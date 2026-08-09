@@ -2,7 +2,7 @@
 
 **Le document de travail unique du projet.** Il remplace `docs/REPRISE.md` et `docs/INTERFACE.md`,
 fusionnés ici le 9 août 2026 : ce qui était livré en est parti, ce qui reste ouvert y est entier, et
-les savoirs qui coûteraient une seconde fois sont regroupés au § 12.
+les savoirs qui coûteraient une seconde fois sont regroupés au § 11.
 
 Deux fichiers se partagent le travail, et aucun ne redit ce qu'un autre porte :
 
@@ -23,9 +23,13 @@ Pour *comprendre* le logiciel plutôt que reprendre son développement :
 
 **Les sections descendent par gravité, et l'ordre est la recommandation.** Ce qui empêche de prouver
 une livraison (§ 0), puis ce qui perd du travail sans le dire (§ 1), puis ce qui bloque un geste
-(§ 3), ce qui fait douter (§ 4), ce qui manque (§ 5 à § 7), et enfin ce qui coûtera plus tard
-(§ 8, § 9). **Le § 2 est vide** : la décision de disposition qu'il portait est livrée, et ses
-numéros de section ne se renumérotent pas plus que ceux des entrées.
+(§ 2), ce qui fait douter (§ 3), ce qui manque (§ 4 à § 6), et enfin ce qui coûtera plus tard
+(§ 7, § 8).
+
+> **Les sections se renumérotent quand l'une d'elles se vide ; les entrées, jamais.** La disposition
+> de la colonne gauche occupait une section à elle, livrée le 9 août — celles qui suivaient ont
+> repris son rang. Les numéros d'entrée, eux, sont cités par des commits et des plans : ils restent
+> troués.
 
 **Chaque entrée commence par le geste attendu, avant tout diagnostic.** Une phrase qui dit ce que
 l'utilisateur doit pouvoir faire à l'écran — pas ce que le code fait, pas la cause, pas le remède. La
@@ -51,7 +55,7 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 
 > Je reprends le développement de **Scenario Studio**, dans `/Users/pasquelin/Applications/scenario`.
 >
-> Lis `docs/todo.md` en entier, puis `CLAUDE.md`. **Ne refais pas les mesures du § 12.4** : leurs
+> Lis `docs/todo.md` en entier, puis `CLAUDE.md`. **Ne refais pas les mesures du § 11.4** : leurs
 > conclusions sont acquises. Puis `git log --oneline -15`, `git worktree list` et `pnpm validate`
 > pour partir d'une base verte.
 >
@@ -61,8 +65,8 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 >
 > **Pour la suite, propose-moi un ordre et attends ma réponse** avant d'ouvrir un worktree. Les
 > candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider,
-> exécuter (§ 6) · les retours d'accessibilité (§ 3) et d'affordance (§ 4) · les **manques par
-> espace** (§ 5), dont deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des
+> exécuter (§ 5) · les retours d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par
+> espace** (§ 4), dont deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des
 > Textures.
 >
 > **Ce fichier est la seule liste qui reste.** `.claude/loop/BACKLOG.md`, qui portait le backlog
@@ -105,8 +109,12 @@ perd des données : sans porte, un correctif ne se prouve pas non plus.
 
 ⚠️ Annoncé DÉPASSÉ depuis `bc9356a` (9 août, ~19 h), sur ses deux seuils (`statements: -90`,
 `branches: -82`). **Rapporté par le message de `d73635c`, jamais mesuré** — et la distinction compte.
-Aucun commit de `develop` n'a touché `vitest.config.ts` ni `renderer/src/stores/` depuis. **Premier
-geste de la prochaine session : le mesurer**, avant de supposer la porte verte.
+
+**Le doute s'est élargi, pas résorbé.** `vitest.config.ts` porte toujours les mêmes deux chiffres,
+mais **`renderer/src/stores/` a été touché plusieurs fois depuis** — `tools.ts` par la colonne
+gauche, `documents.ts` et `selection.ts` par l'inspecteur du graphe, `models.ts` par les générateurs
+de la palette. Le seuil n'a donc pas seulement échappé à la mesure : ce qu'il mesure a changé
+dessous. **Premier geste de la prochaine session : le mesurer**, avant de supposer la porte verte.
 
 Les seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), pas des
 pourcentages. **Couvrir avant d'élargir** ; le commentaire du fichier dit le seul cas où élargir est
@@ -164,30 +172,33 @@ trace fraîche. Deux ou trois exécutions de dix minutes, machine libre.
 
 ---
 
-## 0.3 Trois trous que seule la mutation trouve
+## 0.3 Deux trous que seule la mutation trouve
 
 **Regroupée ici plutôt qu'avec l'espace 3D dont elle parle** : le sujet n'est pas la 3D, c'est
-le filet. Les trois vivent dans des fichiers sans rapport et n'ont en commun que d'être verts
+le filet. Les deux vivent dans des fichiers sans rapport et n'ont en commun que d'être verts
 sous la porte.
 
-### 35. Trois branchements que la couverture certifie et qu'aucun test ne tient
+### 35. Deux branchements que la couverture certifie et qu'aucun test ne tient
 
-**Le geste attendu.** Casser une ligne de `frameSelection`, du builder BVH ou du quantificateur d'`isSprite` doit
-faire rougir un test. Aujourd'hui les trois passent, et la porte est verte.
+**Le geste attendu.** Casser une ligne du builder BVH ou du quantificateur d'`isSprite` doit faire
+rougir un test. Aujourd'hui les deux passent, et la porte est verte.
 
 **Vu le 9 août 2026**, par relecture par mutation — la couverture était verte sur les trois.
 
-- **`SceneRenderer.frameSelection` → `viewport.refit()`.** Vider entièrement le corps de
-  `frameSelection` laissait **1786 tests verts** : la méthode sort tôt sans `orbit`, qui n'existe
-  qu'après un `mount` exigeant WebGL. `framingPlacement`, `framingDistance` et `refit()` sont chacun
-  mesurés ; les trois lignes qui les enchaînent ne le sont pas.
+> **Le troisième est fermé** : `frameSelection` avait été vidé entièrement en laissant **1786 tests
+> verts**, la méthode sortant tôt sans `orbit`. La composition est **sortie de la méthode** et
+> mesurée pour elle-même (`framingPlacement`, `scene-view.test.ts`), ce que le test dit dans sa
+> propre JSDoc : « which no test could reach while it lived inside a method that returns early ».
+> **C'est le remède que l'entrée réclamait — la décision sort, ou elle n'est pas mesurée.**
+
 - **`bvh-builder.ts` — l'entrée que laisse dans `pending` une requête dont le `spawn` a été refusé.**
   Rien hors du module ne lit cette carte ; le `finally` qui la vide est une assurance, pas une
-  mesure.
-- **`scene-document.ts` — le quantificateur de `isSprite`.** `SPRITE_SPECS` moins la couleur ne
-  laisse qu'`opacity`, et sur un singleton `every` et `some` sont indiscernables : remplacer l'un par
-  l'autre ne fait rougir personne. Le test se réparera seul le jour où un second champ mesuré
-  arrivera.
+  mesure. Le test le dit lui-même — « What this cannot see is the slot such a request leaves in
+  `pending` » — ce qui vaut mieux qu'un silence, mais ne le tient toujours pas.
+- **`scene-document.ts` — le quantificateur de `isSprite`.** Remesuré : `SPRITE_SPECS` porte
+  toujours **deux** champs, `color` et `opacity`, et `MEASURED_SPRITE` en retire la couleur — donc
+  toujours un singleton, sur lequel `every` et `some` sont indiscernables. Remplacer l'un par l'autre
+  ne fait rougir personne. Le test se réparera seul le jour où un second champ mesuré arrivera.
 
 **Ce que la session a appris et qu'il ne faut pas réapprendre** : le budget de couverture ne voit pas
 ce genre de trou — les lignes nues de `frameSelection` tenaient dans les 700 statements alloués au
@@ -204,8 +215,8 @@ ne peut pas savoir qu'il a perdu quelque chose. Rien d'autre dans ce fichier n'a
 propriété.
 
 > **Deux fragments du même genre vivent ailleurs**, parce qu'ils appartiennent à un chantier qui
-> les dépasse : le **document neuf jamais enregistré, perdu au rechargement** (§ 5.1) et
-> l'**absence de `fsync`** (§ 7).
+> les dépasse : le **document neuf jamais enregistré, perdu au rechargement** (§ 4.1) et
+> l'**absence de `fsync`** (§ 6).
 
 ## 1.1 La couche projet — un seul chantier, trois entrées
 
@@ -239,7 +250,7 @@ mettre le bouton qui ouvre ou crée un projet — **aujourd'hui il faut retourne
 
 Ce choix évite le piège de l'autre : retirer un panneau touche le **layout persisté** — Dockview est
 remonté par espace, et un panneau ajouté à l'API sortante est jeté par le `fromJSON` du suivant
-(§ 5.1). Un panneau qui disparaît et revient avec le projet risquait de perdre sa place.
+(§ 4.1). Un panneau qui disparaît et revient avec le projet risquait de perdre sa place.
 
 **Les deux gestes existent déjà** : `openPicked()` et `createPicked()` sont sur le store `useProject`,
 et leurs quatre appelants sont tous sur l'accueil. **Et `EmptyState` porte déjà une action** —
@@ -259,7 +270,7 @@ La première est la bonne si la création doit être atteignable de là, et c'es
 
 **Reste à décider quels panneaux déclarent quoi.** L'Explorateur, l'étagère à assets et l'inspecteur
 exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans projet produit un
-job qui ne se collecte nulle part — « un job ne collecte que dans son propre projet » (§ 12.3). Soit il
+job qui ne se collecte nulle part — « un job ne collecte que dans son propre projet » (§ 11.3). Soit il
 exige un projet, soit il faut dire ce que devient ce qu'il produit.
 
 ---
@@ -344,12 +355,12 @@ dossier.
 
 ---
 
-# 3. Les gestes qui n'aboutissent pas
+# 2. Les gestes qui n'aboutissent pas
 
 Deux entrées. La première échoue **complètement et en silence** ; l'autre ne se constate qu'en
 lâchant la souris.
 
-## 3.1 La dictée — le geste demandé n'a jamais existé
+## 2.1 La dictée — le geste demandé n'a jamais existé
 
 ### 41. Trois micros pour une session, et le texte n'atterrit nulle part
 
@@ -391,7 +402,7 @@ devine.
 > minute. C'est `ADR-17`, et la question a été reposée à l'utilisateur qui l'a confirmée. **Les 640 Mo
 > ne sont pas le défaut ; le défaut est qu'on les télécharge pour un geste qui n'aboutit pas.**
 
-## 3.2 Les surcouches flottantes — un seul lot, trois composants
+## 2.2 Les surcouches flottantes — un seul lot, trois composants
 
 **Regroupées** : `Flyout`, `ContextMenu` et `MenuRow` sont le même sous-système du design
 system, et ce qui reste ouvert ici est d'un seul tenant — donner à ces surfaces les manières
@@ -429,12 +440,12 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 ---
 
-# 4. Ce que l'interface ne dit pas
+# 3. Ce que l'interface ne dit pas
 
 Neuf entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
-## 4.1 L'état d'une ligne — ce que trois panneaux en font
+## 3.1 L'état d'une ligne — ce que trois panneaux en font
 
 `rowSkin` est l'unique fonction qui peint hover, sélection et focus d'une ligne, et sa JSDoc
 énonce la règle — « the same line must not light up differently depending on whether a `Tree` or
@@ -481,7 +492,7 @@ jeton n'est pas nécessaire : `chipSkin` a déjà tranché la même question dan
 
 ---
 
-## 4.2 Les cinq bandes de l'accueil disparaissent quand on leur refuse la réponse
+## 3.2 Les cinq bandes de l'accueil disparaissent quand on leur refuse la réponse
 
 ### 42. `useShelf` avale les rejets, et une bande refusée se retire de la page
 
@@ -544,7 +555,7 @@ dette. La piste : le même bloc pour les cinq, `SectionNote` en ton `muted` et u
 
 ---
 
-## 4.3 Les mises en page qui divergent d'un panneau à l'autre
+## 3.3 Les mises en page qui divergent d'un panneau à l'autre
 
 **Regroupées** : dans les deux cas, deux surfaces qui devraient se ressembler ne se ressemblent pas
 parce qu'**un gabarit existe et n'est pas partagé** — la largeur d'une colonne de libellés pour
@@ -627,7 +638,7 @@ de panneau partagé fermerait les deux écarts d'un coup, et il en existe déjà
 
 ---
 
-## 4.4 L'Explorateur n'explore rien
+## 3.4 L'Explorateur n'explore rien
 
 ### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
 
@@ -668,7 +679,7 @@ le studio sait ouvrir. Trois questions, dans cet ordre :
 
 ---
 
-## 4.5 L'accueil — deux entrées, une surface
+## 3.5 L'accueil — deux entrées, une surface
 
 **Regroupées** : l'entrée 13 finit sur le constat de l'entrée 12 — le menu « … » qui masque une
 bande n'a pas été trouvé, « l'accueil ne montre pas ce qu'il permet ». Même page, même défaut
@@ -723,7 +734,7 @@ Que ce menu « … » n'ait pas été trouvé est un retour en soi, et il rejoin
 
 ---
 
-## 4.6 Les Apps — deux entrées, un panneau
+## 3.6 Les Apps — deux entrées, un panneau
 
 **Regroupées** : les deux demandent d'écrire une phrase que le panneau ne porte pas, elles
 coûtent leurs clés dans les deux mêmes bundles, et la réponse de l'une conditionne l'autre —
@@ -755,7 +766,7 @@ coûtent une clé i18n dans chaque bundle.
 
 > À savoir avant d'écrire cette phrase : le panneau ne montre **que les workflows publics**
 > (`privacy: 'public'`), délibérément. Un workflow privé appartient au compte qui l'a écrit, et le
-> studio n'a pas encore d'éditeur pour ça (§ 6). La formulation ne doit donc pas promettre « vos
+> studio n'a pas encore d'éditeur pour ça (§ 5). La formulation ne doit donc pas promettre « vos
 > workflows ».
 
 ---
@@ -790,12 +801,12 @@ Mais l'absence de filtre n'exempte pas d'expliquer — deux manques, dans l'ordr
 
 ---
 
-# 5. Les manques par espace
+# 4. Les manques par espace
 
 Ce qui reste d'un chantier commencé, espace par espace. Rien ici ne perd de données ni ne bloque
 un geste : ce sont des fonctions annoncées et pas finies.
 
-## 5.1 Couche documents
+## 4.1 Couche documents
 
 **Ce qui reste ouvert :**
 
@@ -811,17 +822,17 @@ un geste : ce sont des fonctions annoncées et pas finies.
 
 ---
 
-## 5.2 Espace Image
+## 4.2 Espace Image
 
 > **La dureté du pinceau et la garde des signatures sont livrées** (`feat/pinceau-durete`, 9 août
-> 2026). Ce que les deux ont appris est au § 12.3.
+> 2026). Ce que les deux ont appris est au § 11.3.
 
 - **Le curseur de dureté reste vivant sous le crayon**, et ne déplace rien. Le défaut est **déplacé
   d'un cran, pas refermé** : un contrôle sans effet ne s'affiche pas — c'est la règle que le studio
   applique déjà à la case d'ombre d'un sprite. `BRUSH_FIELDS` est déjà une table : de quoi griser une
   ligne selon l'outil armé y tiendrait.
 - **L'adoucissement est réservé au pinceau, et la gomme attend le sien.** Sous filtre, un stamp en
-  `erase` gomme contre du vide (§ 12.3) : le rendre à la gomme demande de porter le blend sur le
+  `erase` gomme contre du vide (§ 11.3) : le rendre à la gomme demande de porter le blend sur le
   filtre, **et une vérification GPU** — se tromper là veut dire une gomme qui cesse de servir sans
   rien dire.
 
@@ -830,7 +841,7 @@ toujours. **Aucun test ne peut les regarder — il n'y a pas de GPU sous vitest.
 
 ---
 
-## 5.3 Espace 3D
+## 4.3 Espace 3D
 
 L'espace porte 17 primitives, 5 types de lumières, gizmos, sélection multiple, groupes et reparentage,
 import glTF/GLB avec Draco et KTX2, magnétisme et repère local, ombres par nœud, environnement IBL,
@@ -886,7 +897,7 @@ trois côtés : `canCastShadow`/`canReceiveShadow` sont consultés dans le rende
 
 ---
 
-## 5.4 Espace Textures
+## 4.4 Espace Textures
 
 **Ce qui reste, par étape :**
 
@@ -932,24 +943,26 @@ d'abord (verrou d'instance unique).
 
 ---
 
-## 5.5 Espace Skyboxes
+## 4.5 Espace Skyboxes
 
 > **L'export en six faces est livré** (`feat/skybox-export`, 9 août 2026). Ce qu'il a appris est au
-> § 12.3.
+> § 11.3.
 
 **Ce qu'il reste : le HDRI, et rien d'autre.** Les six faces sortent en PNG, donc en **8 bits par
 canal** — ce qui dépasse le blanc est écrêté, et un éclairage à forte dynamique n'a pas de sortie. Un
 `.exr` en écriture demanderait un encodeur que le studio n'embarque pas ; **c'est donc une dépendance
 à accorder avant d'ouvrir le sujet**, pas un chantier à lancer.
 
-> **Un piège avant d'y toucher.** Un `.hdr` **n'est pas importable** : `IMPORTABLE_TYPES`
-> (`main/media/link.ts`) ne connaît que vidéo, audio et image, et un `.exr` importé est catalogué
-> `image`, jamais `skybox`. Sans conséquence aujourd'hui — le puits accepte toute image du projet —
-> mais quiconque cherchera « pourquoi mon HDRI n'apparaît pas dans l'import » cherchera là.
+> **Un piège avant d'y toucher, remesuré le 9 août au soir.** `IMPORTABLE_TYPES`
+> (`main/media/link.ts`) connaît désormais **quatre** genres — vidéo, audio, image et **maillage** —
+> et `exr` figure bien dans les extensions de l'image. Ce qui reste vrai est l'essentiel : **un `.hdr`
+> n'est reconnu par aucun genre**, et un `.exr` importé est catalogué `image`, **jamais `skybox`**.
+> Sans conséquence aujourd'hui — le puits accepte toute image du projet — mais quiconque cherchera
+> « pourquoi mon HDRI n'apparaît pas dans l'import » cherchera là.
 
 ---
 
-# 6. Le node editor et les workflows Scenario
+# 5. Le node editor et les workflows Scenario
 
 > **Le chantier a son plan**, dix étapes :
 > [`docs/plans/2026-08-08-workflows-node-editor.md`](plans/2026-08-08-workflows-node-editor.md).
@@ -964,7 +977,7 @@ choisit** et son formulaire s'ouvre dessous : changer de modèle refait les port
 dont le port a disparu, en une commande annulable. Le manuel le décrit dans les deux langues, avec
 l'avertissement qui convient — **il ne sait toujours pas exécuter ce qu'il décrit.**
 
-## 6.1 Ce qui reste — étapes 7 à 9
+## 5.1 Ce qui reste — étapes 7 à 9
 
 Le cœur exécutable : **compiler** vers le `flow`, **valider**, **exécuter** en local. Puis la logique,
 les boucles, les transforms, l'approbation, et enfin l'import/export et la publication.
@@ -976,7 +989,7 @@ les boucles, les transforms, l'approbation, et enfin l'import/export et la publi
 > Une App publique compte **62 nœuds** (`wflow_H1bKz78jgpinWPKJfVCM5uAp`) : le plafond de 50 n'est pas
 > opposé aux workflows publiés, **ce qui est à vérifier avant d'écrire le refus d'export de l'étape 9.**
 
-## 6.2 La décision d'architecture : où le graphe s'exécute — NON TRANCHÉE
+## 5.2 La décision d'architecture : où le graphe s'exécute — NON TRANCHÉE
 
 C'est **la** question du chantier.
 
@@ -998,7 +1011,7 @@ Un point qui penche : les nodes que Scenario n'a pas sont ceux qui donneraient s
 `localFile`, `ffmpegConcat`, un aperçu PBR sur le noyau GPU existant, un export Unity ou Godot. **Ils
 n'existent que sous B.**
 
-## 6.3 Ce que le chantier apporterait par ricochet
+## 5.3 Ce que le chantier apporterait par ricochet
 
 **`user-approval` ouvre une phase que le `JobManager` n'a pas.** Un job de workflow peut se suspendre
 en attendant l'utilisateur ; `workflows.userApproval` le débloque. `JobStatus` n'a rien entre `running`
@@ -1022,7 +1035,7 @@ interactif, le noyau GPU du studio refait la passe en shader et Scenario n'est a
 `scenario-smart-reframe` en `textDensity: DENSE` + `thinkingLevel: HIGH` est **nettement plus coûteux** :
 ces deux champs veulent un avertissement et un `dryRun` affiché.
 
-## 6.4 Hors périmètre, et pourquoi c'est écrit ici
+## 5.4 Hors périmètre, et pourquoi c'est écrit ici
 
 Pour qu'une prochaine session ne reparte pas chercher.
 
@@ -1048,11 +1061,11 @@ Pour qu'une prochaine session ne reparte pas chercher.
 
 ---
 
-# 7. Les dettes transverses
+# 6. Les dettes transverses
 
 **Le décodage du clone IPC** — **73 % du coût d'un ⌘S, intouché**. `⌘S` gèle toutes les fenêtres
 au-delà de **~5 500 nœuds**, et c'est le décodage qui l'y amène, deux fois et demie la sérialisation
-(§ 12.4).
+(§ 11.4).
 
 L'import glTF aurait dû faire franchir ce plafond. Il ne le fait pas, parce que **le modèle importé est
 un seul nœud portant une référence**, jamais un sous-arbre : le document grossit d'une ligne quel que
@@ -1070,8 +1083,9 @@ appel sur un front montant qu'il suit lui-même. `SceneRenderer.onPointerDown` r
 au lieu de la rustiner deux fois — un viewport qui l'oublierait ouvre son mouvement sur un saut de
 `MAX_DELTA`, 0,1 s.
 
-**Les écritures de *dossier* de `documents.ts` gardent leur propre nettoyage** — entrée **38** du
-§ 1.3, avec le piège de test qui va avec.
+> **Le `rm` de nettoyage qui parlait par-dessus la panne est livré** (`feat/folder-write`, 9 août
+> 2026) : ce que l'appelant entend est de nouveau la raison pour laquelle le document n'a pas pu
+> être écrit. **Ne pas le re-signaler.**
 
 **Durabilité, assumée.** `documents.ts` renomme atomiquement, ce qui protège d'un crash **en cours
 d'écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l'écriture.
@@ -1085,19 +1099,23 @@ trois plateformes.**
 `app` / `BrowserWindow` / `Menu`.
 
 **Aucun test ne s'exécute sur l'application lancée** — le poste de vérification le plus cher du projet,
-et le seul qu'aucune porte ne tient. Le protocole de vérification manuelle est au § 10 ; **Playwright
+et le seul qu'aucune porte ne tient. Le protocole de vérification manuelle est au § 9 ; **Playwright
 est reporté le 8 août 2026, pas abandonné**. Son suivi vivait sous `L7` dans
 `.claude/loop/BACKLOG.md`, **qui n'existe plus** : la décision n'a donc plus d'autre trace que cette
 ligne, et c'est pour ça qu'elle y est écrite en entier plutôt qu'en renvoi.
 
-**La moitié rapatriement de la bibliothèque n'a pas de porte.** `cloud.pull`, `cloud.browse` et
-`cloud.plan` traversent la frontière, sont testés, et **aucun composant ne les appelle** : le
-planificateur sait calculer un diff bidirectionnel, et personne ne le lui demande. Seul `push` a un
-bouton. Deux conséquences à ne pas confondre avec des bugs — **trois des sept badges sont
-inatteignables** (`to-pull`, `conflict`, `other-account`), et `location-facet.ts` explique pourquoi à
+**Le planificateur de rapatriement n'a toujours pas de porte — remesuré le 9 août au soir.**
+`cloud.browse` et `cloud.pull` **ont trouvé la leur entre-temps** : l'accueil les appelle tous les
+deux (`Library.tsx` liste et rapatrie une vignette, `Similar.tsx` lit la bibliothèque pour se
+choisir une référence). **Seul `cloud.plan` reste sans appelant** — le store l'expose, aucun
+composant ne le demande, et le diff bidirectionnel qu'il sait calculer ne sert donc à rien.
+
+Deux conséquences à ne pas confondre avec des bugs : **trois des sept badges restent
+inatteignables** (`to-pull`, `conflict`, `other-account`) — `location-facet.ts` explique pourquoi à
 l'endroit exact où la tentation serait d'en ajouter ; et **le manuel écrit noir sur blanc** que le
-transfert est à sens unique (`docs/fr/manuel/07-assets.md`), donc ouvrir cette moitié veut dire mettre
-à jour les deux manuels dans le même mouvement.
+transfert est à sens unique (`docs/fr/manuel/07-assets.md`), ce qui est **déjà faux depuis que la
+vignette de la bibliothèque rapatrie** — à corriger dans les deux langues, indépendamment de ce que
+devient `plan`.
 
 **L'abandon d'une recherche est livré comme une assurance, pas comme un correctif.** Aucun composant du
 renderer n'envoie encore `text:` au catalogue local. **Le brancher au handler IPC serait un bug** :
@@ -1116,12 +1134,12 @@ de l'image, pas une nouvelle famille.**
 
 ---
 
-# 8. Cohérence
+# 7. Cohérence
 
 Une entrée qui ne casse rien aujourd'hui et qui coûtera le jour où la police nommée par
 l'interface se mettra à compter.
 
-## 8.1 Une police déclarée et jamais chargée
+## 7.1 Une police déclarée et jamais chargée
 
 ### 29. `Inter` est déclarée comme police de l'interface, et n'est chargée nulle part
 
@@ -1142,7 +1160,7 @@ nommer. **La nommer sans la charger est la seule qui mente.**
 
 ---
 
-# 9. Bloqué
+# 8. Bloqué
 
 Une entrée, et elle ne bouge pas sans une mesure sur l'application lancée.
 
@@ -1171,7 +1189,7 @@ correction.**
 
 ---
 
-# 10. Vérifier à l'écran
+# 9. Vérifier à l'écran
 
 **Un jalon visuel validé uniquement par des tests unitaires n'est validé qu'à moitié.** Règles,
 repères, zoom, compositing, pointillés, viewport éclairé : rien de tout cela ne se prouve dans vitest.
@@ -1215,7 +1233,7 @@ lisible** ; la section Compte se capture avec des champs remplis mais masqués.
 
 ---
 
-# 11. Méthode — ce qui a marché
+# 10. Méthode — ce qui a marché
 
 **Les revues qui exécutent le code trouvent beaucoup plus que celles qui le lisent.** Trois points de
 comparaison, tous sur le mode Image :
@@ -1264,12 +1282,12 @@ fusions à envoyer le lecteur chercher chaque panneau du mauvais côté, 24 pass
 
 ---
 
-# 12. Ne pas repayer, ne pas rouvrir
+# 11. Ne pas repayer, ne pas rouvrir
 
 Ce qui suit n'est pas une liste de tâches : ce sont les réponses déjà données, et c'est à elles qu'un
 nouveau constat se compare.
 
-## 12.1 Les règles de disposition — tranchées
+## 11.1 Les règles de disposition — tranchées
 
 **La colonne de gauche est celle de ce qui produit** : la génération en **moitié haute** dans les
 six espaces, l'Explorateur et les Apps en **moitié basse**, partout, accueil compris. La droite
@@ -1306,7 +1324,7 @@ posé »** — cocher les trois niveaux un par un laisse « Tout » éteint, et 
 est conservé **à l'intérieur** de chaque rangée : la largeur des puces suit la langue, aucune largeur
 de volet ne garantit une ligne.
 
-## 12.2 Les corrections déjà faites — ne pas les re-signaler
+## 11.2 Les corrections déjà faites — ne pas les re-signaler
 
 - **Les documents n'appartenaient à aucun projet.** Le store `useDocuments` **n'est plus persisté du
   tout** : le dossier du projet dit quels documents existent, le layout persisté dit lesquels sont
@@ -1338,7 +1356,7 @@ de volet ne garantit une ligne.
   dépôt, et refusé. Un bouton `aria-hidden` deviendrait trouvable par `getByRole` dans les quatre cents
   fichiers — un angle mort permanent.
 
-## 12.3 Les pièges déjà payés
+## 11.3 Les pièges déjà payés
 
 ### three.js
 
@@ -1592,7 +1610,7 @@ dit rien n'est pas un fichier qui dit faux.
   événements souris, dont Chromium ne démarre aucun glisser. C'est le CDP direct qui tranche. Aucun clic
   du MCP ne porte de modificateur non plus.
 
-## 12.4 Performance — les mesures acquises
+## 11.4 Performance — les mesures acquises
 
 **Trois audits, tous menés le 7 août 2026** sur Apple M2 Max / macOS 26.5.2, en **build de production**.
 **Ne pas refaire ces mesures.**
@@ -1681,7 +1699,7 @@ Coût complet d'un ⌘S sur le thread principal. Un `invoke` fait traverser un *
 | 50 000 | 163 ms | 39,9 ms | 76 % | 1019 % |
 
 Franchissement des 16 ms : **≈ 5 500 nœuds**. **C'est la plus petite moitié qui a été optimisée** : le
-décodage pèse presque trois fois la sérialisation et n'est traité nulle part (§ 7).
+décodage pèse presque trois fois la sérialisation et n'est traité nulle part (§ 6).
 
 **Reproduire :** `pnpm bench`. Aux grandes tailles les mesures sont dominées par le GC (`rme` jusqu'à
 20 %) : la colonne à retenir est le **minimum**.
