@@ -23,6 +23,8 @@ export function NodeList({ documentId, type }: { documentId: string; type: Panel
 
   return (
     <Collection
+      label={t(`panels.${namespace}`)}
+      multiple
       items={shown}
       selectedIds={selectedIds}
       // The panel lists half the scene, so a range here spans meshes or lights, never both —

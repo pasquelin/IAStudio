@@ -22,6 +22,17 @@ export type CollectionProps<T extends { id: string }> = {
    */
   renderCard?: (item: T) => ReactNode
   renderRow: (item: T) => ReactNode
+  /**
+   * What the list is called. A `listbox` is a widget, and an unnamed widget is announced as the
+   * bare word "listbox" — the same word in all six panels that draw one.
+   */
+  label: string
+  /**
+   * Whether picking one row keeps the others. Declared rather than deduced: `pickFrom` hands
+   * shift and ⌘ to every caller, but three of them keep a single id and would be announcing a
+   * range they never build.
+   */
+  multiple?: boolean
   /** Ordered like `Tree`'s: the last one is the anchor, and it is where the tab stop sits. */
   selectedIds?: readonly string[]
   /**
@@ -45,6 +56,19 @@ export type CollectionProps<T extends { id: string }> = {
   footer?: ReactNode
   /** Height of a list row. Rows carrying a thumbnail need more than a line of text. */
   rowHeight?: number
+}
+
+type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
+
+/**
+ * Container and cell are one pair, never two decisions: an `option` outside a `listbox` is
+ * invalid ARIA — no list announced, no "3 of 12", and some engines drop the role outright.
+ */
+function rolesFor(pickable: boolean, openable: boolean): CollectionRoles {
+  if (pickable) return { list: 'listbox', cell: 'option' }
+  if (openable) return { list: 'list', cell: 'listitem' }
+
+  return {}
 }
 
 type Grid = {
@@ -101,6 +125,8 @@ function useGrid(host: { current: HTMLElement | null }, cardWidth: number, enabl
 export function Collection<T extends { id: string }>({
   items,
   state = LIST_ONLY,
+  label,
+  multiple,
   renderCard,
   renderRow,
   selectedIds,
@@ -118,6 +144,7 @@ export function Collection<T extends { id: string }>({
   const grid = card !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
+  const roles = rolesFor(onSelect !== undefined, onActivate !== undefined)
   const columns = grid ? fitting.columns : 1
   const rows = Math.ceil(items.length / columns)
   /**
@@ -214,13 +241,22 @@ export function Collection<T extends { id: string }>({
       {items.length === 0 ? (
         empty
       ) : (
-        <div style={{ height: virtualizer.getTotalSize() }} className="relative">
+        <div
+          role={roles.list}
+          aria-label={label}
+          aria-multiselectable={roles.list === 'listbox' ? multiple === true : undefined}
+          style={{ height: virtualizer.getTotalSize() }}
+          className="relative"
+        >
           {virtualRows.map(row => {
             const slice = items.slice(row.index * columns, (row.index + 1) * columns)
 
             return (
               <div
                 key={row.key}
+                // The virtualizer's row is geometry, not structure: a generic element between a
+                // `listbox` and its `option`s breaks the ownership ARIA requires.
+                role="presentation"
                 style={{
                   transform: `translateY(${row.start}px)`,
                   height: row.size,
@@ -243,6 +279,11 @@ export function Collection<T extends { id: string }>({
                       tabbable={index === tabStop}
                       // A list row spans the collection; a card is sized by its grid column.
                       className={grid ? undefined : 'h-full w-full'}
+                      role={roles.cell}
+                      // The virtualizer mounts a window, so the cells cannot be counted from the
+                      // tree: without these a reader announces "1 of 35" over a list of 2000.
+                      position={index + 1}
+                      total={items.length}
                       onSelect={onSelect ? modifiers => pick(item, modifiers) : undefined}
                       onActivate={onActivate ? () => onActivate(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
@@ -267,6 +308,11 @@ type CollectionCellProps = {
   selected: boolean
   /** The collection's single tab stop. Every other cell is reached with the arrows. */
   tabbable: boolean
+  /** What this cell is in its container's terms — `rolesFor` decides the pair. */
+  role?: 'option' | 'listitem'
+  /** Where it sits in the whole collection, which the mounted window cannot say. */
+  position: number
+  total: number
   onSelect?: (modifiers: Modifiers) => void
   onActivate?: () => void
   onArrow: (event: KeyboardEvent) => void
@@ -282,6 +328,9 @@ function CollectionCell({
   index,
   selected,
   tabbable,
+  role,
+  position,
+  total,
   onSelect,
   onActivate,
   onArrow,
@@ -302,10 +351,15 @@ function CollectionCell({
 
   return (
     <div
-      role="option"
+      role={role}
+      aria-posinset={position}
+      aria-setsize={total}
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
-      aria-selected={selected}
+      // An option has a selected state; a listitem has none. The explorer paints what is OPEN
+      // through the same prop, and announcing that as "selected" would describe a state its
+      // rows can neither take nor give up.
+      aria-selected={role === 'option' ? selected : undefined}
       onClick={onSelect}
       onDoubleClick={onActivate}
       onKeyDown={event => {

@@ -201,6 +201,7 @@ export function Models() {
 
       <div className="min-h-0 flex-1">
         <Collection
+          label={t('panels.models')}
           items={items}
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}

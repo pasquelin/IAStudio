@@ -97,6 +97,7 @@ export function Apps() {
 
   return (
     <Collection
+      label={t('panels.apps')}
       items={items}
       onSelect={app => setOpenedId(app.id)}
       onReachEnd={loadMore}

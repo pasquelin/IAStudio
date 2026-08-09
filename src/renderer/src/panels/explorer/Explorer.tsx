@@ -38,6 +38,7 @@ export function Explorer() {
 
   return (
     <Collection
+      label={t('panels.explorer')}
       items={stored}
       // Not a selection one makes — it is what "open" looks like in this list.
       selectedIds={Object.keys(open)}

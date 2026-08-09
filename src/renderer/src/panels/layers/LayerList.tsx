@@ -40,6 +40,7 @@ export function LayerList({ documentId }: { documentId: string }) {
 
   return (
     <Collection
+      label={t('panels.layers')}
       items={stack}
       // One at a time: a stack arms the layer that is painted on, and there is only ever one of
       // those. The plural is the collection's, which the scene outliner needs.

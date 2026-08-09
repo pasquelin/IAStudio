@@ -85,6 +85,8 @@ export function AssetBrowser() {
       {!lying && <CollectionBar state={collection} onChange={setCollection} facets={facets} />}
       <ImportProgress />
       <Collection
+        label={t('panels.assets')}
+        multiple
         items={shown}
         state={collection}
         // The shelf owns its rows' gestures rather than each row wiring its own: that is what
