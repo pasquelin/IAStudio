@@ -193,6 +193,18 @@ describe('openFrom', () => {
     expect(open.bottom).toEqual({ primary: 'assets' })
   })
 
+  /**
+   * The Explorer stands in the left column on the home and in the right one in the six spaces.
+   * Propagating that first placement would hand the spaces' left column — which is generation,
+   * and only generation — to a panel the user opened somewhere they cannot see it from.
+   */
+  it('does not let the home placement of a tool claim a workspace zone', () => {
+    const open = openFrom({ left: { primary: 'models' }, right: { primary: 'explorer' } })
+
+    expect(open.left).toEqual({ primary: 'models' })
+    expect(open.right).toEqual({ primary: 'explorer' })
+  })
+
   // The shelf claims the upper right and the band both; the column was only left on its default.
   // An explicit choice outranks a default, whichever of the two the rebuild reads first.
   it('lets a named panel win a half left on its default', () => {

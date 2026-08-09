@@ -46,7 +46,7 @@ beforeEach(() => {
   installCanvas(DOCUMENT)
   useModels.setState({ selected: {}, preset: {} })
   useTools.setState({ open: {}, focusedZone: null })
-  useLayouts.setState({ activeWorkspace: 'image' })
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
   defaultModel('image', 'model_flux')
 })
 

@@ -153,14 +153,33 @@ describe('a side column', () => {
 })
 
 describe('the home', () => {
-  it('covers the docks entirely: no rail, no zone, no divider', () => {
+  /**
+   * The panels of the right column and the bottom strip all act on an open document, and the
+   * home has none: their zones are not drawn, so neither are their rails.
+   */
+  it('leaves out every zone but the left column', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ open: DEFAULT_OPEN })
     renderShell()
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
-    expect(handles()).toHaveLength(0)
+    // One divider: the left column's. The zones that would carry the others are absent.
+    expect(handles()).toHaveLength(1)
+  })
+
+  /**
+   * The Explorer is a panel, and it opens where panels open — under an icon in the left rail,
+   * in a tool window that closes and reopens like the others. The home puts it there because
+   * its own left column is free: the six spaces reserve theirs for generation.
+   */
+  it('stands the Explorer in the left column, reachable from the rail', () => {
+    useLayouts.setState({ home: true })
+    useTools.setState({ open: DEFAULT_OPEN })
+    renderShell()
+
+    expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Modèles')).not.toBeInTheDocument()
   })
 
   // The status line is the studio's global view — jobs, activity, updates — and the home is

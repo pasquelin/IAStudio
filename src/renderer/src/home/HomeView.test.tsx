@@ -104,19 +104,17 @@ describe('the home', () => {
   })
 
   /**
-   * The aside is the second column, and it is a column: what stands in it is declared by the
-   * shared registry like everything else, so a second panel is a line there rather than a new
-   * layout here.
+   * The Explorer is a panel, not a band of the page: the shell stands it in the left column
+   * under a rail icon, like every other panel. Listed here too, it would be the same folder
+   * read twice on one screen, with two behaviours to keep in step.
    */
-  it('stands the tree of documents beside the page, not above it', () => {
+  it('does not draw the tree of documents: that is a panel, and the shell places it', () => {
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     const { container } = render(<HomeView />)
 
-    const aside = container.querySelector('aside')
-    expect(aside).not.toBeNull()
-    expect(aside?.textContent).toContain('Explorateur')
-    expect(aside?.textContent).toContain('Poster')
+    expect(container.querySelector('aside')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Explorateur' })).not.toBeInTheDocument()
   })
 
   /**
@@ -137,13 +135,6 @@ describe('the home', () => {
     useSettings.setState({ loaded: true })
     rerender(<HomeView />)
     expect(screen.getByText('Outils')).toBeInTheDocument()
-  })
-
-  it('leaves the aside out entirely when nothing stands in it', () => {
-    const { container } = render(<HomeView />)
-
-    // No project, so the tree has no folder to read — and an empty rail is worth no room.
-    expect(container.querySelector('aside')).toBeNull()
   })
 
   it('ends on a way forward rather than on the last shelf', () => {

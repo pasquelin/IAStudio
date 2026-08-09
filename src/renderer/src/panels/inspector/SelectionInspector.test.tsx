@@ -11,6 +11,7 @@ import { useJobs } from '@/stores/jobs'
 import { useModels } from '@/stores/models'
 import { installSequence } from '@/stores/sequence-fixtures'
 import { sequenceOf, useSequences } from '@/stores/sequences'
+import { useLayouts } from '@/stores/layouts'
 import { useSelection } from '@/stores/selection'
 import { useTools } from '@/stores/tools'
 import { Inspector } from './Inspector'
@@ -42,6 +43,7 @@ function openSequence(): void {
 
 describe('Inspector, on what a panel selected', () => {
   beforeEach(() => {
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
     useSelection.setState({ selection: { kind: 'none' } })
     useAssets.setState({ items: [asset()] })
     useJobs.setState({ jobs: [], bodies: {} })

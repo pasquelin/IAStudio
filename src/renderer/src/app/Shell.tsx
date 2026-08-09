@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
-import { useHomeVisible, useLayouts } from '@/stores/layouts'
+import { useHomeVisible, useLayouts, useToolSurface } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
@@ -58,11 +58,22 @@ export function Shell() {
       />
 
       {home ? (
-        // No rails, no zones, no Dockview: the home is read across the whole window, and a
-        // dock around it would frame an entry point as though it were a panel.
-        <Panel className="mx-(--sc-gutter) mb-(--sc-gutter) min-h-0 min-w-0 flex-1">
-          <HomeView />
-        </Panel>
+        // The left rail and its column, and nothing else: the documents of the project are what
+        // one opens the studio to reach, and the Explorer is a panel — it belongs in the column
+        // panels live in, under an icon that survives closing it. No right rail and no bottom
+        // strip: every tool they carry acts on an open document, and the home has none.
+        //
+        // No Dockview either. The center is the page itself, not a tab host.
+        <div className="flex min-h-0 flex-1">
+          <Rail side="left" />
+
+          <div className="flex min-h-0 min-w-0 flex-1 py-(--sc-gutter)">
+            <Edge zone="left" />
+            <Panel className="min-w-0 flex-1" onPointerDownCapture={() => focus(null)}>
+              <HomeView />
+            </Panel>
+          </div>
+        </div>
       ) : (
         <div className="flex min-h-0 flex-1">
           <Rail side="left" />
@@ -114,13 +125,13 @@ function Edge({ zone }: { zone: ToolZone }) {
   const slots = useTools(state => state.open[zone])
   const size = useTools(state => state.sizes[zone] ?? DEFAULT_SIZES[zone])
   const split = useTools(state => state.splits[zone] ?? DEFAULT_SPLIT)
-  const workspace = useLayouts(state => state.activeWorkspace)
-  const hasModel = useHasModel(workspace)
+  const surface = useToolSurface()
+  const hasModel = useHasModel(surface)
 
   // The stored value straight through: `undefined` is a closed half and `null` an unchosen one,
   // and collapsing the two would close every half nobody has clicked.
   const shown = (slot: ToolSlot): ToolId | null =>
-    shownTool(slots?.[slot], zone, slot, workspace, hasModel)
+    shownTool(slots?.[slot], zone, slot, surface, hasModel)
 
   const primary = shown('primary')
   const secondary = shown('secondary')

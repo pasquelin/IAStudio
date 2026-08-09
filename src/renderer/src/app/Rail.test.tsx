@@ -17,7 +17,7 @@ describe('Rail', () => {
     vi.clearAllMocks()
     installFakeBridge()
     useDocuments.setState({ documents: {} })
-    useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+    useLayouts.setState({ activeWorkspace: '3d', home: false, layouts: {} })
     useModels.setState({ selected: {} })
     const stamp = '2026-08-07T10:00:00.000Z'
     useProject.setState({

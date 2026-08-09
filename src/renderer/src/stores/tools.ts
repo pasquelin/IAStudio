@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import {
   isHorizontal,
   placementOf,
-  placementsOf,
+  workspacePlacementsOf,
   TOOL_SLOTS,
   TOOL_ZONES,
   type ToolId,
@@ -158,7 +158,7 @@ function openEverywhereItSits(open: OpenByZone): OpenByZone {
         continue
       }
 
-      for (const placement of placementsOf(tool)) {
+      for (const placement of workspacePlacementsOf(tool)) {
         const target = (next[placement.zone] ??= {})
         // `??=`, so a named panel wins the half over one merely left on its default.
         target[placement.slot] ??= tool

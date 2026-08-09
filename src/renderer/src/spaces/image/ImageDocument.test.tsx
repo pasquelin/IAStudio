@@ -11,6 +11,7 @@ import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
+import { useLayouts } from '@/stores/layouts'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useTools } from '@/stores/tools'
 import { ImageDocument } from './ImageDocument'
@@ -53,6 +54,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
 describe('ImageDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
     useCanvases.setState({ states: {}, histories: {} })
   })
 

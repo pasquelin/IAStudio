@@ -5,7 +5,7 @@ import { revealAssets } from './reveal-panel'
 
 beforeEach(() => {
   useTools.setState({ open: {}, focusedZone: null })
-  useLayouts.setState({ activeWorkspace: 'image' })
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
 })
 
 /**
