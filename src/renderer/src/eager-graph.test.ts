@@ -162,12 +162,14 @@ describe('the opening chunk', () => {
     expect(packages).not.toContain('opentype.js')
   })
 
-  // Deferred by `main.tsx` on 9 August: −48,29 kB, preloads counted. The registry, the search
+  // Deferred by `main.tsx` on 9 August: −48,38 kB, preloads counted. The registry, the search
   // over it and the draft store all came along for the ride.
   it('never reaches the settings window', async () => {
     const { files } = await eagerGraph()
 
-    expect(files).not.toContain('./settings/SettingsWindow.tsx')
+    // The whole folder, not a sample of it: naming files lets a sibling — `AccountSettings`
+    // reused by an onboarding, say — walk back in with the guard still green.
+    expect([...files].filter(path => path.startsWith('./settings/'))).toEqual([])
     expect(files).not.toContain('./stores/settings-draft.ts')
     expect(files).not.toContain('../../shared/domain/settings-registry.ts')
     expect(files).not.toContain('../../shared/domain/settings-search.ts')
