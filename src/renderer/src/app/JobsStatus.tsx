@@ -5,6 +5,7 @@ import { isFinished, type Job } from '@shared/domain/job'
 import { Flyout } from '@/design/Flyout'
 import { ProgressBar } from '@/design/ProgressBar'
 import { UiIcon } from '@/design/UiIcon'
+import { STATUS_BUTTON } from '@/design/styles'
 import { Jobs } from '@/panels/jobs/Jobs'
 import { useJobs } from '@/stores/jobs'
 
@@ -50,7 +51,7 @@ export function JobsStatus() {
         aria-label={t('jobs.open')}
         aria-expanded={open}
         onClick={() => setOpen(current => !current)}
-        className="hover:text-text flex items-center gap-1.5"
+        className={STATUS_BUTTON}
       >
         <span>{label}</span>
         {count > 0 && (

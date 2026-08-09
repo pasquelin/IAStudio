@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UpdateState } from '@shared/domain/update'
+import { STATUS_BUTTON } from '@/design/styles'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useUpdates } from '@/stores/updates'
 import { UpdateStatus } from './UpdateStatus'
@@ -55,6 +56,12 @@ describe('the update indicator', () => {
     await userEvent.click(screen.getByRole('button', { name: /0\.2\.0/ }))
 
     expect(install).toHaveBeenCalled()
+  })
+
+  it('offers the target the status line shares', () => {
+    show({ phase: 'ready', version: '0.2.0' })
+
+    expect(screen.getByRole('button')).toHaveClass(STATUS_BUTTON)
   })
 
   // Nothing to restart into until the bytes are on disk: the announcement is not a button.

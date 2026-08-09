@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { UiIcon } from '@/design/UiIcon'
+import { STATUS_BUTTON } from '@/design/styles'
 import { failureCount, useActivity } from '@/stores/activity'
 import { ActivityList } from './ActivityList'
 
@@ -35,7 +36,7 @@ export function ActivityStatus() {
           if (!open) useActivity.getState().dismissAll()
           setOpen(current => !current)
         }}
-        className="hover:text-text flex items-center gap-1.5"
+        className={STATUS_BUTTON}
       >
         <UiIcon path={failures > 0 ? mdiAlertCircleOutline : mdiHistory} size={12} />
         {failures > 0 && (
