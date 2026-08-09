@@ -516,7 +516,27 @@ export glTF/GLB/USDZ, et un BVH construit en worker pour le picking.
 | Graisses d’une police | une seule coupe par famille est offerte, le romain. Un sélecteur demande d’indexer les faces par famille — mécanique, pas conceptuel |
 | three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu’il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c’est du poids d’installation en double |
 
-### Les treize constats vérifiés que personne n’a traités
+### Ce que l’export a appris, et qu’il ne faut pas repayer
+
+`feat/scene-export` a traité les six constats qui portaient sur ce qui sort du studio. Trois
+savoirs en restent :
+
+- **`SkinnedMesh.copy` garde le squelette de l’ORIGINAL.** C’est vrai à l’export — glTF écrivait
+  `"joints":[null,null]`, qu’aucun lecteur n’ouvre — et c’était vrai à l’écran dans
+  `model-cache.instanceOf`, où toutes les instances d’un modèle riggé étaient pilotées par les os
+  du cache. `SkeletonUtils.clone` est le seul clone qui relie une copie à ses propres os.
+- **glTF n’a pas de cible de lumière.** `KHR_lights_punctual` lit le −Z du nœud, et three le dit
+  au passage : « make light.target a child of the light with position 0,0,-1 ». Une cible sœur
+  des nœuds ne voyage donc jamais avec l’export.
+- **`decompress` sans renderer en fabrique un et le détruit à chaque appel**, et il est appelé
+  par slot de map. Lu dans `WebGLTextureUtils.js` de three 0.185 : un renderer à soi, créé au
+  premier besoin, est ce qui évite d’évincer le viewport que quelqu’un regarde.
+
+**Un septième constat était périmé** : `reportFailure` ne dédoublonne PAS l’export, `scene.export`
+étant dans `GESTURE_SCOPES` depuis `feat/documents-erreurs`, et un `it.each(GESTURES)` le
+verrouille. Cinquième fois qu’une ligne de ce fichier décrit un défaut déjà corrigé.
+
+### Les constats vérifiés que personne n’a traités
 
 Par ordre de gravité. Chaque ligne est actionnable telle quelle.
 
@@ -526,13 +546,6 @@ Par ordre de gravité. Chaque ligne est actionnable telle quelle.
 | `bvh-builder.ts:34-45` | `dispose()` n’est pas définitif : `workerOf()` respawne sans condition, donc la boucle série de `accelerate` fait naître un worker **après** le démontage du moteur, que rien ne terminera. Un drapeau `disposed` suffit |
 | `bvh.worker.ts` | Aucun canal d’échec — pas de `try/catch`, pas de variante d’erreur, et le builder n’écoute ni `'error'` ni `'messageerror'`. Une exception laisse la promesse suspendue, garde la géométrie dans `building` pour toujours et bloque les mailles suivantes |
 | `SceneRenderer.ts:772` | `void this.accelerate(holder)` avale ses rejets alors que `scene.model` est branché vingt lignes plus haut |
-| `main/scene/export.ts:24` | Le message d’erreur de `writeFile` **livre le chemin absolu au renderer** (invariant 1) : un `EPERM` traverse la frontière et part au journal. À trancher avec l’asymétrie connue de `savePicture`, qui rend déjà le chemin |
-| `SceneRenderer.ts:599` | Le fichier exporté porte des **UUID** en guise de noms : `object.name = node.id`, et le `name` du document n’atteint jamais le fichier. Le test qui semblait le prouver utilisait une fixture dont l’id vaut le nom |
-| `scene-export.ts` | Une lumière directionnelle ou spot **perd son orientation** : la cible est sœur des nœuds, non exportée, et three prévient elle-même |
-| `SceneRenderer.ts:389` | Un nœud **caché** produit un fichier vide, écrit sans un mot (`onlyVisible` vaut `true` chez les deux exporteurs) |
-| `scene-export.ts` | Un GLB **riggé** sort en glTF invalide, `"joints":[null,null]` : `SkinnedMesh.copy` partage le squelette de l’original, hors du sous-arbre exporté. `model-cache.ts:28` a le même défaut — une instance riggée est pilotée par les os du cache |
-| `scene-export.ts:37` | Le décodeur de textures compressées crée un `WebGLRenderer` **par slot de map**, pas par texture, et laisse derrière lui des écouteurs `dispose` morts plus un singleton de module qui retient la dernière texture. Coût sur le thread UI, et rétention |
-| `services/diagnostics.ts` | `reportFailure` dédoublonne par `scope:subject`, et le sujet de l’export est le **format** : le second export raté du même format est muet. Insuffisant pour une action relancée à la main |
 | `three-sync.ts:68` | Le mode `rotate` s’arme sur un sprite et n’a aucun effet — le shader ne lit que les longueurs de colonnes — mais salit le document et empile un undo vide |
 | `scene-document.ts:160` | `isSprite` est le seul garde non dérivé de sa table : un champ ajouté au descripteur ne sera pas vérifié à la relecture |
 | `ViewportEngine.ts:105-120` | Le passage ortho → perspective jette le zoom accumulé ; `frameSelection` ne redimensionne pas le tronc orthographique, donc `F` en ortho ne change rien à l’écran |
