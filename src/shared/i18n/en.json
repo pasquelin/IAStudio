@@ -152,6 +152,7 @@
       "texture.shader": "The material preview lost one of its settings",
       "texture.export": "Exporting the texture failed",
       "skybox.source": "The sky picture could not be loaded",
+      "skybox.export": "Exporting the sky failed",
       "canvas.layer": "A layer could not be loaded",
       "image.export": "Exporting the picture failed",
       "document.save": "Saving the document failed",

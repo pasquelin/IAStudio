@@ -152,6 +152,7 @@
       "texture.shader": "L’aperçu du matériau a perdu l’un de ses réglages",
       "texture.export": "L’export de la matière a échoué",
       "skybox.source": "L’image du ciel n’a pas pu être chargée",
+      "skybox.export": "L’export du ciel a échoué",
       "canvas.layer": "Un calque n’a pas pu être chargé",
       "image.export": "L’export de l’image a échoué",
       "document.save": "L’enregistrement du document a échoué",
