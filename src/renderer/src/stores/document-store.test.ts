@@ -123,6 +123,26 @@ describe('a gesture held over a document', () => {
     })
   })
 
+  /**
+   * The last command names the gesture, not the first. A gesture can move to another field — a
+   * drag that starts on one axis and continues on another — and what follows has to go on
+   * collapsing into an entry of its own.
+   *
+   * Pinning the name on the first command instead was tried, to stop foreign commands taking the
+   * gesture over. It stopped this too: everything after the first field became one entry a frame.
+   */
+  it('goes on collapsing when the gesture moves to another field', () => {
+    const store = storeOf()
+    const { beginGesture, runCommand } = store.use.getState()
+
+    beginGesture('doc')
+    runCommand('doc', set('x', 'a'))
+    for (const value of ['b', 'c', 'd']) runCommand('doc', set('y', value))
+
+    expect(entries(store)).toBe(2)
+    expect(valueOf(store)).toBe('d')
+  })
+
   it('merges nothing at all outside a gesture', () => {
     const store = storeOf()
     const { runCommand } = store.use.getState()
