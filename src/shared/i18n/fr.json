@@ -1496,7 +1496,8 @@
       "library": "Votre bibliothèque",
       "documents": "Vos documents",
       "jobs": "En cours",
-      "activity": "Activité récente"
+      "activity": "Activité récente",
+      "explore": "Explorer"
     },
     "title": "Accueil",
     "tools": {
@@ -1559,6 +1560,10 @@
     "showCount_other": "Afficher {{count}} éléments",
     "hidden_one": "{{count}} section masquée",
     "hidden_other": "{{count}} sections masquées",
-    "restore": "Les réafficher"
+    "restore": "Les réafficher",
+    "explore": {
+      "loading": "Chargement du fil…",
+      "none": "Rien de publié dans cette catégorie pour le moment."
+    }
   }
 }

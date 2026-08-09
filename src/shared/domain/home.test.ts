@@ -128,7 +128,7 @@ describe('rearranging the home', () => {
 
   it('refuses a move at either end of the column it belongs to', () => {
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', 'up')).toBe(false)
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'activity', 'down')).toBe(false)
+    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'down')).toBe(false)
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 'up')).toBe(true)
   })
 

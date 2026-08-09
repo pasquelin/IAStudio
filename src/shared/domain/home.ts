@@ -20,6 +20,7 @@ export type HomeSectionId =
   | 'documents'
   | 'jobs'
   | 'activity'
+  | 'explore'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -51,6 +52,9 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },
+  // Last, and no limit: it is the one band that does not end — the grid pages as it is scrolled,
+  // so a count would cap what the reader can reach rather than how much is drawn at once.
+  { id: 'explore', requires: ['api'] },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
