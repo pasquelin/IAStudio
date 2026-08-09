@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
+import { FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { useWindowState } from '@/hooks/useWindowState'
 import type { WorkspaceId } from '@shared/domain/workspace'
@@ -100,6 +101,8 @@ function BarButton({ icon, label, current, onClick }: BarButtonProps) {
         'text-muted bg-transparent transition-colors',
         'hover:bg-elevated/60 hover:text-text',
         current && 'bg-elevated text-text',
+        // Without it the platform draws its own outline, in a blue that belongs to no theme.
+        FOCUS_RING,
       )}
     >
       <UiIcon path={icon} size={16} />

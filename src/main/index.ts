@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import { EVENTS } from '@shared/ipc'
 import { registerAboutPanel } from '@main/about-panel'
@@ -112,15 +112,18 @@ function bootstrap(): void {
     const splash = openSplashWindow()
 
     setImmediate(() => startUp(splash, settings))
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
-    })
   })
 
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit()
-  })
+  /**
+   * Closing the last window quits, on macOS as everywhere else. That is NOT the platform
+   * convention — a Mac app usually outlives its windows and reopens one from the Dock — but the
+   * studio is a document editor with nothing to offer once its windows are gone, and staying
+   * resident left an application running with no way to see it.
+   *
+   * Safe during start-up: the main window is created before the splash is ever dismissed, so
+   * there is no moment where zero windows exist and the launch quits itself.
+   */
+  app.on('window-all-closed', () => app.quit())
 }
 
 // One studio per machine: two would share one settings file and one WAL catalogue opened
