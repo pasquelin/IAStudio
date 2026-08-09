@@ -1,6 +1,12 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
-const ScrollHost = createContext<HTMLElement | null>(null)
+/**
+ * `undefined` means nobody published one; `null` means one was published but has not mounted
+ * yet. Collapsing the two would send a surface off to guess on the render where its own page is
+ * about to tell it — so the heuristic would still be doing the work at mount, which is the whole
+ * thing this replaces.
+ */
+const ScrollHost = createContext<HTMLElement | null | undefined>(undefined)
 
 export type ScrollHostProviderProps = {
   /** The element that actually scrolls. `null` until the page has mounted its own. */
@@ -21,7 +27,7 @@ export function ScrollHostProvider({ host, children }: ScrollHostProviderProps) 
   return <ScrollHost.Provider value={host}>{children}</ScrollHost.Provider>
 }
 
-/** The published scroller, or `null` where nobody published one — then it has to be found. */
-export function useScrollHost(): HTMLElement | null {
+/** The published scroller, `null` while it mounts, `undefined` where nobody publishes one. */
+export function useScrollHost(): HTMLElement | null | undefined {
   return useContext(ScrollHost)
 }

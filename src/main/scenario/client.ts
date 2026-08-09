@@ -134,20 +134,27 @@ export function recordFailuresTo(destination: FailureSink | null): void {
   sink = destination
 }
 
-export function reducedBy(scope: string) {
+/** The reduction itself, which is the part that must never be written twice. */
+function reducing(note: (error: unknown) => void) {
   return async <T>(action: () => Promise<T>): Promise<T> => {
     try {
       return await action()
     } catch (error) {
-      // Logged where the credentials already live: reduced to a code, neither the renderer nor
-      // anyone reading a bug report could say which call the API refused.
-      log.error(scope, describeFailure(error))
-      // Every API failure the studio reduces passes here — which is why the journal is fed from
-      // this one place rather than from each handler that happens to remember.
-      sink?.(scope, persistableFailure(error))
+      note(error)
       throw new Error(failureOf(error), { cause: error })
     }
   }
+}
+
+export function reducedBy(scope: string) {
+  return reducing(error => {
+    // Logged where the credentials already live: reduced to a code, neither the renderer nor
+    // anyone reading a bug report could say which call the API refused.
+    log.error(scope, describeFailure(error))
+    // Every API failure the studio reduces passes here — which is why the journal is fed from
+    // this one place rather than from each handler that happens to remember.
+    sink?.(scope, persistableFailure(error))
+  })
 }
 
 /**
@@ -160,14 +167,7 @@ export function reducedBy(scope: string) {
  * becoming an empty answer.
  */
 export function quietlyReducedBy(scope: string) {
-  return async <T>(action: () => Promise<T>): Promise<T> => {
-    try {
-      return await action()
-    } catch (error) {
-      log.warn(scope, describeFailure(error))
-      throw new Error(failureOf(error), { cause: error })
-    }
-  }
+  return reducing(error => log.warn(scope, describeFailure(error)))
 }
 
 /** What a client is built through, so that no client can be built without its rate limit. */

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UsageReport } from '@shared/domain/usage'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { settleHome } from '../home-fixtures'
+import { expectSilent, settleHome } from '../home-fixtures'
 import { Usage } from './Usage'
 
 function report(overrides: Partial<UsageReport> = {}): UsageReport {
@@ -65,10 +65,7 @@ describe('the usage band', () => {
     install(report())
     const { container } = render(<Usage />)
 
-    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
-    // the band knows when it has been scrolled to, which is what defers its request.
-    expect(container.textContent).toBe('')
-    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    expectSilent(container)
   })
 
   it('stays silent when the key is refused, like every other band', async () => {
@@ -81,10 +78,7 @@ describe('the usage band', () => {
     await act(async () => {
       await new Promise(done => setTimeout(done, 0))
     })
-    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
-    // the band knows when it has been scrolled to, which is what defers its request.
-    expect(container.textContent).toBe('')
-    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    expectSilent(container)
   })
 
   it('reports a period nobody spent anything in, rather than hiding', async () => {

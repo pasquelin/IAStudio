@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { DEFAULT_USAGE_PERIOD, type ModelSpend, type UsageReport } from '@shared/domain/usage'
 import { Carousel } from '@/design/Carousel'
-import { useOnScreen } from '@/hooks/useOnScreen'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 // `format.ts` is the one file of the usage window the opening chunk may reach — the rest of it
@@ -10,7 +9,7 @@ import { formatUnits } from '@/usage/format'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
-import { useShelf } from '../use-shelf'
+import { useDeferredShelf } from '../use-shelf'
 
 /** Wide enough for a model name and two figures under it, without wrapping either. */
 const CARD_WIDTH = 220
@@ -28,18 +27,12 @@ const CARD_WIDTH = 220
 export function Usage() {
   const { t, i18n } = useTranslation()
   const owner = useSettings(activeOwnerId)
-  // Below the fold on any window: read when it is reached, not when the home mounts.
-  const { ref, seen } = useOnScreen()
-
-  // Read again when the active key changes: another key spends its own units.
-  const report = useShelf<UsageReport | null>(
-    null,
-    () => (seen ? spending() : undefined),
-    `${owner}/${seen}`,
-  )
+  // Below the fold on any window, so it is read when reached rather than at mount. Read again
+  // when the active key changes too: another key spends its own units.
+  const { value: report, ref } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
 
   // Nothing spent is not nothing to say — but nothing READ is, and the two look alike from here
-  // until the report lands. The marker stays so the band can still be reached by scrolling.
+  // until the report lands.
   if (!report) return <div ref={ref} aria-hidden />
 
   const spent = formatUnits(report.units, i18n.language)
@@ -56,7 +49,16 @@ export function Usage() {
           itemWidth={CARD_WIDTH}
           itemHeight={SHELF_CARD_HEIGHT}
           label={t('home.sections.usage')}
-          renderCard={model => <ModelCard model={model} />}
+          renderCard={model => (
+            <ShelfCard
+              title={model.name}
+              hint={model.name}
+              subtitle={t('home.usage.model', {
+                units: formatUnits(model.units, i18n.language),
+                count: model.jobs,
+              })}
+            />
+          )}
         />
       )}
     </Section>
@@ -70,19 +72,4 @@ function spending(): Promise<UsageReport> | undefined {
 /** The carousel keys on `id`; a spend is keyed by the model it was spent on. */
 function withId(model: ModelSpend): ModelSpend & { id: string } {
   return { ...model, id: model.modelId }
-}
-
-function ModelCard({ model }: { model: ModelSpend }) {
-  const { t, i18n } = useTranslation()
-
-  return (
-    <ShelfCard
-      title={model.name}
-      hint={model.name}
-      subtitle={t('home.usage.model', {
-        units: formatUnits(model.units, i18n.language),
-        count: model.jobs,
-      })}
-    />
-  )
 }

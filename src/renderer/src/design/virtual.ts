@@ -39,15 +39,6 @@ export function columnsIn(width: number, aim: number): Columns {
   return { columns, columnWidth: (width - (columns - 1) * GAP) / columns }
 }
 
-export type ReachEnd = {
-  /** The furthest index currently mounted — rows for a list, items for a masonry. */
-  last: number
-  /** How many there are in that same unit. */
-  count: number
-  /** How much warning the caller wants, in that same unit. */
-  ahead: number
-}
-
 /**
  * Calls back as the end of a virtualized surface nears, so the next page is asked for before
  * the reader sees the bottom.
@@ -56,9 +47,13 @@ export type ReachEnd = {
  * source runs dry, and only the caller knows whether an empty answer is worth another request.
  *
  * `Collection` and `Masonry` had this rule twice, down to the comment. The unit differs — rows
- * there, items here — which is why it is the caller that says what it counts in.
+ * there, items here — so the caller states it, and states it by name: three bare numbers swap
+ * silently, and the swap would show up as a paging bug rather than as a type error.
  */
-export function useReachEnd({ last, count, ahead }: ReachEnd, onReachEnd?: () => void): void {
+export function useReachEnd(
+  { last, count, ahead }: { last: number; count: number; ahead: number },
+  onReachEnd?: () => void,
+): void {
   const nearEnd = count > 0 && last >= count - ahead
 
   useEffect(() => {

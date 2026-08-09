@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useOnScreen } from '@/hooks/useOnScreen'
 
 /**
  * What a shelf holds, read once when it appears and again when what it depends on changes.
@@ -44,4 +45,34 @@ export function useShelf<T>(initial: T, read: () => Promise<T> | undefined, sour
   }, [source])
 
   return held
+}
+
+export type DeferredShelf<T> = {
+  value: T
+  /**
+   * Goes on whatever the band draws INSTEAD of its content while it holds nothing — a marker
+   * that stays mounted. A band that renders `null` here is a band nothing can ever scroll to,
+   * so its read never happens.
+   */
+  ref: (node: HTMLElement | null) => void
+}
+
+/**
+ * A shelf that reads nothing until it has been scrolled to.
+ *
+ * Three things have to line up for that, and they are subtle enough that both bands using it had
+ * copied them: the read must answer `undefined` while unseen, `seen` must be part of what the
+ * shelf reads under (or the first read is the only one), and a marker must stay on screen in
+ * place of the content. Forgetting either of the last two gives a band that never loads — and
+ * says nothing about why.
+ */
+export function useDeferredShelf<T>(
+  initial: T,
+  read: () => Promise<T> | undefined,
+  source: string,
+): DeferredShelf<T> {
+  const { ref, seen } = useOnScreen()
+  const value = useShelf(initial, () => (seen ? read() : undefined), `${source}/${seen}`)
+
+  return { value, ref }
 }

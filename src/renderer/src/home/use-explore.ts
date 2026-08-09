@@ -69,13 +69,12 @@ function appended(
 function grown(held: Feed, page: CloudPage): Feed {
   const assets = appended(held.assets, page.assets)
   const barren = assets.length > held.assets.length ? 0 : held.barren + 1
-  const repeats = page.cursor !== null && page.cursor === held.cursor
 
   return {
     assets,
     cursor: page.cursor,
     barren,
-    exhausted: page.cursor === null || repeats || barren >= BARREN_MAX,
+    exhausted: page.cursor === null || page.cursor === held.cursor || barren >= BARREN_MAX,
   }
 }
 
@@ -92,7 +91,6 @@ function grown(held: Feed, page: CloudPage): Feed {
  */
 export function useExplore(type: AssetType): Explore {
   const owner = useSettings(activeOwnerId)
-  const source = `${owner}/${type}`
 
   /**
    * Every tab read so far, not just the one on screen — so walking across them costs nothing
@@ -102,9 +100,13 @@ export function useExplore(type: AssetType): Explore {
    * three searches to fill one of them: a sweep of the row could cost eighteen `POST
    * /search/assets` — the endpoint the catalogue bills apart and reserves for the debounced path.
    *
-   * Kept in state and not in a ref: this is what the hook renders from, and a tab arriving on
-   * screen is a render. It lives and dies with the hook, so the home being torn down when a
-   * workspace takes over still makes coming back a genuine refresh — only the tab strip is free.
+   * Keyed by kind alone: a change of key empties the whole record below, so nothing here ever
+   * belongs to another account. Kept in state and not in a ref, because this is what the hook
+   * renders from. It lives and dies with the hook, so the home being torn down when a workspace
+   * takes over is still a genuine refresh — only the tab strip is made free.
+   *
+   * What it can hold is bounded by scrolling, not by code: six tabs of one page is about 360 KB,
+   * six tabs deep-scrolled to two thousand tiles would be some 18 MB.
    */
   const [feeds, setFeeds] = useState<Record<string, Feed>>({})
   const [readUnder, setReadUnder] = useState(owner)
@@ -116,20 +118,20 @@ export function useExplore(type: AssetType): Explore {
     setFeeds({})
   }
 
-  const feed = feeds[source] ?? START
+  const feed = feeds[type] ?? START
   const setFeed = useCallback(
     (grow: (held: Feed) => Feed) => {
-      setFeeds(all => ({ ...all, [source]: grow(all[source] ?? START) }))
+      setFeeds(all => ({ ...all, [type]: grow(all[type] ?? START) }))
     },
-    [source],
+    [type],
   )
 
   /**
    * Which request an answer belongs to, counted rather than named.
    *
-   * The source alone cannot tell two requests apart, and leaving a tab and coming back makes
-   * exactly that pair: the first request answers under the same `owner/type` as the third, so it
-   * was accepted — merging a page from deep in the feed into a freshly reset one, overwriting
+   * The tab alone cannot tell two requests apart, and leaving one and coming back makes exactly
+   * that pair: the first request answers under the same kind as the third, so it was
+   * accepted — merging a page from deep in the feed into a freshly reset one, overwriting
    * the cursor with a further one (every page in between then unreachable), and, when the stale
    * page happened to be the last, marking a two-tile band exhausted for good.
    */
@@ -171,11 +173,11 @@ export function useExplore(type: AssetType): Explore {
   }, [type, feed.cursor, feed.exhausted, setFeed])
 
   useEffect(() => {
-    // Declared before the one below, so the first page of the new source is asked for under a
+    // Declared before the one below, so the first page of the new tab is asked for under a
     // ticket that no answer already in flight can carry.
     ticket.current += 1
     busy.current = false
-  }, [source])
+  }, [owner, type])
 
   /**
    * Keeps pulling while nothing is on screen and the feed has not run out.

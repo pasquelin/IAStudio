@@ -10,6 +10,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { HOME_COMPONENTS } from './home-registry'
+import { SectionNote } from './SectionNote'
 import { enterWorkspace } from './open'
 import { useHomeSections } from './use-home-sections'
 
@@ -62,7 +63,7 @@ function Closing() {
 
   return (
     <div className="flex flex-col items-center gap-3 py-8">
-      <p className="text-muted m-0 text-center text-[12px]">{t('home.closing.title')}</p>
+      <SectionNote standalone>{t('home.closing.title')}</SectionNote>
       <Button onClick={() => enterWorkspace(DEFAULT_WORKSPACE)}>{t('home.closing.action')}</Button>
       <Hidden />
     </div>

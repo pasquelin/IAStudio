@@ -1,9 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset, CloudPage } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { settleHome } from '../home-fixtures'
+import { expectSilent, settleHome, settled } from '../home-fixtures'
 import { Similar } from './Similar'
 
 function cloudAsset(id: string, overrides: Partial<CloudAsset> = {}): CloudAsset {
@@ -42,18 +42,6 @@ beforeEach(() => {
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
 })
 
-/**
- * Several cases below assert an ABSENCE, and the band is absent at first render too — so the
- * wait has to be on something positive first, or the assertion passes before the bridge has
- * answered and would stay green against a band that draws nothing at all.
- */
-async function settled(spy: ReturnType<typeof vi.fn>): Promise<void> {
-  await waitFor(() => expect(spy).toHaveBeenCalled())
-  await act(async () => {
-    await new Promise(done => setTimeout(done, 0))
-  })
-}
-
 describe('the band of lookalikes', () => {
   it('names what the likeness was measured against', async () => {
     // A row of pictures with no stated reason to be there is a row nobody trusts.
@@ -89,10 +77,7 @@ describe('the band of lookalikes', () => {
     const { container } = render(<Similar />)
 
     await settled(browse)
-    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
-    // the band knows when it has been scrolled to, which is what defers its request.
-    expect(container.textContent).toBe('')
-    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    expectSilent(container)
   })
 
   it('draws nothing when nothing out there resembles it', async () => {
@@ -101,10 +86,7 @@ describe('the band of lookalikes', () => {
     const { container } = render(<Similar />)
 
     await settled(similar)
-    // Nothing a reader can perceive. Not an empty container: a hidden marker stays behind so
-    // the band knows when it has been scrolled to, which is what defers its request.
-    expect(container.textContent).toBe('')
-    expect(screen.queryByRole('region')).not.toBeInTheDocument()
+    expectSilent(container)
   })
 
   it('offers to try again when the library refused, instead of vanishing', async () => {

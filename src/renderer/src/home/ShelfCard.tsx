@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { MediaTile } from '@/design/MediaTile'
 import { UiIcon } from '@/design/UiIcon'
-import { FOCUS_RING } from '@/design/styles'
+import { BUTTON_BASE, FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 
 /** What one card of a home shelf measures. Written once so two shelves cannot drift apart. */
@@ -53,15 +53,13 @@ export function ShelfCard({ icon, title, subtitle, hint, onClick }: ShelfCardPro
   }
 
   return (
+    // The docks' own button chrome rather than a fourth copy of it — `cn` is `twMerge`, so
+    // `CARD`'s column layout wins over the centred row `BUTTON_BASE` assumes.
     <button
       type="button"
       onClick={onClick}
       title={hint}
-      className={cn(
-        CARD,
-        'hover:bg-elevated cursor-pointer border-none text-left transition-colors',
-        FOCUS_RING,
-      )}
+      className={cn(BUTTON_BASE, CARD, 'hover:bg-elevated text-left')}
     >
       {body}
     </button>

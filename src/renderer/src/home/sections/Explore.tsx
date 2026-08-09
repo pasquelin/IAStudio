@@ -59,7 +59,7 @@ export function Explore() {
         // a page the studio narrowed away after the index answered — still has pages behind it,
         // and announcing emptiness there is a claim that is about to be contradicted.
         empty={
-          <SectionNote centred spaced>
+          <SectionNote standalone>
             {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
           </SectionNote>
         }

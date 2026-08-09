@@ -397,27 +397,40 @@ describe('what resembles an asset the caller names', () => {
 describe('what a decorative band is allowed to write in the journal', () => {
   afterEach(() => recordFailuresTo(null))
 
-  it('leaves the journal alone when the feed is refused', async () => {
+  it('leaves the journal alone when a shelf is refused', async () => {
     // The journal is what one opens after a job went wrong. A band that polls on its own would
     // fill it with requests nobody made, and the push that really failed scrolls off the top.
+    //
+    // `cloudBrowse` is in here too: it reads like a browser's channel, but both of its callers
+    // are shelves of the home, and the lookalikes band opens on one of them.
     const noted: string[] = []
     recordFailuresTo((_scope, detail) => noted.push(detail))
 
-    setup({ remote: { search: () => Promise.reject(new Error('429 too many requests')) } })
+    setup({
+      remote: {
+        search: () => Promise.reject(new Error('429 too many requests')),
+        list: () => Promise.reject(new Error('429 too many requests')),
+      },
+    })
 
     await expect(invoke(CHANNELS.cloudExplore, { type: 'image' })).rejects.toThrow()
     await expect(invoke(CHANNELS.cloudSimilar, 'asset_1')).rejects.toThrow()
+    await expect(invoke(CHANNELS.cloudBrowse, {})).rejects.toThrow()
     expect(noted).toEqual([])
   })
 
-  it('still writes it for a read the user did ask for', async () => {
-    // The contrast is the point: silence is a property of these two bands, not of every failure.
+  it('still writes it for a call the user did make', async () => {
+    // The contrast is the point: silence belongs to the reads nobody asked for, not to every
+    // failure. Deleting a selection is a gesture, and its refusal belongs in the journal.
     const noted: string[] = []
     recordFailuresTo((_scope, detail) => noted.push(detail))
 
-    setup({ remote: { list: () => Promise.reject(new Error('429 too many requests')) } })
+    const harness = setup({
+      remote: { deleteMany: () => Promise.reject(new Error('429 too many requests')) },
+    })
+    await harness.catalog.add(localAsset({ remoteAssetId: 'remote_1' }))
 
-    await expect(invoke(CHANNELS.cloudBrowse, {})).rejects.toThrow()
+    await expect(invoke(CHANNELS.assetsRemove, ['asset_1'], true)).rejects.toThrow()
     expect(noted).toHaveLength(1)
   })
 

@@ -20,7 +20,7 @@ import {
   PUBLIC_FEED_SORT,
 } from '@main/scenario/filter-expression'
 import { remoteTypesFor } from '@main/scenario/remote-types'
-import { PAGE_SIZE_MAX } from '@main/scenario/limits'
+import { OFFSET_MAX, PAGE_SIZE_MAX } from '@main/scenario/limits'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import type { ActivityLog } from '@main/project/activity-log'
 import type { AutoCaption, DescribeAssets } from './auto-caption'
@@ -56,7 +56,14 @@ export type AssetHandlerDeps = {
 }
 
 const reduced = reducedBy('assets')
-/** For the home's decorative bands, which poll on their own — see `quietlyReducedBy`. */
+/**
+ * For the reads no surface asked for — see `quietlyReducedBy`.
+ *
+ * Which channels those are is a fact about their CALLERS, not about the errand: `cloudBrowse`
+ * reads like a browser's channel and is one today, but both of its callers are shelves of the
+ * home that poll as they appear. The day a panel the user drives calls one of these, the choice
+ * is made again here.
+ */
 const quietly = quietlyReducedBy('assets')
 
 /**
@@ -79,16 +86,6 @@ function needsSearch(query: CloudQuery): boolean {
  */
 const TOKEN_CURSOR = 't:'
 const OFFSET_CURSOR = 'o:'
-
-/**
- * How far into the index an offset may point.
- *
- * A bound and not a page count: the cursor is a string, so `o:1e99` passes validation — the field
- * is opaque and rightly bounded by length alone — and reaches the SDK as a number no index can
- * answer for. Walking to the ceiling is not a dead end either: the feed then answers the same
- * page twice, and `useExplore` reads a page that brings nothing new as the end of it.
- */
-const OFFSET_MAX = 10_000
 
 /**
  * A number the index will take, from whatever was handed in. Both cursors reach the API as an
@@ -322,7 +319,7 @@ export function registerAssetHandlers({
   )
 
   handle(CHANNELS.cloudBrowse, (_event, query) =>
-    reduced(() => browse(remote(), parseCloudQuery(query))),
+    quietly(() => browse(remote(), parseCloudQuery(query))),
   )
 
   handle(CHANNELS.cloudPull, async (_event, remoteAssetIds) => {

@@ -136,8 +136,6 @@ describe('an asset from a search hit', () => {
   })
 
   it('fills in the thumbnail the shape omits, whichever errand asked', () => {
-    // Here and not in the handlers: three of them read hits, and the two that remembered left
-    // `browse` drawing its tiles from the originals on every text or tag search.
     const withUrl = { ...HIT, url: 'https://cdn.example/assets-transform/asset_2?p=100' }
     expect(cloudAssetOfHit(withUrl)?.thumbnailUrl).toBe('https://cdn.example/thumbnails/asset_2')
   })

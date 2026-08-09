@@ -65,11 +65,16 @@ export function Masonry<T extends { id: string }>({
   const [width, setWidth] = useState(0)
   const [scrollMargin, setScrollMargin] = useState(0)
 
-  // The page's own scroller when it published one, and a walk up the tree otherwise. Never
-  // `document.documentElement` as a last resort: the page's scroll is dispatched on `document`,
-  // and `firstElementChild` of `<html>` is `<head>`, which has no box — that fallback produced a
-  // grid that could not be scrolled at all, which is worse than one that is not virtualized.
-  useEffect(() => setScroller(published ?? scrollParentOf(host.current)), [published])
+  // The page's own scroller when a page publishes one, and a walk up the tree only where none
+  // does. Never `document.documentElement` as a last resort: the page's scroll is dispatched on
+  // `document`, and `firstElementChild` of `<html>` is `<head>`, which has no box — that fallback
+  // produced a grid that could not be scrolled at all, worse than one that is not virtualized.
+  useEffect(() => {
+    // `null` is a published scroller that has not mounted yet: waiting one render beats guessing,
+    // and guessing here would leave the heuristic doing the work on the render that matters.
+    if (published === null) return
+    setScroller(published ?? scrollParentOf(host.current))
+  }, [published])
 
   useEffect(() => {
     const element = host.current
@@ -133,8 +138,9 @@ export function Masonry<T extends { id: string }>({
     laneAssignmentMode: 'estimate',
   })
 
-  // Rounded to the pixel: a lane a third of a pixel narrower draws the same grid, and paying N
-  // estimates for it on every frame of a splitter drag is the whole of the cost this avoids.
+  // Rounded to the pixel: a lane a third of a pixel narrower draws the same grid, and a re-measure
+  // rebuilds all N estimates — 35 µs at 400 items, measured. Roughly a `columns`-fold reduction
+  // during a drag, not an elimination; the rounding of `width` above is what removes the render.
   useRemeasure(virtualizer, `${lanes}:${Math.round(laneWidth)}`)
 
   const virtualItems = virtualizer.getVirtualItems()

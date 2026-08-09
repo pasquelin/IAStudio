@@ -5,13 +5,12 @@ import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { Button } from '@/design/Button'
 import { Carousel } from '@/design/Carousel'
 import { assetIcon } from '@/helpers/workspaces'
-import { useOnScreen } from '@/hooks/useOnScreen'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
-import { useShelf } from '../use-shelf'
+import { useDeferredShelf } from '../use-shelf'
 
 /**
  * How many of the newest assets are looked at to find one to measure against.
@@ -31,10 +30,9 @@ const REFERENCE_CANDIDATES = 10
  * apart because only one of them is worth offering to try again.
  */
 type Lookalikes =
-  | { state: 'reading' }
+  /** Not read yet, or nothing to draw — nothing to measure against, or nothing that resembles it. */
+  | { state: 'silent' }
   | { state: 'refused' }
-  /** Nothing to measure against, or nothing that resembles it. No incident, and nothing to draw. */
-  | { state: 'none' }
   | { state: 'ready'; reference: CloudAsset; assets: readonly CloudAsset[] }
 
 /**
@@ -53,16 +51,13 @@ export function Similar() {
   // second copy of the fetch that `useShelf` already owns.
   const [attempt, setAttempt] = useState(0)
   // Two requests, both below the fold on any window: spent when the band is reached.
-  const { ref, seen } = useOnScreen()
-
-  const page = useShelf<Lookalikes>(
-    { state: 'reading' },
-    () => (seen ? lookalikes() : undefined),
-    `${owner}/${attempt}/${seen}`,
+  const { value: page, ref } = useDeferredShelf<Lookalikes>(
+    { state: 'silent' },
+    lookalikes,
+    `${owner}/${attempt}`,
   )
 
-  // The marker stays where the band would be, so scrolling to it is what triggers the read.
-  if (page.state === 'reading' || page.state === 'none') return <div ref={ref} aria-hidden />
+  if (page.state === 'silent') return <div ref={ref} aria-hidden />
 
   if (page.state === 'refused') {
     return (
@@ -75,8 +70,6 @@ export function Similar() {
       </Section>
     )
   }
-
-  if (page.assets.length === 0) return null
 
   return (
     <Section id="similar" title={t('home.similar.title', { name: page.reference.name })}>
@@ -99,14 +92,17 @@ export function Similar() {
  */
 async function lookalikes(): Promise<Lookalikes> {
   const bridge = getBridge()
-  if (!bridge) return { state: 'none' }
+  if (!bridge) return { state: 'silent' }
 
   try {
     const library = await bridge.cloud.browse({ pageSize: REFERENCE_CANDIDATES })
     const reference = library.assets[0]
-    if (!reference) return { state: 'none' }
+    if (!reference) return { state: 'silent' }
 
-    return { state: 'ready', reference, assets: await bridge.cloud.similar(reference.id) }
+    const assets = await bridge.cloud.similar(reference.id)
+    // Settled here rather than at the render: "ready" then means there is something to draw,
+    // and the band has one way of saying nothing instead of two.
+    return assets.length === 0 ? { state: 'silent' } : { state: 'ready', reference, assets }
   } catch {
     return { state: 'refused' }
   }

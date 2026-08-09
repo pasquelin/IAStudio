@@ -148,9 +148,7 @@ describe('searching the library', () => {
   })
 
   it('draws every hit from the thumbnail, whichever errand searched', async () => {
-    // A hit carries only the signed original — 28 MB for one upscaled texture, against 1.6 KB
-    // for its thumbnail. Filled in here rather than per errand: `browse` did not remember, so
-    // every text or tag search was still pulling the full files down.
+    // 28 MB for one upscaled texture against 1.6 KB for its thumbnail — see `withPublicThumbnail`.
     const { backend } = backendSpy({
       search: () =>
         Promise.resolve({

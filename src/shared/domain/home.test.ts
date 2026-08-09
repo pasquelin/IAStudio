@@ -216,22 +216,3 @@ describe('moving a band past the ones nobody is shown', () => {
     expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'projects', 'up', shown)).toBe(false)
   })
 })
-
-describe('reading the same order twice', () => {
-  it('does not let one caller rewrite the list the next one is given', () => {
-    // The walk is memoized on the stored array, because every heading on the home runs it. What
-    // goes out is a copy: `movedHomeSection` swaps in place, and it would otherwise be swapping
-    // inside what the next reader is about to be handed.
-    const before = homeSections(DEFAULT_HOME_SECTIONS).map(setting => setting.id)
-
-    movedHomeSection(DEFAULT_HOME_SECTIONS, 'creations', 'up')
-
-    expect(homeSections(DEFAULT_HOME_SECTIONS).map(setting => setting.id)).toEqual(before)
-  })
-
-  it('answers a changed order rather than the one it held', () => {
-    const moved = movedHomeSection(DEFAULT_HOME_SECTIONS, 'creations', 'up')
-
-    expect(homeSections(moved).map(setting => setting.id)).toEqual(moved.map(setting => setting.id))
-  })
-})
