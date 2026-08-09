@@ -81,6 +81,11 @@ export default defineConfig({
           statements: -700,
           branches: -310,
         },
+        // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network
+        // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
+        // fallback arm of a `Map.get` that a topological order makes unreachable, which
+        // `noUncheckedIndexedAccess` requires anyway.
+        'src/renderer/src/engines/graph/**': { statements: -18, branches: -24 },
         // Both covered whole: the diagnostics channel is the studio's only trace of a failure
         // that has no surface, and a branch of it nobody exercises is a failure nobody would
         // ever read.

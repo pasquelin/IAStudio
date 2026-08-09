@@ -654,6 +654,81 @@ côté du document, il est immuable, et il se purge à la main.
 **Fin d’étape** : un graphe de cinq nodes s’exécute, le prompt du dernier change, **seul le dernier
 se relance**, et un cycle est refusé avec un message qui nomme les nodes en cause.
 
+### Le lot C1 — le plan d’exécution, pur et sans réseau
+
+Livré le 10 août 2026. `engines/graph/plan.ts` : tri topologique de Kahn, nœuds du cycle nommés,
+entrées résolues depuis les arêtes, et la clé de cache de chaque nœud. **Aucun appelant encore** —
+c’est le lot C2 qui le branche, et le dire vaut mieux que de le laisser découvrir.
+
+- **Kahn se lit sur la convention inversée** : ce qui alimente un nœud est `edges.filter(e =>
+  e.source === id)`. Câblé dans le sens intuitif, le tri **termine quand même** et l’ordre a l’air
+  juste — il exécute simplement le graphe à l’envers. Le test qui mord là-dessus est celui qui pose
+  le générateur AVANT le nœud texte dans la liste des nœuds.
+- **Une arête dont un bout manque n’est pas une dépendance.** Comptée, le degré entrant de son
+  consommateur ne retombe jamais à zéro et un graphe parfaitement acyclique **se déclare en
+  cycle**. `removeNode` les nettoie, un fichier relu ne le fait pas.
+- **Kahn ne laisse pas le cycle : il laisse tout ce que le cycle BLOQUE.** Nommer un nœud en aval
+  enverrait l’utilisateur sur un nœud qui n’a rien. D’où un second pelage, par l’aval, qui finit
+  sur les boucles elles-mêmes.
+- **Le `nodeId` est dans le hash, délibérément** : la génération est stochastique, donc deux nœuds
+  « même modèle, même prompt » demandent deux images. Ce qui n’y entre pas, ce sont **exactement
+  les champs de `GraphNodeData`** — `Record<keyof GraphNodeData, true>`, donc complet par
+  construction : un champ ajouté au socle ne compile plus tant qu’il n’est pas rangé d’un côté ou
+  de l’autre, et tout ce qu’un type de nœud ajoute de son cru est haché sans avoir à être listé.
+  C’est le défaut sûr — un paramètre neuf compte tant que personne n’a dit le contraire.
+- **`Object.hasOwn`, pas `in`** : `parseGraph` ne valide pas `data`, donc un fichier peut y écrire
+  une clé nommée comme un membre de `Object.prototype`. Lue avec `in`, elle passait pour exclue et
+  sortait de la clé de cache sans un mot. Même piège qu’à l’étape 1 sur `jobStatusOf`.
+- **`stableKey` avant `digest`** : `JSON.stringify` écrit les clés dans l’ordre d’insertion, donc
+  un formulaire rempli dans un autre ordre se lisait comme un autre formulaire et relançait un
+  nœud pour rien.
+
+**Ce que les revues ont changé, et qui ne se voyait pas autrement :**
+
+1. **`waitingOn` était un compteur tenu à la main à côté d’`incoming`**, dont il recopiait
+   exactement la longueur. Deux vérités pour une grandeur.
+2. **`inputHandleOf` était appelé PAR ARÊTE**, et il ré-aplatit tout l’arbre des sous-ports à
+   chaque appel : un nœud à dix fils sur trente ports le payait dix fois. Aplati une seule fois.
+3. **`hash.ts` est parti dans `src/shared/`.** Rien dedans ne sait ce qu’il hache, et c’est le seul
+   terrain commun aux deux processus — `src/shared/{numeric,text,guards}.ts` sont le gabarit exact.
+   Vérifié que le budget serré de `src/shared/**` (−6 / −20) **n’est pas entamé** : le fichier est
+   couvert à 100 %, mesuré avant et après.
+4. **Un commentaire citait une mesure que personne ne pouvait rejouer** — le défaut exact que le
+   dépôt a déjà payé. Il est devenu `engines/graph/plan.bench.ts` : 62 nœuds, deux poids de
+   formulaire, plus le cas où tout est pris dans une boucle. **1,4 ms** en formulaires réalistes,
+   **3,2 ms** en lourds, **0,02 ms** pour le cycle. La JSDoc renvoie au banc au lieu d’annoncer un
+   chiffre.
+
+**Ce que la revue d’efficacité annonçait et que la mesure a démenti** : elle donnait 3 à 12 ms au
+seul `digest` en BigInt, et recommandait de le remplacer par deux lanes 32 bits. Ses clés d’essai
+incluaient les **ports**, que `paramsOf` exclut précisément. Mesuré de bout en bout, un `planGraph`
+entier coûte 1,4 ms. **BigInt reste**, et la piste des deux lanes est écrite dans la JSDoc pour le
+jour où le banc dira le contraire.
+
+**Le budget de couverture est posé** : `'src/renderer/src/engines/graph/**': { statements: -18,
+branches: -24 }`, calé sur la mesure de la suite **complète** — une mesure sur le seul dossier
+ment, `commands.ts` étant couvert depuis `GraphDocument.test.tsx`. Presque tout ce qui reste est
+le bras de repli d’un `Map.get` qu’un ordre topologique rend inatteignable et que
+`noUncheckedIndexedAccess` impose d’écrire.
+
+**Seize mutations sur seize mordent** — et le harnais a menti une troisième fois, d’une façon
+neuve : `git checkout --` **ne restaure pas un fichier non suivi**, et les seize mutations se sont
+empilées les unes sur les autres pendant que git répondait « pathspec did not match ». Les gardes
+existantes ont refusé les verdicts, mais la restauration passe désormais par une **copie de
+référence**, et la vérification d’application par `cmp` plutôt que par `git diff`. À retenir pour
+tout lot dont les fichiers sont neufs.
+
+**Deux constats laissés ouverts, écrits pour ne pas être redécouverts :**
+
+1. **`inputs` est indexé par nom de port, donc deux arêtes sur un même nom s’écrasent** — le
+   dernier gagne. Le hash, lui, est bâti sur les **arêtes**, donc rien ne lui échappe. Si un jour
+   il faut le dire à l’utilisateur plutôt que de le réduire en silence, c’est `inputs` qui doit
+   changer de forme, pas le hash.
+2. **`isRecord` accepte un tableau** (`src/shared/guards.ts`), donc `parseGraph` laisse passer
+   `data: ["a", "b"]` comme `GraphNodeData`. Le plan ne s’en trouve pas faussé — `paramsOf` hache
+   les indices, `inputHandlesOf` retombe sur `[]` — mais c’est un trou de contrat de `serialize.ts`,
+   pas du plan.
+
 ---
 
 ## Étape 8 — Logique, boucles, transforms, approbation
