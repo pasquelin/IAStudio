@@ -51,7 +51,7 @@ Electron, three targets, one repository.
         │  renderer      sandboxed, no Node, no fs    │
         │                                             │
         │  · React 19 shell — rails, zones, docks     │
-        │  · engines: canvas, scene, timeline, audio  │
+        │  · six engines, no React inside any         │
         │  · zustand stores, TanStack Query           │
         └─────────────────────────────────────────────┘
 ```
@@ -81,8 +81,9 @@ does not match its declared contract does not compile.
 
 ### 3. An engine is rebuildable from its state, never from its DOM
 
-`CanvasEngine`, `SceneRenderer`, `TimelineEngine` each reconstruct entirely from their
-serialised state.
+Every engine reconstructs entirely from its serialised state — `CanvasEngine` and `SceneRenderer`
+as much as the sound, which is a pair of modules rather than a class and holds to the same rule:
+the edit is the state, never the buffer in memory.
 
 The reason is concrete: a WebGL context does not survive being moved between documents, and
 detaching a panel into another window requires exactly that. Save/load and undo become reliable
@@ -117,13 +118,18 @@ Every long task is **cancellable**, **reports progress**, and runs in a pool bou
 `better-sqlite3` is synchronous: a heavy query on the main process blocks every window, so
 non-trivial catalogue queries go through `worker_threads`.
 
-Two threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
+Three threads exist for exactly that reason. `main/project/catalog-worker.ts` owns the database
 and answers a message loop, so a search across thousands of assets never freezes a window.
 `renderer/src/engines/audio/audio.worker.ts` runs the sound chain off the window's thread, with
-sample buffers **transferred** rather than copied. Both are wiring only: the catalogue, the
-dispatch and the audio arithmetic are tested on their own, without a worker in sight.
+sample buffers **transferred** rather than copied. And `renderer/src/engines/scene/bvh.worker.ts`
+builds a mesh's collision trees — **one worker, not a pool**: loading a scene asks for one BVH per
+mesh in a burst, and bounding that burst to a single thread keeps the rest of the window
+responsive. All three are wiring only: the catalogue, the dispatch, the audio arithmetic and the
+BVH build are tested on their own, without a worker in sight.
 
-**And one process, for speech recognition.** `main/dictation/stt-worker.ts` holds Parakeet — six
+**And two processes, for what must not share a heap.** `main/media/peaks-worker.ts` reduces a
+waveform in a `utilityProcess`: an hour of PCM measured 129 ms on the main thread, and every
+window of the studio waited it out. `main/dictation/stt-worker.ts` holds Parakeet — six
 hundred million parameters, 640 MB of weights — in a `utilityProcess` of its own. A thread would
 not have done: it shares its process's heap and lifetime, so the 700 MB would stay in the main
 process's footprint and a crash in the native addon would take the studio with it. Everything
@@ -997,4 +1003,4 @@ A mismatch produces manifests announcing a version that does not exist.
 | [`docs/ci/RELEASE.md`](../ci/RELEASE.md) | the publishing checklist, and the rollback |
 | [`docs/ci/SECRETS.md`](../ci/SECRETS.md) | signing secrets: obtaining them, rotating them |
 | [`docs/ci/TROUBLESHOOTING.md`](../ci/TROUBLESHOOTING.md) | symptom → cause → fix |
-| [`docs/ci/adr/`](../ci/adr/) | the fifteen decisions, with what was ruled out and why |
+| [`docs/ci/adr/`](../ci/adr/) | the pipeline's decisions, with what was ruled out and why |
