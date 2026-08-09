@@ -124,6 +124,11 @@ The layout remembers which tabs are open, but a document closed while no layout 
 longer reachable through tabs. That is what the **Explorer** panel is for: it lists **everything
 the `documents/` folder holds**, open or not.
 
+> **A document never saved does not come back on restart**, and neither does its tab: it is
+> dropped from the layout rather than reopened onto "This document is no longer open." The layout
+> is written to your disk, the contents of documents are not — the `documents/` folder stands for
+> them, and what was never written there has nothing to reopen.
+
 - a **double-click** on a row opens the document, switching workspace if it belongs to another —
   a sequence opened from the Image workspace switches to Video;
 - rows already on screen are marked **Open**;

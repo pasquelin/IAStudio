@@ -1006,9 +1006,6 @@ Ces chantiers **se voient**, mais leur cause n’est pas la mise en page. Ils vi
 `docs/REPRISE.md`, au § indiqué — **ici, une ligne et rien de plus**, pour qu’on ne les cherche pas
 deux fois et qu’aucune des deux versions ne devienne fausse.
 
-- **Deux onglets rouverts sur « Ce document n’est plus ouvert »** au rechargement — **§ 2, en tête
-  du plus urgent.** Le layout est persisté, les documents ne le sont pas, et l’intersection qui les
-  réconcilie ne corrige jamais le layout.
 - **La dureté du pinceau n’est pas implémentée**, et crayon et pinceau rendent le même outil — § 3.2.
 - **La garde manquante sur le format des signatures du registre** (`'P'` au lieu de `'KeyP'`) — § 3.2.
 - **⌘Z se fragmente quand une génération aboutit pendant un glissement** — § 3.6. La ligne fautive

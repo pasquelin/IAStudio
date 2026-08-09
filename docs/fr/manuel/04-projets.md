@@ -128,6 +128,11 @@ La disposition retient les onglets ouverts, mais un document fermé alors qu’a
 ne le portait n’est plus atteignable par les onglets. C’est ce que le panneau **Explorateur**
 sert à retrouver : il liste **tout ce que le dossier `documents/` contient**, ouvert ou non.
 
+> **Un document jamais enregistré ne revient pas au redémarrage**, et son onglet ne revient pas
+> non plus : il est retiré de la disposition plutôt que rouvert sur « Ce document n’est plus
+> ouvert. » La disposition est écrite sur votre disque, le contenu des documents non — c’est le
+> dossier `documents/` qui en tient lieu, et ce qui n’y a jamais été écrit n’a rien à rouvrir.
+
 - un **double-clic** sur une ligne ouvre le document, en changeant d’espace s’il appartient à un
   autre — une séquence ouverte depuis l’espace Image bascule en Vidéo ;
 - les lignes déjà à l’écran sont marquées **Ouvert** ;
