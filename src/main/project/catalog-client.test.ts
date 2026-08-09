@@ -130,19 +130,56 @@ describe('createCatalogClient', () => {
     expect(port.requests).toEqual([])
   })
 
-  /** The listener goes with the answer: a signal outlives the one search it was handed to. */
+  /**
+   * The listener goes with the answer, and it is watched directly rather than through what it
+   * would do: a signal outlives the one search it was handed to — a search field holds one for a
+   * whole session — and every answered search would leave a closure hanging off it.
+   *
+   * It is also what makes `abort` unreachable after a settle, which is why nothing guards that.
+   */
   it('drops its abort listener once the search has answered', async () => {
     const port = manualPort()
     const catalog = createCatalogClient(port)
     const controller = new AbortController()
+    const listeners: EventListenerOrEventListenerObject[] = []
+    const signal = controller.signal
+    vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
+      listeners.push(listener)
+    })
+    vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
+      const index = listeners.indexOf(listener)
+      if (index >= 0) listeners.splice(index, 1)
+    })
 
-    const search = catalog.search({ text: 'mos' }, controller.signal)
+    const search = catalog.search({ text: 'mos' }, signal)
+    expect(listeners).toHaveLength(1)
+
     port.answer({ id: 1, ok: true, value: [] })
     await search
 
-    // Aborting afterwards must not post an abandon for a request that already answered.
-    controller.abort()
-    expect(port.requests.filter(isAbandon)).toEqual([])
+    expect(listeners).toEqual([])
+  })
+
+  /** The same, for the other way a request settles: the thread died, or the project closed. */
+  it('drops its abort listener when the catalogue closes under it', async () => {
+    const port = manualPort()
+    const catalog = createCatalogClient(port)
+    const controller = new AbortController()
+    const signal = controller.signal
+    const listeners: EventListenerOrEventListenerObject[] = []
+    vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
+      listeners.push(listener)
+    })
+    vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
+      const index = listeners.indexOf(listener)
+      if (index >= 0) listeners.splice(index, 1)
+    })
+
+    const search = catalog.search({ text: 'mos' }, signal)
+    await catalog.close()
+    await expect(search).rejects.toThrow(/closed/)
+
+    expect(listeners).toEqual([])
   })
 
   it('gives every request its own id, so two in flight do not collide', async () => {

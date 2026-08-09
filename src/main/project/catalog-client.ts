@@ -104,8 +104,11 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
 
       const id = nextId++
 
+      // Reachable only while the request is still waiting: `release` drops this listener on both
+      // paths that settle one, which is what makes the state a guard here would defend against
+      // impossible. Two tests hold that, one per path.
       const abort = (): void => {
-        if (!pending.delete(id)) return
+        pending.delete(id)
         port.postMessage({ op: 'abandon', target: id })
         reject(new Error(ABANDONED))
       }
