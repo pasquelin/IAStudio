@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { MaterialStyle } from '@shared/domain/style'
-import { isMissing } from '@main/scenario/job-store'
+import { isMissing } from '@main/persistence'
 import { writeAtomic, writeQueue } from '@main/persistence'
 import { parseStyles } from './validation'
 

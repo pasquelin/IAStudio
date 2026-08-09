@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { JobKind } from '@shared/domain/job'
-import { writeAtomic, writeQueue } from '@main/persistence'
+import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import { parseStoredJobs } from './validation'
 
 /**
@@ -41,10 +41,6 @@ export type JobStore = {
 }
 
 const FILE_NAME = 'jobs.json'
-
-/** Node reports a missing path this way, and it is the one failure that is not an error here. */
-export const isMissing = (error: unknown): boolean =>
-  error instanceof Error && 'code' in error && error.code === 'ENOENT'
 
 /**
  * Past this, a note is swept rather than resumed. Long enough for the longest job the API has —
