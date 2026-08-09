@@ -11,3 +11,4 @@ export const TRANSLATIONS: Record<Language, typeof fr> = { fr, en }
 export type Translations = typeof fr
 
 export * from './languages'
+export * from './model-text'

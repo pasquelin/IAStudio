@@ -97,10 +97,10 @@ describe('DynamicForm', () => {
       field({ key: 'strength', label: 'Strength', dependsOn: { key: 'mode', value: 'img2img' } }),
     ])
 
-    expect(screen.queryByLabelText(/Strength/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Intensité/)).not.toBeInTheDocument()
 
     await userEvent.selectOptions(screen.getByLabelText(/Mode/), 'img2img')
-    expect(screen.getByLabelText(/Strength/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Intensité/)).toBeInTheDocument()
   })
 
   it('rolls a new seed on demand', async () => {
@@ -130,7 +130,7 @@ describe('DynamicForm', () => {
       field({ key: 'steps', label: 'Steps', kind: 'integer', group: 'Advanced' }),
     ])
 
-    expect(screen.getByRole('group', { name: 'Advanced' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Avancé' })).toBeInTheDocument()
   })
 
   describe('the accessory a caller hangs under a field', () => {
@@ -220,5 +220,71 @@ describe('DynamicForm', () => {
 
       expect(screen.getByRole('button', { name: 'Adopter' }).closest('label')).toBeNull()
     })
+  })
+})
+
+/**
+ * The panel used to read half in French and half in English: the chassis is the studio's and
+ * was translated, the fields belong to the model and Scenario answers in English only.
+ */
+describe('what the model itself wrote', () => {
+  it('is read out in French, label, description and group heading alike', () => {
+    render(
+      <DynamicForm
+        fields={[
+          field({ key: 'video', label: 'Video', group: 'SETTINGS' }),
+          field({
+            key: 'targetSize',
+            label: 'Target size',
+            help: 'Inference resolution; higher is sharper but slower.',
+            group: 'SETTINGS',
+          }),
+        ]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+      />,
+    )
+
+    expect(screen.getByText('Réglages')).toBeDefined()
+    expect(screen.getByText('Vidéo')).toBeDefined()
+    expect(screen.getByText('Taille cible')).toBeDefined()
+    expect(screen.getByText(/Résolution de l’inférence/)).toBeDefined()
+  })
+
+  it('is left as it came when nobody translated it, rather than showing a key', () => {
+    render(
+      <DynamicForm
+        fields={[field({ key: 'guidance', label: 'Guidance scale', help: 'Karras sigmas' })]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+      />,
+    )
+
+    expect(screen.getByText('Guidance scale')).toBeDefined()
+    expect(screen.getByText('Karras sigmas')).toBeDefined()
+  })
+
+  it('says the options of a choice in French too', () => {
+    render(
+      <DynamicForm
+        fields={[
+          field({
+            key: 'ratio',
+            kind: 'choice',
+            label: 'Aspect ratio',
+            required: true,
+            options: [
+              { value: 'square', label: 'Square' },
+              { value: 'portrait', label: 'Portrait' },
+            ],
+          }),
+        ]}
+        onSubmit={vi.fn()}
+        submitLabel="Générer"
+      />,
+    )
+
+    expect(screen.getByText('Format')).toBeDefined()
+    expect(screen.getByRole('option', { name: 'Carré' })).toBeDefined()
   })
 })
