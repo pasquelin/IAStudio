@@ -328,17 +328,28 @@ src/renderer/src/
 │   ├── TitleBar.tsx     espaces de travail, feux natifs
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
-├── engines/      canvas, scène, timeline, audio, viewport, skybox, texture, et l'historique partagé
-├── spaces/       un éditeur par type de document
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, et `core/` — l'historique partagé
+├── spaces/       un éditeur par type de document — SEPT, autant que d'espaces
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils
 │   ├── video/      la timeline, le moniteur, ses outils
-│   └── audio/      la forme d'onde, ses outils, le décodeur
-├── panels/       les outils ancrables
+│   ├── audio/      la forme d'onde, ses outils, le décodeur
+│   ├── textures/   les canaux d'un matériau, et leur aperçu répété
+│   ├── skyboxes/   le ciel immersif et ses trois projections à plat
+│   └── graph/      le node editor — il pose et enregistre, il n'exécute pas encore
+├── panels/       les quinze outils ancrables
+├── home/         l'accueil et ses quatorze bandes — une page, pas une disposition
+├── settings/     la fenêtre des réglages, chargée à la demande
+├── usage/        la fenêtre de consommation, idem
+├── licences/     la fenêtre des licences, idem
+├── dictation/    ce que le renderer voit de la dictée : bouton, aperçu, niveau
 ├── stores/       zustand : documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        raccourcis, menu natif, densité, état de fenêtre, debounce…
 ├── helpers/      fonctions pures, toutes testées
-└── services/     l'accès au pont et la traduction des échecs
+├── services/     l'accès au pont et la traduction des échecs
+├── i18n/         l'initialisation d'i18next côté fenêtre
+├── main.tsx      l'entrée — tout ce qu'elle atteint statiquement est dans le premier écran
+└── splash.ts     l'entrée de l'écran de démarrage, séparée pour ne jamais tirer le bundle
 ```
 
 ### Le premier écran
@@ -468,6 +479,12 @@ Six, aucun React à l’intérieur d’aucun.
 Les trois qui montrent de la 3D partagent `engines/viewport/` — canevas, caméra, orbite,
 redimensionnement, boucle à la demande, éclairage par image. Chacun écrivant le sien, c’était
 trois chances de ne pas être d’accord sur un redimensionnement ou une libération.
+
+**Six moteurs, dix dossiers sous `engines/` : les quatre autres ne sont pas des moteurs.**
+`core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, `gpu/` les passes de
+shader et le compteur de frame, et `graph/` — **le seul qui pourrait tromper** — n’est que des
+fonctions : commandes, mutations, sérialisation, validation d’une arête. Le node editor n’a pas
+de moteur parce qu’il n’a rien à dessiner lui-même : `@xyflow/react` rend, et le domaine décide.
 
 Celui du son est une paire de modules plutôt qu’une classe — `audio-data.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même

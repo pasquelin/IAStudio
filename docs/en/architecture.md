@@ -321,17 +321,28 @@ src/renderer/src/
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
 ├── design/       the in-house design system — see below
-├── engines/      canvas, scene, timeline, audio, and shared history
-├── spaces/       one editor per document kind
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, and `core/` — the shared history
+├── spaces/       one editor per document kind — SEVEN, as many as there are workspaces
 │   ├── image/      Pixi-backed canvas and its tools
 │   ├── three/      the three.js viewport and its tools
 │   ├── video/      the timeline canvas, the monitor, its tools
-│   └── audio/     the waveform, its tools, the decoder
-├── panels/       the dockable tools
+│   ├── audio/      the waveform, its tools, the decoder
+│   ├── textures/   a material's channels, and their tiled preview
+│   ├── skyboxes/   the immersive sky and its three flat projections
+│   └── graph/      the node editor — it places and saves, it does not run yet
+├── panels/       the fifteen dockable tools
+├── home/         the home screen and its fourteen bands — a page, not a layout
+├── settings/     the settings window, loaded on demand
+├── usage/        the consumption window, likewise
+├── licences/     the licences window, likewise
+├── dictation/    what the renderer sees of dictation: button, preview, level
 ├── stores/       zustand: documents, tools, layouts, models, assets, jobs, settings, keymap
 ├── hooks/        shortcuts, native menu, density, window state, debounce…
 ├── helpers/      pure functions, all unit-tested
-└── services/     the bridge accessor and failure-message mapping
+├── services/     the bridge accessor and failure-message mapping
+├── i18n/         the window-side i18next setup
+├── main.tsx      the entry — everything it reaches statically is in the first screen
+└── splash.ts     the splash entry, kept separate so it never pulls that bundle
 ```
 
 ### The first screen
@@ -440,7 +451,7 @@ where `shared/` holds no runtime dependency. Hence a layer above it, in
 
 ## Engines
 
-Four of them, no React inside any one.
+Six of them, no React inside any one.
 
 | Engine | Backed by | Owns |
 |---|---|---|
@@ -454,6 +465,12 @@ Four of them, no React inside any one.
 The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resizing, on-demand
 loop, image-based lighting. Each writing its own was three chances to disagree about a resize
 or a disposal.
+
+**Six engines, ten folders under `engines/`: the other four are not engines.** `core/` carries the
+shared history, `viewport/` the base of the three 3D views, `gpu/` the shader passes and the frame
+counter, and `graph/` — **the one that could mislead** — is functions only: commands, mutations,
+serialisation, edge validation. The node editor has no engine because it has nothing of its own to
+draw: `@xyflow/react` renders, and the domain decides.
 
 The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
