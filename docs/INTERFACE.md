@@ -149,6 +149,37 @@ Trois réponses possibles, par coût croissant, aucune tranchée :
 > génération d’images lit `seed` et `guidance scale` en anglais partout ailleurs. Traduire peut
 > desservir autant que servir.
 
+### 19. En vue Icônes, une vignette sélectionnée ne se distingue en rien
+
+**Vu le 9 août 2026**, en soldant la vérification à l’écran des entrées 6 et 8 : l’étagère
+annonçait trois assets sélectionnés — l’inspecteur affichait « Éléments 3 » — et les trois carrés
+étaient rigoureusement identiques aux autres. La sélection existe, elle ne se voit pas.
+
+**Mesuré plutôt que supposé** : la cellule fait 114 × 114 et la `figure` de `MediaTile` en fait
+**autant**, 114 × 114. Le fond que `rowSkin` peint sur la cellule sélectionnée — `bg-accent-soft`,
+vérifié présent dans la classe — est intégralement recouvert par une tuile opaque (`bg-surface`,
+plus sa bordure `border-border`, plus l’image en `object-cover`). Il n’en dépasse **aucun pixel**.
+Le liseré d’un pixel qu’on croit voir au bord est la bordure de la tuile, la même sélectionnée ou
+non.
+
+**La même sélection se voit parfaitement en vue Liste**, où la ligne n’a pas de tuile par-dessus :
+c’est la comparaison qui rend le défaut incontestable, et elle dit aussi que le tort n’est pas
+dans `rowSkin`.
+
+**Deux panneaux au moins, pas un.** Vu à l’écran dans l’**étagère à assets** et dans le panneau
+**Modèles**, dont la cellule active porte bien `bg-accent-soft` sans que la carte « GPT Image 2 »
+se distingue des sept autres. `MediaTile` a **quatre** appelants — `AssetCard`, `Models`,
+`ChannelTile`, et `ShelfCard` sur l’accueil : à regarder d’un bloc plutôt qu’un panneau à la fois.
+
+**Ce qui marche déjà, et qui montre la voie** : l’anneau de focus, lui, se voit — la cellule
+atteinte au clavier porte un `ring-accent` net autour de la tuile. Le focus est dessiné **par
+dessus**, la sélection **par dessous**. C’est toute la différence, et c’est probablement là que la
+réponse se trouve.
+
+> Ne pas confondre les deux états en les réglant : une cellule peut être focalisée sans être
+> sélectionnée, et l’inverse. L’entrée 9 vient justement de séparer ce que ces cellules
+> annoncent ; il s’agit ici de leur faire dire à l’œil ce qu’elles disent déjà au lecteur d’écran.
+
 ### 10. Les filtres du journal reviennent à la ligne, et il leur manque « Tout »
 
 **Vu le 9 août 2026, capture à l’appui.** Dans le volet du journal d’activité — celui qu’ouvre
@@ -496,13 +527,20 @@ correction.
 > « quels assets sont sélectionnés », écrite deux fois, faisait repeindre l’étagère à chaque calque
 > choisi ailleurs — elle descend dans le store, en `selectedAssetIds`.
 >
-> **La vérification à l’écran reste due pour les entrées 6 et 8**, et pas faute d’avoir essayé :
-> le MCP `electron` **n’atteint pas les cartes de l’étagère** — `electron_click_by_text` répond
-> « cliqué » sans que le focus ni la sélection ne bougent, et aucun sélecteur ne distingue les
-> cellules d’une collection de celles d’une autre (`data-cell` recommence à zéro dans chacune).
-> Ce qui a été vu : les cellules de l’étagère portent bien `tabindex` et `aria-selected`, que le
-> panneau n’avait pas avant. Ce qui reste à voir de ses yeux : le clic qui peint, la plage au
-> shift, et la bascule d’espace au double-clic depuis un autre espace.
+> **Vérifié à l’écran le 9 août 2026** (projet réel, `pnpm start:debug`), après un premier essai
+> resté en panne d’outil. Ce qui débloque le MCP `electron` : l’étagère se nomme depuis l’entrée 9
+> — `[role="listbox"][aria-label="Assets"] [data-cell="N"]` distingue enfin ses cellules de celles
+> des cinq autres collections, là où `electron_click_by_text` répondait « cliqué » sans que rien
+> ne bouge. Le shift-clic seul n’a pas d’outil : aucun clic du MCP ne porte de modificateur, il a
+> fallu dispatcher le `MouseEvent`, ce que le correctif rend fidèle puisque la sélection est
+> repassée sur `click` et n’écoute plus `pointerdown`.
+>
+> Ce qui a été vu : le clic peint la cellule et lui donne le focus (`aria-selected` passe à
+> `true`) ; le shift-clic depuis cette ancre étend la plage aux trois images, et l’inspecteur
+> compte « Éléments 3 » ; Entrée pose le calque de la cellule focalisée. Et le geste de l’entrée
+> 6, depuis l’espace **3D**, document Image ouvert derrière : le double-clic bascule sur Image,
+> ramène l’onglet au premier plan et pose l’image en calque, d’un seul geste. Aucune erreur en
+> console.
 
 > **L’entrée 9 est la seule du registre qui ne se juge pas à l’œil**, et c’est pourquoi elle y a
 > vécu si longtemps. Le rôle du conteneur et celui de la cellule sont devenus **une seule
@@ -534,9 +572,10 @@ correction.
 > `addAssetToSequence` lisait lui-même l’onglet du premier plan, seule destination sur six à le
 > faire.
 >
-> **Ce qui reste dû : la vérification à l’écran.** Une autre session tenait l’application au moment
-> de la fusion, et le verrou d’instance unique interdit d’en lancer une seconde. Les 4680 tests
-> passent, mais personne n’a *vu* la bascule d’espace.
+> **La bascule d’espace a été vue** — le 9 août 2026, une fois l’application libre : depuis
+> l’espace **3D**, un document Image ouvert derrière, le double-clic sur une image de l’étagère
+> bascule sur Image, ramène l’onglet au premier plan et pose le calque. Le détail de la manœuvre
+> est avec l’entrée 8, avec laquelle elle a été menée.
 
 > **L’entrée 5 n’avait pas la cause qu’elle croyait.** Le détournement de `selectedIds` était réel,
 > mais ce qui privait les lignes du clavier était ailleurs : dans `Collection`, le rôle, le tab stop
