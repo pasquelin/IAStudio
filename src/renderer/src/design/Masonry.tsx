@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scroll-parent'
-import { GAP, PREFETCH_ROWS } from './virtual'
+import { columnsIn, GAP, PREFETCH_ROWS } from './virtual'
 
 /** A picture whose shape nobody stated. Square is the least wrong guess, and never distorts. */
 const FALLBACK_RATIO = 1
@@ -16,9 +16,6 @@ const FALLBACK_RATIO = 1
  */
 const RATIO_MIN = 0.5
 const RATIO_MAX = 2
-
-/** Beyond this a column is too narrow to read, so the grid drops one rather than shrink on. */
-const MIN_COLUMN_WIDTH = 120
 
 export type MasonryProps<T extends { id: string }> = {
   items: readonly T[]
@@ -83,42 +80,33 @@ export function Masonry<T extends { id: string }>({
   }, [])
 
   /**
-   * Where this grid starts inside the scroll container, re-read on scroll rather than once.
+   * Where this grid starts inside the scroll container.
    *
-   * The sections above it fill in as their own reads land, and each one that grows pushes this
-   * down. Nothing observable fires for that from here — the grid's own box does not change — so
-   * the honest options are to measure on every frame of scroll or to be wrong for a while. One
-   * `getBoundingClientRect` per frame, coalesced, is the cheaper of the two.
+   * Watched rather than polled: the value is invariant under scrolling — moving down by one
+   * pixel lowers the grid's box by one and raises `scrollTop` by one — so reading it per frame
+   * would recompute the same number all the way down. It moves only when a section ABOVE
+   * changes height, which is what the observer below fires on.
    */
-  const pending = useRef(0)
+  useEffect(() => {
+    const content = scroller?.firstElementChild
+    const element = host.current
+    if (!scroller || !content || !element) return
 
-  const measureOffset = useCallback(() => {
-    if (pending.current !== 0 || !scroller) return
-
-    pending.current = requestAnimationFrame(() => {
-      pending.current = 0
-      const element = host.current
-      if (!element || !scroller) return
-
+    const measure = (): void => {
       const offset = scrollOffsetWithin(element, scroller) + scroller.scrollTop
-      // Same value, no re-render: this runs on every frame of a scroll.
       setScrollMargin(current => (current === offset ? current : offset))
-    })
+    }
+
+    measure()
+    // The page's content, not the scroller: the window keeping its size while a band above
+    // fills in is precisely the case, and only the content grows then.
+    const observer = new ResizeObserver(measure)
+    observer.observe(content)
+    return () => observer.disconnect()
   }, [scroller])
 
-  useEffect(() => () => cancelAnimationFrame(pending.current), [])
-
-  useEffect(() => {
-    if (!scroller) return
-
-    measureOffset()
-    scroller.addEventListener('scroll', measureOffset, { passive: true })
-    return () => scroller.removeEventListener('scroll', measureOffset)
-  }, [scroller, measureOffset])
-
-  const columns = Math.max(1, Math.floor((width + GAP) / (Math.max(columnWidth, 1) + GAP)))
-  const lanes = width >= MIN_COLUMN_WIDTH ? columns : 1
-  const laneWidth = (width - (lanes - 1) * GAP) / lanes
+  const { columns, columnWidth: laneWidth } = columnsIn(width, columnWidth)
+  const lanes = columns
 
   const virtualizer = useVirtualizer({
     count: items.length,

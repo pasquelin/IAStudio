@@ -16,3 +16,23 @@ export const GAP = 8
  * rows of tall cards and three rows of short ones are both "enough warning to fetch".
  */
 export const PREFETCH_ROWS = 3
+
+export type Columns = {
+  columns: number
+  /**
+   * What one column actually measures. Cards fill their column, so this — not the width that
+   * was aimed for — is what a cell is sized and estimated from.
+   */
+  columnWidth: number
+}
+
+/**
+ * How many cards of a target width fit across `width`, and what one column then measures.
+ *
+ * At least one column: a surface narrower than a single card still has to draw it, and a count
+ * of zero divides the width by nothing.
+ */
+export function columnsIn(width: number, aim: number): Columns {
+  const columns = Math.max(1, Math.floor((width + GAP) / (Math.max(aim, 1) + GAP)))
+  return { columns, columnWidth: (width - (columns - 1) * GAP) / columns }
+}

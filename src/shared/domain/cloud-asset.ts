@@ -72,14 +72,6 @@ export type CloudPage = {
   cursor: string | null
 }
 
-/**
- * What the home's explore feed asks for: everything published, of one kind at a time.
- *
- * A query of its own rather than a flag on `CloudQuery`, because almost nothing about it is the
- * same errand. It reads assets nobody here owns, narrows to a single kind rather than a set,
- * pages by offset alone, and drops anything the API flagged. Sharing the type would have meant
- * a `CloudQuery` whose fields mean one thing in one mode and another in the other.
- */
 export type SimilarPage = {
   /** What the likeness was measured against — one of the account's own assets. */
   reference: CloudAsset
@@ -87,6 +79,13 @@ export type SimilarPage = {
   assets: CloudAsset[]
 }
 
+/**
+ * What the home's explore feed asks for.
+ *
+ * A query of its own rather than a flag on `CloudQuery`: it reads assets nobody here owns and
+ * pages by offset alone, so sharing the type would mean fields that mean one thing in one mode
+ * and another in the other.
+ */
 export type ExploreQuery = {
   /** One tab of the feed. The kinds a masonry can show are the six the studio already has. */
   type: AssetType

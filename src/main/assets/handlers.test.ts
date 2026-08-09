@@ -299,6 +299,39 @@ describe('the public feed', () => {
     expect(page.assets[0]?.thumbnailUrl).toBe('https://cdn.example/its/own.png')
   })
 
+  it('walks past a page the retyping emptied rather than reporting the end', async () => {
+    // The filter casts wider than the studio decides, so a whole page can fall to it. Handed up
+    // empty, it reads as the end of the feed: the grid does not ask again on an empty grid.
+    let round = 0
+    setup({
+      remote: {
+        search: () => {
+          round += 1
+          const dropped: CloudAsset = { ...cloudAsset('a'), type: 'video' }
+          const assets = round === 1 ? [dropped] : [cloudAsset('b')]
+          return Promise.resolve({ assets, token: String(round * 40) })
+        },
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets.map(asset => asset.id)).toEqual(['b'])
+  })
+
+  it('gives up after a few empty rounds rather than walking the whole index', async () => {
+    const audioAsset: CloudAsset = { ...cloudAsset('a'), type: 'audio' }
+    // A kind nobody has published would otherwise cost a search quota per page, to the end.
+    const { searched } = setup({
+      remote: {
+        search: () => Promise.resolve({ assets: [audioAsset], token: '40' }),
+      },
+    })
+
+    const page = await invoke<{ assets: CloudAsset[] }>(CHANNELS.cloudExplore, { type: 'image' })
+    expect(page.assets).toEqual([])
+    expect(searched.length).toBeLessThanOrEqual(3)
+  })
+
   it('walks by offset, and marks the cursor as the index produced it', async () => {
     setup({
       remote: { search: () => Promise.resolve({ assets: [cloudAsset('a')], token: '40' }) },

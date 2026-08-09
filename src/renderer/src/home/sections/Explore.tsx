@@ -4,8 +4,7 @@ import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
 import { Masonry } from '@/design/Masonry'
 import { MediaTile } from '@/design/MediaTile'
-import { FOCUS_RING } from '@/design/styles'
-import { cn } from '@/helpers/cn'
+import { chipSkin } from '@/design/styles'
 import { assetIcon } from '@/helpers/workspaces'
 import { Section } from '../Section'
 import { useExplore } from '../use-explore'
@@ -90,12 +89,7 @@ function Tab({ type, current, onSelect }: TabProps) {
       role="tab"
       aria-selected={current}
       onClick={onSelect}
-      className={cn(
-        'cursor-pointer rounded-(--radius-sc-sm) border-none px-2 py-1 text-[11px]',
-        'transition-colors',
-        current ? 'bg-elevated text-text' : 'text-muted hover:bg-elevated/50 bg-transparent',
-        FOCUS_RING,
-      )}
+      className={chipSkin(current)}
     >
       {t(`assetTypes.${type}`)}
     </button>

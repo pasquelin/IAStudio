@@ -1,7 +1,13 @@
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath, type Asset } from '@shared/domain/asset'
 import { defined } from '@shared/guards'
-import type { CloudPage, CloudQuery, ExploreQuery, SimilarPage } from '@shared/domain/cloud-asset'
+import type {
+  CloudAsset,
+  CloudPage,
+  CloudQuery,
+  ExploreQuery,
+  SimilarPage,
+} from '@shared/domain/cloud-asset'
 import type { SyncOutcome } from '@shared/domain/sync'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
@@ -131,22 +137,44 @@ async function browse(remote: RemoteAssetCatalog, query: CloudQuery): Promise<Cl
  * on purpose. A short page is the price, and the cursor keeps walking.
  */
 async function explore(remote: RemoteAssetCatalog, query: ExploreQuery): Promise<CloudPage> {
-  const page = await remote.search({
-    filter: publicFeedFilter(query.type),
-    publicFeed: true,
-    sortBy: PUBLIC_FEED_SORT,
-    limit: Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX),
-    offset: offsetFrom(query.cursor),
-  })
+  const limit = Math.min(query.pageSize ?? DEFAULT_PAGE_SIZE, PAGE_SIZE_MAX)
+  const assets: CloudAsset[] = []
+  let offset = offsetFrom(query.cursor)
+  let token: string | null = null
 
-  return {
-    assets: page.assets.filter(asset => asset.type === query.type).map(withPublicThumbnail),
-    cursor: marked(OFFSET_CURSOR, page.token),
+  /**
+   * Pulled again while the useful page is empty, because the loop that repairs a loss belongs
+   * to the layer that loses. A whole page can fall to the retyping below, and a page of nothing
+   * handed up reads as the end of the feed: the grid does not ask again on an empty grid — quite
+   * rightly — so the band would stop on "nothing published" with more still to come.
+   */
+  for (let round = 0; round < EMPTY_ROUNDS_MAX; round += 1) {
+    const page = await remote.search({
+      filter: publicFeedFilter(query.type),
+      publicFeed: true,
+      sortBy: PUBLIC_FEED_SORT,
+      limit,
+      offset,
+    })
+
+    assets.push(...page.assets.filter(asset => asset.type === query.type).map(withPublicThumbnail))
+    token = page.token
+
+    if (assets.length > 0 || token === null) break
+    offset = Number(token)
   }
+
+  return { assets, cursor: marked(OFFSET_CURSOR, token) }
 }
 
 /** How many lookalikes are worth a shelf. One row of tiles, and one search's worth of quota. */
 const SIMILAR_SIZE = 12
+
+/**
+ * How many pages the feed may walk past before answering nothing. A bound, not a policy: the
+ * search costs quota, and a kind nobody has published would otherwise walk the whole index.
+ */
+const EMPTY_ROUNDS_MAX = 3
 
 /**
  * Published assets in the vein of one of this account's own.

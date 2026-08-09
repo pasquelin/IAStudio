@@ -68,22 +68,16 @@ export function filterExpression({ tags, types, collectionId }: FilterTerms): st
 }
 
 /**
- * Which provenances stand for a surface and for a sky, as an expression the index accepts.
- *
- * `CONTAINS` and not a prefix: a texture arrives as `texture`, `upscale-texture` or
- * `inference-txt2img-texture`, and a sky as `skybox-base-360` or `upscale-skybox`. `ENDS WITH`
- * would say it exactly and the API answers 500 to it — measured, not assumed.
- *
- * Deliberately WIDER than `assetTypeOfRemote`, which decides the same question exactly. This one
- * only has to avoid asking for a page the caller will then empty: the hits are typed again on
- * arrival, so an over-catch costs a shorter page and an under-catch would lose assets for good.
- */
-/**
- * What the API flagged, left out. An array the API omits on everything it cleared, so emptiness
- * is the test — not a comparison against a value that is never there.
+ * What the API flagged, left out. An array it omits on everything it cleared, so emptiness is
+ * the test — not a comparison against a value that is never there.
  */
 export const NSFW_EMPTY = 'nsfw IS EMPTY'
 
+/**
+ * `CONTAINS` and not a prefix: a texture arrives as `texture`, `upscale-texture` or
+ * `inference-txt2img-texture`, and a sky as `skybox-base-360` or `upscale-skybox`. `ENDS WITH`
+ * would say it exactly, and the API answers 500 to it — measured, not assumed.
+ */
 function contains(needle: string): string {
   return `metadata.type CONTAINS ${quoted(needle)}`
 }
@@ -91,8 +85,9 @@ function contains(needle: string): string {
 /**
  * What the explore feed asks for: one kind of published asset, minus anything flagged.
  *
- * `nsfw IS EMPTY` rather than a comparison — the field is an array the API leaves absent on
- * everything it cleared, and a home that opens onto the public feed cannot afford to guess.
+ * Deliberately WIDER than `assetTypeOfRemote`, which decides the same question exactly. This one
+ * only has to avoid asking for a page the caller will then empty: the hits are typed again on
+ * arrival, so an over-catch costs a shorter page and an under-catch would lose assets for good.
  */
 export function publicFeedFilter(type: AssetType): string {
   const clauses = [NSFW_EMPTY]
