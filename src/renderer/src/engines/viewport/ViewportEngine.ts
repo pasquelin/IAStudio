@@ -306,6 +306,7 @@ export class ViewportEngine {
     const renderer = this.renderer
     if (!renderer) return
 
+    // The engine clears, not three.js — see `autoReset` at mount.
     renderer.info.reset()
 
     const now = performance.now()

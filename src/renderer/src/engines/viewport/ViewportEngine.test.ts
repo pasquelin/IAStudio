@@ -8,7 +8,7 @@ import { ViewportEngine } from './ViewportEngine'
  * Only what the engine reads back is kept — the element it draws into, the two flags it sets at
  * mount, `autoClear`, which the overlay pass turns off and back on, and `info`.
  *
- * `info` follows three.js to the letter, because the counting depends on it: `render` clears the
+ * `info` follows three.js 0.185.1 to the letter, because the counting depends on it: `render` clears the
  * counters first when `autoReset` is on, then adds one draw call. A viewport drawing an overlay
  * calls `render` twice, so a stand-in that skipped the clearing would report a passing count for
  * a viewport that measures only its trihedron.

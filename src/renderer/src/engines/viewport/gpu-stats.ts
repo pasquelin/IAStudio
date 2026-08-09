@@ -9,7 +9,7 @@ export type GpuStats = {
   triangles: number
   points: number
   lines: number
-  /** Frames drawn since mount. A viewport left alone has to stop moving this number. */
+  /** Frames the loop has run since construction. A viewport left alone must stop moving it. */
   frames: number
   /** Alive in the context now, not per frame: what a missing `dispose` makes climb. */
   geometries: number

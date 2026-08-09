@@ -10,6 +10,19 @@ const counters = (
 })
 
 describe('gpu stats', () => {
+  /** Every field, spelled out: a viewport that never drew must not report a number it invented. */
+  it('starts at zero', () => {
+    expect(emptyGpuStats()).toEqual({
+      calls: 0,
+      triangles: 0,
+      points: 0,
+      lines: 0,
+      frames: 0,
+      geometries: 0,
+      textures: 0,
+    })
+  })
+
   it('takes what the last frame cost off the renderer', () => {
     const stats = emptyGpuStats()
 
