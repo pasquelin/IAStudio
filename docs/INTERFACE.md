@@ -110,55 +110,6 @@ existe déjà : `EnvironmentSection` leur est commun, et sa JSDoc dit pourquoi.
 style lisible par les deux espaces demande que la forme sérialisée descende dans `shared/domain/` —
 sans quoi le main, qui écrira le fichier de `userData`, ne peut pas la typer.
 
-### 25. La croix des onglets passe TOUJOURS sous le titre — le correctif visait le mauvais nœud
-
-**Rouvert le 9 août 2026, capture zoomée à l’appui, sur `develop`.** On voit le haut des croix,
-coupé par la hauteur du bandeau, sous chacun des trois titres. Cette entrée était dans la table
-« Fait » depuis `c289365` : **elle en sort.**
-
-**Le diagnostic d’origine était juste, le remède d’un cran trop haut.** Il posait
-`display: flex` sur `.dv-tab`. Mais dockview-react ne monte pas un onglet personnalisé
-directement dans `.dv-tab` : il crée un `div` intermédiaire, `dv-react-part`, et y porte le
-contenu React. Vérifié dans le paquet installé (7.0.4) :
-
-```js
-this._element = document.createElement('div')
-this._element.className = 'dv-react-part'
-this._element.style.height = '100%'
-this._element.style.width = '100%'
-```
-
-**Ce `div` n’a aucune règle dans la feuille de dockview** — zéro occurrence de `dv-react-part`
-dans `dockview.css` — donc il reste en `display: block`. `display: flex` sur `.dv-tab` met donc
-en ligne **l’unique `.dv-react-part`**, pendant que nos deux frères — le tab par défaut en
-`width: 100%` et le bouton de fermeture — restent empilés **à l’intérieur** de ce bloc. Le
-symptôme d’origine, intact.
-
-La règle doit viser **`.dv-tab > .dv-react-part`**, avec le `min-width: 0` qui fait céder le
-titre plutôt que la croix. Celle qui existe sur `.dv-tab` peut rester : elle place le conteneur.
-
-> **Pourquoi rien ne l’a vu, et c’est la leçon la plus utile de l’entrée.** Le test verrouillait
-> **la présence de la règle dans la feuille de style**, lue en `?raw`. Il ne pouvait pas voir
-> qu’elle visait un nœud qui n’est pas le parent des éléments concernés — aucune mise en page
-> n’est calculée en jsdom. Le commit le disait lui-même : « Aucun des deux ne se prouve en
-> jsdom ». Il a été livré sans passer par l’écran, et c’est exactement ce que le § « Vérifier à
-> l’écran ce qui se voit » interdit.
->
-> **Ne pas refermer cette entrée sans avoir mesuré sur l’application lancée** : `pnpm
-> start:debug`, puis lire le `display` calculé de `.dv-react-part` et comparer le `top` du titre
-> et celui du bouton. Ils doivent être égaux.
-
-**Deux choses à vérifier dans le même passage**, puisqu’elles vivent au même endroit :
-
-1. Le second correctif du même commit — le champ de recherche des réglages — **n’a pas été
-   vérifié à l’écran non plus**, et il a été livré sur le même raisonnement. Il porte peut-être
-   le même genre de défaut.
-2. Sur la capture, deux onglets s’appellent **« Sans titre 1 »**. `create` numérote pourtant en
-   comptant le dossier **et** les onglets ouverts. Un « Sans titre » n’étant jamais écrit dans le
-   dossier, deux fenêtres — ou deux espaces — peuvent tomber sur le même numéro. À traiter avec
-   le bug des onglets fantômes (§ 2 de `REPRISE`), qui a la même racine : rien n’écrit ces
-   documents nulle part.
-
 ### 24. L’Explorateur et Apps passent au rail gauche, dans toute l’application
 
 **Décidé le 9 août 2026**, dans la foulée de l’entrée 23 : les deux quittent le rail droit pour
@@ -718,6 +669,7 @@ correction.
 | **(6)** Le double-clic sur un asset ne traversait pas les espaces, et se taisait | `33d31f3` (feat/double-clic) |
 | **(8)** L’étagère à assets n’avait aucun accès clavier, ni sélection multiple | `a98357e` (feat/etagere-clavier) |
 | **(9)** `role="option"` sans `listbox`, et `aria-selected` qui disait « ouvert » | `ea08ce0` (feat/aria-listbox) |
+| **(25)** La croix des onglets passait sous le titre — la règle visait le mauvais nœud | *à commiter* |
 | **(18)** Le formulaire de génération parlait anglais dans une application en français | `e0a07b2` (feat/i18n-schema-api) |
 
 > **L’entrée 18 s’est réglée autrement que les trois pistes qu’elle proposait.** Aucune n’a été

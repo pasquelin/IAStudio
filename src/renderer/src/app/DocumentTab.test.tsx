@@ -121,13 +121,15 @@ describe('a document tab', () => {
    * The cross sits beside the title, never under it. jsdom lays nothing out, so what is checked
    * is the rule that puts it there — the same approach as the colour tokens.
    *
-   * Dockview 7 leaves `.dv-tab` a block and makes its own `.dv-default-tab` `width: 100%`. The
-   * cross is a sibling of that tab: on a block parent it wrapped to a second line and the strip
-   * clipped it. Nothing in dockview's own stylesheet prevents that, so this rule is ours to keep.
+   * The rule has to name **`.dv-react-part`**, and an earlier one that named `.dv-tab` alone did
+   * not work: dockview-react mounts a custom tab inside a `dv-react-part` div it builds in JS,
+   * which its own stylesheet never mentions — so it stays a block, and the title (`width: 100%`)
+   * and our close button stack inside it. A row laid on `.dv-tab` places that single div and
+   * nothing else. Measured on the running app before and after.
    */
   describe('the close button beside the title', () => {
-    const tabRule = (): string => {
-      const at = theme.indexOf('.dv-dockview .dv-tab {')
+    const ruleFor = (selector: string): string => {
+      const at = theme.indexOf(`${selector} {`)
       return at < 0 ? '' : theme.slice(at, theme.indexOf('}', at))
     }
 
@@ -137,9 +139,13 @@ describe('a document tab', () => {
       expect(theme).toContain('.dv-dockview')
     })
 
-    it('is laid on a row by the theme, not left to wrap', () => {
-      expect(tabRule()).toMatch(/display:\s*flex/)
-      expect(tabRule()).toMatch(/align-items:\s*center/)
+    it('lays the row on the div react is mounted in, not on the tab above it', () => {
+      expect(ruleFor('.dv-dockview .dv-tab > .dv-react-part')).toMatch(/display:\s*flex/)
+      expect(ruleFor('.dv-dockview .dv-tab > .dv-react-part')).toMatch(/align-items:\s*center/)
+    })
+
+    it('lets the title shrink inside that row rather than push the cross out', () => {
+      expect(ruleFor('.dv-dockview .dv-tab > .dv-react-part')).toMatch(/min-width:\s*0/)
     })
 
     it('never shrinks away when the title is long', () => {
