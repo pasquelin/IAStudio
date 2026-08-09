@@ -151,6 +151,24 @@ describe('the translation bundles', () => {
     }
   })
 
+  /**
+   * The other half of French typography, and the one that shows: `;` `:` `!` `?` and the closing
+   * `»` take a NO-BREAK space before them, never an ordinary one. An ordinary space is a place
+   * the line may break, so a narrow column — the activity journal is one — drops the colon or
+   * the closing quote alone onto the next line.
+   *
+   * U+00A0 rather than the narrow U+202F: the two look alike at eleven pixels, and the wide
+   * one is the space every font actually has. Named by code point because eslint refuses
+   * either of them in source.
+   */
+  it('holds its double punctuation with a no-break space in French', () => {
+    const breakable = [...BUNDLES.fr]
+      .filter(([, text]) => / [;:!?»]/.test(text))
+      .map(([key]) => key)
+
+    expect(breakable).toEqual([])
+  })
+
   // A hole dropped in translation renders as a sentence with a number missing from it.
   it.each(CODES)('keeps the same interpolations in %s', code => {
     for (const [key, text] of BUNDLES[code]) {
