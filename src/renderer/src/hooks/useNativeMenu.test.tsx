@@ -176,7 +176,7 @@ describe('what the native menu is told', () => {
   // nothing else would tell it.
   it('announces the generator as soon as a model is chosen', () => {
     renderHook(() => useNativeMenu())
-    useModels.getState().select('image', 'flux-dev')
+    useModels.getState().select('image', 'flux-dev', 'image')
     expect(lastPublished().tools).toContain('generator')
   })
 })

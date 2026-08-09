@@ -11,9 +11,10 @@ import {
 } from '@/engines/graph/commands'
 import type { Asset } from '@shared/domain/asset'
 import { assetNode, createModelNode, createNode } from '@/engines/graph/factory'
+import { modelForScope } from '@/helpers/model-for-scope'
+import { offerModelsOfFamily } from '@/helpers/offer-model'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { useModels } from '@/stores/models'
 import type { PaletteEntry } from './palette'
 import { useDocuments } from '@/stores/documents'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
@@ -110,8 +111,10 @@ export function GraphDocument({ documentId }: { documentId: string }) {
 
       // A generator lands on the model chosen for that family, and its ports come from that
       // model's own schema (invariant 5) — so the node cannot be built until the schema is in.
-      const modelId = useModels.getState().selected[entry.family]
-      if (!modelId) return reportFailure('graph.node', entry.family, new Error('no model chosen'))
+      const modelId = modelForScope(entry.family)
+      // With no model to build one from, the answer is the panel where one is chosen, narrowed
+      // to the family asked for: a graph browses every family, so nothing else would say which.
+      if (!modelId) return offerModelsOfFamily(entry.family)
 
       void getBridge()
         ?.scenario.describeModel(modelId)

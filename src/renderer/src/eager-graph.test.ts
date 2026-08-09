@@ -245,9 +245,12 @@ describe('the opening chunk', () => {
    * Explorer included. Stated over the whole folder, so a fifteenth panel cannot land eager with
    * the guard still green.
    *
-   * The three left are not tools of that table: `panels/jobs/**` belongs to the status bar
-   * (`app/JobsStatus.tsx:8`) and the home (`home/sections/Jobs.tsx:3`), and `type-facet.ts` is
-   * read by `helpers/reveal-panel.ts:6`. None of them opens in a zone.
+   * The four left are not tools of that table: `panels/jobs/**` belongs to the status bar
+   * (`app/JobsStatus.tsx:8`) and the home (`home/sections/Jobs.tsx:3`), and the two facet keys
+   * are read by `helpers/reveal-panel.ts`, which narrows a browser before bringing it up. Each
+   * of those two is a lone constant in a file of its own for exactly this reason — declaring it
+   * beside the facets it belongs to would drag that panel's vocabulary in behind it. None of
+   * them opens in a zone.
    */
   it('reaches no panel of the tool table, not even the one the home screen opens', () => {
     const { files } = GRAPH
@@ -256,6 +259,7 @@ describe('the opening chunk', () => {
       './panels/assets/type-facet.ts',
       './panels/jobs/JobRow.tsx',
       './panels/jobs/Jobs.tsx',
+      './panels/models/family-facet.ts',
     ])
   })
 

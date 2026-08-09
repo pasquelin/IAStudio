@@ -7,6 +7,7 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
+import { preferModels } from '@/stores/settings-fixtures'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { Models } from './Models'
 
@@ -36,6 +37,9 @@ function renderPanel() {
 describe('Models panel', () => {
   beforeEach(() => {
     useSettings.setState({ auth: { authenticated: true } })
+    // The panel reads the preference too, so a model preferred by one test would be shown as
+    // chosen in the next.
+    preferModels()
     useModels.setState({ selected: {}, collection: DEFAULT_COLLECTION_STATE })
     useLayouts.setState({ activeWorkspace: 'image' })
   })
@@ -222,6 +226,45 @@ describe('Models panel', () => {
     await userEvent.click(await screen.findByText('Model flux'))
 
     expect(useModels.getState().selected.image).toBe('flux')
+  })
+
+  /**
+   * A space that browses every family files its choice under `'all'` — and the only thing that
+   * asks for it, a graph's generator node, asks for the model of ONE family. Filed there alone,
+   * a model picked here would be invisible to the very node that sent the user to pick it.
+   */
+  it('files a choice under the model’s own family, where the space has none', async () => {
+    useLayouts.setState({ activeWorkspace: 'graph' })
+    installFakeBridge({
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({ items: [model('kling', { family: 'video' })], cursor: null }),
+      },
+    })
+
+    renderPanel()
+    await userEvent.click(await screen.findByText('Model kling'))
+
+    expect(useModels.getState().selected.video).toBe('kling')
+    expect(useModels.getState().selected.all).toBe('kling')
+  })
+
+  /**
+   * The rail draws the generator off the preference alone, and the generator runs on it. This
+   * panel said "no model chosen" about the very model the one beside it was running.
+   */
+  it('shows the preferred model as chosen where nothing was picked by hand', async () => {
+    preferModels({ image: 'flux' })
+    installFakeBridge({
+      scenario: { searchModels: () => Promise.resolve({ items: [model('flux')], cursor: null }) },
+    })
+
+    renderPanel()
+
+    // Twice: the header names it, and the grid lists it. Reading the session choice alone left
+    // the header on "no model chosen" while the row below it was the model being generated with.
+    expect(await screen.findAllByText('Model flux')).toHaveLength(2)
+    expect(screen.queryByText('Aucun modèle choisi')).not.toBeInTheDocument()
   })
 
   it('tells an empty catalogue from a filter that matched nothing', async () => {

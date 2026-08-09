@@ -1,21 +1,12 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { ModelFamily } from '@shared/domain/model'
 import { HOME_SURFACE, type ToolZone } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
+import { preferModels } from '@/stores/settings-fixtures'
 import { hasModelFor, shownTool, useAvailableTools } from './tool-registry'
-
-function preferModel(family: ModelFamily, modelId: string): void {
-  useSettings.setState({
-    settings: {
-      ...DEFAULT_SETTINGS,
-      generation: { ...DEFAULT_SETTINGS.generation, defaultModels: { [family]: modelId } },
-    },
-  })
-}
 
 function idsOf(zone: ToolZone, workspace: WorkspaceId): string[] {
   const { result } = renderHook(() => useAvailableTools(zone, workspace))
@@ -38,7 +29,7 @@ describe('the generator', () => {
   })
 
   it('counts the preferred model, which is what that preference is for', () => {
-    preferModel('image', 'flux-dev')
+    preferModels({ image: 'flux-dev' })
     expect(hasModelFor('image')).toBe(true)
   })
 

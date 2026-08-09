@@ -129,6 +129,23 @@ function polyfillLayout(): void {
     }
   }
 
+  /**
+   * React Flow re-measures its nodes off the viewport's CSS transform, read through a
+   * `DOMMatrixReadOnly` jsdom does not carry — so a node arriving AFTER the mount threw where
+   * one present at mount never did. Identity is the honest answer where nothing is laid out,
+   * and `m22` — the zoom — is the only field it reads.
+   */
+  if (!('DOMMatrixReadOnly' in globalThis)) {
+    class IdentityMatrix {
+      readonly m22 = 1
+    }
+
+    Object.defineProperty(globalThis, 'DOMMatrixReadOnly', {
+      configurable: true,
+      value: IdentityMatrix,
+    })
+  }
+
   const sizes: [string, number][] = [
     ['clientWidth', VIEWPORT_WIDTH],
     ['offsetWidth', VIEWPORT_WIDTH],

@@ -9,6 +9,7 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
+import { preferModels } from '@/stores/settings-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { useTools } from '@/stores/tools'
 import { prepareEdit } from '@/spaces/image/ai-actions'
@@ -53,15 +54,6 @@ function renderPanel() {
   )
 }
 
-function defaultModels(models: Record<string, string>): void {
-  useSettings.setState(state => ({
-    settings: {
-      ...state.settings,
-      generation: { ...state.settings.generation, defaultModels: models },
-    },
-  }))
-}
-
 describe('Generator', () => {
   let bridge: StudioBridge
 
@@ -71,7 +63,7 @@ describe('Generator', () => {
     useModels.setState({ selected: {}, preset: {}, prepared: null })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
-    defaultModels({ image: 'model_flux', upscale: 'model_big' })
+    preferModels({ image: 'model_flux', upscale: 'model_big' })
 
     bridge = installFakeBridge({
       scenario: {
@@ -112,7 +104,7 @@ describe('Generator', () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
 
     useLayouts.setState({ activeWorkspace: 'video' })
-    defaultModels({ video: 'model_flux' })
+    preferModels({ video: 'model_flux' })
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
@@ -123,7 +115,7 @@ describe('Generator', () => {
   it('drops the preparation once a model is picked in the panel', async () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
 
-    useModels.getState().select('image', 'model_flux')
+    useModels.getState().select('image', 'model_flux', 'image')
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()

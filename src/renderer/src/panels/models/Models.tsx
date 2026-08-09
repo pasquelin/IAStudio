@@ -9,6 +9,7 @@ import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { isFiltered } from '@/helpers/collection-state'
+import { useModelForScope } from '@/helpers/model-for-scope'
 import { MediaTile } from '@/design/MediaTile'
 import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
@@ -100,15 +101,28 @@ export function Models() {
 
   const collection = useModels(state => state.collection)
   const setCollection = useModels(state => state.setCollection)
-  const selectedId = useModels(state => state.selected[scope] ?? null)
+  // Through the same answer the rail and the generator read. Reading the session choice alone
+  // left this panel saying "no model chosen" about the very model the generator was running.
+  const selectedId = useModelForScope(scope)
   const select = useModels(state => state.select)
   const authenticated = useSettings(state => state.auth.authenticated)
 
   const search = useDebounced(collection.search, SEARCH_DELAY_MS)
-  // No memo: react-query hashes the key structurally, so a fresh object costs nothing.
+  // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
+  // costs nothing, and `queryFrom` translates nothing.
   const query = queryFrom(collection, family, search)
-  const facets = facetsFor(family, t)
-  const sorts = sortOptions(t)
+
+  // Memoised, unlike the query above: the two share a signature and nothing else. Building the
+  // facets translates up to twenty-five labels through i18next — measured at 376 µs where the
+  // surface has no family of its own and one is picked, against 1 µs for the query — and this
+  // panel re-renders on every keystroke in its search field.
+  // The family is read again inside rather than closed over: a value destructured off a record
+  // is one the compiler rule will not accept as a dependency, and the workspace it comes from is.
+  const facets = useMemo(
+    () => facetsFor(collection, workspaceById(workspace).family, t),
+    [collection, workspace, t],
+  )
+  const sorts = useMemo(() => sortOptions(t), [t])
 
   const catalogue = useInfiniteQuery<ModelPage>({
     queryKey: ['models', query],
@@ -205,7 +219,7 @@ export function Models() {
           items={items}
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}
-          onSelect={model => select(scope, model.id)}
+          onSelect={model => select(scope, model.id, model.family)}
           onReachEnd={loadMore}
           onVisible={onVisible}
           rowHeight={ROW_HEIGHT}
@@ -219,7 +233,10 @@ export function Models() {
                   ? t('collection.loading')
                   : // The debounced search, not the typed one: for the 250 ms in between, the
                     // filter blamed for the empty panel has not been applied yet.
-                    isFiltered({ ...collection, search })
+                    isFiltered(
+                        { ...collection, search },
+                        facets.map(facet => facet.key),
+                      )
                     ? t('collection.noMatch')
                     : t('models.none')
               }

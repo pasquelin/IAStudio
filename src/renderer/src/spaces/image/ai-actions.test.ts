@@ -6,7 +6,7 @@ import { installCanvas } from '@/stores/canvas-fixtures'
 import { useCanvases } from '@/stores/canvases'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
-import { useSettings } from '@/stores/settings'
+import { preferModels } from '@/stores/settings-fixtures'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { prepareEdit } from './ai-actions'
@@ -33,22 +33,13 @@ const bridge = {
   describeModel: () => Promise.resolve({ fields: FIELDS }),
 }
 
-function defaultModel(family: string, modelId: string | undefined): void {
-  useSettings.setState(state => ({
-    settings: {
-      ...state.settings,
-      generation: { ...state.settings.generation, defaultModels: { [family]: modelId } },
-    },
-  }))
-}
-
 beforeEach(() => {
   uploaded = []
   installCanvas(DOCUMENT)
   useModels.setState({ selected: {}, preset: {} })
   useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
   useLayouts.setState({ activeWorkspace: 'image', home: false })
-  defaultModel('image', 'model_flux')
+  preferModels({ image: 'model_flux' })
 })
 
 describe('preparing an edit', () => {
@@ -61,7 +52,7 @@ describe('preparing an edit', () => {
 
   // The session choice wins over the preference, the order the generator itself follows.
   it('uses the model chosen in the panel over the one set in the preferences', async () => {
-    useModels.getState().select('image', 'model_chosen')
+    useModels.getState().select('image', 'model_chosen', 'image')
 
     await prepareEdit(DOCUMENT, 'regenerate', host, bridge)
 
@@ -115,7 +106,7 @@ describe('preparing an edit', () => {
 
   // Cutting out, enlarging and vectorizing take the picture whole: a mask would mean nothing.
   it('asks each edit of the family it belongs to', async () => {
-    defaultModel('upscale', 'model_big')
+    preferModels({ upscale: 'model_big' })
 
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge)
 
@@ -129,7 +120,7 @@ describe('preparing an edit', () => {
    */
   it('opens the models panel rather than picking one when none is set', async () => {
     useModels.setState({ selected: {} })
-    defaultModel('image', undefined)
+    preferModels()
 
     await expect(prepareEdit(DOCUMENT, 'regenerate', host, bridge)).resolves.toBe(false)
 
@@ -152,7 +143,7 @@ describe('preparing an edit', () => {
         },
       },
     })
-    defaultModel('vectorization', undefined)
+    preferModels()
 
     await expect(prepareEdit(DOCUMENT, 'vectorize', host, bridge)).resolves.toBe(false)
 
