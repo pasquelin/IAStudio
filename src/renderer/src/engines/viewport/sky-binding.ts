@@ -6,14 +6,14 @@ import type { ViewportEnvironment } from './environment'
 export type SkyBinding = {
   /** Shows what the document asks for, loading the sky if it is one. Safe to call on every apply. */
   apply: (environment: ViewportEnvironment, wanted: EnvironmentRef) => Promise<void>
-  /** Whether a sky is currently shown — which is to say, whether it owns the background. */
+  /** Whether a sky owns the background — true from the moment one is asked for, not once it decodes. */
   showsSky: () => boolean
   /** Gives the reference back. The viewport is going away, or is being shown something else. */
   release: () => void
 }
 
 /**
- * The reference a viewport holds on the sky it displays, and the two-step way a sky is shown:
+ * The references a viewport holds on the sky it displays, and the two-step way a sky is shown:
  * the picture at once, the prefiltered reflections when it has decoded.
  *
  * Written once for the two viewports that light themselves this way. The order of operations is
@@ -25,19 +25,19 @@ export type SkyBinding = {
  * but hangs nothing behind it, so without this the backdrop stays whatever was there — black.
  */
 export function createSkyBinding(cache: TextureCache, paintBackground: () => void): SkyBinding {
-  /**
-   * Two, not one. `wanted` is what the document asks for and settles the races; `shown` is what
-   * `scene.background` actually holds. Conflated, a call that lost the race had no way to name
-   * its own reference apart from the picture on screen, and gave back whichever it could reach.
-   */
+  /** Settles the races. */
   let wanted: string | null = null
+  /** What `scene.background` holds, which is not what was last asked for while one decodes. */
   let shown: string | null = null
+  /** Every reference a decode still carries: one name could hold only the last of them. */
+  const inFlight = new Map<symbol, string>()
 
   const release = (): void => {
     if (shown) cache.release(shown, SRGBColorSpace)
-    // A sky still decoding is given back here rather than left to its own continuation: the
-    // viewport may be going away, and a reference returned a decode later is one held too long.
-    if (wanted && wanted !== shown) cache.release(wanted, SRGBColorSpace)
+    // Drained here rather than left to each continuation: the viewport may be going away, and a
+    // reference handed back a decode later is one held too long.
+    for (const assetId of inFlight.values()) cache.release(assetId, SRGBColorSpace)
+    inFlight.clear()
     shown = null
     wanted = null
   }
@@ -61,16 +61,27 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
       }
 
       wanted = assetId
+      const token = Symbol(assetId)
+      inFlight.set(token, assetId)
       const loaded = await cache.acquire(assetId, SRGBColorSpace)
 
+      // Drained by `release` while this decoded: the reference is already back, and giving it
+      // twice would take the count to zero under whoever else holds the same sky.
+      if (!inFlight.delete(token)) return
+
       // Overtaken while decoding: gives back what it acquired, which it never put on screen.
-      // Unless nothing is wanted any more — `release` gave it back on this call's behalf.
       if (wanted !== assetId) {
-        if (wanted !== null) cache.release(assetId, SRGBColorSpace)
+        cache.release(assetId, SRGBColorSpace)
         return
       }
 
-      if (!loaded) return
+      // A failed load holds nothing — `ref-cache` drops the entry — so `wanted` must not keep
+      // claiming it: `release` would give back a reference this binding never took, and the next
+      // try of the same sky would be turned away as already wanted.
+      if (!loaded) {
+        wanted = null
+        return
+      }
 
       environment.setTexture(loaded)
       environment.refresh()

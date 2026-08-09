@@ -183,6 +183,58 @@ describe('createSkyBinding', () => {
     expect(source.freed[0]).not.toHaveBeenCalled()
   })
 
+  /** One name could hold one decode. Two in flight and the earlier one was never given back. */
+  it('gives back every sky still decoding, not just the last one asked for', async () => {
+    const sky = binding()
+    const environment = fakeEnvironment()
+
+    const first = sky.apply(environment, SKY)
+    const second = sky.apply(environment, OTHER)
+    sky.release()
+    await Promise.all([first, second])
+
+    expect(source.freed[0]).toHaveBeenCalled()
+    expect(source.freed[1]).toHaveBeenCalled()
+  })
+
+  /**
+   * A failed load holds nothing: `ref-cache` drops the entry. Left claimed, `release` would give
+   * back a reference this binding never took — and free the sky under whoever else holds it.
+   */
+  it('claims nothing after a load that failed', async () => {
+    let fail = true
+    const cache = createTextureCache(async url => {
+      if (fail) throw new Error('gone')
+      return source.load(url)
+    }, silent)
+    const sky = createSkyBinding(cache, paint)
+    await sky.apply(fakeEnvironment(), SKY)
+
+    fail = false
+    const alsoHeld = await cache.acquire('sky-1', SRGBColorSpace)
+    sky.release()
+
+    expect(alsoHeld).not.toBeNull()
+    expect(source.freed[0]).not.toHaveBeenCalled()
+  })
+
+  /** `ref-cache` promises the next acquire tries again; a latched id would deny it for good. */
+  it('lets a sky that failed be asked for again', async () => {
+    let fail = true
+    const cache = createTextureCache(async url => {
+      if (fail) throw new Error('gone')
+      return source.load(url)
+    }, silent)
+    const sky = createSkyBinding(cache, paint)
+    const environment = fakeEnvironment()
+    await sky.apply(environment, SKY)
+
+    fail = false
+    await sky.apply(environment, SKY)
+
+    expect(environment.refresh).toHaveBeenCalled()
+  })
+
   it('shows nothing rather than throwing when the file cannot be read', async () => {
     const sky = createSkyBinding(
       createTextureCache(async () => {
