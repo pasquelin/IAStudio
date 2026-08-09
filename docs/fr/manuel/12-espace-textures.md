@@ -169,7 +169,7 @@ sous les valeurs qu’ils regardent :
 | Contrôle | Ce qu’il fait |
 |---|---|
 | **Aperçu de la répétition** — 1×, 2×, 4× | multiplie la répétition **pour l’œil seulement** |
-| **Amener les coutures au centre** | décale tous les canaux d’une demi-largeur : le bord qui se raccorde arrive au milieu de l’aperçu |
+| **Amener les coutures au centre** | décale tous les canaux d’une demi-largeur **et d’une demi-hauteur** : les deux bords qui se raccordent arrivent au milieu de l’aperçu |
 | **Coutures** — le bouton **Mesurer** | compare le raccord au grain de l’image et répond en trois mots |
 
 **Les deux premiers ne touchent jamais la matière.** Ils changent la façon de la regarder, pas ce

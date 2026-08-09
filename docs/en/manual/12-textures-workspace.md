@@ -168,7 +168,7 @@ values they look at:
 | Control | What it does |
 |---|---|
 | **Repeat preview** — 1×, 2×, 4× | multiplies the repeat **for the eye only** |
-| **Bring the seams to the middle** | shifts every channel by half a width: the edge that wraps lands in the middle of the preview |
+| **Bring the seams to the middle** | shifts every channel by half a width **and half a height**: both edges that wrap land in the middle of the preview |
 | **Seams** — the **Measure** button | compares the wrap with the grain of the picture, and answers in three words |
 
 **The first two never touch the material.** They change how it is looked at, not what it is: the
