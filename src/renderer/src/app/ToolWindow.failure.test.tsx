@@ -8,28 +8,31 @@ import { ToolWindow } from './ToolWindow'
 vi.mock('./tool-components', async () => {
   const { lazy } = await import('react')
 
-  return {
-    TOOL_COMPONENTS: {
-      assets: {
-        Content: () => {
-          throw new Error('tool exploded')
-        },
+  const panels: Record<string, unknown> = {
+    assets: {
+      Content: () => {
+        throw new Error('tool exploded')
       },
-      // Renders its content fine, but its header actions do not.
-      layers: {
-        Content: () => <p>layer list</p>,
-        Actions: () => {
-          throw new Error('actions exploded')
-        },
-      },
-      explorer: {
-        Content: () => <p>explorer tree</p>,
-        Actions: () => <p>explorer actions</p>,
-      },
-      // Every panel is fetched on demand, so a chunk that never lands is a failure mode all
-      // fourteen now have — and one React reports by throwing, not by suspending forever.
-      channels: { Content: lazy(() => Promise.reject(new Error('chunk never landed'))) },
     },
+    // Renders its content fine, but its header actions do not.
+    layers: {
+      Content: () => <p>layer list</p>,
+      Actions: () => {
+        throw new Error('actions exploded')
+      },
+    },
+    explorer: {
+      Content: () => <p>explorer tree</p>,
+      Actions: () => <p>explorer actions</p>,
+    },
+    // Every panel is fetched on demand, so a chunk that never lands is a failure mode all
+    // fourteen now have — and one React reports by throwing, not by suspending forever.
+    channels: { Content: lazy(() => Promise.reject(new Error('chunk never landed'))) },
+  }
+
+  return {
+    isKnownTool: (id: string) => id in panels,
+    toolDefinition: (id: string) => panels[id],
   }
 })
 

@@ -7,7 +7,7 @@ import { Panel } from '@/design/Panel'
 import { PanelHeader } from '@/design/PanelHeader'
 import { Separator } from '@/design/Separator'
 import { ToolButton } from '@/design/ToolButton'
-import { TOOL_COMPONENTS } from './tool-components'
+import { isKnownTool, toolDefinition } from './tool-components'
 import { isHorizontal, type ToolId, type ToolZone } from '@shared/domain/tool'
 import { toolTitleKey } from '@/helpers/tool-registry'
 import { ToolZoneProvider } from './tool-zone'
@@ -42,13 +42,12 @@ export const ToolWindow = memo(function ToolWindow({
   onClose,
 }: ToolWindowProps) {
   const { t } = useTranslation()
-  const definition = TOOL_COMPONENTS[tool]
   const title = t(toolTitleKey(tool))
 
   // The id comes from persisted state: an entry from an older version names no component —
   // a tool this version dropped, not a failure to present as one.
-  if (!definition) return null
-  const { Content, Actions, fillActions } = definition
+  if (!isKnownTool(tool)) return null
+  const { Content, Actions, fillActions } = toolDefinition(tool)
 
   return (
     // Zone-wide, header included: a panel lays out differently in a narrow column and in a
