@@ -1130,15 +1130,30 @@ Deux leçons, et la seconde a coûté un correctif entier :
   session. Pire que le défaut fermé. **Ne pas retenter cette variante :** le store ne peut pas
   inférer la provenance, il faut la lui dire.
 
-**L’écriture atomique existe en deux exemplaires.** `scenario/job-store.ts` et `project/documents.ts`
-écrivent tous deux une copie de transit puis renomment, avec le **même commentaire mot pour mot**, et
-`isMissing` est dupliqué à l’identique. Un défaut corrigé dans le premier vit toujours dans le
-second : le `rm` de nettoyage n’y est pas protégé, si bien qu’un échec du ménage remplace l’erreur
-d’origine et masque la vraie cause. Un `writeAtomic` partagé — dans un `src/main/files.ts` — les
-réunirait, **à condition de garder le nom de la copie en paramètre** : `documents.ts` en veut un
-unique par appel (`<fichier>.<uuid>.tmp`, plusieurs fenêtres écrivent), `job-store.ts` un nom fixe
-(`.staging`, ses écritures sont sérialisées et un nom unique laisserait un orphelin par crash). Les
-**files** d’attente, elles, ne se factorisent pas.
+**L’écriture atomique — livrée, et le constat était à moitié périmé.** `writeAtomic` vivait déjà
+dans `persistence.ts` (pas dans un `files.ts`) et `job-store.ts` l’utilisait ; seul
+`project/documents.ts` gardait la sienne. **Le défaut que le constat lui prêtait était bien réel** :
+son `rm` de nettoyage n’était pas protégé, si bien qu’un échec du ménage levait par-dessus l’erreur
+que l’appelant avait besoin d’entendre.
+
+Ce qui bloquait la mise en commun était bien le nom de la copie, désormais paramètre — défaut au
+nom fixe, que les trois stores gardent puisqu’ils sérialisent leurs écritures. `isMissing` descend
+dans `persistence` : son second exemplaire vivait dans `job-store`, d’où deux autres modules
+importaient un helper de fichier depuis un magasin de jobs.
+
+Trois choses à savoir pour la suite :
+
+- **Les écritures de *dossier* de `documents.ts`** (le manifeste et ses parties, trois `rename`
+  autour de `staged`/`stepped`) **n’ont pas été touchées** et gardent leur propre nettoyage. Elles
+  ne se ramènent pas à `writeAtomic`, qui écrit un fichier ; savoir si elles portent le même défaut
+  de `rm` non protégé reste à vérifier.
+- **Un test de nettoyage ne mord que si les deux erreurs se distinguent.** Le premier écrit ici
+  visait un chemin inexistant — où `rm` avec `force: true` ne lève jamais — et restait vert quand on
+  retirait la protection. Il faut un dossier non vide : `writeFile` répond « illegal operation on a
+  directory », `rm` sans `recursive` répond « rm returned EISDIR ».
+- **Déplacer un export traverse les rebases sans conflit.** Retirer `isMissing` de `job-store` a
+  cassé un `store.ts` arrivé de `develop` pendant le travail : rien dans le rebase ne le signale,
+  seul le typecheck d’après l’a dit.
 
 **Durabilité, assumée.** `documents.ts` renomme atomiquement, ce qui protège d’un crash **en cours
 d’écriture**, mais ne fait pas de `fsync` : une coupure de courant peut perdre l’écriture.

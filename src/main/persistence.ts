@@ -14,13 +14,18 @@ import { rename, rm, writeFile } from 'node:fs/promises'
  * Content into place, or the previous content untouched. Never a truncated file.
  *
  * Through a staging copy renamed over the target: a rename within a folder is atomic, so a crash
- * mid-write cannot leave half a list where the whole one was. The staging name is fixed rather
- * than unique — writes are serialized, so only one copy can exist at a time, and a crash leaves
- * one the next write overwrites instead of an orphan per crash that nothing ever collects.
+ * mid-write cannot leave half a list where the whole one was.
+ *
+ * The staging name defaults to a fixed one, which is right when writes are serialized: only one
+ * copy can exist at a time, and a crash leaves one the next write overwrites instead of an orphan
+ * per crash that nothing ever collects. A caller whose writes are *not* serialized — several
+ * windows saving into the same project folder — passes a name unique to the call instead.
  */
-export async function writeAtomic(file: string, content: string): Promise<void> {
-  const staging = `${file}.staging`
-
+export async function writeAtomic(
+  file: string,
+  content: string,
+  staging = `${file}.staging`,
+): Promise<void> {
   try {
     await writeFile(staging, content, 'utf8')
     await rename(staging, file)
@@ -56,3 +61,7 @@ export function writeQueue(): WriteQueue {
     },
   }
 }
+
+/** Node reports a missing path this way, and it is the one failure that is not an error. */
+export const isMissing = (error: unknown): boolean =>
+  error instanceof Error && 'code' in error && error.code === 'ENOENT'

@@ -19,6 +19,7 @@ import {
   type DocumentPart,
 } from '@shared/domain/document'
 import { isRecord } from '@shared/guards'
+import { isMissing, writeAtomic } from '@main/persistence'
 import { parseDocumentEnvelope } from './validation'
 
 export type DocumentFiles = {
@@ -99,11 +100,6 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-/** Node reports a missing path this way, and it is the one failure that is not an error here. */
-function isMissing(error: unknown): boolean {
-  return error instanceof Error && 'code' in error && error.code === 'ENOENT'
-}
-
 /**
  * The envelope of a file, without reading the document under it: a listing needs a title and a
  * kind, and a project of heavy scenes would otherwise be read whole every time it is opened.
@@ -175,13 +171,10 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
     await mkdir(dirname(file), { recursive: true })
 
     try {
-      await writeFile(copy, bodyOf(document), 'utf8')
-      // Renaming within a folder is atomic, so a crash mid-write can never leave a truncated
-      // document where the user's work was. Durability across a power cut would want `fsync`.
-      await rename(copy, file)
-    } catch (error) {
-      await rm(copy, { force: true })
-      throw error
+      // Shared with the three stores of `persistence`, which is also where the tidy-up learned not
+      // to become the failure: this copy's `rm` used to throw over the error the caller needed.
+      // Durability across a power cut would want `fsync`; it has none.
+      await writeAtomic(file, bodyOf(document), copy)
     } finally {
       staging.delete(basename(copy))
     }

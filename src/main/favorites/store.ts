@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join, resolve, sep } from 'node:path'
 import type { AssetGeneration, AssetType } from '@shared/domain/asset'
 import { FAVORITES_MAX, sameRecipe, type FavoriteRecipe } from '@shared/domain/favorite'
-import { isMissing } from '@main/scenario/job-store'
+import { isMissing } from '@main/persistence'
 import { writeAtomic, writeQueue } from '@main/persistence'
 import { parseFavoriteIndex } from './validation'
 
