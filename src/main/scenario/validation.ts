@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
+import { JOB_KINDS, type JobTarget } from '@shared/domain/job'
 import type { PersistedJob } from './job-store'
 import {
   MODEL_FAMILIES,
@@ -16,6 +17,7 @@ import {
   type SuggestPromptsRequest,
 } from '@shared/domain/prompt-assist'
 import { USAGE_PERIODS, type UsageCursors, type UsagePeriod } from '@shared/domain/usage'
+import { WORKFLOW_PRIVACIES, type WorkflowQuery } from '@shared/domain/workflow'
 
 const usagePeriod = z.literal(USAGE_PERIODS)
 
@@ -90,6 +92,30 @@ export function parseModelQuery(value: unknown): ModelQuery {
   return value === undefined ? {} : modelQuery.parse(value)
 }
 
+/** What a job runs, as the renderer names it — the same shape the manager submits. */
+const jobTarget = z.object({ kind: z.enum(JOB_KINDS), id: z.string().trim().min(1) })
+
+export function parseJobTarget(value: unknown): JobTarget {
+  return jobTarget.parse(value)
+}
+
+const workflowId = z.string().trim().min(1)
+
+export function parseWorkflowId(value: unknown): string {
+  return workflowId.parse(value)
+}
+
+/** Bounded like the model query: `limit` is the page the API is asked for, never a walk. */
+const workflowQuery = z.object({
+  privacy: z.enum(WORKFLOW_PRIVACIES).optional(),
+  cursor: z.string().max(500).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+})
+
+export function parseWorkflowQuery(value: unknown): WorkflowQuery {
+  return value === undefined ? {} : workflowQuery.parse(value)
+}
+
 const modelIds = z.array(modelId).max(MODEL_IDS_BATCH_LIMIT)
 
 export function parseModelIds(value: unknown): string[] {
@@ -145,15 +171,25 @@ export function parseReferenceImages(value: unknown): string[] {
  * An entry that does not parse is dropped rather than failing the read — a file the studio
  * cannot make sense of must not be a studio that will not start.
  */
-const storedJob = z.object({
-  id: z.string().trim().min(1),
-  remoteId: z.string().trim().min(1),
-  modelId: z.string().trim().min(1),
-  label: z.string(),
-  accountId: z.string().trim().min(1),
-  projectPath: z.string().trim().min(1),
-  createdAt: z.string().trim().min(1),
-})
+const storedJob = z
+  .object({
+    id: z.string().trim().min(1),
+    remoteId: z.string().trim().min(1),
+    kind: z.enum(JOB_KINDS).catch('model'),
+    targetId: z.string().trim().min(1).optional(),
+    /** What `targetId` was called before workflows existed. Read, never written. */
+    modelId: z.string().trim().min(1).optional(),
+    label: z.string(),
+    accountId: z.string().trim().min(1),
+    projectPath: z.string().trim().min(1),
+    createdAt: z.string().trim().min(1),
+  })
+  // A note written by an earlier version names a model and knows nothing of workflows. Dropping
+  // it rather than reading it would abandon a generation that is running and already paid for.
+  .transform(({ targetId, modelId, ...job }) => {
+    const target = targetId ?? modelId
+    return target === undefined ? null : { ...job, targetId: target }
+  })
 
 const storedJobs = z.array(storedJob.nullable().catch(null))
 

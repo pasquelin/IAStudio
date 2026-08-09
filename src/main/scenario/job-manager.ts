@@ -5,6 +5,7 @@ import {
   type Job,
   type JobProgress,
   type JobStatus,
+  type JobTarget,
 } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
@@ -12,18 +13,22 @@ import type { PersistedJob } from './job-store'
 import { ORDINARY_REQUESTS_PER_WINDOW } from './rate-limiter'
 import { createRetry, DEFAULT_BACKOFF_BASE_MS } from './retry'
 
-/** A job as the API returns it, reduced to what the studio reads. */
+/**
+ * A job as the runner hands it over, reduced to what the studio reads. Whichever endpoint ran
+ * it, and however that endpoint reports its outputs — see `outputsOf` in `runner.ts`.
+ */
 export type RemoteJob = {
   jobId: string
   status: string
   progress?: number
-  metadata?: { assetIds?: readonly string[] }
+  /** What it has produced so far, as remote asset ids — a workflow job fills it node by node. */
+  assetIds: readonly string[]
   /** Only ever on a submission: the API prices the request, not the job it hands back. */
   cost?: number
 }
 
 export type JobRunner = {
-  submit: (modelId: string, body: Record<string, unknown>) => Promise<RemoteJob>
+  submit: (target: JobTarget, body: Record<string, unknown>) => Promise<RemoteJob>
   poll: (jobId: string) => Promise<RemoteJob>
   cancel: (jobId: string) => Promise<void>
 }
@@ -83,7 +88,7 @@ export type JobManagerDeps = {
 }
 
 export type JobManager = {
-  submit: (modelId: string, label: string, body: Record<string, unknown>) => Job
+  submit: (target: JobTarget, label: string, body: Record<string, unknown>) => Job
   cancel: (jobId: string) => Promise<void>
   list: () => Job[]
   /**
@@ -271,7 +276,8 @@ export function createJobManager({
       unfinished.push({
         id: entry.job.id,
         remoteId,
-        modelId: entry.job.modelId,
+        kind: entry.job.kind,
+        targetId: entry.job.targetId,
         label: entry.job.label,
         accountId,
         projectPath,
@@ -418,7 +424,7 @@ export function createJobManager({
     // Succeeded only once the files are on disk and indexed: announcing it earlier shows a
     // finished job with nothing behind it in the asset browser.
     try {
-      entry.job.assetIds = await bound.collect(entry.job, remote.metadata?.assetIds ?? [])
+      entry.job.assetIds = await bound.collect(entry.job, remote.assetIds)
     } catch {
       // Writing or indexing failed — a local problem, distinct from anything the API said, and
       // one the note must outlive: the generation is paid for and its outputs are still there.
@@ -443,7 +449,8 @@ export function createJobManager({
     try {
       if (remoteId !== null) return await follow(entry, bound, remoteId)
 
-      const submitted = await withRetry(() => bound.runner.submit(entry.job.modelId, entry.body))
+      const target: JobTarget = { kind: entry.job.kind, id: entry.job.targetId }
+      const submitted = await withRetry(() => bound.runner.submit(target, entry.body))
       entry.remoteId = submitted.jobId
       if (submitted.cost !== undefined) entry.job.cost = submitted.cost
 
@@ -484,10 +491,11 @@ export function createJobManager({
   }
 
   return {
-    submit: (modelId, label, body) => {
+    submit: (target, label, body) => {
       const job: Job = {
         id: newId(),
-        modelId,
+        kind: target.kind,
+        targetId: target.id,
         label,
         status: 'queued',
         progress: 0,
@@ -527,7 +535,8 @@ export function createJobManager({
 
         const job: Job = {
           id: remembered.id,
-          modelId: remembered.modelId,
+          kind: remembered.kind,
+          targetId: remembered.targetId,
           label: remembered.label,
           status: 'queued',
           progress: 0,

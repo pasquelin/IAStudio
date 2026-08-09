@@ -1,17 +1,21 @@
 import { APIError } from '@scenario-labs/sdk'
-import type { CostEstimate } from '@shared/domain/job'
+import type { CostEstimate, JobTarget } from '@shared/domain/job'
 import { isRecord } from '@shared/guards'
 
 /** What a run would cost, without running it. `null` where the API declines to price it. */
-export type CostEstimator = (id: string, body: Record<string, unknown>) => Promise<CostEstimate>
+export type CostEstimator = (
+  target: JobTarget,
+  body: Record<string, unknown>,
+) => Promise<CostEstimate>
 
 /**
  * Fires the call an estimate rides on, whatever it is a dry run of.
  *
  * A function rather than a named method, because the same 402 answers `generate.runModel` and
  * `workflows.run` — the endpoint the "Dry Run Response" of `workflows-and-apps.md` documents.
+ * Which of the two is the target's business, exactly as it is for running one.
  */
-export type DryRun = (id: string, body: Record<string, unknown>) => Promise<unknown>
+export type DryRun = (target: JobTarget, body: Record<string, unknown>) => Promise<unknown>
 
 /** The figure a dry run puts in its 402, or `null` when there is no readable number in it. */
 function pricedAt(error: APIError): CostEstimate {
@@ -35,9 +39,9 @@ function pricedAt(error: APIError): CostEstimate {
  * figure either way; the difference is whether the studio can say why.
  */
 export function costEstimatorOf(run: DryRun): CostEstimator {
-  return async (id, body) => {
+  return async (target, body) => {
     try {
-      await run(id, body)
+      await run(target, body)
       // No 402 means the API priced nothing. Nothing was generated either way — the dry run flag
       // is honoured whatever the answer — so there is simply no figure to show.
       return null

@@ -23,7 +23,8 @@ const picture: Asset = {
 
 const done: Job = {
   id: 'job-1',
-  modelId: 'model_flux',
+  kind: 'model',
+  targetId: 'model_flux',
   label: 'Scenario Flux.1',
   status: 'succeeded',
   progress: 1,

@@ -141,15 +141,11 @@ describe('Generator', () => {
 
   /**
    * Asserted on the source for the same reason as the import above: the note only appears after
-   * a debounced dry run, and what matters here is which formatter it goes through. That the
-   * formatter itself groups and rounds for a language is `usage/format.test.ts`'s business.
-   *
-   * The API prices a cheap call in fractions, and `String(1 / 3)` is sixteen digits with an
-   * English point — beside a usage window that writes the same number `0,33`.
+   * a debounced dry run. Where the figure is FORMATTED moved to the hook, which both this form
+   * and the Apps panel read it from — `useCostEstimate.test.ts` holds that half.
    */
-  it('reads the estimate through the formatter the usage window uses', () => {
-    expect(panelSource).toMatch(/formatUnits\(cost\.estimate\.creativeUnits, i18n\.language\)/)
-    // The other half: interpolating the raw number is exactly what this replaced.
-    expect(panelSource).not.toMatch(/units: cost\.estimate\.creativeUnits\b/)
+  it('draws whatever the cost watch says, and formats nothing itself', () => {
+    expect(panelSource).toMatch(/submitNote=\{cost\.note\}/)
+    expect(panelSource).not.toMatch(/formatUnits/)
   })
 })

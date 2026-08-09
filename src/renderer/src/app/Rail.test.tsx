@@ -98,6 +98,7 @@ describe('Rail', () => {
       'Scène',
       'Lumières',
       'Mailles',
+      'Apps',
       'separator',
       'Inspecteur',
     ])

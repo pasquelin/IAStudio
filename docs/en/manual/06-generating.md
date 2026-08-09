@@ -354,6 +354,34 @@ the fastest way to explore a direction.
 
 ---
 
+## Apps: ready-made pipelines
+
+The **Apps** panel, in the right column, lists Scenario's *public workflows*. An App is a pipeline
+— several models chained together, sometimes a slice, a cutout and an upscale one after the other
+— published by Scenario or by the community, and runnable as it is. There is nothing to build:
+it already has its steps and its settings.
+
+**The gesture is the one you know**, in three beats:
+
+1. click an App in the list — its description says what it does;
+2. fill the form that opens. It is built from what the App declares it expects, exactly like a
+   model's form: neither you nor the studio has to guess its fields;
+3. **Run**. The job joins the generations bar with the others, and its outputs land in the open
+   project.
+
+**The price shows on the button** as soon as the form is complete, just as for a generation.
+
+**Back to the list** with the arrow at the top of the panel.
+
+> An App marked **draft** cannot be run — that is the API's decision, not the studio's. The panel
+> says so and the button stays inactive rather than letting you try.
+
+> Something an App produced has **no** "Regenerate" button in the inspector: the pipeline behind
+> it is not a model, and the generation form would not know what to do with it. Launch it again
+> from the Apps panel.
+
+---
+
 ## The errors, and what they mean
 
 | Message | Cause | What to do |

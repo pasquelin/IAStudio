@@ -1,5 +1,6 @@
 import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
+import { definition as apps } from '@/panels/apps'
 import { definition as assets } from '@/panels/assets'
 import { definition as channels } from '@/panels/channels'
 import { definition as explorer } from '@/panels/explorer'
@@ -32,4 +33,5 @@ export const TOOL_COMPONENTS: Record<ToolId, ToolDefinition> = {
   assets,
   channels,
   view,
+  apps,
 }

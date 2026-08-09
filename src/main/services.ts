@@ -74,6 +74,8 @@ import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createWorkflowRegistry, type WorkflowRegistry } from './scenario/workflow-registry'
+import { workflowCatalogOf } from './scenario/workflow-catalog'
 import { createAssistQueue } from './scenario/assist-queue'
 import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
 import { promptAssistApiOf } from './scenario/prompt-assist-api'
@@ -95,11 +97,13 @@ export type Services = {
   settings: SettingsStore
   client: ClientProvider
   models: ModelRegistry
+  /** Scenario's workflows, and the public ones — the Apps — the studio can run as they are. */
+  workflows: WorkflowRegistry
   jobs: JobManager
   prompts: PromptAssist
   /** What every stored key spent. Consumption only — the API exposes no balance to read. */
   usage: UsageReader
-  /** What a run would cost, asked before it is run. See `cost.ts`. */
+  /** What a run would cost, asked before it is run — of a model or of a workflow. See `cost.ts`. */
   estimateCost: CostEstimator
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
   captionArrivals: AutoCaption
@@ -332,6 +336,11 @@ export function createServices(settings: SettingsStore): Services {
     watch: credentials.watch,
   })
 
+  const workflows = createWorkflowRegistry({
+    catalog: () => workflowCatalogOf(client.require()),
+    watch: credentials.watch,
+  })
+
   // Bounded and separate from the `JobManager`: none of this produces an asset or has a status
   // to poll, and a library fetch of three hundred must not become three hundred calls.
   const assistQueue = createAssistQueue({
@@ -517,8 +526,12 @@ export function createServices(settings: SettingsStore): Services {
   // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
   // retried twice, one courtesy estimate would take three slots of the window precisely when
   // there are none left, and hold the transport for half a minute for a figure nobody waits on.
-  const estimateCost = costEstimatorOf((modelId, body) =>
-    client.require().generate.runModel(modelId, { body, dryRun: true }, { maxRetries: 0 }),
+  // The very same 402 on either endpoint, which is why the estimator takes a function: what runs
+  // decides which one is asked, exactly as it does for running it.
+  const estimateCost = costEstimatorOf((target, body) =>
+    target.kind === 'workflow'
+      ? client.require().workflows.run(target.id, { body, dryRun: true }, { maxRetries: 0 })
+      : client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
   )
 
   const ownerScope = createOwnerScope(credentials.watch)
@@ -673,6 +686,7 @@ export function createServices(settings: SettingsStore): Services {
     favorites,
     client,
     models,
+    workflows,
     jobs,
     prompts,
     usage,

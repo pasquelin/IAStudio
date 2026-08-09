@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Job, JobProgress } from '@shared/domain/job'
+import type { Job, JobProgress, JobTarget } from '@shared/domain/job'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -14,7 +14,8 @@ type JobsState = {
 
   /** Loads the current jobs and follows their progress. Returns the unsubscribe function. */
   connect: () => Promise<() => void>
-  submit: (modelId: string, body: Record<string, unknown>) => Promise<Job | null>
+  /** Runs a model or a workflow — the target says which, exactly as it does in the main process. */
+  submit: (target: JobTarget, body: Record<string, unknown>) => Promise<Job | null>
   cancel: (jobId: string) => Promise<void>
   apply: (progress: JobProgress) => void
 }
@@ -82,11 +83,15 @@ export const useJobs = create<JobsState>()((set, get) => ({
     }))
   },
 
-  submit: async (modelId, body) => {
+  submit: async (target, body) => {
     const bridge = getBridge()
     if (!bridge) return null
 
-    const job = await bridge.scenario.generate(modelId, body)
+    const job =
+      target.kind === 'workflow'
+        ? await bridge.workflows.run(target.id, body)
+        : await bridge.scenario.generate(target.id, body)
+
     set(state => ({ jobs: [job, ...state.jobs], bodies: { ...state.bodies, [job.id]: body } }))
     return job
   },

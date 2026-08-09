@@ -448,7 +448,50 @@ est un `402` porteur d’un `estimatedCost` — donc **un 402 n’est pas une er
 
 ## Étape 5 — Exécuter les Apps de Scenario, sans éditeur
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Ce que le plan ne disait pas, et qu’il a fallu trancher : un job ne portait pas ce qu’il
+> lance.** `Job.modelId` était lu par l’inspecteur pour offrir « Régénérer avec ces paramètres »,
+> qui rouvre le générateur sur ce modèle. Un id de workflow y serait passé pour un id de modèle,
+> et le panneau serait resté sur une erreur. `Job` porte donc `kind` (`model` | `workflow`) et
+> `targetId` — les deux endpoints n’ont pas le même vocabulaire d’identifiant, et seul le premier
+> veut dire quelque chose au générateur. `JobRunner.submit` prend la cible entière ; `follow`,
+> `poll` et `cancel` ne changent pas, un job est suivi par l’API des jobs quel qu’il soit.
+>
+> **Les notes de jobs déjà sur disque nomment un `modelId`.** Une note qui ne parse pas est
+> **jetée** (`storedJob` dans `validation.ts`), donc migrer le champ sans plus aurait abandonné,
+> chez un utilisateur, une génération en cours et déjà payée. La lecture accepte les deux noms et
+> retombe sur `kind: 'model'` ; un test le verrouille.
+>
+> **Les sorties d’un job de workflow ne sont pas là où le manager les cherchait**, comme annoncé —
+> mais `metadata.assetIds` **existe aussi** sur un job de workflow, et la doc dit que seuls les
+> derniers nœuds y contribuent. `remoteAssetIdsOf` lit donc `assetIds` **d’abord** et n’aplatit
+> `flow[]` que s’il est vide : aplatir les deux importerait chaque image intermédiaire d’une
+> chaîne comme si c’était un résultat. Dédupliqué, parce qu’un nœud de boucle se répète.
+>
+> **Pas de quatrième canal.** Le dry run est le même 402 sur l’autre endpoint, et `costEstimatorOf`
+> prend une fonction : `scenario:estimate-cost` price désormais une **cible**, celle-là même qu’on
+> soumet, et le renderer n’a plus à savoir quel endpoint tarife quoi. `useCostEstimate` prend le
+> genre en premier argument, et **le plancher de débit est partagé par toutes les formes ouvertes**
+> — le générateur et une App sont dans deux colonnes, donc tous deux à l’écran : un plancher par
+> hook aurait laissé chacun dépenser la part interactive entière, et c’est la boucle de poll,
+> dimensionnée une seule fois sur cette part, qui l’aurait payé.
+>
+> **Le coût d’un job de workflow existe** : `billing.cuCost`, déclaré sur le job par
+> `workflows.run` **et** par `jobs.retrieve` — le doute que le § 4.5 de `REPRISE.md` laissait
+> ouvert. Lu après `creativeUnitsCost`, jamais devant.
+>
+> **Le panneau est à DROITE**, en dernier de la moitié haute dans les six espaces. La colonne de
+> gauche est réservée à `models` et `generator`, un test le verrouille dans les deux sens — et une
+> App n’est pas un modèle que le générateur remplirait. Dernier de la liste pour ne rien déplacer :
+> ce qu’un espace ouvre par défaut est ce qu’il déclare en premier.
+>
+> **Ce qui n’a PAS pu être observé, et qui reste à faire.** Le § 4.5 demandait de consigner ce
+> qu’un vrai job de workflow répond. Impossible ici : le serveur MCP ne liste que les workflows
+> **privés** du compte — `workflows_list` rend une liste vide — et n’expose aucun filtre
+> `privacy: public`. Le studio, lui, demande bien `privacy: 'public'`. **Le premier lancement réel
+> d’une App tranchera** les trois inconnues : la graphie des statuts, l’échelle de la progression,
+> et si `metadata.assetIds` est peuplé ou s’il faut vraiment aplatir `flow[]`.
 
 **Une étape qui vaut un produit à elle seule**, et qui vient avant le canvas : `workflows.list` en
 `privacy: public` rend les **Apps** — des workflows publics, exécutables tels quels, filtrables par

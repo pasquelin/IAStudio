@@ -7,7 +7,8 @@ import { useJobs } from './jobs'
 function job(overrides: Partial<Job> = {}): Job {
   return {
     id: 'job_1',
-    modelId: 'model_flux',
+    kind: 'model',
+    targetId: 'model_flux',
     label: 'Flux',
     status: 'running',
     progress: 0.2,
@@ -108,7 +109,7 @@ describe('jobs store', () => {
       },
     })
 
-    await useJobs.getState().submit('model_flux', { prompt: 'a rock' })
+    await useJobs.getState().submit({ kind: 'model', id: 'model_flux' }, { prompt: 'a rock' })
     expect(useJobs.getState().jobs[0]?.id).toBe('job_new')
   })
 })

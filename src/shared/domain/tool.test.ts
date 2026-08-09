@@ -147,24 +147,24 @@ describe('the left column', () => {
 
 describe('the rail order of the upper right', () => {
   it('reads layers then explorer in Image, and explorer before the scene panels in 3D', () => {
-    expect(upperRightIn('image')).toEqual(['layers', 'explorer'])
-    expect(upperRightIn('3d')).toEqual(['explorer', 'scene', 'lights', 'meshes'])
+    expect(upperRightIn('image')).toEqual(['layers', 'explorer', 'apps'])
+    expect(upperRightIn('3d')).toEqual(['explorer', 'scene', 'lights', 'meshes', 'apps'])
   })
 
   it('puts the shelf first where a take is dragged onto a track', () => {
-    expect(upperRightIn('video')).toEqual(['assets', 'explorer'])
-    expect(upperRightIn('audio')).toEqual(['assets', 'explorer'])
+    expect(upperRightIn('video')).toEqual(['assets', 'explorer', 'apps'])
+    expect(upperRightIn('audio')).toEqual(['assets', 'explorer', 'apps'])
   })
 
   // `view` sits right behind them: how a sky is being looked at is next of kin to what it is,
   // and both used to be a menu floating over the picture.
   it('puts the sky controls first in Skyboxes — it is what that space is for', () => {
-    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view', 'explorer'])
+    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view', 'explorer', 'apps'])
   })
 
   /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */
   it('puts the channels first in Textures', () => {
-    expect(upperRightIn('textures')).toEqual(['channels', 'explorer'])
+    expect(upperRightIn('textures')).toEqual(['channels', 'explorer', 'apps'])
   })
 })
 

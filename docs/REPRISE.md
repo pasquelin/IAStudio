@@ -792,6 +792,34 @@ qui le ferait passer de « une interface devant une API » à « un outil ». D�
 du § 3 : celui-là liste ce qui reste d’un chantier commencé, celui-ci ouvre un chantier qui ne l’est
 pas.
 
+> **L'étape 5 est livrée : les Apps s'exécutent.** `workflows.list` en `privacy: 'public'` alimente
+> un panneau **Apps** (colonne de droite, les six espaces), une App s'ouvre sur le formulaire que
+> `translateSchema` bâtit de ses `inputs` — le même traducteur que pour un modèle, invariant 5 — et
+> se lance par le `JobManager`, avec son coût estimé sur le bouton. **Trois** canaux — `workflows:search`,
+> `:describe`, `:run` — et **pas un quatrième pour le prix** : `scenario:estimate-cost` price
+> désormais une **cible** (`{ kind, id }`), la même que celle qu'on soumet.
+>
+> Trois choses à ne pas redécouvrir :
+>
+> - **un job dit maintenant ce qu'il lance** — `Job.kind` (`model` | `workflow`) et `Job.targetId`.
+>   Sans quoi « Régénérer avec ces paramètres » rouvrait le générateur sur un id de workflow, que
+>   le catalogue de modèles ne connaît pas. Les **notes de jobs déjà sur disque** nomment un
+>   `modelId` : la relecture accepte les deux noms, sinon une génération payée serait abandonnée ;
+> - **les sorties d'un job de workflow** se lisent d'abord dans `metadata.assetIds`, et seulement
+>   s'il est vide en aplatissant `metadata.flow[].assets[]` — `outputsOf`, dans `runner.ts`, parce
+>   que c'est le fichier qui parle SDK. Les deux à la fois importeraient chaque image
+>   intermédiaire de la chaîne comme un résultat ;
+> - **`billing.cuCost` est enfin lu.** Le § 4.5 le donnait pour déclaré mais jamais observé : les
+>   deux références le portent sur le job lui-même, et un workflow ne price rien à côté du sien.
+>   C'est donc le seul chiffre qu'une App puisse afficher — lu **après** `creativeUnitsCost`, pour
+>   qu'un chiffre observé l'emporte toujours sur un chiffre déclaré ;
+> - **un statut inconnu vaut `ready`, pas `draft`.** La graphie n'a pas pu être observée : refuser
+>   ce qu'on ne reconnaît pas rendrait **toutes** les Apps inertes le jour où Scenario écrirait
+>   `published`. Seul un `draft` explicite éteint le bouton ;
+> - **rien n'a pu être observé en vrai.** Le serveur MCP ne liste que les workflows **privés** du
+>   compte (aucun) et n'a pas de filtre `public` : la graphie des statuts, l'échelle de la
+>   progression et le peuplement d'`assetIds` restent à confirmer au premier lancement réel.
+
 ## 4.1 Ce que l’API offre, vérifié dans la copie locale
 
 Huit endpoints, tous dans `docs/scenario-api/reference/` : `workflows.create`, `.update`, `.run`,

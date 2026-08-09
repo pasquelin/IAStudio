@@ -2,7 +2,6 @@ import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatUnits } from '@/usage/format'
 import type { ModelDescriptor } from '@shared/domain/model'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { workspaceById } from '@/helpers/workspaces'
@@ -19,7 +18,7 @@ import { useSettings } from '@/stores/settings'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
-import { useCostEstimate } from './useCostEstimate'
+import { useCostEstimate } from '@/hooks/useCostEstimate'
 
 /**
  * Deferred on purpose: the form drags zod, react-hook-form and its resolver behind it, and
@@ -74,7 +73,7 @@ function useDescriptor(modelId: string | null) {
  * here is written for any particular model.
  */
 export function Generator() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
 
   const workspace = useLayouts(state => state.activeWorkspace)
 
@@ -102,7 +101,7 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
   // Before the guards below return early: a hook cannot be called conditionally.
-  const cost = useCostEstimate(modelId, descriptor.data?.fields)
+  const cost = useCostEstimate('model', modelId, descriptor.data?.fields)
 
   if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
@@ -124,7 +123,7 @@ export function Generator() {
   // put a result is not this panel's business — it serves every one of them.
   const generate = (body: FormValues): void => {
     const claim = claimOnSubmit()
-    void submit(modelId, body).then(claim)
+    void submit({ kind: 'model', id: modelId }, body).then(claim)
   }
 
   // Adopting the settings goes through the preset "regenerate with these parameters" already
@@ -152,17 +151,7 @@ export function Generator() {
               fields={descriptor.data.fields}
               onSubmit={generate}
               submitLabel={t('actions.generate')}
-              // Absent rather than zero when nothing is priced: a button that says nothing is
-              // honest, one that says « 0 CU » would be wrong about a generation that costs.
-              submitNote={
-                cost.estimate
-                  ? t('generation.estimatedCost', {
-                      // The same formatter the usage window reads its figures with: the API
-                      // prices a cheap call in fractions, and `String(1/3)` is sixteen digits.
-                      units: formatUnits(cost.estimate.creativeUnits, i18n.language),
-                    })
-                  : undefined
-              }
+              submitNote={cost.note}
               onValuesChange={cost.onValuesChange}
               busy={!project}
               preset={preset}

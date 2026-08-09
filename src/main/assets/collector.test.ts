@@ -6,7 +6,8 @@ import type { ImportRequest, LocalBackend } from './local-backend'
 
 const JOB: Job = {
   id: 'job_1',
-  modelId: 'model_flux',
+  kind: 'model',
+  targetId: 'model_flux',
   label: 'Flux',
   status: 'running',
   progress: 1,

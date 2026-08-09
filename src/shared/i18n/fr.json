@@ -24,7 +24,8 @@
     "skybox": "Skybox",
     "scene": "Scène",
     "channels": "Canaux",
-    "view": "Vue"
+    "view": "Vue",
+    "apps": "Apps"
   },
   "view": {
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
@@ -49,6 +50,12 @@
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
     "estimatedCost": "~{{units}} UC"
+  },
+  "apps": {
+    "none": "Aucune App publiée pour l’instant.",
+    "back": "Toutes les Apps",
+    "run": "Lancer",
+    "draft": "Cette App est un brouillon : elle ne peut pas être lancée."
   },
   "jobs": {
     "none": "Aucune tâche en cours.",

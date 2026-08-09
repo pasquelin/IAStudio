@@ -1,5 +1,6 @@
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { JobKind } from '@shared/domain/job'
 import { parseStoredJobs } from './validation'
 
 /**
@@ -13,7 +14,8 @@ import { parseStoredJobs } from './validation'
 export type PersistedJob = {
   id: string
   remoteId: string
-  modelId: string
+  kind: JobKind
+  targetId: string
   label: string
   /**
    * The account the job was submitted on, as `accountFingerprint` names it. A job id asked

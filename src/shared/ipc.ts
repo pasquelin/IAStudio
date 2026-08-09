@@ -11,7 +11,7 @@ import type {
   DocumentFile,
   DocumentKind,
 } from './domain/document'
-import type { CostEstimate, Job, JobProgress } from './domain/job'
+import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
 import type { Project } from './domain/project'
@@ -29,6 +29,7 @@ import type { ToolId, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
 import type { WindowState } from './domain/window'
+import type { WorkflowDescriptor, WorkflowPage, WorkflowQuery } from './domain/workflow'
 import type { WorkspaceId } from './domain/workspace'
 
 /**
@@ -64,6 +65,10 @@ export type Channels = {
   scenarioListJobs: 'scenario:list-jobs'
   scenarioUsageReport: 'scenario:usage-report'
   scenarioUsageEvents: 'scenario:usage-events'
+
+  workflowsSearch: 'workflows:search'
+  workflowsDescribe: 'workflows:describe'
+  workflowsRun: 'workflows:run'
 
   projectCreate: 'project:create'
   projectOpen: 'project:open'
@@ -149,6 +154,10 @@ export const CHANNELS: Channels = {
   scenarioListJobs: 'scenario:list-jobs',
   scenarioUsageReport: 'scenario:usage-report',
   scenarioUsageEvents: 'scenario:usage-events',
+
+  workflowsSearch: 'workflows:search',
+  workflowsDescribe: 'workflows:describe',
+  workflowsRun: 'workflows:run',
 
   projectCreate: 'project:create',
   projectOpen: 'project:open',
@@ -395,10 +404,11 @@ export type StudioBridge = {
     describeStyle: (images: readonly string[]) => Promise<PromptStyle>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     /**
-     * What that same generation would cost, without running it. `null` when the API declines to
-     * price it; a rejection when the call itself failed, which a caller may treat as no figure.
+     * What running that exact form would cost, without running it — a model or a workflow, the
+     * target says which. `null` when the API declines to price it; a rejection when the call
+     * itself failed, which a caller may treat as no figure.
      */
-    estimateCost: (id: string, body: Record<string, unknown>) => Promise<CostEstimate>
+    estimateCost: (target: JobTarget, body: Record<string, unknown>) => Promise<CostEstimate>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
     uploadAsset: (name: string, image: string) => Promise<string>
     cancelJob: (jobId: string) => Promise<void>
@@ -424,6 +434,18 @@ export type StudioBridge = {
      * Cursors are opaque — hand back the ones the previous page returned, `{}` for the first.
      */
     usageEvents: (period: UsagePeriod, cursors: UsageCursors) => Promise<UsageEventPage>
+  }
+  /**
+   * Scenario's workflows, and the public ones — the Apps — above all: ready-made pipelines
+   * anyone may run. A workflow is run through the same job manager a generation goes through,
+   * so it lands in the jobs bar and its outputs in the project like everything else.
+   */
+  workflows: {
+    /** One page of the listing, `public` unless the query says otherwise. */
+    search: (query?: WorkflowQuery) => Promise<WorkflowPage>
+    /** Its inputs, translated into the very fields a model's form is built from. */
+    describe: (workflowId: string) => Promise<WorkflowDescriptor>
+    run: (workflowId: string, body: Record<string, unknown>) => Promise<Job>
   }
   project: {
     create: (path: string, name: string) => Promise<Project>

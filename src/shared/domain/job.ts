@@ -2,10 +2,29 @@ import type { JobFailure } from './failure'
 
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
+/**
+ * What a job runs. Two endpoints, two vocabularies of id, and one thing that must not be
+ * confused: only a model id means anything to the generator, so "regenerate with these
+ * parameters" on an asset an App produced would otherwise open the form of a model that does
+ * not exist.
+ */
+export type JobKind = 'model' | 'workflow'
+
+export const JOB_KINDS: readonly JobKind[] = ['model', 'workflow']
+
+/**
+ * What to run, and under which vocabulary of id. One shape for the two questions asked of it —
+ * what would this cost, and run it — so a third runnable thing is a value here rather than a
+ * second channel, a second estimator and a second branch in every caller.
+ */
+export type JobTarget = { kind: JobKind; id: string }
+
 /** A Scenario job, as the studio sees it. */
 export type Job = {
   id: string
-  modelId: string
+  kind: JobKind
+  /** The id of whatever `kind` names — a model of the catalogue, or a workflow. */
+  targetId: string
   label: string
   status: JobStatus
   /** From 0 to 1. */

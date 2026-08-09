@@ -55,8 +55,7 @@ const bridge: StudioBridge = {
     translatePrompt: draft => ipcRenderer.invoke(CHANNELS.scenarioTranslatePrompt, draft),
     describeStyle: images => ipcRenderer.invoke(CHANNELS.scenarioDescribeStyle, images),
     generate: (modelId, body) => ipcRenderer.invoke(CHANNELS.scenarioGenerate, modelId, body),
-    estimateCost: (modelId, body) =>
-      ipcRenderer.invoke(CHANNELS.scenarioEstimateCost, modelId, body),
+    estimateCost: (target, body) => ipcRenderer.invoke(CHANNELS.scenarioEstimateCost, target, body),
     uploadAsset: (name, image) => ipcRenderer.invoke(CHANNELS.scenarioUploadAsset, name, image),
     cancelJob: jobId => ipcRenderer.invoke(CHANNELS.scenarioCancelJob, jobId),
     listJobs: () => ipcRenderer.invoke(CHANNELS.scenarioListJobs),
@@ -65,6 +64,11 @@ const bridge: StudioBridge = {
     usageReport: period => ipcRenderer.invoke(CHANNELS.scenarioUsageReport, period),
     usageEvents: (period, cursors) =>
       ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),
+  },
+  workflows: {
+    search: query => ipcRenderer.invoke(CHANNELS.workflowsSearch, query),
+    describe: workflowId => ipcRenderer.invoke(CHANNELS.workflowsDescribe, workflowId),
+    run: (workflowId, body) => ipcRenderer.invoke(CHANNELS.workflowsRun, workflowId, body),
   },
   project: {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),

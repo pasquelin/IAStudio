@@ -57,7 +57,7 @@ describe('the generator', () => {
   // Named for what it checks: `canOffer` answers for the generator and for nothing else, so a
   // section with no model still shows every panel of its right column.
   it('leaves the right column alone — no model removes anything there', () => {
-    expect(idsOf('right', 'textures')).toEqual(['channels', 'explorer', 'inspector'])
+    expect(idsOf('right', 'textures')).toEqual(['channels', 'explorer', 'apps', 'inspector'])
   })
 })
 
