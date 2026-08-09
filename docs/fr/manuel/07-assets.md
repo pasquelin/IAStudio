@@ -368,7 +368,7 @@ sans avoir exécuté `pnpm ffmpeg:fetch`.
 Tout est dans le dossier du projet, à un endroit précis et lisible :
 
 ```
-mon-projet.scenario/
+Mon projet/
 └── assets/
     ├── img/     les images
     ├── vid/     les vidéos

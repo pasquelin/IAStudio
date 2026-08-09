@@ -352,7 +352,7 @@ without having run `pnpm ffmpeg:fetch`.
 Everything is in the project folder, in a precise and readable place:
 
 ```
-my-project.scenario/
+My project/
 └── assets/
     ├── img/     images
     ├── vid/     videos

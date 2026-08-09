@@ -117,12 +117,11 @@ find again: your documents, your desktop, an external drive.
 What it builds:
 
 ```
-my-first-project/
-├── project.json      the project's identity card
+My first project/
 ├── assets/           everything you make and import
 ├── documents/        your works in progress
-├── layouts/          the way you have arranged your panels
-└── .index/           service files, regenerable
+├── .project.json     the project's identity card — hidden
+└── .index/           service files, regenerable — hidden
 ```
 
 The project's name appears at the top of the window. You always know what you are working in.

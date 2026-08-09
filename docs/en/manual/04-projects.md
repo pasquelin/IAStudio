@@ -9,8 +9,8 @@
 Not a database. Not an online space. Not a single file that only this software can open.
 
 **An ordinary folder, on your disk.** You can open it in your file browser, look inside, copy it
-onto a USB stick, back it up with the rest of your documents, send it to someone. It carries the
-`.scenario` extension, but it stays a folder.
+onto a USB stick, back it up with the rest of your documents, send it to someone. **It carries the
+name you gave it and nothing else**: no extension, no technical suffix.
 
 That is a design decision, not an accident. A project that only the software that made it can open
 is a project you lose the day that software stops opening.
@@ -38,9 +38,7 @@ The open project's name appears in the status line, bottom left.
 ## What is inside
 
 ```
-my-project.scenario/
-│
-├── project.json          the identity card
+My project/
 │
 ├── assets/               EVERYTHING YOU MAKE
 │   ├── img/                images
@@ -53,14 +51,23 @@ my-project.scenario/
 ├── documents/            YOUR WORKS IN PROGRESS
 │                           one file per saved tab
 │
-├── layouts/              the way you arrange your panels
+├── .project.json         the identity card — HIDDEN
 │
-└── .index/               SERVICE FILES — safe to delete
+└── .index/               SERVICE FILES — safe to delete, HIDDEN
     ├── catalog.db          the index that makes search instant
     ├── proxies/            lightweight copies of videos, for smooth scrubbing
     ├── peaks/              the drawing of audio waveforms
     └── filmstrips/         video thumbnails
 ```
+
+**Two entries out of four are hidden, and the rule is simple**: what is yours shows, what is the
+machine's is filed away. Your assets and your documents stay visible — you must be able to look at
+them, copy them, repair them. The identity card and the index do not: they are the studio's tools,
+not your work.
+
+> **On Windows a dot hides nothing** — Explorer reads a file attribute, not the name. The studio
+> sets it on both entries itself. If that fails, **the project opens anyway**: a service file left
+> visible is a blemish; refusing to open the project over it would be a real fault.
 
 ### What belongs to you
 
@@ -75,10 +82,7 @@ remake.
 If that folder grows too large, or if something seems corrupted, **you can delete it**. The studio
 will rebuild it, which takes a while on a large project, and nothing will be lost.
 
-> The `.index` folder starts with a dot: on macOS and Linux it is **hidden** by default in the file
-> browser. That is normal.
-
-### `project.json`
+### `.project.json`
 
 A small text file, readable in any editor:
 
@@ -91,7 +95,14 @@ A small text file, readable in any editor:
 }
 ```
 
-It is this file that makes a folder a project.
+**It is this file that makes a folder a project**, never its name: the studio opens the folder you
+point it at and looks for this file inside.
+
+> **A project made by an earlier version opens as it is.** Its folder was called "My project
+> .scenario" and its identity card `project.json`, with no dot — the studio recognises both and
+> writes the new shape beside them. **The old file is left where it is**: the folder is yours, you
+> may be syncing it, and an earlier version of the studio can still read it. Renaming the folder to
+> drop its extension is yours to do if you care to; the studio does not touch it.
 
 ---
 
@@ -155,7 +166,7 @@ half-written file.
 | **Back it up** | copy the folder. That is all |
 | **Slim it before copying** | delete `.index/` — it will rebuild |
 | **Move it elsewhere** | move the folder, then reopen it from the studio |
-| **Rename it** | rename the folder. The displayed name comes from `project.json` |
+| **Rename it** | rename the folder. The displayed name comes from `.project.json` |
 | **Share it** | send the compressed folder. Whoever receives it will need their own API key |
 
 Nothing breaks: the paths written inside the project are **relative**, which means they describe a

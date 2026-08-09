@@ -11,7 +11,8 @@ qu’avec ce logiciel.
 
 **Un dossier ordinaire, sur votre disque.** Vous pouvez l’ouvrir dans votre explorateur de
 fichiers, regarder dedans, le copier sur une clé USB, le sauvegarder avec le reste de vos
-documents, l’envoyer à quelqu’un. Il porte l’extension `.scenario`, mais reste un dossier.
+documents, l’envoyer à quelqu’un. **Il porte le nom que vous lui avez donné, et rien d’autre** :
+pas d’extension, pas de suffixe technique.
 
 C’est une décision de conception, pas un hasard. Un projet qu’on ne peut ouvrir qu’avec le
 logiciel qui l’a créé est un projet qu’on perd le jour où le logiciel ne s’ouvre plus.
@@ -39,9 +40,7 @@ Le nom du projet ouvert s’affiche dans la ligne d’état, en bas à gauche.
 ## Ce qu’il y a dedans
 
 ```
-mon-projet.scenario/
-│
-├── project.json          la carte d'identité
+Mon projet/
 │
 ├── assets/               TOUT CE QUE VOUS FABRIQUEZ
 │   ├── img/                les images
@@ -54,14 +53,24 @@ mon-projet.scenario/
 ├── documents/            VOS TRAVAUX EN COURS
 │                           un fichier par onglet enregistré
 │
-├── layouts/              la façon dont vous arrangez vos panneaux
+├── .project.json         la carte d'identité — CACHÉ
 │
-└── .index/               DES FICHIERS DE SERVICE — supprimables sans risque
+└── .index/               DES FICHIERS DE SERVICE — supprimables sans risque, CACHÉ
     ├── catalog.db          l'index qui rend la recherche instantanée
     ├── proxies/            des copies allégées des vidéos, pour naviguer sans à-coups
     ├── peaks/              le dessin des formes d'onde audio
     └── filmstrips/         les vignettes des vidéos
 ```
+
+**Deux entrées sur quatre sont cachées, et la règle est simple** : ce qui est à vous se voit, ce
+qui est à la machine se range. Vos assets et vos documents restent visibles — vous devez pouvoir
+les regarder, les copier, les réparer. La carte d’identité et l’index, non : ce sont les outils du
+studio, pas votre travail.
+
+> **Sur Windows, un point ne cache rien** — l’Explorateur lit un attribut de fichier, pas le nom.
+> Le studio le pose lui-même sur les deux entrées. Si l’opération échoue, **le projet s’ouvre quand
+> même** : un fichier de service qui reste visible est un défaut d’apparence, refuser d’ouvrir le
+> projet pour cela en serait un vrai.
 
 ### Ce qui vous appartient
 
@@ -77,10 +86,7 @@ vite, et qu’il sait refabriquer.
 Si ce dossier grossit trop, ou si quelque chose semble corrompu, **vous pouvez le supprimer**.
 Le studio le reconstruira, ce qui prendra un moment sur un gros projet, et rien ne sera perdu.
 
-> Le dossier `.index` commence par un point : sur macOS et Linux, il est **caché** par défaut
-> dans l’explorateur de fichiers. C’est normal.
-
-### `project.json`
+### `.project.json`
 
 Un petit fichier texte, lisible avec n’importe quel éditeur :
 
@@ -93,7 +99,15 @@ Un petit fichier texte, lisible avec n’importe quel éditeur :
 }
 ```
 
-C’est ce fichier qui fait d’un dossier un projet.
+**C’est ce fichier qui fait d’un dossier un projet**, jamais son nom : le studio ouvre le dossier
+que vous désignez et cherche ce fichier dedans.
+
+> **Un projet créé par une version précédente s’ouvre tel quel.** Son dossier s’appelait
+> « Mon projet.scenario » et sa carte d’identité `project.json`, sans point — le studio les
+> reconnaît et écrit la nouvelle forme à côté. **L’ancien fichier est laissé où il est** : le
+> dossier vous appartient, vous le synchronisez peut-être, et une version antérieure du studio sait
+> encore le lire. Renommer le dossier pour lui retirer son extension est à vous de le faire, si
+> vous y tenez ; le studio n’y touche pas.
 
 ---
 
@@ -159,7 +173,7 @@ intacte au lieu d’un fichier à moitié écrit.
 | **Le sauvegarder** | copiez le dossier. C’est tout |
 | **L’alléger avant de le copier** | supprimez `.index/` — il se reconstruira |
 | **Le déplacer ailleurs** | déplacez le dossier, puis rouvrez-le depuis le studio |
-| **Le renommer** | renommez le dossier. Le nom affiché, lui, vient de `project.json` |
+| **Le renommer** | renommez le dossier. Le nom affiché, lui, vient de `.project.json` |
 | **Le partager** | envoyez le dossier compressé. Celui qui le reçoit devra avoir sa propre clé API |
 
 Rien ne casse : les chemins écrits à l’intérieur du projet sont **relatifs**, ce qui veut dire

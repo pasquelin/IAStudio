@@ -1216,13 +1216,20 @@ seconde vérité.
 
 ## 3.7 La couche projet — le dossier qu’on donne à l’utilisateur
 
-**Décidé le 9 août 2026, non commencé.** Un projet est un dossier posé chez quelqu’un : il est
-ouvert dans le Finder, synchronisé, sauvegardé, versionné, bricolé. Ce paragraphe est ce qu’il faut
-lui donner à voir, et ce qu’il faut lui épargner.
+**Décidé le 9 août 2026, et LIVRÉ le même jour** (`feat/projet-dossier`, `f989b5e`). Un projet est
+un dossier posé chez quelqu’un : il est ouvert dans le Finder, synchronisé, sauvegardé, versionné,
+bricolé. Ce paragraphe est ce qu’il fallait lui donner à voir, et ce qu’il fallait lui épargner ; ce
+qui suit décrit maintenant **ce que le code fait**, et non ce qu’il devrait faire.
 
-Les défauts qui l’ont déclenché sont dans **`docs/INTERFACE.md`, entrées 15 à 17** — le panneau sans
-sortie, les messages d’échec absents, le manifeste non défendu, l’extension et les dossiers
-techniques. Ce qui suit est ce qui reste à décider ou à écrire.
+Les défauts qui l’ont déclenché étaient dans **`docs/INTERFACE.md`, entrées 15 à 17**, toutes trois
+closes. Ce qui reste ouvert n’est plus dans ce §.
+
+> **Deux choses que la migration a apprises, et qu’il ne faut pas repayer.** Le repli vers l’ancien
+> manifeste ne se déclenche que sur un fichier **absent** : la première version prenait n’importe
+> quel échec de lecture pour « projet d’avant », si bien qu’un manifeste momentanément illisible
+> aurait été remplacé par un neuf — c’est-à-dire un projet perdu. Et **l’ancien fichier est laissé
+> en place** plutôt que supprimé : le dossier appartient à l’utilisateur, il le synchronise
+> peut-être, et une version antérieure du studio sait encore le lire.
 
 ### La mécanique est masquée sur les trois plateformes, sans exception
 

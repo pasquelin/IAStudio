@@ -119,12 +119,11 @@ que vous retrouverez : vos documents, votre bureau, un disque externe.
 Ce qu’il fabrique :
 
 ```
-mon-premier-projet/
-├── project.json      la carte d'identité du projet
+Mon premier projet/
 ├── assets/           tout ce que vous fabriquez et importez
 ├── documents/        vos travaux en cours
-├── layouts/          la façon dont vous avez arrangé vos panneaux
-└── .index/           des fichiers de service, régénérables
+├── .project.json     la carte d'identité du projet — caché
+└── .index/           des fichiers de service, régénérables — caché
 ```
 
 Le nom du projet s’affiche en haut de la fenêtre. Vous savez toujours dans quoi vous travaillez.
