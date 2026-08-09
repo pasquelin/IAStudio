@@ -1033,7 +1033,6 @@ Ces chantiers **se voient**, mais leur cause n’est pas la mise en page. Ils vi
 `docs/REPRISE.md`, au § indiqué — **ici, une ligne et rien de plus**, pour qu’on ne les cherche pas
 deux fois et qu’aucune des deux versions ne devienne fausse.
 
-- **La dureté du pinceau n’est pas implémentée**, et crayon et pinceau rendent le même outil — § 3.2.
 - **La garde manquante sur le format des signatures du registre** (`'P'` au lieu de `'KeyP'`) — § 3.2.
 - **La croix de fermeture d’onglet** — § 3.1. Celle de Dockview est masquée **délibérément** (elle
   retire un panneau, ce qui n’est pas fermer un document). Ne pas « réparer » ce masquage.
