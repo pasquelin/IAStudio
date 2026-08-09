@@ -600,9 +600,26 @@ Quatre choses passent par les bundles sans en avoir l’air, et chacune répond 
   `index.html` la portait en dur : un lecteur d’écran choisit sa voix dessus, et une interface
   anglaise sous `lang="fr"` était lue avec une phonétique française.
 
-La parité des deux bundles est **vérifiée par un test**, clé par clé, et le même test refuse une
-chaîne visible écrite en dur dans un composant. C’est ce qui empêche une langue de dériver de
-l’autre au fil des ajouts.
+### Quatre gardes, et ce que chacun tient
+
+Ce ne sont pas les mêmes tests, et les confondre laisse croire qu’une seule chose est surveillée.
+Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm validate`.
+
+| Garde | Ce qu’il refuse |
+|---|---|
+| `shared/i18n/bundles.test.ts` | une clé présente d’un côté et pas de l’autre, un ordre qui diverge, une valeur vide, une apostrophe ASCII en français, un trou d’interpolation perdu — **et une phrase anglaise recopiée dans `fr.json`** |
+| `renderer/src/no-hardcoded-text.test.ts` | dans un `.tsx` : du texte entre balises, un littéral entre accolades, derrière un ternaire ou un `&&`, et tout attribut qu’un humain lit |
+| `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
+| `main/no-hardcoded-text.test.ts`, § *the registries* | dans un `.ts` de `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
+
+**Le premier voit ce qu’aucun des trois autres ne peut voir.** Une phrase anglaise collée dans
+`fr.json` passe *par* le bundle : elle est irréprochable pour les gardes qui traquent le texte en
+dur, et elle s’affiche pourtant en anglais devant un utilisateur français. Le test la reconnaît à
+ceci qu’elle est **identique dans les deux fichiers**. Il ne compare que les phrases, jamais les
+mots seuls : `Position`, `Rotation`, `Saturation` s’écrivent pareil dans les deux langues —
+quatre-vingt-quatorze clés — et les inventorier coûterait plus cher que ce que ça attraperait.
+Sept phrases sont identiques à dessein, et elles sont nommées : la marque, deux noms de format,
+deux chemins, une ligne de copyright, un exemple de saisie.
 
 ---
 
