@@ -78,6 +78,13 @@ describe('createCatalogClient', () => {
     await expect(catalog.search({ limit: 10 })).resolves.toEqual([asset])
   })
 
+  it('resolves the totals the worker counted', async () => {
+    const catalog = createCatalogClient(loopbackPort())
+    await catalog.add(asset)
+
+    await expect(catalog.countByType()).resolves.toMatchObject({ image: 1, video: 0 })
+  })
+
   it('gives every request its own id, so two in flight do not collide', async () => {
     const port = loopbackPort()
     const catalog = createCatalogClient(port)

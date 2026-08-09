@@ -29,6 +29,8 @@ function valueOf(catalog: Catalog, request: CatalogRequest): CatalogResults[Cata
       return catalog.findByRemoteId(request.remoteAssetId)
     case 'search':
       return catalog.search(request.query)
+    case 'countByType':
+      return catalog.countByType()
     case 'remove':
       return catalog.remove(request.assetId)
     case 'appendActivity':

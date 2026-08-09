@@ -1,6 +1,6 @@
 import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
-import type { Asset, AssetChanges, AssetQuery } from './domain/asset'
+import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { CloudPage, CloudQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
 import type {
@@ -79,6 +79,7 @@ export type Channels = {
   documentConfirmDelete: 'document:confirm-delete'
 
   assetsSearch: 'assets:search'
+  assetsCounts: 'assets:counts'
   assetsPeaks: 'assets:peaks'
   assetsReveal: 'assets:reveal'
   assetsSaveAudio: 'assets:save-audio'
@@ -159,6 +160,7 @@ export const CHANNELS: Channels = {
   documentConfirmDelete: 'document:confirm-delete',
 
   assetsSearch: 'assets:search',
+  assetsCounts: 'assets:counts',
   assetsPeaks: 'assets:peaks',
   assetsReveal: 'assets:reveal',
   assetsSaveAudio: 'assets:save-audio',
@@ -452,6 +454,11 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
+    /**
+     * How many assets of each kind the project holds — counted in SQL, so the answer is six
+     * numbers rather than the catalogue itself.
+     */
+    counts: () => Promise<AssetCounts>
     /**
      * The waveform computed at ingest, as min/max pairs at `PEAKS_PER_SECOND`. Null when the
      * asset carries no sound, or when ffmpeg was missing when it was brought in.

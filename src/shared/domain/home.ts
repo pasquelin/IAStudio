@@ -10,7 +10,7 @@
 export type HomeRequirement = 'api' | 'project'
 
 export type HomeSectionId =
-  'spotlight' | 'tools' | 'projects' | 'creations' | 'documents' | 'jobs' | 'activity'
+  'spotlight' | 'tools' | 'projects' | 'creations' | 'byMode' | 'documents' | 'jobs' | 'activity'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -33,6 +33,8 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'tools', requires: [], pinned: true },
   { id: 'projects', requires: [], pinned: true, defaultLimit: 12 },
   { id: 'creations', requires: ['project'], defaultLimit: 12 },
+  // No limit: the band is one counter per kind, and there are exactly six kinds.
+  { id: 'byMode', requires: ['project'] },
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
   { id: 'activity', requires: ['project'], defaultLimit: 6 },

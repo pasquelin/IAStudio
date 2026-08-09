@@ -14,6 +14,7 @@ import {
   mediaProbeOf,
   probeNumber,
   type Asset,
+  type AssetCounts,
   type AssetGeneration,
   type AssetQuery,
   type AssetType,
@@ -332,6 +333,11 @@ export type Catalog = {
   findByHash: (hash: string) => Asset | null
   search: (query: AssetQuery) => Asset[]
   /**
+   * How many rows each kind holds. One grouped query rather than six searches: the home draws
+   * the six numbers at once, and counting in SQL never carries a row across the thread.
+   */
+  countByType: () => AssetCounts
+  /**
    * Drops a row and the references the catalogue itself holds to it. What lives on disk is the
    * caller's business: the proxy and the waveform are named after a hash that other rows may
    * share, so only the caller knows whether they are still wanted.
@@ -392,6 +398,8 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const selectActivityIds = driver.prepare(
     'SELECT id FROM (SELECT id FROM activity ORDER BY id DESC LIMIT ?) ORDER BY id',
   )
+  // Answered by `assets_type_idx` alone, without reading a single row.
+  const countTypes = driver.prepare('SELECT type, COUNT(*) AS total FROM assets GROUP BY type')
   const deleteAsset = driver.prepare('DELETE FROM assets WHERE id = ?')
   // A child pointing at a parent that is gone reads back as a derivation from nothing, and
   // every inspector that follows the link would have to guard against a row that cannot exist.
@@ -561,6 +569,27 @@ export function createCatalog(driver: SqliteDriver): Catalog {
 
       const tags = tagsByAsset(rows.map(row => text(row, 'id')))
       return rows.map(row => assetOf(row, tags.get(text(row, 'id')) ?? []))
+    },
+
+    countByType: () => {
+      // Every kind starts at zero: a kind absent from the grouping has none, and the caller
+      // draws six counters whatever the project holds.
+      const counts: AssetCounts = {
+        image: 0,
+        video: 0,
+        audio: 0,
+        mesh: 0,
+        texture: 0,
+        skybox: 0,
+      }
+
+      for (const row of countTypes.all()) {
+        const type = text(row, 'type')
+        // A kind this build no longer knows is dropped rather than counted under another.
+        if (isAssetType(type)) counts[type] = optionalNumber(row, 'total') ?? 0
+      }
+
+      return counts
     },
 
     appendActivity: entries => {

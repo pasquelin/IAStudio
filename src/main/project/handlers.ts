@@ -57,6 +57,8 @@ export function registerProjectHandlers({
     return found.map(withoutSourcePath)
   })
 
+  handle(CHANNELS.assetsCounts, () => project.catalog().countByType())
+
   handle(CHANNELS.assetsReveal, async (_event, assetId) => {
     const asset = await project.catalog().find(parseAssetId(assetId))
     // Their file, not our proxy: showing someone `.index/proxies/ab12….mp4` in place of the

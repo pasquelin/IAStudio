@@ -370,6 +370,33 @@ describe('catalogue provenance and sync', () => {
     expect(catalog.search({ syncStatus: 'local-ahead' }).map(one => one.id)).toEqual(['a'])
   })
 
+  it('counts every kind, zeroes included', () => {
+    catalog.add(asset({ id: 'a', type: 'image' }))
+    catalog.add(asset({ id: 'b', type: 'image' }))
+    catalog.add(asset({ id: 'c', type: 'skybox' }))
+
+    expect(catalog.countByType()).toEqual({
+      image: 2,
+      video: 0,
+      audio: 0,
+      mesh: 0,
+      texture: 0,
+      skybox: 1,
+    })
+  })
+
+  // The column is a free string in SQLite, as everywhere else here: a row written by a build
+  // that knew a seventh kind must not be counted under one of the six this one knows.
+  it('leaves a kind this build no longer knows out of the totals', () => {
+    catalog.add(asset({ id: 'a', type: 'image' }))
+    driver.exec(`
+      INSERT INTO assets (id, name, type, location, created_at)
+      VALUES ('b', 'hologram', 'hologram', 'local', '2026-08-08T10:00:00.000Z')
+    `)
+
+    expect(catalog.countByType()).toMatchObject({ image: 1 })
+  })
+
   it('narrows to what a model produced, leaving imports out', () => {
     catalog.add(
       asset({

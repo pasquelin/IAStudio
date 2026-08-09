@@ -330,6 +330,12 @@ export type AssetQuery = {
 }
 
 /**
+ * How many assets of each kind a project holds. Every kind is present, zero included: a counter
+ * that vanishes when it reaches nothing is a counter that reads as a bug rather than as a total.
+ */
+export type AssetCounts = Record<AssetType, number>
+
+/**
  * What may be changed about an asset from the interface. An absent field is left alone, which is
  * what lets a rename and a retagging travel through the same channel without one erasing the
  * other — tags are replaced wholesale, so `[]` genuinely means « no tags ».

@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { HomeSectionId } from '@shared/domain/home'
 import { Activity } from './sections/Activity'
+import { ByMode } from './sections/ByMode'
 import { Creations } from './sections/Creations'
 import { Documents } from './sections/Documents'
 import { Jobs } from './sections/Jobs'
@@ -17,6 +18,7 @@ export const HOME_COMPONENTS: Record<HomeSectionId, FC> = {
   tools: Tools,
   projects: Projects,
   creations: Creations,
+  byMode: ByMode,
   documents: Documents,
   jobs: Jobs,
   activity: Activity,

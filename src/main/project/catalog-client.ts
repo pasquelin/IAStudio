@@ -1,5 +1,5 @@
 import type { ActivityDraft, ActivityEntry, ActivityQuery } from '@shared/domain/activity'
-import type { Asset, AssetQuery } from '@shared/domain/asset'
+import type { Asset, AssetCounts, AssetQuery } from '@shared/domain/asset'
 import type { CatalogRequest, CatalogResponse, CatalogResults } from './catalog-protocol'
 
 /**
@@ -28,6 +28,8 @@ export type AsyncCatalog = {
   /** The local row a generated asset landed in, looked up by its Scenario identifier. */
   findByRemoteId: (remoteAssetId: string) => Promise<Asset | null>
   search: (query: AssetQuery) => Promise<Asset[]>
+  /** The six totals, counted in SQL — the home asks for them, never for the rows behind them. */
+  countByType: () => Promise<AssetCounts>
   remove: (assetId: string) => Promise<void>
   /** Writes a batch of journal lines and answers them with the ids the database gave them. */
   appendActivity: (entries: readonly ActivityDraft[]) => Promise<ActivityEntry[]>
@@ -96,6 +98,8 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
       send<'findByRemoteId'>(id => ({ id, op: 'findByRemoteId', remoteAssetId })),
 
     search: query => send<'search'>(id => ({ id, op: 'search', query })),
+
+    countByType: () => send<'countByType'>(id => ({ id, op: 'countByType' })),
 
     remove: assetId => send<'remove'>(id => ({ id, op: 'remove', assetId })),
 
