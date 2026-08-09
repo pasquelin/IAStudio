@@ -86,17 +86,23 @@ const homeSection = z.object({
   limit: z.number().int().min(HOME_LIMIT_MIN).max(HOME_LIMIT_MAX).optional(),
 })
 
-const home = z.object({
-  enabled: z.boolean().optional(),
-  // A section this build no longer knows is dropped rather than made a reason to refuse the
-  // whole write: a user who went back to an earlier version would otherwise lose every other
-  // setting along with it. `visibleHomeSections` drops it a second time, and is the one that
-  // has to — nothing guarantees the file went through here.
-  sections: z
-    .array(homeSection.nullable().catch(null))
-    .transform(entries => entries.filter(entry => entry !== null))
-    .optional(),
-})
+/*
+ * Caught at the branch as well as at the element, for the reason spelled out under `workspaces`:
+ * a section this build no longer knows is dropped rather than made a reason to refuse the whole
+ * write, and a `sections` that is not even an array must cost the arrangement and nothing else.
+ * `visibleHomeSections` drops the unknown ones a second time, and is the one that has to —
+ * nothing guarantees the file went through here.
+ */
+const home = z
+  .object({
+    enabled: z.boolean().optional(),
+    sections: z
+      .array(homeSection.nullable().catch(null))
+      .transform(entries => entries.filter(entry => entry !== null))
+      .catch([])
+      .optional(),
+  })
+  .catch({})
 
 /*
  * Caught at the branch, not only at the element: a malformed `order` must cost the arrangement

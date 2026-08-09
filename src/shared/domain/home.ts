@@ -1,3 +1,5 @@
+import { reconcileOrder } from './order'
+
 /**
  * The home screen's registry, shared by both processes. It sits here for the same reason as
  * `domain/tool.ts`: the settings carry the user's order and the main process validates them,
@@ -115,24 +117,14 @@ function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
  * has added since. Every read and every write starts here: a user reordering a home whose
  * settings predate a section would otherwise write that section out of existence.
  *
- * An added section is placed where it was designed to sit rather than appended: nobody goes
- * looking in the preferences for a feature they have never seen, and a new section landing
- * under the fold is a feature that ships invisible.
+ * What `reconcileOrder` buys here: an added section sits where it was designed to rather than
+ * at the end, and a new band under the fold is a feature that ships invisible.
  */
 export function homeSections(stored: readonly HomeSectionSetting[]): HomeSectionSetting[] {
-  const settings = stored.filter(setting => homeSectionOf(setting.id) !== null)
-
-  for (const [index, entry] of HOME_SECTIONS.entries()) {
-    if (settings.some(setting => setting.id === entry.id)) continue
-
-    let at = 0
-    for (const earlier of HOME_SECTIONS.slice(0, index)) {
-      const found = settings.findIndex(setting => setting.id === earlier.id)
-      if (found >= 0) at = found + 1
-    }
-
-    settings.splice(at, 0, settingOf(entry))
-  }
+  const kept = stored.filter(setting => homeSectionOf(setting.id) !== null)
+  // Built here rather than reusing `DEFAULT_HOME_SECTIONS`: what the registry contributes ends up
+  // in the caller's array, and a module constant handed out by reference is a shared mutable.
+  const settings = reconcileOrder(kept, HOME_SECTIONS.map(settingOf), setting => setting.id)
 
   // Anchored bands are put back at the foot whatever the stored order says. Settings written by
   // an earlier version — or by hand — would otherwise place one mid-page, where its endless

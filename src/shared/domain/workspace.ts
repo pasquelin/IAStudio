@@ -1,3 +1,5 @@
+import { reconcileOrder } from './order'
+
 /**
  * Workspace registry, shared by both processes. It sits here for the same reason as
  * `domain/tool.ts`: the document domain needs `WorkspaceId`, and `shared/` cannot import from
@@ -30,37 +32,21 @@ export function isWorkspaceId(id: string): id is WorkspaceId {
 }
 
 /**
- * The order to draw the bar in, reconciled with what this build declares. A stored order is a
- * photograph of the workspaces that existed the day it was written: one that has since been
- * dropped would draw a hole, and one that has since been added would be invisible to everyone
- * who had already arranged their bar.
- *
- * A newcomer lands where the registry declares it — after the last of its earlier neighbours
- * the user kept — rather than at the end, so the reason `WORKSPACE_IDS` is ordered survives.
+ * The order to draw the bar in: the stored one, cleaned of the ids this build no longer knows
+ * and completed by the ones it has added since. `reconcileOrder` holds where a newcomer lands,
+ * and why.
  */
 export function workspaceOrder(stored: unknown): WorkspaceId[] {
-  const order: WorkspaceId[] = []
+  const kept: WorkspaceId[] = []
   // `unknown` rather than an array: the value reaches here off a file or an IPC message, and the
   // window that draws the bar must not be the one to discover it was neither.
   if (Array.isArray(stored)) {
     for (const id of stored) {
-      if (typeof id === 'string' && isWorkspaceId(id) && !order.includes(id)) order.push(id)
+      if (typeof id === 'string' && isWorkspaceId(id) && !kept.includes(id)) kept.push(id)
     }
   }
 
-  for (const [index, id] of WORKSPACE_IDS.entries()) {
-    if (order.includes(id)) continue
-
-    let at = 0
-    for (const earlier of WORKSPACE_IDS.slice(0, index)) {
-      const found = order.indexOf(earlier)
-      if (found >= 0) at = found + 1
-    }
-
-    order.splice(at, 0, id)
-  }
-
-  return order
+  return reconcileOrder(kept, WORKSPACE_IDS, id => id)
 }
 
 /**
