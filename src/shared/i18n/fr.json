@@ -57,6 +57,14 @@
     "run": "Lancer",
     "draft": "Cette App est un brouillon : elle ne peut pas être lancée."
   },
+  "graph": {
+    "nodes": {
+      "text": "Texte",
+      "asset": "Asset",
+      "model": "Modèle",
+      "stickyNote": "Note"
+    }
+  },
   "jobs": {
     "none": "Aucune tâche en cours.",
     "running_one": "{{count}} génération",

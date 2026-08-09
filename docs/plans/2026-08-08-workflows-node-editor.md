@@ -549,7 +549,40 @@ voit son job aboutir dans la barre de jobs avec ses assets posés dans le projet
 
 ## Étape 6 — Le canvas, et la convention d’arête
 
-- [ ] Livrée
+- [x] Livrée
+
+> **Le format est dans `shared/domain/graph.ts`, pas dans `engines/`.** Le plan disait « le format
+> natif est `editorInfo` », et c’est fait — mais **écrit à la main plutôt qu’importé du SDK** : un
+> graphe est un document qui traverse l’IPC, donc son type appartient à `shared/`, et `shared/`
+> ne porte aucune dépendance runtime (invariant 2). Le renderer n’importe pas le SDK, et c’est
+> le principal qui l’adaptera au convertisseur à l’étape 7 — une divergence de forme échouera
+> alors au typecheck, pas à l’exécution.
+>
+> **`editorInfo` a un QUATRIÈME champ** : `nodeGroups`, `{ [uuid]: { title, color } }`, avec un
+> `data.group` sur chaque nœud. Lu sur une App publiée ; ni le plan ni le § 4.4 ne le nommaient.
+>
+> **La convention d’arête est vérifiée sur données réelles**, et elle décide de quel côté va
+> chaque `<Handle>` : une ENTRÉE est un handle React Flow de type `source` posé à GAUCHE, une
+> SORTIE un handle de type `target` posé à DROITE. C’est écrit dans `NodePorts.tsx`, parce que
+> c’est là que l’inversion se paierait.
+>
+> **Deux défauts trouvés en revue, et invisibles autrement :**
+>
+> - **la sélection ne remontait jamais.** Un canvas entièrement contrôlé ne garde aucune
+>   sélection : ce qui ne lui est pas rendu n’est pas sélectionné, et la touche Suppr — qui agit
+>   sur la sélection — ne trouvait donc jamais rien à supprimer. La sélection vit dans le canvas
+>   (état de session, jamais sauvée) et redescend dans les nœuds **et dans les arêtes** — sans
+>   quoi une arête ne se supprimerait pas non plus, ce que la revue n’avait vu que côté nœuds ;
+> - **chaque rendu recréait tous les nœuds.** React Flow compare les nœuds par IDENTITÉ : un
+>   objet neuf lui fait jeter la mesure du nœud et réabonner son `ResizeObserver`. Refaire la
+>   liste entière faisait cela à **tous** les nœuds à **chaque frame** d’un déplacement, pour le
+>   seul qui bougeait. Un cache par nœud (`WeakMap`, clé = le nœud immuable) rend les autres tels
+>   quels.
+>
+> **Ce que l’étape 6 ne fait pas** : le canvas n’est monté nulle part. Le point de montage est la
+> décision de l’étape 10, tranchée depuis — **le graphe est un septième espace** — et c’est le
+> travail suivant. « Se sauve, se relit à l’identique » attend donc le `DocumentIo` de l’étape 10 ;
+> la relecture, elle, est écrite et testée (`parseGraph`, sur un `editorInfo` réel).
 
 **Lire le § 4.4 de `REPRISE.md` avant la première arête.** Le SDK porte la règle en commentaire
 (`lib/workflow_converter.js:588`) : `{ source: consumer, target: provider }`. **`source` est
@@ -688,9 +721,12 @@ s’ouvre dans le studio, et un graphe non exportable dit pourquoi.
 À faire en dernier, quand le contenu existe — mais **à concevoir dès l’étape 6**, parce que ça
 détermine où le canvas est monté.
 
-- Un **septième espace** (`WORKSPACE_IDS`) ou un type de document dans les six ? **À trancher avec
-  l’utilisateur.** Le graphe n’est pas la sortie d’un espace, il les traverse tous : c’est
-  l’argument pour un espace à lui.
+- **Tranché le 9 août 2026 : un septième espace.** Le graphe n’est pas la sortie d’un espace, il
+  les traverse tous — et le code disait la même chose : `DocumentKind` et `WorkspaceId` sont en
+  correspondance **1:1** (`KIND_BY_WORKSPACE`, `workspaceForKind`), donc un `kind: 'graph'` sans
+  espace aurait été le premier à casser cette règle, et il aurait fallu désigner un espace
+  d’accueil — question sans bonne réponse. Ce qui bouge : `WORKSPACE_IDS`, `KIND_BY_WORKSPACE`,
+  `TOOL_PLACEMENTS`, la barre de titre, le rail, et les tests qui verrouillent « six ».
 - `TOOL_PLACEMENTS` : **la colonne de gauche est réservée à la génération dans les six espaces**
   (`models` et `generator`, et rien d’autre — un test le verrouille dans les deux sens). Une
   bibliothèque de nodes ne peut donc **pas** y aller. La droite porte ce qui parle du document,
