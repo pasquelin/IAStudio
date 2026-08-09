@@ -804,6 +804,15 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key belongs |
 
+**A guard that reads data can go blind without turning red**, which is what the *what the guards
+would catch* block of `bundles.test.ts` is for. Its eight checks run through four local helpers: a
+helper returning an empty array would make **all of them pass while checking nothing at all**. Five
+probes now hold what the guards must see — an interpolation hole renamed from one language to the
+other, a number formatter dropped on one side, two bundles that stopped lining up, a nested key the
+flattening must reach. Verified **by breaking**: with `holes()` neutralised, two probes turn red
+where the interpolation guard itself stayed green. The two `no-hardcoded-text` files have carried
+twenty such probes between them all along; this one had none.
+
 **A typographic guard is not a luxury: it holds what no editor shows.** The French bundle wrote
 its double punctuation with an ordinary space — eighty-four values, not one non-breaking — and an
 ordinary space is a place where the line is allowed to break. « Impossible d’importer « {{name}} » »

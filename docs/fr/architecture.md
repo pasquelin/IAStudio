@@ -834,6 +834,16 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 | `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | dans un `.ts` de `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
 
+**Une garde qui lit des données peut devenir aveugle sans rougir**, et c’est la raison du § *what
+the guards would catch* de `bundles.test.ts`. Ses huit vérifications passent par quatre helpers
+locaux : un helper qui rendrait un tableau vide les ferait **toutes passer au vert en ne vérifiant
+plus rien**. Cinq sondes tiennent maintenant ce que les gardes doivent voir — un trou
+d’interpolation renommé d’une langue à l’autre, un formateur de nombre tombé d’un seul côté, deux
+bundles qui ont cessé de s’aligner, une clé imbriquée que l’aplatissement doit atteindre. Vérifiées
+**en cassant** : `holes()` neutralisé, deux sondes rougissent là où la garde des interpolations,
+elle, restait verte. Les deux fichiers `no-hardcoded-text` en portent vingt entre eux depuis
+toujours ; celui-ci n’en avait aucune.
+
 **Une garde typographique n’est pas un luxe : elle tient ce qu’aucun éditeur ne montre.** Le
 bundle français écrivait sa ponctuation double avec une espace ordinaire — quatre-vingt-quatre
 valeurs, zéro insécable — et une espace ordinaire est un endroit où la ligne a le droit de se
