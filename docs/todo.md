@@ -635,7 +635,7 @@ vérifie le format des signatures du registre (§ 5.2).
 
 # 4. Ce que l'interface ne dit pas
 
-Sept entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
+Neuf entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
 ## 4.1 L'état d'une ligne, et d'une tuile — un seul composant, trois aspects
@@ -705,6 +705,111 @@ sélection **par dessous**.
 
 > Ne pas confondre les deux états en les réglant : une cellule peut être focalisée sans être
 > sélectionnée, et l'inverse.
+
+---
+
+## 4.2 Les cinq bandes de l'accueil disparaissent quand on leur refuse la réponse
+
+### 42. `useShelf` avale les rejets, et une bande refusée se retire de la page
+
+**Le geste attendu.** Quand une bande de l'accueil n'obtient pas sa réponse, **elle reste à
+l'écran**, le dit sobrement, et propose de réessayer. Elle ne s'efface pas.
+
+**Vérifié le 9 août 2026**, fichier par fichier. `useShelf` a **une** politique d'échec et son
+`.catch` remet la valeur initiale : « refusé » et « rien à montrer » deviennent le même état, et la
+bande se retire de la page.
+
+| Bande | Ce qu'elle lit | Ce qu'elle fait d'un refus |
+|---|---|---|
+| **Library** | `cloud.browse` | `if (page.length === 0) return null` — un 429 la fait disparaître sans un mot. Et depuis que `cloudBrowse` passe par `quietlyReducedBy`, **le journal ne le dit pas non plus** : plus aucune trace côté utilisateur |
+| **Usage** | `scenario.usageReport` | `if (!report) return marker` — même confusion, même silence |
+| **Creations** | `assets.search` | catalogue local : un échec est rare, la confusion est la même |
+| **ByMode** | `assets.counts` | idem |
+| **Similar** | `cloud.browse` + `cloud.similar` | **la seule qui s'en sort — mais par le haut** |
+
+**Similar est déjà sortie de là, et c'est le vrai signal.** Elle s'est donné un type à trois états,
+son propre `try/catch` dans `lookalikes()`, et un compteur `attempt` glissé dans la clé de `useShelf`
+pour se fabriquer un « Réessayer ». **C'est un mécanisme de relance générique reconstruit dans un
+composant** — la deuxième bande qui le voudra le recopiera.
+
+**La forme juste : `useShelf` rend l'état, pas seulement la valeur.**
+
+    { value, state: 'reading' | 'refused' | 'ready', retry }
+
+Le `attempt` de Similar disparaît alors dans le hook, et `Similar.tsx` n'a plus à attraper ce que le
+hook aurait dû lui dire.
+
+**Trois points que la lecture du code a tranchés, et qu'il ne faut pas redécouvrir :**
+
+- **Un `read()` qui répond `undefined` doit devenir `ready`, pas `reading`.** C'est le cas ordinaire
+  — pas de projet ouvert, pas de pont — et le laisser en lecture ferait dessiner à toute bande sans
+  projet une attente qui ne finit jamais.
+- **`useDeferredShelf` doit forcer `reading` tant que la bande n'a pas été atteinte.** Sinon une
+  bande jamais lue se déclare prête, retire son marqueur — et **n'est alors jamais lue**, puisque le
+  marqueur est ce qui se fait observer.
+- **Le retry doit vivre dans le hook**, pas dans la bande : l'effet dépend déjà de `source`, un
+  compteur interne ajouté à ses deps suffit. Vérifier qu'il fonctionne sur une bande **différée dont
+  le `seen` est déjà verrouillé** — c'est le cas de Similar et d'Usage.
+
+**Ce que chaque bande affiche sur un refus, à décider.** Similar montre une ligne et un bouton ; les
+quatre autres n'ont pas eu la question posée. **Une bande décorative qui afficherait une erreur rouge
+serait pire que le silence** — mais disparaître sans laisser de trace est ce qui a produit cette
+dette. La piste : le même bloc pour les cinq, `SectionNote` en ton `muted` et un bouton
+« Réessayer » (`home.retry` existe déjà), sorti dans un composant partagé plutôt que copié cinq fois.
+
+> **Deux pièges déjà payés sur ce chantier.** Un test qui passe ne prouve rien tant qu'il n'a pas
+> échoué : vérifier que chaque test rougit quand on retire son correctif. **Attention au faux
+> `IntersectionObserver` de `test-setup.ts`** — il répond « visible » par défaut, donc un test de
+> chargement différé passe même si le mécanisme est entièrement supprimé ; installer
+> `installIntersectionObserver({ eager: false })`. Et **ne jamais écrire un fichier de test sans
+> l'avoir lu** : les quatre tests de `useShelf` ont été écrasés comme ça, et c'est le compteur de
+> tests qui l'a révélé.
+
+> **Deux manuels deviennent faux le jour où c'est fait.** Le chapitre 03, fr et en, affirme depuis le
+> 9 août que Similar est **« la seule du lot »** à distinguer un refus d'un compte qui n'a rien de
+> ressemblant.
+
+---
+
+## 4.3 L'inspecteur mélange deux gabarits de ligne qui ne s'alignent pas
+
+### 43. Deux familles de lignes, deux largeurs de label, dans le même groupe
+
+**Le geste attendu.** Dans un même bloc de l'inspecteur, **toutes les lignes s'alignent** : même
+colonne de libellés, même retrait, même hauteur — quel que soit l'espace où l'on se trouve.
+
+**Vu le 9 août 2026, capture à l'appui** (l'inspecteur d'un nœud de graphe) : « Identité » et
+« Type » sur une colonne, « Titre » et « Mots » sur une autre, et les champs qui commencent ailleurs
+encore.
+
+**Mesuré dans le code, pas déduit.** Deux gabarits coexistent, et rien ne les accorde :
+
+| | `PropertyRow` (`design/PropertyRow.tsx`) | Les champs (`TextField`… via `FIELD_ROW`) |
+|---|---|---|
+| Largeur du libellé | **`w-20`** — 80 px | **`w-16`** — 64 px |
+| Retrait horizontal | `px-2` | **aucun** |
+| Hauteur | `min-h-(--sc-control)` | aucune |
+| Retrait vertical | `py-1` | aucun |
+| Valeur | `flex-1 truncate text-right` | champ `flex-1`, texte à gauche |
+
+**Le `gap-2` n'est pas en cause** — les deux l'ont, et `panels/inspector/` ne contient aucun autre
+espacement. Ce qui décale tout, c'est **80 px contre 64**, et **8 px de retrait contre zéro**.
+
+**Et ce n'est pas un défaut du graphe : cinq inspecteurs sur six mélangent les deux familles**, sur
+`develop`, depuis longtemps — `LayerInspector` (7 lignes contre 13 champs), `TextureInspector`
+(5 contre 16), `ClipInspector` (10 contre 4), `TrackInspector` (6 contre 1). Seul `AssetInspector`
+n'emploie que `PropertyRow`, et c'est pourquoi lui seul est aligné.
+
+> **Le nœud de graphe n'est pas encore sur `develop`** : `GraphNodeInspector.tsx` vit dans le
+> worktree `workflows`. La capture vient de là — **mais le défaut qu'elle montre est en amont**, et
+> le corriger dans le graphe seul le laisserait dans les quatre autres.
+
+**Ce que ça demande** : que les deux familles partagent une seule colonne de libellé. `FIELD_LABEL`
+et le `w-20` de `PropertyRow` sont deux déclarations de la même chose — une gauge, comme
+`--sc-control` en est une pour la hauteur des contrôles. Les commentaires des deux fichiers disent
+d'ailleurs le même but avec des mots différents : « so the controls of a section line up rather than
+each starting where its name ends » d'un côté, « share a gauge and an alignment rather than each
+inventing a two-column layout » de l'autre.
 
 ---
 
