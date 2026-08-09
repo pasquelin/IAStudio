@@ -252,7 +252,8 @@ describe('the texture preview', () => {
     it('multiplies the repeat by the preview, on every map at once', async () => {
       const renderer = mounted()
       const state = everyChannel()
-      state.material.tiling = { x: 3, y: 3 }
+      // Asymmetric on purpose: at 3 by 3 the assertion holds with the two axes swapped.
+      state.material.tiling = { x: 3, y: 5 }
       state.preview.tilingPreview = 4
       renderer.apply(state)
       await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(PBR_CHANNELS.length))
@@ -260,10 +261,10 @@ describe('the texture preview', () => {
       for (const result of source.load.mock.results) {
         const map = await result.value
         await vi.waitFor(() => expect(map.repeat.x).toBe(12))
-        expect(map.repeat.y).toBe(12)
+        expect(map.repeat.y).toBe(20)
       }
       // And the document keeps what its author chose.
-      expect(state.material.tiling).toEqual({ x: 3, y: 3 })
+      expect(state.material.tiling).toEqual({ x: 3, y: 5 })
     })
 
     /**
