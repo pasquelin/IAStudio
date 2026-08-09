@@ -635,7 +635,7 @@ vérifie le format des signatures du registre (§ 5.2).
 
 # 4. Ce que l'interface ne dit pas
 
-Neuf entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
+Dix entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
 ## 4.1 L'état d'une ligne, et d'une tuile — un seul composant, trois aspects
@@ -771,7 +771,13 @@ dette. La piste : le même bloc pour les cinq, `SectionNote` en ton `muted` et u
 
 ---
 
-## 4.3 L'inspecteur mélange deux gabarits de ligne qui ne s'alignent pas
+## 4.3 Les mises en page qui divergent d'un panneau à l'autre
+
+**Regroupées** : dans les deux cas, deux surfaces qui devraient se ressembler ne se ressemblent pas
+parce qu'**un gabarit existe et n'est pas partagé** — la largeur d'une colonne de libellés pour
+l'une, la formule d'une colonne défilante pour l'autre. Ce sont les deux mêmes questions que
+`--sc-control` a déjà tranchées pour la hauteur des contrôles : une gauge déclarée une fois, lue
+partout.
 
 ### 43. Deux familles de lignes, deux largeurs de label, dans le même groupe
 
@@ -810,6 +816,40 @@ et le `w-20` de `PropertyRow` sont deux déclarations de la même chose — une 
 d'ailleurs le même but avec des mots différents : « so the controls of a section line up rather than
 each starting where its name ends » d'un côté, « share a gauge and an alignment rather than each
 inventing a two-column layout » de l'autre.
+
+### 44. Le nom du modèle est coupé en deux dans le panneau Génération
+
+**Le geste attendu.** Lire le nom du modèle choisi, en entier, en haut du panneau Génération.
+
+**Vu le 9 août 2026, capture à l'appui** : « GPT Image 2 » n'est pas tronqué en largeur — il est
+**rogné en hauteur**. On voit le haut des lettres, le bas est coupé net.
+
+**La cause tient en une règle CSS que `truncate` déclenche sans le dire.** Le titre est un `<p>` nu,
+enfant direct de la colonne du panneau :
+
+    <div className="flex h-full flex-col overflow-auto">          {/* Generator.tsx:136 */}
+      <p className="text-muted truncate px-2 pt-2 text-[11px]">{descriptor.data?.name}</p>
+
+Un item flex est normalement protégé par `min-height: auto`, qui l'empêche d'être comprimé sous la
+hauteur de son contenu. **Cette protection tombe dès que l'`overflow` de l'item n'est plus
+`visible`** — et `truncate` pose précisément `overflow: hidden`. Le `<p>` devient donc écrasable à
+zéro, le formulaire qui le suit prend la place, et son propre `overflow: hidden` rogne le texte au
+lieu de le laisser dépasser. **`truncate` sur un enfant de colonne flex sans `shrink-0` coupe
+verticalement — c'est ce que la capture montre.**
+
+**Le même panneau, écrit deux fois, et l'autre version est juste.** `Apps.tsx:158` rend exactement
+la même chose : une colonne défilante, un titre, puis le formulaire construit des mêmes
+descripteurs. Deux différences, et chacune compte :
+
+| | `Generator.tsx` | `Apps.tsx` |
+|---|---|---|
+| La colonne | `flex h-full flex-col overflow-auto` | `flex h-full **min-h-0** flex-col overflow-auto` |
+| Le titre | un `<p className="truncate">` **nu**, enfant direct de la colonne | un `<p className="truncate">` dans un en-tête à lui — `flex items-center border-b px-1 py-1.5` — dont un `ToolButton` tient la hauteur |
+
+**Ce que ça demande** : `shrink-0` sur la ligne du titre, et la même formule de colonne des deux
+côtés. La question de fond est celle du regroupement ci-dessus — **ces deux panneaux rendent le même
+formulaire depuis les mêmes descripteurs, et leur en-tête n'est pas le même composant.** Un en-tête
+de panneau partagé fermerait les deux écarts d'un coup, et il en existe déjà un : `PanelHeader`.
 
 ---
 
