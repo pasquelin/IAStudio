@@ -36,8 +36,12 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   const building = new Map<BufferGeometry, Promise<void>>()
 
   /** The worker answers nothing more: everyone waiting on it would wait for the window's life. */
-  const abandon = (reason: string): void => {
-    worker?.terminate()
+  const abandon = (dead: Worker, reason: string): void => {
+    // A late event from a worker already replaced would otherwise kill its successor, and reject
+    // builds that never met it.
+    if (worker !== dead) return
+
+    worker.terminate()
     worker = null
     // Not a rebuild: whoever asked will hear, and the next mesh spawns a worker of its own. A
     // model that runs the thread out of memory must not take every later click's tree with it.
@@ -58,8 +62,12 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
     })
     // The two failures no `try` in the worker can catch: one that died before its handler ran,
     // and a response the structured clone could not carry back.
-    started.addEventListener('error', event => abandon(`BVH worker failed: ${event.message}`))
-    started.addEventListener('messageerror', () => abandon('BVH worker sent an unreadable answer'))
+    started.addEventListener('error', event =>
+      abandon(started, `BVH worker failed: ${event.message}`),
+    )
+    started.addEventListener('messageerror', () =>
+      abandon(started, 'BVH worker sent an unreadable answer'),
+    )
     worker = started
     return started
   }
@@ -77,6 +85,10 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
     const bvh = await new Promise<SerializedBvh | null>((resolve, reject) => {
       pending.set(id, { resolve, reject })
       workerOf().postMessage(request, transferablesOf(request))
+    }).finally(() => {
+      // Also on the paths that never reached the worker: a `spawn` refused by the CSP, or a
+      // `postMessage` that could not clone, left the slot behind with nobody able to reach it.
+      pending.delete(id)
     })
 
     // The mesh may have been thrown away while the tree was being built — the same race a

@@ -7,9 +7,77 @@ import {
   SphereGeometry,
 } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
 import { createBvhBuilder, WORTH_A_TREE } from './bvh-builder'
 import type { BvhRequest, BvhResponse } from './bvh-message'
+
+/** The answer a real build gives, tree included — shared by the two fake workers below. */
+function treeFor(request: BvhRequest): BvhResponse {
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(request.position, 3))
+  if (request.index) geometry.setIndex(new BufferAttribute(request.index, 1))
+
+  const serialized = MeshBVH.serialize(new MeshBVH(geometry))
+  return {
+    id: request.id,
+    ok: true,
+    bvh: {
+      version: 1,
+      roots: serialized.roots,
+      index:
+        serialized.index instanceof Uint32Array || serialized.index instanceof Uint16Array
+          ? serialized.index
+          : null,
+      indirectBuffer: null,
+    },
+  }
+}
+
+/**
+ * One fresh worker per spawn, so an event can be aimed at a worker already replaced — which the
+ * single-instance fake below cannot express, its `spawn` handing back the same object every time.
+ */
+function respawningWorkers() {
+  const made: {
+    listeners: Map<string, (event: Event) => void>
+    sent: BvhRequest[]
+    terminate: Mock<() => void>
+  }[] = []
+
+  const spawn = vi.fn((): Worker => {
+    const fake = {
+      listeners: new Map<string, (event: Event) => void>(),
+      sent: [] as BvhRequest[],
+      terminate: vi.fn(),
+    }
+    made.push(fake)
+    const worker = {
+      addEventListener: (type: string, listener: (event: Event) => void) => {
+        fake.listeners.set(type, listener)
+      },
+      postMessage: (request: BvhRequest) => fake.sent.push(request),
+      terminate: fake.terminate,
+    }
+    // `as`: the builder calls exactly these three members of a `Worker`, and jsdom has no other.
+    return worker as unknown as Worker
+  })
+
+  return {
+    spawn,
+    made,
+    /** That worker died — whether or not it is still the one the builder holds. */
+    raise: (at: number, message: string) => {
+      made[at]?.listeners.get('error')?.(new ErrorEvent('error', { message }))
+    },
+    settle: async (at: number) => {
+      const fake = made[at]
+      const request = fake?.sent.at(-1)
+      if (!fake || !request) return
+      fake.listeners.get('message')?.(new MessageEvent('message', { data: treeFor(request) }))
+      await Promise.resolve()
+    },
+  }
+}
 
 /**
  * A worker standing in for the real one, building the tree in place. jsdom spawns no worker, and
@@ -45,26 +113,7 @@ function scriptedWorker() {
     /** Answers the last request the way the real worker would, tree included. */
     settle: async () => {
       const request = lastRequest()
-      if (!request) return
-
-      const geometry = new BufferGeometry()
-      geometry.setAttribute('position', new BufferAttribute(request.position, 3))
-      if (request.index) geometry.setIndex(new BufferAttribute(request.index, 1))
-
-      const serialized = MeshBVH.serialize(new MeshBVH(geometry))
-      await reply({
-        id: request.id,
-        ok: true,
-        bvh: {
-          version: 1,
-          roots: serialized.roots,
-          index:
-            serialized.index instanceof Uint32Array || serialized.index instanceof Uint16Array
-              ? serialized.index
-              : null,
-          indirectBuffer: null,
-        },
-      })
+      if (request) await reply(treeFor(request))
     },
     /** Answers the last request the way a build that threw does. */
     refuse: async (error: string) => {
@@ -277,6 +326,47 @@ describe('when a build does not come back', () => {
     await done
 
     expect(scripted.spawn).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * `abandon` used to close over the current worker rather than the one that raised, so an event
+   * queued by a worker already replaced killed its successor and rejected builds that never met it.
+   */
+  it('leaves the worker that replaced a dead one alone', async () => {
+    const workers = respawningWorkers()
+    const builder = createBvhBuilder(workers.spawn)
+
+    const died = builder.accelerate(dense())
+    workers.raise(0, 'killed')
+    await expect(died).rejects.toThrow('killed')
+
+    const done = builder.accelerate(dense())
+    // The dead worker's second event, arriving after its replacement is already at work.
+    workers.raise(0, 'killed again')
+    await workers.settle(1)
+
+    expect(workers.made[1]?.terminate).not.toHaveBeenCalled()
+    await expect(done).resolves.toBeUndefined()
+  })
+
+  /**
+   * A worker the environment refuses — a chunk that did not ship, a CSP — must reject rather than
+   * hang, and must not hold the geometry hostage afterwards.
+   *
+   * What this cannot see is the slot such a request leaves in `pending`: nothing outside reads
+   * that map. The `finally` that clears it is an assurance, not something measured here.
+   */
+  it('lets a geometry be tried again after a worker that would not start', async () => {
+    const refused = vi.fn<() => Worker>(() => {
+      throw new Error('worker refused')
+    })
+    const builder = createBvhBuilder(refused)
+    const mesh = dense()
+
+    await expect(builder.accelerate(mesh)).rejects.toThrow('worker refused')
+    await expect(builder.accelerate(mesh)).rejects.toThrow('worker refused')
+
+    expect(refused).toHaveBeenCalledTimes(2)
   })
 })
 

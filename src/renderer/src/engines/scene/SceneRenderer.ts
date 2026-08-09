@@ -95,6 +95,8 @@ export type SceneRendererOptions = {
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
+  /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
+  bvh?: BvhBuilder
   /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
   fonts?: FontLibrary
 }
@@ -228,7 +230,7 @@ export class SceneRenderer {
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
-  private readonly bvh: BvhBuilder = createBvhBuilder(() => new BvhWorker())
+  private readonly bvh: BvhBuilder
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
 
@@ -249,6 +251,7 @@ export class SceneRenderer {
       // otherwise indistinguishable from one that was never asked for.
       (assetId, error) => reportFailure('scene.model', assetId, error),
     )
+    this.bvh = options.bvh ?? createBvhBuilder(() => new BvhWorker())
     this.sky = createSkyBinding(this.textureCache, () => this.paintBackground())
     // The studio's own by default: a face parsed for a caption in the image workspace is the
     // same object a text node extrudes, and half a megabyte of glyph tables is worth sharing.
@@ -795,11 +798,10 @@ export class SceneRenderer {
       // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
-      // Reported rather than swallowed: `scene.model` is what the same asset's load failure uses
-      // twenty lines up, and a click that costs a frame is worth a line in the journal. Sharing
-      // that scope shares its dedup key, which the two causes cannot collide on within a load —
-      // accelerating only runs once one has already worked.
-      void this.accelerate(holder).catch(error => reportFailure('scene.model', assetId, error))
+      // Reported rather than swallowed, and under a scope of its own: `reportFailure` says a
+      // subject once per scope, so sharing `scene.model` would let a tree that failed swallow the
+      // message of a load that fails later for the same asset — two failures nothing relates.
+      void this.accelerate(holder).catch(error => reportFailure('scene.bvh', assetId, error))
     })
 
     return holder
@@ -812,8 +814,20 @@ export class SceneRenderer {
       if (child instanceof Mesh) meshes.push(child)
     })
 
-    for (const mesh of meshes) await this.bvh.accelerate(mesh)
+    // Every mesh is asked before any failure is raised. Letting the first one out of the loop
+    // would cost the meshes behind it the tree the builder is ready to build them — it recovers
+    // from a dead worker, and nothing ever walks a loaded model a second time to ask again.
+    const failures: unknown[] = []
+    for (const mesh of meshes) {
+      try {
+        await this.bvh.accelerate(mesh)
+      } catch (error) {
+        failures.push(error)
+      }
+    }
+
     this.viewport.requestRender()
+    if (failures.length > 0) throw failures[0]
   }
 
   private applyDisplay(object: Object3D): void {

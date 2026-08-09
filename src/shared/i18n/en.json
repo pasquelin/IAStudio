@@ -140,6 +140,7 @@
     "apiRefused": "The Scenario API refused a request",
     "scope": {
       "scene.model": "A 3D model could not be loaded",
+      "scene.bvh": "A 3D model could not be prepared for picking",
       "scene.texture": "A texture could not be loaded",
       "scene.export": "Exporting the scene failed",
       "texture.map": "A texture channel could not be loaded",
