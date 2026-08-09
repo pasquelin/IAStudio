@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import { actionsIn, type SettingAction } from '@shared/domain/settings-registry'
 import { getBridge } from '@/services/bridge'
+import { SettingLine } from './SettingLine'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
 /**
@@ -23,21 +24,18 @@ function ActionRow({ action }: { action: SettingAction }) {
   }
 
   return (
-    <div className="border-base-300 flex flex-col gap-2 border-b py-3 last:border-b-0">
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-xs font-medium">{t(action.titleKey)}</span>
-
-        <button
-          type="button"
-          onClick={run}
-          className={action.confirmKey ? 'btn btn-sm btn-error btn-outline' : 'btn btn-sm'}
-        >
-          {t(action.buttonKey)}
-        </button>
-      </div>
-
-      <p className="text-base-content/60 max-w-lg text-xs">{t(action.helpKey)}</p>
-    </div>
+    <SettingLine
+      title={t(action.titleKey)}
+      help={<p className="text-base-content/60 max-w-lg text-xs">{t(action.helpKey)}</p>}
+    >
+      <button
+        type="button"
+        onClick={run}
+        className={action.confirmKey ? 'btn btn-sm btn-error btn-outline' : 'btn btn-sm'}
+      >
+        {t(action.buttonKey)}
+      </button>
+    </SettingLine>
   )
 }
 
