@@ -267,7 +267,7 @@ trouvée — ce n’est pas un `if` à poser, c’est un geste que `Collection` 
 > (l’anneau `ring-accent` est net) ; l’autre parle de la **sélection**, qui ne se voit pas. Les
 > deux états sont distincts, et l’entrée 9 vient justement de les séparer.
 
-### 27. Trois tests passent seuls et échouent en suite
+### 27. `develop` est rouge par intermittence, et jamais deux fois au même endroit
 
 **Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d’affilée. Ce n’est pas un retour
 d’interface au sens strict, et il est ici parce qu’il **fait douter de chaque livraison** : un
@@ -285,9 +285,35 @@ sinon d’être **lents seuls déjà** : dix-sept secondes pour quinze tests, c�
 accordé à un seul d’entre eux. Sous charge — quatre agents de revue en parallèle, une autre
 session qui compile — ils débordent.
 
-**Deux réponses possibles, à trancher** : relever le délai de ces fichiers, ou regarder pourquoi
+**Deux réponses possibles pour ceux-là** : relever le délai de ces fichiers, ou regarder pourquoi
 un test de réglages met une seconde par assertion. La seconde est la bonne question ; la première
 est ce qui rendra les livraisons lisibles en attendant.
+
+**Et il y a pire, mesuré le 9 août à 17 h 25 sur `develop` fusionné.** Un second groupe échoue
+pour une raison qui n’est pas le temps :
+
+| Fichier | Ce qu’il dit en suite |
+|---|---|
+| `helpers/tool-registry.test.ts` | `Error: Unknown workspace: graph` |
+| `app/document-io.test.ts` | idem, sur « carries a graph to disk and back » |
+| `panels/models/model-filters.test.ts` | idem, deux tests |
+| `eager-graph.test.ts` | idem |
+
+**Les quatre passent seuls** — 33 tests verts en une seule commande, vérifié. Et `graph` est bien
+déclaré des deux côtés : dans `WORKSPACE_IDS` (`shared/domain/workspace.ts`) et dans les `ICONS`
+de `helpers/workspaces.ts`, que `WORKSPACES` mappe l’un sur l’autre.
+
+Donc ce n’est **pas un délai dépassé et pas une déclaration manquante** : c’est un ordre de
+chargement. `WORKSPACES` est calculé à l’évaluation du module, et quelque chose fait qu’il est
+calculé trop tôt — ou qu’un autre fichier de test a déjà figé une version de ces modules. Le
+suspect à regarder en premier est `eager-graph.test.ts` lui-même : il lit **741 sources** par
+`import.meta.glob` et marche le graphe de modules, ce qu’aucun autre test ne fait.
+
+> **Ce n’est pas un retour d’interface, et c’est la chose la plus urgente du registre.** Le
+> septième espace vient d’être fusionné ; ces quatre fichiers parlent tous de lui. Un `develop`
+> dont le `validate` échoue à des endroits différents à chaque exécution ne dit plus si une
+> livraison est bonne — et c’est le seul filet, puisqu’aucun test ne s’exécute sur l’application
+> lancée.
 
 ### 20. En vue Icônes, une vignette sélectionnée ne se distingue en rien
 
