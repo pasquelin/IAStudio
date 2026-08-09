@@ -4,6 +4,7 @@ import { isFinished, type Job } from '@shared/domain/job'
 import { ProgressRow, type StatusTone } from '@/design/ProgressRow'
 import { failureMessageKey } from '@/services/failure-message'
 import { useJobs } from '@/stores/jobs'
+import { formatUnits } from '@/usage/format'
 
 const STATUS_TONE: Record<Job['status'], StatusTone> = {
   queued: 'muted',
@@ -15,7 +16,7 @@ const STATUS_TONE: Record<Job['status'], StatusTone> = {
 
 /** What the row says under its bar: why it failed, or what it cost. Never both. */
 function JobDetail({ job }: { job: Job }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   if (job.error) {
     return (
@@ -27,7 +28,13 @@ function JobDetail({ job }: { job: Job }) {
 
   if (job.cost === undefined) return null
 
-  return <span className="text-muted text-[11px]">{t('jobs.cost', { units: job.cost })}</span>
+  // Through `formatUnits` like every other figure in Compute Units: it groups the thousands
+  // AND keeps the decimals of a cheap call, which rounding would report as free.
+  return (
+    <span className="text-muted text-[11px]">
+      {t('jobs.cost', { units: formatUnits(job.cost, i18n.language) })}
+    </span>
+  )
 }
 
 /**
