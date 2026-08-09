@@ -351,8 +351,9 @@ Et il retient le premier qui **démarre**, pas le premier qui existe : il le lan
 Un binaire présent mais cassé est traité comme absent — voir
 [Quand ça coince](16-depannage.md#le-cas-déroutant--ffmpeg-est-là-et-le-studio-dit-quil-ny-est-pas).
 
-Si aucun des trois ne répond, le bandeau le dit : « Préparation vidéo indisponible : ni copie
-allégée ni forme d’onde. »
+Si aucun des trois ne répond, un **triangle d’alerte ambre** apparaît dans la barre de titre de
+l’étagère à assets, à gauche du compteur. Survolez-le, ou atteignez-le au clavier, et il dit :
+« Préparation vidéo indisponible : ni copie allégée ni forme d’onde. » `Échap` referme l’infobulle.
 
 **L’import fonctionne quand même.** Vous perdez seulement le confort : la navigation dans les
 vidéos sera moins fluide, et les pistes audio n’afficheront pas leur dessin.

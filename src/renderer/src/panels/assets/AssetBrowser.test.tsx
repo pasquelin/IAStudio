@@ -125,20 +125,16 @@ describe('AssetBrowser', () => {
     expect(cancel).toHaveBeenCalledWith('vid')
   })
 
-  // The studio ships its own encoder, so this is the developer's copy missing, never the
-  // user's install: it states what will not happen, and asks for nothing.
-  it('says what is unavailable rather than failing quietly when the encoder is missing', () => {
+  // The missing-ffmpeg notice moved to the title row — see `AssetBrowserActions`. Here it cost
+  // the grid a row for the session, and a third one in a column, whose bar is already outside
+  // the title row.
+  it('gives the band to the ingests alone, the encoder notice having moved to the title row', () => {
     useMedia.setState({
       capabilities: { ffmpeg: false },
       progress: { vid: { assetId: 'vid', stage: 'probe', ratio: 0.1 } },
     })
     render(<AssetBrowser />)
 
-    expect(screen.getByText(/Préparation vidéo indisponible/)).toBeInTheDocument()
-  })
-
-  it('leaves the browser alone when nothing is being ingested', () => {
-    render(<AssetBrowser />)
     expect(screen.queryByText(/Préparation vidéo indisponible/)).not.toBeInTheDocument()
   })
 

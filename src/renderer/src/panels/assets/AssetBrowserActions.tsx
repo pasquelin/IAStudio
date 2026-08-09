@@ -1,9 +1,18 @@
-import { mdiCloudUploadOutline, mdiFileImportOutline, mdiTextBoxOutline } from '@mdi/js'
+import {
+  mdiAlertOutline,
+  mdiCloudUploadOutline,
+  mdiFileImportOutline,
+  mdiTextBoxOutline,
+} from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { useToolLying } from '@/app/tool-zone'
 import { getBridge } from '@/services/bridge'
 import { CollectionBar } from '@/design/CollectionBar'
+import { FOCUS_RING } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
+import { UiIcon } from '@/design/UiIcon'
+import { cn } from '@/helpers/cn'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useMedia } from '@/stores/media'
@@ -28,6 +37,7 @@ export function AssetBrowserActions() {
   // A file cannot be linked into a catalogue that is not open.
   const project = useProject(state => state.project)
   const importMedia = useMedia(state => state.importMedia)
+  const ffmpeg = useMedia(state => state.capabilities.ffmpeg)
   const typeLabels = useTypeLabels()
   const facets = useAssetFacets(typeLabels)
   const lying = useToolLying()
@@ -49,6 +59,23 @@ export function AssetBrowserActions() {
           facets={facets}
           layout="header"
         />
+      )}
+      {/* An icon rather than the sentence, which is 65 characters and would chase the facets out
+          of the row; not a button, since nothing here can install ffmpeg. Focusable all the same:
+          the tooltip is the only thing that shows the sentence, and a pointer is not the only way
+          to ask for it. */}
+      {!ffmpeg && (
+        <span
+          role="img"
+          tabIndex={0}
+          className={cn(
+            'text-warning inline-flex shrink-0 items-center rounded-(--radius-sc-sm)',
+            FOCUS_RING,
+          )}
+          {...TIP_BOTTOM(t('ingest.noFfmpeg'))}
+        >
+          <UiIcon path={mdiAlertOutline} size={14} />
+        </span>
       )}
       <span className="text-muted mr-1 text-[11px]">{t('assets.count', { count })}</span>
       <ToolButton
