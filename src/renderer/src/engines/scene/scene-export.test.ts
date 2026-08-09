@@ -1,12 +1,18 @@
 import {
+  Bone,
   BoxGeometry,
   CompressedTexture,
+  DirectionalLight,
   GridHelper,
   LineBasicMaterial,
   Mesh,
   MeshStandardMaterial,
   Scene,
+  Skeleton,
+  SkinnedMesh,
   Texture,
+  Vector3,
+  type Object3D,
 } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { applyWireOverlay } from './scene-view'
@@ -155,7 +161,7 @@ describe('exportObjects with a compressed texture', () => {
     const decompress = vi.fn(() => new Texture())
     const mesh = boxWearing(new CompressedTexture([], 4, 4))
 
-    await exportObjects([mesh], 'gltf', { decompress }).catch(() => {})
+    await exportObjects([mesh], 'gltf', { decoder: { decompress } }).catch(() => {})
 
     expect(decompress).toHaveBeenCalled()
   })
@@ -209,5 +215,135 @@ describe('placedCopy', () => {
     // Column-major, so the translation sits at index 12.
     expect(copy.matrix.elements[12]).toBe(10)
     expect(copy.position.x).toBe(10)
+  })
+})
+
+/**
+ * The picking identity is the node id, which is what the objects in the viewport wear — so a
+ * file exported from them wears UUIDs where a reader expects the names of the outliner.
+ */
+describe('exportObjects and the names a reader sees', () => {
+  it('writes what the document calls a node, not the id the engine picks it by', async () => {
+    const object = named('3f2a8e14-0c7b-4e9d-9f21-6a5d2b8c1e40')
+
+    const bytes = await exportObjects([object], 'gltf', {
+      nameOf: id => (id === '3f2a8e14-0c7b-4e9d-9f21-6a5d2b8c1e40' ? 'Lamp post' : undefined),
+    })
+    const file: GltfFile = JSON.parse(new TextDecoder().decode(bytes))
+
+    expect(file.nodes?.map(node => node.name)).toEqual(['Lamp post'])
+  })
+
+  /** A child the document does not know — a mesh inside an imported model — keeps its own name. */
+  it('leaves alone a name the document has none for', async () => {
+    const object = named('node-1')
+    const inner = named('Wheel')
+    object.add(inner)
+
+    const bytes = await exportObjects([object], 'gltf', {
+      nameOf: id => (id === 'node-1' ? 'Cart' : undefined),
+    })
+    const file: GltfFile = JSON.parse(new TextDecoder().decode(bytes))
+
+    expect(file.nodes?.map(node => node.name).sort()).toEqual(['Cart', 'Wheel'])
+  })
+})
+
+describe('exportObjects and what cannot be written', () => {
+  /**
+   * Both exporters default to `onlyVisible`, so a hidden node produced a valid, EMPTY file and
+   * the studio said the export had worked. Refused out loud instead — the caller is a menu, and
+   * `reportFailure` puts what is thrown here in the journal.
+   */
+  it('refuses a selection that is entirely hidden', async () => {
+    const hidden = named('box-1')
+    hidden.visible = false
+
+    await expect(exportObjects([hidden], 'gltf')).rejects.toThrow(/nothing visible/)
+  })
+
+  it('writes what is visible when only some of it is hidden', async () => {
+    const hidden = named('box-1')
+    hidden.visible = false
+
+    const file = await gltfOf([hidden, named('box-2')])
+
+    expect(file.nodes?.map(node => node.name)).toEqual(['box-2'])
+  })
+
+  /** Nothing selected is not the same thing as everything hidden: it writes an empty file. */
+  it('says nothing about an empty selection', async () => {
+    const file = await gltfOf([])
+
+    expect(file.nodes).toBeUndefined()
+  })
+})
+
+describe('placedCopy of a light', () => {
+  /**
+   * A light's target is a SIBLING of the nodes, so it never travels with the copy — and glTF has
+   * no target at all: `KHR_lights_punctual` reads the node's own −Z. three says as much on the
+   * way out. The copy is therefore turned to look where the original looked.
+   */
+  it('turns the copy towards the target the original aimed at', () => {
+    const light = new DirectionalLight()
+    light.position.set(0, 10, 0)
+    light.target.position.set(5, 0, 0)
+    light.target.updateWorldMatrix(true, false)
+
+    const copy = placedCopy(light)
+
+    const aim = new Vector3(0, 0, -1).applyQuaternion(copy.quaternion)
+    const wanted = new Vector3(5, 0, 0).sub(new Vector3(0, 10, 0)).normalize()
+    expect(aim.x).toBeCloseTo(wanted.x, 5)
+    expect(aim.y).toBeCloseTo(wanted.y, 5)
+    expect(aim.z).toBeCloseTo(wanted.z, 5)
+  })
+
+  /** And carries a target of its own, where three asks for it, or it warns and drops the aim. */
+  it('gives the copy a target of its own, one unit down its own axis', () => {
+    const light = new DirectionalLight()
+    light.target.position.set(5, 0, 0)
+
+    const copy = placedCopy(light)
+
+    expect(copy).toBeInstanceOf(DirectionalLight)
+    if (!(copy instanceof DirectionalLight)) return
+    expect(copy.target.parent).toBe(copy)
+    expect(copy.target.position.toArray()).toEqual([0, 0, -1])
+  })
+
+  /** An ordinary object has no target, and must not grow one. */
+  it('leaves a mesh with the children it had', () => {
+    expect(placedCopy(named('box-1')).children).toEqual([])
+  })
+})
+
+describe('placedCopy of a rigged model', () => {
+  function rigged(): Object3D {
+    const bone = new Bone()
+    bone.name = 'root-bone'
+    const mesh = new SkinnedMesh(new BoxGeometry(), new MeshStandardMaterial())
+    mesh.add(bone)
+    mesh.bind(new Skeleton([bone]))
+    return mesh
+  }
+
+  /**
+   * `SkinnedMesh.copy` keeps the ORIGINAL's skeleton, whose bones live outside the copied
+   * subtree — glTF then writes `"joints":[null,null]`, a file no viewer opens.
+   */
+  it('binds the copy onto its own bones, not the original ones', () => {
+    const source = rigged()
+    const copy = placedCopy(source)
+
+    expect(copy).toBeInstanceOf(SkinnedMesh)
+    if (!(copy instanceof SkinnedMesh) || !(source instanceof SkinnedMesh)) return
+
+    const bone = copy.skeleton.bones[0]
+    expect(bone).toBeDefined()
+    expect(bone).not.toBe(source.skeleton.bones[0])
+    // The bone the copy is bound to has to be IN the copy: an exporter walks the subtree.
+    expect(copy.children).toContain(bone)
   })
 })
