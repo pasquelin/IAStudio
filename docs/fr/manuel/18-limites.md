@@ -373,6 +373,10 @@ qui a été dépensé sur 7, 31 ou 120 jours — jamais un solde, parce que l'AP
 aucun. Le montant en euros qui l'accompagne est calculé sur la grille publique des packs
 prépayés : un ordre de grandeur, pas votre facture.
 
+Ce qu'il sait dire, en revanche, c'est ce qu'une génération va coûter : le bouton **Générer**
+porte une estimation avant que vous appuyiez. Combien il vous reste pour la payer, c'est votre
+compte Scenario qui le sait, pas le studio.
+
 ### Il ne remplace pas Photoshop, Blender ni Premiere
 
 Il en fait une part utile, au même endroit, **autour de la génération**. C'est un outil de

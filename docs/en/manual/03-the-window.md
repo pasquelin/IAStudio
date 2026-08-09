@@ -363,8 +363,9 @@ What you see while something is working:
 with the last running generation is a failure nobody would have read.
 
 **Clicking opens the list**, in a small window above the status line: one line per job, its model,
-its state, its bar, and the button that cancels it. It is the content of the former panel, one click
-away instead of a permanent piece of surface.
+its state, its bar, and the button that cancels it. Under the bar, what the generation cost — or,
+if it failed, why. It is the content of the former panel, one click away instead of a permanent
+piece of surface.
 
 ### The journal, next to it
 
