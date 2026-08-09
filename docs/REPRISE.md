@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`d66b811`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline d66b811..develop`) au lieu de relire mille lignes.
+à **`55ddf63`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 55ddf63..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -133,13 +133,19 @@ prouve ; **déplacer la ligne jusqu’à un endroit testable, non.**
 > `LicencesWindow` reste, au-dessus du global et délibérément : déplier le texte entier d’une
 > licence est lent pour une raison qui lui est propre.
 >
-> **Le nouveau plafond n’est pas confortable pour autant.** Le 9 août au soir, une passe
-> `test:coverage` est tombée sur `ShortcutsSettings.test.tsx` à **15 930 ms contre 15 000
-> permis** — puis la passe suivante, sans un changement, a rendu **397 fichiers et 4969 cas
-> verts**. Ce fichier reste donc le premier à mordre : sous `--coverage`, son bloc prend une
-> quarantaine de secondes à lui seul. **Relancer une fois avant de conclure** vaut ici plus que
-> partout ailleurs — et si une troisième passe rougissait au même endroit, ce serait le plafond
-> global qu’il faudrait mesurer, pas le fichier qu’il faudrait rustiner à nouveau.
+> **Le coût a fini par être supprimé au lieu d’être toléré** (`e8ec83a`), et c’est le seul des
+> quatre épisodes qui règle la cause. `ShortcutsSettings.test.tsx` passe de **26 s à 3 s** : deux
+> de ses quinze tests en consommaient dix à eux seuls, et c’étaient les deux seuls à chercher un
+> bouton **par son rôle ET son nom**. Le panneau rend **171 boutons**, et `getByRole(…, { name })`
+> **redérive le nom accessible de chacun d’eux** — un rendu complet coûte 230 ms, un seul de ces
+> appels en coûtait 3 600.
+>
+> **La règle qui en sort, valable partout** : chercher par label, puis vérifier le rôle sur
+> l’élément trouvé (`toHaveRole`), plutôt que chercher par rôle et par nom. La couverture ne se
+> troque pas contre de la vitesse — le rôle reste vérifié, mais sur un élément au lieu de 171. Et
+> **chaque contrôle atteint par son label déclare le sien**, pas seulement le premier : sans quoi
+> le bouton de réinitialisation pouvait devenir un lien sans qu’aucun test ne bronche. Vérifié en
+> le changeant pour de bon.
 >
 > **La leçon vaut au-delà des tests.** Un `pnpm validate` vert seul et rouge en suite complète est
 > la pire façon pour une suite d’avoir tort, puisqu’elle **accuse le dernier commit venu** — et le

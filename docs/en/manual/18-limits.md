@@ -389,7 +389,7 @@ cannot leak your account.
 
 If you only remember five things from this chapter:
 
-1. **all six documents save now**, and closing a tab asks before losing anything; what does not
+1. **all seven documents save now**, and closing a tab asks before losing anything; what does not
    come back is the undo history;
 2. **a crop only half undoes** — `⌘Z` gives the frame back, never the cropped pixels; export
    before cropping hard;

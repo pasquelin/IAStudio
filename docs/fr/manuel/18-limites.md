@@ -26,7 +26,7 @@ Trois catégories, à ne pas confondre :
 
 ---
 
-## L’enregistrement : les six types y sont
+## L’enregistrement : les sept types y sont
 
 **Ce chapitre a longtemps commencé par « trois documents sur six ne s’enregistrent pas ». Ce
 n’est plus vrai.** Les sept s’écrivent dans le dossier du projet et se rouvrent tels quels.
@@ -404,7 +404,7 @@ ne peut pas divulguer votre compte.
 
 Si vous ne deviez retenir que cinq choses de ce chapitre :
 
-1. **Les six documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
+1. **Les sept documents s’enregistrent maintenant**, et fermer un onglet demande avant de perdre
    quoi que ce soit ; ce qui ne revient pas, c’est l’historique d’annulation ;
 2. **un recadrage ne se défait qu’à moitié** — `⌘Z` rend le cadre, jamais les pixels rognés ;
    exportez avant de rogner large ;

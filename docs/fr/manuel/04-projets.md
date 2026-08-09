@@ -118,7 +118,7 @@ est :
 Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.scene` à côté de
 `b204.tex` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.
 
-> **Les six types savent s’enregistrer**, et le panneau **Explorateur** liste ce que le dossier
+> **Les sept types savent s’enregistrer**, et le panneau **Explorateur** liste ce que le dossier
 > contient — c’est par là qu’on rouvre un document fermé. Fermer un onglet dont le travail n’est
 > pas écrit pose la question avant de le perdre.
 
