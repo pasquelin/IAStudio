@@ -110,6 +110,20 @@ describe('the project explorer', () => {
     expect(openDocument).toHaveBeenCalledWith(sequence)
   })
 
+  // No keyboard could reach these rows: the collection made a row reachable only when it was
+  // selectable, and "open" is not a selection.
+  it('opens a document from the keyboard', async () => {
+    withProject()
+    installFakeBridge({ documents: { list: () => Promise.resolve([sequence]) } })
+
+    render(<Explorer />)
+    await screen.findByText('Bande annonce')
+    await userEvent.tab()
+    await userEvent.keyboard('{Enter}')
+
+    expect(openDocument).toHaveBeenCalledWith(sequence)
+  })
+
   it('says the project is empty rather than showing a blank panel', async () => {
     withProject()
     installFakeBridge({ documents: { list: () => Promise.resolve([]) } })

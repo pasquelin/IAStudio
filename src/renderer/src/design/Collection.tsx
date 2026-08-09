@@ -30,6 +30,12 @@ export type CollectionProps<T extends { id: string }> = {
    * ever selects one thing can ignore both extra arguments.
    */
   onSelect?: (item: T, ids: readonly string[], mode: SelectionMode) => void
+  /**
+   * What opening an item means — a double-click, or Enter. Separate from `onSelect` because a
+   * panel can offer one without the other: the explorer opens rows it never selects, and a
+   * caller that wired the gesture itself would leave its rows out of the keyboard's reach.
+   */
+  onActivate?: (item: T) => void
   /** Called as the end nears. Must tolerate being called again before it has answered. */
   onReachEnd?: () => void
   /** The items currently on screen, for whatever a card needs fetched only when it is seen. */
@@ -99,6 +105,7 @@ export function Collection<T extends { id: string }>({
   renderRow,
   selectedIds,
   onSelect,
+  onActivate,
   onReachEnd,
   onVisible,
   empty,
@@ -155,12 +162,17 @@ export function Collection<T extends { id: string }>({
    * One tab stop for the whole collection, then the arrows — the roving pattern `Tree` uses.
    * A cell per tab makes a catalogue of five hundred models five hundred presses deep.
    */
-  const anchor = selectedIds?.at(-1)
   const selected = new Set(selectedIds)
-  const tabStop = Math.max(
-    0,
-    items.findIndex(item => item.id === anchor),
-  )
+  // The anchor is a notion of selection. A collection that only opens its rows has none, and
+  // taking the entry point from what it paints would land the tab on a row nobody picked —
+  // the explorer paints the documents that are open, which it does not choose.
+  const anchor = onSelect ? selectedIds?.at(-1) : undefined
+  const anchored = items.findIndex(item => item.id === anchor)
+  const firstMounted = firstVisible * columns
+  // The tab stop must be a cell that exists: the virtualizer only mounts a window, and an anchor
+  // scrolled out of it would leave the whole collection out of the tab order.
+  const tabStop =
+    anchored >= firstMounted && anchored <= (lastRow + 1) * columns - 1 ? anchored : firstMounted
 
   const pick = (item: T, modifiers: Modifiers): void => {
     const { ids, mode } = pickFrom(
@@ -232,6 +244,7 @@ export function Collection<T extends { id: string }>({
                       // A list row spans the collection; a card is sized by its grid column.
                       className={grid ? undefined : 'h-full w-full'}
                       onSelect={onSelect ? modifiers => pick(item, modifiers) : undefined}
+                      onActivate={onActivate ? () => onActivate(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >
                       {card ? card(item) : renderRow(item)}
@@ -255,20 +268,22 @@ type CollectionCellProps = {
   /** The collection's single tab stop. Every other cell is reached with the arrows. */
   tabbable: boolean
   onSelect?: (modifiers: Modifiers) => void
+  onActivate?: () => void
   onArrow: (event: KeyboardEvent) => void
   className?: string
   children: ReactNode
 }
 
 /**
- * Selection and keyboard reach belong to the collection, not to the cards: a caller that had
- * to wire them itself would wire them differently in each panel.
+ * Selection, activation and keyboard reach belong to the collection, not to the cards: a caller
+ * that had to wire them itself would wire them differently in each panel.
  */
 function CollectionCell({
   index,
   selected,
   tabbable,
   onSelect,
+  onActivate,
   onArrow,
   className,
   children,
@@ -281,7 +296,9 @@ function CollectionCell({
    */
   const skin = cn('min-w-0', rowSkin(selected), className)
 
-  if (!onSelect) return <div className={skin}>{children}</div>
+  // What the cell answers to is not what puts it in reach: a row that only opens is walked to
+  // and pressed like one that only selects.
+  if (!onSelect && !onActivate) return <div className={skin}>{children}</div>
 
   return (
     <div
@@ -289,18 +306,26 @@ function CollectionCell({
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
       aria-selected={selected}
-      onClick={event => onSelect(event)}
+      onClick={onSelect}
+      onDoubleClick={onActivate}
       onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          // Only when the cell itself holds the focus: a control inside the row — the visibility
-          // eye — answers the key on its own, and `VisibilityToggle` can stop a click but never
-          // a key press. Without this, reaching the eye by keyboard also moved the selection.
-          if (event.target !== event.currentTarget) return
+        if (event.key !== 'Enter' && event.key !== ' ') return onArrow(event.nativeEvent)
+
+        // Only when the cell itself holds the focus: a control inside the row — the visibility
+        // eye — answers the key on its own, and `VisibilityToggle` can stop a click but never
+        // a key press. Without this, reaching the eye by keyboard also moved the selection.
+        if (event.target !== event.currentTarget) return
+
+        // Enter opens, Space picks. A row that cannot be picked leaves Space to the browser,
+        // which scrolls the list: Space moves a selection everywhere else in the studio, and
+        // making it open a document — switching workspace with it — is not what it promises.
+        if (event.key === 'Enter' && onActivate) {
+          event.preventDefault()
+          onActivate()
+        } else if (onSelect) {
           event.preventDefault()
           onSelect(event)
-          return
         }
-        onArrow(event.nativeEvent)
       }}
       className={cn(skin, 'cursor-pointer')}
     >

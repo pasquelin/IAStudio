@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { Collection } from './Collection'
+import { Collection, type CollectionProps } from './Collection'
 import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collection-state'
 
 type Row = { id: string; name: string }
@@ -13,7 +13,11 @@ function rows(count: number): Row[] {
   }))
 }
 
-function renderCollection(items: Row[], overrides: Partial<CollectionState> = {}, props = {}) {
+function renderCollection(
+  items: Row[],
+  overrides: Partial<CollectionState> = {},
+  props: Partial<CollectionProps<Row>> = {},
+) {
   return render(
     <Collection
       items={items}
@@ -159,14 +163,16 @@ describe('Collection', () => {
 
   // The eye of a layer or a node sits inside the row and answers Enter itself. Selecting on top
   // of it is the keyboard version of the click theft `VisibilityToggle` was written to stop.
-  it('leaves the selection alone when a control inside the row takes the key', async () => {
+  it('leaves the row alone when a control inside it takes the key', async () => {
     const onSelect = vi.fn()
+    const onActivate = vi.fn()
     const onToggle = vi.fn()
     renderCollection(
       rows(4),
       { view: 'list' },
       {
         onSelect,
+        onActivate,
         // Stops the click the way `VisibilityToggle` does — the key press is the part the cell
         // has to handle, since stopping a click never reaches it.
         renderRow: (row: Row) => (
@@ -190,12 +196,77 @@ describe('Collection', () => {
 
     expect(onToggle).toHaveBeenCalled()
     expect(onSelect).not.toHaveBeenCalled()
+    expect(onActivate).not.toHaveBeenCalled()
   })
 
-  it('leaves cells out of the tab order when nothing can be selected', () => {
+  it('leaves cells out of the tab order when nothing can be selected nor activated', () => {
     renderCollection(rows(4))
 
     expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  // A panel whose rows are opened rather than selected — the explorer — is reached the same
+  // way as one whose rows are picked: what a cell answers to is not what puts it in reach.
+  it('keeps a cell reachable when it can only be activated', () => {
+    renderCollection(rows(4), { view: 'list' }, { onActivate: vi.fn() })
+
+    expect(screen.getAllByRole('option').some(cell => cell.tabIndex === 0)).toBe(true)
+  })
+
+  // The virtualizer only mounts a window: an anchor scrolled far out of it used to take the tab
+  // stop with it, and the whole collection fell out of the tab order.
+  it('keeps its tab stop when the anchor is nowhere near the mounted window', () => {
+    renderCollection(rows(500), { view: 'list' }, { onSelect: vi.fn(), selectedIds: ['row_400'] })
+
+    expect(screen.getAllByRole('option').some(cell => cell.tabIndex === 0)).toBe(true)
+  })
+
+  // Space scrolls a focused list, and picks rows everywhere else in the studio. A panel that
+  // only opens its rows must not turn it into "open", which can switch workspace.
+  it('leaves Space alone on a row it can only open', async () => {
+    const onActivate = vi.fn()
+    renderCollection(rows(4), { view: 'list' }, { onActivate })
+
+    await userEvent.tab()
+    await userEvent.keyboard(' ')
+
+    expect(onActivate).not.toHaveBeenCalled()
+  })
+
+  it('walks the cells with the arrows and activates on Enter, without a mouse', async () => {
+    const onActivate = vi.fn()
+    renderCollection(rows(4), { view: 'list' }, { onActivate })
+
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowDown}')
+    await userEvent.keyboard('{Enter}')
+
+    expect(onActivate).toHaveBeenCalledWith({ id: 'row_1', name: 'Row 1' })
+  })
+
+  it('activates on a double-click, so the caller stops wiring one of its own', async () => {
+    const onActivate = vi.fn()
+    renderCollection(rows(4), { view: 'list' }, { onActivate })
+
+    await userEvent.dblClick(screen.getByText('Row 2'))
+
+    expect(onActivate).toHaveBeenCalledWith({ id: 'row_2', name: 'Row 2' })
+  })
+
+  // Enter opens and Space picks, the way a file browser answers both: a collection that can do
+  // the two must not make the opening gesture also move the selection.
+  it('opens on Enter and selects on Space when it can do both', async () => {
+    const onActivate = vi.fn()
+    const onSelect = vi.fn()
+    renderCollection(rows(4), { view: 'list' }, { onActivate, onSelect })
+
+    await userEvent.tab()
+    await userEvent.keyboard('{Enter}')
+    expect(onActivate).toHaveBeenCalledWith({ id: 'row_0', name: 'Row 0' })
+    expect(onSelect).not.toHaveBeenCalled()
+
+    await userEvent.keyboard(' ')
+    expect(onSelect).toHaveBeenCalledWith({ id: 'row_0', name: 'Row 0' }, ['row_0'], 'replace')
   })
 
   // A cell per tab makes a catalogue of five hundred models five hundred presses deep.
