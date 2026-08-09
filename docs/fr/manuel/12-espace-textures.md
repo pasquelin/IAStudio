@@ -98,7 +98,7 @@ différent de la surface.
 | **Occlusion ambiante** | les coins où la lumière entre mal | de la profondeur dans les creux |
 | **Hauteur** | le relief réel | un déplacement de la surface, plus fort que les normales |
 | **Émission** | ce qui brille par soi-même | une enseigne au néon, des braises |
-| **Arêtes** | où sont les bords | sert à d’autres calculs |
+| **Cavité** | les creux et les arêtes de la surface | assombrit le fond des rainures, réglable par le curseur *Cavité* de la section **Matériau** |
 
 Chaque canal a une **origine** :
 

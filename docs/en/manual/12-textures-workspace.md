@@ -98,7 +98,7 @@ surface.
 | **Ambient occlusion** | the corners light struggles to reach | depth in the hollows |
 | **Height** | the real relief | an actual displacement of the surface, stronger than normals |
 | **Emission** | what glows by itself | a neon sign, embers |
-| **Edges** | where the borders are | feeds other calculations |
+| **Cavity** | the hollows and edges of the surface | darkens the bottom of grooves, tuned by the *Cavity* slider in the **Material** section |
 
 Each channel has an **origin**:
 
