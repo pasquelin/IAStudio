@@ -149,7 +149,10 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
         step(documentId, (state, history) =>
           merging ? runCoalescing(state, history, command) : run(state, history, command),
         )
-        if (gestures.has(documentId)) gestures.set(documentId, command.id)
+        // Only the gesture's own first command names it. Rewriting on every command handed the
+        // gesture to whatever wrote last, so two commands from elsewhere — two generations landing
+        // while a cursor is held — coalesced into each other, which outside a gesture they never do.
+        if (gestures.get(documentId) === null) gestures.set(documentId, command.id)
       },
 
       beginGesture: documentId => gestures.set(documentId, null),
