@@ -186,7 +186,21 @@ describe('TitleBar', () => {
 
     fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', altKey: true })
 
-    expect(screen.getByRole('status')).toHaveTextContent('Image déplacé, position 2 sur 7')
+    expect(screen.getByRole('status')).toHaveTextContent('Image en position 2 sur 7')
+  })
+
+  /**
+   * Said aloud and never seen, so the grammar has to hold on its own. The sentence used to end
+   * on a past participle — « {{label}} déplacé » — which a screen reader pronounced as « Image
+   * déplacé » and « Vidéo déplacé »: three of the seven space names are feminine, and English
+   * hides the problem because « moved » never agrees. The wording carries no participle now.
+   */
+  it('says it without an agreement French would have to make', () => {
+    render(<TitleBar activeWorkspace="video" onWorkspace={vi.fn()} />)
+
+    fireEvent.keyDown(pill('Vidéo'), { key: 'ArrowRight', altKey: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent('Vidéo en position 3 sur 7')
   })
 
   /**
