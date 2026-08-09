@@ -49,17 +49,34 @@ pas un choix.
 
 ## À faire
 
-### 5. Les lignes de l’Explorateur n’ont pas d’accès clavier
+### 8. L’étagère à assets n’a pas d’accès clavier non plus
 
-Ce sont **les seules du studio** dans ce cas. L’Explorateur détourne `selectedIds` de `Collection`
-pour dire « ouvert », et `Collection` place l’ancre et le tab stop sur la dernière ligne
-sélectionnée — les deux usages se disputent la même donnée.
+**Trouvé en traitant l’entrée 5, le 9 août 2026** — et il contredit ce que celle-ci affirmait : les
+lignes de l’Explorateur n’étaient pas « les seules du studio » dans ce cas. `AssetBrowser` ne passe à
+`Collection` **ni `selectedIds` ni `onSelect`** : ses cellules tombent dans la branche non
+interactive, sans rôle ni tabulation. Sa sélection se fait par `onPointerDown` dans
+`DraggableAsset`, et son ouverture par un `onDoubleClick` maison — le geste que `onActivate` existe
+désormais pour porter.
 
-Ce qui manque est « activer une ligne » (double-clic, Entrée) dans `Collection` ; `DraggableAsset` a
-déjà le même `onDoubleClick` fait à la main, donc le geste existe deux fois sans être offert par le
-composant.
+Ce n’est donc pas une prop à ajouter mais **la réunion de deux propriétaires du geste** : la cellule
+sélectionne au clic pendant que `DraggableAsset` sélectionne au `pointerdown`. C’est le plus gros
+panneau du studio, et l’entrée 6 touche le même chemin — les traiter ensemble se défend.
 
-*(Relevé en revue de `feat/documents-erreurs`, 8 août 2026, non traité.)*
+**Un piège les attend là-bas** : le double-clic de `Collection` n’a pas la garde de vol
+d’événement que le clavier a (`event.target !== event.currentTarget`), et il ne peut pas l’avoir —
+un double-clic part du texte de la ligne, pas de la cellule. Un panneau qui porte des contrôles
+dans ses lignes (`LayerRow` renomme déjà au double-clic) verra donc les deux gestes se déclencher.
+
+### 9. `role="option"` sans `listbox`, et `aria-selected` qui dit « ouvert »
+
+**Même origine, même date.** Aucun `role="listbox"` n’existe nulle part dans `src/` : les cellules de
+`Collection` portent `role="option"` en orphelines, sans « liste de N éléments » ni « 3 sur 12 »
+annoncés, et sans `aria-multiselectable` alors que la sélection multiple existe. `Tree` fait la même
+chose correctement à côté (`role="tree"` sur la liste, `role="treeitem"` sur les lignes).
+
+L’entrée 5 a élargi le problème sans le créer : l’Explorateur rejoint les porteurs du rôle, et son
+`aria-selected` y veut dire « ouvert » — un état que l’utilisateur ne peut ni poser ni retirer depuis
+ce panneau, alors que la ligne le dit déjà en clair.
 
 ### 6. Le double-clic répond deux choses différentes selon d’où il part
 
@@ -174,6 +191,25 @@ correction.
 | **(1)** Le menu horizontal du centre — parti dans un panneau « Vue » | `3ac739d` (feat/pinceau) |
 | **(2)** La marge que la barre de défilement de macOS mangeait | idem |
 | **(3)** `gap-1` partout où il traînait — 45 occurrences, 27 fichiers | `6ef915e` (feat/pinceau) |
+| **(5)** Les lignes de l’Explorateur n’avaient aucun accès clavier | `776e85b` (feat/explorateur-clavier) |
+
+> **L’entrée 5 n’avait pas la cause qu’elle croyait.** Le détournement de `selectedIds` était réel,
+> mais ce qui privait les lignes du clavier était ailleurs : dans `Collection`, le rôle, le tab stop
+> et les touches n’étaient posés **que si l’appelant fournissait `onSelect`**. L’Explorateur n’en
+> fournit pas — sa notion de sélection est « ce qui est ouvert » — donc ses lignes tombaient dans la
+> branche inerte du composant. Le geste manquant, « activer », est désormais une prop du composant
+> (`onActivate`) : Entrée ouvre, Espace laisse défiler la liste, et le double-clic n’est plus câblé
+> par l’appelant.
+>
+> **Deux défauts du tab stop, trouvés en revue et corrigés avec.** Il était un index dans la liste
+> entière alors que la virtualisation n’en monte qu’une fenêtre : un document ouvert hors de cette
+> fenêtre sortait le panneau entier de l’ordre de tabulation — le défaut même que l’entrée ferme. Et
+> il était dérivé de `selectedIds` sans qu’une sélection existe, de sorte que la tabulation
+> atterrissait sur une ligne que personne n’avait désignée.
+>
+> **Vérifié à l’écran** (projet réel, `pnpm start:debug`) : le clic focalise la ligne, les flèches
+> déplacent le focus, Entrée ouvre le document dans son espace, Espace n’ouvre rien. **Ce que ce lot
+> laisse ouvert est aux entrées 8 et 9.**
 
 > **L’entrée 1 est livrée, le manque qu’elle croisait ne l’est pas.** Les réglages passent par
 > `stores/skybox-views`, le panneau « Vue » les offre, et le centre ne porte plus que la barre
