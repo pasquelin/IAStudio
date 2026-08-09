@@ -83,8 +83,9 @@ export const ToolWindow = memo(function ToolWindow({
               button with them, and a failure notice does not fit on a header row. */}
           {Actions !== undefined && (
             <ErrorBoundary key={tool} fallback={() => null}>
-              {/* Inside the boundary: a panel chunk that fails to arrive is a failure like any
-                  other, and must not escape past the header's own guard. */}
+              {/* A chunk that never arrives is a failure like any other — React rejects rather
+                  than suspending forever, and the boundary above catches it either way round.
+                  Nested as `documents.tsx` nests them, for one shape across the studio. */}
               <Suspense fallback={null}>
                 <Actions />
               </Suspense>
