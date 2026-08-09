@@ -5,12 +5,12 @@ Check-list exécutable sans réfléchir. Chaque étape est vérifiable ; aucune 
 Rappel du modèle de branches ([ADR-15](adr/ADR-15-modele-de-branches.md)) : **`develop` intègre,
 `main` publie**. Un tag `v*` posé sur `main` déclenche le pipeline.
 
-> **Les builds ne sont pas signés, et l'auto-update ne vérifie donc rien.**
-> Le condensat du manifeste garantit qu'un téléchargement n'a pas été corrompu, pas qu'il vient
-> de vous : sans certificat, ni Gatekeeper ni SmartScreen n'ont de signataire à comparer. La
-> seule barrière est l'accès en écriture au dépôt.
-> **Publier une release, c'est donc autoriser l'exécution de ce binaire sur chaque machine qui
-> l'installe.** Réserver ce canal à un cercle de test tant que les certificats de
+> **Les builds ne sont pas signés, et l’auto-update ne vérifie donc rien.**
+> Le condensat du manifeste garantit qu’un téléchargement n’a pas été corrompu, pas qu’il vient
+> de vous : sans certificat, ni Gatekeeper ni SmartScreen n’ont de signataire à comparer. La
+> seule barrière est l’accès en écriture au dépôt.
+> **Publier une release, c’est donc autoriser l’exécution de ce binaire sur chaque machine qui
+> l’installe.** Réserver ce canal à un cercle de test tant que les certificats de
 > [SECRETS.md](SECRETS.md) ne sont pas provisionnés — [ADR-04](adr/ADR-04-strategie-de-signature.md).
 
 ---
@@ -24,7 +24,7 @@ Rappel du modèle de branches ([ADR-15](adr/ADR-15-modele-de-branches.md)) : **`
    gh repo edit --default-branch develop
    ```
 
-   Tant que ce n'est pas fait, les workflows ne peuvent pas s'exécuter.
+   Tant que ce n’est pas fait, les workflows ne peuvent pas s’exécuter.
 
 2. **Vérifier le pipeline à blanc**, avant tout tag :
 
@@ -45,20 +45,20 @@ Rappel du modèle de branches ([ADR-15](adr/ADR-15-modele-de-branches.md)) : **`
 | Incrément | Quand | Exemple |
 |---|---|---|
 | **Patch** — `0.2.0` → `0.2.1` | correction seule, aucune capacité nouvelle | un export qui échouait passe |
-| **Mineure** — `0.2.1` → `0.3.0` | capacité nouvelle, les projets existants s'ouvrent toujours | l'espace Audio devient multipiste |
-| **Majeure** — `0.3.0` → `1.0.0` | un projet enregistré par la version d'avant ne s'ouvre plus tel quel, ou l'ergonomie change en profondeur | changement de format de document |
+| **Mineure** — `0.2.1` → `0.3.0` | capacité nouvelle, les projets existants s’ouvrent toujours | l’espace Audio devient multipiste |
+| **Majeure** — `0.3.0` → `1.0.0` | un projet enregistré par la version d’avant ne s’ouvre plus tel quel, ou l’ergonomie change en profondeur | changement de format de document |
 
 Tant que le premier chiffre est `0`, la promesse de compatibilité est faible par convention —
-mais **le format des documents, lui, engage déjà** : quelqu'un a des projets sur son disque.
+mais **le format des documents, lui, engage déjà** : quelqu’un a des projets sur son disque.
 Une version qui les casse est une majeure, quel que soit le chiffre de gauche.
 
 **Pré-versions** : `v0.3.0-rc.1` pour une candidate. `electron-updater` les traite comme des
-versions à part entière ; ne pas publier la draft d'une `-rc` si la base installée ne doit pas
+versions à part entière ; ne pas publier la draft d’une `-rc` si la base installée ne doit pas
 la recevoir.
 
 ## Publier
 
-1. **Partir d'un `develop` vert.** `pnpm validate` doit passer, et la CI être au vert sur
+1. **Partir d’un `develop` vert.** `pnpm validate` doit passer, et la CI être au vert sur
    `develop`.
 
 2. **Aligner la version** dans `package.json`. Elle doit correspondre **exactement** au tag, sans
@@ -69,8 +69,8 @@ la recevoir.
    npm version 0.2.0 --no-git-tag-version
    ```
 
-   Un désalignement produit des manifestes d'auto-update dont la version ne correspond pas au nom
-   du tag — l'auto-update part alors en boucle ou ne voit rien.
+   Un désalignement produit des manifestes d’auto-update dont la version ne correspond pas au nom
+   du tag — l’auto-update part alors en boucle ou ne voit rien.
 
 3. **Mettre à jour le changelog**, puis committer :
 
@@ -79,7 +79,7 @@ la recevoir.
    git commit -m "chore(release): 0.2.0"
    ```
 
-4. **Fusionner dans `main`.** C'est le seul type de merge que `main` accepte :
+4. **Fusionner dans `main`.** C’est le seul type de merge que `main` accepte :
 
    ```bash
    git checkout main
@@ -100,8 +100,8 @@ la recevoir.
    ```
 
    Le job `build` tourne sur les trois OS, puis `release` agrège et crée la draft. Un échec de
-   `release` avec « Missing update manifests » signifie qu'une plateforme n'a pas produit son
-   `latest*.yml` : c'est une protection, pas un caprice — [ADR-06](adr/ADR-06-publication-des-artefacts.md).
+   `release` avec « Missing update manifests » signifie qu’une plateforme n’a pas produit son
+   `latest*.yml` : c’est une protection, pas un caprice — [ADR-06](adr/ADR-06-publication-des-artefacts.md).
 
 7. **Vérifier la draft** avant de la publier :
 
@@ -117,18 +117,18 @@ la recevoir.
    | `scenario-studio-0.2.0-mac-x64.dmg` / `.zip` | macOS Intel |
    | `scenario-studio-0.2.0-win-x64.exe` | Windows |
    | `scenario-studio-0.2.0-linux-x64.AppImage` / `.deb` | Linux |
-   | `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | manifestes d'auto-update |
+   | `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | manifestes d’auto-update |
 
    Contrôler que les tailles sont cohérentes (170–240 Mo par installeur) et que les manifestes
    portent bien `version: 0.2.0`.
 
-8. **Publier**, depuis l'interface GitHub ou :
+8. **Publier**, depuis l’interface GitHub ou :
 
    ```bash
    gh release edit v0.2.0 --draft=false
    ```
 
-   **C'est ce geste, et lui seul, qui déclenche la mise à jour de la base installée.**
+   **C’est ce geste, et lui seul, qui déclenche la mise à jour de la base installée.**
 
 ---
 
@@ -144,11 +144,11 @@ git tag -d v0.2.0                        # et le tag local
 ```
 
 **Repasser la release en draft suffit à arrêter la diffusion** : `electron-updater` ne voit que
-les releases publiées. Le faire d'abord, réfléchir ensuite.
+les releases publiées. Le faire d’abord, réfléchir ensuite.
 
-Un client qui a déjà téléchargé la version l'installera au prochain quit — une release retirée ne
+Un client qui a déjà téléchargé la version l’installera au prochain quit — une release retirée ne
 rappelle pas ce qui est parti. La parade est de publier **une version supérieure** corrigée, pas
-d'espérer que le retrait suffise.
+d’espérer que le retrait suffise.
 
 ---
 
@@ -166,7 +166,7 @@ pnpm licences:collect                    # le relevé de licences lit ces mêmes
 pnpm validate
 ```
 
-Changer l'URL sans l'empreinte fait échouer le build au packaging — c'est voulu.
+Changer l’URL sans l’empreinte fait échouer le build au packaging — c’est voulu.
 
 **Changer de version impose de changer `SOURCES` avec.** Le commit BtbN suit tout seul, dérivé de
 `BTBN_BUILD` ; la ligne macOS est écrite à la main. Une version sans archive de sources déclarée
@@ -176,11 +176,11 @@ fait échouer `fetch-ffmpeg.mjs --sources`, donc la release — voir ci-dessous.
 
 ## Les sources de ffmpeg voyagent avec la release
 
-Distribuer les binaires déclenche l'obligation : GPL-3.0 sur macOS, LGPL-2.1 ailleurs, et les
+Distribuer les binaires déclenche l’obligation : GPL-3.0 sur macOS, LGPL-2.1 ailleurs, et les
 deux demandent la source **correspondant à ce build précis**
 ([ADR-16](adr/ADR-16-licence-du-projet.md)).
 
-Le job `release` s'en charge tout seul, avant de créer la draft :
+Le job `release` s’en charge tout seul, avant de créer la draft :
 
 ```bash
 node scripts/fetch-ffmpeg.mjs --sources dist
@@ -192,5 +192,5 @@ choses à vérifier sur la draft** avant de la publier :
 - `ffmpeg-7.1.1-source.tar.xz` et `ffmpeg-n7.1.5-…-source.tar.gz` sont bien dans les assets ;
 - leur numéro correspond à celui de `TARGETS`.
 
-Si le téléchargement échoue, la release échoue. C'est délibéré : publier les binaires sans leurs
-sources est la violation, pas l'inverse.
+Si le téléchargement échoue, la release échoue. C’est délibéré : publier les binaires sans leurs
+sources est la violation, pas l’inverse.

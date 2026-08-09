@@ -5,15 +5,15 @@
 
 ## Contexte
 
-Le cahier de mission pose « aucun test automatisé ». C'est inexact : le dépôt a une suite vitest
+Le cahier de mission pose « aucun test automatisé ». C’est inexact : le dépôt a une suite vitest
 à deux projets (node et jsdom), et `pnpm validate` enchaîne typecheck, lint, vérification de
 format et tests **avec couverture**.
 
 La couverture est configurée en **budgets absolus négatifs** par glob — un nombre maximal
-d'instructions et de branches non couvertes, non un pourcentage. Ces seuils sont sensibles à
+d’instructions et de branches non couvertes, non un pourcentage. Ces seuils sont sensibles à
 tout ce qui fait varier les chemins exécutés, y compris la plateforme : du code gardé par
-`process.platform` n'est pas couvert de la même façon sur Linux et sur macOS. Un `validate` vert
-sur le poste peut donc rougir sur un runner Linux, pour une raison qui n'apprend rien.
+`process.platform` n’est pas couvert de la même façon sur Linux et sur macOS. Un `validate` vert
+sur le poste peut donc rougir sur un runner Linux, pour une raison qui n’apprend rien.
 
 ## Décision
 
@@ -25,8 +25,8 @@ sur le poste peut donc rougir sur un runner Linux, pour une raison qui n'apprend
 ## Alternatives écartées
 
 - **`pnpm validate` en CI** : ferait échouer des PR sur une variation de couverture propre à la
-  plateforme, sans rapport avec le changement soumis. Un signal rouge qu'on apprend à ignorer ne
-  vaut pas mieux qu'aucun signal.
+  plateforme, sans rapport avec le changement soumis. Un signal rouge qu’on apprend à ignorer ne
+  vaut pas mieux qu’aucun signal.
 - **Convertir les budgets en pourcentages** : refonte de la politique de couverture du projet,
   hors périmètre de ce pipeline, et perte de ce que les budgets absolus apportent — ils font
   baisser la dette au lieu de la maintenir.
@@ -35,9 +35,9 @@ sur le poste peut donc rougir sur un runner Linux, pour une raison qui n'apprend
 ## Conséquences
 
 - Une PR peut passer la CI alors que `pnpm validate` échouerait localement, sur le seul critère
-  de couverture. C'est délibéré : la couverture est un budget de dette, pas un critère
-  d'intégration.
-- La Definition of done du projet n'est pas assouplie — `ci.yml` en couvre une partie, il ne la
+  de couverture. C’est délibéré : la couverture est un budget de dette, pas un critère
+  d’intégration.
+- La Definition of done du projet n’est pas assouplie — `ci.yml` en couvre une partie, il ne la
   remplace pas.
-- Ajouter du code au processus principal (`src/main/updater.ts`, par exemple) impose d'ajuster
+- Ajouter du code au processus principal (`src/main/updater.ts`, par exemple) impose d’ajuster
   les budgets du glob concerné dans `vitest.config.ts`, sur le poste, avant de committer.

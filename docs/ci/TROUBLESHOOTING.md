@@ -1,7 +1,7 @@
 # Quand le pipeline casse
 
 Symptôme → cause → correction. Les entrées numérotées §9.x reprennent les pièges recensés au
-cadrage : ils sont traités dans le code, l'entrée dit **où** et **pourquoi**, pour qu'un
+cadrage : ils sont traités dans le code, l’entrée dit **où** et **pourquoi**, pour qu’un
 « nettoyage » ne les ramène pas.
 
 ---
@@ -13,7 +13,7 @@ cadrage : ils sont traités dans le code, l'entrée dit **où** et **pourquoi**,
 **Symptôme** : `Cannot find module @rollup/rollup-linux-x64-gnu` (ou `@esbuild/win32-x64`) sur un
 runner, alors que tout passe en local.
 
-**Cause** : le lockfile a été généré sur une plateforme et n'embarque pas les `optionalDependencies`
+**Cause** : le lockfile a été généré sur une plateforme et n’embarque pas les `optionalDependencies`
 des autres. Les binaires natifs de Rollup, esbuild, Tailwind oxide et lightningcss sont un paquet
 par couple OS/architecture.
 
@@ -23,27 +23,27 @@ par couple OS/architecture.
 grep -c "rollup-linux-x64-gnu\|rollup-win32-x64-msvc\|rollup-darwin-arm64\|rollup-darwin-x64" pnpm-lock.yaml
 ```
 
-Si l'une manque, régénérer le lockfile sans filtre de plateforme :
+Si l’une manque, régénérer le lockfile sans filtre de plateforme :
 `rm pnpm-lock.yaml && pnpm install`. Ne jamais committer un lockfile produit avec
 `--filter-platform` ou une clé `supportedArchitectures` restrictive.
 
-### §9.2 — L'AppImage ne démarre pas sur une distribution un peu ancienne
+### §9.2 — L’AppImage ne démarre pas sur une distribution un peu ancienne
 
 **Symptôme** : `version 'GLIBC_2.38' not found`.
 
-**Cause** : un AppImage hérite de la glibc de la machine qui l'a construit. Compilé sur Ubuntu
+**Cause** : un AppImage hérite de la glibc de la machine qui l’a construit. Compilé sur Ubuntu
 24.04, il refuse de démarrer sur une distribution plus ancienne.
 
 **Correction** : la matrice épingle `ubuntu-22.04`, **jamais `ubuntu-latest`**. Le pin porte un
 commentaire dans `.github/workflows/release.yml` précisément pour ne pas être « corrigé ». Le
 relever coupe tous les utilisateurs dont la distribution est plus ancienne que le runner.
 
-### §9.3 — L'installeur macOS Intel est en fait un binaire arm64
+### §9.3 — L’installeur macOS Intel est en fait un binaire arm64
 
-**Symptôme** : le `.dmg` x64 ne se lance pas sur un Mac Intel, ou pèse le même poids que l'arm64.
+**Symptôme** : le `.dmg` x64 ne se lance pas sur un Mac Intel, ou pèse le même poids que l’arm64.
 
-**Cause** : `macos-latest` est une machine **arm64**. Un `--mac` nu ne produit que l'architecture
-de l'hôte.
+**Cause** : `macos-latest` est une machine **arm64**. Un `--mac` nu ne produit que l’architecture
+de l’hôte.
 
 **Correction** : les architectures sont déclarées dans `electron-builder.yml`
 (`arch: [arm64, x64]` sur chaque cible), pas sur la ligne de commande. Ne jamais supposer que le
@@ -55,19 +55,19 @@ lipo -archs "/Volumes/Scenario Studio/Scenario Studio.app/Contents/MacOS/Scenari
 
 ### §9.4 — Un binaire `universal` produit une application cassée
 
-**Cause** : l'option `universal` échoue silencieusement en présence de modules natifs sans
+**Cause** : l’option `universal` échoue silencieusement en présence de modules natifs sans
 prebuild pour les deux architectures.
 
-**Correction** : elle n'est pas utilisée, et [ADR-03](adr/ADR-03-cibles-et-architectures.md)
-l'écarte. `scripts/before-pack.mjs` rejette d'ailleurs `arch === 'universal'` — il ne saurait pas
+**Correction** : elle n’est pas utilisée, et [ADR-03](adr/ADR-03-cibles-et-architectures.md)
+l’écarte. `scripts/before-pack.mjs` rejette d’ailleurs `arch === 'universal'` — il ne saurait pas
 quel ffmpeg télécharger.
 
-### `better-sqlite3` refuse de se charger dans l'application packagée
+### `better-sqlite3` refuse de se charger dans l’application packagée
 
-**Cause probable** : le `.node` est resté dans l'archive asar. Un module natif ne se charge pas
+**Cause probable** : le `.node` est resté dans l’archive asar. Un module natif ne se charge pas
 depuis un asar.
 
-**Correction** : `asarUnpack: ['**/*.node']` est là pour ça. Aucun `electron-rebuild` n'est
+**Correction** : `asarUnpack: ['**/*.node']` est là pour ça. Aucun `electron-rebuild` n’est
 nécessaire — `better-sqlite3` v13 livre des prebuilds N-API pour les quatre cibles, et les résout
 **avant** `build/Release/` ([ADR-08](adr/ADR-08-modules-natifs.md)).
 
@@ -77,12 +77,12 @@ nécessaire — `better-sqlite3` v13 livre des prebuilds N-API pour les quatre c
 
 ### « does not match its recorded digest »
 
-**Symptôme** : le packaging s'arrête avec l'empreinte attendue et l'empreinte obtenue.
+**Symptôme** : le packaging s’arrête avec l’empreinte attendue et l’empreinte obtenue.
 
-**Cause** : la source tierce a remplacé le binaire sous une URL épinglée — ou quelqu'un a changé
-l'URL sans changer l'empreinte.
+**Cause** : la source tierce a remplacé le binaire sous une URL épinglée — ou quelqu’un a changé
+l’URL sans changer l’empreinte.
 
-**Correction** : c'est le garde-fou qui fonctionne. Ne **jamais** recopier l'empreinte obtenue
+**Correction** : c’est le garde-fou qui fonctionne. Ne **jamais** recopier l’empreinte obtenue
 sans savoir pourquoi elle a changé. Rotation délibérée :
 voir « Rotation de ffmpeg » dans [RELEASE.md](RELEASE.md).
 
@@ -92,7 +92,7 @@ voir « Rotation de ffmpeg » dans [RELEASE.md](RELEASE.md).
 `darwin-arm64`. Elle répond 503 sous charge.
 
 **Correction** : relancer le job. Si la panne dure, la seule issue est de changer de source pour
-`darwin-arm64` — donc de changer l'URL **et** l'empreinte, et de vérifier que la version reste
+`darwin-arm64` — donc de changer l’URL **et** l’empreinte, et de vérifier que la version reste
 sur la série 7.1 ([ADR-12](adr/ADR-12-ffmpeg-epinglage-et-concurrence.md) : les cinq cibles sont
 alignées parce que `src/main/media/runner.ts` construit une seule ligne de commande).
 
@@ -109,7 +109,7 @@ bibliothèque a disparu existe sans démarrer.
 
 ### `No identity found`
 
-**Cause** : aucun certificat dans le trousseau du runner. C'est le cas **normal** aujourd'hui —
+**Cause** : aucun certificat dans le trousseau du runner. C’est le cas **normal** aujourd’hui —
 `CSC_IDENTITY_AUTO_DISCOVERY=false` est alors forcé et le build sort non signé, avec un
 avertissement dans le résumé du run.
 
@@ -151,18 +151,18 @@ Les binaires déjà signés et notarisés restent valides : la notarisation est 
     rm "$RUNNER_TEMP/cert.p12"
 ```
 
-Ce recours n'est pas dans le workflow : `electron-builder` fait le travail seul dans le cas
+Ce recours n’est pas dans le workflow : `electron-builder` fait le travail seul dans le cas
 courant. Il est écrit ici pour ne pas être réinventé le jour où il faut.
 
 ### La notarisation dépasse le `timeout-minutes` du job
 
-**Cause** : la notarisation est asynchrone et sa durée dépend d'Apple. Quelques minutes en temps
-normal, parfois beaucoup plus lors d'un incident de leur côté.
+**Cause** : la notarisation est asynchrone et sa durée dépend d’Apple. Quelques minutes en temps
+normal, parfois beaucoup plus lors d’un incident de leur côté.
 
 **Correction** : relancer le job ; les artefacts déjà produits ne sont pas perdus (`fail-fast:
 false`). Si l'attente devient chronique, relever `timeout-minutes` du job `build` — il est à 45
-et n'a jamais été éprouvé sur une notarisation réelle, puisqu'aucun compte Apple n'est souscrit.
-Diagnostiquer l'attente :
+et n’a jamais été éprouvé sur une notarisation réelle, puisqu’aucun compte Apple n’est souscrit.
+Diagnostiquer l’attente :
 
 ```bash
 xcrun notarytool history --key AuthKey.p8 --key-id "$KEY_ID" --issuer "$ISSUER"
@@ -175,20 +175,20 @@ xcrun notarytool log <submission-id> --key AuthKey.p8 --key-id "$KEY_ID" --issue
 
 ### §9.5 — `Resource not accessible by integration` au moment de créer la release
 
-**Cause** : le job publie sans droit d'écriture.
+**Cause** : le job publie sans droit d’écriture.
 
 **Correction** : `contents: write` est **scopé au seul job `release`**. Le laisser au niveau du
-workflow entier donnerait ce droit aux trois jobs de build, qui n'en ont aucun usage.
+workflow entier donnerait ce droit aux trois jobs de build, qui n’en ont aucun usage.
 
 ### §9.6 — « Missing update manifests » : le job `release` refuse de publier
 
 **Symptôme** : `::error::Missing update manifests: latest-mac.yml`.
 
-**Cause** : une plateforme n'a pas produit son manifeste — job en échec, ou artefact non
+**Cause** : une plateforme n’a pas produit son manifeste — job en échec, ou artefact non
 téléversé.
 
-**Correction** : **c'est la protection qui fonctionne, ne pas la contourner.** Une release sans
-manifeste casse l'auto-update de toute la base installée, sans erreur visible côté serveur : le
+**Correction** : **c’est la protection qui fonctionne, ne pas la contourner.** Une release sans
+manifeste casse l’auto-update de toute la base installée, sans erreur visible côté serveur : le
 client demande le fichier, reçoit un 404, et ne dit rien. Corriger la plateforme fautive et
 relancer le run. `latest.yml` = Windows, `latest-mac.yml` = macOS, `latest-linux.yml` = Linux.
 
@@ -197,13 +197,13 @@ relancer le run. `latest.yml` = Windows, `latest-mac.yml` = macOS, `latest-linux
 **Cause** : une release GitHub refuse tout fichier de plus de **2 Go**.
 
 **État actuel** : le plus gros artefact pèse environ 240 Mo, soit ~12 % de la limite. Aucun risque
-aujourd'hui. Si l'on s'en approchait, la parade serait de télécharger les ressources lourdes à la
+aujourd’hui. Si l’on s’en approchait, la parade serait de télécharger les ressources lourdes à la
 première exécution plutôt que de les embarquer.
 
-### §9.8 — L'application packagée plante au démarrage sur `Cannot find module 'electron-updater'`
+### §9.8 — L’application packagée plante au démarrage sur `Cannot find module 'electron-updater'`
 
-**Cause** : le module est en `devDependencies`. `externalizeDeps` d'electron-vite n'externalise
-que les `dependencies`, et electron-builder ne copie que celles-là. L'erreur est invisible en
+**Cause** : le module est en `devDependencies`. `externalizeDeps` d’electron-vite n’externalise
+que les `dependencies`, et electron-builder ne copie que celles-là. L’erreur est invisible en
 développement, où `node_modules` est complet.
 
 **Correction** : `electron-updater` est en **dependency de production**, et doit le rester.
@@ -216,13 +216,13 @@ node -p "Object.keys(require('./package.json').dependencies)"
 
 **Cause** : plusieurs jobs publiant en parallèle sur la même release.
 
-**Correction** : l'architecture à deux étages l'empêche
+**Correction** : l’architecture à deux étages l’empêche
 ([ADR-06](adr/ADR-06-publication-des-artefacts.md)) — la matrice téléverse des artefacts, un job
 unique agrège et publie. Remettre en cause cette architecture ramène le problème.
 
 ### Le tag est poussé mais rien ne se déclenche
 
-**Causes possibles**, dans l'ordre de fréquence :
+**Causes possibles**, dans l’ordre de fréquence :
 
 1. Le tag ne correspond pas à `v*` (`0.2.0` au lieu de `v0.2.0`).
 2. Le tag a été poussé sans `git push origin <tag>` — pousser la branche ne pousse pas les tags.
@@ -235,9 +235,9 @@ gh workflow list
 
 ### `gh` refuse de pousser `.github/workflows/`
 
-**Cause** : le jeton `gh` n'a pas le scope `workflow`.
+**Cause** : le jeton `gh` n’a pas le scope `workflow`.
 
-**Correction** : pousser en SSH (`git push`), qui n'est pas soumis à cette restriction. Ou
+**Correction** : pousser en SSH (`git push`), qui n’est pas soumis à cette restriction. Ou
 `gh auth refresh -s workflow`.
 
 ---
@@ -247,20 +247,20 @@ gh workflow list
 ### Rien ne se passe en développement
 
 **Attendu.** `createUpdates` sort immédiatement quand `app.isPackaged` est faux, et
-`electron-updater` n'est même pas chargé. Le journal dit `[updater] Development run: updates are
+`electron-updater` n’est même pas chargé. Le journal dit `[updater] Development run: updates are
 off.` Sans cette garde, `checkForUpdates` échoue sur un `app-update.yml` absent.
 
-### L'application ne voit pas une release publiée
+### L’application ne voit pas une release publiée
 
-À vérifier dans l'ordre :
+À vérifier dans l’ordre :
 
 1. La release est-elle **publiée** ou encore en draft ? `electron-updater` ne voit que les
    publiées.
 2. La version de la release est-elle **supérieure** à celle qui tourne ?
 3. `latest-mac.yml` / `latest.yml` / `latest-linux.yml` sont-ils bien dans les assets ?
-4. Le fichier `.zip` macOS est-il présent ? C'est lui que `electron-updater` consomme, pas le
-   `.dmg` — d'où sa présence dans les cibles alors qu'il n'est pas distribué.
-5. Le dépôt est-il toujours **public** ? Un dépôt privé casse l'auto-update de toute la base
+4. Le fichier `.zip` macOS est-il présent ? C’est lui que `electron-updater` consomme, pas le
+   `.dmg` — d’où sa présence dans les cibles alors qu’il n’est pas distribué.
+5. Le dépôt est-il toujours **public** ? Un dépôt privé casse l’auto-update de toute la base
    installée ([ADR-05](adr/ADR-05-canal-de-distribution.md)).
 
-Le journal du processus principal porte les lignes `[updater]`, y compris la raison d'un échec.
+Le journal du processus principal porte les lignes `[updater]`, y compris la raison d’un échec.

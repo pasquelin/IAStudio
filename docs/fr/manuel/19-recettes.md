@@ -1,11 +1,11 @@
 # 19. Comment faire pour…
 
-[← Ce qui n'existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md)
+[← Ce qui n’existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md)
 
-Les chapitres précédents expliquent **chaque morceau** du studio. Celui-ci fait l'inverse : il
+Les chapitres précédents expliquent **chaque morceau** du studio. Celui-ci fait l’inverse : il
 part de ce que vous voulez obtenir, et donne le chemin complet, du premier clic au résultat.
 
-Chaque recette tient sur elle-même. Vous n'avez rien à lire avant.
+Chaque recette tient sur elle-même. Vous n’avez rien à lire avant.
 
 ---
 
@@ -16,10 +16,10 @@ Elles reviennent partout, alors elles sont dites une fois ici.
 | Il vous faut | Comment vérifier | Si ça manque |
 |---|---|---|
 | **Un compte branché** | la pastille est **verte** en haut à droite de la fenêtre | [Premiers pas ▸ étape 3](02-premiers-pas.md) |
-| **Un projet ouvert** | son nom est écrit en bas à gauche, dans la ligne d'état | `⌘N` pour en créer un |
-| **Le bon espace** | les six onglets, en haut de la fenêtre | cliquez sur celui qu'il faut |
+| **Un projet ouvert** | son nom est écrit en bas à gauche, dans la ligne d’état | `⌘N` pour en créer un |
+| **Le bon espace** | les six onglets, en haut de la fenêtre | cliquez sur celui qu’il faut |
 
-**Le troisième est celui qu'on oublie.** La moitié des « ça ne marche pas » du studio sont un
+**Le troisième est celui qu’on oublie.** La moitié des « ça ne marche pas » du studio sont un
 geste juste, fait dans le mauvais espace.
 
 ---
@@ -28,10 +28,10 @@ geste juste, fait dans le mauvais espace.
 
 Avant les recettes, une règle qui les traverse toutes.
 
-**Le double-clic sur un asset n'ouvre pas d'onglet.** Il envoie l'asset dans l'onglet **déjà
-ouvert devant vous**. S'il n'y a pas d'onglet, il ne se passe rien, et rien ne le dit.
+**Le double-clic sur un asset n’ouvre pas d’onglet.** Il envoie l’asset dans l’onglet **déjà
+ouvert devant vous**. S’il n’y a pas d’onglet, il ne se passe rien, et rien ne le dit.
 
-Donc, dans toutes les recettes qui suivent, l'ordre est **toujours** le même :
+Donc, dans toutes les recettes qui suivent, l’ordre est **toujours** le même :
 
 ```
 1. le bon espace        (les onglets, en haut)
@@ -45,25 +45,25 @@ Retenez ces trois lignes et vous ne serez bloqué nulle part.
 
 # Fabriquer
 
-## Faire une image à partir d'une phrase
+## Faire une image à partir d’une phrase
 
-**C'est le parcours de base**, détaillé dans [Premiers pas](02-premiers-pas.md). En résumé :
+**C’est le parcours de base**, détaillé dans [Premiers pas](02-premiers-pas.md). En résumé :
 
 1. espace **Image** ;
 2. panneau **Modèles**, à gauche : cliquez une vignette ;
 3. panneau **Génération**, qui prend sa place : écrivez votre phrase dans le **prompt** ;
-4. **Générer**. La ligne d'état, en bas à droite, suit l'avancement ;
+4. **Générer**. La ligne d’état, en bas à droite, suit l’avancement ;
 5. le résultat arrive dans le panneau **Assets**, et dans `assets/img/` sur votre disque.
 
-**Le piège.** Le bouton Générer est gris tant qu'aucun projet n'est ouvert. Le message
-« Ouvrez un projet pour générer. » s'affiche au-dessus du formulaire.
+**Le piège.** Le bouton Générer est gris tant qu’aucun projet n’est ouvert. Le message
+« Ouvrez un projet pour générer. » s’affiche au-dessus du formulaire.
 
 ---
 
-## Faire une variante d'une image que j'ai déjà
+## Faire une variante d’une image que j’ai déjà
 
-C'est ce qu'on appelle **image vers image** : vous donnez une image de départ, le modèle en rend
-une autre, inspirée d'elle.
+C’est ce qu’on appelle **image vers image** : vous donnez une image de départ, le modèle en rend
+une autre, inspirée d’elle.
 
 1. espace **Image** ;
 2. dans le panneau **Modèles**, ouvrez **Plus de filtres** → **Capacité** → cochez
@@ -74,25 +74,25 @@ une autre, inspirée d'elle.
    **0 = presque inchangée, 1 = méconnaissable**. Commencez vers 0,5 ;
 6. **Générer**.
 
-**C'est le moyen de transformer une image par un modèle.** Pour la reprendre à la main —
-pinceau, gomme, formes, texte — c'est l'autre chemin : un document image, et l'image glissée
+**C’est le moyen de transformer une image par un modèle.** Pour la reprendre à la main —
+pinceau, gomme, formes, texte — c’est l’autre chemin : un document image, et l’image glissée
 dessus en calque (voir [Espace Image](08-espace-image.md)).
 
 ---
 
 ## Agrandir une image
 
-Le menu **Image ▸ Agrandir** aplatit le document, l'envoie, et ouvre le formulaire de
-l'agrandisseur avec votre image déjà dedans. C'est vous qui appuyez sur **Générer**.
+Le menu **Image ▸ Agrandir** aplatit le document, l’envoie, et ouvre le formulaire de
+l’agrandisseur avec votre image déjà dedans. C’est vous qui appuyez sur **Générer**.
 
 Une fois, avant la première : **Réglages ▸ Génération ▸ Agrandissement**, choisissez un modèle.
-Sans lui, la commande n'envoie rien et ouvre cet écran — le panneau **Modèles** ne peut pas servir
-ici, il ne montre que la famille de l'espace ouvert.
+Sans lui, la commande n’envoie rien et ouvre cet écran — le panneau **Modèles** ne peut pas servir
+ici, il ne montre que la famille de l’espace ouvert.
 
 **Détourer** et **Vectoriser** marchent exactement pareil, avec leur propre sous-section de
 réglages : **Détourage** et **Vectorisation**.
 
-Un agrandisseur reste par ailleurs un modèle comme un autre : rien n'empêche de le chercher dans
+Un agrandisseur reste par ailleurs un modèle comme un autre : rien n’empêche de le chercher dans
 le panneau Modèles et de lui donner une image à la main.
 
 ---
@@ -103,15 +103,15 @@ Un *ciel* — ou *skybox* — est une image qui vous entoure complètement. Elle
 de lumière.
 
 1. espace **Skyboxes** ;
-2. bouton **+** du rail gauche : un document ciel s'ouvre, vide ;
-3. panneau **Modèles** : il n'en montre que **trois**, et c'est normal — ce sont les seuls qui
+2. bouton **+** du rail gauche : un document ciel s’ouvre, vide ;
+3. panneau **Modèles** : il n’en montre que **trois**, et c’est normal — ce sont les seuls qui
    font des panoramas ;
 4. écrivez votre prompt, **Générer** ;
-5. **la génération se pose toute seule** dans le document d'où elle est partie. Vous n'avez rien
+5. **la génération se pose toute seule** dans le document d’où elle est partie. Vous n’avez rien
    à faire.
 
-Ensuite, **cliquez et glissez** dans l'aperçu pour tourner la tête, et servez-vous du panneau
-**Skybox**, à droite, pour régler l'exposition et la rotation.
+Ensuite, **cliquez et glissez** dans l’aperçu pour tourner la tête, et servez-vous du panneau
+**Skybox**, à droite, pour régler l’exposition et la rotation.
 
 **Le piège.** Trois des quatre boutons de vue — équirectangulaire, croix, faces — ne dessinent
 rien encore. Seule la vue 360 fonctionne.
@@ -120,22 +120,22 @@ rien encore. Seule la vue 360 fonctionne.
 
 ## Faire une matière pour un objet 3D
 
-Une *matière* (ou *texture*) n'est pas une image : c'est une surface qu'on juge **sur un objet
+Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’on juge **sur un objet
 éclairé**, pas à plat.
 
 1. espace **Textures** ;
 2. bouton **+** du rail gauche ;
-3. **glissez une image du projet sur l'aperçu** — un cadre bleu confirme que le dépôt sera pris.
+3. **glissez une image du projet sur l’aperçu** — un cadre bleu confirme que le dépôt sera pris.
    Elle devient la **couleur de base** ;
 4. **Inspecteur** → section **Aperçu** : choisissez la forme — **sphère**, cube, cylindre, plan ou
    nœud de tore. La **sphère** montre le mieux la lumière, le **plan** montre le mieux la
    répétition du motif ;
 5. **Inspecteur** → section **Matériau** : réglez rugosité, métal, relief et émission. Si la
-   matière paraît uniformément moyenne, c'est le **remappage** qu'il faut ouvrir — voir plus bas ;
+   matière paraît uniformément moyenne, c’est le **remappage** qu’il faut ouvrir — voir plus bas ;
 6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir ;
 7. `⌘S` **enregistre**.
 
-**Le piège.** Une image déposée sur l'**aperçu** va toujours dans la couleur de base — c'est
+**Le piège.** Une image déposée sur l'**aperçu** va toujours dans la couleur de base — c’est
 voulu. Pour viser les normales ou la rugosité, déposez sur **leur vignette** dans le panneau
 Canaux.
 
@@ -161,8 +161,8 @@ clip sur la timeline.
 3. décrivez le son voulu, **Générer** ;
 4. le son arrive dans les **Assets**.
 
-**Pour l'écouter et le retoucher :** bouton **+** du rail gauche — un onglet son s'ouvre — puis
-**double-cliquez** votre son dans l'étagère. La forme d'onde apparaît.
+**Pour l’écouter et le retoucher :** bouton **+** du rail gauche — un onglet son s’ouvre — puis
+**double-cliquez** votre son dans l’étagère. La forme d’onde apparaît.
 
 ---
 
@@ -170,9 +170,9 @@ clip sur la timeline.
 
 1. espace **3D** ;
 2. bouton **+** du rail gauche : une scène neuve, avec sa grille au sol ;
-3. **elle est noire, et c'est normal** — il n'y a pas de lumière. Le panneau Lumières le dit ;
-4. panneau **Lumières** → **+** → **Directionnelle**. La scène s'éclaire ;
-5. ajoutez une **Ambiante** faible pour que les ombres ne soient pas complètement noires. C'est
+3. **elle est noire, et c’est normal** — il n’y a pas de lumière. Le panneau Lumières le dit ;
+4. panneau **Lumières** → **+** → **Directionnelle**. La scène s’éclaire ;
+5. ajoutez une **Ambiante** faible pour que les ombres ne soient pas complètement noires. C’est
    la recette classique ;
 6. panneau **Mailles** → **+** → une **Sphère**, par exemple ;
 7. `G` pour la déplacer, `R` pour la tourner, `S` pour la redimensionner, `F` pour la cadrer ;
@@ -190,16 +190,16 @@ lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
 
 1. espace **Vidéo** ;
 2. bouton **+** du rail gauche : une séquence neuve ;
-3. **glissez** votre premier clip depuis l'étagère, à gauche, sur une piste image ;
+3. **glissez** votre premier clip depuis l’étagère, à gauche, sur une piste image ;
 4. glissez le second **juste après** — il colle tout seul au bord du premier ;
 5. `Espace` pour lire, `Début` pour revenir au commencement.
 
 **Pour couper :** placez la tête de lecture, appuyez sur `S`. Pour supprimer un clip :
 sélectionnez-le, `Suppr`.
 
-**Pour garder le montage :** `⌘S`. La séquence s'écrit en `.seq` dans le projet et se rouvre
-telle quelle — pistes, clips, fondus et gains. Ce qui ne revient pas, c'est l'historique
-d'annulation.
+**Pour garder le montage :** `⌘S`. La séquence s’écrit en `.seq` dans le projet et se rouvre
+telle quelle — pistes, clips, fondus et gains. Ce qui ne revient pas, c’est l’historique
+d’annulation.
 
 **Ce qui manque toujours :** l'**export**. Le studio ne peut pas encore écrire un fichier vidéo
 final.
@@ -210,17 +210,17 @@ final.
 
 1. espace **Audio**, bouton **+**, puis **double-cliquez** votre son ;
 2. tirez les bords de la région pour **rogner** ;
-3. posez un **fondu d'entrée** et un **fondu de sortie** ;
-4. le bouton d'écoute compare avec l'original, avant vos retouches.
+3. posez un **fondu d’entrée** et un **fondu de sortie** ;
+4. le bouton d’écoute compare avec l’original, avant vos retouches.
 
-**Le piège.** Rien n'est écrit tant que vous ne le demandez pas, et **changer de prise efface vos
+**Le piège.** Rien n’est écrit tant que vous ne le demandez pas, et **changer de prise efface vos
 réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ---
 
 ## Poser un asset là où il faut
 
-Le tableau à retenir. Il n'y a **que cinq** dépôts possibles, et le double-clic obéit à une
+Le tableau à retenir. Il n’y a **que cinq** dépôts possibles, et le double-clic obéit à une
 autre règle encore.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
@@ -231,7 +231,7 @@ autre règle encore.
 | une image en ciel | glisser sur l'**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-Une texture, elle, n'accepte **que** le glisser-déposer : la double-cliquer ne fait rien.
+Une texture, elle, n’accepte **que** le glisser-déposer : la double-cliquer ne fait rien.
 
 ---
 
@@ -245,19 +245,19 @@ Une texture, elle, n'accepte **que** le glisser-déposer : la double-cliquer ne 
    `tiff` `exr`), 3D (`glb`) ;
 3. un bandeau suit chaque fichier : Analyse, Empreinte, Proxy, Waveform, Prêt.
 
-**Ce qu'il faut savoir, et qui a des conséquences réelles : le fichier n'est pas copié.** Le
-studio crée un **lien** vers l'endroit où il se trouve. Déplacer, renommer ou supprimer
-l'original **casse le lien**.
+**Ce qu’il faut savoir, et qui a des conséquences réelles : le fichier n’est pas copié.** Le
+studio crée un **lien** vers l’endroit où il se trouve. Déplacer, renommer ou supprimer
+l’original **casse le lien**.
 
 **Côté 3D, seul le `.glb` entre.** Un `.gltf` séparé — celui qui traîne ses fichiers `.bin` et
 ses textures à côté — ainsi que `.obj`, `.fbx` et les HDRI (`.hdr`) sont refusés.
 
 ---
 
-## Refaire une image que j'avais réussie
+## Refaire une image que j’avais réussie
 
-1. cliquez l'image dans le panneau **Assets** ;
-2. regardez l'**Inspecteur**, à droite : s'il connaît la génération, il affiche le **modèle**, le
+1. cliquez l’image dans le panneau **Assets** ;
+2. regardez l'**Inspecteur**, à droite : s’il connaît la génération, il affiche le **modèle**, le
    **prompt** et la **graine** ;
 3. bouton **Régénérer** : le modèle et ses paramètres reviennent dans le panneau Génération, prêts
    à repartir.
@@ -270,12 +270,12 @@ résultat.
 
 ## Emporter mon projet sur une autre machine
 
-Un projet est **un dossier ordinaire**. Copiez-le, c'est tout.
+Un projet est **un dossier ordinaire**. Copiez-le, c’est tout.
 
-1. repérez son emplacement — bouton **Révéler dans le gestionnaire de fichiers** de l'inspecteur
-   d'un asset ;
+1. repérez son emplacement — bouton **Révéler dans le gestionnaire de fichiers** de l’inspecteur
+   d’un asset ;
 2. copiez le dossier entier : clé USB, disque, service de synchronisation, peu importe ;
-3. sur l'autre machine, `⌘O` et ouvrez-le.
+3. sur l’autre machine, `⌘O` et ouvrez-le.
 
 **Le piège.** Les médias **importés** ne sont pas dans le dossier : ce sont des liens. Copiez-les
 séparément, ou — mieux — copiez-les dans le dossier du projet **avant** de les importer.
@@ -293,43 +293,43 @@ Chaque clé API porte **son propre** projet Scenario : ses modèles, ses assets,
 1. **Réglages ▸ Compte** : ajoutez-en un second, avec son nom à lui ;
 2. **Utiliser ce compte** bascule ;
 3. plus rapide au quotidien : le nom du compte, en haut à droite de la fenêtre, ouvre la liste
-   d'un clic.
+   d’un clic.
 
 **Ce qui change** : le catalogue de modèles et les assets **distants**. **Ce qui ne change pas** :
-les fichiers de votre projet local, qui sont sur votre disque et n'appartiennent à aucun compte.
+les fichiers de votre projet local, qui sont sur votre disque et n’appartiennent à aucun compte.
 
-**Bonne nouvelle** : une génération lancée **finit sur le compte qui l'a lancée**. Vous pouvez
+**Bonne nouvelle** : une génération lancée **finit sur le compte qui l’a lancée**. Vous pouvez
 lancer une vidéo de dix minutes, basculer pour aller chercher un modèle ailleurs, la première
 continue tranquillement.
 
 ---
 
-## Remettre la fenêtre d'aplomb
+## Remettre la fenêtre d’aplomb
 
 Menu **Affichage ▸ Réinitialiser la disposition**. Les panneaux reprennent leur place de départ,
 espace par espace.
 
-Cette commande n'a **volontairement aucun raccourci** : on s'en sert deux fois par an, et lui
+Cette commande n’a **volontairement aucun raccourci** : on s’en sert deux fois par an, et lui
 réserver une touche serait du gâchis. Vous pouvez lui en attribuer un dans
 **Réglages ▸ Raccourcis**.
 
 ---
 
-# Ce qu'il ne faut pas essayer
+# Ce qu’il ne faut pas essayer
 
-Cinq impasses connues. Elles ne sont pas des pannes : ce sont des fonctions qui n'existent pas
-encore, et rien à l'écran ne le dit sur le moment.
+Cinq impasses connues. Elles ne sont pas des pannes : ce sont des fonctions qui n’existent pas
+encore, et rien à l’écran ne le dit sur le moment.
 
 | Vous essayez de… | Ce qui se passe | Pourquoi |
 |---|---|---|
-| **retrouver l'historique** d'un document rouvert | la pile d'annulation est vide | seul l'état est enregistré, pas les gestes qui y ont mené |
+| **retrouver l’historique** d’un document rouvert | la pile d’annulation est vide | seul l’état est enregistré, pas les gestes qui y ont mené |
 | **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
-| **détourer ou vectoriser** une image | le panneau Modèles s'ouvre, et rien de plus | il manque le moyen de choisir le modèle |
-| **exporter une vidéo** | aucun bouton | l'export vidéo n'est pas écrit — l'image, elle, sort par `⇧⌘E` |
-| **annuler un recadrage** | la taille revient, les pixels rognés non | l'historique ne garde pas l'image d'avant en entier |
+| **détourer ou vectoriser** une image | le panneau Modèles s’ouvre, et rien de plus | il manque le moyen de choisir le modèle |
+| **exporter une vidéo** | aucun bouton | l’export vidéo n’est pas écrit — l’image, elle, sort par `⇧⌘E` |
+| **annuler un recadrage** | la taille revient, les pixels rognés non | l’historique ne garde pas l’image d’avant en entier |
 
 Tout est détaillé, sans rien cacher, dans
-[Ce qui n'existe pas encore](18-limites.md).
+[Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
@@ -338,14 +338,14 @@ Tout est détaillé, sans rien cacher, dans
 | Je veux… | Espace | Le chemin |
 |---|---|---|
 | une image depuis une phrase | Image | Modèles → prompt → Générer |
-| une variante d'une image | Image | filtre *Image vers image* → donner l'image |
+| une variante d’une image | Image | filtre *Image vers image* → donner l’image |
 | une image plus grande | Image | menu **Image ▸ Agrandir**, après avoir réglé son modèle |
 | un ciel à 360° | Skyboxes | `+` → Générer, ça se pose tout seul |
-| une matière | Textures | `+` → glisser une image sur l'aperçu → `⌘S` |
+| une matière | Textures | `+` → glisser une image sur l’aperçu → `⌘S` |
 | un plan animé | Vidéo | filtre *Image vers vidéo* → Générer |
 | un son | Audio | Modèles → Générer, puis `+` et double-clic |
-| une scène 3D | 3D | `+` → une lumière **d'abord**, puis les objets → `⌘S` |
-| éclairer une scène d'un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
+| une scène 3D | 3D | `+` → une lumière **d’abord**, puis les objets → `⌘S` |
+| éclairer une scène d’un ciel | 3D | Inspecteur → Environnement → choisir la skybox |
 | poser un modèle 3D | 3D | double-clic sur le maillage, ou le glisser sur la vue |
 | monter deux plans | Vidéo | `+` → glisser les clips sur la timeline |
 | importer mes fichiers | partout | Assets → Importer un média |
@@ -354,4 +354,4 @@ Tout est détaillé, sans rien cacher, dans
 
 ---
 
-[← Ce qui n'existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md)
+[← Ce qui n’existe pas encore](18-limites.md) · [Sommaire](../guide-utilisateur.md)

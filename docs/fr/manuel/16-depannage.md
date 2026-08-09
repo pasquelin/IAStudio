@@ -2,69 +2,69 @@
 
 [← Tous les raccourcis](15-raccourcis.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Glossaire →](17-glossaire.md)
 
-Chaque message que le studio peut afficher, ce qu'il veut dire, et quoi faire.
+Chaque message que le studio peut afficher, ce qu’il veut dire, et quoi faire.
 
 ---
 
 ## Le premier endroit où regarder : le journal
 
-En bas à droite, à côté des générations, une icône ouvre le **journal d'activité**. Il retient ce
-que le studio a fait et ce qu'il a raté, même quand vous regardiez ailleurs.
+En bas à droite, à côté des générations, une icône ouvre le **journal d’activité**. Il retient ce
+que le studio a fait et ce qu’il a raté, même quand vous regardiez ailleurs.
 
-Quand quelque chose ne s'est pas passé comme prévu, c'est là qu'il faut aller **avant** de
-chercher plus loin : il nomme l'objet en cause et dit ce qui a échoué.
+Quand quelque chose ne s’est pas passé comme prévu, c’est là qu’il faut aller **avant** de
+chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 
 | Ce que le journal peut raconter | Sujet |
 |---|---|
 | « La génération « … » a échoué », « Génération « … » annulée » | Génération |
-| « Impossible d'importer « … » », « « … » est illisible » | Import |
-| « Impossible d'envoyer « … » », « Les tags de « … » n'ont pas rejoint la bibliothèque », « L'API Scenario a refusé une requête » | Bibliothèque |
-| « L'enregistrement du document a échoué », « Un calque n'a pas pu être chargé », « L'export de la scène a échoué », « Le fichier n'a pas pu être montré » | Document |
+| « Impossible d’importer « … » », « « … » est illisible » | Import |
+| « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête » | Bibliothèque |
+| « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué », « Le fichier n’a pas pu être montré » | Document |
 
 Filtrez par **niveau** — information, avertissement, échec — ou par **sujet**, et **Tout
 afficher** relâche les filtres.
 
-**Un échec fait aussi apparaître une bulle** dans le coin, qui ne s'efface pas toute seule. Si
-vous ne l'avez pas vue, le compteur rouge de la ligne d'état la garde en mémoire jusqu'à ce que
+**Un échec fait aussi apparaître une bulle** dans le coin, qui ne s’efface pas toute seule. Si
+vous ne l’avez pas vue, le compteur rouge de la ligne d’état la garde en mémoire jusqu’à ce que
 vous ouvriez le journal.
 
 ---
 
-## D'abord : la plupart des messages ne sont pas des erreurs
+## D’abord : la plupart des messages ne sont pas des erreurs
 
 Le studio écrit beaucoup de phrases dans des panneaux vides. **Ce ne sont pas des pannes** : ce
-sont des panneaux qui vous disent ce qu'il leur manque pour se remplir.
+sont des panneaux qui vous disent ce qu’il leur manque pour se remplir.
 
 | Ce que vous lisez | Ce que ça veut dire |
 |---|---|
 | « Aucun projet ouvert » | il faut créer ou ouvrir un projet (`⌘N` / `⌘O`) |
 | « Aucun document ouvert. Générez ou ouvrez un asset pour commencer. » | le centre de la fenêtre attend un premier onglet |
-| « Aucun asset. Générez quelque chose pour commencer. » | l'étagère du projet est encore vide |
+| « Aucun asset. Générez quelque chose pour commencer. » | l’étagère du projet est encore vide |
 | « Aucune tâche en cours. » | rien ne travaille en ce moment — la liste des générations est vide |
 | « Ouvrez un projet pour générer. » | le formulaire attend un projet où déposer le résultat |
-| « Ouvrez un projet pour voir ses assets. » | idem, pour l'étagère |
-| « Ouvrez une scène pour voir son contenu. » | l'explorateur attend une scène 3D |
-| « L'explorateur suit une scène 3D. Ouvrez l'espace 3D pour en voir le contenu. » | vous êtes dans un autre espace ; ce panneau ne sert qu'en 3D |
-| « Aucun modèle choisi » / « Choisissez-en un dans la liste » | le panneau Génération attend qu'un modèle soit sélectionné |
-| « Ce modèle n'attend aucun paramètre. » | c'est normal : certains modèles ne prennent qu'un prompt |
+| « Ouvrez un projet pour voir ses assets. » | idem, pour l’étagère |
+| « Ouvrez une scène pour voir son contenu. » | l’explorateur attend une scène 3D |
+| « L’explorateur suit une scène 3D. Ouvrez l’espace 3D pour en voir le contenu. » | vous êtes dans un autre espace ; ce panneau ne sert qu’en 3D |
+| « Aucun modèle choisi » / « Choisissez-en un dans la liste » | le panneau Génération attend qu’un modèle soit sélectionné |
+| « Ce modèle n’attend aucun paramètre. » | c’est normal : certains modèles ne prennent qu’un prompt |
 | « Aucun résultat pour ce filtre. » | votre recherche ne trouve rien ; élargissez-la |
 | « Aucun réglage ne correspond à cette recherche. » | idem, dans la fenêtre des réglages |
-| « Aucune action n'utilise cette touche : elle est libre. » | vous pouvez lui attribuer un raccourci |
-| « Ce document n'est plus ouvert. » | l'onglet a été fermé entre-temps |
+| « Aucune action n’utilise cette touche : elle est libre. » | vous pouvez lui attribuer un raccourci |
+| « Ce document n’est plus ouvert. » | l’onglet a été fermé entre-temps |
 | « Aucun modèle dans cet espace. » | le catalogue est bien là, mais aucun modèle ne correspond à cet espace |
 | « Ouvrez une image pour voir ses calques. » | le panneau Calques attend un document image |
 | « Aucune maille. Ajoutez-en une pour commencer. » | la scène 3D est vide — le bouton **+** en pose une |
 | « Ouvrez une scène pour voir ses mailles. » | le panneau Mailles attend une scène 3D |
 | « Aucune lumière. La scène restera noire. » | il faut au moins une lumière pour voir quelque chose |
 | « Ouvrez une scène pour voir ses lumières. » | idem, pour le panneau Lumières |
-| « Ouvrez une scène pour inspecter ce qu'elle contient. » | l'Inspecteur attend une scène 3D |
-| « Sélectionnez un objet pour voir ses propriétés. » | la scène est là, rien n'est sélectionné |
+| « Ouvrez une scène pour inspecter ce qu’elle contient. » | l’Inspecteur attend une scène 3D |
+| « Sélectionnez un objet pour voir ses propriétés. » | la scène est là, rien n’est sélectionné |
 | « Sélectionnez un élément pour voir ses propriétés. » | la même chose, hors de la 3D |
 | « Sélectionnez un clip pour le voir ici. » | le moniteur Source attend une sélection |
 | « Aucune séquence ouverte. Créez-en une pour monter. » | la timeline attend un document séquence — bouton **+** |
 | « Ouvrez une skybox pour la régler. » | le panneau Skybox attend un document ciel |
 
-Aucune de ces phrases ne demande d'action de dépannage. Le reste du chapitre parle des vraies
+Aucune de ces phrases ne demande d’action de dépannage. Le reste du chapitre parle des vraies
 pannes.
 
 ---
@@ -76,67 +76,67 @@ panneau **Modèles** quand il ne peut rien afficher.
 
 ### « Aucun identifiant enregistré. »
 
-**Ce que ça veut dire.** Aucun compte n'est enregistré, ou celui qui l'est a été supprimé.
+**Ce que ça veut dire.** Aucun compte n’est enregistré, ou celui qui l’est a été supprimé.
 
 **Quoi faire.** Réglages (`⌘,`) → **Compte** → donnez un nom, collez votre clé et votre secret →
 **Ajouter un compte**. Ils se prennent sur [app.scenario.com](https://app.scenario.com).
 
-### « Le trousseau n'a pas rendu vos comptes. Réessayez après l'avoir déverrouillé — rien n'a été modifié. »
+### « Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été modifié. »
 
-**Ce que ça veut dire.** Le coffre-fort de votre système est verrouillé, et le studio n'a pas pu
+**Ce que ça veut dire.** Le coffre-fort de votre système est verrouillé, et le studio n’a pas pu
 relire la liste de vos comptes.
 
-**Ce qui compte le plus dans cette phrase, c'est la fin.** Le studio a **refusé d'écrire** plutôt
-que d'écrire à moitié : sans pouvoir relire la liste existante, enregistrer un compte l'aurait
+**Ce qui compte le plus dans cette phrase, c’est la fin.** Le studio a **refusé d’écrire** plutôt
+que d’écrire à moitié : sans pouvoir relire la liste existante, enregistrer un compte l’aurait
 remplacée par lui seul. Vos autres comptes sont intacts.
 
-**Quoi faire.** Déverrouillez votre trousseau — sur macOS, ouvrez « Trousseaux d'accès » et
+**Quoi faire.** Déverrouillez votre trousseau — sur macOS, ouvrez « Trousseaux d’accès » et
 authentifiez-vous ; sur Linux, déverrouillez le trousseau du bureau — puis recommencez.
 
 ### « Renseignez vos identifiants API pour voir vos modèles. »
 
 La même chose, dite par le panneau **Modèles**. Le catalogue vient du service : sans compte
-branché, il n'y a rien à lister.
+branché, il n’y a rien à lister.
 
 ### « Clé ou secret API invalide. »
 
 **Ce que ça veut dire.** Le service a répondu que ce couple ne lui dit rien.
 
-**Quoi faire, dans l'ordre :**
+**Quoi faire, dans l’ordre :**
 
-1. **vérifiez qu'il n'y a pas d'espace** collé au début ou à la fin de ce que vous avez copié.
-   C'est de très loin la cause la plus fréquente ;
-2. **vérifiez que vous n'avez pas inversé** la clé et le secret ;
+1. **vérifiez qu’il n’y a pas d’espace** collé au début ou à la fin de ce que vous avez copié.
+   C’est de très loin la cause la plus fréquente ;
+2. **vérifiez que vous n’avez pas inversé** la clé et le secret ;
 3. **regénérez le couple** sur [app.scenario.com](https://app.scenario.com) et recollez-le.
 
 > **Ce message ne se répare pas tout seul.** Le studio ne réessaie **jamais** une clé invalide,
 > quel que soit le réglage « Tentatives maximum » : réessayer ne la corrigerait pas, cela ne ferait
 > que retarder ce message.
 
-### « Cette clé API n'a pas les droits requis. »
+### « Cette clé API n’a pas les droits requis. »
 
-**Ce que ça veut dire.** La clé est valide, mais elle n'a pas le droit de faire ce que vous venez
+**Ce que ça veut dire.** La clé est valide, mais elle n’a pas le droit de faire ce que vous venez
 de demander — ou votre plan ne le couvre pas.
 
 **Quoi faire.** Vérifiez sur [app.scenario.com](https://app.scenario.com) les permissions de la
-clé et l'état de votre abonnement. Une clé restreinte à la lecture, par exemple, peut lister des
+clé et l’état de votre abonnement. Une clé restreinte à la lecture, par exemple, peut lister des
 modèles sans pouvoir lancer une génération.
 
 ### « Impossible de joindre Scenario. Vérifiez votre connexion. »
 
-**Ce que ça veut dire.** La demande n'est jamais arrivée. Ce n'est pas un refus du service, c'est
+**Ce que ça veut dire.** La demande n’est jamais arrivée. Ce n’est pas un refus du service, c’est
 le trajet qui a échoué.
 
 **Quoi faire :**
 
 1. vérifiez que vous avez bien Internet ;
-2. si vous êtes derrière un pare-feu d'entreprise ou un VPN, essayez sans ;
+2. si vous êtes derrière un pare-feu d’entreprise ou un VPN, essayez sans ;
 3. réessayez : le studio le fait déjà tout seul (voir plus bas), mais une coupure longue épuise
    ses tentatives.
 
 ### « Le service Scenario est momentanément indisponible. »
 
-**Ce que ça veut dire.** Le service a répondu, mais pour dire qu'il a un problème de son côté.
+**Ce que ça veut dire.** Le service a répondu, mais pour dire qu’il a un problème de son côté.
 Cela ne vient pas de vous.
 
 **Quoi faire.** Attendre. Le studio réessaie tout seul, en espaçant ses tentatives. Si cela dure,
@@ -145,29 +145,29 @@ allez voir [status.scenario.com](https://status.scenario.com) ou le support de S
 ### « Ressource introuvable. »
 
 **Ce que ça veut dire.** Le studio a demandé quelque chose de précis — un modèle, un asset — qui
-n'existe plus, ou qui n'est pas accessible à votre compte.
+n’existe plus, ou qui n’est pas accessible à votre compte.
 
-**Quoi faire.** Le cas courant est un modèle retiré du catalogue depuis que vous l'aviez choisi.
+**Quoi faire.** Le cas courant est un modèle retiré du catalogue depuis que vous l’aviez choisi.
 Rafraîchissez le panneau **Modèles** et prenez-en un autre.
 
 ### « Une erreur inattendue est survenue. »
 
-**Ce que ça veut dire.** Quelque chose a échoué d'une façon que le studio n'a pas su nommer.
+**Ce que ça veut dire.** Quelque chose a échoué d’une façon que le studio n’a pas su nommer.
 
 **Quoi faire.** Réessayez une fois. Si cela recommence, passez le **Détail du journal** sur
 « Tout » (Réglages → Avancé), refaites le geste, et ouvrez les **Outils de développement** pour
-lire ce qui est écrit. C'est la seule situation où ce bouton sert à quelque chose.
+lire ce qui est écrit. C’est la seule situation où ce bouton sert à quelque chose.
 
-> **Aucun message d'erreur du service ne vous est montré tel quel.** Le studio les traduit tous en
-> une de ces phrases. Ce n'est pas de la paresse : un message d'erreur brut contient la requête qui
-> l'a produite, donc l'en-tête d'authentification, donc **votre clé API**. Elle ne doit jamais
-> arriver jusqu'à l'écran, où elle finirait dans une capture d'écran envoyée à un forum.
+> **Aucun message d’erreur du service ne vous est montré tel quel.** Le studio les traduit tous en
+> une de ces phrases. Ce n’est pas de la paresse : un message d’erreur brut contient la requête qui
+> l’a produite, donc l’en-tête d’authentification, donc **votre clé API**. Elle ne doit jamais
+> arriver jusqu’à l’écran, où elle finirait dans une capture d’écran envoyée à un forum.
 
 ---
 
-## Quand une partie de l'écran tombe en panne
+## Quand une partie de l’écran tombe en panne
 
-Deux messages qui ne viennent pas du service, mais du studio lui-même. Ils s'affichent **à la
+Deux messages qui ne viennent pas du service, mais du studio lui-même. Ils s’affichent **à la
 place** de ce qui aurait dû être dessiné, avec un bouton **Réessayer**.
 
 ### « Ce panneau a rencontré une erreur. »
@@ -180,26 +180,26 @@ normalement**.
 
 **Ce que vous ne perdez pas** : rien. Un panneau est une vue sur des données qui vivent ailleurs.
 
-### « L'application a rencontré une erreur. »
+### « L’application a rencontré une erreur. »
 
-**Ce que ça veut dire.** La même chose, un cran au-dessus : c'est la fenêtre entière qui n'a pas
+**Ce que ça veut dire.** La même chose, un cran au-dessus : c’est la fenêtre entière qui n’a pas
 pu se dessiner.
 
-**Quoi faire.** **Réessayer** d'abord. Si l'écran revient au même état, fermez la fenêtre et
+**Quoi faire.** **Réessayer** d’abord. Si l’écran revient au même état, fermez la fenêtre et
 rouvrez-la.
 
-> **Ces deux écrans ne disent pas ce qui a échoué**, et c'est délibéré : le détail technique est
-> dans la console, et il ne sert qu'à qui peut le corriger. Si vous voulez le voir avant de
+> **Ces deux écrans ne disent pas ce qui a échoué**, et c’est délibéré : le détail technique est
+> dans la console, et il ne sert qu’à qui peut le corriger. Si vous voulez le voir avant de
 > signaler le problème : Réglages → Avancé → **Outils de développement**.
 >
-> **Ce qui est enregistré sur le disque est en sécurité.** Un plantage d'affichage ne touche ni
+> **Ce qui est enregistré sur le disque est en sécurité.** Un plantage d’affichage ne touche ni
 > vos assets, ni les documents déjà écrits.
 
 ---
 
 ## Les messages de génération
 
-Ils apparaissent sur la ligne de la tâche, dans la liste qu'ouvre le résumé des générations, en bas
+Ils apparaissent sur la ligne de la tâche, dans la liste qu’ouvre le résumé des générations, en bas
 à droite de la fenêtre.
 
 ### « Trop de requêtes. Nouvelle tentative en cours… »
@@ -207,63 +207,63 @@ Ils apparaissent sur la ligne de la tâche, dans la liste qu'ouvre le résumé d
 **Ce que ça veut dire.** Vous en avez demandé plus que ce que le service accepte sur un court
 laps de temps.
 
-**Ce que le studio fait tout seul.** Il attend, puis réessaie — en doublant l'attente à chaque
-fois : 1 seconde, puis 2, puis 4, puis 8. C'est ce qu'on appelle une **temporisation
-exponentielle**, et c'est la bonne façon de se comporter : réessayer tout de suite, en boucle,
-aggrave l'encombrement au lieu de le résoudre.
+**Ce que le studio fait tout seul.** Il attend, puis réessaie — en doublant l’attente à chaque
+fois : 1 seconde, puis 2, puis 4, puis 8. C’est ce qu’on appelle une **temporisation
+exponentielle**, et c’est la bonne façon de se comporter : réessayer tout de suite, en boucle,
+aggrave l’encombrement au lieu de le résoudre.
 
 **Ce que vous pouvez faire.** Si cela revient souvent, baissez **Générations simultanées** dans
 les réglages. Trois est la valeur de départ ; deux suffit largement pour travailler
 confortablement.
 
-> **Ce message est devenu rare.** Le studio borne désormais son **débit** d'appels, et pas
-> seulement le nombre de générations en parallèle : c'étaient deux choses différentes, et compter
-> les secondes ne suffisait pas. Le voir souvent malgré cela veut dire qu'un autre outil se sert
+> **Ce message est devenu rare.** Le studio borne désormais son **débit** d’appels, et pas
+> seulement le nombre de générations en parallèle : c’étaient deux choses différentes, et compter
+> les secondes ne suffisait pas. Le voir souvent malgré cela veut dire qu’un autre outil se sert
 > de la même clé en même temps.
 
 ### « La génération a échoué. »
 
-**Ce que ça veut dire.** Le service a bien reçu la demande, l'a traitée, et a rendu un échec. Ce
-n'est ni un problème de réseau, ni un problème de compte.
+**Ce que ça veut dire.** Le service a bien reçu la demande, l’a traitée, et a rendu un échec. Ce
+n’est ni un problème de réseau, ni un problème de compte.
 
 **Les causes ordinaires :**
 
-- **un paramètre refusé** — une dimension que ce modèle n'accepte pas, une valeur hors de ses
+- **un paramètre refusé** — une dimension que ce modèle n’accepte pas, une valeur hors de ses
   bornes ;
 - **un prompt refusé** — le service applique ses propres règles de contenu ;
-- **une image d'entrée inutilisable** — trop grande, trop petite, dans un format que le modèle ne
+- **une image d’entrée inutilisable** — trop grande, trop petite, dans un format que le modèle ne
   prend pas.
 
 **Quoi faire.** Repartez du formulaire : remettez les paramètres à leurs valeurs par défaut (le
 petit bouton de restauration à côté de chacun), et relancez. Si cela passe, réintroduisez vos
 valeurs une par une pour trouver celle qui bloquait.
 
-> **Ce message n'est jamais réessayé automatiquement.** Une demande refusée le sera à l'identique
-> la fois d'après : seul un changement de votre part peut la faire passer.
+> **Ce message n’est jamais réessayé automatiquement.** Une demande refusée le sera à l’identique
+> la fois d’après : seul un changement de votre part peut la faire passer.
 
-### « Impossible d'enregistrer le résultat sur le disque. »
+### « Impossible d’enregistrer le résultat sur le disque. »
 
-**Ce que ça veut dire.** La génération a **réussi** — l'image existe — mais le studio n'a pas pu
-l'écrire dans votre projet.
+**Ce que ça veut dire.** La génération a **réussi** — l’image existe — mais le studio n’a pas pu
+l’écrire dans votre projet.
 
 **Les causes ordinaires :**
 
 - **le disque est plein** ;
 - **le dossier du projet a été déplacé, renommé ou supprimé** pendant que la tâche travaillait ;
-- **le dossier est en lecture seule**, ou sur un disque réseau qui s'est démonté ;
+- **le dossier est en lecture seule**, ou sur un disque réseau qui s’est démonté ;
 - **le projet est dans un dossier synchronisé** (iCloud, Dropbox, OneDrive) qui a repris la main
   sur le fichier au mauvais moment.
 
 **Quoi faire.** Libérez de la place, vérifiez que le dossier du projet est bien là où il était, et
 relancez la génération.
 
-> **Un projet dans un dossier synchronisé est une source d'ennuis.** Ces services déplacent et
+> **Un projet dans un dossier synchronisé est une source d’ennuis.** Ces services déplacent et
 > ré-écrivent les fichiers pendant que vous travaillez. Préférez un dossier local, et sauvegardez
 > autrement.
 
 ### Quelles erreurs sont réessayées, et lesquelles ne le sont pas
 
-Le studio ne réessaie que **ce qu'un nouvel essai peut réparer**.
+Le studio ne réessaie que **ce qu’un nouvel essai peut réparer**.
 
 | Message | Réessayé ? |
 |---|---|
@@ -282,9 +282,9 @@ Le nombre de tentatives est réglable : Réglages → **Génération** → **Ten
 
 ---
 
-## Les messages d'import
+## Les messages d’import
 
-Ils apparaissent pendant qu'un fichier que vous avez glissé dans le projet est préparé.
+Ils apparaissent pendant qu’un fichier que vous avez glissé dans le projet est préparé.
 
 ### Les étapes normales
 
@@ -295,43 +295,43 @@ Ils apparaissent pendant qu'un fichier que vous avez glissé dans le projet est 
 | **Empreinte…** | il calcule sa signature, pour reconnaître un doublon |
 | **Proxy…** | il fabrique la copie allégée qui rend la navigation fluide |
 | **Waveform…** | il dessine la bande son |
-| **Prêt** | c'est fini, le fichier est utilisable |
+| **Prêt** | c’est fini, le fichier est utilisable |
 
 Le bouton **Interrompre la préparation** arrête le travail en cours. **Retirer de la liste**
-enlève la ligne une fois qu'elle est finie.
+enlève la ligne une fois qu’elle est finie.
 
-### « Préparation vidéo indisponible : ni copie allégée ni forme d'onde. »
+### « Préparation vidéo indisponible : ni copie allégée ni forme d’onde. »
 
-**Ce que ça veut dire.** Aucun ffmpeg utilisable n'a été trouvé — pas même celui que
-l'application transporte.
+**Ce que ça veut dire.** Aucun ffmpeg utilisable n’a été trouvé — pas même celui que
+l’application transporte.
 
-**Ce qui marche quand même.** L'import lui-même. Votre fichier est dans le projet, il se lit, il
+**Ce qui marche quand même.** L’import lui-même. Votre fichier est dans le projet, il se lit, il
 se monte.
 
 **Ce qui manque.** La navigation dans la timeline saccade sur les gros fichiers (pas de copie
-allégée), et les pistes audio n'affichent pas leurs vagues.
+allégée), et les pistes audio n’affichent pas leurs vagues.
 
 **Quoi faire.** Le studio livre son propre ffmpeg sur les trois systèmes, donc ce message ne
-devrait pas apparaître sur une application installée normalement. S'il apparaît quand même :
+devrait pas apparaître sur une application installée normalement. S’il apparaît quand même :
 
 1. **vous avez lancé le studio depuis son code source** — exécutez `pnpm ffmpeg:fetch`, qui
    télécharge les binaires manquants ;
 2. **vous avez indiqué un chemin à vous** dans Réglages → **Médias** → **Chemin de ffmpeg**, et il
-   ne répond pas — videz le champ pour revenir à celui de l'application ;
-3. **sinon**, s'en passer reste parfaitement viable sur des fichiers courts ou légers.
+   ne répond pas — videz le champ pour revenir à celui de l’application ;
+3. **sinon**, s’en passer reste parfaitement viable sur des fichiers courts ou légers.
 
-#### Le cas déroutant : ffmpeg est là, et le studio dit qu'il n'y est pas
+#### Le cas déroutant : ffmpeg est là, et le studio dit qu’il n’y est pas
 
 Vous tapez `which ffmpeg` dans un terminal, il répond un chemin. Le fichier existe. Et le studio
-continue d'afficher que la préparation vidéo est indisponible.
+continue d’afficher que la préparation vidéo est indisponible.
 
-**Ce n'est pas une contradiction.** Le studio ne se contente pas de *trouver* le programme : il le
-**lance**, avec `ffmpeg -version`, et n'accepte que celui qui répond. Un ffmpeg installé par
+**Ce n’est pas une contradiction.** Le studio ne se contente pas de *trouver* le programme : il le
+**lance**, avec `ffmpeg -version`, et n’accepte que celui qui répond. Un ffmpeg installé par
 Homebrew dont une bibliothèque a disparu — après une mise à jour de macOS, ou un
 `brew cleanup` un peu large — existe toujours en tant que fichier, mais ne démarre plus.
 
-Un programme qu'on trouve sans pouvoir l'exécuter serait pire qu'un programme absent : le studio
-promettrait des proxies qu'il ne saurait pas fabriquer.
+Un programme qu’on trouve sans pouvoir l’exécuter serait pire qu’un programme absent : le studio
+promettrait des proxies qu’il ne saurait pas fabriquer.
 
 **Pour le vérifier vous-même**, dans un terminal :
 
@@ -339,8 +339,8 @@ promettrait des proxies qu'il ne saurait pas fabriquer.
 ffmpeg -version
 ```
 
-Si cette commande affiche un numéro de version, ffmpeg va bien. Si elle se plaint d'une
-bibliothèque manquante, c'est le diagnostic.
+Si cette commande affiche un numéro de version, ffmpeg va bien. Si elle se plaint d’une
+bibliothèque manquante, c’est le diagnostic.
 
 **Pour le réparer**, sur macOS :
 
@@ -350,86 +350,86 @@ brew reinstall ffmpeg
 
 ### « Déjà dans le projet »
 
-**Ce que ça veut dire.** Ce fichier a la même empreinte qu'un asset déjà présent. Le studio
-refuse d'en garder deux copies.
+**Ce que ça veut dire.** Ce fichier a la même empreinte qu’un asset déjà présent. Le studio
+refuse d’en garder deux copies.
 
-**Ce n'est pas une erreur.** Cherchez-le dans le panneau **Assets** : il y est déjà.
+**Ce n’est pas une erreur.** Cherchez-le dans le panneau **Assets** : il y est déjà.
 
 ### « Fichier illisible »
 
-**Ce que ça veut dire.** Le studio n'arrive pas à ouvrir ce fichier.
+**Ce que ça veut dire.** Le studio n’arrive pas à ouvrir ce fichier.
 
 **Les causes ordinaires :** un fichier tronqué (téléchargement interrompu), une extension qui ment
 sur le contenu, un format exotique, ou un fichier protégé par des droits numériques.
 
-**Quoi faire.** Ouvrez-le dans un autre lecteur pour vérifier qu'il est sain. S'il l'est,
+**Quoi faire.** Ouvrez-le dans un autre lecteur pour vérifier qu’il est sain. S’il l’est,
 convertissez-le dans un format courant (`.mp4`, `.wav`, `.png`).
 
 ### « Échec » / « Interrompu »
 
-**Échec** : la préparation s'est arrêtée sur un problème. **Interrompu** : vous l'avez arrêtée
+**Échec** : la préparation s’est arrêtée sur un problème. **Interrompu** : vous l’avez arrêtée
 vous-même. Dans les deux cas, le fichier peut être réimporté.
 
 ---
 
-## Les ennuis qui n'affichent aucun message
+## Les ennuis qui n’affichent aucun message
 
-Ceux-là sont les plus déroutants : rien ne s'écrit, mais quelque chose ne va pas.
+Ceux-là sont les plus déroutants : rien ne s’écrit, mais quelque chose ne va pas.
 
 ### « Je double-clique sur un asset et rien ne se passe »
 
-**C'est de loin le plus fréquent.** Et ce n'est ni un bug, ni un fichier abîmé.
+**C’est de loin le plus fréquent.** Et ce n’est ni un bug, ni un fichier abîmé.
 
-**La cause.** Le double-clic **n'ouvre jamais d'onglet** : il envoie l'asset dans l'onglet déjà
-en avant. S'il n'y a aucun onglet ouvert, ou si l'onglet en avant ne sait pas quoi faire de ce
+**La cause.** Le double-clic **n’ouvre jamais d’onglet** : il envoie l’asset dans l’onglet déjà
+en avant. S’il n’y a aucun onglet ouvert, ou si l’onglet en avant ne sait pas quoi faire de ce
 que vous lui envoyez, il ne se passe rien — et rien ne le dit.
 
 | Vous double-cliquez… | Il faut, devant vous… |
 |---|---|
 | une image, pour en faire un ciel | un onglet **ciel** ouvert (espace Skyboxes) |
-| un son, pour l'éditer | un onglet **son** ouvert (espace Audio) |
+| un son, pour l’éditer | un onglet **son** ouvert (espace Audio) |
 | un média, pour le monter | un onglet **séquence** ouvert (espace Vidéo) |
 | une image, pour la peindre | un onglet **image** ouvert (espace Image) |
 
 **Quoi faire.**
 
-1. Vérifiez l'espace en haut de la fenêtre : êtes-vous dans le bon ?
-2. Vérifiez qu'un onglet est bien ouvert — sinon, le bouton `+` du rail gauche en crée un.
+1. Vérifiez l’espace en haut de la fenêtre : êtes-vous dans le bon ?
+2. Vérifiez qu’un onglet est bien ouvert — sinon, le bouton `+` du rail gauche en crée un.
 3. Alors seulement, double-cliquez.
 
 > **Le cas de la scène 3D et de la matière est différent.** Ces deux-là ne reçoivent rien par
-> double-clic, quel que soit l'asset : une texture se pose en glissant l'image sur son aperçu, et
-> la vue 3D n'accepte aucun dépôt. Voir [Ce qui n'existe pas encore](18-limites.md).
+> double-clic, quel que soit l’asset : une texture se pose en glissant l’image sur son aperçu, et
+> la vue 3D n’accepte aucun dépôt. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ### « ⌘Z ne fait rien »
 
-**La cause, presque toujours.** L'action que vous voulez défaire appartient à **un autre onglet**.
+**La cause, presque toujours.** L’action que vous voulez défaire appartient à **un autre onglet**.
 
-Chaque document a sa propre pile d'annulation. `⌘Z` recule dans l'onglet **actif**, pas dans le
+Chaque document a sa propre pile d’annulation. `⌘Z` recule dans l’onglet **actif**, pas dans le
 dernier geste que vous avez fait dans le studio.
 
-**Quoi faire.** Activez l'onglet concerné, puis annulez.
+**Quoi faire.** Activez l’onglet concerné, puis annulez.
 
 ### « Le canvas est tout noir après avoir détaché un panneau »
 
-**La cause.** Une vue 3D ne survit pas au déplacement d'une fenêtre à l'autre : la carte graphique
+**La cause.** Une vue 3D ne survit pas au déplacement d’une fenêtre à l’autre : la carte graphique
 lui reprend son contexte de dessin.
 
-**Quoi faire.** Fermez l'onglet et rouvrez-le. La vue se reconstruit à partir de la scène — vous
-ne perdez pas votre travail, seulement l'affichage.
+**Quoi faire.** Fermez l’onglet et rouvrez-le. La vue se reconstruit à partir de la scène — vous
+ne perdez pas votre travail, seulement l’affichage.
 
-### « L'interface se fige quelques secondes pendant une recherche »
+### « L’interface se fige quelques secondes pendant une recherche »
 
 **La cause.** Une recherche dans un très gros catalogue.
 
-**Quoi faire.** Attendez ; cela se débloque. Pour l'éviter, tapez plus de lettres avant de lancer
+**Quoi faire.** Attendez ; cela se débloque. Pour l’éviter, tapez plus de lettres avant de lancer
 la recherche, ou restreignez avec les filtres.
 
 ### « La lecture saccade sans raison »
 
 **Deux causes possibles :**
 
-1. **il n'y a pas de proxy** — voir le message ffmpeg plus haut. C'est le cas le plus fréquent sur
+1. **il n’y a pas de proxy** — voir le message ffmpeg plus haut. C’est le cas le plus fréquent sur
    une vidéo lourde ;
 2. **la machine est chargée** — une génération en cours consomme le réseau, et une scène 3D
    ouverte dans un autre onglet consomme la carte graphique.
@@ -437,42 +437,42 @@ la recherche, ou restreignez avec les filtres.
 **Quoi faire.** Fermez les onglets dont vous ne vous servez pas, et vérifiez que ffmpeg est
 disponible.
 
-### « Les animations de l'interface saccadent »
+### « Les animations de l’interface saccadent »
 
-Réglages → **Apparence** → cochez **Limiter les animations**. Les panneaux apparaissent d'un coup
-au lieu de glisser, ce qui est bien plus agréable qu'un glissement haché.
+Réglages → **Apparence** → cochez **Limiter les animations**. Les panneaux apparaissent d’un coup
+au lieu de glisser, ce qui est bien plus agréable qu’un glissement haché.
 
-### « J'ai perdu mon travail en fermant un onglet »
+### « J’ai perdu mon travail en fermant un onglet »
 
-**Ce n'est plus censé pouvoir arriver.** Les six types de documents s'enregistrent, et fermer un
-onglet dont le travail n'est pas écrit pose la question avant de fermer : *Enregistrer*, *Ne pas
+**Ce n’est plus censé pouvoir arriver.** Les six types de documents s’enregistrent, et fermer un
+onglet dont le travail n’est pas écrit pose la question avant de fermer : *Enregistrer*, *Ne pas
 enregistrer*, *Annuler*.
 
-**Si la question ne s'est pas posée**, c'est que le document était propre — pas de point (`•`) à
+**Si la question ne s’est pas posée**, c’est que le document était propre — pas de point (`•`) à
 côté de son nom. Deux cas connus :
 
-- **le document n'a jamais été enregistré et n'a rien reçu** : il n'y avait rien à garder ;
-- **son fichier n'avait pas pu être lu à l'ouverture.** Le studio refuse alors délibérément de
-  l'enregistrer, pour ne pas écrire un document vide par-dessus celui qu'il n'a pas su lire — le
-  fichier est la seule copie. La raison est dans le journal d'activité.
+- **le document n’a jamais été enregistré et n’a rien reçu** : il n’y avait rien à garder ;
+- **son fichier n’avait pas pu être lu à l’ouverture.** Le studio refuse alors délibérément de
+  l’enregistrer, pour ne pas écrire un document vide par-dessus celui qu’il n’a pas su lire — le
+  fichier est la seule copie. La raison est dans le journal d’activité.
 
-**Ce qui ne revient jamais**, et c'est voulu : l'**historique d'annulation**. Rouvrir un
-document, c'est repartir sans `⌘Z`. La liste complète est dans
-[Ce qui n'existe pas encore](18-limites.md).
+**Ce qui ne revient jamais**, et c’est voulu : l'**historique d’annulation**. Rouvrir un
+document, c’est repartir sans `⌘Z`. La liste complète est dans
+[Ce qui n’existe pas encore](18-limites.md).
 
-### « J'ai supprimé un document par erreur »
+### « J’ai supprimé un document par erreur »
 
-**Rien ne le rend.** *Supprimer le document…* du menu contextuel d'onglet retire le fichier du
-dossier du projet, et le studio n'a pas de corbeille. C'est pour cela que la confirmation a
+**Rien ne le rend.** *Supprimer le document…* du menu contextuel d’onglet retire le fichier du
+dossier du projet, et le studio n’a pas de corbeille. C’est pour cela que la confirmation a
 *Annuler* pour bouton par défaut.
 
 Si le dossier de projet est dans une sauvegarde système (Time Machine, un dossier synchronisé),
-c'est là qu'il faut aller le chercher.
+c’est là qu’il faut aller le chercher.
 
-### « Les panneaux sont dans tous les sens et je ne m'y retrouve plus »
+### « Les panneaux sont dans tous les sens et je ne m’y retrouve plus »
 
 Menu **Affichage** → **Réinitialiser la disposition**. Les panneaux reprennent leur place
-d'origine. **Votre travail n'est pas touché** — seul l'agencement de la fenêtre l'est.
+d’origine. **Votre travail n’est pas touché** — seul l’agencement de la fenêtre l’est.
 
 ### « Le studio ne se souvient pas de mes réglages »
 
@@ -496,25 +496,25 @@ Trois vérifications, dans cet ordre :
 ### Le journal
 
 Réglages → **Avancé** → **Détail du journal**. Passez-le sur « Tout », refaites le geste qui
-échoue, puis ouvrez les **Outils de développement** (même section) : les messages s'y affichent.
+échoue, puis ouvrez les **Outils de développement** (même section) : les messages s’y affichent.
 
-C'est ce qu'il faut joindre quand vous demandez de l'aide.
+C’est ce qu’il faut joindre quand vous demandez de l’aide.
 
 ### Le fichier de réglages
 
-Réglages → **Avancé** → **Fichier de réglages** → **Montrer**. Il s'ouvre dans votre gestionnaire
+Réglages → **Avancé** → **Fichier de réglages** → **Montrer**. Il s’ouvre dans votre gestionnaire
 de fichiers.
 
 **Vous pouvez le partager sans crainte pour vos identifiants** : ils y sont chiffrés par le
 trousseau de votre session, et illisibles ailleurs. Mais vous pouvez aussi préférer ne pas
-l'envoyer du tout — il contient tous vos réglages, dont les chemins de vos dossiers.
+l’envoyer du tout — il contient tous vos réglages, dont les chemins de vos dossiers.
 
 ### Repartir de zéro
 
-Réglages → **Avancé** → **Tout réinitialiser**. Remet tous les réglages dans l'état d'une
+Réglages → **Avancé** → **Tout réinitialiser**. Remet tous les réglages dans l’état d’une
 installation neuve.
 
-**Vos projets ne sont pas touchés.** Mais l'opération est définitive : il n'y a pas d'annulation.
+**Vos projets ne sont pas touchés.** Mais l’opération est définitive : il n’y a pas d’annulation.
 
 ---
 
@@ -530,13 +530,13 @@ installation neuve.
 | Timeline qui saccade | vérifier que la préparation vidéo est disponible, ou raccourcir la vidéo |
 | Pas de vagues sur la piste audio | idem |
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |
-| « Le trousseau n'a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n'a été perdu |
-| Double-clic sur un asset sans effet | ouvrir d'abord un onglet, avec le `+` du rail gauche |
+| « Le trousseau n’a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n’a été perdu |
+| Double-clic sur un asset sans effet | ouvrir d’abord un onglet, avec le `+` du rail gauche |
 | « Ce panneau a rencontré une erreur » | cliquer **Réessayer** — le reste de la fenêtre va bien |
 | `⌘Z` sans effet | activer le bon onglet |
-| Canvas 3D noir | fermer et rouvrir l'onglet |
+| Canvas 3D noir | fermer et rouvrir l’onglet |
 | Panneaux en désordre | Affichage → Réinitialiser la disposition |
-| Travail perdu à la fermeture d'un onglet | seuls `.scene` et `.tex` s'enregistrent — [voir les limites](18-limites.md) |
+| Travail perdu à la fermeture d’un onglet | seuls `.scene` et `.tex` s’enregistrent — [voir les limites](18-limites.md) |
 
 ---
 

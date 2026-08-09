@@ -2,40 +2,40 @@
 
 [← Espace Audio](11-espace-audio.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Espace Skyboxes →](13-espace-skyboxes.md)
 
-L'espace où l'on juge une **matière** : du bois, du métal rouillé, du tissu, de la pierre.
+L’espace où l’on juge une **matière** : du bois, du métal rouillé, du tissu, de la pierre.
 
 ---
 
-## Une texture n'est pas une image
+## Une texture n’est pas une image
 
-C'est le point de départ, et il change tout.
+C’est le point de départ, et il change tout.
 
 Une image se regarde à plat. Une **matière** ne se juge pas à plat : elle a du relief, elle
-renvoie la lumière d'une certaine façon, elle brille ou elle est mate. Posée sur un plan, sous
+renvoie la lumière d’une certaine façon, elle brille ou elle est mate. Posée sur un plan, sous
 un éclairage neutre, une belle matière et une matière ratée se ressemblent.
 
-C'est pourquoi cet espace ne montre pas votre image dans un cadre. Il la **pose sur un objet en
+C’est pourquoi cet espace ne montre pas votre image dans un cadre. Il la **pose sur un objet en
 volume, sous une vraie lumière**, et le fait tourner.
 
 ---
 
 ## Créer une texture
 
-1. Passez dans l'espace **Textures**.
-2. Cliquez le bouton **+** du rail gauche. Un document neuf s'ouvre.
-3. **Glissez une image du projet sur l'aperçu.** Elle devient la **couleur de base**.
+1. Passez dans l’espace **Textures**.
+2. Cliquez le bouton **+** du rail gauche. Un document neuf s’ouvre.
+3. **Glissez une image du projet sur l’aperçu.** Elle devient la **couleur de base**.
 
-Tant qu'aucune image n'est posée, l'aperçu affiche : « Glissez une image du projet pour la poser
+Tant qu’aucune image n’est posée, l’aperçu affiche : « Glissez une image du projet pour la poser
 en couleur de base ».
 
-Un cadre bleu apparaît autour de l'aperçu quand vous survolez avec une image : c'est le signe que
+Un cadre bleu apparaît autour de l’aperçu quand vous survolez avec une image : c’est le signe que
 le dépôt sera accepté.
 
 ---
 
-## Les réglages de l'aperçu
+## Les réglages de l’aperçu
 
-**Ils sont dans l'Inspecteur**, colonne de droite, section **Aperçu**. L'aperçu lui-même ne porte
+**Ils sont dans l’Inspecteur**, colonne de droite, section **Aperçu**. L’aperçu lui-même ne porte
 aucun bouton : dans un studio on juge des finitions, et un contrôle posé sur la matière est un
 contrôle devant elle.
 
@@ -43,62 +43,62 @@ contrôle devant elle.
 
 Cinq formes, et chacune montre quelque chose de différent :
 
-| Forme | Ce qu'elle révèle |
+| Forme | Ce qu’elle révèle |
 |---|---|
 | **Sphère** | comment la matière reçoit la lumière — la meilleure pour juger le brillant |
 | **Cube** | comment elle se comporte sur des faces plates et des arêtes vives |
 | **Cylindre** | la répétition sur une surface courbe |
-| **Plan** | la **répétition** — c'est là qu'on voit les raccords qui se voient |
+| **Plan** | la **répétition** — c’est là qu’on voit les raccords qui se voient |
 | **Nœud** | ce qui se passe là où la surface se replie sur elle-même |
 
 **En pratique** : commencez par la **sphère** pour juger la matière, puis passez au **plan** pour
-vérifier qu'elle se répète sans couture visible.
+vérifier qu’elle se répète sans couture visible.
 
 ### Les quatre autres contrôles
 
-| Contrôle | Ce qu'il fait |
+| Contrôle | Ce qu’il fait |
 |---|---|
-| **Éclairage** | l'intensité de la lumière d'ambiance, de 0 à 3 |
-| **Rotation du ciel** | fait tourner l'éclairage autour de l'objet, en degrés |
-| **Afficher le fond** | montre l'environnement derrière l'objet, ou l'utilise seulement pour éclairer |
-| **Rotation automatique** | fait tourner l'objet lentement, pour lire le relief |
+| **Éclairage** | l’intensité de la lumière d’ambiance, de 0 à 3 |
+| **Rotation du ciel** | fait tourner l’éclairage autour de l’objet, en degrés |
+| **Afficher le fond** | montre l’environnement derrière l’objet, ou l’utilise seulement pour éclairer |
+| **Rotation automatique** | fait tourner l’objet lentement, pour lire le relief |
 
-**La rotation automatique est plus utile qu'elle n'en a l'air.** Un relief ne se voit pas sur une
-image fixe : c'est le déplacement de la lumière sur la surface qui le révèle. La rotation du ciel
-fait la même chose autrement — l'objet reste immobile et c'est la lumière qui se déplace.
+**La rotation automatique est plus utile qu’elle n’en a l’air.** Un relief ne se voit pas sur une
+image fixe : c’est le déplacement de la lumière sur la surface qui le révèle. La rotation du ciel
+fait la même chose autrement — l’objet reste immobile et c’est la lumière qui se déplace.
 
 ---
 
-## L'éclairage
+## L’éclairage
 
-La section **Environnement** de l'Inspecteur, sous celle de l'aperçu. C'est **exactement celle de
-l'espace 3D** : la question est la même, et les ciels offerts sont ceux de votre projet.
+La section **Environnement** de l’Inspecteur, sous celle de l’aperçu. C’est **exactement celle de
+l’espace 3D** : la question est la même, et les ciels offerts sont ceux de votre projet.
 
 Par défaut, un **studio neutre** — un éclairage doux, sans couleur dominante, comme dans un studio
-photo. Aucun fichier à télécharger, et une matière lisible dès le premier document. C'est
-volontairement neutre : un éclairage coloré ferait paraître belle une matière qui ne l'est pas.
+photo. Aucun fichier à télécharger, et une matière lisible dès le premier document. C’est
+volontairement neutre : un éclairage coloré ferait paraître belle une matière qui ne l’est pas.
 
 Dès que votre projet contient une skybox, elle apparaît dans la liste et sert de lumière à son
-tour — ce qui permet de juger une matière sous l'éclairage réel de la scène où elle finira.
+tour — ce qui permet de juger une matière sous l’éclairage réel de la scène où elle finira.
 « Studio » y est toujours proposé, pour y revenir.
 
 ---
 
-## Les huit canaux d'une matière
+## Les huit canaux d’une matière
 
-Une matière complète n'est pas une image, mais **jusqu'à huit**, qui décrivent chacune un aspect
+Une matière complète n’est pas une image, mais **jusqu’à huit**, qui décrivent chacune un aspect
 différent de la surface.
 
-| Canal | Ce qu'il décrit | Ce que ça donne |
+| Canal | Ce qu’il décrit | Ce que ça donne |
 |---|---|---|
-| **Couleur de base** | la couleur, sans ombre ni reflet | l'aspect « peinture » de la surface |
+| **Couleur de base** | la couleur, sans ombre ni reflet | l’aspect « peinture » de la surface |
 | **Normales** | les micro-reliefs | des bosses et des creux qui accrochent la lumière, sans ajouter de géométrie |
 | **Rugosité** | mat ou brillant, zone par zone | une flaque brillante sur un asphalte mat |
 | **Métallicité** | métal ou non-métal, zone par zone | des rivets métalliques sur un bois |
 | **Occlusion ambiante** | les coins où la lumière entre mal | de la profondeur dans les creux |
 | **Hauteur** | le relief réel | un déplacement de la surface, plus fort que les normales |
 | **Émission** | ce qui brille par soi-même | une enseigne au néon, des braises |
-| **Arêtes** | où sont les bords | sert à d'autres calculs |
+| **Arêtes** | où sont les bords | sert à d’autres calculs |
 
 Chaque canal a une **origine** :
 
@@ -110,35 +110,35 @@ Chaque canal a une **origine** :
 
 ### Le panneau Canaux
 
-Colonne de droite, premier panneau de l'espace — c'est ce que Textures est. Une vignette par
+Colonne de droite, premier panneau de l’espace — c’est ce que Textures est. Une vignette par
 canal, les huit, **y compris ceux qui sont vides** : ce qui manque à une matière compte autant que
-ce qu'elle a.
+ce qu’elle a.
 
-| Geste | Ce qu'il fait |
+| Geste | Ce qu’il fait |
 |---|---|
 | **Glisser une image sur une vignette** | pose cette image dans **ce** canal |
-| **Le menu d'une vignette** | choisit parmi les images du projet, ou vide le canal |
+| **Le menu d’une vignette** | choisit parmi les images du projet, ou vide le canal |
 | **Cliquer une vignette** | montre ce canal **seul**, à plat |
 | **Cliquer la même à nouveau** | revient à la matière éclairée |
 
-Le badge en haut à gauche d'une vignette dit son **origine** — généré, dérivé ou importé.
+Le badge en haut à gauche d’une vignette dit son **origine** — généré, dérivé ou importé.
 
-**La vue à plat n'est pas un aperçu, c'est une lecture.** Elle affiche les pixels sans lissage :
-une carte de normales ou de hauteur s'inspecte précisément pour le bruit et les paliers que le
-lissage d'un navigateur cacherait. Elle ne s'enregistre pas avec le document, et `⌘Z` ne la rend
-pas — c'est une façon de regarder, pas une décision.
+**La vue à plat n’est pas un aperçu, c’est une lecture.** Elle affiche les pixels sans lissage :
+une carte de normales ou de hauteur s’inspecte précisément pour le bruit et les paliers que le
+lissage d’un navigateur cacherait. Elle ne s’enregistre pas avec le document, et `⌘Z` ne la rend
+pas — c’est une façon de regarder, pas une décision.
 
-Une vignette vide ne se clique pas : il n'y a rien à regarder.
+Une vignette vide ne se clique pas : il n’y a rien à regarder.
 
-> **Une image glissée sur l'aperçu, elle, va toujours dans la couleur de base.** C'est le canal
-> sans lequel une matière ne se juge pas, et l'aperçu ne peut pas devenir : pour viser un autre
+> **Une image glissée sur l’aperçu, elle, va toujours dans la couleur de base.** C’est le canal
+> sans lequel une matière ne se juge pas, et l’aperçu ne peut pas devenir : pour viser un autre
 > canal, déposez sur sa vignette.
 
 ---
 
 ## Rugosité et métallicité, expliquées
 
-Ce sont les deux mots qu'il faut comprendre pour lire une matière.
+Ce sont les deux mots qu’il faut comprendre pour lire une matière.
 
 **Rugosité** — à quel point la surface est mate.
 
@@ -150,17 +150,17 @@ Ce sont les deux mots qu'il faut comprendre pour lire une matière.
 | 1 | craie, velours, béton brut |
 
 Certains logiciels appellent cela « brillance » (*glossiness* ou *smoothness*), qui est
-exactement l'inverse : brillance 0,9 = rugosité 0,1. **Le studio dit toujours rugosité**, partout —
-un mot pour une grandeur, ici comme dans l'espace 3D.
+exactement l’inverse : brillance 0,9 = rugosité 0,1. **Le studio dit toujours rugosité**, partout —
+un mot pour une grandeur, ici comme dans l’espace 3D.
 
-Ce n'est pas qu'une question de vocabulaire : certains modèles Scenario répondent en *brillance*.
-Le studio garde alors les pixels tels qu'ils sont arrivés et retourne la lecture au moment de
-l'affichage. Vous n'avez rien à faire, et vous ne verrez jamais une matière éclairée à l'envers.
+Ce n’est pas qu’une question de vocabulaire : certains modèles Scenario répondent en *brillance*.
+Le studio garde alors les pixels tels qu’ils sont arrivés et retourne la lecture au moment de
+l’affichage. Vous n’avez rien à faire, et vous ne verrez jamais une matière éclairée à l’envers.
 
 **Métallicité** — est-ce du métal, oui ou non.
 
 Ce réglage est presque toujours **0 ou 1**, rarement entre les deux. Un métal renvoie la lumière
-d'une façon complètement différente d'un non-métal ; il n'y a pas grand-chose entre les deux,
+d’une façon complètement différente d’un non-métal ; il n’y a pas grand-chose entre les deux,
 sauf sur un métal peint ou rouillé, où la valeur varie **zone par zone** grâce à une carte.
 
 ---
@@ -172,15 +172,15 @@ différentes.
 
 ### Matériau
 
-| Réglage | Ce qu'il fait |
+| Réglage | Ce qu’il fait |
 |---|---|
 | **Teinte de base** | une couleur multipliée par la couleur de base — pour teinter sans repeindre |
 | **Rugosité** | mat ou brillant, pour toute la surface |
 | **Remappage** (sous la rugosité) | **deux poignées sur un rail** : la plage dans laquelle la carte est relue |
 | **Métal** | métal ou non, pour toute la surface |
 | **Remappage** (sous le métal) | la même chose, pour la carte de métallicité |
-| **Occlusion** | à quel point la carte d'occlusion assombrit les creux |
-| **Cavité** | à quel point la carte d'arêtes assombrit les bords |
+| **Occlusion** | à quel point la carte d’occlusion assombrit les creux |
+| **Cavité** | à quel point la carte d’arêtes assombrit les bords |
 
 **Le remappage est le réglage le plus utile de cette section, et le moins évident.** Une carte
 générée est souvent **plate** — tout y est autour de 0,5, et la matière paraît uniformément
@@ -189,26 +189,26 @@ que la carte contenait et fait apparaître le contraste entre les zones mates et
 brillantes.
 
 Les deux poignées **peuvent se rejoindre, jamais se croiser**. Une plage inversée remapperait toute
-la carte sur rien, et la matière deviendrait plate sans que rien à l'écran ne dise pourquoi.
+la carte sur rien, et la matière deviendrait plate sans que rien à l’écran ne dise pourquoi.
 
-**Quand aucune carte n'est posée, le remappage ne fait rien** : il décrit la façon de relire une
+**Quand aucune carte n’est posée, le remappage ne fait rien** : il décrit la façon de relire une
 carte, pas une valeur.
 
 ### Relief
 
-| Réglage | Ce qu'il fait |
+| Réglage | Ce qu’il fait |
 |---|---|
 | **Normale** | la force des micro-reliefs, de −2 à 2 |
-| **Inverser le vert** | pour une carte de normales cuite dans l'autre convention |
+| **Inverser le vert** | pour une carte de normales cuite dans l’autre convention |
 | **Déplacement** | le relief réel, qui déforme la surface — à 0 par défaut |
 
-**Une normale négative retourne le relief** : les bosses deviennent des creux. Ce n'est pas un
-bug, c'est la réponse à une carte cuite à l'envers — l'autre réponse étant « Inverser le vert ».
-OpenGL et DirectX ne sont pas d'accord sur le sens du canal vert, et une carte venue d'un moteur
-éclaire depuis le mauvais côté jusqu'à ce que l'un des deux soit corrigé.
+**Une normale négative retourne le relief** : les bosses deviennent des creux. Ce n’est pas un
+bug, c’est la réponse à une carte cuite à l’envers — l’autre réponse étant « Inverser le vert ».
+OpenGL et DirectX ne sont pas d’accord sur le sens du canal vert, et une carte venue d’un moteur
+éclaire depuis le mauvais côté jusqu’à ce que l’un des deux soit corrigé.
 
 **Le déplacement est à 0 volontairement.** Il déforme vraiment la géométrie, ce qui coûte plus
-cher que la scène qu'on prévisualise : c'est quelque chose qu'on demande, pas qu'on subit.
+cher que la scène qu’on prévisualise : c’est quelque chose qu’on demande, pas qu’on subit.
 
 ### Émission
 
@@ -216,16 +216,16 @@ Une couleur et une intensité, pour ce qui brille par soi-même.
 
 ### Répétition
 
-Cette section est **repliée** à l'ouverture : une répétition se règle une fois et se laisse.
+Cette section est **repliée** à l’ouverture : une répétition se règle une fois et se laisse.
 
-| Réglage | Ce qu'il fait |
+| Réglage | Ce qu’il fait |
 |---|---|
 | **Répéter** | combien de fois la matière se répète, en X et en Y |
 | **Décalage** | où elle commence |
 | **Rotation** | de 0 à 360°, autour du centre |
 
-**Les trois s'appliquent aux huit canaux à la fois.** Appliqués à un seul, les canaux se
-désaligneraient et le relief cesserait de correspondre à l'image qu'il soulève.
+**Les trois s’appliquent aux huit canaux à la fois.** Appliqués à un seul, les canaux se
+désaligneraient et le relief cesserait de correspondre à l’image qu’il soulève.
 
 ---
 
@@ -234,26 +234,26 @@ désaligneraient et le relief cesserait de correspondre à l'image qu'il soulèv
 Tout est enregistré **automatiquement**, quelques instants après votre dernier geste, dans un
 fichier `.tex` du dossier `documents/` de votre projet.
 
-**Rien n'est cuit dans les pixels.** Rouvrez le document dans six mois : chaque réglage est
+**Rien n’est cuit dans les pixels.** Rouvrez le document dans six mois : chaque réglage est
 encore là, et se règle encore. Ce qui est écrit, ce sont vos décisions, pas leur résultat.
 
-**Les six types de documents s'enregistrent désormais**, mais la matière garde une particularité :
-elle est la seule à s'écrire **toute seule**. Ailleurs, c'est `⌘S` qui décide du moment, et la
-puce sur l'onglet dit ce qui attend encore d'être écrit.
+**Les six types de documents s’enregistrent désormais**, mais la matière garde une particularité :
+elle est la seule à s’écrire **toute seule**. Ailleurs, c’est `⌘S` qui décide du moment, et la
+puce sur l’onglet dit ce qui attend encore d’être écrit.
 
 ---
 
 ## Ce qui manque encore
 
 - les **dérivations automatiques** — fabriquer les normales depuis la hauteur, par exemple. Le
-  badge « dérivé » existe et le studio sait qu'un canal en dérive un autre ; ce qui manque est le
+  badge « dérivé » existe et le studio sait qu’un canal en dérive un autre ; ce qui manque est le
   calcul lui-même ;
-- l'**import d'un fichier du disque** directement dans un canal. Passez par l'import du projet
-  (chapitre 7), puis posez l'image sur la vignette ;
+- l'**import d’un fichier du disque** directement dans un canal. Passez par l’import du projet
+  (chapitre 7), puis posez l’image sur la vignette ;
 - l'**aperçu de répétition** en 1×, 2×, 4×, et la détection des coutures ;
 - l'**export** vers glTF, Unity, Unreal, Roblox.
 
-Le détail est dans [Ce qui n'existe pas encore](18-limites.md).
+Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 
