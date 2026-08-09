@@ -25,6 +25,7 @@ import {
 import { previewGeometry } from './preview-geometry'
 import {
   contentOf,
+  DEFAULT_PREVIEW,
   DEFAULT_TEXTURE_MATERIAL,
   slotFor,
   type PreviewShape,
@@ -178,7 +179,7 @@ export class TextureRenderer {
 
     // No `needsUpdate` here: nothing above affects the PROGRAM. A slot going empty→filled does,
     // and `install`, `release` and `setEdgeMap` are the three that say so.
-    this.applyTransform(material)
+    this.applyTransform(texture)
   }
 
   /**
@@ -193,9 +194,11 @@ export class TextureRenderer {
    * here needs it: `matrixAutoUpdate` is on, so three refreshes the uv matrix itself every frame,
    * and `wrapS`/`wrapT`, which really are upload-time state, are set once in `install`.
    */
-  private applyTransform({ tiling, offset, rotation }: TextureState['material']): void {
-    if (this.transform && sameTransform(this.transform, { tiling, offset, rotation })) return
-    this.transform = { tiling, offset, rotation }
+  private applyTransform({ material, preview }: TextureState): void {
+    const { tiling, offset, rotation } = material
+    const next = { tiling, offset, rotation, ...previewFrame(preview) }
+    if (this.transform && sameTransform(this.transform, next)) return
+    this.transform = next
 
     for (const map of this.maps()) this.placeMap(map)
     syncEdgeTransform(this.uniforms)
@@ -252,9 +255,12 @@ export class TextureRenderer {
 
   /** The transform this material is on, onto one map — the new one, or all of them. */
   private placeMap(map: Texture): void {
-    const { tiling, offset, rotation } = this.transform ?? DEFAULT_TEXTURE_MATERIAL
-    map.repeat.set(tiling.x, tiling.y)
-    map.offset.set(offset.x, offset.y)
+    const { tiling, offset, rotation, tilingPreview, seamShift } =
+      this.transform ?? DEFAULT_TRANSFORM
+    // Multiplied, not replaced: the preview asks "how does this look repeated", and the answer
+    // has to be the material's own repeat seen more times, not somebody else's repeat.
+    map.repeat.set(tiling.x * tilingPreview, tiling.y * tilingPreview)
+    map.offset.set(offset.x + seamShift, offset.y + seamShift)
     map.rotation = rotation
   }
 
@@ -330,8 +336,26 @@ function spaceOf(channel: PbrChannel): ColorSpace {
   return contentOf(channel) === 'color' ? SRGBColorSpace : NoColorSpace
 }
 
-/** How every map is laid on the shape. The three values that move together, and only those. */
-type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'>
+/**
+ * How every map is laid on the shape: what the material decided, and what the view adds on top.
+ * The two are kept apart right up to `placeMap` — a preview that wrote into the material would
+ * send a texture out into a scene tiled four times over, and offset by half.
+ */
+type MapTransform = Pick<TextureState['material'], 'tiling' | 'offset' | 'rotation'> & PreviewFrame
+
+/** What the view adds. Half a width and half a height is exactly what brings a wrap edge to the middle. */
+type PreviewFrame = { tilingPreview: number; seamShift: number }
+
+const SEAM_SHIFT = 0.5
+
+function previewFrame({ tilingPreview, showSeam }: TextureState['preview']): PreviewFrame {
+  return { tilingPreview, seamShift: showSeam ? SEAM_SHIFT : 0 }
+}
+
+const DEFAULT_TRANSFORM: MapTransform = {
+  ...DEFAULT_TEXTURE_MATERIAL,
+  ...previewFrame(DEFAULT_PREVIEW),
+}
 
 function sameTransform(a: MapTransform, b: MapTransform): boolean {
   return (
@@ -339,6 +363,8 @@ function sameTransform(a: MapTransform, b: MapTransform): boolean {
     a.tiling.x === b.tiling.x &&
     a.tiling.y === b.tiling.y &&
     a.offset.x === b.offset.x &&
-    a.offset.y === b.offset.y
+    a.offset.y === b.offset.y &&
+    a.tilingPreview === b.tilingPreview &&
+    a.seamShift === b.seamShift
   )
 }

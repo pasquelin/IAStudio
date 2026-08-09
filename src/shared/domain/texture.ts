@@ -63,3 +63,16 @@ export const CHANNEL_BY_SCENARIO_TYPE: Record<string, ChannelSource> = {
 export function channelFromScenarioType(metadataType: string | undefined): ChannelSource | null {
   return metadataType === undefined ? null : (CHANNEL_BY_SCENARIO_TYPE[metadataType] ?? null)
 }
+
+/** What a seam reading means, in words. A ratio is a number nobody reads without a scale. */
+export type SeamVerdict = 'none' | 'faint' | 'visible'
+
+/**
+ * The two thresholds, and they are of the picture's own grain rather than of anything absolute:
+ * a wrap no worse than the detail already there cannot be seen, and one twice as strong as the
+ * detail around it is what the eye lands on first. See `engines/texture/derive/seam-shader`.
+ */
+export function seamVerdict(ratio: number): SeamVerdict {
+  if (ratio < 1.2) return 'none'
+  return ratio < 2 ? 'faint' : 'visible'
+}

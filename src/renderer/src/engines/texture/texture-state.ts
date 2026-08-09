@@ -210,10 +210,14 @@ function isPreviewShape(value: unknown): value is PreviewShape {
   return PREVIEW_SHAPES.some(candidate => candidate === value)
 }
 
-/** How many times the map repeats on the preview. Local to the view, never baked into tiling. */
+/**
+ * How many times the map repeats on the preview. A **multiplier over** `material.tiling`, never
+ * written into it: judging a repeat and choosing one are two different acts, and a texture whose
+ * tiling had been rewritten by a glance would go out into a scene tiled four times over.
+ */
 export type TilingPreview = 1 | 2 | 4
 
-const TILING_PREVIEWS: readonly TilingPreview[] = [1, 2, 4]
+export const TILING_PREVIEWS: readonly TilingPreview[] = [1, 2, 4]
 
 function isTilingPreview(value: unknown): value is TilingPreview {
   return TILING_PREVIEWS.some(candidate => candidate === value)
@@ -230,6 +234,12 @@ export type PreviewSettings = {
   showBackground: boolean
   autoSpin: boolean
   tilingPreview: TilingPreview
+  /**
+   * Brings the wrap edges of every map into the middle of the preview, by half a width and half
+   * a height. A seam is invisible where it falls — on the far side of a sphere, on the edge of a
+   * plane — and this is the whole of what makes it visible without touching a pixel.
+   */
+  showSeam: boolean
 }
 
 /** Frozen for the same reason as the material defaults, `environment` being its nested object. */
@@ -241,6 +251,7 @@ export const DEFAULT_PREVIEW: PreviewSettings = {
   showBackground: true,
   autoSpin: false,
   tilingPreview: 1,
+  showSeam: false,
 }
 
 Object.freeze(DEFAULT_PREVIEW)
@@ -414,6 +425,7 @@ function readPreview(value: unknown): PreviewSettings {
     tilingPreview: isTilingPreview(value.tilingPreview)
       ? value.tilingPreview
       : fallback.tilingPreview,
+    showSeam: readBoolean(value, 'showSeam', fallback.showSeam),
   }
 }
 

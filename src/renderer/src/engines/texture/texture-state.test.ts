@@ -209,6 +209,7 @@ describe('parseTexture', () => {
         showBackground: false,
         autoSpin: true,
         tilingPreview: 2,
+        showSeam: true,
       },
     }
 

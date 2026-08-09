@@ -20,6 +20,9 @@ import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { installScene } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
+import { useTextureViews } from '@/stores/texture-views'
+import { textureOf, useTextures } from '@/stores/textures'
+import { setChannel } from '@/engines/texture/commands'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
@@ -586,6 +589,69 @@ describe('inspector panel', () => {
       render(<Content />)
 
       expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
+    })
+
+    /** The section folds, and a folded one keeps no field mounted — see `PropertySection`. */
+    const openTiling = () => userEvent.click(screen.getByRole('button', { name: /^Répétition$/ }))
+
+    /**
+     * The preview multiplier and the seam shift live under the values they act on, and neither
+     * ever reaches a scene: written into `material.tiling`, a glance would go out with the file.
+     */
+    it('multiplies the repeat for the preview without writing it into the material', async () => {
+      installTexture('doc-1')
+      render(<Content />)
+      await openTiling()
+
+      await userEvent.click(screen.getByRole('button', { name: '4×' }))
+
+      const texture = textureOf(useTextures.getState(), 'doc-1')
+      expect(texture.preview.tilingPreview).toBe(4)
+      expect(texture.material.tiling).toEqual({ x: 1, y: 1 })
+    })
+
+    it('brings the seams to the middle without writing an offset into the material', async () => {
+      installTexture('doc-1')
+      render(<Content />)
+      await openTiling()
+
+      await userEvent.click(screen.getByLabelText('Amener les coutures au centre'))
+
+      const texture = textureOf(useTextures.getState(), 'doc-1')
+      expect(texture.preview.showSeam).toBe(true)
+      expect(texture.material.offset).toEqual({ x: 0, y: 0 })
+    })
+
+    /** A measurement asks the GPU for a context: it is offered where there is nothing to read. */
+    it('refuses to measure a seam with no base colour to measure it on', async () => {
+      installTexture('doc-1')
+      render(<Content />)
+      await openTiling()
+
+      expect(screen.getByRole('button', { name: 'Mesurer les coutures' })).toBeDisabled()
+    })
+
+    it('offers the measurement once a base colour is there', async () => {
+      installTexture('doc-1')
+      useTextures
+        .getState()
+        .runCommand(
+          'doc-1',
+          setChannel('baseColor', { assetId: 'img-1', origin: 'imported', width: 8, height: 8 }),
+        )
+      render(<Content />)
+      await openTiling()
+
+      expect(screen.getByRole('button', { name: 'Mesurer les coutures' })).toBeEnabled()
+    })
+
+    it('reads a measurement back in words rather than as a ratio', async () => {
+      installTexture('doc-1')
+      useTextureViews.setState({ seams: { 'doc-1': 3 } })
+      render(<Content />)
+      await openTiling()
+
+      expect(screen.getByText('Couture visible')).toBeInTheDocument()
     })
 
     /**

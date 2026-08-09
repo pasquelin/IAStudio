@@ -10,7 +10,14 @@ import type { PbrChannel } from '@shared/domain/texture'
  */
 export type TextureViewsState = {
   inspected: Record<string, PbrChannel | null>
+  /**
+   * The last seam reading of each texture, or absent when none was asked for. Session state and
+   * not a document field on purpose: it describes the base colour as it is right now, and one
+   * saved into the `.tex` would be a measurement of pixels the file no longer points at.
+   */
+  seams: Record<string, number>
   inspect: (documentId: string, channel: PbrChannel | null) => void
+  setSeam: (documentId: string, ratio: number) => void
   /** Dropped on close: the project folder hands ids out again, and a document reopened later must
    * not open on the flat view of the one before it. */
   forget: (documentId: string) => void
@@ -18,16 +25,26 @@ export type TextureViewsState = {
 
 export const useTextureViews = create<TextureViewsState>()(set => ({
   inspected: {},
+  seams: {},
   inspect: (documentId, channel) =>
     set(state => ({ inspected: { ...state.inspected, [documentId]: channel } })),
+  setSeam: (documentId, ratio) =>
+    set(state => ({ seams: { ...state.seams, [documentId]: ratio } })),
   forget: documentId =>
     set(state => {
-      if (!(documentId in state.inspected)) return state
+      if (!(documentId in state.inspected) && !(documentId in state.seams)) return state
       const inspected = { ...state.inspected }
       delete inspected[documentId]
-      return { inspected }
+      const seams = { ...state.seams }
+      delete seams[documentId]
+      return { inspected, seams }
     }),
 }))
+
+/** The last seam reading, or `null` when none was asked for. */
+export function seamOf(state: Pick<TextureViewsState, 'seams'>, documentId: string): number | null {
+  return state.seams[documentId] ?? null
+}
 
 /** The channel shown flat, or `null` when the document shows its material under light. */
 export function inspectedChannel(
