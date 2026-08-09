@@ -8,6 +8,7 @@ import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
 import { PBR_CHANNELS } from '../domain/texture'
+import { USAGE_ACTIONS, USAGE_ASSET_KINDS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
 function flatten(
@@ -165,6 +166,10 @@ const DYNAMIC_KEYS: readonly string[] = [
   // channel — and the domain warns the API adds types without notice — would caption a tile with
   // its own key.
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
+  // The usage report showed what the API called things — `images-generation` sat in a French
+  // table, and `video` beside a `Vidéo` the bundle already knew.
+  ...USAGE_ACTIONS.map(action => `usage.actionNames.${action}`),
+  ...USAGE_ASSET_KINDS.map(kind => `usage.assetKinds.${kind}`),
 ]
 
 describe('the keys the interface composes', () => {
