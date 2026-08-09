@@ -29,9 +29,11 @@ export const historyOf = store.historyOf
 export function setSkyboxSource(documentId: string, asset: Asset): void {
   if (!isLocalPicture(asset)) return
 
+  // Outside any gesture: this hangs off a job that lands whenever it lands, and off a drop —
+  // neither belongs to the cursor a panel may be holding at that moment.
   store.use
     .getState()
-    .runCommand(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
+    .runOutsideGesture(documentId, applyGeneration({ assetId: asset.id }, provenanceOf(asset)))
 }
 
 /**

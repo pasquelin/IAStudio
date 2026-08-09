@@ -1070,13 +1070,34 @@ qu’aucun des deux appelants** : que `renderFrame` remette `lastTime` à `null`
 pas replanifier de frame, ce qui supprime la classe entière au lieu de la rustiner deux fois — un
 viewport qui l’oublierait ouvre son mouvement sur un saut de `MAX_DELTA`, 0,1 s.
 
-**Une commande asynchrone vole le geste en cours.** `document-store.ts` réécrit l’identifiant de
-coalescence du document à **chaque** `runCommand` dès qu’un geste est ouvert, y compris pour une
-commande venue d’ailleurs. Tant que toutes les écritures venaient de la main de l’utilisateur, elles
-partageaient le geste. L’espace Skyboxes a introduit le premier écrivain **asynchrone** — une
-génération qui aboutit — et le rend atteignable : si un job se termine pendant qu’un curseur est
-tenu, l’annulation se fragmente en trois entrées, dont la génération au milieu, et un ⌘Z fait
-disparaître l’image au lieu de défaire le réglage. **La ligne fautive sert tous les espaces.**
+**Le geste volé — livré, et le constat était à côté.** Le vrai défaut : **deux commandes étrangères
+fusionnaient l’une dans l’autre** dès qu’un geste était ouvert. Deux générations qui aboutissent
+pendant qu’un curseur est tenu ne faisaient qu’une entrée d’undo, alors que hors geste elles en
+font deux. Le remède est `runOutsideGesture`, que `setSkyboxSource` emploie — **la provenance se
+déclare, elle ne se devine pas** : le store ne peut pas savoir d’où vient une commande, et aucune
+règle sur `command.id` ne le peut.
+
+Ce que ce paragraphe annonçait était faux, et le dire évite de le rouvrir : il décrivait une
+annulation « fragmentée en trois entrées, dont la génération au milieu ». **Cette fragmentation est
+correcte**, et elle se produit de toute façon — `runCoalescing` a sa propre garde sur l’identifiant
+de la *dernière entrée*, si bien que le geste ne peut pas fusionner par-dessus une génération même
+quand `gestures` le lui permettrait. Le vrai défaut était l’inverse : **deux commandes étrangères
+fusionnaient l’une dans l’autre**. Deux générations qui aboutissent pendant qu’un curseur est tenu
+ne faisaient qu’une entrée d’undo, alors que hors geste elles en font deux.
+
+Deux leçons, et la seconde a coûté un correctif entier :
+
+- **Quand deux gardes protègent la même chose, la seconde masque les symptômes de la première.** Le
+  constat décrivait ce que le code aurait fait sans la garde de `runCoalescing` sur l’identifiant
+  de la dernière entrée, et personne ne l’avait vérifié en exécutant. `document-store.ts`, le cœur
+  de l’undo, n’avait aucun test à lui.
+- **Un premier correctif — n’épingler le geste que sur sa première commande — a été écrit, puis
+  jeté.** Il déplaçait la fenêtre de course au lieu de la fermer : un champ ouvre son geste **au
+  focus**, sans aucune commande, et une génération qui atterrit dans cette fenêtre silencieuse
+  nommait le geste — après quoi plus rien de ce que faisait l’utilisateur ne fusionnait, soit une
+  entrée par frame pour tout le glissement, et cent entrées suffisent à évincer l’historique de la
+  session. Pire que le défaut fermé. **Ne pas retenter cette variante :** le store ne peut pas
+  inférer la provenance, il faut la lui dire.
 
 **L’écriture atomique existe en deux exemplaires.** `scenario/job-store.ts` et `project/documents.ts`
 écrivent tous deux une copie de transit puis renomment, avec le **même commentaire mot pour mot**, et

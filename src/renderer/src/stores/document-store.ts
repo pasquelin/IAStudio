@@ -23,6 +23,16 @@ export type DocumentStoreState<S> = {
   saved: Record<string, Command<S> | null>
   runCommand: (documentId: string, command: Command<S>) => void
   /**
+   * Writes a command that belongs to nobody's gesture — a job that lands whenever it lands, a
+   * picture dropped on a document.
+   *
+   * The store cannot tell where a command came from, and no rule on `command.id` can: provenance
+   * has to be said. Said, such a command neither merges into an open gesture nor takes it over —
+   * two generations landing while a cursor is held stay two entries, and the cursor goes on
+   * collapsing into its own.
+   */
+  runOutsideGesture: (documentId: string, command: Command<S>) => void
+  /**
    * Opens a gesture: from here until `endGesture`, successive commands of the same edit collapse
    * into one history entry. A slider dragged across a panel is one thing the user did, and ⌘Z
    * has to give all of it back at once.
@@ -151,6 +161,9 @@ export function createDocumentStore<S>(defaultState: S): DocumentStore<S> {
         )
         if (gestures.has(documentId)) gestures.set(documentId, command.id)
       },
+
+      runOutsideGesture: (documentId, command) =>
+        step(documentId, (state, history) => run(state, history, command)),
 
       beginGesture: documentId => gestures.set(documentId, null),
 

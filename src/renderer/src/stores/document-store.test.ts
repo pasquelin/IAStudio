@@ -1,0 +1,155 @@
+import { describe, expect, it } from 'vitest'
+import { createDocumentStore } from './document-store'
+import type { Command } from '@/engines/core/history'
+
+/**
+ * The coalescing rule, which decides what one ⌘Z gives back. Dragging a field emits dozens of
+ * values a second and they must collapse into one entry; two separate edits must not.
+ */
+
+type Text = { value: string }
+
+/** A command that sets an absolute value, the way every coalescing command in the studio does. */
+function set(id: string, value: string): Command<Text> {
+  let before = ''
+  return {
+    id,
+    apply: state => {
+      before = state.value
+      return { value }
+    },
+    revert: () => ({ value: before }),
+  }
+}
+
+const storeOf = () => {
+  const store = createDocumentStore<Text>({ value: '' })
+  store.use.getState().ensure('doc', () => ({ value: '' }))
+  return store
+}
+
+const entries = (store: ReturnType<typeof storeOf>): number =>
+  store.use.getState().histories['doc']?.past.length ?? 0
+
+const valueOf = (store: ReturnType<typeof storeOf>): string =>
+  store.stateOf(store.use.getState(), 'doc').value
+
+describe('a gesture held over a document', () => {
+  it('collapses its own commands into one entry', () => {
+    const store = storeOf()
+    const { beginGesture, runCommand } = store.use.getState()
+
+    beginGesture('doc')
+    runCommand('doc', set('slider', 'a'))
+    runCommand('doc', set('slider', 'b'))
+    runCommand('doc', set('slider', 'c'))
+
+    expect(entries(store)).toBe(1)
+    expect(valueOf(store)).toBe('c')
+  })
+
+  it('keeps two gestures of the same field apart', () => {
+    const store = storeOf()
+    const { beginGesture, endGesture, runCommand } = store.use.getState()
+
+    beginGesture('doc')
+    runCommand('doc', set('slider', 'a'))
+    endGesture('doc')
+    beginGesture('doc')
+    runCommand('doc', set('slider', 'b'))
+
+    expect(entries(store)).toBe(2)
+  })
+
+  /**
+   * A job that lands whenever it lands, a picture dropped on a document. The store cannot tell where
+   * a command came from and no rule on `command.id` can, so the caller says it.
+   *
+   * The workspace that made this reachable is Skyboxes: it introduced the first asynchronous writer.
+   */
+  describe("a command that belongs to nobody's gesture", () => {
+    it('never merges two of them into each other', () => {
+      const store = storeOf()
+      const { beginGesture, runCommand, runOutsideGesture } = store.use.getState()
+
+      beginGesture('doc')
+      runCommand('doc', set('slider', 'a'))
+      runOutsideGesture('doc', set('generate', 'first image'))
+      runOutsideGesture('doc', set('generate', 'second image'))
+
+      // Three: the drag, and one entry per generation — what they are outside a gesture too.
+      expect(entries(store)).toBe(3)
+    })
+
+    // What an interrupted gesture must still do: carry on collapsing, into an entry of its own.
+    it('lets the gesture go on collapsing after it', () => {
+      const store = storeOf()
+      const { beginGesture, runCommand, runOutsideGesture } = store.use.getState()
+
+      beginGesture('doc')
+      runCommand('doc', set('slider', 'a'))
+      runOutsideGesture('doc', set('generate', 'an image'))
+      runCommand('doc', set('slider', 'b'))
+      runCommand('doc', set('slider', 'c'))
+
+      expect(entries(store)).toBe(3)
+      expect(valueOf(store)).toBe('c')
+    })
+
+    /**
+     * A field opens its gesture on focus, before any command at all — tab into a slider, or hold the
+     * thumb without moving. A landing inside that silent window used to name the gesture, and then
+     * nothing the user did ever collapsed again: one entry per frame, for the whole drag.
+     */
+    it('does not name a gesture that has not written yet', () => {
+      const store = storeOf()
+      const { beginGesture, runCommand, runOutsideGesture } = store.use.getState()
+
+      beginGesture('doc')
+      runOutsideGesture('doc', set('generate', 'an image'))
+      for (const value of ['a', 'b', 'c', 'd']) runCommand('doc', set('slider', value))
+
+      expect(entries(store)).toBe(2)
+    })
+
+    it('writes on its own outside any gesture', () => {
+      const store = storeOf()
+      const { runOutsideGesture } = store.use.getState()
+
+      runOutsideGesture('doc', set('generate', 'an image'))
+
+      expect(entries(store)).toBe(1)
+      expect(valueOf(store)).toBe('an image')
+    })
+  })
+
+  /**
+   * The last command names the gesture, not the first. A gesture can move to another field — a
+   * drag that starts on one axis and continues on another — and what follows has to go on
+   * collapsing into an entry of its own.
+   *
+   * Pinning the name on the first command instead was tried, to stop foreign commands taking the
+   * gesture over. It stopped this too: everything after the first field became one entry a frame.
+   */
+  it('goes on collapsing when the gesture moves to another field', () => {
+    const store = storeOf()
+    const { beginGesture, runCommand } = store.use.getState()
+
+    beginGesture('doc')
+    runCommand('doc', set('x', 'a'))
+    for (const value of ['b', 'c', 'd']) runCommand('doc', set('y', value))
+
+    expect(entries(store)).toBe(2)
+    expect(valueOf(store)).toBe('d')
+  })
+
+  it('merges nothing at all outside a gesture', () => {
+    const store = storeOf()
+    const { runCommand } = store.use.getState()
+
+    runCommand('doc', set('slider', 'a'))
+    runCommand('doc', set('slider', 'b'))
+
+    expect(entries(store)).toBe(2)
+  })
+})
