@@ -4,20 +4,18 @@ import { normalizeModelText, translateModelText } from './model-text'
 
 /**
  * The words the dictionary deliberately does not hold, because the studio says them in English
- * everywhere else too. That last clause is the test: `seed` was on this list on the argument
- * that a practitioner reads it in English — but `inspector.seed` and `skybox.seed` had said
- * « Graine » since long before, so the form was the only surface refusing the word its own
- * inspector uses. The bundle decides, not the argument.
+ * everywhere else too. That last clause is the test, and it has emptied this list twice:
+ * `seed` left it when `inspector.seed` turned out to say « Graine », then `negative prompt`
+ * and `guidance scale` when the manual's glossary turned out to name them « Prompt négatif »
+ * and « Guidage ». What stays is what the studio has never named in French anywhere — no
+ * glossary entry, no bundle key. The usage decides, never the argument about the trade.
  */
 const KEPT_IN_ENGLISH = [
-  'guidance scale',
-  'cfg scale',
   'sampler',
   'scheduler',
   'lora',
   'checkpoint',
   'prompt',
-  'negative prompt',
   'clip skip',
   'denoising strength',
 ]
@@ -120,5 +118,27 @@ describe('a word the studio already had its own name for', () => {
 
   it('leaves it alone in English, where the model already speaks the language', () => {
     expect(translateModelText('Seed', 'en')).toBe('Seed')
+  })
+})
+
+/**
+ * The manual's glossary is a source of vocabulary in its own right, and for these two it is the
+ * only one: no surface of the studio's own shows a negative prompt or a guidance scale, so no
+ * bundle key names them — they reach the screen through a model's form and nowhere else.
+ */
+describe('the words only the glossary had named', () => {
+  it('says a negative prompt the way the glossary does', () => {
+    expect(translateModelText('Negative prompt', 'fr')).toBe('Prompt négatif')
+  })
+
+  // The glossary entry « Guidage » carries both senses on purpose: ControlNet, and cfg.
+  it('says a guidance scale the way the glossary does', () => {
+    expect(translateModelText('Guidance scale', 'fr')).toBe('Échelle de guidage')
+    expect(translateModelText('CFG scale', 'fr')).toBe('Échelle de guidage')
+  })
+
+  it('leaves what the studio has never named in French', () => {
+    expect(translateModelText('Sampler', 'fr')).toBe('Sampler')
+    expect(translateModelText('Denoising strength', 'fr')).toBe('Denoising strength')
   })
 })

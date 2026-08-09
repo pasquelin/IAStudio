@@ -50,5 +50,10 @@
   "inference resolution; higher is sharper but slower": "Résolution de l’inférence ; plus elle est haute, plus le rendu est net, mais lent.",
   "maximum splat points kept after compression; lower = lighter file": "Nombre maximum de points de splat conservés après compression ; moins il y en a, plus le fichier est léger.",
   "seed": "Graine",
-  "random seed": "Graine aléatoire"
+  "random seed": "Graine aléatoire",
+  "negative prompt": "Prompt négatif",
+  "guidance": "Guidage",
+  "guidance scale": "Échelle de guidage",
+  "cfg": "Guidage",
+  "cfg scale": "Échelle de guidage"
 }
