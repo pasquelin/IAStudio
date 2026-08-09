@@ -107,8 +107,9 @@ describe('Rail', () => {
     )
   }
 
-  // The left rail is generation, under the button that makes a document, with the band's own
-  // tools at its foot. The rail is the legend of the column, so it has to draw the same cut.
+  // The left rail is what one produces with, under the button that makes a document: generation
+  // above the cut, the Explorer and the Apps below it, with the band's own tools at its foot.
+  // The rail is the legend of the column, so it has to draw the same cut.
   it('puts generation on the left rail, under the new-document button', () => {
     useModels.setState({ selected: { '3d': 'tripo-v3' } })
     const { container } = render(<Rail side="left" />)
@@ -118,6 +119,9 @@ describe('Rail', () => {
       'separator',
       'Modèles',
       'Génération',
+      'separator',
+      'Explorateur',
+      'Apps',
       'Assets',
     ])
   })
@@ -125,29 +129,21 @@ describe('Rail', () => {
   it('cuts the right rail where the column is cut: the document above, the selection below', () => {
     const { container } = render(<Rail side="right" />)
 
-    expect(marksOf(container)).toEqual([
-      'Explorateur',
-      'Scène',
-      'Lumières',
-      'Mailles',
-      'Apps',
-      'separator',
-      'Inspecteur',
-    ])
+    expect(marksOf(container)).toEqual(['Scène', 'Lumières', 'Mailles', 'separator', 'Inspecteur'])
   })
 
   // On the default layout no half names a panel, so the icon that reads as up is the first one
-  // the section declares — the layers in Image, never the explorer under them.
+  // the section declares — the Explorer in the lower left, never the Apps under it.
   it('marks the section-first panel as up on the default layout', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
-    render(<Rail side="right" />)
+    render(<Rail side="left" />)
 
-    expect(screen.getByRole('button', { name: 'Calques' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Explorateur' })).toHaveAttribute(
       'aria-pressed',
-      'false',
+      'true',
     )
+    expect(screen.getByRole('button', { name: 'Apps' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   // The panel a section stands in for another is the one that is up, so its icon is the one

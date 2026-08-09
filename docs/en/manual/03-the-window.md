@@ -273,8 +273,9 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, View, Layers, Channels, Styles, Assets, Explorer, Scene, Lights, Meshes, Apps — whichever
-ones the workspace declares, in that order — then, below the separator, Inspector.
+The **right column** icons: Skybox, View, Layers, Channels, Styles, Assets, Scene, Lights,
+Meshes — whichever ones the workspace declares, in that order — then, below the separator,
+Inspector.
 
 ### The rail only shows what the workspace can do
 
@@ -356,24 +357,34 @@ instead.
 | **Channels** | right | 1st | Textures | the eight channels of the open material, and what each one holds |
 | **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
 | **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
-| **Explorer** | right | 1st | everywhere | the documents of the project, open or not |
+| **Explorer** | left | 2nd | everywhere, home included | the documents of the project, open or not |
+| **Apps** | left | 2nd | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
-| **Apps** | right | 1st | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
 | **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |
 
-> **"Everywhere" means the workspaces, not the home screen.** A workspace is a place that opens
-> documents of a kind of its own; the home opens none — it opens the others'. It has only a left
-> column, where it puts the **Explorer** — where the workspaces put generation.
+> **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
+> workspace is a place that opens documents of a kind of its own; the home opens none — it opens
+> the others'. It has only a left column, and it puts the **Explorer** in the same place and
+> under the same icon as the workspaces do: the lower half. With no generation to sit above it,
+> the panel fills the whole column there.
 
-**The left column is generation, and nothing else.** Only two panels may sit there — **Models**
-and **Generate** — and neither appears anywhere else. Generating is the one thing every
-workspace does, so it gets the same place in each, right under the **+** button that makes a
-document. They are two moments of the same work, choosing then filling in, so they take turns in
-the same half.
+**The left column belongs to what produces**, and it is cut in two.
+
+**Above, generation, and nothing else.** Only two panels may sit there — **Models** and
+**Generate** — and neither appears anywhere else. Generating is the one thing every workspace
+does, so it gets the same place in each, right under the **+** button that makes a document.
+They are two moments of the same work, choosing then filling in, so they take turns in the same
+half.
+
+**Below, the Explorer and the Apps**, taking turns the same way. An App produces assets, which
+is generating, so it belongs to the column one produces from. And a half rather than two more
+turns above, because four icons stacked in a rail is the moment a column stops being a place you
+know and becomes a pile you search — while two halves of two keep generation visible **while**
+the Explorer is read.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
 selected. Its panels take turns in the upper half — no workspace declares them all at once — and
@@ -408,13 +419,15 @@ the workspace declares there — the topmost in the table above, and so the firs
 
 That is what you see on first launch, and what **View ▸ Reset layout** restores:
 
+The lower left half opens on the **Explorer** everywhere, the Apps behind it.
+
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|
 | **Image** | Layers | Assets |
 | **Video** | Assets | Timeline |
-| **3D** | Explorer | Assets |
+| **3D** | Scene | Assets |
 | **Audio** | Assets | Timeline |
-| **Textures** | Explorer | Assets |
+| **Textures** | Channels | Assets |
 | **Skyboxes** | Skybox | Assets |
 
 **Why this is not a panel pinned once and for all.** Your layout is remembered once for all

@@ -81,14 +81,18 @@ describe('a horizontal band', () => {
 // What a fresh install shows, and what "Reset layout" restores. The stored layout is the same in
 // all six sections; each reads its own first panel into every half.
 describe('the default layout', () => {
-  it('opens Image on the layers, the inspector and the shelf', () => {
+  it('opens Image on the layers, the inspector, the shelf and the Explorer', () => {
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
     expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
     expect(screen.getByLabelText('Assets')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Explorateur')).not.toBeInTheDocument()
+    // The lower half of the left column, open like every other half a surface has: two halves of
+    // two exist so the generator stays visible WHILE the Explorer is read.
+    expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
+    // Its half shows the first panel it declares, so the Apps wait one click away.
+    expect(screen.queryByLabelText('Apps')).not.toBeInTheDocument()
   })
 
   it('opens Video on the montage and the shelf beside it', () => {
@@ -154,9 +158,8 @@ describe('a side column', () => {
     expect(handles()).toHaveLength(2)
   })
 
-  // The left column holds one panel, whichever of the two generation panels it is: no divider
-  // to drag, and no half to leave empty.
-  it('draws no divider in the left column, which is never cut', () => {
+  // A lone half fills its zone: the divider belongs to the cut, and there is none to make here.
+  it('draws no divider where only one half of a column is open', () => {
     useTools.setState({
       arrangements: arrangedFor('image', { open: { left: { primary: 'models' } } }),
     })
