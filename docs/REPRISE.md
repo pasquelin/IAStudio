@@ -81,8 +81,8 @@ la configuration et de l’espace 3D ayant été supprimées une fois leurs chan
 
 # 1. L’état
 
-**977 fichiers dans `src/`, dont 389 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
-en exécutait alors **4886 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
+**979 fichiers dans `src/`, dont 390 de test** (relevé le 9 août au soir, sur `develop` ; `pnpm test`
+en exécutait alors **4907 cas**, verts — les `it.each` en portent plusieurs chacun, donc aucun de ces
 nombres ne se lit dans un fichier). **Six espaces éditables, les six genres de documents s’enregistrent**, et fermer un onglet
 demande avant de perdre quoi que ce soit. L’application démarre par `pnpm start`.
 
