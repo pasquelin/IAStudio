@@ -33,15 +33,19 @@ export function withoutPanels(
     // rather than the node. `activeGroup` is left alone on purpose: a group that is gone is
     // looked up and skipped there, and no id of ours can name one anyway.
     grid: { ...layout.grid, root: root ?? { type: 'branch', data: [] } },
-    floatingGroups: layout.floatingGroups?.flatMap(group => {
-      const content = prunedWindow(group, removed)
-      return content ? { ...group, ...content } : []
-    }),
-    popoutGroups: layout.popoutGroups?.flatMap(group => {
-      const content = prunedWindow(group, removed)
-      return content ? { ...group, ...content } : []
-    }),
+    floatingGroups: prunedWindows(layout.floatingGroups, removed),
+    popoutGroups: prunedWindows(layout.popoutGroups, removed),
   }
+}
+
+function prunedWindows<W extends WindowContent>(
+  windows: readonly W[] | undefined,
+  removed: ReadonlySet<string>,
+): W[] | undefined {
+  return windows?.flatMap(window => {
+    const content = prunedWindow(window, removed)
+    return content ? { ...window, ...content } : []
+  })
 }
 
 /** Edge groups are left as they are: Dockview types their group as `unknown`, and we open none. */

@@ -160,4 +160,15 @@ describe('withoutPanels', () => {
 
     expect(after?.popoutGroups?.[0]?.data?.views).toEqual(['kept'])
   })
+
+  it('drops a popout window left with nothing to show', () => {
+    const before: SerializedLayout = {
+      ...layout(grid(leaf(group('g1', ['kept']))), 'kept', 'ghost'),
+      popoutGroups: [{ data: group('popped', ['ghost']), position: null }],
+    }
+
+    const after = withoutPanels(before, new Set(['ghost']))
+
+    expect(after?.popoutGroups).toEqual([])
+  })
 })
