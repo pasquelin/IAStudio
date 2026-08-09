@@ -397,6 +397,11 @@ export class SceneRenderer {
     return exportObjects(
       roots.flatMap(id => this.objects.get(id) ?? []),
       format,
+      {
+        // The objects wear node ids, which is what picking reads back off a hit. A file wears the
+        // names the document gave them.
+        nameOf: id => this.applied.get(id)?.name,
+      },
     )
   }
 
