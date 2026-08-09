@@ -132,6 +132,10 @@ describe('salvaging the bar order', () => {
 
     expect(salvaged.workspaces?.order ?? []).toEqual([])
     expect(salvaged.appearance?.theme).toBe('light')
+  })
+})
+
+/**
  * A remap crosses as a plain string, so the shape is all there is to check. The cost of getting
  * it wrong is not symmetrical: a refused binding is a key nobody can bind, while an accepted one
  * no keyboard emits is only a shortcut that never fires.
