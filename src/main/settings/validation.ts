@@ -17,6 +17,7 @@ import {
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
+import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
 import type { AccountBook, Credentials } from './accounts'
 
@@ -95,6 +96,24 @@ const home = z.object({
     .optional(),
 })
 
+/*
+ * Caught at the branch, not only at the element: a malformed `order` must cost the arrangement
+ * and nothing else. Before this branch existed the key was simply stripped, so making it able
+ * to send the whole file back to its defaults would be a regression this list introduced.
+ *
+ * A written order is always a reconciled one, so it can never legitimately outgrow the registry.
+ */
+const workspaces = z
+  .object({
+    order: z
+      .array(z.enum(WORKSPACE_IDS).nullable().catch(null))
+      .max(WORKSPACE_IDS.length)
+      .transform(ids => ids.filter(id => id !== null))
+      .catch([])
+      .optional(),
+  })
+  .catch({})
+
 // Keys are command ids and values signatures, both free strings here: a build that no longer
 // knows a command ignores its remap rather than refusing the whole write.
 const grid = boundsOf('three.gridSize')
@@ -132,6 +151,7 @@ const advanced = z.object({ logLevel: z.enum(LOG_VERBOSITIES).optional() })
 const partialSettings = z.object({
   general: general.optional(),
   home: home.optional(),
+  workspaces: workspaces.optional(),
   appearance: appearance.optional(),
   generation: generation.optional(),
   storage: storage.optional(),

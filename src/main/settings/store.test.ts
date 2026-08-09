@@ -43,6 +43,26 @@ describe('settings store', () => {
     expect(settings.generation).toEqual(DEFAULT_SETTINGS.generation)
   })
 
+  /**
+   * `merge` names its branches by hand, so one added to `Settings` and missed there would drop
+   * every write to it without a word. Read off the defaults rather than listed here, or the
+   * check would need the same edit the merge just missed.
+   */
+  it('keeps every branch the settings declare when merging a write', () => {
+    const store = createSettingsStore(adapter)
+    store.write({ appearance: { density: 'compact' } })
+
+    expect(Object.keys(store.read()).sort()).toEqual(Object.keys(DEFAULT_SETTINGS).sort())
+  })
+
+  it('carries the bar order across a write to another section', () => {
+    const store = createSettingsStore(adapter)
+    store.write({ workspaces: { order: ['audio', 'image'] } })
+    store.write({ appearance: { density: 'compact' } })
+
+    expect(store.read().workspaces.order).toEqual(['audio', 'image'])
+  })
+
   it('reads a config file written before the media section existed', () => {
     // Every release adds settings; a file from the previous one must not lose the rest.
     adapter.write('settings', { appearance: { density: 'compact' } })

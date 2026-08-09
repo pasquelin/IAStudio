@@ -9,7 +9,7 @@ import {
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { scopeOf, type ModelFamily, type ModelScope } from '@shared/domain/model'
-import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
 
 export type Workspace = {
   id: WorkspaceId
@@ -112,6 +112,15 @@ export const WORKSPACES: readonly Workspace[] = WORKSPACE_IDS.map(id => ({
   family: FAMILIES[id],
   scope: scopeOf(FAMILIES[id]),
 }))
+
+/**
+ * The same workspaces, in the order the user arranged. Both surfaces that draw the bar read
+ * through here rather than mapping `WORKSPACES` themselves: the title bar and the home's tools
+ * showed the same list, and reordering one of them alone would leave two truths on one screen.
+ */
+export function workspacesIn(stored: readonly WorkspaceId[]): Workspace[] {
+  return workspaceOrder(stored).map(id => workspaceById(id))
+}
 
 /** i18n key of a workspace label — the label is never hardcoded. */
 export function workspaceLabelKey(id: WorkspaceId): string {
