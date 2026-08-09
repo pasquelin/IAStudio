@@ -181,6 +181,38 @@ describe('the translation bundles', () => {
 })
 
 /**
+ * What the checks above would see, on a bundle nobody would ship.
+ *
+ * They read real data rather than a function, so nothing else proves they still look at
+ * anything: a helper returning an empty array would turn every one of them green while
+ * checking nothing at all. The two `no-hardcoded-text` files carry twenty such probes between
+ * them — this file carried none until one of its guards was verified by hand, once, and the
+ * proof thrown away.
+ */
+describe('what the guards would catch', () => {
+  it('sees a hole renamed from one language to the other', () => {
+    expect(holes('{{count}} assets')).not.toEqual(holes('{{n}} assets'))
+  })
+
+  // The format belongs to the hole: one language grouping its thousands and the other not.
+  it('sees a number formatter dropped on one side', () => {
+    expect(holes('{{units, number}} CU')).not.toEqual(holes('{{units}} CU'))
+  })
+
+  it('reads the holes of a sentence in a stable order, whatever the sentence does with them', () => {
+    expect(holes('{{a}} then {{b}}')).toEqual(holes('{{b}}, and {{a}} before it'))
+  })
+
+  it('sees two bundles that stopped lining up', () => {
+    expect(orderOf({ a: 1, b: 2 })).not.toEqual(orderOf({ b: 2, a: 1 }))
+  })
+
+  it('walks into the nested keys rather than stopping at the first level', () => {
+    expect([...flatten({ panel: { title: 'Assets' } }).keys()]).toEqual(['panel.title'])
+  })
+})
+
+/**
  * Keys the interface builds at runtime — `t(`assetTypes.${type}`)` and its like. A value added
  * to one of these unions and forgotten in the bundles shows the user the key itself, and no
  * amount of typechecking sees it: the key exists only once the template has run.
