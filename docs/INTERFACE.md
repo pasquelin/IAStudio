@@ -254,6 +254,10 @@ même application. Le reste du code ne lit `WORKSPACE_IDS` que comme un **ensemb
 
 ### 15. Un panneau ne déclare pas ce dont il a besoin — l’Explorateur sans projet
 
+> Les entrées **15, 16 et 17** forment un seul chantier, décrit au **§ 3.7 de `docs/REPRISE.md`** :
+> la couche projet, et le dossier qu’on donne à l’utilisateur.
+
+
 **Demandé le 9 août 2026.** Sans projet ouvert, pas d’Explorateur : un projet est le dossier qui
 tient les documents et les assets, et l’Explorateur n’a rien à explorer sans lui.
 

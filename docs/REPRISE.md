@@ -828,6 +828,75 @@ seconde vérité.
 
 ---
 
+## 3.7 La couche projet — le dossier qu’on donne à l’utilisateur
+
+**Décidé le 9 août 2026, non commencé.** Un projet est un dossier posé chez quelqu’un : il est
+ouvert dans le Finder, synchronisé, sauvegardé, versionné, bricolé. Ce paragraphe est ce qu’il faut
+lui donner à voir, et ce qu’il faut lui épargner.
+
+Les défauts qui l’ont déclenché sont dans **`docs/INTERFACE.md`, entrées 15 à 17** — le panneau sans
+sortie, les messages d’échec absents, le manifeste non défendu, l’extension et les dossiers
+techniques. Ce qui suit est ce qui reste à décider ou à écrire.
+
+### La mécanique est masquée sur les trois plateformes, sans exception
+
+**Le point initial ne suffit pas.** Il masque sur macOS et sur Linux — c’est une convention de shell,
+respectée par le Finder — et **ne masque rien sur Windows**, qui décide par l’attribut
+`FILE_ATTRIBUTE_HIDDEN`, que Node n’expose pas. Le pipeline empaquette les trois OS : une solution
+qui n’en couvre que deux n’est pas la solution.
+
+**Un seul dossier technique, et non plusieurs.** C’est ce qui rend la chose robuste plutôt que
+répétée : un seul chemin à masquer, donc un seul geste par plateforme, un seul endroit où l’oubli
+est possible. Tout ce qui n’appartient pas à l’utilisateur y entre — le manifeste, le catalogue, les
+proxies, les waveforms, les filmstrips, et `layouts/` s’il doit vivre.
+
+> **`layouts/` est à trancher d’abord.** Il est dans `PROJECT_FOLDERS`, donc créé dans chaque projet,
+> et c’est sa **seule occurrence dans tout `src/`** : les arrangements sont persistés dans le
+> `localStorage` du renderer (`scenario-studio:layouts`). C’est un dossier vide chez l’utilisateur.
+> Ou il servira et il rejoint le dossier technique, ou il ne sert pas et il ne doit pas être créé.
+
+**Le manifeste ne peut pas aller dans `.index/`**, et c’est le piège de l’idée simple : `.index/` est
+déclaré **cache reconstructible** — un utilisateur qui le supprime pour récupérer de la place doit
+retrouver son projet, pas le perdre. Le manifeste est ce qui fait qu’un dossier est un projet ; il
+survit à la suppression du cache, ou il n’est pas le manifeste.
+
+**Sur Windows, `attrib +h`, et rien à écrire pour le lancer** : `runProcess` (`main/media/runner.ts`)
+est déjà un `spawn` court avec délai de garde et signal d’annulation, prévu pour exactement ce genre
+d’appel dans le main. Trois règles autour :
+
+1. **Un échec de masquage n’empêche jamais d’ouvrir ou de créer un projet.** C’est cosmétique. On
+   journalise, et on continue — un projet qui refuse de s’ouvrir parce qu’un dossier n’a pas pu être
+   caché serait un remède pire que le mal.
+2. **C’est idempotent**, posé à la création et repassé à l’ouverture, comme `ensureFolders` répare
+   déjà l’arborescence. Un projet copié depuis un Mac vers un PC arrive sans attribut.
+3. **Ça ne rend pas le dossier introuvable** : masqué n’est pas protégé, et un utilisateur qui
+   affiche les fichiers cachés doit pouvoir lire ce qu’il y a dedans.
+
+### L’extension disparaît du nom du dossier
+
+`PROJECT_EXTENSION` n’a **qu’un seul usage** dans `src/` — fabriquer le nom à la création — et
+n’est **déclarée nulle part au système** : pas de `fileAssociations`, donc rien au double-clic et
+aucun paquet macOS. La reconnaissance passe par le manifeste, jamais par le nom. **Retirer
+l’extension ne casse aucun projet existant** : `open(path)` reçoit un chemin absolu et ne la teste
+jamais.
+
+### Ce qui reste visible, et pourquoi ça ne se négocie pas
+
+« A project is a folder, not a binary file — **versionable, inspectable, repairable by hand** » :
+c’est la raison d’être du format, elle est dans `shared/domain/project.ts`. `assets/` et
+`documents/` restent là où l’utilisateur les voit, les copie et les répare. La règle est **cacher ce
+qui n’est pas à lui**, pas cacher.
+
+### Ce que ça touche
+
+`shared/domain/project.ts` (les constantes et la liste des dossiers), `main/project/store.ts` (la
+création, l’ouverture, la réparation), `main/project/validation.ts` (la version du manifeste, à
+plafonner comme celle des documents), les deux bundles i18n (les messages d’échec, aujourd’hui
+inexistants), et **une migration** : lire l’ancien emplacement du manifeste et écrire le nouveau, le
+temps que le parc tourne.
+
+---
+
 # 4. Le node editor et les workflows Scenario
 
 > **Le chantier a son plan**, écrit pour être exécuté sans supervision, dix étapes :
