@@ -1733,11 +1733,11 @@
     "spark": {
       "ask": "Proposez-moi une idée",
       "asking": "Un instant…",
-      "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
-      "use": "Ouvrir le générateur sur « {{prompt}} »"
+      "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
+      "use": "Ouvrir le générateur sur « {{prompt}} »"
     },
     "similar": {
-      "title": "Dans la veine de « {{name}} »"
+      "title": "Dans la veine de « {{name}} »"
     },
     "usage": {
       "summary_one": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} génération.",
