@@ -114,7 +114,7 @@ s’il y en a une, la première cellule visible sinon.
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
 | **Affichage** | `Z` | fait défiler rendu, filaire, rendu et filaire |
-| **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi, à distance fixe |
+| **Cadrer la sélection** | `F` | rapproche la caméra pour que l’objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 
 ### Assembler et dupliquer

@@ -157,3 +157,22 @@ export function applyWireOverlay(object: Object3D, on: boolean, material: Materi
     mesh.add(edges)
   }
 }
+
+/**
+ * How far a camera has to stand for something that size to fill its view, plus a margin so the
+ * edges are not flush against the frame.
+ *
+ * A constant step framed a studio primitive and stood *inside* a fifty-unit model. That went
+ * unseen while an orthographic frustum ignored the move altogether — and became the whole of what
+ * framing does the moment it stopped ignoring it.
+ */
+export function framingDistance(halfSize: number, fieldOfView: number): number {
+  return (
+    (Math.max(halfSize, MIN_FRAMED_HALF) / Math.tan((fieldOfView * Math.PI) / 360)) * FRAME_MARGIN
+  )
+}
+
+/** A point light and an empty group have no size at all, and would otherwise ask for distance nil. */
+const MIN_FRAMED_HALF = 0.5
+
+const FRAME_MARGIN = 1.2

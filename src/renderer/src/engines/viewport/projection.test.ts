@@ -119,6 +119,47 @@ describe('ViewportEngine projection', () => {
     expect(engine.orthographic.bottom).toBeCloseTo(-4, 5)
   })
 
+  /**
+   * Nothing bounds an orthographic zoom — `minZoom` is 0 and ninety notches of wheel cost nothing
+   * there. Spent whole, the distance lands past `far`, the target is clipped, and the viewport is
+   * black with no swap that recovers it. A zoom dropped only ever widened the view.
+   */
+  it('spends no more zoom than the far plane allows', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(0, 0, 12)
+    engine.setProjection('orthographic')
+    engine.orthographic.zoom = 0.0099
+
+    engine.setProjection('perspective')
+
+    expect(engine.perspective.position.length()).toBeLessThanOrEqual(engine.perspective.far / 2)
+    expect(engine.perspective.position.length()).toBeGreaterThan(12)
+  })
+
+  it('spends no more zoom than the near plane allows', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(0, 0, 12)
+    engine.setProjection('orthographic')
+    engine.orthographic.zoom = 500
+
+    engine.setProjection('perspective')
+
+    expect(engine.perspective.position.length()).toBeGreaterThanOrEqual(engine.perspective.near * 2)
+    expect(engine.perspective.position.length()).toBeLessThan(12)
+  })
+
+  // `orthographic.zoom` is public, and a zero would divide the placement into infinity.
+  it('spends nothing at all when the zoom is not a positive number', () => {
+    const engine = new ViewportEngine()
+    engine.perspective.position.set(0, 0, 12)
+    engine.setProjection('orthographic')
+    engine.orthographic.zoom = 0
+
+    engine.setProjection('perspective')
+
+    expect(engine.perspective.position.toArray()).toEqual([0, 0, 12])
+  })
+
   it('does nothing at all when asked for the projection it already draws with', () => {
     const engine = new ViewportEngine()
     engine.orthographic.zoom = 4

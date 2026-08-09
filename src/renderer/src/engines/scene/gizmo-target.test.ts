@@ -46,6 +46,34 @@ describe('gizmoTargetFor', () => {
     })
   })
 
+  /**
+   * From two upwards the handle drives the pivot, and turning a pivot carries its children through
+   * space — sprites included. The first cut refused the handle whenever nothing turned on its own,
+   * which took it away from two sprites that a rotation would have moved.
+   */
+  it('keeps the rotate handle over two sprites, which a pivot would move', () => {
+    const other = object('s2')
+    const target = gizmoTargetFor(
+      'rotate',
+      'world',
+      [sprite, other],
+      kinds({ s: 'sprite', s2: 'sprite' }),
+    )
+
+    expect(target).toMatchObject({ kind: 'pivot', objects: [sprite, other] })
+  })
+
+  // Reparenting is offered by drag in the outliner, and three.js does turn a sprite's children.
+  it('keeps the rotate handle over a sprite that other nodes hang from', () => {
+    const parent = object('s3')
+    parent.add(object('m2'))
+
+    expect(gizmoTargetFor('rotate', 'world', [parent], kinds({ s3: 'sprite' }))).toEqual({
+      kind: 'object',
+      object: parent,
+    })
+  })
+
   // Turning the group carries the sprite through space, and that does show.
   it('keeps the rotate handle when something in the selection turns', () => {
     const target = gizmoTargetFor('rotate', 'world', [sprite, mesh], both)

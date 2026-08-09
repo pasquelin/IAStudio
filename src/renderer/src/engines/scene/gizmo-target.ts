@@ -34,7 +34,9 @@ export function gizmoTargetFor(
   const [first] = selected
   if (!first) return { kind: 'none' }
 
-  if (mode === 'rotate' && !selected.some(object => turns(nodeOf(object)))) {
+  // Only a lone object can be refused: from two upwards the handle drives the pivot, and turning
+  // a pivot carries its children through space whatever they are.
+  if (mode === 'rotate' && selected.length === 1 && !turns(first, nodeOf(first))) {
     return { kind: 'none' }
   }
 
@@ -51,7 +53,11 @@ export function gizmoTargetFor(
   }
 }
 
-/** An object the engine cannot name is not a reason to withhold the handle. */
-function turns(node: { type: SceneNodeType } | undefined): boolean {
-  return !node || canRotate(node)
+/**
+ * Whether turning this object would show. An object the engine cannot name is not a reason to
+ * withhold the handle — and neither is a sprite with nodes hanging under it, which turning swings
+ * around it.
+ */
+function turns(object: Object3D, node: { type: SceneNodeType } | undefined): boolean {
+  return !node || canRotate(node) || object.children.length > 0
 }

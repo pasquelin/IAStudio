@@ -120,10 +120,18 @@ export class ViewportEngine {
     const next = this.camera
     next.position.copy(previous.position)
     next.quaternion.copy(previous.quaternion)
-    if (leavingOrthographic && zoomToSpend !== 1) {
+    if (leavingOrthographic && zoomToSpend > 0 && zoomToSpend !== 1) {
       // The same fallback as `fitProjection`: with no controls, there is no target but the origin.
       const target = this.controls?.target ?? ORIGIN
-      next.position.sub(target).divideScalar(zoomToSpend).add(target)
+      // Held inside the camera's own planes, half a plane either side. Nothing bounds an
+      // orthographic zoom — `minZoom` is 0 and costs nothing to reach — and a distance spent past
+      // `far` clips the target into a black viewport that no further swap recovers. A zoom simply
+      // dropped only widened the view; that is the trade this bound keeps on the right side.
+      next.position
+        .sub(target)
+        .divideScalar(zoomToSpend)
+        .clampLength(this.perspective.near * 2, this.perspective.far / 2)
+        .add(target)
     }
     // Carried over, a zoom from an earlier swap would apply again on top of the frustum just
     // sized for it.

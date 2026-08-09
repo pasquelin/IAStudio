@@ -18,6 +18,7 @@ import {
   isViewDirection,
   viewPosition,
   VIEW_DIRECTIONS,
+  framingDistance,
 } from './scene-view'
 
 const ORIGIN = new Vector3(0, 0, 0)
@@ -245,5 +246,31 @@ describe('the wireframe overlay under the pointer', () => {
     const raycaster = new Raycaster(new Vector3(0.9, 0, 5), new Vector3(0, 0, -1))
 
     expect(raycaster.intersectObject(mesh, true)).toEqual([])
+  })
+})
+
+/**
+ * The whole of what framing does, once the orthographic frustum stopped ignoring the move: a
+ * constant step framed a studio primitive and stood inside a fifty-unit model.
+ */
+describe('framingDistance', () => {
+  // tan(45°) = 1, so a 90° lens needs exactly the half-size, plus the margin.
+  it('stands as far back as the object is wide, for a square lens', () => {
+    expect(framingDistance(10, 90)).toBeCloseTo(12, 5)
+  })
+
+  // The defect it replaces: the same distance whatever the size.
+  it('stands further back for a bigger object', () => {
+    expect(framingDistance(50, 60)).toBeGreaterThan(framingDistance(5, 60))
+  })
+
+  // A narrower lens sees less at the same distance, so it has to back off further.
+  it('stands further back for a narrower lens', () => {
+    expect(framingDistance(10, 30)).toBeGreaterThan(framingDistance(10, 90))
+  })
+
+  // A point light and an empty group have no size at all, and would ask for a distance of nil.
+  it('keeps its distance from something with no size', () => {
+    expect(framingDistance(0, 60)).toBeGreaterThan(0)
   })
 })

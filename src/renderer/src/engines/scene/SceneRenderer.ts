@@ -1,4 +1,5 @@
 import {
+  Box3,
   BufferGeometry,
   DirectionalLight,
   GridHelper,
@@ -68,6 +69,7 @@ import {
   applyDisplayMode,
   applyWireOverlay,
   directionOf,
+  framingDistance,
   viewPosition,
   type DisplayMode,
   type ViewDirection,
@@ -128,6 +130,9 @@ const STUDIO_INTENSITY = 0.4
 
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
+
+/** Where framing stands from what it frames — the studio's three-quarter view, distance apart. */
+const FRAME_FROM = new ThreeVector3(4, 4, 4).normalize()
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
@@ -370,9 +375,18 @@ export class SceneRenderer {
     const orbit = this.viewport.orbit
     if (objects.length === 0 || !orbit) return
 
-    const centre = centreOf(objects, new ThreeVector3())
+    const bounds = new Box3()
+    for (const object of objects) bounds.expandByObject(object)
+    const empty = bounds.isEmpty()
+
+    const centre = empty
+      ? centreOf(objects, new ThreeVector3())
+      : bounds.getCenter(new ThreeVector3())
+    const size = empty ? new ThreeVector3() : bounds.getSize(new ThreeVector3())
+    const distance = framingDistance(Math.max(size.x, size.y, size.z) / 2, this.view.fieldOfView)
+
     orbit.target.copy(centre)
-    this.viewport.camera.position.copy(centre).add(new ThreeVector3(4, 4, 4))
+    this.viewport.camera.position.copy(centre).addScaledVector(FRAME_FROM, distance)
     orbit.update()
     // Moving an orthographic camera changes nothing of what it shows: without this, `F` recentred
     // the orbit and left the screen exactly as it was.
