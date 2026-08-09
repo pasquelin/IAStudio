@@ -443,7 +443,7 @@ le scrubbing se met à saccader sans raison visible.
 3. le main le récupère               GET /models/{id}
 4. le ModelRegistry traduit          schéma JSON → FieldDescriptor[]
 5. DynamicForm le rend               react-hook-form + un schéma zod bâti sur les descripteurs
-5b. le prix s'affiche                scenario:estimate-cost → POST ?dryRun=true → 402
+5b. le prix s'affiche                scenario:estimate-cost → POST ?dryRun=true → 200 (402 en repli)
 6. soumission                        scenario:generate
 7. le JobManager met en file         concurrence bornée
 8. il poll                           jobs.retrieve, toutes les 2 s
@@ -459,11 +459,21 @@ jour.
 Un `kind` de champ inconnu se rend en saisie brute plutôt que de faire échouer le descripteur —
 un formulaire de génération qui perd un champ en silence est pire qu’un formulaire laid.
 
-**L’étape 5b est le seul appel du studio où un 4xx est le chemin nominal.** Un `?dryRun=true` ne
-crée aucun job et ne dépense rien ; l’API répond **402**, et `estimatedCost` est dans son corps.
-`main/scenario/cost.ts` rattrape ce seul statut — un 500 ou un réseau mort remonte comme
-n’importe quelle panne, jusqu’au journal. Le port est une fonction, pas une méthode, parce que le
-dry run est documenté sur `workflows.run` autant que sur la génération.
+**L’étape 5b lit un prix dans deux formes de réponse, parce que la référence et le serveur ne
+disent pas la même chose.** Un `?dryRun=true` ne crée aucun job et ne dépense rien. La référence
+documente un **402** portant `estimatedCost` ; le serveur, observé sur les deux endpoints, répond
+**200** avec `creativeUnitsCost` à côté d’un `job` vide. `main/scenario/cost.ts` lit les deux, le
+200 d’abord, le 402 en repli — un 500 ou un réseau mort remonte comme n’importe quelle panne,
+jusqu’au journal.
+
+> **C’est en ne lisant que le 402 documenté qu’aucun badge n’a jamais affiché de prix.** Le défaut
+> était invisible par construction : un bouton sans chiffre se lit comme un modèle que l’API
+> refuse de tarifer, exactement comme les trois autres cas qui donnent `null`. Il a fallu lancer
+> une App pour de vrai pour le voir. **Devant une API, la référence dit ce qui était prévu, pas ce
+> qui répond.**
+
+Le port est une fonction, pas une méthode, parce que `generate.runModel` et `workflows.run`
+tarifent un dry run de la même façon : lequel des deux est visé regarde la cible, pas le port.
 
 Côté renderer, `useCostEstimate` débounce à 600 ms **et** garde un plancher entre deux envois,
 dérivé de `INTERACTIVE_REQUESTS_PER_MINUTE` : un débounce seul n’a pas de plafond, seulement une
