@@ -2,8 +2,8 @@
 
 **Le document de travail du projet.** L’état, ce qu’il reste à faire, les savoirs qui coûteraient une
 seconde fois, les mesures acquises. Vérifié dans le code le 9 août 2026 au soir, contre `develop`
-à **`55ddf63`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
-(`git log --oneline 55ddf63..develop`) au lieu de relire mille lignes.
+à **`0d11ef6`** — le sha est là pour que la passe suivante sache d’où reprendre le delta
+(`git log --oneline 0d11ef6..develop`) au lieu de relire mille lignes.
 
 Trois fichiers se partagent le travail, et aucun ne redit ce qu’un autre porte :
 
@@ -42,8 +42,11 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > **l’accueil** et ses onze bandes, avec « en refaire une
 > avec… » (`feat/home`, `feat/home-creations`) · les trois accès clavier — Explorateur, double-clic
 > qui traverse les espaces, étagère à assets et sa sélection multiple (`feat/explorateur-clavier`,
-> `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader des Textures**
-> (`feat/textures-derive`) · le **formulaire de génération traduit** sans rien écrire par modèle
+> `feat/double-clic`, `feat/etagere-clavier`) · les **dérivations en shader et le tiling des
+> Textures**, plus leur **panneau Styles** (`feat/textures-derive`, `feat/textures-tiling`,
+> `feat/styles-textures`) · les **index du catalogue** et l’abandon d’une recherche
+> (`feat/catalog-index`) · le **BVH qui dit ses pannes et l’ombre qui s’arrête aux nœuds**
+> (`feat/scene-bvh`) · le **formulaire de génération traduit** sans rien écrire par modèle
 > (`feat/i18n-schema-api`) et le **rapport d’usage** avec lui (`feat/i18n-usage`) · le prix d’une
 > génération, avant et après
 > (`feat/workflows`) · six passes i18n et les trois gardes de texte en dur (`feat/i18n-*`) · le
@@ -51,10 +54,11 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > Textures (`feat/textures-materiau`). Le détail est au § 1.
 >
 > **Propose-moi un ordre et attends ma réponse** avant d’ouvrir un worktree. Les candidats, sans
-> priorité imposée : l’**étape 8 des Textures** (§ 3.4) · le **backlog qualité P1**
-> (`.claude/loop/BACKLOG.md`, dont les statuts ont déjà menti trois fois : vérifie avant de prendre)
-> · les **13 constats du § 3.3** et l’export en six faces du skybox (§ 3.5) · les **dettes
-> transverses** du § 3.6.
+> priorité imposée : les **étapes 7 à 9 du node editor** — compiler, valider, exécuter (§ 4) ·
+> l’**étape 8 des Textures** (§ 3.4) · le **backlog qualité P1** (`.claude/loop/BACKLOG.md`, dont
+> les statuts ont déjà menti trois fois : vérifie avant de prendre) · les **3 constats restants du
+> § 3.3** et l’export en six faces du skybox (§ 3.5) · les **deux dernières dettes transverses**
+> du § 3.6.
 >
 > Cinq règles qui ne sont pas dans `CLAUDE.md` :
 >
