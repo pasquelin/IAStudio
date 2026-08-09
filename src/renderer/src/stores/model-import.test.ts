@@ -67,19 +67,28 @@ describe('addModelTo', () => {
 
 // The first of the three doors: a double-click in the asset browser.
 describe('opening a model asset', () => {
-  it('drops it into the scene in front', () => {
-    openAsset(asset('mesh-1', 'mesh'))
+  it('drops it into the scene in front', async () => {
+    await openAsset(asset('mesh-1', 'mesh'))
     expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(1)
   })
 
-  it('leaves a picture alone, which belongs to another workspace', () => {
-    openAsset(asset('img-1', 'image'))
+  it('leaves a picture alone, which belongs to another workspace', async () => {
+    await openAsset(asset('img-1', 'image'))
     expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(0)
   })
 
-  it('does nothing with a model while no scene is in front', () => {
+  // A scene open in another workspace is still a scene: the double-click crosses to it and
+  // brings it forward, the way the explorer opens a document wherever it belongs.
+  it('crosses to a scene that is open but not in front', async () => {
     useDocuments.setState({ activeId: null })
-    openAsset(asset('mesh-1', 'mesh'))
+    await openAsset(asset('mesh-1', 'mesh'))
+
+    expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(1)
+  })
+
+  it('does nothing with a model while no scene is open at all', async () => {
+    useDocuments.setState({ documents: {}, activeId: null })
+    await openAsset(asset('mesh-1', 'mesh'))
 
     expect(nodesOf('doc-1').filter(node => node.type === 'model')).toHaveLength(0)
   })

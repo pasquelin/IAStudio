@@ -55,7 +55,7 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
           // Read off the workspace table: changing a space's glyph in the rail must change it here.
           icon={workspaceById(intent.workspace).icon}
           disabled={!intent.ready(asset)}
-          onSelect={choose(() => intent.run(asset))}
+          onSelect={choose(() => void intent.run(asset))}
         />
       ))}
       <MenuRow

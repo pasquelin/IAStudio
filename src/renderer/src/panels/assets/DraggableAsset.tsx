@@ -31,7 +31,7 @@ export function DraggableAsset({ asset, className, children }: DraggableAssetPro
       draggable
       onPointerDown={() => useSelection.getState().selectAssets([asset.id])}
       onDragStart={event => startAssetDrag(event, asset)}
-      onDoubleClick={() => openAsset(asset)}
+      onDoubleClick={() => void openAsset(asset)}
       onContextMenu={event => {
         event.preventDefault()
         // Selected first: the menu acts on this asset, and leaving the previous selection

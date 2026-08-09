@@ -123,6 +123,7 @@
       "image.export": "Exporting the picture failed",
       "document.save": "Saving the document failed",
       "assets.reveal": "The file could not be shown",
+      "assets.open": "This asset has nowhere to go",
       "font.face": "A font could not be loaded",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",

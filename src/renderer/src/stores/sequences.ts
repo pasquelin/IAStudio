@@ -7,7 +7,6 @@ import {
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
-import { activeIdOfKind, useDocuments } from './documents'
 import { createDocumentStore } from './document-store'
 
 /** One sequence per document, in memory like the documents themselves. */
@@ -19,14 +18,22 @@ export const sequenceOf = store.stateOf
 export const historyOf = store.historyOf
 
 /**
- * Drops an asset onto the montage in front, at the playhead. Nothing happens when the tab in
- * front is not a sequence, or when every track refuses it — silence rather than a throw, since
- * this hangs off a double-click that can land anywhere.
+ * Whether any track of that montage would hold this asset — what keeps the cascade from
+ * settling on a destination that then refuses in silence, and switches workspace to do it.
  */
-export function addAssetToSequence(asset: Asset): void {
-  const documentId = activeIdOfKind(useDocuments.getState(), 'sequence')
-  if (!documentId) return
+export function sequenceTakes(documentId: string, asset: Asset): boolean {
+  return trackForAsset(store.stateOf(store.use.getState(), documentId), asset) !== null
+}
 
+/**
+ * Drops an asset onto a montage, at its playhead. Nothing happens when every track refuses it —
+ * silence rather than a throw, since this hangs off a double-click that can land anywhere.
+ *
+ * The document is named by the caller, like every other destination of `ASSET_INTENTS`: reading
+ * the tab in front here made this the one destination an asset could not be sent to from
+ * somewhere else.
+ */
+export function addAssetToSequence(documentId: string, asset: Asset): void {
   const current = store.use.getState()
   const sequence = store.stateOf(current, documentId)
   const track = trackForAsset(sequence, asset)

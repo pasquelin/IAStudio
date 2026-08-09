@@ -26,6 +26,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'document.close': 'document',
   'document.delete': 'document',
   'assets.reveal': 'library',
+  // An asset with nowhere to go is read with the shelf it was double-clicked in, not with the
+  // document that refused it — there is none, and that is exactly what the line says.
+  'assets.open': 'library',
   // A face that will not open is read where the document it was set in is read: the caption is
   // still there, drawn in the fallback, and this is what says why it does not look right.
   'font.face': 'document',

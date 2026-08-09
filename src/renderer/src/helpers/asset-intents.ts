@@ -5,14 +5,16 @@ import {
   type Asset,
   type AssetType,
 } from '@shared/domain/asset'
-import type { DocumentKind } from '@shared/domain/document'
+import type { DocumentDescriptor, DocumentKind } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { openDocument } from '@/app/dockview-api'
+import { restoreDocument } from '@/app/document-io'
 import { loadTake } from '@/spaces/audio/load-take'
 import { placeAsset } from '@/spaces/image/place-asset'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
-import { activeIdOfKind, useDocuments } from '@/stores/documents'
+import { activeKind, documentOfKind, useDocuments } from '@/stores/documents'
 import { addModelTo } from '@/stores/scenes'
-import { addAssetToSequence } from '@/stores/sequences'
+import { addAssetToSequence, sequenceTakes } from '@/stores/sequences'
 import { setSkyboxSource } from '@/stores/skyboxes'
 
 /**
@@ -20,15 +22,18 @@ import { setSkyboxSource } from '@/stores/skyboxes'
  *
  * This used to be a cascade of `if`s inside `openAsset`, which worked for double-clicking and
  * for nothing else: a menu can only offer what it can enumerate. Same table, two consumers — the
- * double-click takes the first applicable entry, and the context menu lists them all.
+ * double-click takes one entry, and the context menu lists them all.
  *
- * ORDER IS THE CASCADE. The first entry whose space is open and whose `accepts` says yes is what
- * a double-click does, exactly as the chain of `if`s did before it.
+ * ORDER IS THE CASCADE, and the tab in front comes before it: a double-click lands where the
+ * user is looking whenever that tab takes the asset, and the order of this table only decides
+ * between the destinations they are NOT looking at.
  */
 export type AssetIntent = {
   id: string
   /** Where this destination lives — the menu reads its glyph off the workspace table. */
   workspace: WorkspaceId
+  /** The document it writes into. What decides whether the tab in front is this destination. */
+  kind: DocumentKind
   labelKey: string
   /**
    * The kinds this destination takes, judged on the type alone and never on the asset.
@@ -38,19 +43,27 @@ export type AssetIntent = {
    */
   accepts: readonly AssetType[]
   /**
-   * Whether THIS asset can go there right now: the space must have a document open, and the
-   * destination must be able to take that particular asset.
+   * Whether THIS asset can go there right now: a document of that kind must be open somewhere —
+   * in front or not — and the destination must be able to take that particular asset.
    *
    * It takes the asset where `accepts` cannot, because a double-click and a menu both hold it.
    * A `ready` that only counted open tabs would stop the cascade on a destination that then
    * refuses in silence — a cloud picture landing nowhere instead of on the montage.
    */
   ready: (asset: Asset) => boolean
-  run: (asset: Asset) => void
+  /** Resolves once the asset has landed — a destination may have to read its file first. */
+  run: (asset: Asset) => Promise<void>
 }
 
-function activeId(kind: DocumentKind): string | null {
-  return activeIdOfKind(useDocuments.getState(), kind)
+/**
+ * The tab this destination would write into.
+ *
+ * Reading the tab in FRONT is what kept an asset from crossing workspaces — a double-click
+ * could only ever land on the tab already on screen, and did nothing at all from anywhere else.
+ * The explorer has always crossed; this is the same promise for an asset.
+ */
+function targetOf(kind: DocumentKind): DocumentDescriptor | null {
+  return documentOfKind(useDocuments.getState(), kind)
 }
 
 /**
@@ -62,13 +75,27 @@ function activeId(kind: DocumentKind): string | null {
 function inDocument(
   kind: DocumentKind,
   put: (documentId: string, asset: Asset) => void,
-  eligible: (asset: Asset) => boolean = () => true,
-): Pick<AssetIntent, 'ready' | 'run'> {
+  eligible: (asset: Asset, documentId: string) => boolean = () => true,
+): Pick<AssetIntent, 'kind' | 'ready' | 'run'> {
   return {
-    ready: asset => eligible(asset) && activeId(kind) !== null,
-    run: asset => {
-      const tab = activeId(kind)
-      if (tab) put(tab, asset)
+    kind,
+    ready: asset => {
+      const target = targetOf(kind)
+      return target !== null && eligible(asset, target.id)
+    },
+    run: async asset => {
+      const target = targetOf(kind)
+      if (!target) return
+
+      // Brought forward before it is written into: an asset landing in a tab nobody is looking
+      // at is indistinguishable from a double-click that did nothing.
+      openDocument(target)
+
+      // And its file read before anything is written into it. A tab that has never been on
+      // screen holds no state, and writing into it makes `restoreDocument` take it for one
+      // already loaded: the file is then never read, and the next save writes this over it.
+      await restoreDocument(target.id)
+      put(target.id, asset)
     },
   }
 }
@@ -106,11 +133,11 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     id: 'video.clip',
     workspace: 'video',
     labelKey: 'intents.videoClip',
-    // Where everything ends up, hence its place near the end and the kinds it takes — but only
-    // when a sequence is open to take it, which `addAssetToSequence` checks and used to swallow.
+    // Where everything ends up, hence its place near the end and the kinds it takes.
     accepts: ASSET_TYPES,
-    ready: () => activeId('sequence') !== null,
-    run: asset => addAssetToSequence(asset),
+    ...inDocument('sequence', addAssetToSequence, (asset, documentId) =>
+      sequenceTakes(documentId, asset),
+    ),
   },
   {
     id: 'textures.channel',
@@ -128,12 +155,18 @@ export function intentsFor(type: AssetType): readonly AssetIntent[] {
 }
 
 /**
- * What a double-click does: the first destination that would take it and has somewhere to put
- * it. Identical to the chain of `if`s this replaced, because the order of the table IS that
- * chain — the difference is that it can now be listed and pointed at.
+ * What a double-click does: the destination of the tab in front when it takes the asset, and
+ * otherwise the first of the table that has somewhere to put it.
+ *
+ * The tab in front comes first because it is the one being looked at — the cascade only ever
+ * decides between destinations the user is NOT watching, which is what it did when every
+ * destination but the front one was out of reach.
  */
 export function defaultIntent(asset: Asset): AssetIntent | null {
-  return (
-    ASSET_INTENTS.find(intent => intent.accepts.includes(asset.type) && intent.ready(asset)) ?? null
+  const applicable = ASSET_INTENTS.filter(
+    intent => intent.accepts.includes(asset.type) && intent.ready(asset),
   )
+  const front = activeKind(useDocuments.getState())
+
+  return applicable.find(intent => intent.kind === front) ?? applicable[0] ?? null
 }
