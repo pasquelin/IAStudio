@@ -43,7 +43,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
         label={t('documents.close')}
         variant="header"
         iconSize={12}
-        className="mr-1 size-4 self-center"
+        className="mr-1 size-4 shrink-0 self-center"
         onClick={close}
       />
 

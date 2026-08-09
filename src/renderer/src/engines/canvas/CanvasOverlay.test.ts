@@ -35,6 +35,7 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
     beginPath: record('beginPath'),
     moveTo: record('moveTo'),
     lineTo: record('lineTo'),
+    arc: record('arc'),
     stroke: record('stroke'),
     fillRect: record('fillRect'),
     strokeRect: record('strokeRect'),
@@ -102,6 +103,7 @@ const NO_TOOL: ToolChrome = {
   lit: null,
   pending: null,
   selection: null,
+  brushRadius: null,
 }
 
 const RECT = { x: 10, y: 20, width: 30, height: 40 }
@@ -474,5 +476,79 @@ describe('the tool chrome', () => {
     // Twelve for the crop — four bands and eight grips — then the layer's own eight.
     expect(fills).toHaveLength(20)
     expect(fills[0]).toEqual([7, 11, 200, 40])
+  })
+})
+
+describe('the brush ring', () => {
+  const AT = { x: 80, y: 60 }
+
+  it('draws nothing while no painting tool is armed', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushRadius: null } }))
+
+    expect(opsOf(calls, 'arc')).toHaveLength(0)
+  })
+
+  // The ring says where the next dab lands. With the hand off the canvas there is no next dab,
+  // and a ring left at the last known point claims one.
+  it('draws nothing once the pointer has left the canvas', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, scene({ pointer: null, tools: { ...NO_TOOL, brushRadius: 12 } }))
+
+    expect(opsOf(calls, 'arc')).toHaveLength(0)
+  })
+
+  it('rings the pointer where it is, in screen pixels', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushRadius: 12 } }))
+
+    // The pointer is already in screen space — it is what the rulers echo — so it is not
+    // projected a second time.
+    expect(opsOf(calls, 'arc')[0]?.slice(0, 2)).toEqual([80, 60])
+  })
+
+  /**
+   * The whole point of drawing it rather than using a CSS cursor: a 24 px brush covers 24
+   * document pixels, which is half the screen at 1600% and a speck at 5%.
+   */
+  it('scales the radius with the zoom, so the ring covers what the dab will', () => {
+    const { context, calls } = recorder()
+    const zoomed = scene({ viewport: VIEW, pointer: AT, tools: { ...NO_TOOL, brushRadius: 12 } })
+    drawOverlay(context, zoomed)
+
+    expect(opsOf(calls, 'arc')[0]?.[2]).toBe(24)
+  })
+
+  it('shrinks with the zoom just as honestly', () => {
+    const { context, calls } = recorder()
+    const far = scene({
+      viewport: { x: 0, y: 0, scale: 0.25 },
+      pointer: AT,
+      tools: { ...NO_TOOL, brushRadius: 12 },
+    })
+    drawOverlay(context, far)
+
+    expect(opsOf(calls, 'arc')[0]?.[2]).toBe(3)
+  })
+
+  // Same two-tone reasoning as the ants, and for the same reason: a single stroke vanishes
+  // against a background of its own colour. Undashed, so it costs no frame loop.
+  it('strokes twice, light under dark, and marches neither', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, scene({ pointer: AT, tools: { ...NO_TOOL, brushRadius: 12 } }))
+
+    const inks = opsOf(calls, 'strokeStyle').map(args => args[0])
+    expect(inks.slice(-2)).toEqual(['#light', '#dark'])
+    expect(opsOf(calls, 'lineDashOffset')).toHaveLength(0)
+  })
+
+  it('rings above the grips, never under them', () => {
+    const { context, calls } = recorder()
+    const both = toolScene({ handles: cornersOfRect(RECT), brushRadius: 12 })
+    drawOverlay(context, { ...both, pointer: AT })
+
+    const arc = calls.findIndex(call => call.op === 'arc')
+    const lastGrip = calls.map(call => call.op).lastIndexOf('fillRect')
+    expect(arc).toBeGreaterThan(lastGrip)
   })
 })

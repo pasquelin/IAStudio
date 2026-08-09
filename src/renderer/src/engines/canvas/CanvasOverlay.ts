@@ -25,6 +25,7 @@ export type OverlayContext = Pick<
   | 'beginPath'
   | 'moveTo'
   | 'lineTo'
+  | 'arc'
   | 'stroke'
   | 'fillRect'
   | 'strokeRect'
@@ -83,22 +84,42 @@ export function ants(
   phase: number,
   colors: OverlayColors,
 ): void {
-  context.lineWidth = 1.5
+  twoTone(context, trace, colors, 1.5, () => {
+    context.setLineDash([ANT_DASH, ANT_GAP])
+    // Negative, so the dashes travel the way the path was traced rather than against it.
+    context.lineDashOffset = -phase
+  })
 
+  context.setLineDash([])
+  context.lineDashOffset = 0
+}
+
+/**
+ * A path stroked twice — a plain light pass, then a dark one over it — which is what keeps an
+ * outline readable over anything the document holds. A single stroke disappears against a
+ * background of its own colour, whichever colour that is.
+ *
+ * `beforeDark` is where the second pass differs: the ants dash and march there, the brush ring
+ * only narrows. Shared so the two cannot drift into two ideas of what "readable" means.
+ */
+function twoTone(
+  context: OverlayContext,
+  trace: () => void,
+  colors: OverlayColors,
+  width: number,
+  beforeDark: () => void,
+): void {
+  context.lineWidth = width
   context.setLineDash([])
   context.strokeStyle = colors.marqueeLight
   trace()
   context.stroke()
 
-  context.setLineDash([ANT_DASH, ANT_GAP])
-  // Negative, so the dashes travel the way the path was traced rather than against it.
-  context.lineDashOffset = -phase
+  beforeDark()
   context.strokeStyle = colors.marqueeDark
   trace()
   context.stroke()
 
-  context.setLineDash([])
-  context.lineDashOffset = 0
   context.lineWidth = 1
 }
 
@@ -126,6 +147,12 @@ export type ToolChrome = {
   /** The shape under the hand, outlined until it is committed to the layer. */
   pending: ShapeGeometry | null
   selection: CanvasSelection
+  /**
+   * Half the brush, in DOCUMENT units, while a painting tool is armed — `null` for every other
+   * tool. Drawn rather than set as a CSS cursor because a cursor cannot scale: the ring has to
+   * cover exactly what the next dab will, at 5% as at 1600%.
+   */
+  brushRadius: number | null
 }
 
 export type OverlayScene = {
@@ -210,6 +237,33 @@ function drawTools(context: OverlayContext, scene: OverlayScene, phase: number):
   drawPending(context, scene, phase)
   drawCrop(context, scene, phase)
   drawGrips(context, scene)
+  // Last: the ring stands in for the cursor, and a cursor is never under what it points at.
+  drawBrush(context, scene)
+}
+
+/**
+ * The brush's footprint under the hand, at the diameter the next dab will actually cover.
+ *
+ * Undashed, unlike the ants: a dash would have to march, and marching is what keeps a frame
+ * loop alive for as long as the tool is armed.
+ */
+function drawBrush(context: OverlayContext, scene: OverlayScene): void {
+  const radius = scene.tools.brushRadius
+  const at = scene.pointer
+  if (radius === null || !at) return
+
+  twoTone(
+    context,
+    () => {
+      context.beginPath()
+      context.arc(at.x, at.y, radius * scene.viewport.scale, 0, Math.PI * 2)
+    },
+    scene.colors,
+    3,
+    () => {
+      context.lineWidth = 1
+    },
+  )
 }
 
 function drawSelection(context: OverlayContext, scene: OverlayScene, phase: number): void {

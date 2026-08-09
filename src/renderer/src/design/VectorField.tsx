@@ -39,7 +39,7 @@ export function VectorField<V extends AxisValue>({
       <span className={FIELD_LABEL}>{label}</span>
 
       <div
-        className="grid min-w-0 flex-1 gap-1"
+        className="grid min-w-0 flex-1 gap-2"
         style={{ gridTemplateColumns: `repeat(${shown.length}, minmax(0, 1fr))` }}
       >
         {shown.map(axis => (

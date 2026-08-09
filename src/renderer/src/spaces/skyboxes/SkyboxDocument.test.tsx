@@ -6,6 +6,7 @@ import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installDocument } from '@/stores/document-fixtures'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
 import { SKYBOX_VIEWS, type SkyboxView } from '@shared/domain/skybox'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxDocument } from './SkyboxDocument'
@@ -60,6 +61,7 @@ describe('SkyboxDocument', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSkyboxes.setState({ states: {}, histories: {} })
+    useSkyboxViews.setState({ views: {} })
     useAssets.setState({ items: [panorama] })
     installDocument('doc-1', 'skyboxes')
   })
@@ -100,6 +102,7 @@ describe('the keyboard of a sky', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSkyboxes.setState({ states: {}, histories: {} })
+    useSkyboxViews.setState({ views: {} })
     useAssets.setState({ items: [panorama] })
     installDocument('doc-1', 'skyboxes')
   })
@@ -131,23 +134,40 @@ describe('the keyboard of a sky', () => {
     expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun).toMatchObject(moved)
   })
 
-  // Four views and one key: a letter each would spend four of them on a space that has two
-  // other things to offer.
+  /**
+   * Four views and one key: a letter each would spend four of them on a space that has two
+   * other things to offer.
+   *
+   * Read off the store rather than off a button: the controls moved to the View panel, and the
+   * centre carries the toolbar and the rulers only. What the document still owns is the key.
+   */
   it('cycles through the views and comes back round', () => {
-    const { getByRole } = render(<SkyboxDocument documentId="doc-1" />)
-    const pressed = (): string | undefined =>
-      SKYBOX_VIEWS.find(view => {
-        const button = getByRole('button', { name: LABELS[view] })
-        return button.getAttribute('aria-pressed') === 'true'
-      })
+    render(<SkyboxDocument documentId="doc-1" />)
+    const shown = (): SkyboxView => viewOf(useSkyboxViews.getState(), 'doc-1').view
 
-    expect(pressed()).toBe('immersive')
+    expect(shown()).toBe('immersive')
     fireEvent.keyDown(window, { code: 'KeyV' })
-    expect(pressed()).toBe(SKYBOX_VIEWS[1])
+    expect(shown()).toBe(SKYBOX_VIEWS[1])
 
     for (let step = 1; step < SKYBOX_VIEWS.length; step += 1) {
       fireEvent.keyDown(window, { code: 'KeyV' })
     }
-    expect(pressed()).toBe('immersive')
+    expect(shown()).toBe('immersive')
+  })
+
+  it('toggles the test objects from the keyboard, and hands it to the engine', () => {
+    render(<SkyboxDocument documentId="doc-1" />)
+
+    fireEvent.keyDown(window, { code: 'KeyP' })
+
+    expect(viewOf(useSkyboxViews.getState(), 'doc-1').probes).toBe(false)
+  })
+
+  // The menu that floated over the picture is gone: the centre shows the sky, and nothing else.
+  it('lays no menu over the viewport', () => {
+    const { queryByRole } = render(<SkyboxDocument documentId="doc-1" />)
+
+    expect(queryByRole('button', { name: LABELS.immersive })).toBeNull()
+    expect(queryByRole('slider')).toBeNull()
   })
 })

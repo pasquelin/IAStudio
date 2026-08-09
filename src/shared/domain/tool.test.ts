@@ -156,8 +156,10 @@ describe('the rail order of the upper right', () => {
     expect(upperRightIn('audio')).toEqual(['assets', 'explorer'])
   })
 
+  // `view` sits right behind them: how a sky is being looked at is next of kin to what it is,
+  // and both used to be a menu floating over the picture.
   it('puts the sky controls first in Skyboxes — it is what that space is for', () => {
-    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'explorer'])
+    expect(upperRightIn('skyboxes')).toEqual(['skybox', 'view', 'explorer'])
   })
 
   /** Same rule, same reason: a texture IS its eight channels, so they come before the files. */

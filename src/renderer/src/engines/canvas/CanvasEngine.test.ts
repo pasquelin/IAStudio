@@ -19,6 +19,7 @@ import {
   type Rect,
   type Transform,
 } from './canvas-state'
+import { DEFAULT_BRUSH } from './brush'
 import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from './shape-geometry'
@@ -440,12 +441,14 @@ function press(host: HTMLElement, x: number, y: number, button = 0): void {
 }
 
 /**
- * Every rectangle the overlay filled, in order. The overlay paints only when its canvas hands
- * out a 2D context, and `test-setup` denies one to the whole renderer — lending it a recorder
- * for the length of one test is the only outlet the grips have.
+ * What the overlay put on screen, in order: the rectangles it filled — the grips — and the
+ * circles it traced — the brush ring. The overlay paints only when its canvas hands out a 2D
+ * context, and `test-setup` denies one to the whole renderer, so lending it a recorder for the
+ * length of one test is the only outlet this chrome has.
  */
-function chromeRecorder(): number[][] {
+function overlayRecorder(): { fills: number[][]; rings: number[][] } {
   const fills: number[][] = []
+  const rings: number[][] = []
   const ignore = (): void => {}
   const context = {
     save: ignore,
@@ -459,6 +462,9 @@ function chromeRecorder(): number[][] {
     strokeRect: ignore,
     fillText: ignore,
     setLineDash: ignore,
+    arc: (x: number, y: number, radius: number): void => {
+      rings.push([x, y, radius])
+    },
     fillRect: (x: number, y: number, width: number, height: number): void => {
       fills.push([x, y, width, height])
     },
@@ -479,7 +485,7 @@ function chromeRecorder(): number[][] {
     HTMLCanvasElement.prototype.getContext = previous
   })
 
-  return fills
+  return { fills, rings }
 }
 
 /** How many tree mutations happen from here on, read when the assertion needs it. */
@@ -2465,6 +2471,23 @@ describe('the move tool', () => {
   })
 })
 
+/**
+ * What the pointer says before the button goes down. The grips were reachable only by guessing:
+ * nothing changed under an idle hand, so the twelve pixels of a grip had to be found blind.
+ *
+ * Pixi owns this canvas and the cursor goes on it, which is what lets it win for as long as the
+ * gesture lasts and hand it back to the host on release.
+ */
+const cursorOn = (host: HTMLElement): string => {
+  // Found by what it is, not by where it sits: the overlay marks itself unclickable, so the
+  // other canvas is Pixi's. Taking the first would ride on the order `mount` happens to append
+  // them in, and every assertion of an *absent* cursor would pass on the wrong element.
+  const canvases = [...host.querySelectorAll('canvas')]
+  const pixi = canvases.filter(canvas => canvas.style.pointerEvents !== 'none')
+  const only = pixi.length === 1 ? pixi[0] : undefined
+  return only ? only.style.cursor : `expected one paintable canvas, found ${pixi.length}`
+}
+
 describe('the transform grips', () => {
   /** A layer occupying the whole 1024² document, so the grips sit on the document's corners. */
   const armed = async () => {
@@ -2539,23 +2562,6 @@ describe('the transform grips', () => {
 
     expect(layers.at(-1)).toBe('translate:layer-1:230:230')
   })
-
-  /**
-   * What the pointer says before the button goes down. The grips were reachable only by guessing:
-   * nothing changed under an idle hand, so the twelve pixels of a grip had to be found blind.
-   *
-   * Pixi owns this canvas and the cursor goes on it, which is what lets it win for as long as the
-   * gesture lasts and hand it back to the host on release.
-   */
-  const cursorOn = (host: HTMLElement): string => {
-    // Found by what it is, not by where it sits: the overlay marks itself unclickable, so the
-    // other canvas is Pixi's. Taking the first would ride on the order `mount` happens to append
-    // them in, and every assertion of an *absent* cursor would pass on the wrong element.
-    const canvases = [...host.querySelectorAll('canvas')]
-    const pixi = canvases.filter(canvas => canvas.style.pointerEvents !== 'none')
-    const only = pixi.length === 1 ? pixi[0] : undefined
-    return only ? only.style.cursor : `expected one paintable canvas, found ${pixi.length}`
-  }
 
   it('says a grip pulls across the edge when the pointer rests on one', async () => {
     const { host } = await armed()
@@ -2712,6 +2718,116 @@ describe('the transform grips', () => {
     drag(host, 1224, 1224)
 
     expect(layers).toEqual([])
+  })
+})
+
+/**
+ * A tool that cannot act says so under the hand, before the click. The refusal was silent: the
+ * brush, the bucket, the shapes and the move tool all returned without a word on a group, on an
+ * adjustment layer, on a padlocked one — and a picture that takes no paint looks exactly like
+ * one whose stroke went somewhere unexpected.
+ *
+ * At the cursor rather than in a toast: a refusal has to be readable BEFORE the gesture, which
+ * no toast allows, and one toast per refused gesture would be worse than the silence it fixes.
+ */
+describe('a tool that can do nothing here', () => {
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function hoveringWith(tool: CanvasTool, state: CanvasState): Promise<string> {
+    const harness = await mounted(state, tool)
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    return cursorOn(harness.host)
+  }
+
+  /** A group swallows every stroke: it holds layers, never pixels of its own. */
+  const armedGroup = (): CanvasState => {
+    const group = groupLayer('g', 'G', [pixelLayer('a', 'A')])
+    return { ...DEFAULT_CANVAS, layers: [group], activeLayerId: group.id }
+  }
+
+  const padlocked = (): CanvasState =>
+    stacked([layerFixture({ locked: { ...UNLOCKED, pixels: true } })])
+
+  const pinned = (): CanvasState =>
+    stacked([layerFixture({ locked: { ...UNLOCKED, position: true } })])
+
+  it('refuses the brush on a group, and says so under the hand', async () => {
+    expect(await hoveringWith('brush', armedGroup())).toBe('not-allowed')
+  })
+
+  it('refuses the brush on a layer padlocked against paint', async () => {
+    expect(await hoveringWith('brush', padlocked())).toBe('not-allowed')
+  })
+
+  it('refuses the eraser, the bucket and the shapes on the same layer', async () => {
+    expect(await hoveringWith('eraser', padlocked())).toBe('not-allowed')
+    expect(await hoveringWith('fill', padlocked())).toBe('not-allowed')
+    expect(await hoveringWith('shape', padlocked())).toBe('not-allowed')
+  })
+
+  // Its own padlock: a layer free to take paint can still be pinned where it stands.
+  it('refuses the move tool on a layer pinned in place', async () => {
+    expect(await hoveringWith('move', pinned())).toBe('not-allowed')
+  })
+
+  it('lets the brush through on a layer that can take it', async () => {
+    expect(await hoveringWith('brush', stacked([layerFixture()]))).toBe('')
+  })
+
+  /**
+   * The eyedropper reads the document, it does not write to it, and the selection tools carve
+   * out a region rather than a layer. Neither has anything to refuse on a padlocked layer.
+   */
+  it('says nothing for the tools a padlock does not stop', async () => {
+    expect(await hoveringWith('picker', padlocked())).toBe('')
+    expect(await hoveringWith('select', padlocked())).toBe('')
+    expect(await hoveringWith('crop', padlocked())).toBe('')
+  })
+
+  it('takes the refusal back when a tool that can act is armed', async () => {
+    const harness = await mounted(padlocked(), 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    expect(cursorOn(harness.host)).toBe('not-allowed')
+
+    harness.engine.setTool('picker')
+    drag(harness.host, 122, 92)
+    await nextFrame()
+
+    expect(cursorOn(harness.host)).toBe('')
+  })
+
+  // Space is a pan in waiting and owns the cursor while it is held — panning is the one gesture
+  // no tool may take over, and it works over a padlocked layer like any other.
+  it('yields to space, which can always pan', async () => {
+    const harness = await mounted(padlocked(), 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 120, 90)
+    await nextFrame()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
+    drag(harness.host, 122, 92)
+    await nextFrame()
+
+    expect(cursorOn(harness.host)).toBe('grab')
+  })
+
+  it('drops the ring too, since nothing would land under it', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(padlocked(), 'brush')
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    rings.length = 0
+    drag(harness.host, 120, 90)
+    await nextFrame()
+
+    expect(rings).toHaveLength(0)
   })
 })
 
@@ -3033,7 +3149,7 @@ describe('the grips offered on the armed layer', () => {
   const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
 
   async function chromeOf(tool: CanvasTool, layer: Layer): Promise<number[][]> {
-    const fills = chromeRecorder()
+    const { fills } = overlayRecorder()
     const harness = await mounted(stacked([layer]), tool)
 
     // Twice: the first drains the frames mounting already booked, with the rulers still on.
@@ -3060,5 +3176,94 @@ describe('the grips offered on the armed layer', () => {
     const pinned = layerFixture({ locked: { ...UNLOCKED, position: true } })
 
     expect(await chromeOf('move', pinned)).toHaveLength(0)
+  })
+})
+
+/**
+ * The ring under the hand, which says what the next dab will cover before it covers it. Same
+ * split as the grips: the engine decides its radius, the overlay puts it on screen.
+ */
+describe('the brush ring', () => {
+  /** Rulers off on purpose: they are the other reason the overlay repaints on a bare move. */
+  const BARE = { ...VIEW_1_1, rulers: false, guides: false, snap: false }
+
+  async function ringsAfterMoving(tool: CanvasTool, size?: number): Promise<number[][]> {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, tool)
+    harness.engine.setView(BARE)
+    if (size !== undefined) harness.engine.setBrush({ ...DEFAULT_BRUSH, size })
+    await nextFrame()
+
+    rings.length = 0
+    drag(harness.host, 120, 90)
+    await nextFrame()
+    return rings
+  }
+
+  it('rings the hand while the brush is armed', async () => {
+    const rings = await ringsAfterMoving('brush', 40)
+
+    expect(rings).toHaveLength(2)
+    // Half the brush: the setting is a diameter, and the ring is the footprint of one dab.
+    expect(rings[0]).toEqual([120, 90, 20])
+  })
+
+  it('rings the hand for the eraser too, which lays down the same disc', async () => {
+    expect(await ringsAfterMoving('eraser', 40)).toHaveLength(2)
+  })
+
+  it('leaves the hand bare under a tool that lays down no disc', async () => {
+    expect(await ringsAfterMoving('move')).toHaveLength(0)
+    expect(await ringsAfterMoving('select')).toHaveLength(0)
+    expect(await ringsAfterMoving('crop')).toHaveLength(0)
+  })
+
+  /**
+   * The overlay used to repaint on an idle move only to echo the pointer on the rulers. With
+   * them off, the ring would have been painted once and then stood still while the hand moved.
+   */
+  it('follows the hand with the rulers off', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    await nextFrame()
+
+    drag(harness.host, 100, 100)
+    await nextFrame()
+    rings.length = 0
+    drag(harness.host, 160, 140)
+    await nextFrame()
+
+    expect(rings[0]?.slice(0, 2)).toEqual([160, 140])
+  })
+
+  // Dragging the size slider must show the new footprint at once: waiting for the next twitch
+  // of the mouse is what makes a slider feel disconnected from what it sets.
+  it('resizes under a still hand when the setting changes', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 100, 100)
+    await nextFrame()
+
+    rings.length = 0
+    harness.engine.setBrush({ ...DEFAULT_BRUSH, size: 64 })
+    await nextFrame()
+
+    expect(rings[0]).toEqual([100, 100, 32])
+  })
+
+  it('drops the ring once the hand leaves the canvas', async () => {
+    const { rings } = overlayRecorder()
+    const harness = await mounted(DEFAULT_CANVAS, 'brush')
+    harness.engine.setView(BARE)
+    drag(harness.host, 100, 100)
+    await nextFrame()
+
+    rings.length = 0
+    harness.host.dispatchEvent(new PointerEvent('pointerleave'))
+    await nextFrame()
+
+    expect(rings).toHaveLength(0)
   })
 })

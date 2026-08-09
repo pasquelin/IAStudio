@@ -299,4 +299,33 @@ describe('SettingsWindow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }))
     expect(written.at(-1)).toEqual({ generation: { defaultModels: {} } })
   })
+
+  /**
+   * The search field sat inside the column that scrolls, at `w-full`. Two things followed from
+   * that: the scrollbar took its width out of the field, so it narrowed and widened as the list
+   * grew past the window; and it scrolled away with the sections it filters.
+   *
+   * jsdom lays nothing out, so what is checked is the structure that decides it: the field is
+   * outside whatever scrolls, and the list is inside it.
+   */
+  describe('the search field', () => {
+    const field = (): HTMLElement => screen.getByLabelText('Rechercher un réglage')
+
+    it('sits outside the part that scrolls, so a scrollbar never resizes it', () => {
+      installFakeBridge()
+      render(<SettingsWindow />)
+
+      const scrollers = field().closest('[class*="overflow-auto"]')
+      expect(scrollers).toBeNull()
+    })
+
+    it('leaves the sections themselves free to scroll under it', () => {
+      installFakeBridge()
+      render(<SettingsWindow />)
+
+      // The outermost one: the nested sections carry lists of their own.
+      const [list] = within(screen.getByRole('navigation')).getAllByRole('list')
+      expect(list?.closest('[class*="overflow-auto"]')).not.toBeNull()
+    })
+  })
 })

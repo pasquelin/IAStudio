@@ -96,8 +96,8 @@ export function PromptAssistant({
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex justify-end gap-1">
+    <div className="flex flex-col gap-2">
+      <div className="flex justify-end gap-2">
         <ToolButton
           icon={mdiEyedropperVariant}
           label={t('prompt.describeStyle')}
@@ -155,7 +155,7 @@ function Suggestion({
   const settings = Object.entries(suggestion.parameters).filter(([key]) => key !== 'prompt')
 
   return (
-    <div className={cn('border-border bg-surface flex flex-col gap-1 border p-1.5')}>
+    <div className={cn('border-border bg-surface flex flex-col gap-2 border p-1.5')}>
       <p className="text-text text-[11px] leading-snug">{suggestion.text}</p>
 
       {suggestion.rationale && (
@@ -168,7 +168,7 @@ function Suggestion({
         </p>
       )}
 
-      <div className="flex gap-1">
+      <div className="flex gap-2">
         <Button onClick={onAdoptText}>{t('prompt.useText')}</Button>
         {settings.length > 0 && (
           <Button onClick={onAdoptCall}>{t('prompt.useTextAndSettings')}</Button>

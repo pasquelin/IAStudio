@@ -23,7 +23,14 @@
     "assets": "Assets",
     "skybox": "Skybox",
     "scene": "Scène",
-    "channels": "Canaux"
+    "channels": "Canaux",
+    "view": "Vue"
+  },
+  "view": {
+    "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
+    "projection": "Projection",
+    "mode": "Mode",
+    "helpers": "Repères"
   },
   "actions": {
     "undo": "Annuler",
@@ -335,6 +342,11 @@
     "pickerHint": "Prélever la couleur sous le pointeur",
     "color": "Couleur",
     "colorHint": "Couleur du pinceau, des formes et du remplissage",
+    "brushSettings": "Réglages du pinceau",
+    "brushSettingsHint": "Taille, dureté et opacité du pinceau, de la gomme et des formes",
+    "size": "Taille",
+    "hardness": "Dureté",
+    "opacity": "Opacité",
     "textDefault": "Votre texte"
   },
   "imageView": {
@@ -1267,6 +1279,14 @@
     "canvasToolPicker": {
       "title": "Outil Pipette",
       "help": "Arme la pipette : un clic prend la couleur sous le pointeur et la donne au pinceau."
+    },
+    "canvasBrushSmaller": {
+      "title": "Réduire le pinceau",
+      "help": "Rétrécit d’un cran le diamètre du pinceau, de la gomme et du trait des formes."
+    },
+    "canvasBrushLarger": {
+      "title": "Agrandir le pinceau",
+      "help": "Élargit d’un cran le diamètre du pinceau, de la gomme et du trait des formes."
     }
   },
   "texture": {

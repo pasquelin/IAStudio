@@ -41,11 +41,23 @@
 /* Center tabs take the surfaces' radius: a square tab inside a rounded panel reads as a
    foreign body. The horizontal margin is what separates them — touching tabs read as one
    segmented control rather than as several documents. */
+/* `display: flex` is not decoration: dockview 7 leaves `.dv-tab` a block, and its own
+   `.dv-default-tab` inside is `width: 100%`. Our close button is a sibling of that tab, so on a
+   block parent it wrapped onto a second line and the strip's height cut it in half — a cross
+   under the title instead of beside it. */
 .dv-dockview .dv-tab {
+  display: flex;
+  align-items: center;
   border-radius: var(--radius-sc-md);
   margin: 6px 2px;
   padding: 0 4px;
   transition: background-color 120ms ease;
+}
+
+/* The title yields, the cross never does: a long name shortens rather than pushing the button
+   out of the tab it belongs to. */
+.dv-dockview .dv-tab .dv-default-tab {
+  min-width: 0;
 }
 
 .dv-dockview .dv-tab:hover {

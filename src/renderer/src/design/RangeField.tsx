@@ -1,6 +1,7 @@
 import { cn } from '@/helpers/cn'
 import { bound } from '@/helpers/numeric'
-import { FIELD_LABEL, FIELD_READOUT, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
+import { Readout } from './Readout'
+import { FIELD_LABEL, FIELD_ROW, FOCUS_RING, type GestureProps } from './styles'
 
 /** Both ends of one value, kept in order. Declared here rather than imported from an engine:
  * `design/` describes controls, and a field that reached into a workspace would tie the two. */
@@ -112,9 +113,7 @@ export function RangeField({
         />
       </div>
 
-      <output className={cn(FIELD_READOUT, 'w-14')}>
-        {value.min}–{value.max}
-      </output>
+      <Readout values={[value.min, value.max]} />
     </div>
   )
 }

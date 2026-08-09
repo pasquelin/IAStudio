@@ -133,7 +133,7 @@ export function ActivityList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border flex flex-wrap items-center gap-1 border-b p-1">
+      <div className="border-border flex flex-wrap items-center gap-2 border-b p-1">
         <Chips
           values={ACTIVITY_LEVELS}
           active={levels}

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
+import { PANEL_SCROLL } from '@/design/styles'
 import { clipById, trackById } from '@/engines/timeline/timeline-state'
 import { formatBytes } from '@/helpers/format'
 import { assetsById, useAssets } from '@/stores/assets'
@@ -35,7 +36,7 @@ import { TrackInspector } from './TrackInspector'
 export function Inspector() {
   // The scroller belongs here rather than to each face: one of them used to forget it.
   return (
-    <div className="h-full overflow-y-auto">
+    <div className={PANEL_SCROLL}>
       <Face />
     </div>
   )

@@ -23,6 +23,7 @@ import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
 import { canvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/texture-state'
+import { useSkyboxViews } from '@/stores/skybox-views'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureStore } from '@/stores/textures'
 import { createSkyboxContent } from '@shared/domain/skybox'
@@ -345,7 +346,10 @@ function forgetDocument(documentId: string): void {
   // Session views are not the document's state, so no `DocumentIo` drops them. `useCanvasViews`
   // and `useSceneViews` still keep their entry for the session — they hold a viewport, which is
   // harmless to inherit; an inspected channel is not, it would reopen the tab on a flat map.
+  // A sky's view is of the second kind: it carries a projection and the test objects, and a
+  // fresh document opening onto the cross of its predecessor is not what was asked for.
   useTextureViews.getState().forget(documentId)
+  useSkyboxViews.getState().forget(documentId)
   closePanel(documentId)
   useDocuments.getState().close(documentId)
 }

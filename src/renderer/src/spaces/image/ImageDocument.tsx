@@ -15,7 +15,11 @@ import { getBridge } from '@/services/bridge'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
-import { CanvasEngine, DEFAULT_BRUSH, type BrushSettings } from '@/engines/canvas/CanvasEngine'
+import { mdiTune } from '@mdi/js'
+import { CanvasEngine } from '@/engines/canvas/CanvasEngine'
+import { BRUSH_SIZE, DEFAULT_BRUSH, resizedBrush, type BrushSettings } from '@/engines/canvas/brush'
+import { MenuButton } from '@/design/MenuButton'
+import { SliderField } from '@/design/SliderField'
 import { RULER_SIZE } from '@/engines/canvas/CanvasOverlay'
 import { useBindingOverrides } from '@/stores/bindings'
 import {
@@ -235,6 +239,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           }
           return
         }
+        case 'canvas.brushLarger':
+          return setBrush(current => resizedBrush(current, 'larger'))
+        case 'canvas.brushSmaller':
+          return setBrush(current => resizedBrush(current, 'smaller'))
         case 'canvas.deselect':
           return useCanvasViews.getState().setSelection(documentId, null)
         // Both no-ops without a frame on screen, which is what makes ⏎ and ⎋ safe to bind here:
@@ -349,6 +357,14 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
     [bindings, label],
   )
 
+  const brushKeys = useMemo(
+    () => ({
+      smaller: label(bindingOf('canvas.brushSmaller', bindings)),
+      larger: label(bindingOf('canvas.brushLarger', bindings)),
+    }),
+    [bindings, label],
+  )
+
   return (
     <div className="flex h-full min-h-0">
       <AssetDropTarget
@@ -372,7 +388,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
           activeTool={tool}
           onTool={setTool}
           onMode={pick}
-          extras={<BrushControls brush={brush} onBrush={setBrush} />}
+          extras={<BrushControls brush={brush} onBrush={setBrush} shortcuts={brushKeys} />}
           onUndo={() => run('canvas.undo')}
           onRedo={() => run('canvas.redo')}
           canUndo={undoable}
@@ -395,14 +411,17 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
 function BrushControls({
   brush,
   onBrush,
+  shortcuts,
 }: {
   brush: BrushSettings
   onBrush: (next: BrushSettings) => void
+  /** Read off the registry by the caller, so a remapped bracket key moves on the tooltip too. */
+  shortcuts: { smaller: string; larger: string }
 }) {
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       {/*
         A native colour input, deliberately: macOS opens the system picker, which already has
         an eyedropper, swatches and HSL fields. Same reasoning as the native `<select>` in
@@ -417,6 +436,57 @@ function BrushControls({
         }
         className={cn(CONTROL, 'w-(--sc-control) cursor-pointer border-none p-0.5')}
       />
+
+      {/*
+        Behind a flyout rather than in the bar: this bar is one control wide, and three labelled
+        sliders in a column that narrow are three sliders nobody can read. The brackets reach the
+        size without opening anything, which is what the hand uses mid-stroke.
+      */}
+      <MenuButton
+        icon={mdiTune}
+        label={t('imageTools.brushSettings')}
+        // The bracket keys are named on the tooltip rather than on the slider: they resize
+        // without opening anything, so the panel is the last place the hand learns about them.
+        description={`${t('imageTools.brushSettingsHint')} — ${shortcuts.smaller} / ${shortcuts.larger}`}
+        tooltip={TIP_RIGHT}
+        opensOnClick
+        // `useHoverFlyout` treats a single row as no menu at all.
+        rowCount={BRUSH_FIELDS.length}
+        rows={() => (
+          <div className="flex w-56 flex-col gap-2 p-1">
+            {BRUSH_FIELDS.map(field => (
+              <SliderField
+                key={field.of}
+                label={t(field.labelKey)}
+                value={brush[field.of]}
+                min={field.min}
+                max={field.max}
+                step={field.step}
+                onChange={value => onBrush({ ...brush, [field.of]: value })}
+              />
+            ))}
+          </div>
+        )}
+      />
     </div>
   )
 }
+
+/**
+ * The three settings the flyout offers, as a table: a fourth is one row here rather than a
+ * fourth near-copy of the same slider. Colour is not one of them — it has its own input, and
+ * a swatch is not a value anyone drags along a track.
+ */
+const BRUSH_FIELDS: readonly {
+  of: 'size' | 'hardness' | 'opacity'
+  /** Spelled out rather than built from `of`: a composed key is one no search can find. */
+  labelKey: string
+  min: number
+  max: number
+  step: number
+}[] = [
+  { of: 'size', labelKey: 'imageTools.size', min: BRUSH_SIZE.min, max: BRUSH_SIZE.max, step: 1 },
+  // Twenty steps across the track: finer than that is a slider nobody can land on.
+  { of: 'hardness', labelKey: 'imageTools.hardness', min: 0, max: 1, step: 0.05 },
+  { of: 'opacity', labelKey: 'imageTools.opacity', min: 0, max: 1, step: 0.05 },
+]

@@ -87,7 +87,7 @@ function Group({ title, entries, columns }: GroupProps) {
     <div className="bg-surface flex flex-col gap-2 rounded-(--radius-sc-lg) p-3">
       <h3 className="text-muted m-0 text-[10px] font-semibold tracking-wider uppercase">{title}</h3>
 
-      <div className={cn('grid gap-1', columns === 2 && 'sm:grid-cols-2')}>
+      <div className={cn('grid gap-2', columns === 2 && 'sm:grid-cols-2')}>
         {entries.map(entry => (
           <button
             key={entry.key}

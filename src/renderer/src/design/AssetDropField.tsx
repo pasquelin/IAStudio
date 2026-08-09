@@ -49,7 +49,7 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
       onDrop={take}
       // Ours alone: an editor behind this field must not also receive the drop.
       exclusive
-      className="flex min-w-0 items-center gap-1 rounded"
+      className="flex min-w-0 items-center gap-2 rounded"
     >
       {assetId ? (
         <Thumbnail url={assetUrl(assetId)} className={THUMBNAIL} />

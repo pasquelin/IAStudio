@@ -44,7 +44,7 @@ export function Rail({ side }: RailProps) {
       aria-orientation="vertical"
       className="flex w-(--sc-rail) shrink-0 flex-col items-center justify-between py-(--sc-gutter)"
     >
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-2">
         {side === 'left' && (
           <>
             <NewDocumentButton />
@@ -119,7 +119,7 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   const { show, close } = useTools.getState()
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-2">
       {halvesOf(tools).map(([slot, inSlot], index) => {
         // What the half draws, not what it stores: a panel standing in for one this section
         // puts elsewhere is up, and its icon has to read — and close — as up.

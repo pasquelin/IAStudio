@@ -64,19 +64,34 @@ export function chipSkin(active: boolean): string {
  */
 export const LIST_ROW_HEIGHT = 28
 
-/** One property row of an inspector: a label of fixed width, then the control it names. */
-export const FIELD_ROW = 'flex min-w-0 items-center gap-1 text-[11px]'
+/**
+ * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn
+ * OVER the content rather than beside it, and with no room reserved it lands on the last column
+ * of every row — which in an inspector is the value one is trying to read.
+ */
+export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
+
+/**
+ * One property row of an inspector: a label of fixed width, then the control it names.
+ *
+ * The gap is two, never one: at one the label, the track and the number read as a single
+ * run-on string rather than as three things. It is the studio's spacing, applied throughout.
+ */
+export const FIELD_ROW = 'flex min-w-0 items-center gap-2 text-[11px]'
 
 /** Fixed, so the controls of a section line up rather than each starting where its name ends. */
 export const FIELD_LABEL = 'text-muted w-16 shrink-0 truncate'
 
 /**
- * The number beside a slider — "somewhere past the middle" is not a value anyone can write down.
+ * The number beside a track — "somewhere past the middle" is not a value anyone can write down.
+ * Worn by `Readout`, which is what every track uses; this is here only because it is a shape.
  *
- * Tabular figures are the point: without them the row twitches sideways as the digits change. The
- * width is the caller's, one value being narrower than a span of two.
+ * Tabular figures are the point: without them the row twitches sideways as the digits change.
+ * The width belongs to the style rather than to each caller — a readout that reserves more room
+ * takes it off the track beside it, and an inspector ends up stacking sliders of two lengths.
+ * Fourteen fits the widest of them, a range's `0–1`.
  */
-export const FIELD_READOUT = 'text-muted shrink-0 text-right tabular-nums'
+export const FIELD_READOUT = 'text-muted w-14 shrink-0 text-right tabular-nums'
 
 /**
  * Both ends of one gesture. Everything a field emits between them is one thing the user did,

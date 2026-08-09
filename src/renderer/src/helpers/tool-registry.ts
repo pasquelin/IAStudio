@@ -9,6 +9,7 @@ import {
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
+  mdiEyeOutline,
 } from '@mdi/js'
 import { useMemo } from 'react'
 import {
@@ -45,6 +46,7 @@ const ICONS: Record<ToolId, string> = {
   generator: mdiCreationOutline,
   inspector: mdiTuneVariant,
   skybox: mdiWeatherPartlyCloudy,
+  view: mdiEyeOutline,
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,
 }
