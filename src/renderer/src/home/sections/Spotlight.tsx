@@ -25,6 +25,9 @@ import { enterWorkspace } from '../open'
 const CARD_WIDTH = 560
 const CARD_HEIGHT = 168
 
+/** What a laid-down banner measures — held so its empty stand-in reserves the same room. */
+const BANNER_HEIGHT = 76
+
 type Slide = {
   id: string
   icon: string
@@ -59,11 +62,13 @@ function resumable(state: DocumentsSlice): DocumentDescriptor | undefined {
 export function Spotlight() {
   const { t } = useTranslation()
   const project = useProject(state => state.project)
+  const projectKnown = useProject(state => state.known)
   const last = useDocuments(resumable)
   // The count, not the list: `apply` replaces the whole array on every progress event, and this
   // band only changes when a job starts or stops.
   const running = useJobs(state => state.jobs.filter(job => !isFinished(job.status)).length)
   const authenticated = useSettings(state => state.auth.authenticated)
+  const authKnown = useSettings(state => state.authKnown)
 
   const slides: Slide[] = []
 
@@ -89,7 +94,7 @@ export function Spotlight() {
     })
   }
 
-  if (!authenticated) {
+  if (authKnown && !authenticated) {
     slides.push({
       id: 'credentials',
       icon: mdiKeyOutline,
@@ -102,7 +107,7 @@ export function Spotlight() {
     })
   }
 
-  if (!project) {
+  if (projectKnown && !project) {
     slides.push({
       id: 'create',
       icon: mdiFolderPlusOutline,
@@ -119,6 +124,11 @@ export function Spotlight() {
   // of them. Being pinned is a promise to draw something: without this, the home would open on
   // its second band, and the one state a fresh project is in would be the one with no heading.
   if (slides.length === 0) {
+    // Except at launch, where "nothing is true" and "nothing is known yet" look the same from
+    // here. Naming a state now would name the wrong one and take it back a moment later — which
+    // is what made this band flicker through three readings while the window was still opening.
+    if (!authKnown || !projectKnown) return <Waiting />
+
     slides.push({
       id: 'ready',
       icon: mdiCreationOutline,
@@ -148,6 +158,21 @@ export function Spotlight() {
       itemHeight={CARD_HEIGHT}
       label={t('home.sections.spotlight')}
       renderCard={slide => <Card slide={slide} layout="stacked" />}
+    />
+  )
+}
+
+/**
+ * The band before it knows what it holds. Silent, and exactly the height of the banner that
+ * replaces it: a message appearing at the top of the page would push everything under it down,
+ * which is the other half of what made the opening feel unsettled.
+ */
+function Waiting() {
+  return (
+    <div
+      aria-hidden
+      className="bg-surface rounded-(--radius-sc-lg)"
+      style={{ height: BANNER_HEIGHT }}
     />
   )
 }

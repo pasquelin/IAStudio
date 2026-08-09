@@ -12,6 +12,12 @@ import { useSceneClipboard } from './scene-clipboard'
 
 type ProjectState = {
   project: Project | null
+  /**
+   * False until the main process has said which project is open, if any. The initial `null` is
+   * "not asked yet", not "none" — and the studio reopens the last project on launch, so a
+   * surface that took it for an answer would offer to create a project to someone who has one.
+   */
+  known: boolean
 
   /** Loads the open project and keeps following it. Returns the unsubscribe function. */
   connect: () => Promise<() => void>
@@ -55,6 +61,7 @@ async function followProject(project: Project | null): Promise<void> {
  */
 export const useProject = create<ProjectState>()(set => ({
   project: null,
+  known: false,
 
   connect: async () => {
     const bridge = getBridge()
@@ -70,14 +77,14 @@ export const useProject = create<ProjectState>()(set => ({
     // arrangement: nothing of the previous one may be left showing.
     const stop = bridge.project.onChange(project => {
       announced = true
-      set({ project })
+      set({ project, known: true })
       void followProject(project)
     })
 
     const current = await bridge.project.current()
     if (announced) return stop
 
-    set({ project: current })
+    set({ project: current, known: true })
     await followProject(current)
     return stop
   },
@@ -87,7 +94,7 @@ export const useProject = create<ProjectState>()(set => ({
     if (!bridge) return false
 
     try {
-      set({ project: await bridge.project.open(path) })
+      set({ project: await bridge.project.open(path), known: true })
       return true
     } catch {
       // Forgotten here rather than by whoever clicked: an opening can fail from anywhere, and a
@@ -106,7 +113,7 @@ export const useProject = create<ProjectState>()(set => ({
       'folder',
       useSettings.getState().settings.storage.projectsFolder,
     )
-    if (bridge && folder) set({ project: await bridge.project.open(folder) })
+    if (bridge && folder) set({ project: await bridge.project.open(folder), known: true })
   },
 
   createPicked: async () => {
@@ -120,6 +127,6 @@ export const useProject = create<ProjectState>()(set => ({
     // The dialog picks where, not what to call it; renaming a project folder is the file
     // manager's job until the studio has a proper new-project sheet.
     const name = i18next.t('project.defaultName')
-    set({ project: await bridge.project.create(folder, name) })
+    set({ project: await bridge.project.create(folder, name), known: true })
   },
 }))

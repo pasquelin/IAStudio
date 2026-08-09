@@ -29,6 +29,9 @@ const PROJECT = {
 function setSettings(home = DEFAULT_HOME_SECTIONS, authenticated = false): void {
   useSettings.setState(state => ({
     auth: authenticated ? { authenticated: true } : { authenticated: false, reason: 'missing' },
+    // A studio that has already answered. The home says nothing before it has — see the
+    // spotlight's own suite.
+    authKnown: true,
     settings: {
       ...state.settings,
       home: { enabled: true, sections: [...home] },
@@ -40,7 +43,7 @@ function setSettings(home = DEFAULT_HOME_SECTIONS, authenticated = false): void 
 beforeEach(() => {
   installFakeBridge()
   setSettings()
-  useProject.setState({ project: null })
+  useProject.setState({ project: null, known: true })
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
 })
 
@@ -70,7 +73,7 @@ describe('the home', () => {
   })
 
   it('offers the documents of the project once one is open', () => {
-    useProject.setState({ project: PROJECT })
+    useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({
       documents: { a: POSTER_DOCUMENT },
       stored: [POSTER_DOCUMENT],
@@ -90,7 +93,7 @@ describe('the home', () => {
    */
   it('still opens on a band when a key is connected and the project is empty', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
-    useProject.setState({ project: PROJECT })
+    useProject.setState({ project: PROJECT, known: true })
     render(<HomeView />)
 
     expect(screen.getByText('Tout est prêt')).toBeInTheDocument()
@@ -130,7 +133,7 @@ describe('customising the home', () => {
         section.id === 'documents' ? { ...section, visible: false } : section,
       ),
     )
-    useProject.setState({ project: PROJECT })
+    useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />)
 
