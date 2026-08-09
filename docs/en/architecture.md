@@ -207,8 +207,9 @@ src/main/
 ### The JobManager is the only thing that polls
 
 The SDK's `job.wait()` reports no progress and caps at 120 seconds — unusable for a progress bar
-and unusable for video generation. So the `JobManager` polls `jobs.retrieve` itself, every two
-seconds, and pushes progress to the renderer over `evt:job-progress`.
+and unusable for video generation. So the `JobManager` polls `jobs.retrieve` itself — every two
+seconds being the **floor**, not the rate, see below — and pushes progress to the renderer over
+`evt:job-progress`.
 
 **Polling anywhere else is a bug.** The manager also owns the concurrency (three by default,
 settable) and the exponential backoff on 429 and 5xx — no published rate limit exists, so none
@@ -430,6 +431,16 @@ Each pairs with a plain state module (`canvas-state.ts`, `scene-state.ts`, `time
 and a command module. Commands are the only way state changes, which is what makes undo a
 generic mechanism in `engines/core/history.ts` rather than three bespoke ones.
 
+**A command's provenance is declared; it is not guessed.** An open gesture — a slider held, a drag
+under way — merges the commands arriving while it lasts, which is the whole point of it. But **a
+command from elsewhere** — a generation landing, a double-click, a drop — does not belong to the
+cursor a panel may be holding, and merged into it, it makes an undo entry disappear. So it goes
+through `runOutsideGesture` rather than `runCommand`. **The store cannot infer that difference**:
+no rule on `command.id` says where a write came from, and guessing from a gesture's first command
+moves the race window instead of closing it — a field opens its gesture **on focus**, with no
+command at all. One caller is concerned today, `setSkyboxSource`, which serves all three ways a
+picture enters a sky.
+
 `node-factory.ts`, `mesh-primitives.ts`, `light-types.ts` and `three-factory.ts` keep the
 *description* of a node separate from its three.js instantiation — so a scene serialises without
 dragging the renderer along, and rebuilds from that serialisation alone.
@@ -450,7 +461,7 @@ scrubbing starts stuttering for no visible reason.
 5b. the price shows up           scenario:estimate-cost → POST ?dryRun=true → 200 (402 as fallback)
 6. user submits                  scenario:generate
 7. JobManager queues it          bounded concurrency
-8. it polls                      jobs.retrieve, every 2 s
+8. it polls                      jobs.retrieve — 2 s is the FLOOR, not the rate
 9. progress flows back           evt:job-progress → status line
 10. success                      metadata.assetIds → downloaded into the project
 11. the catalogue records it     SQLite → the asset appears in the shelf
@@ -461,6 +472,14 @@ hand is right for exactly one model on exactly one day.
 
 An unknown field kind renders as raw input rather than failing the descriptor — a generation
 form that silently loses a field is worse than an ugly one.
+
+**Step 8 slows down as the load rises, and that is what makes it safe.** The interval is
+`max(floor, ceil(running × 60,000 ÷ POLL_REQUESTS_PER_MINUTE))`: two seconds is what one or two
+generations get, not a fixed rate. At a fixed rate, four concurrent generations ask for 120
+requests a minute against the hundred the API grants — the limiter then holds every poll, the SDK
+retries, and **a generation that is running and being paid for is reported as a rate-limit failure
+fifteen seconds in**. The budget itself is *derived* from the constants of `rate-limiter.ts` rather
+than written out, precisely so it cannot go quietly false the day one of them is tuned.
 
 **Step 5b reads a price out of two shapes of answer, because the reference and the server do not
 agree.** A `?dryRun=true` creates no job and spends nothing. The reference documents a **402**

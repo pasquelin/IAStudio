@@ -211,7 +211,8 @@ src/main/
 
 Le `job.wait()` du SDK ne rapporte aucune progression et plafonne à 120 secondes — inutilisable
 pour une barre de progression, inutilisable pour une génération vidéo. Le `JobManager` poll donc
-`jobs.retrieve` lui-même, toutes les deux secondes, et pousse la progression au renderer par
+`jobs.retrieve` lui-même — deux secondes étant le **plancher** et non la cadence, voir plus bas —
+et pousse la progression au renderer par
 `evt:job-progress`.
 
 **Poller ailleurs est un bug.** Le manager détient aussi la concurrence (trois par défaut,
@@ -446,6 +447,17 @@ Chacun va de pair avec un module d’état pur (`canvas-state.ts`, `scene-state.
 l’état change, ce qui fait de l’undo un mécanisme générique dans `engines/core/history.ts` plutôt
 que trois mécaniques sur mesure.
 
+**La provenance d’une commande se déclare ; elle ne se devine pas.** Un geste ouvert — un curseur
+tenu, un glissement en cours — fusionne les commandes qui arrivent pendant qu’il dure, ce qui est
+tout son intérêt. Mais **une commande venue d’ailleurs** — une génération qui aboutit, un
+double-clic, un dépôt — n’appartient pas au curseur qu’un panneau tient peut-être, et fusionnée
+dedans elle fait disparaître une entrée d’undo. Elle passe donc par `runOutsideGesture` plutôt que
+par `runCommand`. **Le store ne peut pas déduire cette différence** : aucune règle sur
+`command.id` ne dit d’où vient l’écriture, et deviner à partir de la première commande d’un geste
+déplace la fenêtre de course au lieu de la fermer — un champ ouvre son geste **au focus**, sans
+aucune commande. Un seul appelant est concerné aujourd’hui, `setSkyboxSource`, qui sert les trois
+chemins d’entrée d’une image dans un ciel.
+
 `node-factory.ts`, `mesh-primitives.ts`, `light-types.ts` et `three-factory.ts` gardent la
 *description* d’un nœud séparée de son instanciation three.js — une scène se sérialise donc sans
 traîner le moteur de rendu avec elle, et se reconstruit depuis cette seule sérialisation.
@@ -466,7 +478,7 @@ le scrubbing se met à saccader sans raison visible.
 5b. le prix s'affiche                scenario:estimate-cost → POST ?dryRun=true → 200 (402 en repli)
 6. soumission                        scenario:generate
 7. le JobManager met en file         concurrence bornée
-8. il poll                           jobs.retrieve, toutes les 2 s
+8. il poll                           jobs.retrieve — 2 s est le PLANCHER, pas la cadence
 9. la progression remonte            evt:job-progress → ligne d'état
 10. succès                           metadata.assetIds → téléchargés dans le projet
 11. le catalogue l'enregistre        SQLite → l'asset paraît dans l'étagère
@@ -478,6 +490,15 @@ jour.
 
 Un `kind` de champ inconnu se rend en saisie brute plutôt que de faire échouer le descripteur —
 un formulaire de génération qui perd un champ en silence est pire qu’un formulaire laid.
+
+**L’étape 8 ralentit quand la charge monte, et c’est ce qui la rend sûre.** L’intervalle est
+`max(plancher, ceil(jobs_en_cours × 60 000 ÷ POLL_REQUESTS_PER_MINUTE))` : deux secondes est ce
+qu’obtiennent une ou deux générations, pas une cadence fixe. À cadence fixe, quatre générations
+simultanées demandent 120 requêtes par minute contre les cent que l’API accorde — le limiteur
+retient alors chaque poll, le SDK réessaie, et **une génération qui tourne et qui est facturée est
+rapportée comme un échec de débit au bout de quinze secondes**. Le budget lui-même est *dérivé*
+des constantes de `rate-limiter.ts` et non écrit en clair, précisément pour qu’il ne devienne pas
+faux en silence le jour où l’une d’elles bouge.
 
 **L’étape 5b lit un prix dans deux formes de réponse, parce que la référence et le serveur ne
 disent pas la même chose.** Un `?dryRun=true` ne crée aucun job et ne dépense rien. La référence
