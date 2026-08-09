@@ -1707,6 +1707,17 @@ production**. **Ne pas refaire ces mesures.**
 **Une optimisation non mesurée est une complexité gratuite.** L’audit 3D est le cas d’école : cinq
 pistes de revue, cinq réfutées par la mesure, **zéro ligne changée**.
 
+> **Le studio sait enfin chiffrer une frame 3D** (`feat/gpu-stats`, `engines/viewport/gpu-stats.ts`).
+> Jusqu’ici aucun compteur GPU n’existait dans `src/`, donc **aucun lot GPU ne pouvait se prouver** :
+> appels de dessin, triangles, points, lignes, plus les géométries et textures encore vivantes dans
+> le contexte — ces deux dernières étant ce qu’un `dispose` manquant fait grimper.
+>
+> **Deux pièges, tous deux payés à l’écriture.** three.js remet `info` à zéro en tête de chaque
+> `render`, et la passe d’overlay **rappelle `render`** : lu naïvement, un viewport publierait le
+> coût de son trièdre et l’appellerait la frame. D’où `autoReset = false` et un reset tenu par le
+> moteur. Pour la même raison, `frames` est compté à la main plutôt que lu sur `info.render.frame`,
+> qui compte les **appels** à `render` — un viewport qui dessine un overlay en fait deux par frame.
+
 ## Audit 1 — le chemin chaud de l’inspecteur 3D : ce n’en est pas un
 
 Scène au pire cas légal : sphère 128 × 128 (~16 000 sommets), cinq panneaux ouverts, 300 frames de
