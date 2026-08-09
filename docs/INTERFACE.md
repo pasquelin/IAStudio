@@ -235,6 +235,41 @@ Ce qui manque à l’accueil ne manque nulle part.
 ce menu n’ait pas été trouvé est un retour en soi, et il rejoint l’entrée 12 : l’accueil ne montre
 pas ce qu’il permet.
 
+### 14. Réordonner les espaces au glisser, Accueil restant fixe
+
+**Demandé le 9 août 2026.** Mettre Image avant 3D, ou l’ordre qu’on veut, en **glissant** les
+entrées de la barre du haut. **Accueil ne bouge pas** : il reste en tête.
+
+**Accueil est déjà hors de la liste, structurellement**, et il n’y a rien à protéger : `TitleBar`
+rend son bouton **avant** la boucle, il n’appartient pas à `WORKSPACES`, et le commentaire dit
+pourquoi — « the home covers the spaces rather than being one of them ». Il suffit de ne pas
+l’ajouter à ce qui devient réordonnable.
+
+**L’ordre est en dur** dans `WORKSPACE_IDS` (`shared/domain/workspace.ts`) ; `WORKSPACES`
+(`helpers/workspaces.ts`) en dérive avec les icônes, et `TitleBar` le mappe tel quel.
+
+**Le patron à suivre existe, et il est à côté.** L’accueil ordonne déjà ses sections : l’ordre vit
+dans les réglages (`settings.home.sections`), et le déplacement est une **fonction pure du domaine
+partagé** — `movedHomeSection`, `canMoveHomeSection` — dont l’interface n’est que le déclencheur.
+La même découpe vaut ici : l’ordre dans les réglages, le déplacement dans
+`shared/domain/workspace.ts`, testable sans rendre quoi que ce soit.
+
+**Ce qui n’existe pas et qu’il faudra écrire : le glisser lui-même.** L’accueil réordonne par un
+menu « Monter / Descendre », pas au glisser. Rien dans `src/` ne réordonne une liste à la souris —
+les seuls glissers du studio déplacent des assets (`DraggableAsset`, `AssetDropTarget`) ou du temps
+(`TimelineCanvas`).
+
+**Deux surfaces montrent cet ordre, pas une.** `home/sections/Tools.tsx` mappe `WORKSPACES` lui
+aussi : réordonner la barre sans réordonner l’accueil laisserait deux vérités à l’écran, dans la
+même application. Le reste du code ne lit `WORKSPACE_IDS` que comme un **ensemble** (`includes`,
+`find` — `tool.ts`, `document.ts`, `main/menu/index.ts`), donc l’ordre n’y casse rien.
+
+> **Le piège est le lieu.** Le `header` de la barre de titre est en `WebkitAppRegion: 'drag'` — la
+> zone par laquelle macOS déplace la fenêtre — et le `nav` repasse en `no-drag` pour rendre les
+> boutons cliquables. Un glisser HTML5 qui part d’une barre de titre est un cas connu de conflit
+> avec le déplacement de fenêtre. Ça peut marcher, ça ne se prouve pas au test unitaire : à
+> vérifier à l’écran, port de debug, avant de considérer l’entrée traitée.
+
 ### 4. Aucun sélecteur de couleur ne s’ouvre
 
 Les **quatre** `input type="color"` de l’application sont muets — pinceau, inspecteur, formulaire de
