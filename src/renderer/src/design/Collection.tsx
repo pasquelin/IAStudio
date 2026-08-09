@@ -4,13 +4,11 @@ import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin } from './styles'
+import { GAP, PREFETCH_ROWS } from './virtual'
 
-const GAP = 8
 const ROW_HEIGHT = 26
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
-/** How many rows from the bottom the next page is asked for — before the user sees the end. */
-const PREFETCH_ROWS = 3
 
 export type CollectionProps<T extends { id: string }> = {
   items: readonly T[]

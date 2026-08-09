@@ -5,9 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { FOCUS_RING } from './styles'
 import { UiIcon } from './UiIcon'
-
-/** The same gutter the collection puts between its cards, for the same reason. */
-const GAP = 8
+import { GAP } from './virtual'
 
 /**
  * Beyond this, dots count rather than orient: a reader cannot tell the eleventh from the
