@@ -226,6 +226,22 @@ describe('the remap of the material panel', () => {
     expect(reads(orm.green).high).toBe(0.7)
   })
 
+  it('reaches every engine, not only the two the other cases visit', () => {
+    for (const target of TEXTURE_EXPORT_TARGETS.filter(candidate => candidate !== 'raw')) {
+      const remapped = resolvePictures(target, narrowed, 'mat')
+        .flatMap(picture => [picture.red, picture.green, picture.blue, picture.alpha])
+        .filter(component => !('constant' in component))
+        .filter(component => reads(component).assetId === 'a-roughness')
+
+      expect(remapped.length).toBeGreaterThan(0)
+      for (const component of remapped) {
+        const { low, high } = reads(component)
+        expect(Math.min(low, high)).toBe(0.3)
+        expect(Math.max(low, high)).toBe(0.7)
+      }
+    }
+  })
+
   it('leaves the raw target alone, which means the channels as stored', () => {
     const roughness = pictureNamed(resolvePictures('raw', narrowed, 'mat'), '_Roughness')
 

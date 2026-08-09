@@ -350,8 +350,9 @@ la moitié d'une matière —, alors ils voyagent ensemble.
 | **Roblox** | `_ColorMap`, `_NormalMap`, `_RoughnessMap`, `_MetalnessMap` |
 | **Canaux bruts** | les huit canaux, un fichier chacun, masque de cavité compris |
 
-Tout est en **PNG**, sans perte : un canal est de la donnée avant d'être une image, et le JPEG
-inventerait des dégradés là où le relief se lit.
+Les canaux sortent en **PNG**, sans perte : un canal est de la donnée avant d'être une image, et
+le JPEG inventerait des dégradés là où le relief se lit. La première ligne, elle, écrit un seul
+fichier `.glb` qui porte ses images à l'intérieur.
 
 ### Ce que veut dire « empaqueter »
 
@@ -382,7 +383,7 @@ DirectX, l'export le sait : il ne retourne pas deux fois.
 retient qu'elle est inversée. Un fichier `_Roughness` contient donc bien de la rugosité, et le
 `_MaskMap` d'Unity bien du lissage : le nom du fichier dit ce qu'il y a dedans.
 
-### Trois choses à savoir
+### Quatre choses à savoir
 
 **Vos réglages de plage partent avec.** La double poignée du panneau Matériau — celle qui
 resserre la rugosité ou la métallicité — n’existe dans aucun des quatre formats. Elle est donc
@@ -400,15 +401,24 @@ métallicité ne produit pas d'`_ORM` gris uniforme : tout l'intérêt de cet em
 qu'il contient a été mesuré. Les composantes manquantes d'une image qui, elle, est écrite prennent
 une valeur neutre — pas d'occlusion, pas de métal.
 
-**Ré-exporter écrase.** Le même document exporté deux fois au même endroit réécrit son dossier.
-C'est ce que veut dire ré-exporter après une retouche.
+**Ré-exporter écrase fichier par fichier, et ne fait pas le ménage.** Le même document exporté
+deux fois au même endroit réécrit les fichiers de même nom, mais **ne vide pas le dossier** :
+exporter vers Unreal puis vers Roblox laisse les deux jeux côte à côte, et un canal supprimé
+entre-temps y laisse son fichier périmé. Videz le dossier vous-même si vous voulez qu'il ne
+contienne que le dernier export.
 
 ### Ce que le `.glb` emporte en plus
 
 Lui seul est un objet et pas un jeu de fichiers : il part avec **la forme de l'aperçu**, et avec
-les réglages du panneau Matériau que le format sait porter — la teinte, la rugosité, la
-métallicité, la force de la normale et du relief, l'émission, et la répétition. Ouvert ailleurs,
-il ressemble à ce que vous jugiez à l'écran.
+les réglages du panneau Matériau que le format sait porter : la teinte, la rugosité, la
+métallicité, la force de la normale, l'intensité d'occlusion, l'émission et son intensité, et la
+répétition avec son décalage et sa rotation. Ouvert ailleurs, il ressemble à ce que vous jugiez à
+l'écran.
+
+Deux choses n'y entrent pas, faute d'exister dans le format : le **relief** — glTF n'a pas
+d'emplacement de déplacement, donc la hauteur ne part ni comme carte ni comme force — et le
+**centre de la rotation**. `KHR_texture_transform` n'a pas de pivot : une matière exportée avec
+une rotation tourne autour du coin de l'image là où l'aperçu tourne autour du milieu.
 
 La **prévisualisation** de la répétition (×1, ×2, ×4) n'en fait pas partie, et c'est voulu :
 juger une répétition et en choisir une sont deux gestes, et seul celui que vous avez choisi

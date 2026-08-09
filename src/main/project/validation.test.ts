@@ -33,6 +33,16 @@ describe('parseDocumentId', () => {
     expect(() => parseDocumentId('')).toThrow()
     expect(() => parseDocumentId('   ')).toThrow()
   })
+
+  /**
+   * No escape, but `writeFile` throws on a NUL — after the folder was made and the files before
+   * it were written, which leaves something nobody can tell from a finished piece of work.
+   */
+  it('refuses a control character, which no filesystem call survives', () => {
+    expect(() => parseDocumentId('a\u0000b')).toThrow()
+    expect(() => parseDocumentId('a\nb')).toThrow()
+    expect(() => parseDocumentId('a\u001fb')).toThrow()
+  })
 })
 
 describe('parseDocumentKind', () => {

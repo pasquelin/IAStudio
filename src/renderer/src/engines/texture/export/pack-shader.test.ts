@@ -8,16 +8,22 @@ import {
 } from '@shared/domain/texture-export'
 import { createPackPass } from './pack-shader'
 
-const CHANNELS: ExportChannels = {
+/** Every channel filled, so a recipe that drops one drops it for a reason of its own. */
+const CHANNELS_WITH_EVERYTHING: ExportChannels = {
   baseColor: { assetId: 'a-base' },
   normal: { assetId: 'a-normal' },
   roughness: { assetId: 'a-roughness' },
   metalness: { assetId: 'a-metalness' },
   ao: { assetId: 'a-ao' },
+  height: { assetId: 'a-height' },
+  emissive: { assetId: 'a-emissive' },
+  edge: { assetId: 'a-edge' },
 }
 
 function pictureNamed(target: 'unreal' | 'unity' | 'roblox', suffix: string): ResolvedPicture {
-  const found = resolvePictures(target, CHANNELS, 'mat').find(p => p.name === `mat${suffix}`)
+  const found = resolvePictures(target, CHANNELS_WITH_EVERYTHING, 'mat').find(
+    p => p.name === `mat${suffix}`,
+  )
   if (!found) throw new Error(`no picture named mat${suffix}`)
   return found
 }
@@ -55,11 +61,34 @@ describe('the packing shader', () => {
     expect(shader).not.toContain('uSource3')
   })
 
-  it('binds each sampler to the channel its slot reads', () => {
+  /**
+   * The values, not only the names. Naming three samplers says nothing about which picture each
+   * one carries, and the whole pass rests on one invariant — the order of `assetsOf` is the
+   * order the textures were decoded in. Bound the wrong way round, an ORM whose three components
+   * all read the occlusion would ship in silence.
+   */
+  it('binds each sampler to the texture of the channel its slot reads', () => {
+    const orm = pictureNamed('unreal', '_ORM')
+    const textures = decoded(orm)
+    const { material } = createPackPass(orm, textures)
+
+    expect(Object.keys(material.uniforms)).toEqual(['uSource0', 'uSource1', 'uSource2'])
+    // Distinct instances, so a swap or a shared binding cannot pass: `assetsOf` names occlusion,
+    // roughness and metalness in that order, and each sampler must hold its own.
+    expect(material.uniforms.uSource0?.value).toBe(textures[0])
+    expect(material.uniforms.uSource1?.value).toBe(textures[1])
+    expect(material.uniforms.uSource2?.value).toBe(textures[2])
+    expect(new Set(textures).size).toBe(3)
+  })
+
+  /** A shader missing its preamble or its vertex half does not compile, and said nothing. */
+  it('carries the preamble and the vertex shader every pass needs', () => {
     const orm = pictureNamed('unreal', '_ORM')
     const { material } = createPackPass(orm, decoded(orm))
 
-    expect(Object.keys(material.uniforms)).toEqual(['uSource0', 'uSource1', 'uSource2'])
+    expect(material.fragmentShader).toContain('varying vec2 vUv;')
+    expect(material.fragmentShader).toContain('precision highp float;')
+    expect(material.vertexShader).toContain('vUv = uv;')
   })
 
   it('reads one asset through one sampler, however many components want it', () => {
@@ -126,5 +155,63 @@ describe('the packing shader', () => {
 
   it('refuses a picture whose channel nobody decoded, rather than sampling black', () => {
     expect(() => createPackPass(pictureNamed('unreal', '_ORM'), [])).toThrow(/was not decoded/)
+  })
+})
+
+/**
+ * The file names the two manuals print in their table of destinations. Pinned as whole lists:
+ * every one of them could be renamed with every other test staying green, and a renamed suffix
+ * is an engine that silently stops finding its map.
+ */
+describe('the files each target names', () => {
+  const namesFor = (target: 'unity' | 'unreal' | 'roblox' | 'raw' | 'gltf'): string[] =>
+    resolvePictures(target, CHANNELS_WITH_EVERYTHING, 'mat').map(picture => picture.name)
+
+  it('names Unity maps as URP looks them up', () => {
+    expect(namesFor('unity')).toEqual([
+      'mat_BaseMap',
+      'mat_BumpMap',
+      'mat_MaskMap',
+      'mat_EmissionMap',
+      'mat_ParallaxMap',
+    ])
+  })
+
+  it('names Unreal maps as its import expects', () => {
+    expect(namesFor('unreal')).toEqual([
+      'mat_BaseColor',
+      'mat_Normal',
+      'mat_ORM',
+      'mat_Emissive',
+      'mat_Height',
+    ])
+  })
+
+  it('names the eight raw channels after what they hold', () => {
+    expect(namesFor('raw')).toEqual([
+      'mat_BaseColor',
+      'mat_Normal',
+      'mat_Roughness',
+      'mat_Metalness',
+      'mat_AO',
+      'mat_Height',
+      'mat_Emissive',
+      'mat_Edge',
+    ])
+  })
+
+  it('keeps the raw normal a colour, which is what a normal is', () => {
+    const normal = resolvePictures('raw', CHANNELS_WITH_EVERYTHING, 'mat').find(
+      picture => picture.name === 'mat_Normal',
+    )
+    if (!normal) throw new Error('no normal')
+
+    // Read component by component: flattened to grey, a normal map points nowhere.
+    expect(componentsOf(normal)).toEqual([
+      'texture2D(uSource0, vUv).r',
+      'texture2D(uSource0, vUv).g',
+      'texture2D(uSource0, vUv).b',
+      '1.0',
+    ])
   })
 })

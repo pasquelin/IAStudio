@@ -57,7 +57,10 @@ export async function buildGlb({
 }: GlbRequest): Promise<Uint8Array> {
   const decoded = await decodePictures(pictures, load, material)
 
-  const geometry = previewGeometry(shape, material.heightScale > 0)
+  // Never displaced, whatever the height slider says: glTF has no displacement outside an
+  // extension, `buildMaterial` mounts no such map, and the subdivided form of a box is 196k
+  // triangles — six megabytes of vertices for a relief the file cannot carry.
+  const geometry = previewGeometry(shape, false)
   const mesh = new Mesh(geometry, buildMaterial(decoded, material))
 
   try {
@@ -121,10 +124,9 @@ function placeTexture(texture: Texture, material: MaterialSettings, colour: bool
   texture.colorSpace = colour ? SRGBColorSpace : NoColorSpace
   texture.wrapS = RepeatWrapping
   texture.wrapT = RepeatWrapping
-  // The pivot of the rotation, as `TextureRenderer.install` sets it. Left at the corner, a
-  // material exported with a rotation turns around a point the preview never turned around —
-  // which is the one difference nobody would look for in a file that opens.
-  texture.center.set(0.5, 0.5)
+  // No pivot: `KHR_texture_transform` has no field for one and `GLTFExporter` never reads
+  // `texture.center`, so a rotation leaves turning around the uv origin where the preview turns
+  // around the middle. Setting it here would only have looked like the fix.
   texture.repeat.set(material.tiling.x, material.tiling.y)
   texture.offset.set(material.offset.x, material.offset.y)
   texture.rotation = material.rotation
@@ -154,7 +156,6 @@ function buildMaterial(
   // Signed on the x alone: glTF holds one scalar for it, and the green convention was settled
   // in the pixels — see the `greenFlipped` reconciliation in the domain.
   material.normalScale.set(settings.normalScale, settings.normalScale)
-  material.displacementScale = settings.heightScale
   material.emissive.set(settings.emissive)
   material.emissiveIntensity = settings.emissiveIntensity
 

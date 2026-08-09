@@ -413,6 +413,9 @@ export function safeFileName(name: string, fallback = 'texture'): string {
     .replace(/^[.\s]+/, '')
     .trim()
 
-  // Trimmed again after the cut: 80 characters can land in the middle of a space run.
-  return cleaned.length > 0 ? cleaned.slice(0, 80).trim() : fallback
+  // Cut by code point, as it was mapped: `slice` counts UTF-16 units, so a name of emoji came
+  // out ending on half a surrogate pair — which `writeFile` then replaced with U+FFFD, letting
+  // two different titles land on the same folder.
+  const cut = [...cleaned].slice(0, 80).join('').trim()
+  return cut.length > 0 ? cut : fallback
 }

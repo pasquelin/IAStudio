@@ -108,13 +108,18 @@ describe('the texture export handler', () => {
       ).rejects.toThrow()
     })
 
-    it('anything that is not bytes', async () => {
+    /**
+     * Which of the two rules speaks — the type or the ceiling — is not what this holds; both are
+     * there and either refusing is the right answer. What it holds is that nothing reaches the
+     * disk, which a `rejects.toThrow()` alone would not have said.
+     */
+    it('anything that is not bytes, without writing a thing', async () => {
+      const notBytes = { name: 'base', extension: '.png', bytes: new ArrayBuffer(8) }
+
       await expect(
-        invoke(CHANNELS.textureExport, {
-          folder: 'Brique',
-          files: [{ name: 'base', extension: '.png', bytes: 'not bytes' }],
-        }),
+        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [notBytes] }),
       ).rejects.toThrow()
+      await expect(readdir(chosen)).resolves.toEqual([])
     })
 
     it('an export with no file in it at all', async () => {
@@ -131,26 +136,30 @@ describe('the texture export handler', () => {
       ).rejects.toThrow()
     })
 
+    /**
+     * Real bytes, not a `byteLength` written over a empty array: faked, what the test observed
+     * was `writeFile` choking on a length no buffer had, and it passed with no ceiling at all.
+     */
     it('a set of files too large to be an export', async () => {
-      const files = Array.from({ length: 5 }, (_unused, index) => {
-        const bytes = new Uint8Array(0)
-        Object.defineProperty(bytes, 'byteLength', { value: 200 * 1024 * 1024 })
-        return { name: `base-${index}`, extension: '.png', bytes }
-      })
+      const big = (): Uint8Array => new Uint8Array(64 * 1024 * 1024)
+      const files = Array.from({ length: 9 }, (_unused, index) => ({
+        name: `base-${index}`,
+        extension: '.png',
+        bytes: big(),
+      }))
 
-      await expect(invoke(CHANNELS.textureExport, { folder: 'Brique', files })).rejects.toThrow()
+      await expect(invoke(CHANNELS.textureExport, { folder: 'Brique', files })).rejects.toThrow(
+        /too_big|custom|Invalid/i,
+      )
+      await expect(readdir(chosen)).resolves.toEqual([])
     })
 
-    /** The ceiling is on the whole export, so one file over it is refused by the same rule. */
-    it('a single file that is over the ceiling on its own', async () => {
-      const bytes = new Uint8Array(0)
-      Object.defineProperty(bytes, 'byteLength', { value: 513 * 1024 * 1024 })
-
+    it('a name carrying a control character, which would break the write half way', async () => {
       await expect(
-        invoke(CHANNELS.textureExport, {
-          folder: 'Brique',
-          files: [{ name: 'base', extension: '.png', bytes }],
-        }),
+        invoke(CHANNELS.textureExport, { folder: 'Brique', files: [file('a\u0000b')] }),
+      ).rejects.toThrow()
+      await expect(
+        invoke(CHANNELS.textureExport, { folder: 'a\u0000b', files: [file('base')] }),
       ).rejects.toThrow()
     })
   })

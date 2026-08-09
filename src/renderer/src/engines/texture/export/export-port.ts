@@ -111,6 +111,11 @@ export function createTextureExportPort({
 }: TextureExportPortOptions): TextureExportPort {
   return async ({ target, channels, name, material, shape }) => {
     const pictures = resolvePictures(target, channels, name)
+    // Before the glTF road as much as the folder one: a texture with no channel resolves to no
+    // picture, and `buildGlb` would happily answer a grey sphere wearing nothing — the one
+    // target that would have opened a dialog to write a file saying nothing.
+    if (pictures.length === 0) return []
+
     const max = maxSizeOf(target)
 
     const drawn: { picture: ResolvedPicture; bytes: Uint8Array }[] = []

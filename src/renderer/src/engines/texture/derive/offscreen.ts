@@ -172,6 +172,12 @@ async function withRenderer<T>(
     // Without it the drawing buffer is cleared before the canvas can be read back, and every
     // derivation comes out blank.
     preserveDrawingBuffer: true,
+    // three defaults this to true, and `alpha: false` below does NOT reach the context — it only
+    // picks the clear colour. A pass writing straight values into a context declared premultiplied
+    // has its colours divided by alpha at `toBlob`: Unity's mask map, the one recipe whose alpha
+    // is a channel rather than 1, came out with its metallic and occlusion destroyed — fully
+    // rough (smoothness 0) encoded as (0,0,0,0). Every other pass writes alpha 1, which hid it.
+    premultipliedAlpha: false,
     // A full-screen quad depth-tests against nothing and blends with nothing. Left on, the depth
     // attachment alone is another 67 MB at 4K, allocated and thrown away.
     antialias: false,

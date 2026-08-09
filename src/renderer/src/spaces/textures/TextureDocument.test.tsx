@@ -1,6 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { TextureExportCommand, TextureExportRequest } from '@shared/ipc'
+import type { TextureExportTarget } from '@shared/domain/texture-export'
 import { setChannel } from '@/engines/texture/commands'
+import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
@@ -10,6 +13,8 @@ import { TextureDocument } from './TextureDocument'
 
 // jsdom has no WebGL context: what the engine draws is exercised by hand, not here. This covers
 // the document handing it the right state — same reason as `SkyboxDocument.test`.
+vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
+
 vi.mock('@/engines/texture/TextureRenderer', () => ({
   TextureRenderer: class {
     mount = vi.fn()
@@ -89,22 +94,43 @@ describe('TextureDocument', () => {
  * which tab answers a menu row, and which one stays quiet.
  */
 describe('the export menu row', () => {
-  const listen = (): { listeners: () => number; unsubscribed: () => number } => {
-    let listeners = 0
+  type Menu = {
+    listeners: () => number
+    unsubscribed: () => number
+    fire: (target: TextureExportTarget) => void
+    exported: () => TextureExportRequest[]
+  }
+
+  const listen = (): Menu => {
+    const callbacks: ((command: TextureExportCommand) => void)[] = []
+    const exported: TextureExportRequest[] = []
     let released = 0
 
     installFakeBridge({
       menu: {
-        onTextureExport: () => {
-          listeners += 1
+        onTextureExport: callback => {
+          callbacks.push(callback)
           return () => {
             released += 1
           }
         },
       },
+      texture: {
+        export: request => {
+          exported.push(request)
+          return Promise.resolve(request.folder)
+        },
+      },
     })
 
-    return { listeners: () => listeners, unsubscribed: () => released }
+    return {
+      listeners: () => callbacks.length,
+      unsubscribed: () => released,
+      fire: target => {
+        for (const callback of callbacks) callback({ target })
+      },
+      exported: () => exported,
+    }
   }
 
   it('is listened to while the tab is in front', () => {
@@ -134,5 +160,33 @@ describe('the export menu row', () => {
     unmount()
 
     expect(menu.unsubscribed()).toBe(1)
+  })
+
+  /**
+   * The port needs a GPU, so what a fired row can be held to here is everything around it: that
+   * a texture with no channel never reaches the dialog, and that a title that reads as a path
+   * never becomes one. Both were mutable in silence before this.
+   */
+  it('sends nothing across when the texture has no channel to export', async () => {
+    const menu = listen()
+    useDocuments.setState({ activeId: DOCUMENT })
+    render(<TextureDocument documentId={DOCUMENT} />)
+
+    menu.fire('raw')
+    await waitFor(() => expect(reportFailure).toHaveBeenCalled())
+
+    expect(menu.exported()).toEqual([])
+    expect(reportFailure).toHaveBeenCalledWith('texture.export', 'raw', expect.anything())
+  })
+
+  it('reports the failure under the target the row named, not under another', async () => {
+    const menu = listen()
+    useDocuments.setState({ activeId: DOCUMENT })
+    render(<TextureDocument documentId={DOCUMENT} />)
+
+    menu.fire('roblox')
+    await waitFor(() => expect(reportFailure).toHaveBeenCalled())
+
+    expect(reportFailure).toHaveBeenCalledWith('texture.export', 'roblox', expect.anything())
   })
 })
