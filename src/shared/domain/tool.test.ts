@@ -41,14 +41,14 @@ describe('the placements of one tool', () => {
 })
 
 describe('resolving where a tool sits', () => {
-  it('puts the asset shelf in the bottom strip everywhere it is a shelf', () => {
-    const strips: readonly WorkspaceId[] = ['image', '3d', 'textures', 'skyboxes']
+  it('puts the asset shelf in the bottom strip everywhere the band is free', () => {
+    const strips: readonly WorkspaceId[] = ['image', 'textures', 'skyboxes']
     for (const workspace of strips) expect(placementIn('assets', workspace)?.zone).toBe('bottom')
   })
 
-  it('keeps it beside the montage where a take is dragged onto a track', () => {
-    expect(placementIn('assets', 'video')?.zone).toBe('right')
-    expect(placementIn('assets', 'audio')?.zone).toBe('right')
+  it('sends it to the column wherever a timeline owns the band', () => {
+    const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
+    for (const workspace of timed) expect(placementIn('assets', workspace)?.zone).toBe('right')
   })
 
   it('serves the shelf in every workspace — it is never simply absent', () => {
@@ -218,7 +218,12 @@ describe('the rail order of the upper right', () => {
   // document that is already open, and only that.
   it('reads the panels of the document, and no longer the Explorer or the Apps', () => {
     expect(upperRightIn('image')).toEqual(['layers'])
-    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes'])
+  })
+
+  // The shelf comes last on purpose: a half with nothing chosen opens on the first tool it
+  // declares, and entering 3D must land on the outliner rather than on a list of assets.
+  it('leaves the outliner first in 3D, with the shelf behind it', () => {
+    expect(upperRightIn('3d')).toEqual(['scene', 'lights', 'meshes', 'assets'])
   })
 
   it('puts the shelf first where a take is dragged onto a track', () => {
@@ -239,9 +244,10 @@ describe('the rail order of the upper right', () => {
 })
 
 describe('the montage band', () => {
-  it('is the timeline in Video and Audio, and the shelf everywhere else', () => {
+  it('is the timeline wherever there is time to read, and the shelf everywhere else', () => {
+    const timed: readonly WorkspaceId[] = ['video', 'audio', '3d']
     for (const workspace of WORKSPACE_IDS) {
-      const band = workspace === 'video' || workspace === 'audio' ? 'timeline' : 'assets'
+      const band = timed.includes(workspace) ? 'timeline' : 'assets'
       expect(placementIn(band, workspace)?.zone).toBe('bottom')
     }
   })
