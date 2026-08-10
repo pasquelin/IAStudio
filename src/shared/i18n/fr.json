@@ -462,7 +462,7 @@
     "color": "Couleur",
     "colorHint": "Couleur du pinceau, des formes et du remplissage",
     "brushSettings": "Réglages du pinceau",
-    "brushSettingsHint": "Taille, dureté et opacité du pinceau, de la gomme et des formes",
+    "brushSettingsHint": "Taille et opacité du trait — la dureté ne s’offre que sous le pinceau, seul à adoucir son bord",
     "size": "Taille",
     "hardness": "Dureté",
     "opacity": "Opacité",

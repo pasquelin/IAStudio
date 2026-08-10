@@ -1011,14 +1011,24 @@ describe('painting a transformed layer', () => {
     expect(reach).toMatchObject({ width: 61, height: 61 })
   })
 
-  /** The pencil reads the same settings and spreads none of them: that is the whole difference. */
-  it('reaches no further under the pencil, whatever the hardness slider says', async () => {
-    const { host, engine } = await mounted(shifted({}))
-    engine.setTool('pencil')
-    engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
+  /**
+   * The pencil reads the same settings and spreads none of them: that is the whole difference.
+   *
+   * The eraser goes with it, and for Pixi's reason rather than a promise of the tool — see
+   * `softness()`. Both rows are `BRUSH_SETTINGS_BY_TOOL`, which the bar reads to hide the
+   * slider: this is the measurement that keeps the table honest about the one column the engine
+   * asks it for.
+   */
+  it.each<CanvasTool>(['pencil', 'eraser'])(
+    'reaches no further under the %s, whatever the hardness slider says',
+    async tool => {
+      const { host, engine } = await mounted(shifted({}))
+      engine.setTool(tool)
+      engine.setBrush({ ...DEFAULT_BRUSH, size: 40, hardness: 0 })
 
-    expect(reachOf(host)).toMatchObject({ width: 42 })
-  })
+      expect(reachOf(host)).toMatchObject({ width: 42 })
+    },
+  )
 
   /**
    * What the reach is computed from. Without this the filter could stop being hung at all and

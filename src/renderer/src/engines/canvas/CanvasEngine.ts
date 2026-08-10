@@ -81,7 +81,7 @@ import {
   type ShapeGeometry,
   type ShapeKind,
 } from './shape-geometry'
-import { blurRadius, DEFAULT_BRUSH, type BrushSettings } from './brush'
+import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
 import { brushRect, grownBy } from './tiles'
 import {
   containIn,
@@ -1002,6 +1002,10 @@ export class CanvasEngine {
    * How far the edge of a dab is spread, in document pixels — zero for every tool that does not
    * feather.
    *
+   * **Which ones those are is `BRUSH_SETTINGS_BY_TOOL`, asked rather than restated.** The bar
+   * hides the hardness slider from the same table, so the two cannot drift into a control that
+   * moves nothing.
+   *
    * The pencil is hard by definition, and that is the whole of what tells it from the brush. The
    * eraser is hard for a reason of Pixi's: a filtered container is drawn into a texture of its
    * own, cleared to nothing, and composed back with the FILTER's blend mode rather than the
@@ -1011,7 +1015,7 @@ export class CanvasEngine {
    * the eraser silently stops erasing.
    */
   private softness(): number {
-    return this.tool === 'brush' ? blurRadius(this.brush) : 0
+    return readsBrushSetting(this.tool, 'hardness') ? blurRadius(this.brush) : 0
   }
 
   /**

@@ -126,6 +126,16 @@ describe('ImageDocument', () => {
     render(<ImageDocument documentId="doc-1" />)
   }
 
+  /**
+   * Arms a tool by its key, which is the path a hand takes — and the only one that reaches a
+   * mode a group does not open on, the pencil being one. Rendered once: a second `render` in the
+   * same case would leave two bars answering the same query.
+   */
+  const armedWith = (key: string, shift = false): void => {
+    if (screen.queryAllByRole('button', { name: /^Pipette/ }).length === 0) armed()
+    press(key, shift)
+  }
+
   it('arms the brush when its key is pressed', () => {
     armed()
 
@@ -185,7 +195,7 @@ describe('ImageDocument', () => {
   })
 
   it('offers a colour input', () => {
-    render(<ImageDocument documentId="doc-1" />)
+    armedWith('KeyP')
     expect(screen.getByLabelText('Couleur')).toBeInTheDocument()
   })
 
@@ -195,7 +205,7 @@ describe('ImageDocument', () => {
    */
   describe('the brush settings', () => {
     const openSettings = async (): Promise<void> => {
-      render(<ImageDocument documentId="doc-1" />)
+      armedWith('KeyP')
       await userEvent.click(screen.getByRole('button', { name: 'Réglages du pinceau' }))
     }
 
@@ -219,6 +229,85 @@ describe('ImageDocument', () => {
 
       expect(await screen.findByLabelText('Taille')).toHaveValue('24')
       expect(screen.getByLabelText('Taille')).toHaveAttribute('max', String(BRUSH_SIZE.max))
+    })
+  })
+
+  /**
+   * A control the armed tool ignores is gone, not greyed — the rule the inspector already applies
+   * to a sprite, which gets no shadow section rather than a dead one. The hardness slider under
+   * the pencil is the case that named it: live, draggable, and moving nothing.
+   *
+   * What each tool reads is `BRUSH_SETTINGS_BY_TOOL`, and the engine's `softness()` asks the same
+   * table — so a row that shows here is a row that does something there.
+   */
+  describe('the paint settings follow the armed tool', () => {
+    const settingsUnder = async (key: string, shift = false): Promise<string[]> => {
+      armedWith(key, shift)
+      const flyout = screen.queryByRole('button', { name: 'Réglages du pinceau' })
+      if (!flyout) return []
+
+      await userEvent.click(flyout)
+      await screen.findByLabelText('Taille')
+      return ['Taille', 'Dureté', 'Opacité'].filter(name => screen.queryByLabelText(name) !== null)
+    }
+
+    it('offers hardness under the brush, the only tool that feathers', async () => {
+      expect(await settingsUnder('KeyP')).toEqual(['Taille', 'Dureté', 'Opacité'])
+    })
+
+    it('takes hardness away under the pencil, which is hard by definition', async () => {
+      expect(await settingsUnder('KeyP', true)).toEqual(['Taille', 'Opacité'])
+    })
+
+    it('takes hardness away under the eraser as well', async () => {
+      expect(await settingsUnder('KeyE')).toEqual(['Taille', 'Opacité'])
+    })
+
+    it('takes hardness away under the shapes, whose size is a stroke width', async () => {
+      expect(await settingsUnder('KeyR')).toEqual(['Taille', 'Opacité'])
+    })
+
+    // Its stamp is white, which is what the erase blend reads — the swatch chose nothing.
+    it('takes the colour away under the eraser, and keeps it under the bucket', () => {
+      armedWith('KeyE')
+      expect(screen.queryByLabelText('Couleur')).not.toBeInTheDocument()
+
+      armedWith('KeyG')
+      expect(screen.getByLabelText('Couleur')).toBeInTheDocument()
+    })
+
+    // The bucket sets a colour and nothing else: a flyout of sliders it never reads would be
+    // the same defect one control further along.
+    it('offers the bucket no slider flyout at all', () => {
+      armedWith('KeyG')
+
+      expect(screen.queryByRole('button', { name: 'Réglages du pinceau' })).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['the eyedropper', 'KeyI'],
+      ['the pointer', 'KeyV'],
+      ['the crop frame', 'KeyF'],
+      ['the caption tool', 'KeyT'],
+    ])('shows nothing at all under %s, which paints no pixel', (_name, key) => {
+      armedWith(key)
+
+      expect(screen.queryByLabelText('Couleur')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Réglages du pinceau' })).not.toBeInTheDocument()
+    })
+
+    /**
+     * Withdrawing means leaving, not standing there empty: the bar is a flex row with a gap
+     * between every pair of children, so a wrapper with nothing in it still spends one. The
+     * separators are `<span>`, which is what makes an empty `<div>` here nothing but this.
+     */
+    it('takes its slot in the bar with it rather than leaving a gap behind', () => {
+      armedWith('KeyI')
+
+      const empty = [...screen.getByRole('toolbar').children].filter(
+        child => child.tagName === 'DIV' && child.childElementCount === 0,
+      )
+      expect(empty).toEqual([])
     })
   })
 

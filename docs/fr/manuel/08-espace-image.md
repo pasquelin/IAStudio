@@ -238,8 +238,16 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 | **Commentaire** | `C` | *pas encore disponible* |
 | **Remplir le calque** | `G` | remplit **tout** le calque actif de la couleur courante |
 | **Pipette** | `I` | prélève la couleur sous le pointeur |
-| **Couleur** | — | la couleur du pinceau, des formes et du remplissage |
+| **Couleur** | — | la couleur du pinceau, du crayon, des formes et du remplissage |
 | **Réglages du pinceau** | `[` et `]` | la taille, la dureté et l’opacité |
+
+> **Ces deux contrôles suivent l’outil armé, et disparaissent quand il ne les lit pas.** La
+> pipette, le pointeur, le recadrage et la légende ne peignent aucun pixel : la barre n’affiche
+> alors ni couleur ni curseurs. La gomme n’offre pas de couleur — son trait est le blanc que le
+> mélange d’effacement lit, et le nuancier n’y choisissait rien. Le pot de peinture n’offre que
+> la couleur. Un contrôle sans effet **n’est pas grisé, il n’est pas là** : c’est la règle que
+> l’inspecteur applique déjà à un sprite, qui n’a aucune section d’ombre plutôt qu’une section
+> morte.
 
 > **Remplir n’est pas un pot de peinture.** Il remplit le calque entier, d’un bord à l’autre.
 > C’est ce qui donne un fond uni en un geste, mais ce n’est pas le remplissage par zone que vous
@@ -247,7 +255,8 @@ La gomme efface **vers la transparence**, elle ne peint pas en blanc.
 
 ### Les réglages du pinceau
 
-Le dernier bouton de la barre en ouvre trois curseurs.
+Le dernier bouton de la barre ouvre les curseurs que l’outil armé lit — trois sous le pinceau,
+deux partout ailleurs.
 
 | Réglage | Plage | Ce qu’il fait |
 |---|---|---|
@@ -259,10 +268,12 @@ Le dernier bouton de la barre en ouvre trois curseurs.
 et le trait des formes. Un pinceau de 40 px et une gomme de 4 px, ce n’est pas possible — c’est le
 même réglage.
 
-**La dureté, elle, n’en touche qu’un : le pinceau.** Le crayon est net par définition — c’est sa
-raison d’être, et il lit la taille et l’opacité comme les autres. La gomme et le trait des formes
-ont un bord net eux aussi : leur adoucissement demande une vérification que rien d’automatique ne
-peut faire ici, et un bord fondu qui n’effacerait plus rien serait pire que pas de fondu du tout.
+**La dureté, elle, n’en touche qu’un : le pinceau — et elle ne s’affiche que là.** Le crayon est
+net par définition, c’est sa raison d’être, et il lit la taille et l’opacité comme les autres. La
+gomme et le trait des formes ont un bord net eux aussi : leur adoucissement demande une
+vérification que rien d’automatique ne peut faire ici, et un bord fondu qui n’effacerait plus rien
+serait pire que pas de fondu du tout. Le curseur restait autrefois offert sous les trois, vivant
+et sans effet ; il a rejoint l’outil qui le lit.
 
 **En dessous d’un certain point, adoucir ne se voit plus.** Un fondu qui n’atteindrait pas un
 demi-pixel ne déplace rien qu’un œil distingue : sur un pinceau de 4 px, il faut descendre la
