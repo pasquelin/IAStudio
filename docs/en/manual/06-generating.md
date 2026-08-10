@@ -249,8 +249,9 @@ The **die button** 🎲 beside the field draws a new random seed.
 
 The **Generate** button, at the bottom of the form.
 
-> **Button not responding?** It is inactive as long as no project is open — the message "Open a
-> project to generate." appears above the form. A result has to land somewhere.
+> **No form at all?** The panel asks for a project before it draws one: it shows "Open a project
+> to generate." and the two buttons that open or create one. A result has to land somewhere, and
+> a generation launched without a project collects nowhere.
 
 ### The price, before you pay it
 

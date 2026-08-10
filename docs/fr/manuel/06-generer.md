@@ -265,9 +265,10 @@ Le **bouton dé** 🎲 à côté du champ tire une nouvelle graine au hasard.
 
 Le bouton **Générer**, en bas du formulaire.
 
-> **Le bouton ne répond pas ?** Il est inactif tant qu’aucun projet n’est ouvert — le message
-> « Ouvrez un projet pour générer. » s’affiche au-dessus du formulaire. Un résultat doit
-> atterrir quelque part.
+> **Pas de formulaire du tout ?** Le panneau demande un projet avant d’en dessiner un : il
+> affiche « Ouvrez un projet pour générer. » et les deux boutons qui en ouvrent ou en créent un.
+> Un résultat doit atterrir quelque part, et une génération lancée sans projet ne se collecte
+> nulle part.
 
 ### Le prix, avant de payer
 

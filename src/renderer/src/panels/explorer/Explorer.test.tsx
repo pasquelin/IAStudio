@@ -54,7 +54,9 @@ function install(byFolder: Record<string, FolderEntry[]>, documents: DocumentDes
 beforeEach(() => {
   vi.clearAllMocks()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
-  useProject.setState({ project: null })
+  // `known` settled: the panel says nothing at all until the main process has answered, and
+  // every case below is about what it says once it has.
+  useProject.setState({ project: null, known: true })
   useLayouts.setState({ layouts: {} })
   installFakeBridge({})
 })
@@ -63,6 +65,20 @@ describe('the project explorer', () => {
   it('says so when no project is open, rather than listing nothing', () => {
     render(<Explorer />)
     expect(screen.getByText(/Aucun projet ouvert/)).toBeInTheDocument()
+  })
+
+  /**
+   * The studio reopens the last project on launch, and `project` is `null` until it says so.
+   * Read as an answer, that `null` offered to create a project to someone who already had one
+   * — for as long as the reopening took, on every start.
+   */
+  it('offers nothing before the main process has said whether there is one', () => {
+    useProject.setState({ project: null, known: false })
+
+    render(<Explorer />)
+
+    expect(screen.queryByText(/Aucun projet ouvert/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Créer un projet' })).toBeNull()
   })
 
   /**

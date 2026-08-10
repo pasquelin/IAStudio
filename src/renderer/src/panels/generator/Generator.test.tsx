@@ -55,12 +55,20 @@ function renderPanel() {
   )
 }
 
+const PROJECT = {
+  path: '/projects/demo',
+  manifest: { version: 1, name: 'demo', createdAt: '', updatedAt: '' },
+}
+
 describe('Generator', () => {
   let bridge: StudioBridge
 
   beforeEach(() => {
     installCanvas(DOCUMENT)
     useSettings.setState({ auth: { authenticated: true } })
+    // A job collects into its own project and nowhere else, so the panel asks for one before it
+    // draws a form. Every case below is about the form, and each of them needs one.
+    useProject.setState({ project: PROJECT, known: true })
     useModels.setState({ selected: {}, preset: {}, prepared: null })
     useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
     useLayouts.setState({ activeWorkspace: 'image' })
@@ -205,5 +213,59 @@ describe('Generator', () => {
 
       expect(await screen.findByRole('button', { name: 'Générer' })).toBeEnabled()
     })
+  })
+})
+
+/**
+ * Decided with the user: the generator REQUIRES a project. A job collects into its own project
+ * and nowhere else, so generating without one produces assets that land nowhere — the panel
+ * used to draw the whole form with a dead button and one muted line to say why.
+ */
+describe('the generator without a project', () => {
+  beforeEach(() => {
+    installCanvas(DOCUMENT)
+    useSettings.setState({ auth: { authenticated: true } })
+    useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+    useLayouts.setState({ activeWorkspace: 'image' })
+    preferModels({ image: 'model_flux', upscale: 'model_big' })
+    installFakeBridge({})
+  })
+
+  it('asks for one rather than drawing a form nothing can submit', async () => {
+    useProject.setState({ project: null, known: true })
+
+    renderPanel()
+
+    expect(await screen.findByText(/Ouvrez un projet pour générer/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Générer/ })).toBeNull()
+  })
+
+  it('offers both ways to get one', () => {
+    useProject.setState({ project: null, known: true })
+
+    renderPanel()
+
+    expect(screen.getByRole('button', { name: 'Ouvrir un projet' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Créer un projet' })).toBeInTheDocument()
+  })
+
+  // The studio reopens the last project on launch: taking the first `null` for an answer offers
+  // to create a project to someone who already has one, for as long as the reopening takes.
+  it('offers nothing before the main process has said whether there is one', () => {
+    useProject.setState({ project: null, known: false })
+
+    renderPanel()
+
+    expect(screen.queryByRole('button', { name: 'Créer un projet' })).toBeNull()
+  })
+
+  // The key comes first: without it nothing generates at all, project or no project.
+  it('asks for the credentials before the project', () => {
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    useProject.setState({ project: null, known: true })
+
+    renderPanel()
+
+    expect(screen.queryByRole('button', { name: 'Ouvrir un projet' })).toBeNull()
   })
 })
