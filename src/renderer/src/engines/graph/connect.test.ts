@@ -3,6 +3,7 @@ import { EMPTY_GRAPH, type GraphNode, type GraphState } from '@shared/domain/gra
 import type { FieldDescriptor } from '@shared/domain/model'
 import { canConnect, canDropConnection, edgeOf, refuseConnection } from './connect'
 import { createModelNode, createNode } from './factory'
+import { transformNode } from './graph-fixtures'
 import { outputHandlesOf } from './handles'
 
 const asset = (id: string, type: string): GraphNode => ({
@@ -106,6 +107,85 @@ describe('what the canvas may connect', () => {
     }
 
     expect(refuseConnection(wired, feeding)).toBe('input-taken')
+  })
+
+  /**
+   * The refusal above, and the node it must not be answered for. A transform compiles one CEL
+   * variable per incoming wire — `text1_output + text2_output` — so the second wire is the whole
+   * point of the port, and refusing it made a sentence the webapp writes impossible here.
+   */
+  it('lets a second wire onto a port whose node names its wires by their provider', () => {
+    const first = {
+      source: 'transformText1',
+      sourceHandle: 'transformText1-source-text',
+      target: 'image1',
+      targetHandle: 'image1-target-image',
+    }
+    const wired: GraphState = {
+      ...graph,
+      nodes: [...graph.nodes, transformNode('transformText1')],
+      edges: [edgeOf({ ...first, target: 'sound1', targetHandle: 'sound1-target-image' })!],
+    }
+
+    expect(refuseConnection(wired, first)).toBeNull()
+  })
+
+  /**
+   * And the port that stays at one on EVERY type. The conditional steers whether the node runs at
+   * all; the converter drops that edge before it names anything, so a second wire into it would
+   * be a fil the studio draws and no published run has.
+   */
+  it('still holds the conditional port of such a node to one wire', () => {
+    // A branch, which is what steers a conditional port. Its outputs carry no type, so nothing
+    // but the refusal under test can stand in the way of the second wire.
+    const branch = (id: string): GraphNode => ({
+      id,
+      type: 'ifElse',
+      position: { x: 0, y: 0 },
+      data: { outputHandles: [{ id: `${id}-target-case1`, name: 'case1' }] },
+    })
+
+    const feeding = {
+      source: 'transformText1',
+      sourceHandle: 'transformText1-source-conditional',
+      target: 'ifElse1',
+      targetHandle: 'ifElse1-target-case1',
+    }
+    const wired: GraphState = {
+      ...graph,
+      nodes: [transformNode('transformText1'), branch('ifElse1'), branch('ifElse2')],
+      edges: [edgeOf({ ...feeding, target: 'ifElse2', targetHandle: 'ifElse2-target-case1' })!],
+    }
+
+    expect(refuseConnection(wired, feeding)).toBe('input-taken')
+  })
+
+  /**
+   * And the node the exception is NOT for. A branch reads its condition fields through that very
+   * port — `conditionFieldsOf` builds them from its wires, whatever their handle — so holding it
+   * to one wire would hold every branch to a single field, where the converter compiles two.
+   */
+  it('lets a branch take a second wire on its own conditional port', () => {
+    const branch: GraphNode = {
+      id: 'ifElse1',
+      type: 'ifElse',
+      position: { x: 0, y: 0 },
+      data: { inputHandles: [{ id: 'ifElse1-source-conditional', name: 'conditional' }] },
+    }
+
+    const feeding = {
+      source: 'ifElse1',
+      sourceHandle: 'ifElse1-source-conditional',
+      target: 'image1',
+      targetHandle: 'image1-target-image',
+    }
+    const wired: GraphState = {
+      ...graph,
+      nodes: [...graph.nodes, branch],
+      edges: [edgeOf({ ...feeding, target: 'sound1', targetHandle: 'sound1-target-image' })!],
+    }
+
+    expect(refuseConnection(wired, feeding)).toBeNull()
   })
 
   it('names an edge that already exists rather than doubling it', () => {

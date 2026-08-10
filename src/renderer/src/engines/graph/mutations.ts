@@ -1,7 +1,8 @@
 import type { GraphEdge, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
 import type { Connection } from './connect'
 import { edgeOf } from './connect'
-import { inputHandlesOf, outputHandlesOf } from './handles'
+import { takesManyWires } from '@shared/domain/graph'
+import { inputHandleOf, inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
  * The id the webapp gives a node: its type in camel case, then the smallest free number.
@@ -46,18 +47,28 @@ export function removeNode(graph: GraphState, id: string): GraphState {
 }
 
 /**
- * Connecting an input that already has a producer REPLACES it.
+ * Connecting an input that already has a producer REPLACES it — unless the port takes several.
  *
  * The refusal in `refuseConnection` is what the canvas paints while the wire is being dragged;
- * this is what happens when the user drops it anyway. One producer per input either way — the
- * compiler would otherwise pick the first and drop the rest without a word.
+ * this is what happens when the user drops it anyway. One producer per input where the compiler
+ * would otherwise pick the first and drop the rest without a word, and as many as the user draws
+ * where each one compiles to a variable of its own (`takesManyWires`).
  */
 export function connect(graph: GraphState, connection: Connection): GraphState {
   const edge = edgeOf(connection)
   if (!edge) return graph
 
-  const kept = graph.edges.filter(
-    existing => existing.source !== edge.source || existing.sourceHandle !== edge.sourceHandle,
+  const consumer = graph.nodes.find(node => node.id === edge.source)
+  // By the port's NAME, not by its handle id: only `edgeOf` spells an id the convention's way, and
+  // `conditional` has to be recognised wherever a file put it.
+  const joins =
+    consumer !== undefined &&
+    takesManyWires(consumer.type, inputHandleOf(consumer, edge.sourceHandle)?.name)
+
+  const kept = graph.edges.filter(existing =>
+    joins
+      ? existing.id !== edge.id
+      : existing.source !== edge.source || existing.sourceHandle !== edge.sourceHandle,
   )
 
   return { ...graph, edges: [...kept, edge] }

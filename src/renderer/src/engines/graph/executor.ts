@@ -113,21 +113,30 @@ export async function runGraph(
    * The conditional port is in the first and out of the second, exactly as it is dropped from a
    * body: it steers whether the node runs at all, and the converter skips that edge before it
    * names anything.
+   *
+   * Several wires onto one port concatenate in edge order, each still naming a variable of its
+   * own; a scalar port then takes the head, which is the `inputEdges[0]` the converter takes.
    */
   const resolveInputs = async (planned: GraphPlanNode): Promise<Resolved | null> => {
     const values: Record<string, readonly string[]> = {}
     const variables: Record<string, string | readonly string[]> = {}
 
-    for (const [port, source] of Object.entries(planned.inputs)) {
-      // Present by construction: a provider comes before its consumer in a topological order, so
-      // its promise was made on an earlier turn of the loop below.
-      const upstream = await settled.get(source.node)
-      if (!upstream) return null
+    for (const [port, sources] of Object.entries(planned.inputs)) {
+      const carried: string[] = []
 
-      values[port] = upstream.values
-      if (port !== CONDITIONAL_PORT) {
-        variables[celVariableName(source.node, source.output)] = asVariable(upstream.values)
+      for (const source of sources) {
+        // Present by construction: a provider comes before its consumer in a topological order, so
+        // its promise was made on an earlier turn of the loop below.
+        const upstream = await settled.get(source.node)
+        if (!upstream) return null
+
+        carried.push(...upstream.values)
+        if (port !== CONDITIONAL_PORT) {
+          variables[celVariableName(source.node, source.output)] = asVariable(upstream.values)
+        }
       }
+
+      values[port] = carried
     }
 
     return { values, variables }

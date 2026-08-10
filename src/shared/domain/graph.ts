@@ -460,6 +460,51 @@ export const OUTPUT_NODE_TYPES: readonly GraphNodeType[] = ['model', 'llm', 'for
 
 export const canBeOutput = (type: GraphNodeType): boolean => OUTPUT_NODE_TYPES.includes(type)
 
+/**
+ * The node types whose wires are NAMED after the node they come from, so one input port holds
+ * several of them.
+ *
+ * Read off `workflow_converter.js` like the list above: these two push one flow input per
+ * incoming edge — one `celVariableName` each — where every other type compiles a port to its
+ * first edge and drops the rest without a word.
+ */
+export const MULTI_WIRE_NODE_TYPES: readonly GraphNodeType[] = ['transformText', 'ifElse']
+
+/**
+ * Whether ONE input port takes several wires.
+ *
+ * The conditional port is the exception, and it cuts both ways — which is the whole reason this
+ * asks for the port and not just the type. On a `transformText` it STEERS: it decides whether the
+ * node runs at all, the converter drops that edge before naming anything, so a second wire there
+ * would be one no published run has. On an `ifElse` it is the input itself — a branch reads its
+ * condition fields through it (`conditionFieldsOf`), so holding it to one wire would hold every
+ * branch to a single field.
+ */
+export const takesManyWires = (type: GraphNodeType, port: string | undefined): boolean =>
+  MULTI_WIRE_NODE_TYPES.includes(type) && (type === 'ifElse' || port !== CONDITIONAL_PORT)
+
+/**
+ * Input ports, nested ones included: a sub-handle is a port that can be wired like any other.
+ *
+ * Here rather than in `engines/graph/handles.ts` for the reason `RESERVED_NODE_ID` is here: the
+ * READER needs it — `parseGraph` has to know which port an edge lands on — and the reader is in
+ * the opening chunk. Reaching from there into the engine drags the engine along, which a budget
+ * test watches (`eager-graph.test.ts`). `handles.ts` re-exports both, so the engine keeps its own
+ * door.
+ */
+export function inputHandlesOf(node: GraphNode): readonly GraphHandleInput[] {
+  const flatten = (handles: readonly GraphHandleInput[]): GraphHandleInput[] =>
+    handles.flatMap(handle => [handle, ...flatten(handle.subHandles ?? [])])
+
+  return flatten(node.data.inputHandles ?? [])
+}
+
+/** `id` may be missing: an edge read off a file names no handle, and that is no port either. */
+export const inputHandleOf = (
+  node: GraphNode,
+  id: string | undefined,
+): GraphHandleInput | undefined => inputHandlesOf(node).find(handle => handle.id === id)
+
 /** The nodes the converter would compile a branch for, in the order the graph holds them. */
 export const outputNodesOf = (graph: GraphState): readonly GraphNode[] =>
   graph.nodes.filter(node => node.data.isOutput === true && canBeOutput(node.type))

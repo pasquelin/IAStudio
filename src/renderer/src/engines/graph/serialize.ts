@@ -1,7 +1,9 @@
 import {
   EMPTY_GRAPH,
   isGraphNodeType,
+  inputHandleOf,
   isReservedNodeId,
+  takesManyWires,
   type GraphEdge,
   type GraphGroups,
   type GraphNode,
@@ -28,10 +30,13 @@ export function parseGraph(raw: unknown): GraphState {
     .filter(isPresent)
     .filter(edge => known.has(edge.source) && known.has(edge.target))
 
-  // One producer per input, which is what the whole editor is written around: a second edge onto
-  // the same input would leave the compiler to pick, and it picks the first — so the first is
-  // what a reader keeps, rather than an editor holding a graph its own rules forbid.
-  const edges = firstOfEach(wired, edge => `${edge.source}\0${edge.sourceHandle ?? ''}`)
+  // One producer per input, EXCEPT on a port that takes several (`takesManyWires`) — there the key
+  // is the whole edge, so two providers both survive and only a wire drawn twice is dropped.
+  // Keyed by the port alone everywhere else, and the first is what a reader keeps, because that is
+  // the one the compiler picks. Read here rather than left to the editor: a graph imported from the
+  // webapp carries the wires the editor would now allow, and they must reach the plan.
+  const byId = new Map(nodes.map(node => [node.id, node]))
+  const edges = firstOfEach(wired, edge => edgeKeyOf(edge, byId))
 
   const inputKeys = firstOfEach(
     asArray(raw.inputKeys)
@@ -42,6 +47,20 @@ export function parseGraph(raw: unknown): GraphState {
   const nodeGroups = parseGroups(raw.nodeGroups)
 
   return nodeGroups ? { nodes, edges, inputKeys, nodeGroups } : { nodes, edges, inputKeys }
+}
+
+/**
+ * What makes two edges the same for the reader: the port they land on, and — where that port takes
+ * several wires — which provider they come from.
+ */
+function edgeKeyOf(edge: GraphEdge, byId: ReadonlyMap<string, GraphNode>): string {
+  const port = `${edge.source}\0${edge.sourceHandle ?? ''}`
+  const consumer = byId.get(edge.source)
+  const many =
+    consumer !== undefined &&
+    takesManyWires(consumer.type, inputHandleOf(consumer, edge.sourceHandle)?.name)
+
+  return many ? `${port}\0${edge.target}\0${edge.targetHandle ?? ''}` : port
 }
 
 /**
