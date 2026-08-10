@@ -61,16 +61,33 @@ export type GraphRunResult =
  * Three facts, three names. `stalled` deliberately covers BOTH a node that went wrong and a run
  * the user ended: a reader does the same thing with either — it has nothing to read — and the one
  * place the difference matters, painting the node, is decided by whoever reports, not by whoever
- * reads. A fourth member for the stop was written and taken back out: the mutation harness showed
- * that turning it into a failure broke nothing, which is what an unread distinction looks like.
+ * reads.
  */
 type Outcome =
   | { kind: 'produced'; values: Readonly<Record<string, readonly string[]>> }
   | { kind: 'skipped' }
   | { kind: 'stalled' }
 
-/** The one answer that files no report: `stopped` has already painted the node idle. */
-const STALLED: Outcome = { kind: 'stalled' }
+/** Whoever hands this back has just painted the node — `fail` red, `stopped` idle. */
+const STALLED: Extract<Outcome, { kind: 'stalled' }> = { kind: 'stalled' }
+
+/**
+ * What a reader makes of a provider that handed back no values.
+ *
+ * A `switch` over `Exclude<Outcome, produced>` with its return type written down, and that is the
+ * point: a ternary falling through to `blocked` would paint a FUTURE member red in silence, where
+ * this stops the build. Narrowing stays with the caller, which needs `values` right after.
+ */
+const withoutValues = (
+  outcome: Exclude<Outcome, { kind: 'produced' }>,
+): Exclude<Reach, 'ready'> => {
+  switch (outcome.kind) {
+    case 'skipped':
+      return 'skipped'
+    case 'stalled':
+      return 'blocked'
+  }
+}
 
 /**
  * Every port a node publishes its one result on.
@@ -131,6 +148,15 @@ export async function runGraph(
   const guarding = new Set(approvalsOf(graph).values())
   const produced = new Map(cache)
   const settled = new Map<string, Promise<Outcome>>()
+
+  /**
+   * What a node settled on, awaited.
+   *
+   * Present by construction — the plan is topological, so a provider's promise was made on an
+   * earlier turn of the loop below, and an approval comes before everything it guards. A node the
+   * plan never ordered gave nothing all the same, which is what a stall is.
+   */
+  const settledOn = async (id: string): Promise<Outcome> => (await settled.get(id)) ?? STALLED
 
   const fail = (id: string, failure: GraphRunFailure): Outcome => {
     report(id, { status: 'failed', failure })
@@ -198,11 +224,8 @@ export async function runGraph(
       const carried: string[] = []
 
       for (const source of sources) {
-        // Present by construction: a provider comes before its consumer in a topological order, so
-        // its promise was made on an earlier turn of the loop below.
-        const upstream = await settled.get(source.node)
-        if (upstream?.kind !== 'produced')
-          return upstream?.kind === 'skipped' ? 'skipped' : 'blocked'
+        const upstream = await settledOn(source.node)
+        if (upstream.kind !== 'produced') return withoutValues(upstream)
 
         // The port the edge leaves from, never the whole node: a branch that was not taken has
         // no entry here, and reading the node flat would hand on what another branch produced.
@@ -245,12 +268,10 @@ export async function runGraph(
    */
   const reachOf = async (planned: GraphPlanNode): Promise<Reach> => {
     for (const id of planned.awaits) {
-      // Present for the same reason an input's provider is: the plan puts an approval before
-      // everything it guards, which is why it works out the dependency rather than the executor.
-      const answer = await settled.get(id)
+      const answer = await settledOn(id)
       // An approval on a branch nobody took was never asked, so what it guards was not refused —
       // it was not reached either.
-      if (answer?.kind !== 'produced') return answer?.kind === 'skipped' ? 'skipped' : 'blocked'
+      if (answer.kind !== 'produced') return withoutValues(answer)
     }
 
     return 'ready'

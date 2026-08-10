@@ -587,36 +587,35 @@ describe('stopping a run', () => {
     })
 
     expect(reported.get('m2')?.map(run => run.status)).toEqual(['idle'])
+    // And no node ANYWHERE is red, which is the whole of what `stalled` promises: the node that
+    // was on the wire when the stop landed has nothing to hand on, and blaming it for a run the
+    // user ended would be the one report this must never file. Asserted over every node because
+    // the mistake is a reader's, and a reader is whichever one comes next.
+    expect([...reported.values()].flat().map(run => run.status)).not.toContain('failed')
   })
 
   /**
-   * The promise `Outcome` makes by telling `failed` from `stopped`, held at the one place it can be
-   * seen: NO node of a stopped run is painted red. The two were one `null`, and every reader had to
-   * ask the abort signal a second time to tell them apart — a reader that forgot would report a
-   * fault on a graph where nothing went wrong, and the only way to notice is to look at them all.
+   * The other half of that same guard, and the half no test held: a generation that came back
+   * AFTER the stop must not land in the cache. Filed there, the next Run would paint the node
+   * `cached` off a run the user ended and never regenerate it — the result is real, but nobody
+   * asked for the run that produced it.
    */
-  it('paints no node failed anywhere in a run that was stopped', async () => {
+  it('keeps out of the cache what came back after the stop', async () => {
     const controller = new AbortController()
 
-    const reported = new Map<string, GraphNodeRun[]>()
-    await runGraph(chain(), undefined, {
+    const run = await runGraph(chain(), undefined, {
       generate: async () => {
         controller.abort()
         return ['asset_1']
       },
-      approve: () => Promise.resolve(true),
+      approve: () => Promise.resolve(false),
       transform: noTransform,
-      report: (nodeId, run) => {
-        const held = reported.get(nodeId)
-        if (held) held.push(run)
-        else reported.set(nodeId, [run])
-      },
+      report: () => {},
       signal: controller.signal,
     })
 
-    const painted = [...reported.values()].flat().map(run => run.status)
-    expect(painted).not.toContain('failed')
-    expect(painted).toContain('idle')
+    // What the text node produced BEFORE the stop belongs there; what came back after does not.
+    expect(run.ok && [...run.cache.values()].flat()).not.toContain('asset_1')
   })
 
   it('submits nothing at all when the stop came before the run', async () => {
@@ -762,6 +761,10 @@ describe('stopping on an approval', () => {
     })
 
     expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'idle'])
+    // And nothing downstream of the gate runs. An approval that made it through hands back the
+    // same empty outcome as one nobody asked — so a stop that let this one answer `produced` would
+    // open the gate on a run the user just ended, and the next generation would be paid for.
+    expect(watched.submitted.map(call => call.modelId)).not.toContain('model_b')
   })
 
   /**
