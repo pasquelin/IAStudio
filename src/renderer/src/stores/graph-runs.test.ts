@@ -66,7 +66,7 @@ function installJobs(): {
 function chain(prompt = 'a knight'): GraphState {
   const graph = graphOf(
     [textNode('text1'), modelNode('m1', {}, 'model_a')],
-    [wire('m1', 'prompt', 'text1', 'output')],
+    [wire('m1', 'prompt', 'text1', 'prompt')],
   )
 
   return updateNodeData(graph, 'text1', { value: prompt })

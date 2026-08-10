@@ -86,6 +86,22 @@ describe('whether an output can feed an input', () => {
     expect(typesConnect({ id: 'o' }, { id: 'i', type: 'image' })).toBe(true)
     expect(typesConnect({ id: 'o', type: 'image' }, { id: 'i' })).toBe(true)
   })
+
+  /**
+   * The two pairs a published App is wired by, replayed — `wflow_H1bKz78jgpinWPKJfVCM5uAp`, 94
+   * edges, `image` → `image` 69 times and `text` → `prompt` 25. The second was refused here until
+   * the webapp was asked, which made the one gesture the graph space exists for impossible.
+   */
+  it('joins the two pairs a published App is actually wired by', () => {
+    expect(typesConnect({ id: 'o', type: 'image' }, { id: 'i', type: 'image' })).toBe(true)
+    expect(typesConnect({ id: 'o', type: 'text' }, { id: 'i', type: 'prompt' })).toBe(true)
+  })
+
+  /** Widened one way only: a prompt is text, a text field is not somewhere to drop a picture. */
+  it('does not widen the pair the other way round', () => {
+    expect(typesConnect({ id: 'o', type: 'prompt' }, { id: 'i', type: 'text' })).toBe(false)
+    expect(typesConnect({ id: 'o', type: 'image' }, { id: 'i', type: 'prompt' })).toBe(false)
+  })
 })
 
 describe('the ports of a node', () => {
