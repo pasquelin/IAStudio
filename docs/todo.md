@@ -895,27 +895,21 @@ logique, les boucles, les transforms, l'approbation, puis l'import/export et la 
 > une suite entière aveugle**, et rien n'empêche encore la prochaine de diverger. Le test qui
 > manque : celui qui exigerait qu'une fixture de nœud soit ce que la fabrique construit.
 
-### 🔴 Un fil tiré vers un générateur n'arrive pas dans le flow compilé — MESURÉ dans le SDK
-
-**Le geste attendu** : relier un nœud Texte au port prompt d'un générateur, puis exporter — le
-workflow exporté doit porter ce lien.
-
-**Ce qui se passe** : le lien n'existe pas dans le flow. `convertWorkflowEditorToFlow` tire
-`modelInputs` de `getModel`, **que le lot C3 ne lui passe pas**, puis saute chaque arête qu'il ne
-sait pas nommer — `if (!modelInput) continue`, `workflow_converter.ts:1378`, même chose pour
-`inputs_array` ligne 1321. Le générateur garde les valeurs de son formulaire et perd son câblage.
-La ligne d'état répond quand même « 2 étapes ».
-
-**Pourquoi ce n'est pas une ligne à ajouter** : le convertisseur veut le **type d'entrée de l'API**
-(`WorkflowEditorModelInput.type`), et `ModelRegistry` le traduit en `FieldKind` avant de le mettre
-en cache — ce type brut n'existe plus nulle part côté main. Le lot doit donc soit conserver le type
-brut à côté du descripteur, soit demander le modèle une seconde fois. Le reste est facile : le
-handler `workflows:compile` est **déjà asynchrone** et déjà débouncé à 400 ms, donc il peut
-résoudre les modèles du graphe avant d'appeler le convertisseur, qui, lui, est synchrone.
-
-**Le test qui le tient déjà** : `refuses to carry a wire into a generator, for want of the model
-behind it` (`workflow-compile.test.ts`) épingle le comportement actuel — **il doit rougir** le jour
-où le trou est comblé, et être réécrit à l'endroit.
+> ### Les fils arrivent — livré, et ce qui reste ouvert derrière
+>
+> `workflows:compile` résout les modèles du graphe **avant** d'appeler le convertisseur, qui est
+> synchrone : `ModelRegistry.inputsOf` rend les entrées telles que l'API les épelle, servies par la
+> même requête et la même entrée de cache que `describe`. Mesuré : le port prompt d'un générateur
+> câblé devient `ref: { node: 'text1', name: 'all' }` et **remplace** la valeur du formulaire.
+>
+> **Deux champs restent vides dans `editorModelOf`, et c'est écrit plutôt que caché** : `uiConfig`
+> (préréglages de ratio, que seul un nœud `aspectRatio` lirait — l'éditeur ne sait pas en créer) et
+> `tags` (qui dit au convertisseur si un modèle est `compose`, ce qui demande les entrées
+> imbriquées d'un `inputs_array` — une forme que `ScenarioInput` ne porte pas et qu'aucun modèle du
+> compte ne publie). L'étape 8 les rencontrera.
+>
+> **Un modèle indescriptible ne fait pas échouer la compilation** : il est laissé de côté, et les
+> fils de ce nœud-là retombent dans le comportement d'avant. Le graphe dit quand même s'il compile.
 
 > **Ce que la revue du lot C3 a laissé ouvert, et qui n'est pas corrigé** :
 >

@@ -5,7 +5,7 @@ import {
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
-import { compileGraph, toEditorFlow } from './workflow-compile'
+import { compileGraph, editorModelOf, modelIdsOf, toEditorFlow } from './workflow-compile'
 
 const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
   `${nodeId}-${side}-${field}`
@@ -178,16 +178,63 @@ describe('compiling a graph', () => {
   })
 
   /**
-   * The hole this lot leaves, pinned so it cannot be forgotten — read off the converter, not
-   * guessed: it derives `modelInputs` from `getModel`, which is not passed, and then skips every
-   * wire it cannot name (`if (!modelInput) continue`). A text node feeding a generator therefore
-   * reaches the flow as a step of its own, and the generator's prompt still holds the form value
-   * rather than a reference to it.
-   *
-   * Written as an assertion rather than a comment because the day `getModel` is wired — the lot
-   * `docs/todo.md` § 5.1 asks for — this test must fail and be rewritten the other way round.
+   * That `compileGraph` hands `getModel` on to the converter, which its own answer cannot show:
+   * a verdict reduced to `ok` and a step count is the same either way — measured, both say
+   * `{ ok: true, steps: 2 }`. What does show is the lookup itself: handed nothing, the converter
+   * never asks, and the wires are dropped in silence. A mutation removing the pass-through
+   * survived every other test in this file.
    */
-  it('refuses to carry a wire into a generator, for want of the model behind it', () => {
+  it('asks for the model of a generator while compiling it, not only while converting', () => {
+    const graph = graphOf(
+      [textNode('text1', 'a knight'), modelNode('m1', true)],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
+    )
+    const getModel = vi.fn(() => ({
+      id: 'model_flux',
+      inputs: [{ name: 'prompt', type: 'string' }],
+    }))
+
+    compileGraph(graph, { report: vi.fn(), getModel })
+
+    expect(getModel).toHaveBeenCalledWith('model_flux')
+  })
+
+  /**
+   * The wire, carried — which is the whole point of resolving the models first.
+   *
+   * Measured rather than guessed: the converter matches the edge to the input by NAME, then types
+   * the flow input from the model's own `type` and replaces the form value with a reference to
+   * the node feeding it. `name: 'all'` is the converter's own word for a whole output.
+   */
+  it('carries a wire into a generator once the model behind it is known', () => {
+    const graph = graphOf(
+      [textNode('text1', 'a knight'), modelNode('m1', true)],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
+    )
+    const model = { id: 'model_flux', inputs: [{ name: 'prompt', type: 'string' }] }
+    const generator = toEditorFlow(graph, () => model).find(step => step.id === 'm1')
+
+    expect(generator?.inputs).toContainEqual({
+      name: 'prompt',
+      type: 'string',
+      ref: { node: 'text1', name: 'all' },
+    })
+    // The reference REPLACES the form value: a wired prompt must not also submit what the
+    // inspector last held, or the two would race to fill the same field.
+    expect(generator?.inputs).not.toContainEqual(
+      expect.objectContaining({ name: 'prompt', value: 'a knight' }),
+    )
+  })
+
+  /**
+   * The same graph without the model behind it — still a real path: a model that was deleted, or
+   * a key that no longer reaches it, resolves to nothing and the compile goes on without it.
+   *
+   * Read off the converter: it derives `modelInputs` from `getModel` and skips every wire it
+   * cannot name (`if (!modelInput) continue`). What is lost is the wiring; what survives is the
+   * form. Pinned so the difference the resolution makes is written down, not assumed.
+   */
+  it('drops the wire when the model behind it cannot be resolved', () => {
     const graph = graphOf(
       [textNode('text1', 'a knight'), modelNode('m1', true)],
       [wire('m1', 'prompt', 'text1', 'prompt')],
@@ -199,6 +246,83 @@ describe('compiling a graph', () => {
     )
     // No input of the generator refers to the text node, so nothing wires the two together.
     expect(JSON.stringify(generator?.inputs)).not.toContain('text1')
+  })
+})
+
+describe('the models a graph names', () => {
+  const node = (id: string, type: 'model' | 'llm' | 'text', data: Record<string, unknown>) => ({
+    id,
+    type,
+    position: { x: 0, y: 0 },
+    data,
+  })
+
+  it('names each model once, however many nodes carry it', () => {
+    const graph = graphOf([
+      node('m1', 'model', { modelId: 'model_flux' }),
+      node('m2', 'model', { modelId: 'model_flux' }),
+      node('m3', 'model', { modelId: 'model_sdxl' }),
+    ])
+
+    expect(modelIdsOf(graph)).toEqual(['model_flux', 'model_sdxl'])
+  })
+
+  /** `llm` holds its model in the same field, under an arm that declares nothing but the basics. */
+  it('reads the model of an llm node as well as of a generator', () => {
+    const graph = graphOf([node('llm1', 'llm', { modelId: 'model_scenario-llm' })])
+
+    expect(modelIdsOf(graph)).toEqual(['model_scenario-llm'])
+  })
+
+  /**
+   * A generator carrying no model is what the palette drops before one is chosen, and a file can
+   * hold anything at all: neither must become a request for `GET /models/undefined`.
+   */
+  it('asks for nothing on a node that carries no usable model', () => {
+    const graph = graphOf([
+      node('m1', 'model', {}),
+      node('m2', 'model', { modelId: '' }),
+      ...JSON.parse('[{"id":"m3","type":"model","position":{"x":0,"y":0},"data":{"modelId":7}}]'),
+      node('text1', 'text', { value: 'a knight' }),
+    ])
+
+    expect(modelIdsOf(graph)).toEqual([])
+  })
+})
+
+describe('a model as the converter reads one', () => {
+  it('keeps the API’s own input type, which is what an edge is matched by', () => {
+    const model = editorModelOf('model_flux', [
+      { name: 'prompt', type: 'string' },
+      { name: 'image', type: 'file' },
+    ])
+
+    expect(model).toEqual({
+      id: 'model_flux',
+      inputs: [
+        { name: 'prompt', type: 'string' },
+        { name: 'image', type: 'file' },
+      ],
+    })
+  })
+
+  /** Bounds travel because the converter coerces static values against them. */
+  it('carries the bounds of a number, and spells its allowed values as strings', () => {
+    const model = editorModelOf('model_flux', [
+      { name: 'steps', type: 'number', min: 1, max: 50, step: 1 },
+      { name: 'scheduler', type: 'string', allowedValues: ['euler', 2] },
+    ])
+
+    expect(model.inputs).toEqual([
+      { name: 'steps', type: 'number', min: 1, max: 50, step: 1 },
+      { name: 'scheduler', type: 'string', allowedValues: ['euler', '2'] },
+    ])
+  })
+
+  it('leaves out what the model does not declare rather than writing undefined', () => {
+    const [input] = editorModelOf('model_flux', [{ name: 'prompt', type: 'string' }]).inputs ?? []
+
+    expect(input && Object.keys(input)).toEqual(['name', 'type'])
   })
 })
 

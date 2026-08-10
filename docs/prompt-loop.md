@@ -121,13 +121,21 @@ sur une question ouverte, elle la met de côté et avance sur un autre front.
   convention existe et quatre bancs sont commités), et le commentaire renvoie au banc au lieu
   d'annoncer le nombre. Un commentaire qui cite un chiffre invérifiable est le défaut que ce dépôt
   a déjà payé.
-- **Le harnais de mutation ment, et il a trouvé une troisième façon.** Les deux connues : `zsh` ne
+- **Le harnais de mutation ment, et il en est à quatre façons.** Les deux premières : `zsh` ne
   découpe pas une variable en mots — un tableau `TESTS=(a b)` et `"${TESTS[@]}"` — et une mutation
   qui fait déborder la pile ne dit pas « failed », elle tue le fichier, d'où la comparaison des
   **comptes** de tests. La troisième, payée le 10 août : **`git checkout --` ne restaure pas un
   fichier non suivi**, donc sur un lot dont les fichiers sont neufs, git répond « pathspec did not
   match » et les mutations **s'empilent** les unes sur les autres. Restaurer depuis une **copie de
-  référence**, et vérifier l'application par `cmp`, jamais par `git diff`.
+  référence**, et vérifier l'application par `cmp`, jamais par `git diff`. La quatrième, le même
+  jour : **ne jamais tuyauter le script dans `head`** — la fermeture du tuyau lui envoie un SIGPIPE
+  en pleine passe, il meurt avant sa restauration, et la mutation reste dans le code. Écrire la
+  sortie dans un fichier et la lire ensuite.
+- **Une mutation qui survit n'accuse pas toujours le test qu'on regarde.** Celle qui a survécu au
+  lot `getModel` — retirer un argument passé au SDK — était invisible parce que le verdict rendu
+  est réduit à un nombre. Ce qui l'a tuée : espionner la **dépendance** qu'on fournit, un
+  `vi.fn()` qui n'est jamais appelé si l'argument n'est pas transmis. Quand un effet ne se lit pas
+  dans le retour, il se lit dans ce que le code a demandé autour de lui.
 - **Un rouge ne se croit pas sur parole** : relance une fois avant d'ouvrir une enquête, et ne conclus
   à une régression que si le second passage rougit **au même endroit**. Des échecs qui se déplacent
   d'une exécution à l'autre sont de la contention entre sessions, pas une régression.

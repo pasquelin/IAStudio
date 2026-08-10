@@ -1,8 +1,11 @@
+import type { WorkflowEditorModel } from '@scenario-labs/sdk'
+import type { GraphState } from '@shared/domain/graph'
 import type { Job, JobTarget } from '@shared/domain/job'
+import { messageOf } from '@shared/guards'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import { compileGraph } from './workflow-compile'
+import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
@@ -32,6 +35,8 @@ import {
 
 export type ScenarioHandlerDeps = {
   models: ModelRegistry
+  /** Bounds what a compile asks the catalogue: a graph read off an App names dozens of models. */
+  queue: <T>(task: () => Promise<T>) => Promise<T>
   workflows: WorkflowRegistry
   jobs: JobManager
   prompts: PromptAssist
@@ -43,8 +48,42 @@ export type ScenarioHandlerDeps = {
 
 const reduced = reducedBy('scenario')
 
+/**
+ * The models a graph names, as the converter reads them.
+ *
+ * Through the queue rather than a bare `Promise.all`: a graph read off a published App names
+ * dozens of models, and asking for every schema at once is the unbounded burst the guide names.
+ * Warm after the first compile — the registry caches a schema for ten minutes.
+ *
+ * A model nobody can describe — deleted, or a key that no longer reaches it — is LEFT OUT rather
+ * than allowed to fail the compile: the graph still says how many steps it holds, and the wires
+ * of that one node are dropped exactly as they were before any of this existed.
+ */
+async function resolveModels(
+  graph: GraphState,
+  models: ModelRegistry,
+  queue: <T>(task: () => Promise<T>) => Promise<T>,
+): Promise<Map<string, WorkflowEditorModel>> {
+  const resolved = new Map<string, WorkflowEditorModel>()
+
+  await Promise.all(
+    modelIdsOf(graph).map(modelId =>
+      queue(() => models.inputsOf(modelId))
+        .then(inputs => {
+          resolved.set(modelId, editorModelOf(modelId, inputs))
+        })
+        .catch((error: unknown) => {
+          log.warn('scenario', `workflow compile: ${modelId}: ${messageOf(error)}`)
+        }),
+    ),
+  )
+
+  return resolved
+}
+
 export function registerScenarioHandlers({
   models,
+  queue,
   workflows,
   jobs,
   prompts,
@@ -119,15 +158,18 @@ export function registerScenarioHandlers({
     reduced(() => workflows.describe(parseWorkflowId(workflowId))),
   )
 
-  // No account, no network, no key: the compiler is a pure function of the SDK, and it answers
-  // while the user is still wiring. It is here because only this side speaks SDK (invariant 2).
-  handle(CHANNELS.workflowsCompile, (_event, graph) =>
-    Promise.resolve(
-      compileGraph(parseGraphState(graph), {
-        report: message => log.warn('scenario', `workflow compile: ${message}`),
-      }),
-    ),
-  )
+  // Here because only this side speaks SDK (invariant 2), and it answers while the user is still
+  // wiring — hence the models resolved first: the converter is synchronous and drops every wire
+  // whose input it cannot name, so a compile with no models is a compile with no wires.
+  handle(CHANNELS.workflowsCompile, async (_event, graph) => {
+    const state = parseGraphState(graph)
+    const resolved = await resolveModels(state, models, queue)
+
+    return compileGraph(state, {
+      report: message => log.warn('scenario', `workflow compile: ${message}`),
+      getModel: modelId => resolved.get(modelId),
+    })
+  })
 
   handle(CHANNELS.workflowsRun, (_event, workflowId, body) =>
     submitNamed(
