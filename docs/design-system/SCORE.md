@@ -1,6 +1,6 @@
 # SCORE
 
-Courant : 0 (dette 293 · 260 composants) — itération 12, 2026-08-10
+Courant : 0 (dette 319 · 260 composants) — itération 12, 2026-08-10
 
 Le score s'est effondré à l'itération 4 parce qu'un invariant venait d'être déclaré, pas
 parce que le code avait régressé.
@@ -12,7 +12,7 @@ haut ; il n'est pas plus mauvais. Ne pas lisser vaut aussi pour ça.
 
 | # | Date | Score | Dette | P0 | P1 | P2 | Lot traité |
 |---|---|---|---|---|---|---|---|
-| 12 | 2026-08-10 | 0 | 293 | 29 | 1 | 0 | les dix appels à `<Button>` — il n'en reste aucun |
+| 12 | 2026-08-10 | 0 | 319 | 31 | 3 | 0 | les dix appels à `<Button>` — il n'en reste aucun |
 | 11 | 2026-08-10 | 0 | 373 | 37 | 1 | 0 | les huit derniers `<button>` bruts — il n'en reste aucun |
 | 10 | 2026-08-10 | 0 | 463 | 46 | 1 | 0 | neuf boutons des docks et de la ligne d'état — et le recensement corrigé |
 | 9 | 2026-08-10 | 0 | 173 | 17 | 1 | 0 | les dix-sept boutons à libellé des Préférences |

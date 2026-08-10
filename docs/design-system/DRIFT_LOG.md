@@ -6,7 +6,7 @@ donne aussi le nom accessible (`TIP_*`). Source : décision de l'utilisateur du 
 portée dans `CLAUDE.md` § Interface.
 
 Sont clos et n'y figurent plus : les `<ToolButton>` (le type exige `tooltip`), les `<button>`
-écrits à la main, et les appels à `<Button>`. Restent les rangées de menu.
+écrits à la main, et les appels à `<Button>`. Restent les rangées de menu, plus ce qui est arrivé depuis.
 
 ## Rangées de menu (29)
 
@@ -48,6 +48,14 @@ la dérive est vivante, et c'est exactement ce que ce journal existe pour montre
 | P0 | src/renderer/src/panels/styles/StyleMenu.tsx:26 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/styles/StyleMenu.tsx:34 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/spaces/graph/GraphMenu.tsx:63 | P0-button-tooltip | prop `tip` non passée |
+
+## Arrivés depuis, sans être traités
+
+| P | Fichier:ligne | Règle | Preuve |
+|---|---|---|---|
+| P0 | src/renderer/src/design/ShelfTile.tsx:53 | P0-button-tooltip | `<button>` neuf, fusionné pendant l'itération 12 |
+| P1 | src/renderer/src/panels/documents/Documents.tsx:41 | P1-duplicate-role | réécrit à la main l'`EmptyState` « pas de projet » que `panels/shared/NoProject.tsx` porte déjà |
+| P1 | src/renderer/src/panels/projects/Projects.tsx:48 | P1-duplicate-role | idem, avec les deux gestes dans l'ordre inverse |
 
 ## Peau recopiée
 
