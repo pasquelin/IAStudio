@@ -132,7 +132,7 @@ from ever being a blank page, whatever you untick.
 
 ### The left column
 
-A narrow rail holding the **Explorer**: the project's documents, as a tree. It is there for what
+A narrow rail holding the **Explorer**: the project folder, as a tree. It is there for what
 you keep an eye on while reading the page, rather than what you read in turn.
 
 > **The home can be skipped.** **Preferences ▸ General ▸ Show the home screen**: unticked, the
@@ -388,7 +388,7 @@ instead.
 | **Channels** | right | 1st | Textures | the eight channels of the open material, and what each one holds |
 | **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
 | **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
-| **Explorer** | left | 2nd | everywhere, home included | the documents of the project, open or not |
+| **Explorer** | left | 2nd | everywhere, home included | the project folder, folders and files |
 | **Apps** | left | 2nd | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
@@ -469,9 +469,9 @@ would impose one workspace's answer on the other six.
 As soon as you click an icon, that half remembers **your** choice, and does not move again until
 you click another — or reset the layout.
 
-**Why the Explorer is visible everywhere.** It lists the documents of the project folder, open or
-not, and that is the same question in every workspace: double-clicking a row opens the
-document, switching workspace if it belongs to another. It long showed the 3D scene tree — that
+**Why the Explorer is visible everywhere.** It shows the project folder as a tree, and that is the
+same question in every workspace: double-clicking a document opens it, switching workspace if it
+belongs to another, and double-clicking anything else hands it to the system. It long showed the 3D scene tree — that
 now has its own panel, **Scene**.
 
 ---

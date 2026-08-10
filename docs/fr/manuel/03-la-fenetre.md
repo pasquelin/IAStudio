@@ -136,7 +136,7 @@ garantit que l’accueil n’est jamais une page blanche, quoi qu’on décoche.
 
 ### La colonne de gauche
 
-Un rail étroit portant l’**Explorateur** : les documents du projet, en arborescence. Il est là
+Un rail étroit portant l’**Explorateur** : le dossier du projet, en arborescence. Il est là
 pour ce qu’on garde à l’œil pendant qu’on lit la page, au lieu de le lire à son tour.
 
 > **L’accueil peut être coupé.** **Préférences ▸ Général ▸ Afficher l’accueil** : décoché, le
@@ -401,7 +401,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
 | **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
-| **Explorateur** | gauche | 2de | partout, accueil compris | les documents du projet, ouverts ou non |
+| **Explorateur** | gauche | 2de | partout, accueil compris | le dossier du projet, dossiers et fichiers |
 | **Apps** | gauche | 2de | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
@@ -487,9 +487,9 @@ six autres.
 Dès que vous cliquez une icône, cette moitié retient **votre** choix, et ne bouge plus jusqu’à ce
 que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
 
-**Pourquoi l’Explorateur est visible partout.** Il liste les documents du dossier de projet,
-ouverts ou non, et c’est la même question dans tous les espaces : un double-clic sur une ligne
-ouvre le document, en changeant d’espace s’il appartient à un autre. Il a longtemps montré
+**Pourquoi l’Explorateur est visible partout.** Il montre le dossier du projet en arborescence, et
+c’est la même question dans tous les espaces : un double-clic sur un document l’ouvre, en changeant
+d’espace s’il appartient à un autre, et un double-clic sur autre chose le confie au système. Il a longtemps montré
 l’arbre de la scène 3D — celui-ci a désormais son propre panneau, **Scène**.
 
 ---

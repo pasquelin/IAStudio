@@ -56,6 +56,12 @@ import {
 import { runnerOf } from './scenario/runner'
 import type { AskUser } from './project/document-dialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
+import {
+  createFolderReader,
+  watchProjectFolder,
+  type FolderReader,
+  type FolderWatch,
+} from './project/folder'
 import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
 import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
@@ -159,6 +165,10 @@ export type Services = {
   pickFolder: () => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
+  /** The project folder, read one level at a time for the explorer. */
+  folder: FolderReader
+  /** Hands a file to the system. The one place the studio launches a third-party application. */
+  openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
   askUser: AskUser
   pickMedia: () => Promise<string[]>
@@ -403,6 +413,8 @@ export function createServices(settings: SettingsStore): Services {
     if (remembered.length > 0) jobs.resume(remembered)
   }
 
+  let folderWatch: FolderWatch | null = null
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
@@ -427,6 +439,14 @@ export function createServices(settings: SettingsStore): Services {
       // outputs land in the project they were generated for, and the catalogue that receives
       // them only exists once one is open.
       if (current) void resumeJobsOf(current.path)
+
+      // One watch at a time, and it belongs to the project that is open: left running, the
+      // previous project's folder would go on announcing changes the explorer would answer by
+      // re-reading a folder that is no longer on screen.
+      folderWatch?.stop()
+      folderWatch = current
+        ? watchProjectFolder(current.path, () => broadcast(EVENTS.projectFolderChanged))
+        : null
     },
     settle: async () => {
       // Both before the catalogue stops answering: the journal writes into it, and the pending
@@ -804,6 +824,8 @@ export function createServices(settings: SettingsStore): Services {
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
     reveal: file => shell.showItemInFolder(file),
+    folder: createFolderReader(() => project.path()),
+    openInSystem: file => shell.openPath(file),
     askUser,
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's

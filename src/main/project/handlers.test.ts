@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS } from '@shared/ipc'
@@ -46,6 +47,9 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
       remove: vi.fn(async () => undefined),
     },
     reveal: vi.fn(),
+    folder: { list: vi.fn(async () => []) },
+    // An empty string is what `shell.openPath` answers when the system took the file.
+    openInSystem: vi.fn(async () => ''),
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
     // anything by not caring.
     askUser: vi.fn(async () => 2),
@@ -104,6 +108,68 @@ describe('project handlers', () => {
       await expect(invoke(CHANNELS.projectCreate, PROJECT, 'Reel')).resolves.toBeDefined()
 
       expect(injected.record).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('walking the project folder', () => {
+    it('lists the folder that was asked for', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectListFolder, 'assets/img')
+
+      expect(injected.folder.list).toHaveBeenCalledWith('assets/img')
+    })
+
+    // The one channel where a window names a path of its own, and `join` walks out of the
+    // project on every platform. The listing must never be reached at all.
+    it('refuses a path that would climb out of the project', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectListFolder, '../..')).rejects.toThrow()
+
+      expect(injected.folder.list).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * The one place the studio launches a third-party application. `shell.openPath` answers with
+   * a sentence rather than throwing, so the refusal has to be read rather than caught.
+   */
+  describe('handing a file to the system', () => {
+    it('opens it under the project folder, never wherever the renderer says', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectOpenFile, 'notes.pdf')).resolves.toBe(true)
+
+      expect(injected.openInSystem).toHaveBeenCalledWith(join(PROJECT, 'notes.pdf'))
+    })
+
+    it('refuses a path that would climb out of the project', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectOpenFile, '../../etc/passwd')).rejects.toThrow()
+
+      expect(injected.openInSystem).not.toHaveBeenCalled()
+    })
+
+    // A sentence back is a refusal, and it is the system's own — in the system's language. The
+    // journal says ours.
+    it('says so in the journal when the system will not take it', async () => {
+      const injected = deps(catalog)
+      injected.openInSystem = vi.fn(async () => 'no application knows this file')
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectOpenFile, 'notes.pdf')).resolves.toBe(false)
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.fileNotOpened',
+      })
     })
   })
 

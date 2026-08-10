@@ -292,3 +292,111 @@ describe('Tree', () => {
     expect(rendered.length).toBeLessThan(200)
   })
 })
+
+/**
+ * A file browser opens what a row names; an outliner has nothing to open. Both walk the same
+ * tree, so the tree asks rather than assumes.
+ */
+describe('Tree, opening a row', () => {
+  const withActivate = (onActivate: (node: { id: string }) => void, onSelect = vi.fn()) =>
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={onSelect}
+        onToggle={() => {}}
+        onActivate={onActivate}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+  it('opens on a double-click', async () => {
+    const onActivate = vi.fn()
+    withActivate(onActivate)
+
+    await userEvent.dblClick(screen.getByText('a'))
+
+    expect(onActivate).toHaveBeenCalledWith(NODES[1])
+  })
+
+  it('opens on Enter', async () => {
+    const onActivate = vi.fn()
+    withActivate(onActivate)
+
+    screen.getAllByRole('treeitem')[1]?.focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(onActivate).toHaveBeenCalledWith(NODES[1])
+  })
+
+  // A key that opened a document from a browser and selected a node from an outliner would be
+  // the same key meaning two things.
+  it('still picks on Space', async () => {
+    const onActivate = vi.fn()
+    const onSelect = vi.fn()
+    withActivate(onActivate, onSelect)
+
+    screen.getAllByRole('treeitem')[1]?.focus()
+    await userEvent.keyboard(' ')
+
+    expect(onActivate).not.toHaveBeenCalled()
+    expect(onSelect).toHaveBeenCalled()
+  })
+
+  it('picks on Enter when there is nothing to open', async () => {
+    const onSelect = vi.fn()
+    renderTree(onSelect)
+
+    screen.getAllByRole('treeitem')[1]?.focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(onSelect).toHaveBeenCalled()
+  })
+})
+
+/**
+ * A folder nobody has opened has no children LOADED, which is not the same as having none:
+ * derived from the nodes, it draws no chevron and can never be opened at all.
+ */
+describe('Tree, a node that can hold children it has not got yet', () => {
+  it('offers to expand what the caller says is expandable', () => {
+    render(
+      <Tree
+        nodes={[{ id: 'assets', parentId: null }]}
+        selectedIds={[]}
+        expandedIds={new Set()}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        expandable={() => true}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    expect(screen.getByRole('treeitem')).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('leaves a leaf a leaf', () => {
+    render(
+      <Tree
+        nodes={[{ id: 'notes.txt', parentId: null }]}
+        selectedIds={[]}
+        expandedIds={new Set()}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        expandable={() => false}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    expect(screen.getByRole('treeitem')).not.toHaveAttribute('aria-expanded')
+  })
+})
+
+describe('flattenTree, asked what can expand', () => {
+  it('takes the caller’s word over what the nodes show', () => {
+    const rows = flattenTree([{ id: 'assets', parentId: null }], new Set(), () => true)
+
+    expect(rows[0]?.hasChildren).toBe(true)
+  })
+})

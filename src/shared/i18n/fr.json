@@ -156,6 +156,7 @@
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
+    "fileNotOpened": "Ce fichier n’a pas pu être ouvert par le système",
     "jobFailed": "La génération « {{name}} » a échoué",
     "jobCancelled": "Génération « {{name}} » annulée",
     "generated": "{{count, number}} asset généré",
@@ -512,7 +513,7 @@
   },
   "explorer": {
     "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
-    "noDocuments": "Ce projet ne contient encore aucun document enregistré.",
+    "empty": "Ce dossier de projet n’a pas pu être lu.",
     "open": "Ouvert"
   },
   "objects": {

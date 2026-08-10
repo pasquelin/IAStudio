@@ -147,25 +147,48 @@ est :
 Cette extension est là pour que le dossier **se lise à l’œil**. `a3f1.scene` à côté de
 `b204.tex` dit ce qu’est chacun ; `a3f1.json` à côté de `b204.json` ne dit rien.
 
-> **Les sept types savent s’enregistrer**, et le panneau **Explorateur** liste ce que le dossier
-> contient — c’est par là qu’on rouvre un document fermé. Fermer un onglet dont le travail n’est
+> **Les sept types savent s’enregistrer**, et le panneau **Explorateur** montre le dossier du
+> projet en arborescence — c’est par là qu’on rouvre un document fermé. Fermer un onglet dont le travail n’est
 > pas écrit pose la question avant de le perdre.
 
-### Rouvrir un document — le panneau Explorateur
+### Parcourir le projet — le panneau Explorateur
 
-La disposition retient les onglets ouverts, mais un document fermé alors qu’aucune disposition
-ne le portait n’est plus atteignable par les onglets. C’est ce que le panneau **Explorateur**
-sert à retrouver : il liste **tout ce que le dossier `documents/` contient**, ouvert ou non.
+Le panneau **Explorateur** montre **le dossier du projet**, en arborescence : `assets/`,
+`documents/`, et tout ce que vous y avez déposé vous-même. Les dossiers se déplient, les fichiers
+sont dedans, exactement comme dans l’explorateur de votre système.
+
+**Il montre aussi ce que le studio ne sait pas ouvrir.** Un `.pdf`, un `.txt`, un dossier de notes :
+c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste de documents.
+
+| Geste | Effet |
+|---|---|
+| **Double-clic** sur un dossier | l’ouvre ou le referme |
+| **Double-clic** sur un document du studio | l’ouvre, en changeant d’espace s’il appartient à un autre |
+| **Double-clic** sur tout autre fichier | le confie à votre système, qui l’ouvre avec l’application prévue |
+| `→` `←` | déplie, replie |
+| `↑` `↓` | la ligne précédente, la suivante |
+| `Entrée` | ouvre la ligne |
+
+- les documents déjà à l’écran sont marqués **Ouvert** ;
+- l’icône d’un document dit de quel espace il relève, la même que dans le rail ;
+- `.project.json` et `.index/` ne s’affichent pas : ce sont les fichiers de service du studio.
+
+**Un dossier n’est lu qu’au moment où vous l’ouvrez.** `assets/img` peut contenir des milliers de
+fichiers dans un projet ordinaire, et les lire pour les compter coûterait une attente à chaque
+ouverture de projet.
+
+**L’arbre suit le disque.** Copiez un fichier dans le dossier depuis votre système : il apparaît,
+sans rien à cliquer. Il se relit aussi quand vous revenez sur la fenêtre — un projet posé sur un
+volume réseau n’émet parfois aucun événement, et ce second filet le rattrape.
+
+> **C’est toujours par là qu’on rouvre un document fermé.** La disposition retient les onglets
+> ouverts, mais un document fermé alors qu’aucune disposition ne le portait n’est plus atteignable
+> par les onglets ; il est dans `documents/`, un repli plus bas.
 
 > **Un document jamais enregistré ne revient pas au redémarrage**, et son onglet ne revient pas
 > non plus : il est retiré de la disposition plutôt que rouvert sur « Ce document n’est plus
 > ouvert. » La disposition est écrite sur votre disque, le contenu des documents non — c’est le
 > dossier `documents/` qui en tient lieu, et ce qui n’y a jamais été écrit n’a rien à rouvrir.
-
-- un **double-clic** sur une ligne ouvre le document, en changeant d’espace s’il appartient à un
-  autre — une séquence ouverte depuis l’espace Image bascule en Vidéo ;
-- les lignes déjà à l’écran sont marquées **Ouvert** ;
-- l’icône dit de quel espace le document relève, la même que dans le rail.
 
 Il n’y a pas de dialogue « Ouvrir un fichier », et il n’en est pas prévu : le studio n’ouvre que
 ce qui est dans le projet.

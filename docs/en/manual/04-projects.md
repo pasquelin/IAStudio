@@ -143,21 +143,43 @@ what each one is; `a3f1.json` next to `b204.json` says nothing.
 > **All seven kinds save**, and the **Explorer** panel lists what the folder holds — that is how a
 > closed document is reopened. Closing a tab whose work is not written asks before losing it.
 
-### Reopening a document — the Explorer panel
+### Walking the project — the Explorer panel
 
-The layout remembers which tabs are open, but a document closed while no layout held it is no
-longer reachable through tabs. That is what the **Explorer** panel is for: it lists **everything
-the `documents/` folder holds**, open or not.
+The **Explorer** panel shows **the project folder**, as a tree: `assets/`, `documents/`, and
+whatever you dropped in there yourself. Folders unfold, files are inside them, exactly as in your
+system's own file browser.
+
+**It shows what the studio cannot open, too.** A `.pdf`, a `.txt`, a folder of notes: it is your
+folder, and that is what tells an explorer apart from a list of documents.
+
+| Gesture | Effect |
+|---|---|
+| **Double-click** a folder | opens or closes it |
+| **Double-click** a studio document | opens it, switching workspace if it belongs to another |
+| **Double-click** any other file | hands it to your system, which opens it with the right application |
+| `→` `←` | unfolds, folds |
+| `↑` `↓` | the previous row, the next one |
+| `Enter` | opens the row |
+
+- documents already on screen are marked **Open**;
+- a document's icon says which workspace it belongs to, the same one the rail uses;
+- `.project.json` and `.index/` are not shown: they are the studio's own service files.
+
+**A folder is only read once you open it.** `assets/img` can hold thousands of files in an ordinary
+project, and reading them to count them would cost a wait on every project opening.
+
+**The tree follows the disk.** Copy a file into the folder from your system: it appears, with
+nothing to click. It is read again when you come back to the window as well — a project on a
+network volume sometimes emits no event at all, and that second net catches it.
+
+> **It is still where a closed document is found again.** The layout remembers which tabs are open,
+> but a document closed while no layout held it is no longer reachable through tabs; it is in
+> `documents/`, one fold down.
 
 > **A document never saved does not come back on restart**, and neither does its tab: it is
 > dropped from the layout rather than reopened onto "This document is no longer open." The layout
 > is written to your disk, the contents of documents are not — the `documents/` folder stands for
 > them, and what was never written there has nothing to reopen.
-
-- a **double-click** on a row opens the document, switching workspace if it belongs to another —
-  a sequence opened from the Image workspace switches to Video;
-- rows already on screen are marked **Open**;
-- the icon says which workspace the document belongs to, the same one the rail uses.
 
 There is no "Open file" dialog, and none is planned: the studio only opens what is in the
 project.

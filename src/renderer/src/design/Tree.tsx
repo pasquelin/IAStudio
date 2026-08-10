@@ -20,6 +20,7 @@ export type TreeRow<T> = { node: T; depth: number; hasChildren: boolean; expande
 export function flattenTree<T extends TreeNode>(
   nodes: readonly T[],
   expandedIds: ReadonlySet<string>,
+  expandable?: (node: T) => boolean,
 ): TreeRow<T>[] {
   const byParent = new Map<string | null, T[]>()
   for (const node of nodes) {
@@ -31,7 +32,10 @@ export function flattenTree<T extends TreeNode>(
   const rows: TreeRow<T>[] = []
   const walk = (parentId: string | null, depth: number): void => {
     for (const node of byParent.get(parentId) ?? []) {
-      const hasChildren = byParent.has(node.id)
+      // Asked rather than derived when the caller knows better: a folder nobody has expanded
+      // has no children LOADED, and a tree that read that as "no children" would draw no
+      // chevron — leaving the folder impossible to open at all.
+      const hasChildren = expandable ? expandable(node) : byParent.has(node.id)
       const expanded = expandedIds.has(node.id)
       rows.push({ node, depth, hasChildren, expanded })
       if (hasChildren && expanded) walk(node.id, depth + 1)
@@ -55,6 +59,16 @@ export type TreeProps<T extends TreeNode> = {
    */
   selectable?: (node: T) => boolean
   /**
+   * Whether a node can hold children, when the tree cannot tell. A file browser loads a folder
+   * only once it is opened, so "has no children yet" and "is a leaf" look the same from here.
+   */
+  expandable?: (node: T) => boolean
+  /**
+   * Opening a row — a double-click, or `Enter`. Absent, `Enter` picks as `Space` does, which is
+   * what an outliner wants: there is nothing to open, only something to select.
+   */
+  onActivate?: (node: T) => void
+  /**
    * A row was dropped onto another. Absent leaves the tree undraggable — a file browser has
    * nothing to reorder, and offering the gesture there would promise something it cannot do.
    */
@@ -76,14 +90,19 @@ export function Tree<T extends TreeNode>({
   onSelect,
   onToggle,
   selectable,
+  expandable,
   onDrop,
+  onActivate,
   renderRow,
 }: TreeProps<T>) {
   // Which row the pointer is over during a drag. Session state of the gesture itself, so it
   // never reaches the caller: what the caller hears about is the drop.
   const [over, setOver] = useState<string | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
-  const rows = useMemo(() => flattenTree(nodes, expandedIds), [nodes, expandedIds])
+  const rows = useMemo(
+    () => flattenTree(nodes, expandedIds, expandable),
+    [nodes, expandedIds, expandable],
+  )
 
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
@@ -131,7 +150,14 @@ export function Tree<T extends TreeNode>({
     onSelect(ids, mode)
   }
 
-  const onRowKeyDown = (row: TreeRow<T>, index: number, event: KeyboardEvent): void => {
+  // The React event, not `event.nativeEvent`: React dispatches from a single root listener, so
+  // the native event's `currentTarget` is already null by the time a handler reads it — and the
+  // guard below then refused every `Enter` and every `Space`, in every tree of the studio.
+  const onRowKeyDown = (
+    row: TreeRow<T>,
+    index: number,
+    event: React.KeyboardEvent<HTMLElement>,
+  ): void => {
     if (event.key === 'ArrowRight' && row.hasChildren && !row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowLeft' && row.expanded) onToggle(row.node.id)
     else if (event.key === 'ArrowDown') focusRow(Math.min(index + 1, rows.length - 1))
@@ -141,7 +167,11 @@ export function Tree<T extends TreeNode>({
       // control inside the row — the visibility eye — answers the key on its own, and
       // `VisibilityToggle` can stop a click but never a key press.
       if (event.target !== event.currentTarget) return
-      pick(row.node, event)
+      // `Enter` opens where there is something to open, and picks where there is not. `Space`
+      // always picks: a key that opened a document from an outliner and selected a node from a
+      // file browser would be the same key meaning two things.
+      if (event.key === 'Enter' && onActivate) onActivate(row.node)
+      else pick(row.node, event)
     } else return
 
     event.preventDefault()
@@ -201,7 +231,8 @@ export function Tree<T extends TreeNode>({
                   if (dragged && dragged !== row.node.id) onDrop?.(dragged, row.node.id)
                 }}
                 onPointerDown={event => pick(row.node, event)}
-                onKeyDown={event => onRowKeyDown(row, index, event.nativeEvent)}
+                onDoubleClick={() => onActivate?.(row.node)}
+                onKeyDown={event => onRowKeyDown(row, index, event)}
               >
                 {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
                 glyph are unreadable as a list. It is not a control — the row already carries
