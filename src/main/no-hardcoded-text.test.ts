@@ -254,16 +254,19 @@ describe('the registries', () => {
   // that renders it was invisible to all three guards — the renderer's own check only walks JSX,
   // and an array of rows declared above the component is not JSX. An empty result proves nothing
   // unless the files were opened, so this counts them.
+  //
+  // The number guards the regression that matters — narrowing the scan back to `.ts` drops it to
+  // zero. It is a floor, not a tally: it will not notice a handful of components going missing.
   it('reads the components too, not only the modules beside them', () => {
     const scanned = trees.flatMap(tree => sourceFiles(tree))
 
-    expect(scanned.filter(path => path.endsWith('.tsx')).length).toBeGreaterThan(100)
+    expect(scanned.filter(path => path.endsWith('.tsx')).length).toBeGreaterThan(150)
   })
 
-  // Opening them is not enough: read as plain TypeScript, `<Row/>` parses as a type assertion and
-  // the walk finds nothing while looking like it ran. `createSourceFile` infers JSX from the file
-  // name, so this holds today — and keeps holding if a caller ever passes a name without one.
-  it('parses a component as JSX, so what follows a tag is still seen', () => {
+  // The shape the widened scan exists for: rows declared beside the component that renders them,
+  // which is neither JSX nor a module of its own. Not a lock on how the file is parsed — the TS
+  // parser recovers from JSX it was not told to expect and finds this either way, measured.
+  it('sees a registry declared beside the component that renders it', () => {
     const found = registryFindingsIn(
       'probe.tsx',
       "const ROWS = [{ key: 'exposure', label: 'Exposure' }]\nconst A = () => <Row items={ROWS} />",
