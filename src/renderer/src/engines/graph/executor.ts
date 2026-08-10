@@ -51,14 +51,26 @@ export type GraphRunResult =
   | { ok: true; cache: GraphCache }
 
 /**
- * What a node hands to the ones reading it, **by output port**, or nothing at all.
+ * What a node hands to the ones reading it, **by output port**, or why it handed nothing.
  *
  * By port and no longer flat, because a node can have more than one: `ifElse` produces on the
  * branch it chose and on none of the others, and a reader wired to a branch that was not taken
  * must see nothing rather than see what a sibling branch produced. Every other node declares one
  * port, so its record holds one entry — `outputName` says which.
+ *
+ * Three facts, three names. `stalled` deliberately covers BOTH a node that went wrong and a run
+ * the user ended: a reader does the same thing with either — it has nothing to read — and the one
+ * place the difference matters, painting the node, is decided by whoever reports, not by whoever
+ * reads. A fourth member for the stop was written and taken back out: the mutation harness showed
+ * that turning it into a failure broke nothing, which is what an unread distinction looks like.
  */
-type Outcome = { values: Readonly<Record<string, readonly string[]>> } | 'skipped' | null
+type Outcome =
+  | { kind: 'produced'; values: Readonly<Record<string, readonly string[]>> }
+  | { kind: 'skipped' }
+  | { kind: 'stalled' }
+
+/** The one answer that files no report: `stopped` has already painted the node idle. */
+const STALLED: Outcome = { kind: 'stalled' }
 
 /**
  * Every port a node publishes its one result on.
@@ -120,9 +132,9 @@ export async function runGraph(
   const produced = new Map(cache)
   const settled = new Map<string, Promise<Outcome>>()
 
-  const fail = (id: string, failure: GraphRunFailure): null => {
+  const fail = (id: string, failure: GraphRunFailure): Outcome => {
     report(id, { status: 'failed', failure })
-    return null
+    return STALLED
   }
 
   /**
@@ -135,13 +147,16 @@ export async function runGraph(
    */
   const skip = (id: string): Outcome => {
     report(id, { status: 'skipped' })
-    return 'skipped'
+    return { kind: 'skipped' }
   }
 
   const keep = (planned: GraphPlanNode, node: GraphNode, values: readonly string[]): Outcome => {
     produced.set(planned.hash, values)
     report(planned.id, { status: 'done' })
-    return { values: Object.fromEntries(outputNames(node).map(port => [port, values])) }
+    return {
+      kind: 'produced',
+      values: Object.fromEntries(outputNames(node).map(port => [port, values])),
+    }
   }
 
   /**
@@ -155,7 +170,7 @@ export async function runGraph(
    */
   const routeTo = (id: string, ports: readonly string[], values: readonly string[]): Outcome => {
     report(id, { status: 'done' })
-    return { values: Object.fromEntries(ports.map(port => [port, values])) }
+    return { kind: 'produced', values: Object.fromEntries(ports.map(port => [port, values])) }
   }
 
   /**
@@ -186,8 +201,8 @@ export async function runGraph(
         // Present by construction: a provider comes before its consumer in a topological order, so
         // its promise was made on an earlier turn of the loop below.
         const upstream = await settled.get(source.node)
-        if (upstream === 'skipped') return 'skipped'
-        if (!upstream) return 'blocked'
+        if (upstream?.kind !== 'produced')
+          return upstream?.kind === 'skipped' ? 'skipped' : 'blocked'
 
         // The port the edge leaves from, never the whole node: a branch that was not taken has
         // no entry here, and reading the node flat would hand on what another branch produced.
@@ -235,8 +250,7 @@ export async function runGraph(
       const answer = await settled.get(id)
       // An approval on a branch nobody took was never asked, so what it guards was not refused —
       // it was not reached either.
-      if (answer === 'skipped') return 'skipped'
-      if (!answer) return 'blocked'
+      if (answer?.kind !== 'produced') return answer?.kind === 'skipped' ? 'skipped' : 'blocked'
     }
 
     return 'ready'
@@ -260,13 +274,13 @@ export async function runGraph(
       // no holds back what nobody validated, where yes would let it through.
     }
 
-    if (stopped(node.id)) return null
+    if (stopped(node.id)) return STALLED
     if (!approved) return fail(node.id, 'declined')
 
     report(node.id, { status: 'done' })
     // Nothing to hand on: whoever reads the guarded node reads it directly. An approval is a
     // gate, and the flow it compiles to carries a dependency rather than a value.
-    return { values: {} }
+    return { kind: 'produced', values: {} }
   }
 
   /**
@@ -294,7 +308,7 @@ export async function runGraph(
 
     // Asked on the way back for the reason a generation is: a stop pressed while this was
     // crossing the boundary must not file a result in the cache the next Run would reuse.
-    if (stopped(node.id)) return null
+    if (stopped(node.id)) return STALLED
 
     return values ? keep(planned, node, values) : fail(node.id, 'invalid-expression')
   }
@@ -349,7 +363,7 @@ export async function runGraph(
       if (expression === '') continue
 
       const answer = await transform(expression, inputs.variables).catch(() => null)
-      if (stopped(node.id)) return null
+      if (stopped(node.id)) return STALLED
       if (!answer) return fail(node.id, 'invalid-expression')
 
       // `['true']` because a boolean crosses the boundary as text — `workflow-transform.ts` calls
@@ -387,7 +401,7 @@ export async function runGraph(
     const gate = await reachOf(planned)
 
     if (gate !== 'ready') {
-      if (stopped(node.id)) return null
+      if (stopped(node.id)) return STALLED
       return gate === 'skipped' ? skip(node.id) : fail(node.id, 'blocked')
     }
 
@@ -395,7 +409,7 @@ export async function runGraph(
 
     // Asked after the inputs, and BEFORE the blocked branch: a stop pressed while a provider was
     // on the wire leaves what it feeds idle, rather than reporting a failure nothing caused.
-    if (stopped(node.id)) return null
+    if (stopped(node.id)) return STALLED
 
     if (inputs === 'skipped') return skip(node.id)
     if (inputs === 'blocked') return fail(node.id, 'blocked')
@@ -411,7 +425,10 @@ export async function runGraph(
     const held = cache.get(planned.hash)
     if (held) {
       report(node.id, { status: 'cached' })
-      return { values: Object.fromEntries(outputNames(node).map(port => [port, held])) }
+      return {
+        kind: 'produced',
+        values: Object.fromEntries(outputNames(node).map(port => [port, held])),
+      }
     }
 
     // Both through `asList`, and that is the fix rather than a shortening: a text node holding
@@ -421,11 +438,12 @@ export async function runGraph(
     if (node.type === 'text') return keep(planned, node, asList(node.data.value))
     if (node.type === 'asset') return keep(planned, node, asList(node.data.value))
     // A note is drawn on the canvas and compiles to nothing — it has no output to read either.
-    if (node.type === 'stickyNote') return { values: {} }
+    if (node.type === 'stickyNote') return { kind: 'produced', values: {} }
     // Asked only once what it guards has produced, which the inputs above are: an approval put to
     // the user before the picture exists is a question about nothing. One guarding nothing is a
     // question about nothing too — it passes without a word rather than stopping the graph.
-    if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: {} }
+    if (node.type === 'approval')
+      return guarding.has(node.id) ? decide(node) : { kind: 'produced', values: {} }
     if (node.type === 'transformText') return evaluate(planned, node, inputs.variables)
     if (node.type === 'ifElse') return route(planned, node, inputs)
     if (node.type !== 'model') return fail(node.id, 'unsupported')
@@ -442,13 +460,13 @@ export async function runGraph(
       // pressed while this job was on the wire cannot un-submit it, but painting the node green
       // and filing its result in the cache would make a run the user stopped look like one that
       // finished — and the next Run would then reuse what it produced.
-      if (stopped(node.id)) return null
+      if (stopped(node.id)) return STALLED
 
       return keep(planned, node, values)
     } catch {
       // A stop cancels what is on the wire, so the throw that follows is the stop rather than a
       // refusal — painting the node red would blame the API for what the user just did.
-      if (stopped(node.id)) return null
+      if (stopped(node.id)) return STALLED
 
       // The reason belongs to the job, which the jobs panel already shows in full. What the node
       // owes is that it is the one that stopped, so its readers can say why they never ran.

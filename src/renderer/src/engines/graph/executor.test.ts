@@ -589,6 +589,36 @@ describe('stopping a run', () => {
     expect(reported.get('m2')?.map(run => run.status)).toEqual(['idle'])
   })
 
+  /**
+   * The promise `Outcome` makes by telling `failed` from `stopped`, held at the one place it can be
+   * seen: NO node of a stopped run is painted red. The two were one `null`, and every reader had to
+   * ask the abort signal a second time to tell them apart — a reader that forgot would report a
+   * fault on a graph where nothing went wrong, and the only way to notice is to look at them all.
+   */
+  it('paints no node failed anywhere in a run that was stopped', async () => {
+    const controller = new AbortController()
+
+    const reported = new Map<string, GraphNodeRun[]>()
+    await runGraph(chain(), undefined, {
+      generate: async () => {
+        controller.abort()
+        return ['asset_1']
+      },
+      approve: () => Promise.resolve(true),
+      transform: noTransform,
+      report: (nodeId, run) => {
+        const held = reported.get(nodeId)
+        if (held) held.push(run)
+        else reported.set(nodeId, [run])
+      },
+      signal: controller.signal,
+    })
+
+    const painted = [...reported.values()].flat().map(run => run.status)
+    expect(painted).not.toContain('failed')
+    expect(painted).toContain('idle')
+  })
+
   it('submits nothing at all when the stop came before the run', async () => {
     const controller = new AbortController()
     controller.abort()
