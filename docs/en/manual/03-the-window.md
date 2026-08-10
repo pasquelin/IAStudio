@@ -138,6 +138,41 @@ That is the place the workspaces give the Explorer — here, what you keep an ey
 the page is the list of projects, not the contents of one. The open project's documents are
 listed in the right column, which has panels of its own.
 
+### The right column
+
+Four panels in the upper half, one in the lower, and they read in that order: from what this
+project has just made to what there is inside it to open, by way of what your account holds
+outside it.
+
+| Panel | Half | What it shows | It needs |
+|---|---|---|---|
+| **What you have made** | 1st | this project's generations, the most recent first | an open project |
+| **By kind** | 1st | one number per asset kind; a kind that is not at zero leads to its part of the shelf | nothing |
+| **Your library** | 1st | what your account holds online | an API key |
+| **Your documents** | 1st | the project's documents, open or not | an open project |
+| **Recent activity** | 2nd | the studio's journal, with filters | nothing |
+
+**"It needs" does not mean here what it means for the bands.** A band missing what it needs
+disappears; **a panel stays**, and says what it lacks — its icon is in the rail, and an icon
+opening onto nothing would be worse than an empty panel. With no project, *Your documents* offers
+to open one; with no key, *Your library* says it **got no answer** and offers to try again — the
+same message a refusal from the server gets, and deliberately so: from where it stands, a request
+with no key and a request turned down come to the same thing, and **Try again** is the right
+gesture either way. The "your library is empty" message only shows when the question did get
+asked and the answer held nothing.
+
+**Your documents is not the Explorer, and that is the whole point.** The Explorer walks the
+project folder as a tree, where a document is one file among many, a fold further down. This
+panel lists the documents themselves — the question the home asks is "what is there to open".
+**It is what makes a closed document reachable again**: the layout says which ones are on screen,
+the folder says which ones exist, and a document closed while no layout held it can only be found
+here.
+
+**Recent activity is the whole journal**, the same one the status bar unfolds — filters by level
+and by topic included, empty state and all. It is not an extract of the last few lines: a summary
+can say nothing about what it left out, whereas "what went wrong" is exactly a question you
+answer by filtering.
+
 > **The home can be skipped.** **Preferences ▸ General ▸ Show the home screen**: unticked, the
 > studio goes straight to the workspace you left. The order of the bands, and which ones you have
 > hidden, are set on the home itself, not in the preferences.
