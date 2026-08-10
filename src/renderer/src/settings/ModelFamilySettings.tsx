@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
+import { isBeyondPlan } from '@shared/domain/plan'
 import { getBridge } from '@/services/bridge'
+import { usePlanAccess } from '@/helpers/plan-access'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
@@ -42,10 +44,32 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
   return models
 }
 
+/**
+ * The stored default kept among the options whatever the page holds, so the screen never shows
+ * an empty picker over a setting that IS set — a `<select>` whose value matches no option has
+ * `selectedIndex === -1` and renders blank, and the next stray change overwrites it unseen.
+ * `ModelNodeFields` does the same for the model a graph node runs.
+ */
+function withStored(models: readonly ModelSummary[], stored: string): readonly ModelSummary[] {
+  if (!stored || models.some(model => model.id === stored)) return models
+  return [{ ...PLACEHOLDER, id: stored, name: stored }, ...models]
+}
+
+/** Enough of a summary to name a row; the picker reads nothing else off it. */
+const PLACEHOLDER: Omit<ModelSummary, 'id' | 'name'> = {
+  family: 'other',
+  source: 'other',
+  origin: 'community',
+  featured: false,
+  capabilities: [],
+  tags: [],
+}
+
 /** Per-family generation settings. Today: which model the generator preselects. */
 export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const { t } = useTranslation()
-  const models = useFamilyModels(family)
+  const fetched = useFamilyModels(family)
+  const plan = usePlanAccess()
   const stored = useSettings(state => state.settings.generation.defaultModels)
   const stageBranch = useSettingsDraft(state => state.stageBranch)
   // Staged like every other setting: this screen writes a branch no path can name, which is
@@ -54,6 +78,17 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
 
   const defaultModels = staged ?? stored
   const selected = defaultModels[family] ?? ''
+  const models = withStored(fetched, selected)
+
+  /**
+   * The default that is ALREADY stored, which nobody is choosing right now. A downgrade or an
+   * account switch can put it out of plan, and a browser still shows a disabled `<option>` as
+   * the selected one — silently, since the suffix only lives in the option labels. The
+   * generator would then open armed on it and fail on every submission.
+   */
+  const selectedModel = models.find(model => model.id === selected)
+  const selectedRefused =
+    plan !== null && isBeyondPlan(selectedModel?.requiredPlanLevel, plan) ? plan : null
 
   return (
     <div className="flex max-w-md flex-col gap-3">
@@ -72,13 +107,25 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
           }}
         >
           <option value="">{t('settings.noDefaultModel')}</option>
-          {models.map(model => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
+          {models.map(model => {
+            const refused = isBeyondPlan(model.requiredPlanLevel, plan)
+            return (
+              // A native `<option>` carries no tooltip — react-tooltip needs pointer events a
+              // disabled option never emits — so the reason is suffixed onto the label. Saying
+              // it is the point: a picker that greys a name out without a word is a dead end.
+              <option key={model.id} value={model.id} disabled={refused}>
+                {refused ? `${model.name} — ${t('models.planLocked')}` : model.name}
+              </option>
+            )
+          })}
         </select>
       </label>
+
+      {selectedRefused && (
+        <p className="text-warning text-xs">
+          {t('models.planLockedHint', { plan: selectedRefused.name })}
+        </p>
+      )}
     </div>
   )
 }

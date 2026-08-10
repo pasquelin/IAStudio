@@ -16,6 +16,12 @@ export type RowProps = {
   actions?: ReactNode
   /** Struck through and dimmed: a hidden layer, an invisible mesh. */
   muted?: boolean
+  /**
+   * A sentence added under the name in its tooltip — why the row is refused, typically. The
+   * name is already on screen, so this EXPLAINS rather than repeats: that is what the factory's
+   * `description` is for, and a tooltip that echoes a visible word is noise to a screen reader.
+   */
+  hint?: string
   /** Placement of the name's tooltip. Rows live in side panels, so it goes right by default. */
   tip?: TooltipFactory
 }
@@ -35,6 +41,7 @@ export function Row({
   leading,
   actions,
   muted,
+  hint,
   tip = TIP_RIGHT,
 }: RowProps) {
   return (
@@ -46,7 +53,7 @@ export function Row({
             case where hovering is the only way to read it. The studio tooltip and not `title`,
             which comes with the OS delay and none of the theme. */}
         <p
-          {...tip(title)}
+          {...tip(title, false, hint)}
           className={cn('truncate text-[12px]', muted ? 'text-muted line-through' : 'text-text')}
         >
           {title}

@@ -198,6 +198,15 @@ export type ModelSummary = {
    */
   previewAssetId?: string
   createdAt?: string
+  /**
+   * The plan grade the API refuses this model below — its `accessRestrictions`. Read against
+   * `PlanAccess` by `isBeyondPlan`; absent when the API grades the model with nothing.
+   *
+   * A plain number, NOT the SDK's `0 | 25 | 50 | 75 | 100` union: two public models answer `1`
+   * (Neo3D Realism, Scenario Flux Upscale), which that union does not admit. Measured — the
+   * generated type is wrong about its own values, and a closed union would drop the field.
+   */
+  requiredPlanLevel?: number
 }
 
 export type ModelDescriptor = ModelSummary & {

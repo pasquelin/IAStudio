@@ -18,6 +18,7 @@ import type { GraphCompileResult, GraphState } from './domain/graph'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
+import type { PlanAccess } from './domain/plan'
 import type { Project } from './domain/project'
 import type {
   PromptStyle,
@@ -61,6 +62,7 @@ export type Channels = {
   scenarioSearchModels: 'scenario:search-models'
   scenarioModelPreviews: 'scenario:model-previews'
   scenarioDescribeModel: 'scenario:describe-model'
+  scenarioPlan: 'scenario:plan'
   scenarioSuggestPrompts: 'scenario:suggest-prompts'
   scenarioTranslatePrompt: 'scenario:translate-prompt'
   scenarioDescribeStyle: 'scenario:describe-style'
@@ -176,6 +178,7 @@ export const CHANNELS: Channels = {
   scenarioSearchModels: 'scenario:search-models',
   scenarioModelPreviews: 'scenario:model-previews',
   scenarioDescribeModel: 'scenario:describe-model',
+  scenarioPlan: 'scenario:plan',
   scenarioSuggestPrompts: 'scenario:suggest-prompts',
   scenarioTranslatePrompt: 'scenario:translate-prompt',
   scenarioDescribeStyle: 'scenario:describe-style',
@@ -514,6 +517,11 @@ export type StudioBridge = {
     /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
     modelPreviews: (assetIds: readonly string[]) => Promise<Record<string, string>>
     describeModel: (modelId: string) => Promise<ModelDescriptor>
+    /**
+     * The account's plan, against which a model's `requiredPlanLevel` is read. `null` when it
+     * cannot be read — the picker then offers everything, as it did before it asked.
+     */
+    plan: () => Promise<PlanAccess | null>
     /**
      * Rewrites a draft into on-model prompts, each with the settings the API proposes for it.
      * Free — measured at 0 creative units — and answered in one round trip: the endpoint hands

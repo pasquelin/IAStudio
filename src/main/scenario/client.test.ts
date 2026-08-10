@@ -32,6 +32,27 @@ describe('failure mapping', () => {
     expect(failureOf(apiError(503))).toBe('server')
   })
 
+  /**
+   * The two 403s need opposite answers — a key to fix, or a subscription — and the body is the
+   * only thing that tells them apart. Measured: `POST /generate/custom/model_bytedance-seedance-2-0`
+   * on a `cu-basic` account answers this shape.
+   */
+  it('tells a 403 the plan caused from a 403 the key caused', () => {
+    const restricted = APIError.generate(
+      403,
+      {
+        reason: 'You are not allowed to use this model with your plan',
+        name: 'ModelAccessRestrictedError',
+        details: { currentPlan: 'cu-basic', requiredPlan: 'cu-pro-q3-25' },
+      },
+      undefined,
+      new Headers(),
+    )
+
+    expect(failureOf(restricted)).toBe('plan-restricted')
+    expect(failureOf(apiError(403))).toBe('forbidden')
+  })
+
   it('maps an unreachable API to a network failure', () => {
     expect(failureOf(new APIConnectionError({}))).toBe('network')
   })

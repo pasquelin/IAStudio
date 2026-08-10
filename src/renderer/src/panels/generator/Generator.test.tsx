@@ -7,6 +7,7 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
+import { useProject } from '@/stores/project'
 import { connectPreparation } from '@/stores/preparation'
 import { useSettings } from '@/stores/settings'
 import { preferModels } from '@/stores/settings-fixtures'
@@ -140,5 +141,69 @@ describe('Generator', () => {
   it('draws whatever the cost watch says, and formats nothing itself', () => {
     expect(panelSource).toMatch(/submitNote=\{cost\.note\}/)
     expect(panelSource).not.toMatch(/formatUnits/)
+  })
+
+  /**
+   * The last door before the spend. Five ways of arming a model never open the picker — a stored
+   * default, "recreate", "regenerate with these parameters", a Spark idea, the canvas edits — so
+   * greying the picker alone would leave every one of them to discover the 403.
+   */
+  describe('a model the plan does not cover', () => {
+    // A project of its own: `busy` is also raised by its absence, and without one these cases
+    // would pass on the wrong reason — a disabled button proving nothing about the plan.
+    beforeEach(() => {
+      useProject.setState({
+        project: {
+          path: '/projects/summer',
+          manifest: {
+            version: 1,
+            name: 'Summer',
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          },
+        },
+        known: true,
+      })
+
+      installFakeBridge({
+        scenario: {
+          describeModel: () =>
+            Promise.resolve({
+              ...descriptor('model_flux', 'Flux', 'image'),
+              requiredPlanLevel: 50,
+            }),
+          plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+        },
+      })
+    })
+
+    it('refuses to generate with it', async () => {
+      renderPanel()
+
+      expect(await screen.findByRole('button', { name: 'Générer' })).toBeDisabled()
+    })
+
+    it('says why, naming the plan, rather than leaving a dead button', async () => {
+      renderPanel()
+
+      expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
+    })
+
+    // Being wrong here blocks a model the user is paying for, so an unread plan refuses nothing.
+    it('generates as before when the plan cannot be read', async () => {
+      installFakeBridge({
+        scenario: {
+          describeModel: () =>
+            Promise.resolve({
+              ...descriptor('model_flux', 'Flux', 'image'),
+              requiredPlanLevel: 50,
+            }),
+          plan: () => Promise.resolve(null),
+        },
+      })
+      renderPanel()
+
+      expect(await screen.findByRole('button', { name: 'Générer' })).toBeEnabled()
+    })
   })
 })

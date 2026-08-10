@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
+import { isBeyondPlan } from '@shared/domain/plan'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
 import { useModelForScope } from '@/helpers/model-for-scope'
+import { usePlanAccess } from '@/helpers/plan-access'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
 import { PromptAssistant } from '@/design/PromptAssistant'
@@ -102,6 +104,18 @@ export function Generator() {
   const descriptor = useDescriptor(modelId)
   // Before the guards below return early: a hook cannot be called conditionally.
   const cost = useCostEstimate('model', modelId, descriptor.data?.fields)
+  const plan = usePlanAccess()
+
+  /**
+   * The last door before the spend, for everything that arms a model without opening the picker:
+   * a stored default, "recreate", "regenerate with these parameters", a Spark idea and the canvas
+   * edits all land here. Greying the picker alone would leave every one of them to discover the
+   * 403.
+   *
+   * NOT every path, though — a graph runs its own nodes through `graph-runs.ts`, straight to the
+   * job queue, and is gated where its model is chosen (`ModelNodeFields`) instead.
+   */
+  const refused = plan !== null && isBeyondPlan(descriptor.data?.requiredPlanLevel, plan)
 
   if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
@@ -140,6 +154,11 @@ export function Generator() {
       {/* A project is where a generated asset lands; without one there is nowhere to put it. */}
       {!project && <p className="text-muted px-2 text-xs">{t('generation.noProject')}</p>}
 
+      {/* Refused by the subscription, not by the studio — saying so beats a 403 nobody reads. */}
+      {refused && (
+        <p className="text-muted px-2 text-xs">{t('models.planLockedHint', { plan: plan.name })}</p>
+      )}
+
       {descriptor.data && (
         // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
         // it the throw leaves the panel, leaves the dock, and takes the whole window down.
@@ -153,7 +172,7 @@ export function Generator() {
               submitLabel={t('actions.generate')}
               submitNote={cost.note}
               onValuesChange={cost.onValuesChange}
-              busy={!project}
+              busy={!project || refused}
               preset={preset}
               // Two accessories, on two different sets of fields. Assistance hangs on the one
               // the API marks as its prompt, because only that one can be rewritten for the

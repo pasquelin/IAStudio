@@ -1,5 +1,6 @@
 import Scenario, { APIConnectionError, APIError, type ClientOptions } from '@scenario-labs/sdk'
 import type { ApiFailure } from '@shared/domain/failure'
+import { isRecord } from '@shared/guards'
 import { MAX_LOG_MESSAGE } from '@shared/ipc'
 import type { AuthState } from '@shared/domain/settings'
 import type { Credentials } from '@main/settings/accounts'
@@ -12,6 +13,19 @@ export class NotAuthenticatedError extends Error {
     super('not-authenticated')
     this.name = 'NotAuthenticatedError'
   }
+}
+
+/** What the API calls a 403 the subscription caused rather than the key. */
+const PLAN_RESTRICTED = 'ModelAccessRestrictedError'
+
+/**
+ * Whether a 403 blames the plan.
+ *
+ * Reads the PARSED RESPONSE BODY, which carries no credentials — `describeFailure` already
+ * writes it to the log for that reason. Never `error.message`, which embeds the request.
+ */
+function restrictedByPlan(body: unknown): boolean {
+  return isRecord(body) && body.name === PLAN_RESTRICTED
 }
 
 /**
@@ -27,7 +41,7 @@ export function failureOf(error: unknown): ApiFailure {
   if (error instanceof APIError) {
     const { status } = error
     if (status === 401) return 'invalid-credentials'
-    if (status === 403) return 'forbidden'
+    if (status === 403) return restrictedByPlan(error.error) ? 'plan-restricted' : 'forbidden'
     if (status === 404) return 'not-found'
     if (status === 429) return 'rate-limited'
     if (status !== undefined && status >= 500) return 'server'

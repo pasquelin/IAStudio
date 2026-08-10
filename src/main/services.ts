@@ -89,6 +89,7 @@ import { createRateLimiters, limitedTransport } from './scenario/rate-limiter'
 import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
+import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
 import { createWorkflowRegistry, type WorkflowRegistry } from './scenario/workflow-registry'
 import { workflowCatalogOf } from './scenario/workflow-catalog'
 import { createAssistQueue } from './scenario/assist-queue'
@@ -124,6 +125,8 @@ export type Services = {
   prompts: PromptAssist
   /** What every stored key spent. Consumption only — the API exposes no balance to read. */
   usage: UsageReader
+  /** Which models the account's plan may run, so the picker refuses one before the API does. */
+  plan: PlanReader
   /** What a run would cost, asked before it is run — of a model or of a workflow. See `cost.ts`. */
   estimateCost: CostEstimator
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
@@ -366,6 +369,11 @@ export function createServices(settings: SettingsStore): Services {
   })
   const models = createModelRegistry({
     catalog: () => catalogOf(client.require()),
+    watch: credentials.watch,
+  })
+
+  const plan = createPlanReader({
+    catalog: () => teamsOf(client.require()),
     watch: credentials.watch,
   })
 
@@ -789,6 +797,7 @@ export function createServices(settings: SettingsStore): Services {
     jobs,
     prompts,
     usage,
+    plan,
     estimateCost,
     captionArrivals: captioner.onArrival,
     describeAssets: captioner.describe,

@@ -39,6 +39,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       searchModels: () => Promise.resolve({ items: [], cursor: null }),
       modelPreviews: () => Promise.resolve({}),
       describeModel: () => Promise.reject(new Error('no model')),
+      // No plan by default, which is the "grey nothing out" case: a test that wants a row
+      // refused says so itself, rather than every other test inheriting a restriction.
+      plan: () => Promise.resolve(null),
       suggestPrompts: () => Promise.resolve([]),
       translatePrompt: draft => Promise.resolve({ text: draft, detectedLanguage: 'english' }),
       describeStyle: () => Promise.resolve({ description: '', synthesis: '' }),

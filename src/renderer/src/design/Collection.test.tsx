@@ -461,4 +461,67 @@ describe('Collection', () => {
 
     expect(document.activeElement).toBe(focused)
   })
+
+  /**
+   * A refused row stays listed, reachable and announced — it is `aria-disabled`, not removed.
+   * A cell taken out of reach is a cell whose tooltip nobody can read, and that tooltip is
+   * usually the only thing on screen saying why the row is refused.
+   */
+  describe('a refused item', () => {
+    const refuseFirst = (props: Partial<CollectionProps<Row>> = {}) =>
+      renderCollection(
+        rows(5),
+        { view: 'list' },
+        { isDisabled: item => item.id === 'row_0', ...props },
+      )
+
+    const cellOf = (name: string): HTMLElement | null =>
+      screen.getByText(name).closest('[role="option"]')
+
+    it('is announced as disabled, and its neighbours are not', () => {
+      refuseFirst({ onSelect: vi.fn() })
+
+      expect(cellOf('Row 0')).toHaveAttribute('aria-disabled', 'true')
+      expect(cellOf('Row 1')).not.toHaveAttribute('aria-disabled')
+    })
+
+    it('is not selected by a click', async () => {
+      const onSelect = vi.fn()
+      refuseFirst({ onSelect })
+
+      await userEvent.click(screen.getByText('Row 0'))
+
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('is not opened by a double click', async () => {
+      const onActivate = vi.fn()
+      refuseFirst({ onSelect: vi.fn(), onActivate })
+
+      await userEvent.dblClick(screen.getByText('Row 0'))
+
+      expect(onActivate).not.toHaveBeenCalled()
+    })
+
+    it('is not selected by the keyboard either', async () => {
+      const onSelect = vi.fn()
+      refuseFirst({ onSelect })
+
+      await userEvent.tab()
+      await userEvent.keyboard(' ')
+
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    // Stopping the arrows on it would strand the keyboard: the row keeps its place in the list.
+    it('still lets the arrows walk through it', async () => {
+      refuseFirst({ onSelect: vi.fn() })
+
+      await userEvent.tab()
+      expect(cellOf('Row 0')).toHaveFocus()
+
+      await userEvent.keyboard('{ArrowDown}')
+      await waitFor(() => expect(cellOf('Row 1')).toHaveFocus())
+    })
+  })
 })

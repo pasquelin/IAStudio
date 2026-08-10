@@ -58,6 +58,14 @@ export type CollectionProps<T extends { id: string }> = {
   onReachEnd?: () => void
   /** The items currently on screen, for whatever a card needs fetched only when it is seen. */
   onVisible?: (items: readonly T[]) => void
+  /**
+   * Which items cannot be picked, and stay listed anyway — a model the account's plan refuses.
+   *
+   * The row keeps its place in the tab order and its pointer events: it is `aria-disabled`, not
+   * `disabled`. A cell removed from reach is a cell whose tooltip nobody can read, and the
+   * tooltip is the only thing on screen that says WHY the row is refused.
+   */
+  isDisabled?: (item: T) => boolean
   /** Shown in place of the items — the caller decides whether it means empty or unmatched. */
   empty?: ReactNode
   footer?: ReactNode
@@ -141,6 +149,7 @@ export function Collection<T extends { id: string }>({
   onOpen,
   onReachEnd,
   onVisible,
+  isDisabled,
   empty,
   footer,
   rowHeight = ROW_HEIGHT,
@@ -271,6 +280,7 @@ export function Collection<T extends { id: string }>({
                       key={item.id}
                       index={index}
                       selected={selected.has(item.id)}
+                      disabled={isDisabled?.(item) === true}
                       tabbable={index === tabStop}
                       // A list row spans the collection; a card is sized by its grid column, and
                       // is inset so the selection this cell paints has somewhere to show. A card
@@ -311,6 +321,12 @@ type CollectionCellProps = {
   /** Position in `items`, so the arrows can name the cell they want focused. */
   index: number
   selected: boolean
+  /**
+   * Listed, reachable, announced — and inert. The handlers are still passed and ignored here
+   * rather than withheld by the caller: dropping them would take the cell out of its `listbox`
+   * and out of the tab order, and the row would lose the tooltip that says why it is refused.
+   */
+  disabled: boolean
   /** The collection's single tab stop. Every other cell is reached with the arrows. */
   tabbable: boolean
   /** What this cell is in its container's terms — `rolesFor` decides the pair. */
@@ -332,6 +348,7 @@ type CollectionCellProps = {
 function CollectionCell({
   index,
   selected,
+  disabled,
   tabbable,
   role,
   position,
@@ -348,7 +365,7 @@ function CollectionCell({
    * from `rowSkin`, which the tree draws its own rows with — the same line must not light up
    * differently depending on which panel it is listed in.
    */
-  const skin = cn('min-w-0', rowSkin(selected), className)
+  const skin = cn('min-w-0', rowSkin(selected, disabled), className)
 
   // What the cell answers to is not what puts it in reach: a row that only opens is walked to
   // and pressed like one that only selects.
@@ -359,16 +376,20 @@ function CollectionCell({
       role={role}
       aria-posinset={position}
       aria-setsize={total}
+      aria-disabled={disabled || undefined}
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
       // An option has a selected state; a listitem has none. The explorer paints what is OPEN
       // through the same prop, and announcing that as "selected" would describe a state its
       // rows can neither take nor give up.
       aria-selected={role === 'option' ? selected : undefined}
-      onClick={onSelect}
-      onDoubleClick={onActivate}
+      onClick={disabled ? undefined : onSelect}
+      onDoubleClick={disabled ? undefined : onActivate}
       onKeyDown={event => {
+        // Before the refusal, never after: the arrows walk THROUGH a disabled row. Stopping
+        // them there would strand the keyboard on it, since it keeps its place in the list.
         if (event.key !== 'Enter' && event.key !== ' ') return onArrow(event.nativeEvent)
+        if (disabled) return
 
         // Only when the cell itself holds the focus: a control inside the row — the visibility
         // eye — answers the key on its own, and `VisibilityToggle` can stop a click but never
@@ -386,7 +407,7 @@ function CollectionCell({
           onSelect(event)
         }
       }}
-      className={cn(skin, 'cursor-pointer')}
+      className={cn(skin, !disabled && 'cursor-pointer')}
     >
       {children}
     </div>

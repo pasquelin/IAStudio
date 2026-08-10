@@ -284,4 +284,90 @@ describe('Models panel', () => {
 
     expect(await screen.findByText(/Aucun résultat pour ce filtre/)).toBeInTheDocument()
   })
+
+  /**
+   * Measured on this account: 41 of the first 100 public models are graded above `cu-basic`,
+   * so picking one is the common case, not the edge one. The API answers 403
+   * `ModelAccessRestrictedError` — the studio says so first instead.
+   */
+  describe('a model the plan does not cover', () => {
+    /** Graded 50 against a plan worth 25, beside one graded 25 that the plan does cover. */
+    beforeEach(() => {
+      installFakeBridge({
+        scenario: {
+          searchModels: () =>
+            Promise.resolve({
+              items: [
+                model('pro', { requiredPlanLevel: 50 }),
+                model('mine', { requiredPlanLevel: 25 }),
+              ],
+              cursor: null,
+            }),
+          plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+        },
+      })
+    })
+
+    const cellOf = (name: string): HTMLElement | null =>
+      screen.getByText(name).closest('[role="option"]')
+
+    it('announces the row as disabled while leaving it listed', async () => {
+      renderPanel()
+
+      await screen.findByText('Model pro')
+      expect(cellOf('Model pro')).toHaveAttribute('aria-disabled', 'true')
+      expect(cellOf('Model mine')).not.toHaveAttribute('aria-disabled')
+    })
+
+    it('does not choose it when it is clicked', async () => {
+      renderPanel()
+
+      await userEvent.click(await screen.findByText('Model pro'))
+
+      expect(useModels.getState().selected).toEqual({})
+    })
+
+    it('still chooses a model the plan does cover', async () => {
+      renderPanel()
+
+      await userEvent.click(await screen.findByText('Model mine'))
+
+      expect(useModels.getState().selected).toMatchObject({ image: 'mine' })
+    })
+
+    /**
+     * Greying a row out without a word is a dead end, and the two views say it in two places:
+     * a card has a corner badge, a row explains through the tooltip on its name. Both are
+     * tested because a user meets whichever view the panel was left in.
+     */
+    it('says why on a card, naming the plan that refuses it', async () => {
+      renderPanel()
+
+      const badge = await screen.findByText('Hors abonnement')
+      expect(badge.getAttribute('data-tooltip-content')).toContain('cu-basic')
+    })
+
+    it('says why on a row too, where the badge has nowhere to sit', async () => {
+      useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
+      renderPanel()
+
+      const title = await screen.findByText('Model pro')
+      expect(title.getAttribute('data-tooltip-content')).toContain('cu-basic')
+    })
+
+    // Being wrong here hides models the user is paying for, so an unread plan refuses nothing.
+    it('refuses nothing when the plan cannot be read', async () => {
+      installFakeBridge({
+        scenario: {
+          searchModels: () =>
+            Promise.resolve({ items: [model('pro', { requiredPlanLevel: 50 })], cursor: null }),
+          plan: () => Promise.resolve(null),
+        },
+      })
+      renderPanel()
+
+      await screen.findByText('Model pro')
+      expect(cellOf('Model pro')).not.toHaveAttribute('aria-disabled')
+    })
+  })
 })

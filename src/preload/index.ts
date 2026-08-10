@@ -54,6 +54,7 @@ const bridge: StudioBridge = {
     searchModels: query => ipcRenderer.invoke(CHANNELS.scenarioSearchModels, query),
     modelPreviews: assetIds => ipcRenderer.invoke(CHANNELS.scenarioModelPreviews, assetIds),
     describeModel: modelId => ipcRenderer.invoke(CHANNELS.scenarioDescribeModel, modelId),
+    plan: () => ipcRenderer.invoke(CHANNELS.scenarioPlan),
     suggestPrompts: request => ipcRenderer.invoke(CHANNELS.scenarioSuggestPrompts, request),
     translatePrompt: draft => ipcRenderer.invoke(CHANNELS.scenarioTranslatePrompt, draft),
     describeStyle: images => ipcRenderer.invoke(CHANNELS.scenarioDescribeStyle, images),

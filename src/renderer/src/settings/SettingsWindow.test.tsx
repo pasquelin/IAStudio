@@ -356,6 +356,90 @@ describe('SettingsWindow', () => {
   })
 
   /**
+   * A default the plan cannot run is a generation that fails every time the generator opens,
+   * with nothing on this screen having said so. A native `<option>` carries no tooltip, so the
+   * reason is suffixed onto the label — greying a name out silently is the failure to avoid.
+   */
+  it('refuses a default model the plan does not cover, and says so in its label', async () => {
+    installFakeBridge({
+      // Without a key there is no plan to read, and nothing is greyed out — which is the whole
+      // point of the fallback, and would make this case pass on the wrong reason.
+      settings: { authState: () => Promise.resolve({ authenticated: true }) },
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_seedance',
+                name: 'Seedance 2.0',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+                requiredPlanLevel: 50,
+              },
+            ],
+            cursor: null,
+          }),
+        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+
+    const option = await screen.findByRole('option', { name: /Seedance 2\.0/ })
+    expect(option).toBeDisabled()
+    expect(option).toHaveTextContent('Hors abonnement')
+  })
+
+  /**
+   * The default ALREADY stored, which nobody is choosing right now — a downgrade or an account
+   * switch puts it out of plan on its own. A browser still shows a disabled `<option>` as the
+   * selected one, and the suffix lives only in the option labels, so without this the screen
+   * says nothing and the generator opens armed on a model that fails on every submission.
+   */
+  it('warns when the default already stored has fallen out of the plan', async () => {
+    installFakeBridge({
+      settings: {
+        read: () =>
+          Promise.resolve({
+            ...DEFAULT_SETTINGS,
+            generation: { ...DEFAULT_SETTINGS.generation, defaultModels: { image: 'model_pro' } },
+          }),
+        authState: () => Promise.resolve({ authenticated: true }),
+      },
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_pro',
+                name: 'Seedance 2.0',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+                requiredPlanLevel: 50,
+              },
+            ],
+            cursor: null,
+          }),
+        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+
+    expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
+  })
+
+  /**
    * The search field sat inside the column that scrolls, at `w-full`. Two things followed from
    * that: the scrollbar took its width out of the field, so it narrowed and widened as the list
    * grew past the window; and it scrolled away with the sections it filters.

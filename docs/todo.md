@@ -1655,6 +1655,20 @@ dit rien n'est pas un fichier qui dit faux.
   fichier illisible n'est pas un fichier vide** : absent rend `[]`, illisible **refuse l'écriture**.
 - **Un job ne collecte que dans son propre projet**, et **le compte est nommé par une empreinte de sa
   clé**, pas par l'id du carnet.
+- **L'abonnement décide quels modèles tournent, et l'API le dit deux fois** (10 août 2026, mesuré). Chaque
+  modèle porte `accessRestrictions`, et `GET /teams` — **absent du SDK 2.7.0**, donc atteint par le `get`
+  du client — publie le plan du compte sous `plan`. Sur `cu-basic` : les modèles gradés **0, 1 et 25**
+  passent en `dryRun`, celui gradé **50 est refusé** en nommant `requiredPlan: cu-pro-q3-25`. **41 des 100
+  premiers modèles publics sont hors de ce plan.**
+- **L'union `0 | 25 | 50 | 75 | 100` que le SDK déclare pour `accessRestrictions` est FAUSSE** : deux
+  modèles publics répondent **`1`** (Neo3D Realism, Scenario Flux Upscale). C'est la **troisième** fois que
+  la source générée annonce les bonnes structures et les mauvaises valeurs — le champ voyage donc en
+  `number`, sans union fermée, sous peine de perdre ces deux modèles.
+- **`GET /models` ne sait pas filtrer par accessibilité** : `accessible=true`, `restricted=false` et
+  `plan=<nom>` sont **ignorés en silence** et rendent le catalogue entier. Le tri se fait donc côté studio.
+- **Les noms de plans portent leur trimestre** — `cu-pro-q3-25`. Une table qui les compare en entier
+  vieillit d'un trimestre sur l'autre ; ils se lisent **par segment**, et un nom non reconnu ne doit
+  **rien** griser (se tromper cache un modèle que l'utilisateur paie).
 
 ### Tests et outillage
 

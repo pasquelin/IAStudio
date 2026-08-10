@@ -109,6 +109,7 @@ function register(overrides: Partial<ScenarioHandlerDeps> = {}): void {
     prompts,
     uploads,
     usage,
+    plan: { access: () => Promise.resolve(null) },
     estimateCost,
     ...overrides,
   })

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelPage } from '@shared/domain/model'
+import { isBeyondPlan } from '@shared/domain/plan'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { PropertyGroup } from '@/design/PropertyGroup'
@@ -12,6 +13,7 @@ import { CONTROL } from '@/design/styles'
 import { setGraphNodeData, setGraphNodeModel } from '@/engines/graph/commands'
 import { modelDataOf } from '@/engines/graph/factory'
 import { cn } from '@/helpers/cn'
+import { usePlanAccess } from '@/helpers/plan-access'
 import type { FormValues } from '@/helpers/dynamic-form'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -50,6 +52,7 @@ export type ModelNodeFieldsProps = {
 export function ModelNodeFields({ documentId, node, edit }: ModelNodeFieldsProps) {
   const { t } = useTranslation()
   const modelId = node.type === 'model' ? node.data.modelId : undefined
+  const plan = usePlanAccess()
 
   const schema = useQuery<ModelDescriptor | null>({
     queryKey: ['model', modelId],
@@ -81,7 +84,16 @@ export function ModelNodeFields({ documentId, node, edit }: ModelNodeFieldsProps
   const options = useMemo(() => {
     const items = catalogue.data?.items ?? []
     if (!modelId || items.some(model => model.id === modelId)) return items
-    return [{ id: modelId, name: schema.data?.name ?? modelId }, ...items]
+    // The grade comes along: `describeModel` retrieves it, and without it the one model the node
+    // actually runs would be the only row the plan never checks.
+    return [
+      {
+        id: modelId,
+        name: schema.data?.name ?? modelId,
+        requiredPlanLevel: schema.data?.requiredPlanLevel,
+      },
+      ...items,
+    ]
   }, [catalogue.data, modelId, schema.data])
 
   const swap = (next: string): void => {
@@ -114,11 +126,17 @@ export function ModelNodeFields({ documentId, node, edit }: ModelNodeFieldsProps
               back to the first option, so the panel names a model the node does not run — and
               that one model is then the only one clicking cannot choose. */}
           {modelId === undefined && <option value="">{t('inspector.noModel')}</option>}
-          {options.map(model => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
+          {options.map(model => {
+            // A graph runs its nodes itself — `graph-runs.ts` submits straight to the job queue,
+            // never through the generator — so this is where a refused model has to be caught.
+            // Without it, a five-node graph pays for the first three and dies on the fourth.
+            const refused = isBeyondPlan(model.requiredPlanLevel, plan)
+            return (
+              <option key={model.id} value={model.id} disabled={refused}>
+                {refused ? `${model.name} — ${t('models.planLocked')}` : model.name}
+              </option>
+            )
+          })}
         </select>
       </PropertyRow>
 
