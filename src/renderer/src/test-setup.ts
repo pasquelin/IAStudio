@@ -7,6 +7,7 @@ import {
   type AudioWorkerState,
 } from '@/engines/audio/audio-render'
 import { initI18n } from '@/i18n'
+import { useAssets } from '@/stores/assets'
 
 /**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is
@@ -242,3 +243,21 @@ beforeAll(async () => {
 })
 
 afterEach(cleanup)
+
+/**
+ * A case must not leave a timer armed for the next one.
+ *
+ * `useAssets.invalidate` coalesces on a 200 ms timer held at MODULE scope, so it outlives the
+ * case that armed it — and anything that ingests, generates or pulls ends by calling it. When it
+ * fires inside a later case, `refresh()` re-reads the catalogue through whatever bridge THAT case
+ * installed, and the shelf changes under an element already held: a band flips from "open" to
+ * "fetch" between the query and the click. It cost half an hour of probing to find once
+ * (`b982fdd2`), and the failure moves with how busy the machine is, which is what makes it read
+ * as flakiness rather than as a bug.
+ *
+ * This narrows the window, it does not close it. The three callers — `stores/jobs`,
+ * `stores/media`, `stores/cloud` — invalidate from bridge callbacks, so a promise settling AFTER
+ * the hooks of a case can still arm one that nothing then cancels. A case that leaves work in
+ * flight has to await it; no teardown can await it for them.
+ */
+afterEach(() => useAssets.getState().cancelInvalidate())

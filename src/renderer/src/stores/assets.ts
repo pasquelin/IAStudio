@@ -30,6 +30,22 @@ type AssetsState = {
    * otherwise freeze every window forty times over.
    */
   invalidate: () => void
+  /**
+   * Drops the coalesced read still waiting, if there is one.
+   *
+   * It exists for the test harness, and says so rather than pretending to a product need: the
+   * timer `invalidate` arms lives at module scope, so a case that leaves one behind has it fire
+   * inside a LATER case and refresh that one's catalogue under it. `test-setup` calls this after
+   * every case — see the comment there for the failure it produces.
+   *
+   * The alternative was to leave production untouched and swap `globalThis.setTimeout` in the
+   * harness for one that tracks every timer and clears them all after each case. It works — it
+   * was tried. It is not what is here because it clears timers nobody knows about, so the next
+   * leak of this kind is swallowed instead of named, and because a case that legitimately wants
+   * a timer to outlive it would silently stop working. One named cancellation on the one store
+   * that holds a module-scope timer says what it does.
+   */
+  cancelInvalidate: () => void
 }
 
 const COALESCE_MS = 200
@@ -134,6 +150,11 @@ export const useAssets = create<AssetsState>()(
             pending = null
             void get().refresh()
           }, COALESCE_MS)
+        },
+
+        cancelInvalidate: () => {
+          if (pending) clearTimeout(pending)
+          pending = null
         },
       }
     },
