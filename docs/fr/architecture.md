@@ -682,8 +682,13 @@ Trois conséquences pour l’appelant, et aucune n’est facultative :
   d’assets et la liste de nœuds. Le déduire promettrait une plage que les autres ne construisent
   pas.
 
-`aria-selected` ne se pose que sur un `option`. L’Explorateur peint « ouvert » avec la même prop,
-et l’annoncer « sélectionné » décrirait un état que ses lignes ne peuvent ni prendre ni rendre.
+`aria-selected` ne se pose que sur un `option`, et **une liste qui ne fait qu’ouvrir n’en est
+pas une** : `onOpen` la déclare `list`/`listitem`, là où `onSelect` la déclarerait `listbox`.
+L’Explorateur a payé la confusion — il peignait « ouvert » en empruntant `selectedIds`, ce qui
+teintait des lignes que personne n’avait choisies **et** laissait sans teinte les deux panneaux
+qui ont, eux, une vraie sélection. Il porte maintenant sa propre pastille, et le sous-titre dit
+la même chose en toutes lettres — d’où l’`aria-hidden` sur le point : un lecteur d’écran ne
+l’annonce pas deux fois.
 
 **La même règle vaut pour `Flyout`**, dont le `role` est un paramètre et non une supposition :
 `role="menu"` promet des rangées qu’un lecteur d’écran parcourt à la flèche, et un volet qui

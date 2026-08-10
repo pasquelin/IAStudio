@@ -655,8 +655,12 @@ Three consequences for the caller, none of them optional:
   caller, but most keep a single selection — only two pass `multiple`, the asset shelf and the
   node list. Inferring it would promise a range the others do not build.
 
-`aria-selected` is only ever set on an `option`. The Explorer paints "open" with that same prop,
-and announcing it as "selected" would describe a state its rows can neither take nor give back.
+`aria-selected` is only ever set on an `option`, and **a list that merely opens is not one**:
+`onOpen` declares it `list`/`listitem` where `onSelect` would declare it a `listbox`. The Explorer
+paid for that confusion — it painted "open" by borrowing `selectedIds`, which tinted rows nobody
+had chosen **and** left the two panels that do have a selection showing none. It now carries its
+own dot, and the subtitle says the same thing in words — hence the `aria-hidden` on it: a screen
+reader must not announce it twice.
 
 **The same rule governs `Flyout`**, whose `role` is a parameter rather than an assumption:
 `role="menu"` promises rows a screen reader steps through with the arrow keys, and a panel holding
