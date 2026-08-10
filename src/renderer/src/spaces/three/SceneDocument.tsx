@@ -10,9 +10,13 @@ import {
   copiesOf,
   groupNodes,
   moveNodes,
+  multi,
   removeNodes,
   rootedIn,
 } from '@/engines/scene/commands'
+import { armedTracksFor, recordMove } from '@/engines/scene/animation-commands'
+import { snapToFrame } from '@/engines/scene/animation-eval'
+import type { Command } from '@/engines/core/history'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { setDocumentTitle } from '@/app/dockview-api'
 import { useAddNode } from '@/hooks/useAddNode'
@@ -24,7 +28,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import { selectedNodes, type NodeMove, type SceneState } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
@@ -56,6 +60,36 @@ async function exportScene(
   } catch (error) {
     reportFailure('scene.export', format, error)
   }
+}
+
+/**
+ * What a gizmo drag writes. With a track armed it becomes a key on that track; with none it moves
+ * the node itself, exactly as it always did.
+ *
+ * Without this, an armed timeline makes the gizmo useless: the drag would write the REST pose,
+ * and the tracks would add themselves on top of it again on the very next frame.
+ */
+function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
+  const store = useScenes.getState()
+  const state = sceneOf(store, documentId)
+  const at = snapToFrame(viewOf(useSceneViews.getState(), documentId).playhead, state.animation.fps)
+
+  const keys: Command<SceneState>[] = []
+  const plain: NodeMove[] = []
+
+  for (const move of moves) {
+    const armed = armedTracksFor(state, move.id)
+    const rest = state.nodes.find(node => node.id === move.id)?.transform
+    if (armed.length === 0 || !rest) {
+      plain.push(move)
+      continue
+    }
+    keys.push(...recordMove(rest, move.transform, at, armed))
+  }
+
+  if (plain.length > 0) keys.push(moveNodes(plain))
+  if (keys.length === 0) return
+  store.runCommand(documentId, keys.length === 1 && keys[0] ? keys[0] : multi('transform', keys))
 }
 
 const MESHES: readonly AssetType[] = ['mesh']
@@ -99,7 +133,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // A click in the void with a modifier held keeps the selection: `toggle` of nothing is
       // nothing, which is what stops a near miss from undoing the picking that came before it.
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
-      onTransform: moves => useScenes.getState().runCommand(documentId, moveNodes(moves)),
+      onTransform: moves => recordTransform(documentId, moves),
       onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
     })
 
@@ -149,6 +183,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setSkeletons(view.skeletons)
   }, [view.skeletons])
+
+  // The head is session state React owns; the engine is told where it stands, never the reverse.
+  useEffect(() => {
+    engine.current?.setPlayhead(view.playhead)
+  }, [view.playhead])
 
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them. Only while this tab is in front, or two

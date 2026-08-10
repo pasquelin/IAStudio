@@ -7,12 +7,17 @@ export type SceneView = {
   display: DisplayMode
   /** Whether the bones of every rigged model are drawn over it. Off, like every other overlay. */
   skeletons: boolean
+  /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
+  playhead: number
+  playing: boolean
 }
 
 const DEFAULT_SCENE_VIEW: SceneView = {
   projection: 'perspective',
   display: 'shaded',
   skeletons: false,
+  playhead: 0,
+  playing: false,
 }
 
 /**
@@ -28,6 +33,8 @@ export type SceneViewsState = {
   setProjection: (documentId: string, projection: ProjectionKind) => void
   setDisplay: (documentId: string, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
+  setPlayhead: (documentId: string, playhead: number) => void
+  setPlaying: (documentId: string, playing: boolean) => void
 }
 
 export const useSceneViews = create<SceneViewsState>()(set => ({
@@ -46,6 +53,16 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setSkeletons: (documentId, skeletons) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), skeletons } },
+    })),
+
+  setPlayhead: (documentId, playhead) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), playhead } },
+    })),
+
+  setPlaying: (documentId, playing) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), playing } },
     })),
 }))
 

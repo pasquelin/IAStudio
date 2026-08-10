@@ -1,3 +1,4 @@
+import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { describe, expect, it } from 'vitest'
 import { MESH_ENTRIES, TEXTURE_SLOTS } from '@shared/domain/scene'
 import { MESH_PRIMITIVES } from './mesh-primitives'
@@ -29,9 +30,13 @@ function reread(state: SceneState): SceneState {
 const nodeWith = (fields: object): unknown => ({ ...mesh('a'), ...fields })
 
 describe('scenePayload', () => {
-  it('carries the nodes and what lights them, and leaves the selection behind', () => {
+  it('carries the nodes, what lights them and what moves them, and leaves the selection behind', () => {
     const state: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: ['a'] }
-    expect(scenePayload(state)).toEqual({ nodes: [mesh('a')], environment: { kind: 'studio' } })
+    expect(scenePayload(state)).toEqual({
+      nodes: [mesh('a')],
+      environment: { kind: 'studio' },
+      animation: EMPTY_TIMELINE,
+    })
   })
 })
 
@@ -364,5 +369,80 @@ describe('sceneFromPayload', () => {
     ]
 
     expect(sceneFromPayload({ nodes }).nodes).toEqual([])
+  })
+})
+
+describe('the timeline a file holds', () => {
+  const trackPayload = {
+    id: 'track-1',
+    name: 'Cube position',
+    index: 0,
+    muted: false,
+    solo: false,
+    locked: false,
+    armed: false,
+    target: { nodeId: 'cube', property: 'position' },
+    keys: [{ time: 1, value: { x: 1, y: 0, z: 0 } }],
+  }
+
+  const read = (animation: unknown) =>
+    sceneFromPayload({ nodes: [], environment: { kind: 'studio' }, animation }).animation
+
+  it('opens on an empty one where the file says nothing — every document written so far', () => {
+    expect(read(undefined)).toEqual(EMPTY_TIMELINE)
+  })
+
+  it('reads a track back whole, keys included', () => {
+    const timeline = read({ duration: 8, fps: 30, tracks: [trackPayload] })
+
+    expect(timeline).toMatchObject({ duration: 8, fps: 30 })
+    expect(timeline.tracks[0]?.keys).toEqual(trackPayload.keys)
+  })
+
+  it('drops one malformed track rather than the animation around it', () => {
+    const timeline = read({
+      tracks: [trackPayload, { id: 'broken', name: 'Broken' }, { ...trackPayload, id: 'track-2' }],
+    })
+
+    expect(timeline.tracks.map(track => track.id)).toEqual(['track-1', 'track-2'])
+  })
+
+  it('refuses a track whose property is not one this version drives', () => {
+    const timeline = read({
+      tracks: [{ ...trackPayload, target: { nodeId: 'cube', property: 'colour' } }],
+    })
+
+    expect(timeline.tracks).toEqual([])
+  })
+
+  it('refuses a key that is not a point in time and space', () => {
+    const timeline = read({ tracks: [{ ...trackPayload, keys: [{ time: 'soon' }] }] })
+    expect(timeline.tracks).toEqual([])
+  })
+
+  it('falls back on the defaults for a length or a rate that says nothing usable', () => {
+    const timeline = read({ duration: -3, fps: 0, tracks: [] })
+    expect(timeline).toMatchObject({
+      duration: EMPTY_TIMELINE.duration,
+      fps: EMPTY_TIMELINE.fps,
+    })
+  })
+
+  it('takes a bone track, which names a bone inside a file rather than a node', () => {
+    const timeline = read({
+      tracks: [
+        { ...trackPayload, target: { nodeId: 'perso', bone: 'spine', property: 'rotation' } },
+      ],
+    })
+
+    expect(timeline.tracks[0]?.target).toMatchObject({ bone: 'spine' })
+  })
+
+  it('refuses a bone that is not a name', () => {
+    const timeline = read({
+      tracks: [{ ...trackPayload, target: { nodeId: 'perso', bone: 7, property: 'rotation' } }],
+    })
+
+    expect(timeline.tracks).toEqual([])
   })
 })

@@ -15,6 +15,15 @@ import {
   type EnvironmentRef,
   type Transform,
 } from '@shared/domain/scene'
+import {
+  DEFAULT_DURATION,
+  DEFAULT_FPS,
+  EMPTY_TIMELINE,
+  TRACK_PROPERTIES,
+  type AnimationTimeline,
+  type AnimationTrack,
+  type Keyframe,
+} from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import {
@@ -37,10 +46,14 @@ import {
 } from './scene-state'
 
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
-export type ScenePayload = { nodes: readonly SceneNode[]; environment: EnvironmentRef }
+export type ScenePayload = {
+  nodes: readonly SceneNode[]
+  environment: EnvironmentRef
+  animation: AnimationTimeline
+}
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes, environment: state.environment }
+  return { nodes: state.nodes, environment: state.environment, animation: state.animation }
 }
 
 /**
@@ -65,6 +78,7 @@ export function sceneFromPayload(payload: unknown): SceneState {
     nodes: nodes.filter(isSceneNode).map(revived),
     selectedIds: [],
     environment: readEnvironment(payload.environment),
+    animation: readTimeline(payload.animation),
   }
 }
 
@@ -168,6 +182,43 @@ function isOptionalAnimation(value: unknown): boolean {
     Number.isFinite(value.time) &&
     Number.isFinite(value.speed)
   )
+}
+
+/**
+ * The timeline a file holds, or an empty one. Read track by track rather than refused whole, on
+ * the rule the nodes already follow: a project folder is user territory, and one malformed track
+ * must not cost the animation around it.
+ */
+function readTimeline(value: unknown): AnimationTimeline {
+  if (!isRecord(value)) return EMPTY_TIMELINE
+
+  const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
+  return {
+    duration:
+      Number.isFinite(value.duration) && Number(value.duration) > 0
+        ? Number(value.duration)
+        : DEFAULT_DURATION,
+    fps: Number.isFinite(value.fps) && Number(value.fps) > 0 ? Number(value.fps) : DEFAULT_FPS,
+    tracks,
+  }
+}
+
+function isTrack(value: unknown): value is AnimationTrack {
+  if (!isRecord(value)) return false
+  if (typeof value.id !== 'string' || value.id === '') return false
+  if (typeof value.name !== 'string') return false
+  if (!Number.isFinite(value.index)) return false
+  const target = value.target
+  if (!isRecord(target)) return false
+  if (typeof target.nodeId !== 'string') return false
+  if (target.bone !== undefined && typeof target.bone !== 'string') return false
+  if (!TRACK_PROPERTIES.some(property => property === target.property)) return false
+
+  return Array.isArray(value.keys) && value.keys.every(isKeyframe)
+}
+
+function isKeyframe(value: unknown): value is Keyframe {
+  return isRecord(value) && Number.isFinite(value.time) && isVector3(value.value)
 }
 
 function isTransform(value: unknown): value is Transform {

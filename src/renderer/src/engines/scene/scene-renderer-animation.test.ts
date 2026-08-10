@@ -6,8 +6,9 @@ import { DEFAULT_ANIMATION } from '@shared/domain/scene'
 import { SceneRenderer } from './SceneRenderer'
 import type { BvhBuilder } from './bvh-builder'
 import type * as ModelCache from './model-cache'
-import { modelNodeFixture } from './scene-fixtures'
+import { meshNode, modelNodeFixture } from './scene-fixtures'
 import { EMPTY_SCENE } from './scene-state'
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 
 /**
  * The instance the scene mounts is a clone, which nothing outside the engine can reach. Handing
@@ -182,6 +183,75 @@ describe('SceneRenderer and the bones a rig carries', () => {
     engine.apply(EMPTY_SCENE)
 
     expect((scene?.children ?? []).filter(child => child.type === 'SkeletonHelper')).toHaveLength(0)
+    engine.dispose()
+  })
+})
+
+describe('SceneRenderer and the timeline over the scene', () => {
+  const cube = meshNode('cube-1')
+
+  const timelineWith = (value: number): AnimationTimeline => ({
+    ...EMPTY_TIMELINE,
+    tracks: [
+      {
+        id: 'track-1',
+        name: 'Cube position',
+        index: 0,
+        muted: false,
+        solo: false,
+        locked: false,
+        armed: false,
+        target: { nodeId: 'cube-1', property: 'position' },
+        keys: [{ time: 0, value: { x: value, y: 0, z: 0 } }],
+      },
+    ],
+  })
+
+  /** The engine names its objects after their node, which is how one is found from outside. */
+  const objectOf = (engine: SceneRenderer, id: string): Object3D | undefined => {
+    const scene: { children: Object3D[] } = Reflect.get(engine, 'viewport').scene
+    return scene.children.find(child => child.name === id)
+  }
+
+  it('lays what the tracks add over the pose the node holds', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply({ ...EMPTY_SCENE, nodes: [cube], animation: timelineWith(4) })
+
+    expect(objectOf(engine, 'cube-1')?.position.x).toBe(4)
+    engine.dispose()
+  })
+
+  it('follows the head without the document changing at all', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    const one = timelineWith(0).tracks[0]
+    if (!one) throw new Error('the fixture builds one track')
+
+    const timeline: AnimationTimeline = {
+      ...EMPTY_TIMELINE,
+      tracks: [
+        {
+          ...one,
+          keys: [
+            { time: 0, value: { x: 0, y: 0, z: 0 } },
+            { time: 2, value: { x: 10, y: 0, z: 0 } },
+          ],
+        },
+      ],
+    }
+    engine.apply({ ...EMPTY_SCENE, nodes: [cube], animation: timeline })
+    expect(objectOf(engine, 'cube-1')?.position.x).toBe(0)
+
+    engine.setPlayhead(1)
+    expect(objectOf(engine, 'cube-1')?.position.x).toBeCloseTo(5, 5)
+    engine.dispose()
+  })
+
+  it('leaves a scene with no track exactly where its nodes stand', () => {
+    const engine = new SceneRenderer({ onSelect: () => {}, onTransform: () => {}, bvh })
+    engine.apply({ ...EMPTY_SCENE, nodes: [cube] })
+    engine.setPlayhead(3)
+
+    expect(objectOf(engine, 'cube-1')?.position.x).toBe(0)
     engine.dispose()
   })
 })

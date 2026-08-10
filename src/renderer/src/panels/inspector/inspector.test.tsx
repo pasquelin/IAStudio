@@ -15,6 +15,7 @@ import {
   type SceneState,
 } from '@/engines/scene/scene-state'
 import type { Transform } from '@shared/domain/scene'
+import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useDocuments } from '@/stores/documents'
@@ -528,6 +529,7 @@ describe('inspector panel', () => {
         ],
         selectedIds: ['box-2', 'box-1'],
         environment: STUDIO_ENVIRONMENT,
+        animation: EMPTY_TIMELINE,
       })
       render(<Content />)
       const handle = axisHandle('Y')
@@ -563,6 +565,7 @@ describe('inspector panel', () => {
         ],
         selectedIds: ['box-2', 'box-1'],
         environment: STUDIO_ENVIRONMENT,
+        animation: EMPTY_TIMELINE,
       })
       render(<Content />)
       const handle = axisHandle('Y', 1)

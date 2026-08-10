@@ -1,3 +1,4 @@
+import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { LIGHT_TYPES } from './light-types'
 import { lightNode } from './node-factory'
 import { STUDIO_ENVIRONMENT, type LightDescriptor, type Vector3 } from '@shared/domain/scene'
@@ -19,5 +20,6 @@ export function createDefaultScene(): SceneState {
     }),
     selectedIds: [],
     environment: STUDIO_ENVIRONMENT,
+    animation: EMPTY_TIMELINE,
   }
 }

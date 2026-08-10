@@ -61,6 +61,8 @@ export type SceneState = {
   selectedIds: readonly string[]
   /** What lights the scene, and what its materials reflect. Part of the document. */
   environment: EnvironmentRef
+  /** The tracks that move it through time. Where the head STANDS is session state, not this. */
+  animation: AnimationTimeline
 }
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
@@ -168,6 +170,7 @@ export const EMPTY_SCENE: SceneState = {
   nodes: [],
   selectedIds: [],
   environment: STUDIO_ENVIRONMENT,
+  animation: EMPTY_TIMELINE,
 }
 
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>
@@ -252,3 +255,4 @@ export function subtreeOf(nodes: readonly SceneNode[], id: string): SceneNode[] 
 export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): SceneNode[] {
   return nodes.filter(node => node.type === type)
 }
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'

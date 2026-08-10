@@ -2,8 +2,9 @@ import { mdiVideoVintage } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { TimelineCanvas } from '@/spaces/video/TimelineCanvas'
-import { activeSequenceId, useDocuments } from '@/stores/documents'
+import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
 import { useVideoTool } from '@/stores/video-tool'
+import { AnimationPanel } from './AnimationPanel'
 import { TrackHeaders } from './TrackHeaders'
 
 /**
@@ -14,8 +15,12 @@ import { TrackHeaders } from './TrackHeaders'
 export function TimelinePanel() {
   const { t } = useTranslation()
   const documentId = useDocuments(activeSequenceId)
+  const sceneId = useDocuments(activeSceneId)
   const tool = useVideoTool(state => state.tool)
 
+  // A scene reads its time along the same band, and it is a different timeline entirely: tracks
+  // that add up rather than clips that take turns.
+  if (sceneId) return <AnimationPanel documentId={sceneId} />
   if (!documentId) return <EmptyState icon={mdiVideoVintage} message={t('timeline.noDocument')} />
 
   return (

@@ -31,6 +31,7 @@ const setSpace = vi.fn()
 const setProjection = vi.fn()
 const setDisplayMode = vi.fn()
 const setSkeletons = vi.fn()
+const setPlayhead = vi.fn()
 const viewFrom = vi.fn()
 // At module scope like the others, so a test can make the encoding itself refuse: the exporters
 // throw on a texture they cannot write, and that is the half no bridge failure stands in for.
@@ -52,6 +53,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setProjection = setProjection
     setDisplayMode = setDisplayMode
     setSkeletons = setSkeletons
+    setPlayhead = setPlayhead
     viewFrom = viewFrom
     frameSelection = frameSelection
     exportTo = exportTo

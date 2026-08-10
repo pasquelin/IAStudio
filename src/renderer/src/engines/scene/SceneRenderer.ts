@@ -57,6 +57,8 @@ import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
 import { SceneAnimations, clipNamesOf, clipsOf } from './animation'
+import { drivenNodes, poseAt } from './animation-eval'
+import type { AnimationTimeline } from '@shared/domain/animation'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, placePivot, release, transformOf } from './pivot'
 import {
@@ -213,6 +215,9 @@ export class SceneRenderer {
   /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
   private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
+  /** The tracks of the document, and where the head stands over them. */
+  private timeline: AnimationTimeline | null = null
+  private playhead = 0
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -345,9 +350,46 @@ export class SceneRenderer {
     for (const node of state.nodes) this.hangFromParent(node)
 
     this.selectedIds = state.selectedIds
+    this.timeline = state.animation
+    // After the transforms are written, never before: a pose is what the tracks ADD to the one
+    // the node holds, so it has to be laid over a rest pose that is already up to date.
+    this.applyPoses()
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
     this.viewport.requestRender()
+  }
+
+  /**
+   * Where the head stands, in seconds. Session state, so it arrives by a call of its own rather
+   * than inside the document — playing would otherwise put one undo entry per frame.
+   */
+  setPlayhead(time: number): void {
+    if (time === this.playhead) return
+    this.playhead = time
+    this.applyPoses()
+    this.viewport.requestRender()
+  }
+
+  /**
+   * Lays the timeline over the rest poses. Only the nodes it drives are touched, and a scene
+   * with no track at all costs one `Set` of nothing.
+   */
+  private applyPoses(): void {
+    const timeline = this.timeline
+    if (!timeline || timeline.tracks.length === 0) return
+
+    for (const nodeId of drivenNodes(timeline)) {
+      const object = this.objects.get(nodeId)
+      const rest = this.applied.get(nodeId)?.transform
+      // A node the gizmo is carrying holds a transform relative to the pivot, not to the scene:
+      // writing a world pose into it mid-drag would teleport it, exactly as `syncNode` warns.
+      if (!object || !rest || object.parent === this.pivot) continue
+
+      const pose = poseAt(rest, timeline, nodeId, this.playhead)
+      object.position.set(pose.position.x, pose.position.y, pose.position.z)
+      object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z)
+      object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z)
+    }
   }
 
   setMode(mode: TransformMode): void {
