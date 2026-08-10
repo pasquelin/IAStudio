@@ -291,6 +291,23 @@ describe('hashing a node', () => {
       hashOf(planGraph(graphOf(nodes, feeds)), 'm1'),
     )
   })
+
+  /**
+   * Onto ONE port, the order decides. Several wires on a port concatenate in edge order and a
+   * scalar port takes the head (`bodyOf`), so the first wire is what fills the body — unlike two
+   * wires on two ports, above, where the file's own order says nothing.
+   */
+  it('changes when two wires onto ONE port are written in the other order', () => {
+    const feeds: readonly GraphEdge[] = [
+      wire('m1', 'prompt', 'text1', 'prompt'),
+      wire('m1', 'prompt', 'text2', 'prompt'),
+    ]
+    const nodes = [text('text1'), text('text2'), model('m1')]
+
+    expect(hashOf(planGraph(graphOf(nodes, [...feeds].reverse())), 'm1')).not.toBe(
+      hashOf(planGraph(graphOf(nodes, feeds)), 'm1'),
+    )
+  })
 })
 
 describe('reading the cache', () => {

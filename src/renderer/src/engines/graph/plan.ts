@@ -134,17 +134,30 @@ function inputsOf(
  *
  * Built from the edges rather than from `inputs`, which is keyed by port NAME: a file may give two
  * ports one name, and two wires that land on different handles would then hash as one.
+ *
+ * Grouped by the port a wire LANDS on, ordered inside a group and sorted between them. Both halves
+ * are load-bearing. Inside one port the order decides: several wires concatenate in edge order and
+ * a scalar takes the head (`bodyOf`), so recabling one of two wires changes what is submitted, and
+ * a flat sort handed the first wire's picture back off the cache. Between two ports nothing
+ * decides, and sorting is what keeps reopening a file whose edges are listed otherwise from
+ * invalidating a whole graph.
  */
 function hashOf(
   node: GraphNode,
   incoming: readonly GraphEdge[],
   hashes: ReadonlyMap<string, string>,
 ): string {
-  const from = incoming
+  // Keyed by the consumer's own handle ID rather than by its name, for the reason the JSDoc gives:
+  // a file may give two ports one name, and their wires must not fall into one group.
+  const landing = new Map<string, string[]>()
+
+  for (const edge of incoming) {
     // A provider is always hashed before its consumer — that is what the topological order buys.
-    .map(edge => [edge.sourceHandle ?? '', edge.targetHandle ?? '', hashes.get(edge.target) ?? ''])
-    .map(stableKey)
-    .sort()
+    const wire = stableKey([edge.targetHandle ?? '', hashes.get(edge.target) ?? ''])
+    push(landing, edge.sourceHandle ?? '', wire)
+  }
+
+  const from = [...landing].map(stableKey).sort()
 
   return digest(stableKey({ id: node.id, type: node.type, params: paramsOf(node), from }))
 }
