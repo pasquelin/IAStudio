@@ -980,17 +980,38 @@ est écrit ici parce que chacun demande une décision, pas une correction :**
 8. **`role="status"` est posé par nœud**, donc vingt régions live sur un graphe de vingt nœuds.
    Ailleurs le dépôt n'en met qu'une, et `ProgressRow` — qui peint la même information pour les
    jobs — n'en a pas.
-0. **Un nœud texte et le port prompt d'un modèle ne se relient peut-être pas** — trouvé en écrivant
-   le lot C3, par une sonde, pas par lecture. `factory.ts` type la sortie d'un nœud texte `text`
-   (`OUTPUTS.text = { field: 'prompt', type: 'text' }`) et le port prompt d'un générateur `prompt`
-   (`portTypeOf` sur `field.promptSpark`). `typesConnect` refuse : `acceptedTypes(input)` vaut
-   `['prompt']` et n'inclut pas `'text'`. **Mesuré côté compilateur** : le convertisseur ne résout
-   pas ce fil et le générateur retombe sur son formulaire. Deux lectures possibles — soit le canvas
-   refuse le geste et personne ne l'a vu, soit `typesConnect` est plus permissif que je ne le lis.
-   **Ni l'une ni l'autre n'est vérifiée à l'écran** ; c'est le premier geste du prochain lot du
-   chantier. Attention : les fixtures de `engines/graph/graph-fixtures.ts` écrivent `type: 'prompt'`
-   sur la sortie d'un nœud texte, donc **elles ne reproduisent pas ce que `createNode` fabrique** —
-   c'est ce qui a caché la question jusqu'ici.
+0. ### 🔴 **Un nœud texte ne peut pas être relié au port prompt d'un générateur — MESURÉ**
+
+   **Le geste attendu** : poser un nœud Texte, poser un générateur d'image, tirer un fil de la
+   sortie du texte vers l'entrée « prompt » du générateur. C'est le geste pour lequel l'espace
+   Graphe existe.
+
+   **Ce qui se passe** : le fil est refusé. Mesuré en appelant `refuseConnection` sur les nœuds
+   que `createNode` et `createModelNode` fabriquent réellement — pas sur des fixtures :
+
+   ```
+   textOutput  { id: 'text1-target-prompt',           name: 'output', type: 'text'   }
+   modelPrompt { id: 'imageGenerator1-source-prompt',  name: 'prompt', type: 'prompt' }
+   refusal     'type-mismatch'
+   ```
+
+   `factory.ts` type la sortie d'un nœud texte `'text'` (`OUTPUTS.text`) et le port prompt d'un
+   générateur `'prompt'` (`portTypeOf` sur `field.promptSpark`) ; `typesConnect` n'accepte que
+   `'prompt'`, donc `refuseConnection` rend `'type-mismatch'` et `canDropConnection` est faux.
+
+   **Pourquoi personne ne l'a vu** : `engines/graph/graph-fixtures.ts` écrit `type: 'prompt'` sur
+   la sortie d'un nœud texte. **Les fixtures ne reproduisent pas ce que `createNode` fabrique**, et
+   toute la suite des lots C1 et C2 s'appuie dessus. Corriger la fixture est le premier geste — il
+   fera rougir ce qui doit rougir.
+
+   **Ce qui n'est pas tranché, et ne doit pas l'être seul** : qui a tort des deux. Soit la sortie
+   d'un texte doit être typée `'prompt'`, soit le port prompt doit accepter `['prompt', 'text']`.
+   La seconde est plus permissive et colle à ce que `typesConnect` documente déjà (« un port non
+   typé accepte tout, le studio ne doit pas refuser ce que la webapp permet ») — **mais la valeur
+   `'text'` vient d'une App publique lue le 9 août**, donc c'est la webapp qui décide, et ça se
+   vérifie par un appel avant d'écrire quoi que ce soit.
+
+   **À vérifier à l'écran aussi** : le fil doit se voir refusé au pointeur.
 
 9. **`whenSettled` n'a ni signal ni échéance** : un job qui n'atteindrait jamais d'état terminal
    fige l'exécution. Le `try/finally` empêche l'application de rester bloquée, pas l'attente
