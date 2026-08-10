@@ -27,7 +27,8 @@ The simplest case. Double-click and follow what your system offers.
 
 ### You are starting from the source code
 
-You need **Node 22 or later** and **[pnpm](https://pnpm.io)**. Then, in a terminal, at the root of
+You need **Node 24** — the version `.nvmrc` carries, and the one CI uses — and
+**[pnpm](https://pnpm.io)**. Then, in a terminal, at the root of
 the folder:
 
 ```bash
