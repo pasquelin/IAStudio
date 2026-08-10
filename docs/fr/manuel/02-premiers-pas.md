@@ -19,7 +19,8 @@ C’est le cas le plus simple. Double-cliquez et suivez ce que votre système pr
 |---|---|---|
 | **macOS** | un fichier `.dmg` | l’ouvrir, glisser l’application dans **Applications** |
 | **Windows** | un installeur `.exe` | le lancer, suivre l’assistant |
-| **Linux** | un `.AppImage` | le rendre exécutable, puis le lancer |
+| **Linux — Debian, Ubuntu** | un paquet `.deb` | l’ouvrir avec l’installeur de votre bureau, ou `sudo apt install ./<fichier>.deb` |
+| **Linux — les autres** | un `.AppImage` | le rendre exécutable, puis le lancer — rien ne s’installe |
 
 > **macOS peut refuser d’ouvrir l’application** si elle n’a pas été signée par Apple. Le message
 > parle d’un « développeur non identifié ». Dans ce cas : clic droit sur l’application →
@@ -67,8 +68,9 @@ passe, réservés aux programmes.
 
 ## Étape 3 — Brancher votre compte
 
-1. Ouvrez les réglages : `⌘,` sur macOS, `Ctrl+,` sur Windows et Linux. Ou par le menu
-   **Fichier ▸ Réglages…**
+1. Ouvrez les réglages : `⌘,` sur macOS, `Ctrl+,` sur Windows et Linux. Ou par le menu —
+   **Scenario Studio ▸ Réglages…** sur macOS, **Fichier ▸ Réglages…** ailleurs, car il n’y a
+   de menu d’application que sur macOS.
 2. Dans la liste de gauche, cliquez sur **Compte**.
 3. Donnez-lui un **nom** — ce que vous voulez : « Studio », « Perso », votre prénom.
 4. Collez votre clé dans **Clé API**, votre secret dans **Secret API**.

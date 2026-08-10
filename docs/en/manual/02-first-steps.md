@@ -19,7 +19,8 @@ The simplest case. Double-click and follow what your system offers.
 |---|---|---|
 | **macOS** | a `.dmg` file | open it, drag the application into **Applications** |
 | **Windows** | an `.exe` installer | run it, follow the wizard |
-| **Linux** | an `.AppImage` | make it executable, then launch it |
+| **Linux — Debian, Ubuntu** | a `.deb` package | open it with your desktop's installer, or `sudo apt install ./<file>.deb` |
+| **Linux — everything else** | an `.AppImage` | make it executable, then launch it — nothing gets installed |
 
 > **macOS may refuse to open the application** if it has not been signed by Apple. The message
 > talks about an "unidentified developer". In that case: right-click the application → **Open** →
@@ -65,8 +66,9 @@ programs.
 
 ## Step 3 — Connect your account
 
-1. Open settings: `⌘,` on macOS, `Ctrl+,` on Windows and Linux. Or through the menu
-   **File ▸ Settings…**
+1. Open settings: `⌘,` on macOS, `Ctrl+,` on Windows and Linux. Or through the menu —
+   **Scenario Studio ▸ Settings…** on macOS, **File ▸ Settings…** elsewhere, since only macOS
+   has an application menu.
 2. In the list on the left, click **Account**.
 3. Give it a **name** — whatever you like: "Studio", "Personal", your first name.
 4. Paste your key into **API key**, your secret into **API secret**.
