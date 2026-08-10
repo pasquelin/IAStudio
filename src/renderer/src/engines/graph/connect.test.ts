@@ -128,7 +128,6 @@ describe('what the canvas may connect', () => {
     }
 
     expect(refuseConnection(wired, first)).toBeNull()
-    expect(canConnect(wired, first)).toBe(true)
   })
 
   it('names an edge that already exists rather than doubling it', () => {

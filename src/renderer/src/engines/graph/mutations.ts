@@ -52,20 +52,18 @@ export function removeNode(graph: GraphState, id: string): GraphState {
  * this is what happens when the user drops it anyway. One producer per input where the compiler
  * would otherwise pick the first and drop the rest without a word, and as many as the user draws
  * where each one compiles to a variable of its own (`takesManyWires`).
- *
- * The edge is dropped and re-added rather than left alone where it is already there: an id is a
- * pair of handles, so re-drawing a wire that exists rewrites the same edge instead of doubling it.
  */
 export function connect(graph: GraphState, connection: Connection): GraphState {
   const edge = edgeOf(connection)
   if (!edge) return graph
 
   const consumer = graph.nodes.find(node => node.id === edge.source)
-  const replaces = (existing: GraphEdge): boolean =>
-    existing.source === edge.source && existing.sourceHandle === edge.sourceHandle
+  const joins = consumer !== undefined && takesManyWires(consumer)
 
   const kept = graph.edges.filter(existing =>
-    consumer && takesManyWires(consumer) ? existing.id !== edge.id : !replaces(existing),
+    joins
+      ? existing.id !== edge.id
+      : existing.source !== edge.source || existing.sourceHandle !== edge.sourceHandle,
   )
 
   return { ...graph, edges: [...kept, edge] }

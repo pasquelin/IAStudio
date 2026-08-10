@@ -114,11 +114,8 @@ export async function runGraph(
    * body: it steers whether the node runs at all, and the converter skips that edge before it
    * names anything.
    *
-   * **Several wires onto one port are concatenated, in the graph's own edge order** — which is
-   * both halves of what the converter does with them: an array-typed input gets the concatenation
-   * itself, and a scalar one gets the first, because `bodyOf` reads the head of the list where the
-   * form holds a single value and the converter reads `inputEdges[0]`. Each wire still names a
-   * variable of its own, which is the whole point of allowing the second one.
+   * Several wires onto one port concatenate in edge order, each still naming a variable of its
+   * own; a scalar port then takes the head, which is the `inputEdges[0]` the converter takes.
    */
   const resolveInputs = async (planned: GraphPlanNode): Promise<Resolved | null> => {
     const values: Record<string, readonly string[]> = {}

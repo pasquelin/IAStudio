@@ -117,24 +117,25 @@ describe('wiring', () => {
     expect(second.edges[0]?.target).toBe('text2')
   })
 
+  const joining = {
+    source: 'transformText1',
+    sourceHandle: 'transformText1-source-text',
+    target: 'text1',
+    targetHandle: 'text1-target-prompt',
+  }
+
+  const withTransform: GraphState = {
+    ...graph,
+    nodes: [...graph.nodes, text('text2'), transform('transformText1')],
+  }
+
   /**
    * A transform names its wires after the nodes they come from, so a second one is a second CEL
    * variable rather than a contest — and dropping it must ADD, where the generator above replaces.
    */
   it('joins a second wire onto a port that takes several', () => {
-    const feeding = {
-      source: 'transformText1',
-      sourceHandle: 'transformText1-source-text',
-      target: 'text1',
-      targetHandle: 'text1-target-prompt',
-    }
-    const withTransform: GraphState = {
-      ...graph,
-      nodes: [...graph.nodes, text('text2'), transform('transformText1')],
-    }
-
-    const both = connect(connect(withTransform, feeding), {
-      ...feeding,
+    const both = connect(connect(withTransform, joining), {
+      ...joining,
       target: 'text2',
       targetHandle: 'text2-target-prompt',
     })
@@ -144,18 +145,7 @@ describe('wiring', () => {
 
   /** Re-drawing a wire that is already there rewrites it: an edge id is its pair of handles. */
   it('does not double a wire drawn twice onto a port that takes several', () => {
-    const feeding = {
-      source: 'transformText1',
-      sourceHandle: 'transformText1-source-text',
-      target: 'text1',
-      targetHandle: 'text1-target-prompt',
-    }
-    const withTransform: GraphState = {
-      ...graph,
-      nodes: [...graph.nodes, transform('transformText1')],
-    }
-
-    expect(connect(connect(withTransform, feeding), feeding).edges).toHaveLength(1)
+    expect(connect(connect(withTransform, joining), joining).edges).toHaveLength(1)
   })
 
   it('removes an edge by its id', () => {

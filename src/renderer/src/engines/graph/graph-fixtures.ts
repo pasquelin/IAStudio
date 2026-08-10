@@ -20,8 +20,7 @@ export function textNode(id: string, value?: string): GraphNode {
     type: 'text',
     position: { x: 0, y: 0 },
     data: {
-      // Left out entirely where none is given, rather than defaulted to `''`: `value` is a
-      // parameter, so writing one would change what every suite here hashes.
+      // Left out where none is given rather than defaulted: a written `value` is hashed.
       ...(value === undefined ? {} : { value }),
       outputHandles: [
         { id: handleId(id, 'target', 'prompt'), name: DEFAULT_OUTPUT_NAME, type: 'text' },

@@ -140,12 +140,7 @@ describe('the ports of a node', () => {
   })
 })
 
-/**
- * The two node types whose wires are named after the node they come from, and therefore the two
- * whose ports hold more than one. Asked of the type rather than of the port because that is how
- * the converter asks it: `workflow_converter.js` has one arm per node type, and only these two
- * push one flow input per incoming edge.
- */
+/** Asked of the TYPE because the converter asks it that way: one arm per node type. */
 describe('a port that takes several wires', () => {
   const typed = (type: GraphNode['type']): GraphNode => ({
     id: 'n1',

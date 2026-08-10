@@ -15,9 +15,9 @@ const DOCUMENT = 'graph-1'
  * suite's subject is the branch, and a hand-written text node here carried no output port at all
  * while the very edge below named one.
  */
-const TEXT: GraphNode = textNode('text1', 'a small grey rock')
+const TEXT = textNode('text1', 'a small grey rock')
 
-const MODEL: GraphNode = modelNode('model1')
+const MODEL = modelNode('model1')
 
 const BRANCH: GraphNode = {
   id: 'ifElse1',
