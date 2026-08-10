@@ -745,7 +745,13 @@
     "conditionValue": "Valeur comparée",
     "combine": "Combinaison avec la condition précédente",
     "rangeFrom": "Borne basse",
-    "rangeTo": "Borne haute"
+    "rangeTo": "Borne haute",
+    "noTextureHint": "Laisse ce champ sans image",
+    "pickTextureHint": "Pose cette image dans le champ",
+    "studioHint": "Éclaire la scène avec l’environnement par défaut, sans ciel importé",
+    "pickSkyHint": "Éclaire la scène avec ce ciel et l’affiche en fond",
+    "noFontHint": "Aucune police choisie ; le texte garde celle du document",
+    "pickFontHint": "Compose le texte dans cette police"
   },
   "transport": {
     "play": "Lire",
@@ -1651,7 +1657,11 @@
     "noPicture": "Aucune image dans ce projet",
     "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
     "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture",
-    "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit"
+    "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit",
+    "deriveHint": "Calcule ce canal à partir d’un autre plutôt que d’une image importée",
+    "clearChannelHint": "Retire l’image du canal ; le matériau reprend sa valeur par défaut",
+    "noPictureHint": "Générez ou importez une image pour pouvoir en poser une ici",
+    "pickChannelHint": "Pose cette image sur le canal"
   },
   "licences": {
     "title": "Licences",

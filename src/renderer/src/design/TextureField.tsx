@@ -1,6 +1,6 @@
 import { mdiCheckboxBlankOutline, mdiClose, mdiTextureBox } from '@mdi/js'
 import { useMemo } from 'react'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
 import { Thumbnail } from './Thumbnail'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
@@ -24,6 +24,13 @@ export type TextureFieldProps = {
   emptyLabel: string
   clearLabel: string
   chooseLabel: string
+  /**
+   * What the two kinds of row DO, in a sentence. Required, and separate from the labels: a menu
+   * row reads its own name already, and what a caller means by "None" — no picture, the studio's
+   * own light, the document's font — is exactly what the label cannot say.
+   */
+  emptyHint: string
+  optionHint: string
 }
 
 /** The thumbnail matches the control gauge, so a slot is exactly one row tall. */
@@ -41,6 +48,8 @@ export function TextureField({
   emptyLabel,
   clearLabel,
   chooseLabel,
+  emptyHint,
+  optionHint,
 }: TextureFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
 
@@ -70,6 +79,7 @@ export function TextureField({
             icon={mdiCheckboxBlankOutline}
             checked={value === null}
             tick="one-of"
+            tip={HINT_RIGHT(emptyHint)}
             onSelect={() => {
               onChange(null)
               close()
@@ -82,6 +92,7 @@ export function TextureField({
               icon={mdiTextureBox}
               checked={option.id === value}
               tick="one-of"
+              tip={HINT_RIGHT(optionHint)}
               onSelect={() => {
                 onChange(option.id)
                 close()

@@ -64,6 +64,8 @@ export function FontField({ label, value, onChange }: FontFieldProps) {
       emptyLabel={t('inspector.noFont')}
       chooseLabel={t('inspector.chooseFont')}
       clearLabel={t('inspector.chooseFont')}
+      emptyHint={t('inspector.noFontHint')}
+      optionHint={t('inspector.pickFontHint')}
     />
   )
 }

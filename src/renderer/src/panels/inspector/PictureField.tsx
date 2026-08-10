@@ -36,6 +36,8 @@ export function PictureField({ label, value, onChange }: PictureFieldProps) {
       emptyLabel={t('inspector.noTexture')}
       chooseLabel={t('inspector.chooseTexture')}
       clearLabel={t('inspector.clearTexture')}
+      emptyHint={t('inspector.noTextureHint')}
+      optionHint={t('inspector.pickTextureHint')}
     />
   )
 }
