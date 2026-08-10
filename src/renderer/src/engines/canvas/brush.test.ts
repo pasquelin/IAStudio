@@ -1,5 +1,65 @@
 import { describe, expect, it } from 'vitest'
-import { blurRadius, BRUSH_SIZE, DEFAULT_BRUSH, resizedBrush, type BrushSettings } from './brush'
+import {
+  blurRadius,
+  BRUSH_SETTINGS_BY_TOOL,
+  BRUSH_SIZE,
+  DEFAULT_BRUSH,
+  readsBrushSetting,
+  resizedBrush,
+  type BrushSetting,
+  type BrushSettings,
+} from './brush'
+
+/**
+ * The table the bar hides its controls from and the engine reads its softness out of. What it
+ * closes is a slider that moves nothing: the hardness under the pencil was live and draggable
+ * for as long as the two sides answered the question separately.
+ */
+describe('which settings a tool reads', () => {
+  const SETTINGS: readonly BrushSetting[] = ['size', 'hardness', 'opacity', 'color']
+
+  it('answers for every tool of the engine, which the typecheck is what enforces', () => {
+    // Named so the rules below cannot pass on a table someone emptied.
+    expect(Object.keys(BRUSH_SETTINGS_BY_TOOL)).toEqual(
+      expect.arrayContaining(['brush', 'pencil', 'eraser', 'shape', 'fill', 'picker']),
+    )
+  })
+
+  it('names only settings that exist, and never the same one twice', () => {
+    for (const [tool, reads] of Object.entries(BRUSH_SETTINGS_BY_TOOL)) {
+      expect(
+        reads.filter(one => !SETTINGS.includes(one)),
+        tool,
+      ).toEqual([])
+      expect(new Set(reads).size, tool).toBe(reads.length)
+    }
+  })
+
+  /**
+   * The one the engine asks for. `softness()` reads this row rather than testing the tool, so
+   * a second name here would feather a stroke the bar promised was hard.
+   */
+  it('gives hardness to the brush and to nothing else', () => {
+    const feathering = Object.entries(BRUSH_SETTINGS_BY_TOOL)
+      .filter(([, reads]) => reads.includes('hardness'))
+      .map(([tool]) => tool)
+
+    expect(feathering).toEqual(['brush'])
+  })
+
+  it('gives the eraser no colour, its stamp being the white the erase blend reads', () => {
+    expect(readsBrushSetting('eraser', 'color')).toBe(false)
+    expect(readsBrushSetting('eraser', 'size')).toBe(true)
+  })
+
+  // A tool that reads nothing is an answer; a tool missing from the table is an oversight, and
+  // the typecheck is what tells them apart — `Record<CanvasTool, …>` refuses an absent row.
+  it('answers for the tools that paint nothing at all', () => {
+    expect(BRUSH_SETTINGS_BY_TOOL.picker).toEqual([])
+    expect(BRUSH_SETTINGS_BY_TOOL.text).toEqual([])
+    expect(readsBrushSetting('hand', 'size')).toBe(false)
+  })
+})
 
 describe('stepping the brush size', () => {
   it('grows and shrinks by a ratio, so a step feels the same at either end of the scale', () => {

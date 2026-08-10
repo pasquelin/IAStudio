@@ -462,7 +462,7 @@
     "color": "Colour",
     "colorHint": "Colour of the brush, the shapes and the fill",
     "brushSettings": "Brush settings",
-    "brushSettingsHint": "Size, hardness and opacity of the brush, the eraser and the shapes",
+    "brushSettingsHint": "Size and opacity of the stroke — hardness is offered under the brush alone, the one tool that feathers its edge",
     "size": "Size",
     "hardness": "Hardness",
     "opacity": "Opacity",

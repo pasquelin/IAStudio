@@ -1,4 +1,8 @@
 import { clamp } from '@shared/numeric'
+// Type-only, so nothing of the engine — Pixi included — is pulled in at runtime. The cycle it
+// makes with `CanvasEngine` is erased at build, and it is what lets the table below be the one
+// place that says which tool reads what.
+import type { CanvasTool } from './CanvasEngine'
 
 /**
  * What the brush, the eraser and the shape stroke are set to. Session state, not document
@@ -15,6 +19,43 @@ export type BrushSettings = {
   opacity: number
   /** Packed RGB, the form Pixi takes. */
   color: number
+}
+
+export type BrushSetting = keyof BrushSettings
+
+/**
+ * Which of the four settings each tool actually reads.
+ *
+ * **It is the source, not a description of one.** `softness()` asks it rather than testing the
+ * tool itself, so the bar and the engine cannot disagree about the hardness: a control that
+ * moves nothing is the defect this table exists to close, and a second spelling of the rule
+ * would reopen it on the first edit.
+ *
+ * Exhaustive by the typecheck: a tool added to `CanvasTool` without a row here does not build.
+ * A tool that reads nothing gets an empty row rather than being left out — "reads nothing" is
+ * an answer, "not in the table" is an oversight.
+ */
+export const BRUSH_SETTINGS_BY_TOOL: Readonly<Record<CanvasTool, readonly BrushSetting[]>> = {
+  brush: ['size', 'hardness', 'opacity', 'color'],
+  // Hard by definition, and that is the whole of what tells it from the brush.
+  pencil: ['size', 'opacity', 'color'],
+  // Its colour is not a choice: the stamp is white, which is what the erase blend reads.
+  eraser: ['size', 'opacity'],
+  // `size` is the stroke's width here rather than a disc's diameter.
+  shape: ['size', 'opacity', 'color'],
+  fill: ['color'],
+  // A caption's colour and size live on the layer and are edited in the inspector.
+  text: [],
+  select: [],
+  move: [],
+  hand: [],
+  crop: [],
+  comment: [],
+  picker: [],
+}
+
+export function readsBrushSetting(tool: CanvasTool, setting: BrushSetting): boolean {
+  return BRUSH_SETTINGS_BY_TOOL[tool].includes(setting)
 }
 
 /**

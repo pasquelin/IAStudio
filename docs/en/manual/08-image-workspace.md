@@ -231,15 +231,23 @@ The eraser erases **to transparency**; it does not paint white.
 | **Comment** | `C` | *not available yet* |
 | **Fill layer** | `G` | fills the **whole** active layer with the current colour |
 | **Eyedropper** | `I` | picks up the colour under the pointer |
-| **Colour** | — | the colour of the brush, the shapes and the fill |
+| **Colour** | — | the colour of the brush, the pencil, the shapes and the fill |
 | **Brush settings** | `[` and `]` | the size, the hardness and the opacity |
+
+> **These two follow the armed tool, and leave when it does not read them.** The eyedropper, the
+> pointer, the crop frame and the caption tool paint no pixel: the bar then shows neither colour
+> nor sliders. The eraser offers no colour — its stroke is the white the erase blend reads, and
+> the swatch chose nothing there. The bucket offers the colour alone. A control with no effect is
+> **not greyed, it is gone**: the rule the inspector already applies to a sprite, which gets no
+> shadow section rather than a dead one.
 
 > **Fill is not a paint bucket.** It fills the entire layer, edge to edge. That is what gives a
 > plain background in one gesture, but it is not the region fill you may know from elsewhere.
 
 ### The brush settings
 
-The last button in the bar opens three sliders.
+The last button in the bar opens the sliders the armed tool reads — three under the brush, two
+everywhere else.
 
 | Setting | Range | What it does |
 |---|---|---|
@@ -250,10 +258,12 @@ The last button in the bar opens three sliders.
 **Size and opacity apply to four tools at once**: the brush, the pencil, the eraser and the shape
 stroke. A 40 px brush with a 4 px eraser is not possible — it is the same setting.
 
-**Hardness reaches only one of them: the brush.** The pencil is hard by definition — that is what
-it is for, and it reads the size and the opacity like the others. The eraser and the shape stroke
-have a hard edge too: softening them needs a check nothing automatic can do here, and a feathered
-edge that stopped erasing would be worse than no feather at all.
+**Hardness reaches only one of them: the brush — and it only shows there.** The pencil is hard by
+definition, that is what it is for, and it reads the size and the opacity like the others. The
+eraser and the shape stroke have a hard edge too: softening them needs a check nothing automatic
+can do here, and a feathered edge that stopped erasing would be worse than no feather at all. The
+slider used to be offered under all three, live and doing nothing; it has joined the tool that
+reads it.
 
 **Below a certain point, softening stops showing.** A feather that would not reach half a pixel
 moves nothing an eye can tell: on a 4 px brush, hardness has to come down to 0.5 before the
