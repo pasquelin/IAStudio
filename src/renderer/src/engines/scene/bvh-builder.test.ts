@@ -359,8 +359,9 @@ describe('when a build does not come back', () => {
    * A worker the environment refuses — a chunk that did not ship, a CSP — must reject rather than
    * hang, and must not hold the geometry hostage afterwards.
    *
-   * What this cannot see is the slot such a request leaves in `pending`: nothing outside reads
-   * that map. The `finally` that clears it is an assurance, not something measured here.
+   * Nothing is in flight to sweep up either: the worker is asked for before the request is
+   * registered, so a refused spawn never reaches `InflightBuilds` at all — which is what
+   * `bvh-inflight.test.ts` measures on its own `size`.
    */
   it('lets a geometry be tried again after a worker that would not start', async () => {
     const refused = vi.fn<() => Worker>(() => {

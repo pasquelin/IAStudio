@@ -127,6 +127,13 @@ mesh in a burst, and bounding that burst to a single thread keeps the rest of th
 responsive. All three are wiring only: the catalogue, the dispatch, the audio arithmetic and the
 BVH build are tested on their own, without a worker in sight.
 
+**What waits for an answer is a module, not a private map.** `bvh-inflight.ts` holds the requests
+sent to the worker and the promises waiting on them, and it reports how many are out. The reason
+is not elegance: while that map lived inside the builder's closure, the line sweeping it after a
+refused send was an assurance no test could reach — emptied, the gate stayed green. **A register
+nothing can read is a register nothing measures**, which is the remedy `framingPlacement` already
+got when it left `frameSelection`.
+
 **And two processes, for what must not share a heap.** `main/media/peaks-worker.ts` reduces a
 waveform in a `utilityProcess`: an hour of PCM measured 129 ms on the main thread, and every
 window of the studio waited it out. `main/dictation/stt-worker.ts` holds Parakeet — six

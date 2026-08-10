@@ -1,6 +1,7 @@
 import type { BufferGeometry, Mesh } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
-import type { BvhIndex, BvhRequest, BvhResponse, SerializedBvh } from './bvh-message'
+import { createInflightBuilds } from './bvh-inflight'
+import type { BvhIndex, BvhResponse } from './bvh-message'
 
 export type BvhBuilder = {
   /**
@@ -29,9 +30,8 @@ export const WORTH_A_TREE = 20_000
  */
 export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   let worker: Worker | null = null
-  let nextId = 0
   let disposed = false
-  const pending = new Map<number, Settle>()
+  const inflight = createInflightBuilds()
   /** Builds already asked for. Two nodes of one model share their geometry — and their tree. */
   const building = new Map<BufferGeometry, Promise<void>>()
 
@@ -45,21 +45,16 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
     worker = null
     // Not a rebuild: whoever asked will hear, and the next mesh spawns a worker of its own. A
     // model that runs the thread out of memory must not take every later click's tree with it.
-    for (const slot of pending.values()) slot.reject(new Error(reason))
-    pending.clear()
+    inflight.failAll(reason)
   }
 
   const workerOf = (): Worker => {
     if (worker) return worker
 
     const started = spawn()
-    started.addEventListener('message', (event: MessageEvent<BvhResponse>) => {
-      const slot = pending.get(event.data.id)
-      pending.delete(event.data.id)
-      if (!slot) return
-      if (event.data.ok) slot.resolve(event.data.bvh)
-      else slot.reject(new Error(event.data.error))
-    })
+    started.addEventListener('message', (event: MessageEvent<BvhResponse>) =>
+      inflight.settle(event.data),
+    )
     // The two failures no `try` in the worker can catch: one that died before its handler ran,
     // and a response the structured clone could not carry back.
     started.addEventListener('error', event =>
@@ -73,27 +68,19 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
   }
 
   const build = async (mesh: Mesh, geometry: BufferGeometry): Promise<void> => {
-    const id = (nextId += 1)
-    const request: BvhRequest = {
-      id,
+    // Started before anything is recorded, so a spawn the CSP refuses throws with nothing in
+    // flight to sweep up afterwards.
+    const target = workerOf()
+    const bvh = await inflight.send(target, {
       // Copies: the buffers are transferred, and the live geometry has to keep drawing while the
       // build runs. What comes back replaces the index anyway.
       position: positionsOf(geometry),
       index: indexOf(geometry),
-    }
-
-    const bvh = await new Promise<SerializedBvh | null>((resolve, reject) => {
-      pending.set(id, { resolve, reject })
-      workerOf().postMessage(request, transferablesOf(request))
-    }).finally(() => {
-      // Also on the paths that never reached the worker: a `spawn` refused by the CSP, or a
-      // `postMessage` that could not clone, left the slot behind with nobody able to reach it.
-      pending.delete(id)
     })
 
     // The mesh may have been thrown away while the tree was being built — the same race a
     // texture runs, and the same answer: what nobody wants any more is dropped. `null` is the
-    // engine going: an awaited promise nobody answers never ends.
+    // engine going.
     if (!bvh || mesh.geometry !== geometry) return
     // A variable, not a literal: the library's own type omits the `version` its code reads.
     geometry.boundsTree = MeshBVH.deserialize(bvh, geometry)
@@ -122,17 +109,10 @@ export function createBvhBuilder(spawn: () => Worker): BvhBuilder {
       disposed = true
       worker?.terminate()
       worker = null
-      // Resolved, not rejected: a window closing is not a failure anyone should be told about.
-      for (const slot of pending.values()) slot.resolve(null)
-      pending.clear()
+      inflight.resolveAll()
       building.clear()
     },
   }
-}
-
-type Settle = {
-  resolve: (bvh: SerializedBvh | null) => void
-  reject: (error: Error) => void
 }
 
 function triangleCount(geometry: BufferGeometry): number {
@@ -178,10 +158,4 @@ function indexOf(geometry: BufferGeometry): BvhIndex | null {
   const widened = new Uint32Array(index.count)
   for (let at = 0; at < index.count; at += 1) widened[at] = index.getX(at)
   return widened
-}
-
-function transferablesOf(request: BvhRequest): Transferable[] {
-  const buffers: Transferable[] = [request.position.buffer]
-  if (request.index) buffers.push(request.index.buffer)
-  return buffers
 }
