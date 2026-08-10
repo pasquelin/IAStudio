@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pseudoLocalize, type Bundle } from './pseudo'
+import { PSEUDO_LANGUAGE, pseudoLocalize, type Bundle } from './pseudo'
 import { TRANSLATIONS } from './index'
 
 /** The one leaf of a one-key bundle, so a test reads as a sentence about a string. */
@@ -86,3 +86,23 @@ function leavesOf(bundle: Bundle, into: string[] = []): string[] {
 
   return into
 }
+
+/**
+ * The code is handed to `Intl` by every formatter the window builds — `i18n.language` is what
+ * `timeAgo`, the usage figures and the activity clock all pass through. A tag `Intl` cannot
+ * parse throws a `RangeError` on the first date drawn, so the detector would die on the screens
+ * it exists to inspect. Six letters is a well-formed primary subtag; one letter is not.
+ */
+describe('the code the pseudo bundle is registered under', () => {
+  it('is a tag every Intl formatter accepts', () => {
+    expect(() => new Intl.RelativeTimeFormat(PSEUDO_LANGUAGE)).not.toThrow()
+    expect(() => new Intl.NumberFormat(PSEUDO_LANGUAGE)).not.toThrow()
+    expect(() => new Intl.DateTimeFormat(PSEUDO_LANGUAGE)).not.toThrow()
+  })
+
+  // Unknown to CLDR, so a formatter falls back to the environment's own locale rather than
+  // pretending the pseudo-locale has date and number rules of its own.
+  it('is not a language anything claims to support', () => {
+    expect(Intl.NumberFormat.supportedLocalesOf([PSEUDO_LANGUAGE])).toEqual([])
+  })
+})

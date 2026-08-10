@@ -38,7 +38,9 @@ export async function initI18n(language: Language = DEFAULT_LANGUAGE): Promise<v
   declareLanguage(pseudo ? DEFAULT_LANGUAGE : language)
 
   if (i18next.isInitialized) {
-    if (pseudo) i18next.addResourceBundle(PSEUDO_LANGUAGE, NAMESPACE, pseudoBundle())
+    // Built once: the settings call this again on every change, and the bundle is 1700 strings.
+    if (pseudo && !i18next.hasResourceBundle(PSEUDO_LANGUAGE, NAMESPACE))
+      i18next.addResourceBundle(PSEUDO_LANGUAGE, NAMESPACE, pseudoBundle())
     await i18next.changeLanguage(spoken)
     return
   }
