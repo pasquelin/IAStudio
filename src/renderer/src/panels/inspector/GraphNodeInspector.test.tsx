@@ -31,6 +31,13 @@ const ASSET: GraphNode = {
 
 const LOOP: GraphNode = { id: 'forEach1', type: 'forEach', position: { x: 0, y: 0 }, data: {} }
 
+const APPROVAL: GraphNode = {
+  id: 'approval1',
+  type: 'approval',
+  position: { x: 0, y: 0 },
+  data: { message: 'On garde ?' },
+}
+
 /**
  * What a file can hold and the type cannot: `parseGraph` validates the node, never its `data`.
  * Written through `JSON.parse` so the shapes are the ones a reader really produces.
@@ -50,7 +57,11 @@ const MANY_ASSETS: GraphNode = {
 }
 
 beforeEach(() => {
-  installGraph(DOCUMENT, { nodes: [TEXT, NOTE, ASSET, LOOP], edges: [], inputKeys: [] })
+  installGraph(DOCUMENT, {
+    nodes: [TEXT, NOTE, ASSET, LOOP, APPROVAL],
+    edges: [],
+    inputKeys: [],
+  })
 })
 
 const nodeById = (id: string): GraphNode | undefined =>
@@ -130,6 +141,37 @@ describe('GraphNodeInspector', () => {
     expect(screen.queryByLabelText('Prompt')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Source')).toHaveValue('asset_Hr7')
     expect(screen.getByText('image')).toBeInTheDocument()
+  })
+
+  /**
+   * The one field an approval carries, and what the converter hands over as the flow node's
+   * label — so the sentence the studio writes is the one a published run puts to the user.
+   */
+  it('writes the question an approval asks', async () => {
+    show(APPROVAL)
+    await userEvent.type(screen.getByLabelText('Question posée'), '!')
+
+    expect(nodeById('approval1')?.data).toMatchObject({ message: 'On garde ?!' })
+  })
+
+  /** A graph read off a file carries no `message` at all, and the field must still open. */
+  it('opens the question of an approval that carries none', () => {
+    const bare: GraphNode = {
+      id: 'approval2',
+      type: 'approval',
+      position: { x: 0, y: 0 },
+      data: {},
+    }
+    installGraph(DOCUMENT, { nodes: [bare], edges: [], inputKeys: [] })
+    show(bare)
+
+    expect(screen.getByLabelText('Question posée')).toHaveValue('')
+  })
+
+  it('offers no question field on a node that asks nothing', () => {
+    show(TEXT)
+
+    expect(screen.queryByLabelText('Question posée')).not.toBeInTheDocument()
   })
 
   // A generator's face is `ModelNodeFields`, which asks the catalogue and has its own suite.

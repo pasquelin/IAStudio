@@ -76,6 +76,13 @@ export const isReservedNodeId = (id: string): boolean => id === RESERVED_NODE_ID
 export const CONDITIONAL_PORT = 'conditional'
 
 /**
+ * The single input port an `approval` node carries, and the one handle id the converter matches
+ * literally: it finds the node an approval guards by `` `${approvalId}-source-approval` ``, and
+ * an approval wired through any other port compiles to nothing at all.
+ */
+export const APPROVAL_PORT = 'approval'
+
+/**
  * An input port, on the LEFT of a node. `type` may be a list, which means the port is
  * polymorphic and accepts any of them — that is what the connection check and the port colours
  * are made of. `subHandles` are the ports nested under one, as a model's grouped inputs are.
@@ -157,8 +164,17 @@ export type GraphNodeBody =
    * graph read off a published App carries them.
    */
   | { type: 'modelInput'; data: GraphNodeData & { inputName?: string } }
+  /**
+   * A pause for a human, and the one node whose `data` says what the person is asked. `message`
+   * is what the converter carries over as the flow node's `label` — the sentence shown beside
+   * the two answers, so a graph with three approvals does not ask the same question three times.
+   */
+  | { type: 'approval'; data: GraphNodeData & { message?: string } }
   | {
-      type: Exclude<GraphNodeType, 'text' | 'stickyNote' | 'asset' | 'model' | 'modelInput'>
+      type: Exclude<
+        GraphNodeType,
+        'text' | 'stickyNote' | 'asset' | 'model' | 'modelInput' | 'approval'
+      >
       data: GraphNodeData
     }
 
@@ -228,11 +244,12 @@ export const GRAPH_ID_MAX = 200
  * without its line in the bundles shows the user the key itself and no typecheck sees it. The
  * guard that catches that (`i18n/bundles.test.ts`) is in `shared/` and cannot reach the renderer.
  */
-export type GraphRunStatus = 'idle' | 'running' | 'cached' | 'done' | 'failed'
+export type GraphRunStatus = 'idle' | 'running' | 'awaiting' | 'cached' | 'done' | 'failed'
 
 export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
   'idle',
   'running',
+  'awaiting',
   'cached',
   'done',
   'failed',
@@ -253,6 +270,8 @@ export type GraphRunFailure =
   | 'blocked'
   /** It ran and the job did not succeed. */
   | 'rejected'
+  /** A person was asked and said no. Apart from `rejected`: nothing failed, someone decided. */
+  | 'declined'
 
 export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
   'cycle',
@@ -260,6 +279,7 @@ export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
   'no-model',
   'blocked',
   'rejected',
+  'declined',
 ]
 
 /**

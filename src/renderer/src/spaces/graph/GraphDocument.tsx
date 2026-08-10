@@ -203,6 +203,12 @@ export function GraphDocument({ documentId }: { documentId: string }) {
     void store.start(documentId).catch(error => reportFailure('graph.run', documentId, error))
   }, [documentId])
 
+  const onDecide = useCallback(
+    (nodeId: string, approved: boolean) =>
+      useGraphRuns.getState().decide(documentId, nodeId, approved),
+    [documentId],
+  )
+
   const run = useCallback(
     (command: CommandId): void => {
       if (command === 'graph.undo') return undo()
@@ -227,6 +233,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onUndo={undo}
       onRedo={redo}
       onRun={onRun}
+      onDecide={onDecide}
       canUndo={canUndo}
       canRedo={canRedo}
       runs={runs}

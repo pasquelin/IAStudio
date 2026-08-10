@@ -18,6 +18,7 @@ export const NODE_LABEL_KEYS: Record<GraphNodeType, string | null> = {
   asset: 'graph.nodes.asset',
   model: 'graph.nodes.model',
   stickyNote: 'graph.nodes.stickyNote',
+  approval: 'graph.nodes.approval',
   aspectRatio: null,
   modelInput: null,
   llm: null,
@@ -28,7 +29,6 @@ export const NODE_LABEL_KEYS: Record<GraphNodeType, string | null> = {
   sliceAssets: null,
   forEach: null,
   forEachEnd: null,
-  approval: null,
 }
 
 /** Every key the record names, for the guard that checks the bundles carry them. */

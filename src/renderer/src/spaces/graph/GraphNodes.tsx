@@ -14,10 +14,13 @@ import {
   type GraphRunStatus,
 } from '@shared/domain/graph'
 import { isRecord } from '@shared/guards'
+import { Button } from '@/design/Button'
 import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { RUN_STATE_KEY } from './adapter'
+import { useNodeDecision } from './node-decision'
 import { NODE_LABEL_KEYS } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
 
@@ -25,6 +28,7 @@ import { InputPorts, OutputPorts } from './NodePorts'
 const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
   idle: 'muted',
   running: 'accent',
+  awaiting: 'warning',
   cached: 'muted',
   done: 'success',
   failed: 'danger',
@@ -124,6 +128,7 @@ type NodeData = {
   value?: unknown
   content?: unknown
   modelId?: unknown
+  message?: unknown
   inputHandles?: unknown
   outputHandles?: unknown
   isOutput?: unknown
@@ -160,11 +165,11 @@ const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
 function nodeOf(
   name: string,
   drawn: GraphNodeType,
-  body: (data: NodeData) => ReactNode,
+  body: (data: NodeData, id: string) => ReactNode,
 ): (props: NodeProps) => ReactNode {
   // Named per type rather than once for all three: without it React DevTools shows the same
   // component three times over, on the one surface where telling them apart is the point.
-  const Node = ({ data, selected, type }: NodeProps): ReactNode => {
+  const Node = ({ data, id, selected, type }: NodeProps): ReactNode => {
     const { t } = useTranslation()
     const fields: NodeData = data
 
@@ -178,7 +183,7 @@ function nodeOf(
         inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
         outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}
       >
-        {body(fields)}
+        {body(fields, id)}
       </NodeShell>
     )
   }
@@ -198,6 +203,55 @@ const AssetNode = nodeOf('AssetNode', 'asset', data => (
 const ModelNode = nodeOf('ModelNode', 'model', data => (
   <p className="text-muted truncate text-[11px]">{asText(data.modelId)}</p>
 ))
+
+const ApprovalNode = nodeOf('ApprovalNode', 'approval', (data, id) => (
+  <ApprovalBody id={id} message={asText(data.message)} run={asRun(data[RUN_STATE_KEY])} />
+))
+
+/**
+ * The question an approval puts, and the two answers to it while a run is stopped on it.
+ *
+ * The buttons are drawn only while the run is `awaiting`: an approval node standing on an idle
+ * canvas is a gate someone will pass through later, not a decision to take now — and answering
+ * one nobody asked would be a click into `decide`, which drops it.
+ */
+function ApprovalBody({
+  id,
+  message,
+  run,
+}: {
+  id: string
+  message: string
+  run: GraphNodeRun | undefined
+}) {
+  const { t } = useTranslation()
+  const decide = useNodeDecision()
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-muted line-clamp-3 text-[11px] whitespace-pre-wrap">
+        {message || t('graph.askApproval')}
+      </p>
+
+      {run?.status === 'awaiting' && (
+        // `nodrag`, or React Flow swallows the press to start dragging the node and the button
+        // never fires — its own escape hatch, and the only way a control lives inside a node.
+        <div className="nodrag flex gap-2">
+          <Button
+            variant="primary"
+            onClick={() => decide(id, true)}
+            {...HINT_BOTTOM(t('graph.approveHint'))}
+          >
+            {t('graph.approve')}
+          </Button>
+          <Button onClick={() => decide(id, false)} {...HINT_BOTTOM(t('graph.declineHint'))}>
+            {t('graph.decline')}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /**
  * A note, and the only node with no execution at all: the compiler's own union does not carry
@@ -268,5 +322,5 @@ export const GRAPH_NODE_TYPES: Record<GraphNodeType, (props: NodeProps) => React
   sliceAssets: PlainNode,
   forEach: PlainNode,
   forEachEnd: PlainNode,
-  approval: PlainNode,
+  approval: ApprovalNode,
 }

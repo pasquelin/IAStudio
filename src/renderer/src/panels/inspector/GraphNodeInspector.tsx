@@ -59,6 +59,17 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
         />
       )}
 
+      {/* What the person is asked, and the one field of an approval. Left empty the node falls
+          back to a sentence of its own, so a graph never stops on a question with no words. */}
+      {node.type === 'approval' && (
+        <TextField
+          label={t('inspector.message')}
+          value={node.data.message ?? ''}
+          onChange={message => edit.run(setGraphNodeData(node.id, { message }))}
+          {...edit.gesture}
+        />
+      )}
+
       {node.type === 'stickyNote' && (
         <TextField
           label={t('inspector.text')}

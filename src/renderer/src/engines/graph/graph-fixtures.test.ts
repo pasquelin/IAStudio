@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EMPTY_GRAPH, type GraphHandleInput, type GraphHandleOutput } from '@shared/domain/graph'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { createModelNode, createNode } from './factory'
-import { modelNode, textNode } from './graph-fixtures'
+import { approvalNode, modelNode, textNode } from './graph-fixtures'
 import { inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
@@ -44,6 +44,16 @@ describe('the fixtures say what the factory builds', () => {
     expect(portsOf('text1', outputHandlesOf(textNode('text1')))).toEqual(
       portsOf(built.id, outputHandlesOf(built)),
     )
+  })
+
+  it('gives an approval the port createNode gives it, and no output either', () => {
+    const built = createNode(EMPTY_GRAPH, 'approval', { x: 0, y: 0 })
+    const fixture = approvalNode('approval1')
+
+    expect(portsOf('approval1', inputHandlesOf(fixture))).toEqual(
+      portsOf(built.id, inputHandlesOf(built)),
+    )
+    expect(outputHandlesOf(fixture)).toEqual(outputHandlesOf(built))
   })
 
   it('gives a generator ports createModelNode would recognise', () => {

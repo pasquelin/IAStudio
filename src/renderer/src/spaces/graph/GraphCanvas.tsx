@@ -26,6 +26,7 @@ import { GRAPH_NODE_TYPES } from './GraphNodes'
 import { GraphMenu } from './GraphMenu'
 import { GraphStatus, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
+import { NodeDecisionProvider } from './node-decision'
 import { ViewportBridge } from './ViewportBridge'
 import type { GraphMode } from './graph-tools'
 
@@ -58,6 +59,8 @@ export type GraphCanvasProps = {
   running: boolean
   /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
   onRun: () => void
+  /** The answer given to an approval node the run has stopped on. */
+  onDecide: (nodeId: string, approved: boolean) => void
 }
 
 /**
@@ -92,6 +95,7 @@ export function GraphCanvas({
   runs,
   running,
   onRun,
+  onDecide,
 }: GraphCanvasProps) {
   /** An edge has no inspector face, so which one is picked never leaves this surface. */
   const [selectedEdges, setSelectedEdges] = useState<ReadonlySet<string>>(() => new Set())
@@ -184,46 +188,50 @@ export function GraphCanvas({
           dropAt.current = { x: event.clientX, y: event.clientY }
         }}
       >
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={GRAPH_NODE_TYPES}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          isValidConnection={isValidConnection}
-          onPaneContextMenu={onPaneContextMenu}
-          // In pan mode the drag pushes the view; in select mode it draws a rubber band, which is
-          // what the pointer tool means everywhere else in the studio.
-          panOnDrag={mode === 'pan'}
-          selectionOnDrag={mode === 'select'}
-          // Neither `<Controls>` nor `<MiniMap>`: the studio has its own toolbar, and the webapp
-          // shows neither either. `<Background>` is the one piece of their chrome worth keeping.
-          proOptions={{ hideAttribution: false }}
-          fitView
-          fitViewOptions={FIT_VIEW}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={DOT_GAP} size={DOT_SIZE} />
-          <GraphToolbar
-            mode={mode}
-            onMode={setMode}
-            // The bar's own button opens the same menu the right-click does; the bar says where.
-            onAdd={setMenuAt}
-            onUndo={onUndo}
-            onRedo={onRedo}
-            onRun={onRun}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            running={running}
-          />
-          <ViewportBridge
-            onReady={useCallback((convert: (at: { x: number; y: number }) => GraphPosition) => {
-              toFlow.current = convert
-            }, [])}
-          />
-          {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
-          <GraphStatus result={compiled} />
-        </ReactFlow>
+        {/* Above React Flow, which is what renders the nodes — and holding a value the caller
+            keeps stable, or every node on the canvas re-renders when one of them is asked. */}
+        <NodeDecisionProvider onDecide={onDecide}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={GRAPH_NODE_TYPES}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            isValidConnection={isValidConnection}
+            onPaneContextMenu={onPaneContextMenu}
+            // In pan mode the drag pushes the view; in select mode it draws a rubber band, which is
+            // what the pointer tool means everywhere else in the studio.
+            panOnDrag={mode === 'pan'}
+            selectionOnDrag={mode === 'select'}
+            // Neither `<Controls>` nor `<MiniMap>`: the studio has its own toolbar, and the webapp
+            // shows neither either. `<Background>` is the one piece of their chrome worth keeping.
+            proOptions={{ hideAttribution: false }}
+            fitView
+            fitViewOptions={FIT_VIEW}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={DOT_GAP} size={DOT_SIZE} />
+            <GraphToolbar
+              mode={mode}
+              onMode={setMode}
+              // The bar's own button opens the same menu the right-click does; the bar says where.
+              onAdd={setMenuAt}
+              onUndo={onUndo}
+              onRedo={onRedo}
+              onRun={onRun}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              running={running}
+            />
+            <ViewportBridge
+              onReady={useCallback((convert: (at: { x: number; y: number }) => GraphPosition) => {
+                toFlow.current = convert
+              }, [])}
+            />
+            {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
+            <GraphStatus result={compiled} />
+          </ReactFlow>
+        </NodeDecisionProvider>
       </div>
     </AssetDropTarget>
   )

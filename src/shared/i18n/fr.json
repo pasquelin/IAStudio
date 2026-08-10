@@ -70,8 +70,14 @@
       "text": "Texte",
       "asset": "Asset",
       "model": "Modèle",
-      "stickyNote": "Note"
-    }
+      "stickyNote": "Note",
+      "approval": "Approbation"
+    },
+    "approve": "Approuver",
+    "approveHint": "Laisser la suite du graphe se servir de ce résultat",
+    "decline": "Rejeter",
+    "declineHint": "Arrêter l’exécution de tout ce qui lit ce nœud",
+    "askApproval": "Approuver ce résultat ?"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} étape",
@@ -84,6 +90,7 @@
   },
   "graphRun": {
     "running": "en cours",
+    "awaiting": "à approuver",
     "cached": "inchangé",
     "done": "terminé",
     "failure": {
@@ -91,7 +98,8 @@
       "unsupported": "non exécutable",
       "no-model": "sans modèle",
       "blocked": "amont en échec",
-      "rejected": "échec"
+      "rejected": "échec",
+      "declined": "rejeté"
     }
   },
   "graphTools": {
@@ -665,6 +673,7 @@
     "node": "Nœud",
     "title": "Titre",
     "isOutput": "Résultat de l’App",
+    "message": "Question posée",
     "nodeId": "Identifiant",
     "noModel": "Aucun",
     "sectionFoldHint": "Replie ce groupe de propriétés",

@@ -1,5 +1,6 @@
 import type { GraphEdge, GraphNode, GraphNodeData, GraphState } from '@shared/domain/graph'
 import { digest, stableKey } from '@shared/hash'
+import { approvalsOf } from './approvals'
 import { inputHandlesOf } from './handles'
 
 /** Which node, and through which of its output ports, feeds one input port. */
@@ -11,6 +12,15 @@ export type GraphPlanNode = {
   hash: string
   /** What feeds each input port, keyed by the port's name — a model's own field key. */
   inputs: Readonly<Record<string, GraphPlanInput>>
+  /**
+   * The nodes whose outcome this one waits on without reading a value from them: today, the
+   * approvals standing between it and what feeds it.
+   *
+   * Kept apart from `inputs` because it must not reach a body — an approval produces nothing to
+   * submit — and out of the hash because a question asked of a person says nothing about what the
+   * node computes.
+   */
+  awaits: readonly string[]
   /** Whether a result is already held for this hash. */
   cached: boolean
 }
@@ -125,19 +135,30 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
   // read off disk is not made to.
   const edges = graph.edges.filter(edge => byId.has(edge.source) && byId.has(edge.target))
 
+  const awaited = awaitedApprovals(graph, edges)
+
   const incoming = new Map<string, GraphEdge[]>()
+  // Ordering, which is the edges PLUS the approvals: what a node reads and what it merely waits
+  // for are two questions, and only the first fills a body. Kept in one index all the same, so
+  // Kahn, the in-degree and the cycle report all read the same dependencies.
   const outgoing = new Map<string, GraphEdge[]>()
+  const waitingOn = new Map(graph.nodes.map(node => [node.id, 0]))
+
+  const depend = (consumer: string, provider: string, edge: GraphEdge): void => {
+    push(outgoing, provider, edge)
+    waitingOn.set(consumer, (waitingOn.get(consumer) ?? 0) + 1)
+  }
 
   for (const edge of edges) {
     push(incoming, edge.source, edge)
-    push(outgoing, edge.target, edge)
+    depend(edge.source, edge.target, edge)
   }
 
-  // Counted off `incoming` rather than tallied beside it: a second counter kept in step by hand
-  // is one that can fall out of step.
-  const waitingOn = new Map(
-    graph.nodes.map(node => [node.id, (incoming.get(node.id) ?? []).length]),
-  )
+  for (const [consumer, approvals] of awaited) {
+    for (const approval of approvals) {
+      depend(consumer, approval, { id: '', source: consumer, target: approval })
+    }
+  }
 
   const hashes = new Map<string, string>()
   const order: GraphPlanNode[] = []
@@ -152,7 +173,13 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
     const feeding = incoming.get(id) ?? []
     const hash = hashOf(node, feeding, hashes)
     hashes.set(id, hash)
-    order.push({ id, hash, inputs: inputsOf(node, feeding), cached: cache?.has(hash) === true })
+    order.push({
+      id,
+      hash,
+      inputs: inputsOf(node, feeding),
+      awaits: [...(awaited.get(id) ?? [])],
+      cached: cache?.has(hash) === true,
+    })
 
     for (const edge of outgoing.get(id) ?? []) {
       const left = (waitingOn.get(edge.source) ?? 0) - 1
@@ -164,6 +191,39 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
   if (order.length === graph.nodes.length) return { ok: true, order }
 
   return { ok: false, cycle: cycleAmong(graph, order, outgoing) }
+}
+
+/**
+ * Which approvals stand between each node and what feeds it, keyed by that node.
+ *
+ * This is the rule the SDK's converter writes into the flow — everything reading a guarded node
+ * gains a dependency on its approval — brought forward into the plan so the LOCAL run stops at
+ * the same place a published one would. Left to the executor it would be a race: two consumers of
+ * one guarded node are siblings in the topological order, and one of them could be handed its
+ * inputs before the question had been asked.
+ *
+ * An approval never waits on itself: the wire it uses to name the node it guards would otherwise
+ * read as a dependency on its own answer, and the graph would report a loop.
+ */
+function awaitedApprovals(
+  graph: GraphState,
+  edges: readonly GraphEdge[],
+): ReadonlyMap<string, ReadonlySet<string>> {
+  const guards = approvalsOf(graph)
+  if (guards.size === 0) return new Map()
+
+  const awaited = new Map<string, Set<string>>()
+
+  for (const edge of edges) {
+    const approval = guards.get(edge.target)
+    if (approval === undefined || approval === edge.source) continue
+
+    const held = awaited.get(edge.source)
+    if (held) held.add(approval)
+    else awaited.set(edge.source, new Set([approval]))
+  }
+
+  return awaited
 }
 
 /**

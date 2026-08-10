@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { GraphState } from '@shared/domain/graph'
 import type { Job, JobTarget } from '@shared/domain/job'
-import { graphOf, modelNode, textNode, wire } from '@/engines/graph/graph-fixtures'
+import {
+  approvalNode,
+  graphOf,
+  guards,
+  modelNode,
+  textNode,
+  wire,
+} from '@/engines/graph/graph-fixtures'
 import { updateNodeData } from '@/engines/graph/mutations'
 import { parseGraph } from '@/engines/graph/serialize'
 import { runOf, useGraphRuns } from './graph-runs'
@@ -424,5 +431,98 @@ describe('stopping and forgetting a run', () => {
     await vi.waitFor(() => expect(jobs.submitted).toHaveLength(2))
     jobs.settle('job_2', { status: 'succeeded', assetIds: ['asset_local'] })
     await again
+  })
+})
+
+/**
+ * The half of the gate the store owns: it holds the promise the executor is waiting on, and the
+ * canvas answers it by node id. Nothing here reaches the API — an approval submits nothing.
+ */
+describe('answering an approval', () => {
+  beforeEach(() => {
+    useGraphRuns.setState({ runs: {} })
+  })
+
+  /** `m1` generates, `approval1` guards it: the run stops with the node saying `awaiting`. */
+  const gated = (): GraphState =>
+    graphOf(
+      [modelNode('m1', {}, 'model_a'), approvalNode('approval1')],
+      [guards('approval1', 'm1')],
+    )
+
+  const untilAwaiting = async (): Promise<void> =>
+    vi.waitFor(() =>
+      expect(runOf(useGraphRuns.getState(), DOC).nodes.approval1).toEqual({ status: 'awaiting' }),
+    )
+
+  it('stops on the approval and carries on once it is approved', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, gated())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await untilAwaiting()
+
+    useGraphRuns.getState().decide(DOC, 'approval1', true)
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.approval1).toEqual({ status: 'done' })
+  })
+
+  it('marks it declined when the answer is no', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, gated())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await untilAwaiting()
+
+    useGraphRuns.getState().decide(DOC, 'approval1', false)
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.approval1).toEqual({
+      status: 'failed',
+      failure: 'declined',
+    })
+  })
+
+  /** A run left hanging on a question nobody can answer is a document that never stops running. */
+  it('lets a stop settle a run waiting on an approval', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, gated())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await untilAwaiting()
+
+    useGraphRuns.getState().stop(DOC)
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
+    // Stopped, not declined: nobody said no — the user put the whole run down.
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.approval1).toEqual({ status: 'idle' })
+  })
+
+  it('does nothing with an answer to a question that is not being asked', () => {
+    expect(() => useGraphRuns.getState().decide(DOC, 'approval1', true)).not.toThrow()
+  })
+
+  it('ignores a second answer to the same question', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, gated())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await untilAwaiting()
+
+    useGraphRuns.getState().decide(DOC, 'approval1', true)
+    useGraphRuns.getState().decide(DOC, 'approval1', false)
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.approval1).toEqual({ status: 'done' })
   })
 })

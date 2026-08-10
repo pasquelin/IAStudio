@@ -25,6 +25,11 @@ type GraphRunsState = {
   start: (documentId: string) => Promise<void>
   /** Stops it: nothing else is submitted, and what is on the wire is cancelled. */
   stop: (documentId: string) => void
+  /**
+   * Answers the question an approval node is waiting on, and does nothing where none is asked —
+   * a second click on Approve, or an answer to a run that has since been stopped.
+   */
+  decide: (documentId: string, nodeId: string, approved: boolean) => void
   /** Drops what a closed document held — its cache names assets of a project being left. */
   forget: (documentId: string) => void
 }
@@ -37,6 +42,25 @@ type GraphRunsState = {
  */
 const stopping = new Map<string, AbortController>()
 const inFlight = new Map<string, Set<string>>()
+
+/**
+ * The approvals a run is waiting on, by document and then by node — the `resolve` of the promise
+ * the executor is holding.
+ *
+ * Beside the store for the reason the two above are, and one of its own: a function put through
+ * `set` would be state no subscriber can compare. What the canvas needs to draw the question is
+ * already in `nodes[id].status`, which says `awaiting`.
+ */
+const pending = new Map<string, Map<string, (approved: boolean) => void>>()
+
+/** Answers no to whatever is still asked, so a stopped run leaves nothing hanging on a click. */
+const abandon = (documentId: string): void => {
+  const asked = pending.get(documentId)
+  if (!asked) return
+
+  for (const answer of asked.values()) answer(false)
+  asked.clear()
+}
 
 export const runOf = (state: GraphRunsState, documentId: string): DocumentRun =>
   state.runs[documentId] ?? IDLE
@@ -88,6 +112,8 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
       stopping.set(documentId, controller)
       const jobs = new Set<string>()
       inFlight.set(documentId, jobs)
+      const asked = new Map<string, (approved: boolean) => void>()
+      pending.set(documentId, asked)
 
       // Cleared rather than kept: a node left green from the previous run, beside one the graph
       // has since made unreachable, reads as a result this run produced.
@@ -123,6 +149,8 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
 
               return settled.assetIds
             },
+            // Held open until `decide` answers it, or until a stop hands every one of them a no.
+            approve: nodeId => new Promise(resolve => asked.set(nodeId, resolve)),
             report: (nodeId, run) =>
               patch(documentId, controller, held => ({
                 ...held,
@@ -145,16 +173,33 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
         patch(documentId, controller, held => ({ ...held, running: false }))
         if (stopping.get(documentId) === controller) stopping.delete(documentId)
         if (inFlight.get(documentId) === jobs) inFlight.delete(documentId)
+        if (pending.get(documentId) === asked) pending.delete(documentId)
       }
     },
 
     stop: documentId => {
+      // Aborted first: the executor tests the signal on its way out of an approval, so answering
+      // no before it is set would paint a node the user declined rather than one they stopped.
       stopping.get(documentId)?.abort()
+      abandon(documentId)
       for (const jobId of inFlight.get(documentId) ?? []) cancelIfRunning(jobId)
+    },
+
+    decide: (documentId, nodeId, approved) => {
+      const answer = pending.get(documentId)?.get(nodeId)
+      if (!answer) return
+
+      // Housekeeping rather than behaviour, and said so rather than dressed up: resolving a
+      // settled promise twice does nothing, so no test can see this line go. What it buys is
+      // that `abandon` only ever answers questions still open.
+      pending.get(documentId)?.delete(nodeId)
+      answer(approved)
     },
 
     forget: documentId => {
       stopping.get(documentId)?.abort()
+      abandon(documentId)
+      pending.delete(documentId)
       // Dropping the token is what silences the run still under way: every `patch` of it now
       // compares against nothing and writes nothing, so the entry stays gone.
       stopping.delete(documentId)

@@ -11,6 +11,13 @@ export type GraphRunPorts = {
    * truth about the same thing.
    */
   generate: (modelId: string, body: Record<string, unknown>) => Promise<readonly string[]>
+  /**
+   * Puts an approval node's question to whoever is watching, and resolves with their answer.
+   *
+   * A port like the others: the executor knows there is a person to ask, never how they are
+   * asked — the buttons are the canvas's business, and a run stops here with no DOM in sight.
+   */
+  approve: (nodeId: string) => Promise<boolean>
   /** Called on every change of state, so the canvas paints while the run is still going. */
   report: (nodeId: string, run: GraphNodeRun) => void
   /** Nodes not started yet are left alone; nothing interrupts a generation already on the wire. */
@@ -41,7 +48,7 @@ const EMPTY_CACHE: GraphCache = new Map()
 export async function runGraph(
   graph: GraphState,
   cache: GraphCache = EMPTY_CACHE,
-  { generate, report, signal }: GraphRunPorts,
+  { generate, approve, report, signal }: GraphRunPorts,
 ): Promise<GraphRunResult> {
   const plan = planGraph(graph, cache)
 
@@ -83,9 +90,54 @@ export async function runGraph(
     return resolved
   }
 
+  /** Whether every approval standing between this node and its providers was given. */
+  const cleared = async (planned: GraphPlanNode): Promise<boolean> => {
+    for (const id of planned.awaits) {
+      // Present for the same reason an input's provider is: the plan puts an approval before
+      // everything it guards, which is why it works out the dependency rather than the executor.
+      if (!(await settled.get(id))) return false
+    }
+
+    return true
+  }
+
+  const stopped = (id: string): boolean => {
+    if (signal?.aborted !== true) return false
+    report(id, { status: 'idle' })
+    return true
+  }
+
+  const decide = async (node: GraphNode): Promise<Outcome> => {
+    report(node.id, { status: 'awaiting' })
+
+    let approved = false
+
+    try {
+      approved = await approve(node.id)
+    } catch {
+      // A question that can no longer be answered counts as a no, and it is the safe way round:
+      // no holds back what nobody validated, where yes would let it through.
+    }
+
+    if (stopped(node.id)) return null
+    if (!approved) return fail(node.id, 'declined')
+
+    report(node.id, { status: 'done' })
+    // Nothing to hand on: whoever reads the guarded node reads it directly. An approval is a
+    // gate, and the flow it compiles to carries a dependency rather than a value.
+    return { values: [] }
+  }
+
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
+    // Waited on BEFORE the cache is read, which is the whole point of the plan carrying them: a
+    // result kept from a run somebody approved must not come back on a run they have declined.
+    if (!(await cleared(planned))) {
+      return stopped(node.id) ? null : fail(node.id, 'blocked')
+    }
+
     // Read off the cache rather than off `planned.cached`, which says the same thing one step
     // further from the values: two ways of asking one question is how they come to disagree.
+    // An approval never lands in it — it is `keep` that writes, and an approval never keeps.
     const held = cache.get(planned.hash)
     if (held) {
       report(node.id, { status: 'cached' })
@@ -96,10 +148,7 @@ export async function runGraph(
 
     // Asked after the inputs, and BEFORE the blocked branch: a stop pressed while a provider was
     // on the wire leaves what it feeds idle, rather than reporting a failure nothing caused.
-    if (signal?.aborted) {
-      report(node.id, { status: 'idle' })
-      return null
-    }
+    if (stopped(node.id)) return null
 
     if (!inputs) return fail(node.id, 'blocked')
 
@@ -111,6 +160,9 @@ export async function runGraph(
     if (node.type === 'asset') return keep(planned, asList(node.data.value))
     // A note is drawn on the canvas and compiles to nothing — it has no output to read either.
     if (node.type === 'stickyNote') return { values: [] }
+    // Asked only once what it guards has produced, which the inputs above are: an approval put to
+    // the user before the picture exists is a question about nothing.
+    if (node.type === 'approval') return decide(node)
     if (node.type !== 'model') return fail(node.id, 'unsupported')
 
     const { modelId, form } = node.data
@@ -125,19 +177,13 @@ export async function runGraph(
       // pressed while this job was on the wire cannot un-submit it, but painting the node green
       // and filing its result in the cache would make a run the user stopped look like one that
       // finished — and the next Run would then reuse what it produced.
-      if (signal?.aborted) {
-        report(node.id, { status: 'idle' })
-        return null
-      }
+      if (stopped(node.id)) return null
 
       return keep(planned, values)
     } catch {
       // A stop cancels what is on the wire, so the throw that follows is the stop rather than a
       // refusal — painting the node red would blame the API for what the user just did.
-      if (signal?.aborted) {
-        report(node.id, { status: 'idle' })
-        return null
-      }
+      if (stopped(node.id)) return null
 
       // The reason belongs to the job, which the jobs panel already shows in full. What the node
       // owes is that it is the one that stopped, so its readers can say why they never ran.

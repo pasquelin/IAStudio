@@ -53,6 +53,26 @@ export function modelNode(
   }
 }
 
+/**
+ * An approval node, with the one port the converter finds it by. No output and no `conditional`:
+ * an approval is read as a dependency, never as a value — see `createNode`.
+ */
+export function approvalNode(id: string, message = ''): GraphNode {
+  return {
+    id,
+    type: 'approval',
+    position: { x: 0, y: 0 },
+    data: { message, inputHandles: [{ id: handleId(id, 'source', 'approval'), name: 'approval' }] },
+  }
+}
+
+/**
+ * The wire an approval names the node it guards by. Its own port on one end, and the guarded
+ * node's output on the other, which is what lets the approval show what it is asked about.
+ */
+export const guards = (approvalId: string, guarded: string, from = 'image'): GraphEdge =>
+  wire(approvalId, 'approval', guarded, from)
+
 /** `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention. */
 export function wire(consumer: string, port: string, provider: string, from: string): GraphEdge {
   return {
