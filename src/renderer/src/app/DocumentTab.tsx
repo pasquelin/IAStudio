@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { closeTab } from './close-tab'
 import { DocumentTabMenu } from './DocumentTabMenu'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 
 /**
  * A document's tab.
@@ -41,6 +42,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
       <ToolButton
         icon={mdiClose}
         label={t('documents.close')}
+        tooltip={TIP_BOTTOM}
         variant="header"
         iconSize={12}
         className="mr-1 size-4 shrink-0 self-center"

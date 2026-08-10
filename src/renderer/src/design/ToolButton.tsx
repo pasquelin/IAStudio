@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react'
 import { cn } from '@/helpers/cn'
-import { withShortcut, type TooltipFactory } from '@/helpers/tooltip'
+import type { TooltipFactory } from '@/helpers/tooltip'
 import { BUTTON_BASE } from './styles'
 import { UiIcon } from './UiIcon'
 
@@ -17,8 +17,11 @@ export type ToolButtonProps = Omit<
   label: string
   /** Shown in the tooltip in place of the label — for a control whose name is already on screen. */
   description?: string
-  /** Tooltip factory of the host bar. When absent, the `aria-label` is still set. */
-  tooltip?: TooltipFactory
+  /**
+   * Tooltip factory of the host bar — required: an icon-only button whose action is never
+   * spelled out is a button one has to press to find out what it does.
+   */
+  tooltip: TooltipFactory
   shortcut?: string | false
   /** Tool currently in use: neutral background. */
   active?: boolean
@@ -52,9 +55,7 @@ export function ToolButton({
   ref,
   ...rest
 }: ToolButtonProps) {
-  const naming = tooltip
-    ? tooltip(label, shortcut, description)
-    : { 'aria-label': withShortcut(label, shortcut) }
+  const naming = tooltip(label, shortcut, description)
 
   return (
     <button

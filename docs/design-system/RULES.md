@@ -17,6 +17,8 @@ qui établit le majoritaire.
 | Les tailles de texte s'écrivent en pixels arbitraires | usage : 86 occurrences `text-[Npx]` ; `index.css` ne déclare aucune échelle typographique | `src/renderer/` |
 | DaisyUI ne sert que hors des docks | `CLAUDE.md` § La frontière design system / DaisyUI ; usage : les classes DaisyUI n'apparaissent que sous `settings/` et `usage/`, deux fenêtres séparées | `src/renderer/src/` |
 | Les icônes passent par `UiIcon` ; pas de SVG inline dans un composant | `CLAUDE.md` § Icônes | `src/renderer/` |
+| Tout bouton porte une infobulle qui explique son action ; si le libellé est visible, elle explique au lieu de le répéter | décision de l'utilisateur du 2026-08-10, portée dans `CLAUDE.md` § Interface | `src/renderer/` |
+| Le placement de l'infobulle vient de l'hôte, jamais du bouton | usage : 19 sites passent `TIP_*` depuis la barre qui les contient ; barre d'en-tête → `TIP_BOTTOM`, rail vertical → `TIP_RIGHT`, inspecteur → `TIP_LEFT` | `src/renderer/` |
 | Un composant exporté a au moins un appelant | usage : 0 orphelin sur 257 composants recensés | `src/` |
 | Un hexadécimal en dehors d'un `.tsx` est une donnée ou un repli documenté | usage : les 33 relevés sont des couleurs de scène, des dessins de curseur ou des replis de jeton, chacun avec son commentaire | `src/renderer/src/engines/`, `src/shared/` |
 

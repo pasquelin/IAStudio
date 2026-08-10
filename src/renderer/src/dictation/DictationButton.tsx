@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { cn } from '@/helpers/cn'
+import type { TooltipFactory } from '@/helpers/tooltip'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { useBinding } from '@/stores/bindings'
 import { useDictation as useStore } from '@/stores/dictation'
@@ -11,6 +12,8 @@ import { useDictation } from './useDictation'
 export type DictationButtonProps = {
   /** `header` is the smaller gauge, for a bar of panel actions. */
   variant?: 'bar' | 'header'
+  /** Tooltip factory of the host, as for any other button of a dock. */
+  tooltip: TooltipFactory
 }
 
 /**
@@ -24,7 +27,7 @@ export type DictationButtonProps = {
  * Built on `ToolButton` like every other button in a dock — the accented state it already has
  * is exactly "this tool is in use", which is what a live microphone is.
  */
-export function DictationButton({ variant = 'bar' }: DictationButtonProps) {
+export function DictationButton({ variant = 'bar', tooltip }: DictationButtonProps) {
   const { t } = useTranslation()
   const label = useShortcutLabel()
   const shortcut = label(useBinding('app.dictate'))
@@ -39,6 +42,7 @@ export function DictationButton({ variant = 'bar' }: DictationButtonProps) {
       <ToolButton
         icon={dictation.isListening ? mdiMicrophone : mdiMicrophoneOff}
         label={dictation.isListening ? t('dictation.stop') : t('dictation.start')}
+        tooltip={tooltip}
         shortcut={shortcut}
         variant={variant}
         accented={dictation.isListening}

@@ -109,11 +109,11 @@
     },
     {
       "path": "src/renderer/src/app/ActivityToasts.tsx",
-      "lines": 56,
+      "lines": 58,
       "components": [
         {
           "name": "ActivityToasts",
-          "line": 23,
+          "line": 24,
           "exported": false,
           "props": [],
           "signature": {
@@ -177,11 +177,11 @@
     },
     {
       "path": "src/renderer/src/app/DocumentTab.tsx",
-      "lines": 54,
+      "lines": 56,
       "components": [
         {
           "name": "DocumentTab",
-          "line": 17,
+          "line": 18,
           "exported": false,
           "props": [
             "props"
@@ -770,11 +770,11 @@
     },
     {
       "path": "src/renderer/src/design/DynamicForm.tsx",
-      "lines": 264,
+      "lines": 266,
       "components": [
         {
           "name": "Control",
-          "line": 72,
+          "line": 73,
           "exported": false,
           "props": [
             "field",
@@ -789,7 +789,7 @@
         },
         {
           "name": "DynamicForm",
-          "line": 154,
+          "line": 156,
           "exported": false,
           "props": [
             "accessory",
@@ -1113,11 +1113,11 @@
     },
     {
       "path": "src/renderer/src/design/ProgressRow.tsx",
-      "lines": 57,
+      "lines": 59,
       "components": [
         {
           "name": "ProgressRow",
-          "line": 26,
+          "line": 27,
           "exported": false,
           "props": [
             "cancel",
@@ -1137,11 +1137,11 @@
     },
     {
       "path": "src/renderer/src/design/PromptAssistant.tsx",
-      "lines": 180,
+      "lines": 184,
       "components": [
         {
           "name": "PromptAssistant",
-          "line": 36,
+          "line": 37,
           "exported": false,
           "props": [
             "describeStyle",
@@ -1160,7 +1160,7 @@
         },
         {
           "name": "Suggestion",
-          "line": 145,
+          "line": 149,
           "exported": false,
           "props": [
             "onAdoptCall",
@@ -1495,7 +1495,7 @@
     },
     {
       "path": "src/renderer/src/design/ToggleField.tsx",
-      "lines": 28,
+      "lines": 34,
       "components": [
         {
           "name": "ToggleField",
@@ -1516,11 +1516,11 @@
     },
     {
       "path": "src/renderer/src/design/ToolButton.tsx",
-      "lines": 82,
+      "lines": 83,
       "components": [
         {
           "name": "ToolButton",
-          "line": 40,
+          "line": 43,
           "exported": false,
           "props": [
             "accented",
@@ -1724,13 +1724,14 @@
     },
     {
       "path": "src/renderer/src/dictation/DictationButton.tsx",
-      "lines": 88,
+      "lines": 92,
       "components": [
         {
           "name": "DictationButton",
-          "line": 27,
+          "line": 30,
           "exported": false,
           "props": [
+            "tooltip",
             "variant"
           ],
           "signature": {
@@ -1740,7 +1741,7 @@
         },
         {
           "name": "LevelMeter",
-          "line": 68,
+          "line": 72,
           "exported": false,
           "props": [],
           "signature": {
@@ -1752,18 +1753,18 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 82,
+          "line": 86,
           "text": "style={{"
         }
       ]
     },
     {
       "path": "src/renderer/src/dictation/DictationField.tsx",
-      "lines": 55,
+      "lines": 56,
       "components": [
         {
           "name": "DictationField",
-          "line": 18,
+          "line": 19,
           "exported": false,
           "props": [],
           "signature": {
@@ -1979,6 +1980,27 @@
       "probes": []
     },
     {
+      "path": "src/renderer/src/home/RefusedSection.tsx",
+      "lines": 38,
+      "components": [
+        {
+          "name": "RefusedSection",
+          "line": 22,
+          "exported": false,
+          "props": [
+            "id",
+            "message",
+            "onRetry"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>Button>SectionNote"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
       "path": "src/renderer/src/home/Section.tsx",
       "lines": 61,
       "components": [
@@ -2100,21 +2122,21 @@
     },
     {
       "path": "src/renderer/src/home/sections/ByMode.tsx",
-      "lines": 64,
+      "lines": 71,
       "components": [
         {
           "name": "ByMode",
-          "line": 21,
+          "line": 22,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 3,
-            "shape": "Section>div>Counter"
+            "tags": 4,
+            "shape": "RefusedSection>Section>div>Counter"
           }
         },
         {
           "name": "Counter",
-          "line": 41,
+          "line": 48,
           "exported": false,
           "props": [
             "total",
@@ -2130,28 +2152,42 @@
     },
     {
       "path": "src/renderer/src/home/sections/Creations.tsx",
-      "lines": 73,
+      "lines": 122,
       "components": [
         {
           "name": "Creations",
-          "line": 23,
+          "line": 29,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 3,
-            "shape": "Section>Carousel>Tile"
+            "tags": 4,
+            "shape": "RefusedSection>Section>Carousel>Tile"
           }
         },
         {
           "name": "Tile",
-          "line": 54,
+          "line": 70,
           "exported": false,
           "props": [
             "asset"
           ],
           "signature": {
-            "tags": 1,
-            "shape": "ShelfTile"
+            "tags": 2,
+            "shape": "ShelfTile>Recreate"
+          }
+        },
+        {
+          "name": "Recreate",
+          "line": 95,
+          "exported": false,
+          "props": [
+            "asset",
+            "generation",
+            "model"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
           }
         }
       ],
@@ -2277,24 +2313,25 @@
     },
     {
       "path": "src/renderer/src/home/sections/Library.tsx",
-      "lines": 84,
+      "lines": 115,
       "components": [
         {
           "name": "Library",
-          "line": 27,
+          "line": 32,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 3,
-            "shape": "Section>Carousel>Tile"
+            "tags": 4,
+            "shape": "RefusedSection>Section>Carousel>Tile"
           }
         },
         {
           "name": "Tile",
-          "line": 64,
+          "line": 88,
           "exported": false,
           "props": [
-            "asset"
+            "asset",
+            "fetched"
           ],
           "signature": {
             "tags": 1,
@@ -2339,21 +2376,21 @@
     },
     {
       "path": "src/renderer/src/home/sections/Similar.tsx",
-      "lines": 124,
+      "lines": 100,
       "components": [
         {
           "name": "Similar",
-          "line": 47,
+          "line": 40,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 6,
-            "shape": "Section>Button>SectionNote>Section>Carousel>Tile"
+            "tags": 4,
+            "shape": "RefusedSection>Section>Carousel>Tile"
           }
         },
         {
           "name": "Tile",
-          "line": 111,
+          "line": 87,
           "exported": false,
           "props": [
             "asset"
@@ -2475,16 +2512,16 @@
     },
     {
       "path": "src/renderer/src/home/sections/Usage.tsx",
-      "lines": 76,
+      "lines": 85,
       "components": [
         {
           "name": "Usage",
-          "line": 27,
+          "line": 29,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 4,
-            "shape": "Section>SectionNote>Carousel>ShelfCard"
+            "tags": 5,
+            "shape": "RefusedSection>Section>SectionNote>Carousel>ShelfCard"
           }
         }
       ],
@@ -2528,11 +2565,11 @@
     },
     {
       "path": "src/renderer/src/panels/apps/Apps.tsx",
-      "lines": 211,
+      "lines": 219,
       "components": [
         {
           "name": "Apps",
-          "line": 60,
+          "line": 61,
           "exported": false,
           "props": [],
           "signature": {
@@ -2542,7 +2579,7 @@
         },
         {
           "name": "AppRow",
-          "line": 135,
+          "line": 136,
           "exported": false,
           "props": [
             "app"
@@ -2554,7 +2591,7 @@
         },
         {
           "name": "AppRunner",
-          "line": 150,
+          "line": 151,
           "exported": false,
           "props": [
             "onBack",
@@ -2587,7 +2624,7 @@
     },
     {
       "path": "src/renderer/src/panels/assets/AssetBrowserActions.tsx",
-      "lines": 109,
+      "lines": 112,
       "components": [
         {
           "name": "AssetBrowserActions",
@@ -2952,24 +2989,24 @@
     },
     {
       "path": "src/renderer/src/panels/inspector/GraphNodeInspector.tsx",
-      "lines": 94,
+      "lines": 105,
       "components": [
         {
           "name": "GraphNodeInspector",
-          "line": 20,
+          "line": 21,
           "exported": false,
           "props": [
             "documentId",
             "node"
           ],
           "signature": {
-            "tags": 8,
-            "shape": "PropertyGroup>PropertyRow>PropertyRow>TextField>ModelNodeFields>TextField>TextField>AssetFields"
+            "tags": 9,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>TextField>ToggleField>ModelNodeFields>TextField>TextField>AssetFields"
           }
         },
         {
           "name": "AssetFields",
-          "line": 74,
+          "line": 85,
           "exported": false,
           "props": [
             "edit",
@@ -4391,11 +4428,11 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphCanvas.tsx",
-      "lines": 227,
+      "lines": 231,
       "components": [
         {
           "name": "GraphCanvas",
-          "line": 77,
+          "line": 78,
           "exported": false,
           "props": [
             "canRedo",
@@ -4416,8 +4453,8 @@
             "selectedNodeIds"
           ],
           "signature": {
-            "tags": 7,
-            "shape": "AssetDropTarget>div>ReactFlow>Background>GraphToolbar>ViewportBridge>GraphMenu"
+            "tags": 8,
+            "shape": "AssetDropTarget>div>ReactFlow>Background>GraphToolbar>ViewportBridge>GraphMenu>GraphStatus"
           }
         }
       ],
@@ -4465,11 +4502,11 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphNodes.tsx",
-      "lines": 244,
+      "lines": 259,
       "components": [
         {
           "name": "RunBadge",
-          "line": 36,
+          "line": 40,
           "exported": false,
           "props": [
             "run"
@@ -4481,25 +4518,26 @@
         },
         {
           "name": "NodeShell",
-          "line": 48,
+          "line": 52,
           "exported": false,
           "props": [
             "children",
             "inputs",
             "kind",
+            "output",
             "outputs",
             "run",
             "selected",
             "title"
           ],
           "signature": {
-            "tags": 9,
-            "shape": "div>header>span>RunBadge>span>div>div>InputPorts>OutputPorts"
+            "tags": 10,
+            "shape": "div>header>UiIcon>span>RunBadge>span>div>div>InputPorts>OutputPorts"
           }
         },
         {
           "name": "Node",
-          "line": 140,
+          "line": 153,
           "exported": false,
           "props": [
             "data",
@@ -4513,7 +4551,7 @@
         },
         {
           "name": "StickyNoteNode",
-          "line": 179,
+          "line": 193,
           "exported": false,
           "props": [
             "data",
@@ -4526,7 +4564,7 @@
         },
         {
           "name": "PlainNode",
-          "line": 205,
+          "line": 219,
           "exported": false,
           "props": [
             "data",
@@ -4536,6 +4574,25 @@
           "signature": {
             "tags": 1,
             "shape": "NodeShell"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/GraphStatus.tsx",
+      "lines": 78,
+      "components": [
+        {
+          "name": "GraphStatus",
+          "line": 61,
+          "exported": false,
+          "props": [
+            "result"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "p"
           }
         }
       ],
@@ -5071,8 +5128,8 @@
     }
   ],
   "totals": {
-    "files": 190,
-    "components": 257,
+    "files": 192,
+    "components": 260,
     "probes": 62
   }
 }

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
 import type { FieldDescriptor } from '@shared/domain/model'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { DictationButton } from './DictationButton'
 import { useDictation } from './useDictation'
 
@@ -24,7 +25,7 @@ export function DictationField() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-end">
-        <DictationButton variant="header" />
+        <DictationButton variant="header" tooltip={TIP_BOTTOM} />
       </div>
 
       {/*

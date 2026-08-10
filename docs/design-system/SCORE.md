@@ -1,9 +1,14 @@
 # SCORE
 
-Courant : 100 (dette 0 · 257 composants) — itération 3, 2026-08-10
+Courant : 0 (dette 530 · 260 composants) — itération 4, 2026-08-10
+
+Le score s'effondre parce qu'un invariant vient d'être déclaré, pas parce que le code a
+régressé : 53 boutons enfreignent une règle qui n'existait pas hier. Il n'est pas lissé —
+un P0 pèse dix, et 53 P0 sur 260 composants dépassent le plancher.
 
 | # | Date | Score | Dette | P0 | P1 | P2 | Lot traité |
 |---|---|---|---|---|---|---|---|
+| 4 | 2026-08-10 | 0 | 530 | 53 | 0 | 0 | infobulle obligatoire sur `ToolButton`, 12 sites câblés |
 | 3 | 2026-08-10 | 100 | 0 | 0 | 0 | 0 | gabarit de classes de `Row` |
 | 2 | 2026-08-10 | 99 | 3 | 0 | 1 | 0 | accroche du carrousel dite en classes |
 | 1 | 2026-08-10 | 96 | 9 | 0 | 3 | 0 | peau des boutons révélés au survol d'une étagère |
@@ -11,9 +16,4 @@ Courant : 100 (dette 0 · 257 composants) — itération 3, 2026-08-10
 
 ## P2 laissés à l'arbitrage
 
-Aucun. Les motifs du catalogue qui ne se rencontrent nulle part dans `src/` :
-`P2-index-key`, `P2-any`, `P2-dangerous-html`, `P2-orphan-component`,
-`P2-prop-drift`.
-
-Les deux relevés `anyCast` de l'inventaire sont de la prose de commentaire
-(« as any other value », « has any use for »), pas des annotations de type.
+Aucun.
