@@ -1,6 +1,6 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useQuery } from '@tanstack/react-query'
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
@@ -19,21 +19,13 @@ import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
 import { claimOnSubmit } from '@/stores/generation-claims'
 import { useSettings } from '@/stores/settings'
+import { DynamicForm } from '@/design/dynamic-form-lazy'
 import { FormHeader } from '@/design/FormHeader'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
-
-/**
- * Deferred on purpose: the form drags zod, react-hook-form and its resolver behind it, and
- * taking them out of the opening chunk measured −219,62 kB on 8 August. It only renders once
- * the model descriptor has come back, so the wait it adds sits inside one the panel already had.
- */
-const DynamicForm = lazy(async () => ({
-  default: (await import('@/design/DynamicForm')).DynamicForm,
-}))
 
 /**
  * Free — measured at 0 creative units — and answered in one round trip, so no job is involved
@@ -162,6 +154,9 @@ export function Generator() {
         <p className="text-muted px-2 text-xs">{t('models.planLockedHint', { plan: plan.name })}</p>
       )}
 
+      {/* Gated on the descriptor, which is what makes the deferred form free to the eye: it only
+          renders once that round trip has come back, so the wait its chunk adds sits inside one
+          the panel already had. */}
       {descriptor.data && (
         // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
         // it the throw leaves the panel, leaves the dock, and takes the whole window down.

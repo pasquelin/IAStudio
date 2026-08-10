@@ -1,10 +1,11 @@
 import { mdiTuneVariant } from '@mdi/js'
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelPage } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
+import { DynamicForm } from '@/design/dynamic-form-lazy'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { PropertyGroup } from '@/design/PropertyGroup'
@@ -26,15 +27,6 @@ import type { DocumentEdit } from './useDocumentEdit'
  * rather than a choice.
  */
 const PICKER_LIMIT = 60
-
-/**
- * Lazy, as the generator and the Apps panel load it. It drags `zod` and `react-hook-form` behind
- * it — 220 kB measured — and the inspector is placed in EVERY workspace, so a static import would
- * make a 3D session pay for a form it will never render.
- */
-const DynamicForm = lazy(async () => ({
-  default: (await import('@/design/DynamicForm')).DynamicForm,
-}))
 
 export type ModelNodeFieldsProps = {
   documentId: string
