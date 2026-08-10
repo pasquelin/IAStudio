@@ -65,10 +65,19 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > branchement que seule la mutation trouve (§ 0.3) — celui d'`isSprite`, qui attend un second
 > champ mesuré dans `SPRITE_SPECS` pour être tenable.
 >
-> **Les quatre décisions qui attendaient sont prises le 10 août 2026** — 39, 12, 40, 29. Elles sont
-> écrites dans leur entrée, et **ne se redemandent pas**. Une seule question en est née et reste
-> ouverte : ce que fait un clic sur une vignette de bibliothèque **pas encore rapatriée** (entrée
-> 12). **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
+> **Les décisions qui attendaient sont toutes prises le 10 août 2026** — 39, 12, 40, 29, la forme
+> de la dictée (41), et l'encodeur HDRI des Skyboxes, dont la dépendance est **accordée sous
+> réserve de la soumettre avant installation**. Elles sont écrites dans leur entrée, et **ne se
+> redemandent pas**. **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
+>
+> **Un lot de sept dettes courtes est livré le 10 août 2026** — la police `Inter` qui n'était
+> chargée nulle part, le motif de sortie `txt$` qui rangeait un LLM dans l'espace Image, l'horloge
+> du viewport qui n'avait pas d'état de repos, le badge d'un canal qu'un bouton en `inset-0`
+> rendait insurvolable, la bande « Activité récente » éteinte par défaut, et les deux manuels qui
+> annonçaient un transfert à sens unique. **Ce que ce lot a montré et qui resservira** : `ioOf` lit
+> le `kind` dans la carte des documents, donc **oublier un document APRÈS l'avoir retiré de la
+> carte ne libère rien** — c'est pour ça que `refreshDocuments` retient les descripteurs et non les
+> identifiants.
 >
 > **L'entrée 36 est livrée le 10 août 2026** (rotation d'un sprite) : la règle vit désormais dans
 > `rotationShows` de `scene-state.ts`, et les trois côtés la lisent — la poignée du viewport, la
@@ -86,6 +95,9 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > vient d'être écrit · les **étapes 7 à 9 du node editor** (§ 5) · le reste des retours
 > d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par espace** (§ 4), dont deux qui ne
 > se jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
+>
+> **Le lot C3 du node editor est tenu par un agent au 10 août 2026** — `feat/graph-compile`,
+> worktree `graph-compile`, cinq commits en attente de sa revue. **Ne pas l'ouvrir.**
 >
 > **Ce fichier est la seule liste qui reste.** `.claude/loop/BACKLOG.md`, qui portait le backlog
 > qualité, **n'existe plus** — ne pas l'y chercher, et ne pas conclure d'un renvoi trouvé ailleurs
@@ -379,31 +391,6 @@ exige un projet, soit il faut dire ce que devient ce qu'il produit.
 
 ---
 
-### Où vivent les layouts — à trancher, et ce n'est pas un oubli
-
-**Le geste attendu, et c'est la question même.** Ouvrir le même projet sur une autre machine et
-y retrouver son arrangement de panneaux — ou l'assumer attaché à la machine. **Les deux se défendent ;
-ce qui ne se défend pas est que la spec dise l'un et le code l'autre.**
-
-**C'est une divergence.** La conception le prévoit — « `layouts/` : dispositions Dockview
-sérialisées, par espace », § 5 de `docs/specs/2026-08-06-scenario-studio-design.md`. L'implémentation a
-pris l'autre chemin : les arrangements vivent dans le `localStorage` du renderer
-(`scenario-studio:layouts`), et le dossier est créé dans chaque projet sans que rien n'y écrive jamais
-— c'est sa **seule occurrence dans tout `src/`**.
-
-La question n'est pas « sert-il à quelque chose » mais **où doit vivre un arrangement** : dans le
-projet, il voyage avec lui — on ouvre le projet sur une autre machine et on retrouve son écran, ce
-qu'un studio fait tous les jours ; dans le `localStorage`, il suit la machine et pas le travail. La
-spec a tranché pour le projet ; le code dit le contraire depuis le début. **Acter l'un des deux** :
-ramener les layouts dans le dossier technique, ou assumer le `localStorage` et cesser de créer le
-dossier.
-
-> **Décision prise le 9 août** : ne plus créer `layouts/`. À vérifier dans le code — c'est la moitié
-> qui n'a peut-être pas suivi.
-
----
-
----
 
 # 2. Les gestes qui n'aboutissent pas
 
@@ -748,28 +735,12 @@ Ce n'est donc pas un défaut de compréhension mais **d'affordance**.
 > dans son espace ; « Recréer » et « Rapatrier » deviennent secondaires — au survol ou au menu
 > contextuel. C'est ce que la capture dit qu'on croit cliquer.
 >
-> **Un cas reste à poser, et il ne se déduit pas de la décision** : un asset de la bibliothèque
-> **pas encore rapatrié** n'est pas sur le disque, donc il n'y a rien à ouvrir. Le rapatriement
-> implicite a été explicitement écarté ; reste donc à demander ce que le clic fait alors —
-> « Rapatrier » en action principale sur ces vignettes-là seulement, ou une autre réponse. **Ne pas
-> trancher seul, et ne pas le lire comme une remise en cause de « ouvrir par défaut ».**
-
----
-
-### 13. L'activité est affichée deux fois
-
-**Le geste attendu.** Ne pas voir deux fois la même activité.
-
-La bande « Activité récente » de l'accueil montre ce que le volet du bas montre déjà.
-
-C'est bien la **même source** : `home/sections/Activity.tsx` lit `useActivity(state => state.entries)`
-exactement comme `ActivityList`. Elle est redondante par construction.
-
-**Rien n'est perdu en la retirant** : `ActivityStatus` est dans la ligne d'état en permanence, et le
-volet complet est à un clic. **Le mécanisme existe déjà** — les sections de l'accueil sont ordonnables
-et masquables (`hiddenHomeSections`). C'est donc un **changement de défaut**, pas une suppression.
-
-Que ce menu « … » n'ait pas été trouvé est un retour en soi, et il rejoint l'entrée 12.
+> **Le dernier cas est tranché le 10 août 2026 : « Rapatrier » reste l'action principale sur une
+> vignette pas encore rapatriée**, et sur celles-là seulement. Un asset qui n'est pas sur le disque
+> n'a rien à ouvrir, et le rapatriement implicite avait été écarté ; le verbe est donc visible à
+> l'écran plutôt que deviné. Une fois l'asset descendu, la vignette rejoint la règle commune et son
+> clic ouvre. **Ce n'est pas une exception à « ouvrir par défaut », c'est ce que la règle donne
+> quand il n'y a rien à ouvrir.**
 
 ---
 
@@ -842,8 +813,6 @@ un geste : ce sont des fonctions annoncées et pas finies.
   Avant comme après le correctif des onglets fantômes. Décider s'il faut le dire ou l'écrire, sachant
   qu'écrire contredit le commentaire de `create`, qui a ses raisons. **Choix de produit, pas
   correctif.**
-- **`useDocuments.refresh()` ne passe pas par `forgetDocument`** : les vues de session d'un projet
-  quitté y survivent.
 
 ---
 
@@ -929,8 +898,7 @@ la clé API** — il faudrait la réduire avant, et `log.ts` l'écrit en gros.
   dit dans quelle convention la normale est **arrivée**. Il descend jusqu'à l'export, seul endroit où
   la convention d'un canal et celle d'une cible se rencontrent. Il reste là où il est parce que les
   `.tex` déjà écrits l'y portent.
-- **`ChannelTile`** : le bouton d'inspection en `inset-0` recouvre le badge d'origine, si bien que son
-  `title` ne peut jamais s'afficher (l'`aria-label` reste lu, c'est cosmétique).
+
 
 **Une dette hors périmètre** : `design/MenuRow.tsx` n'expose aucun `aria-checked` — aucun lecteur
 d'écran ne dit quelle ligne est active, dans **tous** les menus du studio.
@@ -1206,16 +1174,6 @@ soit le poids du fichier. Le prix est que l'intérieur d'un modèle ne s'édite 
 « éclater » lèverait la limite le jour où elle gênera. **Le décodage reste à traiter avant tout ce qui
 poserait des nœuds par milliers.**
 
-**L'horloge d'un viewport n'a pas d'état « au repos », et sa JSDoc prétend le contraire.**
-`ViewportEngine.lastTime` est documenté comme valant `null` quand la boucle dort, mais rien ne l'y
-ramène : `renderFrame` y écrit `now` à chaque frame et seul `resetClock()` y touche par ailleurs.
-Chaque appelant qui démarre une animation doit donc penser à appeler `resetClock()` — et à garder cet
-appel sur un front montant qu'il suit lui-même. `SceneRenderer.onPointerDown` refait déjà la même danse
-à la main. **Le remède est plus profond qu'aucun des deux appelants** : que `renderFrame` remette
-`lastTime` à `null` quand il décide de ne pas replanifier de frame, ce qui supprime la classe entière
-au lieu de la rustiner deux fois — un viewport qui l'oublierait ouvre son mouvement sur un saut de
-`MAX_DELTA`, 0,1 s.
-
 > **Le `rm` de nettoyage qui parlait par-dessus la panne est livré** (`feat/folder-write`, 9 août
 > 2026) : ce que l'appelant entend est de nouveau la raison pour laquelle le document n'a pas pu
 > être écrit. **Ne pas le re-signaler.**
@@ -1263,59 +1221,15 @@ deux (`Library.tsx` liste et rapatrie une vignette, `Similar.tsx` lit la bibliot
 choisir une référence). **Seul `cloud.plan` reste sans appelant** — le store l'expose, aucun
 composant ne le demande, et le diff bidirectionnel qu'il sait calculer ne sert donc à rien.
 
-Deux conséquences à ne pas confondre avec des bugs : **trois des sept badges restent
-inatteignables** (`to-pull`, `conflict`, `other-account`) — `location-facet.ts` explique pourquoi à
-l'endroit exact où la tentation serait d'en ajouter ; et **le manuel écrit noir sur blanc** que le
-transfert est à sens unique (`docs/fr/manuel/07-assets.md`), ce qui est **déjà faux depuis que la
-vignette de la bibliothèque rapatrie** — à corriger dans les deux langues, indépendamment de ce que
-devient `plan`.
+Une conséquence à ne pas confondre avec un bug : **trois des sept badges restent inatteignables**
+(`to-pull`, `conflict`, `other-account`) — `location-facet.ts` explique pourquoi à l'endroit exact
+où la tentation serait d'en ajouter.
 
 **L'abandon d'une recherche est livré comme une assurance, pas comme un correctif.** Aucun composant du
 renderer n'envoie encore `text:` au catalogue local. **Le brancher au handler IPC serait un bug** :
 `stores/assets.ts` lit un rejet comme « pas de projet » et **VIDE l'étagère**. Un champ de recherche
 devra donc distinguer `ABANDONED` d'un échec avant de tenir un `AbortController`.
 
-**La famille `other` n'attrape rien, et le seul modèle qu'elle devrait attraper part dans Image.**
-Vérifié par un appel le 9 août 2026 : sur les 100 premiers modèles publics, **quinze capacités
-distinctes**, dont une seule qu'aucun motif de `FAMILY_BY_CAPABILITY` ne classe — `txt2txt`. Elle
-appartient à `model_scenario-llm`, qui déclare **aussi `img2txt`**, et `img2txt` contient `img` : le
-motif de l'image mord, et le LLM est catalogué modèle d'**image**. Le test
-`familyOf(['txt2txt'], []) === 'other'` (`schema.test.ts:151`) garde donc un jeu de capacités
-qu'**aucun modèle réel ne porte**. Conséquence à l'écran, non vérifiée : le panneau Modèles de l'espace
-Image liste un modèle qui produit du texte. **Le remède serait un motif de sortie (`txt$`) avant celui
-de l'image, pas une nouvelle famille.**
-
----
-
-# 7. Cohérence
-
-Une entrée qui ne casse rien aujourd'hui et qui coûtera le jour où la police nommée par
-l'interface se mettra à compter.
-
-## 7.1 Une police déclarée et jamais chargée
-
-### 29. `Inter` est déclarée comme police de l'interface, et n'est chargée nulle part
-
-**Le geste attendu.** Que l'interface s'affiche avec la **même** police sur les trois plateformes, et qu'un libellé
-coupe au même endroit partout.
-
-`--font-sans` nomme `'Inter', system-ui, …` dans `index.css`, mais **aucun `@font-face`, aucune
-dépendance dans `package.json`, aucun lien dans `index.html`** : la pile retombe sur `system-ui`,
-c'est-à-dire une police différente sur chacune des trois plateformes que le pipeline empaquette.
-
-**Ce que ça ne casse pas, contrairement à ce qu'on croirait** : les hauteurs de ligne. Le préflight
-Tailwind pose `line-height: 1.5` sur `html`, sans unité, donc calculé sur la taille de chaque élément
-et non sur les métriques de la fonte.
-
-**Ce que ça change quand même** : la chasse et le dessin des lettres, donc la largeur d'un libellé,
-donc le point où un `truncate` coupe.
-
-**Tranché le 10 août 2026 : cesser de la nommer.** `--font-sans` retombe sur `system-ui` — San
-Francisco, Segoe, la police système sous Linux. Aucune dépendance ajoutée, aucun poids de paquet, et
-l'interface se fond dans chaque OS. **Ce qui est assumé par ce choix** : un libellé ne coupe pas au
-même endroit sur les trois plateformes, donc une largeur de colonne ajustée à l'œil sur macOS peut
-tronquer ailleurs — les gauges se dimensionnent sur le contenu, jamais sur une mesure prise dans une
-capture. Le geste est d'une ligne : retirer `'Inter', ` de `index.css`.
 
 ---
 
