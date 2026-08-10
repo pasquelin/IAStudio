@@ -258,20 +258,22 @@ le but : **un fichier neuf non testé dans un panneau fait rougir la porte** au 
 
 ---
 
-## 0.2 `develop` est rouge par intermittence — et un troisième groupe se reproduit, lui
+## 0.2 `develop` est rouge par intermittence, et jamais deux fois au même endroit — sauf une
 
 **Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d'affilée. Un `validate` rouge qu'il
 faut réexécuter pour croire est un filet qui ne tient plus.
 
-### Le troisième groupe, mesuré le 10 août 2026 — et il n'est ni un délai ni la charge
+### Le troisième groupe — un endroit fixe, et une reproduction qui n'a PAS tenu
 
-**`Library.test.tsx > opens an asset the project has already fetched` échoue seul, sans charge,
-environ une fois sur cinq.** Mesuré : deux `pnpm validate` d'affilée rouges au **même** endroit,
-puis le fichier lancé **seul**, sans autre projet ni autre session — 1 échec sur 5, puis 1 sur 5
-encore. C'est la première intermittence de ce fichier qui **se reproduit à la demande**, et elle
-dément le titre que cette section portait.
+> **La chasse est faite le 10 août 2026, et elle n'a rien donné. Ne pas la refaire :** ce qui suit
+> dit ce qui a été essayé, pour que la prochaine session parte d'ailleurs.
 
-Ce que la trace dit, et c'est tout ce qu'elle dit :
+**Ce qui est solide** : `Library.test.tsx > opens an asset the project has already fetched` a rougi
+**quatre fois en une demi-heure, toujours au même endroit et sur la même assertion** — deux
+`pnpm validate` complets, puis deux exécutions du fichier seul. C'est le seul cas connu où
+l'intermittence a une **identité stable**, et c'est ce qui distingue ce groupe des deux autres.
+
+La trace, et c'est tout ce qu'elle dit :
 
 ```
 × opens an asset the project has already fetched
@@ -280,15 +282,43 @@ AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
 ```
 
 **Le bouton est donc trouvé** — `findByRole` n'a pas expiré — **et cliqué, et son `onClick` ne part
-pas.** Le geste vient du lot des entrées 42 et 12 : `act.run` est posé par `Library.tsx:94`, et
-`ShelfTile` ne rend un `<button>` que s'il reçoit un `onClick`.
+pas.**
 
-**La cause n'est pas cherchée, et surtout pas devinée** — ce fichier dit ailleurs ce que coûte une
-cause trouvée à la volée. La piste à ouvrir en premier est celle qu'un nœud remplacé entre le
-`findByRole` et le clic laisserait : le shelf se peuple de façon asynchrone (`useShelf` → `browse`),
-et un `<button>` qui redevient une carte non cliquable, ou l'inverse, changerait le nœud sous la
-main de `userEvent`. **La reproduction est gratuite** : cinq exécutions du fichier seul suffisent,
-ce qui est la première fois que ce § peut se traiter autrement qu'à l'aveugle.
+**Ce qui a été mesuré ensuite, et qui n'a rien donné : 57 exécutions du fichier intact, aucun
+échec**, en quatre conditions choisies pour se contredire l'une l'autre :
+
+| Condition | Tours | Échecs |
+|---|---|---|
+| Fichier seul, `--maxWorkers=3`, worktree neuf | 15 | 0 |
+| Fichier seul, dépôt principal | 15 | 0 |
+| Fichier seul **pendant** une suite `renderer` complète en parallèle | 12 | 0 |
+| Fichier seul, **au commit exact où il avait rougi** (`f2eec12a`) | 15 | 0 |
+
+Plus 18 tours d'une version instrumentée, et 70 d'un scénario isolé réécrit : rien.
+
+**Trois conclusions, dont une qui corrige ce fichier :**
+
+1. **« Se reproduit seul, une fois sur cinq » était faux, et c'est moi qui l'avais écrit.** Les
+   quatre échecs sont tombés dans une fenêtre où **trois autres sessions fusionnaient** (`types-
+   connect`, `design-tooltips`, la dictée). Je n'avais pas vérifié « sans autre session » : je
+   l'avais supposé. **Un chiffre rapporté n'est pas un chiffre mesuré**, y compris quand c'est le
+   sien — le § 0.1 le dit déjà d'un autre chiffre, et il vient de se repayer.
+2. **Ni le code ni la charge ordinaire ne suffisent.** Le commit exact ne rougit pas, et une suite
+   complète tournant à côté ne rougit pas non plus. Ce qui distingue la fenêtre d'échec reste
+   **les conditions**, exactement comme le disent les deux autres groupes — mais d'une charge d'un
+   autre ordre : trois ou quatre `pnpm validate` **avec couverture** en même temps.
+3. **La piste de cause n'a pas été ouverte, et elle reste ouverte.** `Carousel` est **virtualisé**
+   (`useVirtualizer`, `ResizeObserver`, un `rAF` de coalescence) : sous jsdom, `clientWidth` vaut 0,
+   et une mesure qui tomberait entre le `findByRole` et le clic démonterait le nœud que
+   `userEvent` tient. **C'est une hypothèse, pas un diagnostic** — elle n'a pas pu être mise en
+   défaut faute d'échec à observer.
+
+**Ce qu'il faudrait pour aller plus loin, et ce que ça coûte** : reproduire demande de saturer la
+machine comme quatre sessions le font, ce qu'une session seule ne peut pas simuler honnêtement.
+**Le geste rentable est donc l'inverse** : rendre le test insensible au démontage plutôt que de
+chasser la fenêtre — chercher le bouton **au moment du clic** (`screen.getByRole` juste avant, ou
+`userEvent.click(screen.getByRole(…))` en un seul temps) au lieu de tenir un nœud trouvé plus tôt.
+Ça ne prouve pas la cause ; ça retire du filet un test qui ne mesure pas ce qu'il croit.
 
 **Le premier groupe est un dépassement de délai sous charge.** Le pire des trois est traité
 (`55ddf63`, `ShortcutsSettings.test.tsx` de 26 s à 3 s). Restent :
