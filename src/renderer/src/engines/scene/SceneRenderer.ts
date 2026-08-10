@@ -16,6 +16,7 @@ import {
   SpriteMaterial,
   TextureLoader,
   Vector2,
+  WebGLRenderTarget,
   Vector3 as ThreeVector3,
 } from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
@@ -60,6 +61,7 @@ import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
 import { SceneAnimations, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animation-eval'
+import { evenSize, flipRows, frameTimes, type FilmRequest } from './film'
 import type { AnimationTimeline } from '@shared/domain/animation'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, placePivot, release, transformOf } from './pivot'
@@ -560,6 +562,72 @@ export class SceneRenderer {
     helper.removeFromParent()
     helper.dispose()
     this.skeletons.delete(nodeId)
+  }
+
+  /**
+   * Draws the film one frame at a time, from a camera of the scene, and hands each one over
+   * already encoded as a PNG.
+   *
+   * Off screen and at the film's own size, never the viewport's: what is being written has a
+   * resolution of its own, and resizing the viewport to match would be visible on screen. The
+   * helper the camera wears is hidden for the pass — a render is what the camera sees, not a
+   * picture of the camera.
+   *
+   * `onFrame` is awaited between frames on purpose: it is what carries the bytes to the main
+   * process, and running ahead of it would hold a whole film in memory.
+   */
+  async renderFilm(
+    cameraNodeId: string,
+    request: FilmRequest,
+    onFrame: (index: number, png: Uint8Array) => Promise<void>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const gl = this.viewport.gl
+    const camera = this.objects.get(cameraNodeId)
+    if (!gl || !(camera instanceof PerspectiveCamera)) throw new Error('no camera to render from')
+
+    const { width, height } = evenSize(request)
+    const target = new WebGLRenderTarget(width, height)
+    const pixels = new Uint8Array(width * height * 4)
+    const surface = new OffscreenCanvas(width, height)
+    const context = surface.getContext('2d')
+    if (!context) throw new Error('no 2d context to read the frames back through')
+
+    const helper = camera.children.find(child => child instanceof CameraHelper)
+    const wasVisible = helper?.visible ?? false
+    if (helper) helper.visible = false
+
+    camera.aspect = width / height
+    camera.updateProjectionMatrix()
+    const head = this.playhead
+
+    try {
+      let index = 0
+      for (const time of frameTimes(request.duration, request.fps)) {
+        if (signal?.aborted) return
+
+        this.setPlayhead(time)
+        gl.setRenderTarget(target)
+        gl.render(this.viewport.scene, camera)
+        gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
+
+        // Through the context's own buffer: an `ImageData` built from a typed array is typed
+        // against a narrower array type than the one three hands back.
+        const image = context.createImageData(width, height)
+        image.data.set(flipRows(pixels, width, height))
+        context.putImageData(image, 0, 0)
+        const blob = await surface.convertToBlob({ type: 'image/png' })
+        index += 1
+        await onFrame(index, new Uint8Array(await blob.arrayBuffer()))
+      }
+    } finally {
+      gl.setRenderTarget(null)
+      target.dispose()
+      if (helper) helper.visible = wasVisible
+      // Where the head was before the film was asked for: a render is not an edit.
+      this.setPlayhead(head)
+      this.viewport.requestRender()
+    }
   }
 
   setMotion(held: Set<MotionId>): void {

@@ -1,13 +1,14 @@
 import {
   mdiCircleMedium,
   mdiDeleteOutline,
+  mdiMovieOpenOutline,
   mdiPause,
   mdiPlay,
   mdiPlus,
   mdiRhombus,
   mdiSkipPrevious,
 } from '@mdi/js'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TRACK_PROPERTIES, type AnimationTrack, type TrackProperty } from '@shared/domain/animation'
 import { EmptyState } from '@/design/EmptyState'
@@ -24,6 +25,10 @@ import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { selectedNodes } from '@/engines/scene/scene-state'
+import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
+import { useDocuments } from '@/stores/documents'
+import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { TRACK_FLAGS } from './track-flags'
@@ -32,6 +37,10 @@ export type AnimationPanelProps = { documentId: string }
 
 /** How wide the header column is, so the rows and the ruler line up on one gauge. */
 const HEADER = 'w-(--sc-track-header)'
+
+/** What a film is written at. One size for now, and a setting the day somebody asks for one. */
+const FILM_WIDTH = 1920
+const FILM_HEIGHT = 1080
 
 /**
  * The animation of a 3D scene, along the same band a montage uses.
@@ -89,6 +98,8 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
 
         <div className="flex-1" />
 
+        <RenderButton documentId={documentId} />
+
         {TRACK_PROPERTIES.map(property => (
           <ToolButton
             key={property}
@@ -119,6 +130,68 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Writes the film. The camera is the first one the scene holds — a scene without one has nothing
+ * to render FROM, so the button says that rather than being missing.
+ *
+ * The work is the engine's: it draws each frame off screen and hands the bytes over one at a
+ * time, and this only carries them to the main process. Awaited frame by frame on purpose —
+ * running ahead would hold a whole film in memory.
+ */
+function RenderButton({ documentId }: AnimationPanelProps) {
+  const { t } = useTranslation()
+  const [busy, setBusy] = useState(false)
+  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
+  const camera = nodes.find(node => node.type === 'camera')
+
+  const render = async (): Promise<void> => {
+    const engine = sceneEngineOf(documentId)
+    const bridge = getBridge()
+    if (!engine || !bridge || !camera) return
+
+    const { animation } = sceneOf(useScenes.getState(), documentId)
+    const title = useDocuments.getState().documents[documentId]?.title ?? 'render'
+
+    setBusy(true)
+    const id = await bridge.render.start({ name: title, fps: animation.fps })
+    if (!id) {
+      setBusy(false)
+      return
+    }
+
+    try {
+      await engine.renderFilm(
+        camera.id,
+        {
+          width: FILM_WIDTH,
+          height: FILM_HEIGHT,
+          fps: animation.fps,
+          duration: animation.duration,
+        },
+        (index, png) => bridge.render.frame({ id, index, png }),
+      )
+      await bridge.render.finish(id)
+    } catch (error) {
+      await bridge.render.cancel(id)
+      reportFailure('scene.render', title, error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <ToolButton
+      icon={mdiMovieOpenOutline}
+      label={t('animation.render')}
+      description={camera ? t('animation.renderHint') : t('animation.renderNeedsCamera')}
+      tooltip={TIP_TOP}
+      variant="header"
+      disabled={!camera || busy}
+      onClick={() => void render()}
+    />
   )
 }
 

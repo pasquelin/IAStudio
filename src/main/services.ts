@@ -129,6 +129,11 @@ export type Services = {
   plan: PlanReader
   /** What a run would cost, asked before it is run — of a model or of a workflow. See `cost.ts`. */
   estimateCost: CostEstimator
+  /**
+   * Runs the resolved ffmpeg with those arguments. Exposed because a render encodes too, and a
+   * second resolver is how two flows start disagreeing about which binary this machine has.
+   */
+  encodeVideo: (args: readonly string[]) => Promise<void>
   /** Names what arrives without a useful name. Never throws, never blocks its caller. */
   captionArrivals: AutoCaption
   /** Names a chosen selection, whatever it is already called. */
@@ -831,6 +836,11 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     savePicture,
     pickSavePath,
+    encodeVideo: async args => {
+      const binary = ffmpeg.path()
+      if (!binary) throw new Error('ffmpeg was not found')
+      await runProcess(binary, args)
+    },
     // The same picker the settings use for a folder: a second dialog with slightly different
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),

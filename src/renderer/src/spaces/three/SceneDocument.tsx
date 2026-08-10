@@ -30,6 +30,7 @@ import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { selectedNodes, type NodeMove, type SceneState } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews, viewOf } from '@/stores/scene-views'
@@ -139,9 +140,13 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
     renderer.mount(element)
     engine.current = renderer
+    // Registered so a panel that is not the viewport can ask it to draw a film — and forgotten
+    // below, or an engine whose canvas is gone would still be handed out.
+    registerSceneEngine(documentId, renderer)
     return () => {
       renderer.dispose()
       engine.current = null
+      forgetSceneEngine(documentId)
       // The names came out of files this viewport parsed; nothing outside it can answer for them.
       useModelClips.getState().forget(documentId)
     }
