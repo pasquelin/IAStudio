@@ -1,14 +1,12 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
-import { Button } from '@/design/Button'
 import { Carousel } from '@/design/Carousel'
 import { assetIcon } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
+import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
-import { SectionNote } from '../SectionNote'
 import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
 import { useDeferredShelf } from '../use-shelf'
 
@@ -23,17 +21,12 @@ import { useDeferredShelf } from '../use-shelf'
 const REFERENCE_CANDIDATES = 10
 
 /**
- * What the band knows, which is more than "some assets or none".
+ * What the band draws, when it has something to draw.
  *
- * A refusal and an account with nothing alike used to look the same from here: both arrived as
- * an empty shelf, and the band took itself off the page until the key changed. They are told
- * apart because only one of them is worth offering to try again.
+ * `null` is "nothing to measure against, or nothing that resembles it" — an ordinary answer,
+ * and not the same thing as a refusal, which `useShelf` now reports on its own.
  */
-type Lookalikes =
-  /** Not read yet, or nothing to draw — nothing to measure against, or nothing that resembles it. */
-  | { state: 'silent' }
-  | { state: 'refused' }
-  | { state: 'ready'; reference: CloudAsset; assets: readonly CloudAsset[] }
+type Lookalikes = { reference: CloudAsset; assets: readonly CloudAsset[] } | null
 
 /**
  * Published work in the vein of this account's latest asset.
@@ -47,29 +40,18 @@ type Lookalikes =
 export function Similar() {
   const { t } = useTranslation()
   const owner = useSettings(activeOwnerId)
-  // Part of what the shelf reads under, so pressing "try again" is a new read rather than a
-  // second copy of the fetch that `useShelf` already owns.
-  const [attempt, setAttempt] = useState(0)
   // Two requests, both below the fold on any window: spent when the band is reached.
-  const { value: page, marker } = useDeferredShelf<Lookalikes>(
-    { state: 'silent' },
-    lookalikes,
-    `${owner}/${attempt}`,
-  )
+  const {
+    value: page,
+    state,
+    retry,
+    marker,
+  } = useDeferredShelf<Lookalikes>(null, lookalikes, `${owner}`)
 
-  if (page.state === 'silent') return marker
+  if (state === 'refused')
+    return <RefusedSection id="similar" message={t('home.similar.refused')} onRetry={retry} />
 
-  if (page.state === 'refused') {
-    return (
-      <Section
-        id="similar"
-        title={t('home.sections.similar')}
-        actions={<Button onClick={() => setAttempt(count => count + 1)}>{t('home.retry')}</Button>}
-      >
-        <SectionNote>{t('home.similar.refused')}</SectionNote>
-      </Section>
-    )
-  }
+  if (!page) return marker
 
   return (
     <Section id="similar" title={t('home.similar.title', { name: page.reference.name })}>
@@ -85,27 +67,21 @@ export function Similar() {
 }
 
 /**
- * Two reads, and the failure of either is a refusal rather than an empty band.
- *
- * `useShelf` turns a rejection into the initial value, which is exactly the confusion this type
- * exists to end — so the catch is here, where what failed is still known.
+ * Two reads, and the failure of either is a refusal — which is `useShelf`'s to report now, so
+ * this one lets it through instead of catching it into a state of its own.
  */
 async function lookalikes(): Promise<Lookalikes> {
   const bridge = getBridge()
-  if (!bridge) return { state: 'silent' }
+  if (!bridge) return null
 
-  try {
-    const library = await bridge.cloud.browse({ pageSize: REFERENCE_CANDIDATES })
-    const reference = library.assets[0]
-    if (!reference) return { state: 'silent' }
+  const library = await bridge.cloud.browse({ pageSize: REFERENCE_CANDIDATES })
+  const reference = library.assets[0]
+  if (!reference) return null
 
-    const assets = await bridge.cloud.similar(reference.id)
-    // Settled here rather than at the render: "ready" then means there is something to draw,
-    // and the band has one way of saying nothing instead of two.
-    return assets.length === 0 ? { state: 'silent' } : { state: 'ready', reference, assets }
-  } catch {
-    return { state: 'refused' }
-  }
+  const assets = await bridge.cloud.similar(reference.id)
+  // Settled here rather than at the render: a page then means there is something to draw, and
+  // the band has one way of saying nothing instead of two.
+  return assets.length === 0 ? null : { reference, assets }
 }
 
 function Tile({ asset }: { asset: CloudAsset }) {

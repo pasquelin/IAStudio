@@ -14,8 +14,16 @@ function Shelf({
   key?: string
   deps: string
 }) {
-  const held = useShelf(EMPTY, read, deps)
-  return <span data-testid="held">{held.join(',')}</span>
+  const { value, state, retry } = useShelf(EMPTY, read, deps)
+  return (
+    <>
+      <span data-testid="held">{value.join(',')}</span>
+      <span data-testid="state">{state}</span>
+      <button type="button" onClick={retry}>
+        again
+      </button>
+    </>
+  )
 }
 
 beforeEach(() => {
@@ -64,6 +72,52 @@ describe('what a shelf holds', () => {
 })
 
 /**
+ * The half the value could not carry: a refusal and an empty answer both arrive as the initial
+ * value, and five bands took themselves off the page on either.
+ */
+describe('what a shelf says about its read', () => {
+  it('is reading until the answer lands, and ready once it has', async () => {
+    render(<Shelf read={() => Promise.resolve(['a'])} deps="one" />)
+
+    expect(screen.getByTestId('state').textContent).toBe('reading')
+    await vi.waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ready'))
+  })
+
+  /**
+   * The ordinary case — no project, no bridge — and an answer in itself. Left as `reading` it
+   * would draw a wait that never ends on every band without a project.
+   */
+  it('is ready, not reading, when there was nothing to ask', async () => {
+    render(<Shelf read={() => undefined} deps="one" />)
+
+    // A tick, not a round trip: the answer is already known, it is only settled off the render.
+    await vi.waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ready'))
+  })
+
+  it('is refused when the read rejects, which is the one state worth retrying', async () => {
+    render(<Shelf read={() => Promise.reject(new Error('429'))} deps="one" />)
+
+    await vi.waitFor(() => expect(screen.getByTestId('state').textContent).toBe('refused'))
+  })
+
+  it('reads again on retry, without the band having to change what it reads under', async () => {
+    const read = vi
+      .fn<() => Promise<string[]>>()
+      .mockRejectedValueOnce(new Error('429'))
+      .mockResolvedValueOnce(['landed'])
+    render(<Shelf read={read} deps="one" />)
+    await vi.waitFor(() => expect(screen.getByTestId('state').textContent).toBe('refused'))
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'again' }).click()
+    })
+
+    expect(await screen.findByText('landed')).toBeInTheDocument()
+    expect(read).toHaveBeenCalledTimes(2)
+  })
+})
+
+/**
  * The default fake reports everything as on screen at once — jsdom lays nothing out, so there is
  * nothing off it. A suite about DEFERRING has to install the one that waits to be told.
  */
@@ -73,9 +127,23 @@ afterEach(() => {
   globalThis.IntersectionObserver = REAL
 })
 
-function Band({ read, source = 'key' }: { read: () => Promise<string | null>; source?: string }) {
-  const { value, marker } = useDeferredShelf<string | null>(null, read, source)
-  return value === null ? marker : <p>{value}</p>
+function Band({
+  read,
+  source = 'key',
+  showState = false,
+}: {
+  read: () => Promise<string | null>
+  source?: string
+  /** Off by default: two tests read `container.firstElementChild`, which a probe would occupy. */
+  showState?: boolean
+}) {
+  const { value, state, marker } = useDeferredShelf<string | null>(null, read, source)
+  return (
+    <>
+      {showState && <span data-testid="state">{state}</span>}
+      {value === null ? marker : <p>{value}</p>}
+    </>
+  )
 }
 
 describe('a shelf that waits to be reached', () => {
@@ -120,6 +188,18 @@ describe('a shelf that waits to be reached', () => {
     })
 
     expect(container.firstElementChild).toBeNull()
+  })
+
+  /**
+   * The trap this forecloses: unseen, the read answers `undefined`, which is `ready`. A band
+   * that declared itself ready would draw its content instead of the marker — and the marker is
+   * what makes it observed, so the band would never load at all.
+   */
+  it('holds at "reading" while unseen, whatever the unread read answers', () => {
+    installIntersectionObserver({ eager: false })
+    render(<Band read={() => Promise.resolve('spent')} showState />)
+
+    expect(screen.getByTestId('state').textContent).toBe('reading')
   })
 
   it('reads again when what it reads under changes, having already been seen', async () => {
