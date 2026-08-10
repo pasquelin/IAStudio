@@ -71,6 +71,17 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
         />
       )}
 
+      {/* The CEL expression, under the same `value` the text node writes — Scenario's own naming,
+          not a shape of ours. A variable reads `<nodeId>_output`, which is the wire's own name. */}
+      {node.type === 'transformText' && (
+        <TextField
+          label={t('inspector.expression')}
+          value={node.data.value ?? ''}
+          onChange={value => edit.run(setGraphNodeData(node.id, { value }))}
+          {...edit.gesture}
+        />
+      )}
+
       {node.type === 'stickyNote' && (
         <TextField
           label={t('inspector.text')}

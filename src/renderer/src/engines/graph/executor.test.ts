@@ -1,12 +1,27 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphNodeRun, GraphState } from '@shared/domain/graph'
 import { runGraph, type GraphRunPorts, type GraphRunResult } from './executor'
-import { approvalNode, graphOf, guards, modelNode, textNode, wire } from './graph-fixtures'
+import {
+  approvalNode,
+  graphOf,
+  guards,
+  modelNode,
+  textNode,
+  transformNode,
+  wire,
+} from './graph-fixtures'
 import { handleId } from './handles'
 import { updateNodeData } from './mutations'
 import { planGraph, type GraphCache } from './plan'
 
 type Submitted = { modelId: string; body: Record<string, unknown> }
+
+/**
+ * Refuses rather than answering, exactly as the approval port below does: a graph whose transforms
+ * a suite never thought about must not sail through one and prove the opposite of what it claims.
+ */
+const noTransform: GraphRunPorts['transform'] = expression =>
+  Promise.reject(new Error(`no transform declared for ${expression}`))
 
 /** A run, and everything it said while it went: what was submitted, and what each node reported. */
 type Watched = {
@@ -30,6 +45,8 @@ async function watch(
     signal?: AbortSignal
     /** What the person answers, per approval node. A graph with none never reaches it. */
     approve?: (nodeId: string) => Promise<boolean>
+    /** What the evaluator answers. A graph with no transform node never reaches it. */
+    transform?: GraphRunPorts['transform']
   } = {},
 ): Promise<Watched> {
   const submitted: Submitted[] = []
@@ -48,6 +65,7 @@ async function watch(
     // about would otherwise sail through one, and the test would prove the opposite of that.
     approve:
       options.approve ?? (nodeId => Promise.reject(new Error(`no answer declared for ${nodeId}`))),
+    transform: options.transform ?? noTransform,
     report: (nodeId, run) => {
       const held = reported.get(nodeId)
       if (held) held.push(run)
@@ -207,6 +225,7 @@ describe('running a graph', () => {
         return ['asset_1']
       },
       approve: () => Promise.resolve(true),
+      transform: noTransform,
       report: () => {},
     })
 
@@ -463,6 +482,7 @@ describe('stopping a run', () => {
         return ['asset_1']
       },
       approve: () => Promise.resolve(true),
+      transform: noTransform,
       report: (nodeId, run) => {
         const held = reported.get(nodeId)
         if (held) held.push(run)
@@ -497,6 +517,7 @@ describe('stopping a run', () => {
         throw new Error('cancelled')
       },
       approve: () => Promise.resolve(true),
+      transform: noTransform,
       report: (nodeId, run) => {
         const held = reported.get(nodeId)
         if (held) held.push(run)
@@ -541,6 +562,7 @@ describe('stopping on an approval', () => {
         events.push(`approve:${nodeId}`)
         return true
       },
+      transform: noTransform,
       report: () => {},
     })
 
@@ -683,5 +705,263 @@ describe('stopping on an approval', () => {
     )
 
     expect(asked).toEqual([])
+  })
+})
+
+describe('a transform node', () => {
+  /**
+   * A text node feeding a transform, which feeds a generator's prompt: the whole reason the type
+   * exists — a prompt built out of what an earlier node produced.
+   */
+  const rewriting = (expression: string): GraphState =>
+    graphOf(
+      [textNode('text1'), transformNode('transformText1', expression), modelNode('m1')],
+      [
+        wire('transformText1', 'text', 'text1', 'prompt'),
+        wire('m1', 'prompt', 'transformText1', 'text'),
+      ],
+    )
+
+  /**
+   * The name the SDK's converter gives the wire — `<providerId>_<outputName>`, read off
+   * `workflow_converter.ts`. Named any other way here, an expression that runs locally would read
+   * an unknown variable the day the App is published.
+   */
+  it('hands the evaluator its variables under the names the converter gives the wires', async () => {
+    const transform = vi.fn(() => Promise.resolve(['rewritten']))
+
+    await watch(
+      rewriting("'A photo of ' + text1_output"),
+      { model_flux: ['asset_1'] },
+      {
+        transform,
+      },
+    )
+
+    expect(transform).toHaveBeenCalledWith("'A photo of ' + text1_output", {
+      text1_output: '',
+    })
+  })
+
+  it('hands over what the node feeding it actually produced', async () => {
+    const transform = vi.fn(() => Promise.resolve(['rewritten']))
+    const graph = updateNodeData(rewriting('text1_output'), 'text1', { value: 'a cat' })
+
+    await watch(graph, { model_flux: ['asset_1'] }, { transform })
+
+    expect(transform).toHaveBeenCalledWith('text1_output', { text1_output: 'a cat' })
+  })
+
+  it('passes what it produced to whatever reads it', async () => {
+    const watched = await watch(
+      updateNodeData(rewriting('text1_output'), 'text1', { value: 'a cat' }),
+      { model_flux: ['asset_1'] },
+      { transform: () => Promise.resolve(['a photo of a cat']) },
+    )
+
+    expect(watched.submitted).toEqual([
+      { modelId: 'model_flux', body: { prompt: 'a photo of a cat' } },
+    ])
+  })
+
+  it('reports it is running, then done', async () => {
+    const watched = await watch(
+      rewriting('text1_output'),
+      { model_flux: ['asset_1'] },
+      {
+        transform: () => Promise.resolve(['rewritten']),
+      },
+    )
+
+    expect(statusesOf(watched, 'transformText1')).toEqual(['running', 'done'])
+  })
+
+  /** The state every transform starts in, and what the converter compiles it to: `''`. */
+  it('produces nothing for an empty expression, without asking the evaluator', async () => {
+    const transform = vi.fn(() => Promise.resolve(['never']))
+
+    const watched = await watch(rewriting(''), { model_flux: ['asset_1'] }, { transform })
+
+    expect(transform).not.toHaveBeenCalled()
+    expect(statusesOf(watched, 'transformText1')).toEqual(['done'])
+  })
+
+  /** Nothing produced must not overwrite what the form of the node reading it holds. */
+  it('leaves the prompt of what reads it alone when it produced nothing', async () => {
+    const watched = await watch(rewriting(''), { model_flux: ['asset_1'] })
+
+    expect(watched.submitted).toEqual([{ modelId: 'model_flux', body: {} }])
+  })
+
+  it('fails on the node itself when the expression would not evaluate', async () => {
+    const watched = await watch(
+      rewriting('nope('),
+      { model_flux: ['asset_1'] },
+      {
+        transform: () => Promise.resolve(null),
+      },
+    )
+
+    expect(failureOf(watched, 'transformText1')).toBe('invalid-expression')
+  })
+
+  /** A refusal is the node's, not the graph's: what reads it says why it never ran. */
+  it('blocks what reads it rather than submitting a prompt it never got', async () => {
+    const watched = await watch(
+      rewriting('nope('),
+      { model_flux: ['asset_1'] },
+      {
+        transform: () => Promise.resolve(null),
+      },
+    )
+
+    expect(failureOf(watched, 'm1')).toBe('blocked')
+    expect(watched.generate).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The evaluator lives across the IPC boundary, so its promise can reject for reasons that are
+   * not the expression — a bridge that went away mid-run. The node says the same thing either
+   * way rather than taking the whole run down with an unhandled rejection.
+   */
+  it('fails on the node when the evaluator rejects rather than answering', async () => {
+    const watched = await watch(
+      rewriting('text1_output'),
+      { model_flux: ['asset_1'] },
+      {
+        transform: () => Promise.reject(new Error('no bridge')),
+      },
+    )
+
+    expect(failureOf(watched, 'transformText1')).toBe('invalid-expression')
+  })
+
+  it('reuses what an earlier run produced rather than evaluating again', async () => {
+    const graph = rewriting('text1_output')
+    const first = await watch(
+      graph,
+      { model_flux: ['asset_1'] },
+      {
+        transform: () => Promise.resolve(['rewritten']),
+      },
+    )
+
+    const transform = vi.fn(() => Promise.resolve(['rewritten']))
+    const second = await watch(
+      graph,
+      { model_flux: ['asset_1'] },
+      {
+        cache: cacheOf(first.result),
+        transform,
+      },
+    )
+
+    expect(transform).not.toHaveBeenCalled()
+    expect(statusesOf(second, 'transformText1')).toEqual(['cached'])
+  })
+
+  it('evaluates again once its expression changed', async () => {
+    const graph = rewriting('text1_output')
+    const first = await watch(
+      graph,
+      { model_flux: ['asset_1'] },
+      {
+        transform: () => Promise.resolve(['rewritten']),
+      },
+    )
+
+    const transform = vi.fn(() => Promise.resolve(['other']))
+    await watch(
+      updateNodeData(graph, 'transformText1', { value: "'x' + text1_output" }),
+      {
+        model_flux: ['asset_1'],
+      },
+      { cache: cacheOf(first.result), transform },
+    )
+
+    expect(transform).toHaveBeenCalledOnce()
+  })
+
+  /**
+   * The port every node carries to be steered by, kept out of the variables for the reason it is
+   * kept out of a body: it decides whether the node runs at all, and the converter skips that edge
+   * before it names anything. Left in, an expression would see a variable no published run has.
+   */
+  it('keeps a wired conditional port out of the variables it hands over', async () => {
+    const transform = vi.fn(() => Promise.resolve(['rewritten']))
+    const graph = graphOf(
+      [textNode('text1'), textNode('text2'), transformNode('transformText1', 'text1_output')],
+      [
+        wire('transformText1', 'text', 'text1', 'prompt'),
+        wire('transformText1', 'conditional', 'text2', 'prompt'),
+      ],
+    )
+
+    await watch(updateNodeData(graph, 'text1', { value: 'a cat' }), {}, { transform })
+
+    expect(transform).toHaveBeenCalledWith('text1_output', { text1_output: 'a cat' })
+  })
+
+  /** A generator asked for four pictures produced four: the variable is the list, not the first. */
+  it('hands over a list where the node feeding it produced several', async () => {
+    const transform = vi.fn(() => Promise.resolve(['rewritten']))
+    const graph = graphOf(
+      [modelNode('m1', {}, 'model_a'), transformNode('transformText1', 'm1_output[0]')],
+      [wire('transformText1', 'text', 'm1', 'image')],
+    )
+
+    await watch(graph, { model_a: ['asset_1', 'asset_2'] }, { transform })
+
+    expect(transform).toHaveBeenCalledWith('m1_output[0]', {
+      m1_output: ['asset_1', 'asset_2'],
+    })
+  })
+
+  /**
+   * `?? 'output'` in the converter, copied here: a graph read off a file can carry an output
+   * handle with no name at all, and both sides must then call the variable the same thing.
+   */
+  it('falls back to the output name the converter falls back to', async () => {
+    const transform = vi.fn(() => Promise.resolve(['rewritten']))
+    const unnamed: GraphNode = {
+      id: 'text1',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {
+        value: 'a cat',
+        outputHandles: [{ id: handleId('text1', 'target', 'prompt') }],
+      },
+    }
+    const graph = graphOf(
+      [unnamed, transformNode('transformText1', 'text1_output')],
+      [wire('transformText1', 'text', 'text1', 'prompt')],
+    )
+
+    await watch(graph, {}, { transform })
+
+    expect(transform).toHaveBeenCalledWith('text1_output', { text1_output: 'a cat' })
+  })
+
+  /**
+   * Filing a result a stopped run produced would make the next Run reuse it, exactly as it would
+   * for a generation the user stopped paying for.
+   */
+  it('keeps nothing a stopped run evaluated', async () => {
+    const controller = new AbortController()
+
+    const watched = await watch(
+      rewriting('text1_output'),
+      { model_flux: ['asset_1'] },
+      {
+        signal: controller.signal,
+        transform: () => {
+          controller.abort()
+          return Promise.resolve(['rewritten'])
+        },
+      },
+    )
+
+    expect(statusesOf(watched, 'transformText1')).toEqual(['running', 'idle'])
+    expect(cacheOf(watched.result).size).toBe(1)
   })
 })

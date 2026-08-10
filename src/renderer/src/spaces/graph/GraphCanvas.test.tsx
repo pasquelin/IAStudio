@@ -314,6 +314,36 @@ describe('the graph canvas', () => {
   })
 })
 
+describe('the transform node', () => {
+  it('reads its expression back on its own face, where a graph is read at a glance', () => {
+    canvas({
+      nodes: [
+        {
+          id: 'transformText1',
+          type: 'transformText',
+          position: { x: 0, y: 0 },
+          data: { value: "'A photo of ' + text1_output" },
+        },
+      ],
+      edges: [],
+      inputKeys: [],
+    })
+
+    expect(screen.getByText("'A photo of ' + text1_output")).toBeInTheDocument()
+  })
+
+  /** A transform nobody has written into still says what it is, rather than drawing an empty box. */
+  it('names its type where no expression has been written yet', () => {
+    canvas({
+      nodes: [{ id: 'transformText1', type: 'transformText', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+      inputKeys: [],
+    })
+
+    expect(screen.getByText('Transformation')).toBeInTheDocument()
+  })
+})
+
 /**
  * The one node that asks something of the user rather than telling them something. Its two
  * answers are drawn only while a run is stopped on it — an approval on an idle canvas is a gate

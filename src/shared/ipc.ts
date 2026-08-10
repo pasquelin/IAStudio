@@ -14,7 +14,7 @@ import type {
   DocumentFile,
   DocumentKind,
 } from './domain/document'
-import type { GraphCompileResult, GraphState } from './domain/graph'
+import type { GraphCompileResult, GraphState, GraphTransformVariables } from './domain/graph'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -78,6 +78,7 @@ export type Channels = {
   workflowsDescribe: 'workflows:describe'
   workflowsRun: 'workflows:run'
   workflowsCompile: 'workflows:compile'
+  workflowsTransform: 'workflows:transform'
 
   projectCreate: 'project:create'
   projectOpen: 'project:open'
@@ -199,6 +200,7 @@ export const CHANNELS: Channels = {
   workflowsDescribe: 'workflows:describe',
   workflowsRun: 'workflows:run',
   workflowsCompile: 'workflows:compile',
+  workflowsTransform: 'workflows:transform',
 
   projectCreate: 'project:create',
   projectOpen: 'project:open',
@@ -617,6 +619,21 @@ export type StudioBridge = {
      * this side would drift from what the webapp produces on the first node type they add.
      */
     compile: (graph: GraphState) => Promise<GraphCompileResult>
+    /**
+     * Evaluates one `transformText` node's CEL expression, and answers the text it produced.
+     *
+     * Here for the reason `compile` is: the evaluator is Scenario's own — the very one its
+     * backend, its webapp and its MCP server share — and only this side speaks SDK (invariant 2).
+     * A second evaluator written on this side would drift from what a published App computes.
+     *
+     * `null` where the expression would not parse, reads a variable nothing feeds, or answers
+     * something no wire can carry. The sentence saying which goes to the journal, never the
+     * screen — the node shows a code, exactly as a failed compile does.
+     */
+    transform: (
+      expression: string,
+      variables: GraphTransformVariables,
+    ) => Promise<readonly string[] | null>
   }
   project: {
     create: (path: string, name: string) => Promise<Project>

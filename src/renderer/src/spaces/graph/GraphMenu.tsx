@@ -1,5 +1,6 @@
 import {
   mdiAccountCheckOutline,
+  mdiCodeBraces,
   mdiFormatText,
   mdiImageOutline,
   mdiLayersTripleOutline,
@@ -25,6 +26,7 @@ const INPUT_ICONS: Record<CreatableNodeType, string> = {
   asset: mdiImageOutline,
   stickyNote: mdiNoteOutline,
   approval: mdiAccountCheckOutline,
+  transformText: mdiCodeBraces,
 }
 
 /** One glyph for every generator: what differs between them is the family, and the label says it. */

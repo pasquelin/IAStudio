@@ -67,6 +67,28 @@ export function approvalNode(id: string, message = ''): GraphNode {
 }
 
 /**
+ * A transform node, spelled as `createNode` spells one: an untyped `text` input beside the
+ * conditional port every node carries, and an output the next node reads as text.
+ */
+export function transformNode(id: string, value = ''): GraphNode {
+  return {
+    id,
+    type: 'transformText',
+    position: { x: 0, y: 0 },
+    data: {
+      value,
+      inputHandles: [
+        { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
+        { id: handleId(id, 'source', 'text'), name: 'text' },
+      ],
+      outputHandles: [
+        { id: handleId(id, 'target', 'text'), name: DEFAULT_OUTPUT_NAME, type: 'text' },
+      ],
+    },
+  }
+}
+
+/**
  * The wire an approval names the node it guards by. Its own port on one end, and the guarded
  * node's output on the other, which is what lets the approval show what it is asked about.
  */

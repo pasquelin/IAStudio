@@ -83,7 +83,8 @@
       "model": "Model",
       "stickyNote": "Note",
       "approval": "Approval",
-      "ifElse": "Condition"
+      "ifElse": "Condition",
+      "transformText": "Transform"
     },
     "approve": "Approve",
     "approveHint": "Let the rest of the graph use this result",
@@ -130,7 +131,8 @@
       "no-model": "no model",
       "blocked": "upstream failed",
       "rejected": "failed",
-      "declined": "declined"
+      "declined": "declined",
+      "invalid-expression": "invalid expression"
     }
   },
   "graphTools": {
@@ -718,6 +720,7 @@
     "title": "Title",
     "isOutput": "App result",
     "message": "Question asked",
+    "expression": "Expression",
     "nodeId": "Identifier",
     "noModel": "None",
     "sectionFoldHint": "Folds this group of properties",

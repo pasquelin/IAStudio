@@ -6,6 +6,7 @@ import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
+import { runTransform } from './workflow-transform'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
@@ -27,6 +28,8 @@ import {
   parsePromptDraft,
   parseReferenceImages,
   parseSuggestPrompts,
+  parseTransformExpression,
+  parseTransformVariables,
   parseUsageCursors,
   parseJobTarget,
   parseUsagePeriod,
@@ -176,6 +179,17 @@ export function registerScenarioHandlers({
       getModel: modelId => resolved.get(modelId),
     })
   })
+
+  // Here for the reason the compile above is: the evaluator is the SDK's, and only this side
+  // speaks SDK. Synchronous and local — no network, nothing billed — so it runs on the handler
+  // rather than through the job queue a generation goes through.
+  handle(CHANNELS.workflowsTransform, (_event, expression, variables) =>
+    runTransform(
+      parseTransformExpression(expression),
+      parseTransformVariables(variables),
+      message => log.warn('scenario', `workflow transform: ${message}`),
+    ),
+  )
 
   handle(CHANNELS.workflowsRun, (_event, workflowId, body) =>
     submitNamed(

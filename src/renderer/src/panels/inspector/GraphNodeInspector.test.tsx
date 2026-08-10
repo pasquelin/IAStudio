@@ -31,6 +31,13 @@ const ASSET: GraphNode = {
 
 const LOOP: GraphNode = { id: 'forEach1', type: 'forEach', position: { x: 0, y: 0 }, data: {} }
 
+const TRANSFORM: GraphNode = {
+  id: 'transformText1',
+  type: 'transformText',
+  position: { x: 0, y: 0 },
+  data: { value: "'A photo of ' + text1_output" },
+}
+
 const APPROVAL: GraphNode = {
   id: 'approval1',
   type: 'approval',
@@ -172,6 +179,39 @@ describe('GraphNodeInspector', () => {
     show(TEXT)
 
     expect(screen.queryByLabelText('Question posée')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Under `value`, the very field the text node writes — Scenario's own naming, so a transform
+   * written here is one the webapp reads back.
+   */
+  it('writes the expression a transform evaluates', async () => {
+    installGraph(DOCUMENT, { nodes: [TRANSFORM], edges: [], inputKeys: [] })
+    show(TRANSFORM)
+    await userEvent.type(screen.getByLabelText('Expression'), '!')
+
+    expect(nodeById('transformText1')?.data).toMatchObject({
+      value: "'A photo of ' + text1_output!",
+    })
+  })
+
+  it('opens the expression of a transform that carries none', () => {
+    const bare: GraphNode = {
+      id: 'transformText2',
+      type: 'transformText',
+      position: { x: 0, y: 0 },
+      data: {},
+    }
+    installGraph(DOCUMENT, { nodes: [bare], edges: [], inputKeys: [] })
+    show(bare)
+
+    expect(screen.getByLabelText('Expression')).toHaveValue('')
+  })
+
+  it('offers no expression field on a node that evaluates nothing', () => {
+    show(TEXT)
+
+    expect(screen.queryByLabelText('Expression')).not.toBeInTheDocument()
   })
 
   // A generator's face is `ModelNodeFields`, which asks the catalogue and has its own suite.

@@ -209,6 +209,14 @@ const ModelNode = nodeOf('ModelNode', 'model', data => (
   <p className="text-muted truncate text-[11px]">{asText(data.modelId)}</p>
 ))
 
+/**
+ * Its expression, in the type it is written in: a CEL expression is code, and reading one back in
+ * the panel's own face makes a quoted string indistinguishable from a variable name.
+ */
+const TransformTextNode = nodeOf('TransformTextNode', 'transformText', data => (
+  <p className="text-muted line-clamp-3 font-mono text-[10px] break-all">{asText(data.value)}</p>
+))
+
 const ApprovalNode = nodeOf('ApprovalNode', 'approval', (data, id) => (
   <ApprovalBody id={id} message={asText(data.message)} run={asRun(data[RUN_STATE_KEY])} />
 ))
@@ -366,7 +374,7 @@ export const GRAPH_NODE_TYPES: Record<GraphNodeType, (props: NodeProps) => React
   aspectRatio: PlainNode,
   modelInput: PlainNode,
   llm: PlainNode,
-  transformText: PlainNode,
+  transformText: TransformTextNode,
   splitText: PlainNode,
   ifElse: IfElseNode,
   groupItems: PlainNode,

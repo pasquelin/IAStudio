@@ -1,5 +1,12 @@
-import type { GraphNode, GraphNodeRun, GraphRunFailure, GraphState } from '@shared/domain/graph'
+import type {
+  GraphNode,
+  GraphNodeRun,
+  GraphRunFailure,
+  GraphState,
+  GraphTransformVariables,
+} from '@shared/domain/graph'
 import { CONDITIONAL_PORT } from '@shared/domain/graph'
+import { readString } from '@shared/guards'
 import { approvalsOf } from './approvals'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
@@ -19,6 +26,18 @@ export type GraphRunPorts = {
    * asked — the buttons are the canvas's business, and a run stops here with no DOM in sight.
    */
   approve: (nodeId: string) => Promise<boolean>
+  /**
+   * Evaluates one CEL expression and resolves with the text it produced, `null` where it would
+   * not evaluate to any.
+   *
+   * A port for the reason `generate` is: the evaluator is Scenario's own and lives in the SDK,
+   * which this side does not speak (invariant 2) — and a second one written here would drift
+   * from what a published App computes on the first function they add.
+   */
+  transform: (
+    expression: string,
+    variables: GraphTransformVariables,
+  ) => Promise<readonly string[] | null>
   /** Called on every change of state, so the canvas paints while the run is still going. */
   report: (nodeId: string, run: GraphNodeRun) => void
   /** Nodes not started yet are left alone; nothing interrupts a generation already on the wire. */
@@ -32,6 +51,12 @@ export type GraphRunResult =
 
 /** What a node hands to the ones reading it: the ids it produced, or nothing at all. */
 type Outcome = { values: readonly string[] } | null
+
+/** One node's incoming wires, read two ways: as a body's fields, and as a CEL expression's names. */
+type Resolved = {
+  values: Readonly<Record<string, readonly string[]>>
+  variables: GraphTransformVariables
+}
 
 const EMPTY_CACHE: GraphCache = new Map()
 
@@ -49,7 +74,7 @@ const EMPTY_CACHE: GraphCache = new Map()
 export async function runGraph(
   graph: GraphState,
   cache: GraphCache = EMPTY_CACHE,
-  { generate, approve, report, signal }: GraphRunPorts,
+  { generate, approve, transform, report, signal }: GraphRunPorts,
 ): Promise<GraphRunResult> {
   const plan = planGraph(graph, cache)
 
@@ -79,20 +104,36 @@ export async function runGraph(
     return { values }
   }
 
-  const inputsOf = async (
-    planned: GraphPlanNode,
-  ): Promise<Record<string, readonly string[]> | null> => {
-    const resolved: Record<string, readonly string[]> = {}
+  /**
+   * What a node's wires carry, in the two shapes its readers need — resolved in one pass so a
+   * provider is awaited once and the two can never disagree about what came through.
+   *
+   * `values` is keyed by the consumer's own port, which is what fills a generation body.
+   * `variables` is keyed the way Scenario's converter names the wire, `` `${node}_${output}` ``,
+   * copied off `workflow_converter.ts` rather than invented: named any other way, an expression
+   * that runs here reads an unknown variable once the App is published.
+   *
+   * The conditional port is in the first and out of the second, exactly as it is dropped from a
+   * body: it steers whether the node runs at all, and the converter skips that edge before it
+   * names anything.
+   */
+  const resolveInputs = async (planned: GraphPlanNode): Promise<Resolved | null> => {
+    const values: Record<string, readonly string[]> = {}
+    const variables: Record<string, string | readonly string[]> = {}
 
     for (const [port, source] of Object.entries(planned.inputs)) {
       // Present by construction: a provider comes before its consumer in a topological order, so
       // its promise was made on an earlier turn of the loop below.
       const upstream = await settled.get(source.node)
       if (!upstream) return null
-      resolved[port] = upstream.values
+
+      values[port] = upstream.values
+      if (port !== CONDITIONAL_PORT) {
+        variables[`${source.node}_${source.output}`] = asVariable(upstream.values)
+      }
     }
 
-    return resolved
+    return { values, variables }
   }
 
   /** Whether every approval standing between this node and its providers was given. */
@@ -133,6 +174,36 @@ export async function runGraph(
     return { values: [] }
   }
 
+  /**
+   * A `transformText` node: its CEL expression, over what its wires carry.
+   *
+   * `value` is read as data rather than as the type says, like every other field off `data`:
+   * `parseGraph` validates the node and not its contents, so a graph read off a file can hold
+   * anything there.
+   */
+  const rewrite = async (
+    planned: GraphPlanNode,
+    node: GraphNode,
+    variables: GraphTransformVariables,
+  ): Promise<Outcome> => {
+    const expression = readString(node.data, 'value', '')
+
+    // What the converter compiles an empty transform to — `''`, which produces nothing. Answered
+    // here rather than sent across the boundary: a node nobody has written an expression into is
+    // the state every one of them starts in.
+    if (expression === '') return keep(planned, [])
+
+    report(node.id, { status: 'running' })
+
+    const values = await transform(expression, variables).catch(() => null)
+
+    // Asked on the way back for the reason a generation is: a stop pressed while this was
+    // crossing the boundary must not file a result in the cache the next Run would reuse.
+    if (stopped(node.id)) return null
+
+    return values ? keep(planned, values) : fail(node.id, 'invalid-expression')
+  }
+
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
     // Waited on BEFORE the cache is read, which is the whole point of the plan carrying them: a
     // result kept from a run somebody approved must not come back on a run they have declined.
@@ -149,7 +220,7 @@ export async function runGraph(
       return { values: held }
     }
 
-    const inputs = await inputsOf(planned)
+    const inputs = await resolveInputs(planned)
 
     // Asked after the inputs, and BEFORE the blocked branch: a stop pressed while a provider was
     // on the wire leaves what it feeds idle, rather than reporting a failure nothing caused.
@@ -169,6 +240,7 @@ export async function runGraph(
     // the user before the picture exists is a question about nothing. One guarding nothing is a
     // question about nothing too — it passes without a word rather than stopping the graph.
     if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: [] }
+    if (node.type === 'transformText') return rewrite(planned, node, inputs.variables)
     if (node.type !== 'model') return fail(node.id, 'unsupported')
 
     const { modelId, form } = node.data
@@ -177,7 +249,7 @@ export async function runGraph(
     report(node.id, { status: 'running' })
 
     try {
-      const values = await generate(modelId, bodyOf(form, inputs))
+      const values = await generate(modelId, bodyOf(form, inputs.values))
 
       // Asked AGAIN on the way back, and it is not the same question as the one above: a stop
       // pressed while this job was on the wire cannot un-submit it, but painting the node green
@@ -207,6 +279,26 @@ export async function runGraph(
 
   await Promise.all(settled.values())
   return { ok: true, cache: produced }
+}
+
+/**
+ * One provider's output as the CEL variable reading it: a string where one value came through,
+ * the list where several did.
+ *
+ * The converter types every input of a transform `string`, but the `ref` it writes points at the
+ * whole node, so what the variable HOLDS is what that node produced — a deduction from its code,
+ * not something an API answer has been read for.
+ *
+ * **Nothing produced reads as empty TEXT, not as an empty list**, and that is the one place this
+ * departs from `asList` above. A text node holding nothing compiles to `''` on Scenario's side;
+ * handed `[]`, the ordinary `'a photo of ' + text1_output` would fail to evaluate rather than
+ * answering the sentence with a blank in it.
+ */
+function asVariable(values: readonly string[]): string | readonly string[] {
+  if (values.length === 0) return ''
+
+  const [only] = values
+  return values.length === 1 && only !== undefined ? only : values
 }
 
 const asList = (value: unknown): readonly string[] => {

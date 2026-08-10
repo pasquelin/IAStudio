@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { GraphNodeRun } from '@shared/domain/graph'
 import { isFinished } from '@shared/domain/job'
 import type { GraphCache } from '@/engines/graph/plan'
+import { getBridge } from '@/services/bridge'
 import { graphOf, useGraphs } from './graphs'
 import { useJobs, whenSettled } from './jobs'
 
@@ -151,6 +152,10 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
             },
             // Held open until `decide` answers it, or until a stop hands every one of them a no.
             approve: nodeId => new Promise(resolve => asked.set(nodeId, resolve)),
+            // No bridge is no evaluation, and the node says so — the same answer the main process
+            // gives for an expression it refuses, since neither produced any text.
+            transform: async (expression, variables) =>
+              (await getBridge()?.workflows.transform(expression, variables)) ?? null,
             report: (nodeId, run) =>
               patch(documentId, controller, held => ({
                 ...held,

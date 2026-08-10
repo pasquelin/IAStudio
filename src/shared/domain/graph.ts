@@ -252,10 +252,25 @@ export type GraphNodeBody =
       type: 'ifElse'
       data: GraphNodeData & { conditionBlocks?: readonly GraphConditionBlock[] }
     }
+  /**
+   * A CEL expression over what its wires carry, and the field is `value` — the same name the text
+   * node uses, read off the converter's own union rather than guessed.
+   *
+   * Left empty the converter compiles `''`, so an expression nobody wrote transforms into nothing
+   * rather than refusing the flow.
+   */
+  | { type: 'transformText'; data: GraphNodeData & { value?: string } }
   | {
       type: Exclude<
         GraphNodeType,
-        'text' | 'stickyNote' | 'asset' | 'model' | 'modelInput' | 'approval' | 'ifElse'
+        | 'text'
+        | 'stickyNote'
+        | 'asset'
+        | 'model'
+        | 'modelInput'
+        | 'approval'
+        | 'ifElse'
+        | 'transformText'
       >
       data: GraphNodeData
     }
@@ -319,6 +334,26 @@ export const GRAPH_EDGES_MAX = 8000
 export const GRAPH_ID_MAX = 200
 
 /**
+ * What one CEL evaluation may weigh on its way in, for the reason the three above exist: the
+ * expression is a field someone types, and its variables are one per wire into a single node.
+ *
+ * Generous against both — a prompt template runs to a few hundred characters and a node to a
+ * handful of ports — and far below what an evaluator handed a megabyte would cost.
+ */
+export const GRAPH_EXPRESSION_MAX = 10_000
+export const GRAPH_VARIABLES_MAX = 200
+
+/**
+ * What a CEL expression reads, by the name the converter gives each wire: `<providerId>_<output>`.
+ *
+ * A list where the node feeding it produced several, a string where it produced one. The converter
+ * declares every such input `type: 'string'`, but the `ref` it writes points at the whole node, so
+ * what the variable HOLDS is what that node produced — a deduction from the converter's code, not
+ * something an API answer has been read for.
+ */
+export type GraphTransformVariables = Readonly<Record<string, string | readonly string[]>>
+
+/**
  * What a node is doing in a run, as the canvas paints it.
  *
  * Here rather than beside the executor that produces it, for the reason `JobStatus` lives in
@@ -354,6 +389,14 @@ export type GraphRunFailure =
   | 'rejected'
   /** A person was asked and said no. Apart from `rejected`: nothing failed, someone decided. */
   | 'declined'
+  /**
+   * A CEL expression the evaluator refused, or one that answered something a wire cannot carry.
+   *
+   * One code for the two, and deliberately: a transform whose result is a map is as unusable to
+   * the node reading it as one that would not parse, and the sentence naming which goes to the
+   * journal — the screen gets a code, exactly as a failed job does.
+   */
+  | 'invalid-expression'
 
 export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
   'cycle',
@@ -362,6 +405,7 @@ export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
   'blocked',
   'rejected',
   'declined',
+  'invalid-expression',
 ]
 
 /**

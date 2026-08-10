@@ -119,7 +119,7 @@ describe('refusing a cycle', () => {
 describe('resolving what feeds a node', () => {
   it('keys an input by the port name, which is the model field it fills', () => {
     expect(ordered(planGraph(chain()))[1]?.inputs).toEqual({
-      prompt: { node: 'text1', handle: 'text1-target-prompt' },
+      prompt: { node: 'text1', output: 'output' },
     })
   })
 
@@ -144,7 +144,7 @@ describe('resolving what feeds a node', () => {
     const graph = graphOf([text('text1'), model('m1')], [wire('m1', 'gone', 'text1', 'prompt')])
 
     expect(ordered(planGraph(graph))[1]?.inputs).toEqual({
-      'm1-source-gone': { node: 'text1', handle: 'text1-target-prompt' },
+      'm1-source-gone': { node: 'text1', output: 'output' },
     })
   })
 })
@@ -303,7 +303,7 @@ describe('waiting on an approval', () => {
     const plan = planGraph(guarded())
 
     expect(ordered(plan).find(node => node.id === 'm2')?.inputs).toEqual({
-      prompt: { node: 'm1', handle: 'm1-target-image' },
+      prompt: { node: 'm1', output: 'output' },
     })
   })
 

@@ -78,10 +78,34 @@ describe('creating a node', () => {
 
       const node = createNode(EMPTY_GRAPH, type, at)
 
-      expect(node.data.inputHandles).toEqual([
-        { id: `${node.id}-source-conditional`, name: 'conditional', type: 'conditional' },
-      ])
+      // Carried, not carried ALONE: a transform declares a port of its own beside it. What the
+      // claim is about is that no creatable type is born unsteerable.
+      expect(node.data.inputHandles).toContainEqual({
+        id: `${node.id}-source-conditional`,
+        name: 'conditional',
+        type: 'conditional',
+      })
     }
+  })
+
+  /**
+   * Untyped, and it is the same reason the approval's port is: the converter matches no handle on
+   * a transform — it walks every incoming edge but the conditional one — so a type here would
+   * refuse in the studio a wire the webapp draws without complaint.
+   */
+  it('gives a transform an untyped input beside the conditional port, and a text output', () => {
+    const node = createNode(EMPTY_GRAPH, 'transformText', at)
+
+    expect(node.data.inputHandles).toEqual([
+      { id: `${node.id}-source-conditional`, name: 'conditional', type: 'conditional' },
+      { id: `${node.id}-source-text`, name: 'text' },
+    ])
+    expect(node.data.outputHandles).toEqual([
+      { id: `${node.id}-target-text`, name: 'output', type: 'text' },
+    ])
+    // The field a CEL expression is written into — Scenario's own naming, shared with the text
+    // node, rather than a shape of ours.
+    expect(node.data).toMatchObject({ value: '' })
   })
 
   /**
