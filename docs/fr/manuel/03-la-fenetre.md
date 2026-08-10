@@ -43,7 +43,7 @@ Sous la bannière, une bande par sujet, dans cet ordre :
 | **Ce que vous avez produit** | vos générations, légendées du modèle qui les a faites | un projet ouvert |
 | **Par type** | six compteurs — Image, Vidéo, Audio, Maillage, Texture, Skybox | un projet ouvert |
 | **Vos recettes** | les réglages que vous avez épinglés | rien |
-| **Votre bibliothèque** | ce qui vit en ligne, sur votre compte Scenario | une clé API |
+| **Votre bibliothèque** | ce qui vit en ligne, sur votre compte Scenario — **un clic rapatrie** | une clé API |
 | **Vos documents** | les documents du projet | un projet ouvert |
 | **En cours** | les générations en route | une clé API |
 | **Activité récente** | ce que le studio a fait et raté | un projet ouvert |
@@ -98,6 +98,12 @@ projets, elle vous suit d’un projet à l’autre. C’est la seule bande qui a
 **Refaire une image ne coûte aucun appel réseau.** Sous chaque création, « En refaire une
 avec… » rouvre le formulaire déjà rempli : le modèle, le prompt et les réglages sont gardés à
 côté de l’asset, dans le projet.
+
+**C'est ici, et nulle part ailleurs, qu'on rapatrie.** Cliquer une vignette de **Votre
+bibliothèque** fait descendre l'asset dans le projet ouvert. L'étagère, elle, sait envoyer et
+pas reprendre : chaque sens a sa porte, et ce n'est pas la même — voir
+[Les assets](07-assets.md). Sans projet ouvert, ou pendant qu'un transfert tourne, la vignette
+reste une image et ne répond pas : il n'y aurait nulle part où écrire.
 
 **Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image et pose le
 filtre : vous arrivez sur les images, pas sur l’étagère entière. Un type à zéro reste sur la

@@ -43,7 +43,7 @@ Under the banner, one band per subject, in this order:
 | **What you have made** | your generations, captioned with the model that made them | an open project |
 | **By kind** | six counters — Image, Video, Audio, Mesh, Texture, Skybox | an open project |
 | **Your recipes** | the settings you have pinned | nothing |
-| **Your library** | what lives online, on your Scenario account | an API key |
+| **Your library** | what lives online, on your Scenario account — **one click fetches it** | an API key |
 | **Your documents** | the project's documents | an open project |
 | **Running now** | the generations under way | an API key |
 | **Recent activity** | what the studio has done and failed to do | an open project |
@@ -95,6 +95,12 @@ is open.
 **Making another image costs no network call.** Under each creation, "Make another one with…"
 reopens the form already filled in: the model, the prompt and the settings are kept beside the
 asset, in the project.
+
+**This is where you fetch, and nowhere else.** Clicking a tile in **Your library** brings the
+asset down into the open project. The shelf can send but not take back: each direction has its own
+door, and they are not the same — see [Assets](07-assets.md). With no project open, or while a
+transfer is running, the tile stays a plain picture and does not respond: there would be nowhere
+to write it.
 
 **A counter leads to its assets.** Clicking the images one opens the Image workspace and sets the
 filter: you land on the images, not on the whole shelf. A kind at zero stays on the row but does
