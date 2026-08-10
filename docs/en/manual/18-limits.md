@@ -58,7 +58,7 @@ Save, Don't save, Cancel — and *Cancel* is what an `⎋` struck without readin
 ### There is no "Open" menu, and none is needed
 
 A picture from the shelf comes **in** — dragged onto the canvas, double-clicked, or chosen with
-the **Image…** tool (`⇧⌘K`): it becomes a layer. See [Image workspace](08-image-workspace.md).
+the **Image…** tool: it becomes a layer. See [Image workspace](08-image-workspace.md).
 
 Reopening a document composed earlier goes through the **Explorer** panel, which lists the
 documents of the project: double-clicking a row opens it, switching workspace if it belongs to

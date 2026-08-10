@@ -28,7 +28,7 @@ nommé d’après l’asset et **déjà actif** : c’est lui que le prochain tr
 |---|---|
 | **Glisser-déposer** l’image sur la toile | l’onglet image ouvert devant vous |
 | **Double-clic** sur l’image dans l’étagère | un onglet image en avant — c’est lui qui la reçoit |
-| L’outil **Image…** (`⇧⌘K`), groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
+| L’outil **Image…**, groupe Formes | rien : il ouvre l’étagère, vous y choisissez |
 
 > Seules les **images du projet** entrent — celles que vous voyez dans l’étagère, générées ou
 > importées. Une image qui n’a pas encore été téléchargée dans le projet n’est pas déposable.
@@ -149,8 +149,12 @@ le document n’a pas changé de taille entre-temps.
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
 | **Recadrage** | `F` | glissez un cadre sur l’image, ajustez-le, puis `⏎` pour rogner |
-| **Section** | `⇧S` | *pas encore disponible* |
-| **Découpe** | `S` | *pas encore disponible* |
+| **Section** | — | *pas encore disponible* |
+| **Découpe** | — | *pas encore disponible* |
+
+> **Ces deux-là n'ont pas de touche, et n'en auront qu'en arrivant.** Le registre des commandes
+> ne porte que les outils qui répondent : un raccourci écrit d'avance serait une intention
+> affichée, pas un geste — c'est la règle du [chapitre 18](18-limites.md).
 
 Le geste se fait en trois temps :
 
@@ -193,7 +197,7 @@ Le cadre ne sort jamais de l’image — un recadrage rogne, il n’agrandit pas
 | **Ellipse** | `O` | Maj pour un cercle |
 | **Polygone** | — | tracé depuis son centre |
 | **Étoile** | — | tracée depuis son centre |
-| **Image…** | `⇧⌘K` | ouvre la bibliothèque, pour poser une image comme calque |
+| **Image…** | — | ouvre la bibliothèque, pour poser une image comme calque |
 
 ### Groupe Dessin
 
