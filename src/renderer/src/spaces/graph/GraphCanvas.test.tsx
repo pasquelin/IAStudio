@@ -201,6 +201,27 @@ describe('the graph canvas', () => {
       expect(screen.getByRole('menuitem', { name: 'Audio' })).toBeInTheDocument()
     })
 
+    // Eight nouns, four of which are the names of model families used everywhere else in the
+    // studio: what the row ADDS to the graph is exactly what the label cannot carry.
+    it('says what each row would add rather than naming it twice', () => {
+      const { container } = canvas({ nodes: [], edges: [], inputKeys: [] })
+      rightClickPane(container)
+
+      const said = (name: string): string | null =>
+        screen.getByRole('menuitem', { name }).getAttribute('data-tooltip-content')
+
+      expect(said('Texte')).toBe(
+        'Un texte que les nœuds suivants liront — un prompt, le plus souvent',
+      )
+      expect(said('Image')).toBe(
+        'Génère une image depuis ses entrées — le modèle se choisit dans le panneau Modèles',
+      )
+      // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
+      for (const row of screen.getAllByRole('menuitem')) {
+        expect(row).not.toHaveAttribute('aria-label')
+      }
+    })
+
     // The position is the pointer's. That it is CONVERTED through the pan and the zoom cannot be
     // proved here — jsdom measures nothing, so the viewport is identity — and is checked on screen.
     it('hands the chosen entry back with the point it was asked for', () => {

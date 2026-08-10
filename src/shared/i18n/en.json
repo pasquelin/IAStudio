@@ -86,7 +86,12 @@
       "ifElse": "Condition",
       "transformText": "Transform",
       "forEach": "Loop",
-      "forEachEnd": "End of loop"
+      "forEachEnd": "End of loop",
+      "textHint": "A piece of text the nodes downstream will read — a prompt, most of the time",
+      "assetHint": "A picture, a video or a sound of the project, fed into the graph",
+      "stickyNoteHint": "A note for whoever reads the graph; it takes part in no run",
+      "approvalHint": "Pauses the run until someone approves what came before",
+      "transformTextHint": "Rewrites the text it receives before passing it on"
     },
     "approve": "Approve",
     "approveHint": "Let the rest of the graph use this result",
@@ -116,7 +121,13 @@
       "image": "Pictures",
       "text": "Texts"
     },
-    "noLoop": "No loop"
+    "noLoop": "No loop",
+    "generators": {
+      "image": "Generates a picture from its inputs — the model is picked in the Models panel",
+      "video": "Generates a video from its inputs — the model is picked in the Models panel",
+      "3d": "Generates a 3D model from its inputs — the model is picked in the Models panel",
+      "audio": "Generates a sound from its inputs — the model is picked in the Models panel"
+    }
   },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
@@ -1898,7 +1909,13 @@
     "audioTake": "Open in the audio editor",
     "imageLayer": "Place as a layer",
     "videoClip": "Add to the montage",
-    "textureChannel": "Use as base colour"
+    "textureChannel": "Use as base colour",
+    "skyboxSourceHint": "Opens the Skies space and sets this picture as the panorama source",
+    "sceneMeshHint": "Opens the 3D scene and adds the model to it",
+    "audioTakeHint": "Opens the audio editor and loads this take into it",
+    "imageLayerHint": "Opens the image document and lays the asset in as a new layer",
+    "videoClipHint": "Opens the montage and adds the asset to it as a clip",
+    "textureChannelHint": "Opens the texture document and fills its base colour channel"
   },
   "prompt": {
     "suggest": "Suggest variants",

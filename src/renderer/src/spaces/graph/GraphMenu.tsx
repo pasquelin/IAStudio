@@ -14,7 +14,8 @@ import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
 import type { CreatableNodeType } from '@/engines/graph/factory'
-import { PALETTE, paletteLabelKey, type PaletteEntry } from './palette'
+import { HINT_RIGHT } from '@/helpers/tooltip'
+import { PALETTE, paletteHintKey, paletteLabelKey, type PaletteEntry } from './palette'
 
 /**
  * A `Record` over the creatable types rather than a lookup with a fallback, and the fallback is
@@ -64,6 +65,7 @@ export function GraphMenu({ at, onClose, onAdd }: GraphMenuProps) {
           )}
           <MenuRow
             label={t(paletteLabelKey(entry))}
+            tip={HINT_RIGHT(t(paletteHintKey(entry)))}
             icon={entry.group === 'input' ? INPUT_ICONS[entry.node] : GENERATOR_ICON}
             onSelect={() => {
               onAdd(entry, screenToFlowPosition(at))
