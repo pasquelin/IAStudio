@@ -901,11 +901,11 @@
     },
     {
       "path": "src/renderer/src/design/Masonry.tsx",
-      "lines": 204,
+      "lines": 205,
       "components": [
         {
           "name": "Masonry",
-          "line": 52,
+          "line": 53,
           "exported": false,
           "props": [
             "columnWidth",
@@ -925,22 +925,22 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 161,
+          "line": 162,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 164,
+          "line": 165,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 177,
+          "line": 178,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 185,
+          "line": 186,
           "text": "style={{"
         }
       ]
@@ -1663,13 +1663,15 @@
     },
     {
       "path": "src/renderer/src/design/Tree.tsx",
-      "lines": 272,
+      "lines": 302,
       "components": [
         {
           "name": "Tree",
-          "line": 88,
+          "line": 102,
           "exported": false,
           "props": [
+            "draggable",
+            "droppable",
             "expandable",
             "expandedIds",
             "nodes",
@@ -1691,17 +1693,17 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 185,
+          "line": 210,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 194,
+          "line": 219,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 206,
+          "line": 231,
           "text": "style={{"
         }
       ]
@@ -2820,11 +2822,11 @@
     },
     {
       "path": "src/renderer/src/panels/explorer/Explorer.tsx",
-      "lines": 154,
+      "lines": 163,
       "components": [
         {
           "name": "Explorer",
-          "line": 38,
+          "line": 39,
           "exported": false,
           "props": [],
           "signature": {
@@ -4951,11 +4953,11 @@
     },
     {
       "path": "src/renderer/src/spaces/video/TimelineCanvas.tsx",
-      "lines": 376,
+      "lines": 377,
       "components": [
         {
           "name": "TimelineCanvas",
-          "line": 43,
+          "line": 44,
           "exported": true,
           "props": [
             "documentId",
