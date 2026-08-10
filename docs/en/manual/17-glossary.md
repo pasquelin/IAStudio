@@ -263,7 +263,8 @@ result lands in your *assets*.
 The seventh *workspace*: a canvas where you place *nodes*, wire them together, and one's output
 becomes the next one's input. A `.graph` document.
 
-It opens, it saves, it does **not run yet** — that is written in
+It opens, it saves, and **it runs**: a button starts the chain, each node leaves when what it
+reads is ready, and **what has not changed is not rerun**. What it still lacks is in
 [What does not exist yet](18-limits.md).
 
 **Group**

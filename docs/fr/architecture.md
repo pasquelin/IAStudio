@@ -349,7 +349,7 @@ src/renderer/src/
 │   ├── audio/      la forme d'onde, ses outils, le décodeur
 │   ├── textures/   les canaux d'un matériau, et leur aperçu répété
 │   ├── skyboxes/   le ciel immersif et ses trois projections à plat
-│   └── graph/      le node editor — il pose et enregistre, il n'exécute pas encore
+│   └── graph/      le node editor — il pose, enregistre et exécute
 ├── panels/       les quinze outils ancrables
 ├── home/         l'accueil et ses quatorze bandes — une page, pas une disposition
 ├── settings/     la fenêtre des réglages, chargée à la demande
@@ -497,8 +497,10 @@ trois chances de ne pas être d’accord sur un redimensionnement ou une libéra
 **Six moteurs, dix dossiers sous `engines/` : les quatre autres ne sont pas des moteurs.**
 `core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, `gpu/` les passes de
 shader et le compteur de frame, et `graph/` — **le seul qui pourrait tromper** — n’est que des
-fonctions : commandes, mutations, sérialisation, validation d’une arête. Le node editor n’a pas
-de moteur parce qu’il n’a rien à dessiner lui-même : `@xyflow/react` rend, et le domaine décide.
+fonctions : commandes, mutations, sérialisation, validation d’une arête, et depuis `f17de270` le
+plan d’exécution et son exécuteur. Le node editor n’a pas de moteur pour autant, parce qu’il n’a
+rien à dessiner lui-même : `@xyflow/react` rend, le domaine décide, et l’exécution n’est qu’un
+ordre de passage calculé puis parcouru.
 
 Celui du son est une paire de modules plutôt qu’une classe — `audio-data.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même

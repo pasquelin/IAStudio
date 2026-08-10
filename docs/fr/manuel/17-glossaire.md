@@ -283,8 +283,9 @@ petite prise à viser.
 Le septième *espace de travail* : une toile où l’on pose des *nœuds*, où on les relie, et où la
 sortie de l’un devient l’entrée du suivant. Un document `.graph`.
 
-Il s’ouvre, il enregistre, il ne **s’exécute pas encore** — c’est écrit au chapitre
-[Ce qui n’existe pas encore](18-limites.md).
+Il s’ouvre, il enregistre, et **il s’exécute** : un bouton lance la chaîne, chaque nœud part
+quand ce qu’il lit est prêt, et **ce qui n’a pas changé n’est pas relancé**. Ce qui lui manque
+est au chapitre [Ce qui n’existe pas encore](18-limites.md).
 
 **Graine** *(seed)*
 Le point de départ du hasard d’une génération. C’est un nombre.

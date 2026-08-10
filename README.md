@@ -47,8 +47,9 @@ without your API credentials ever reaching the browser context.
 
 The unit of work is a **project**: a folder on your disk. The unit of display is a **workspace**:
 seven of them — Image, Video, 3D, Audio, Textures, Skyboxes and Graph — each rearranging the
-panels around what that kind of work needs. The Graph is still under construction: it opens,
-holds nodes and saves them, but does not yet run what it describes.
+panels around what that kind of work needs. The Graph is the newest: it holds nodes, wires them,
+saves them and runs them, reusing whatever has not changed — its logic and loop nodes are still
+to come.
 
 | | |
 |---|---|

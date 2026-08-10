@@ -51,10 +51,11 @@ machine, without sending them anywhere.
 | 12 | [Textures workspace](manual/12-textures-workspace.md) | Judge a material on a lit object |
 | 13 | [Skyboxes workspace](manual/13-skyboxes-workspace.md) | Make a 360° sky and adjust it |
 
-> **The seventh workspace, the Graph, has no chapter yet.** It opens, holds nodes and saves them,
-> but it does not yet run what it describes: describing it like the other six would promise work
-> it cannot do. What it does today is in [chapter 3](manual/03-the-window.md), and its limits in
-> [chapter 18](manual/18-limits.md).
+> **The seventh workspace, the Graph, has no chapter yet.** It opens, holds nodes, wires them,
+> saves them, and **runs them** — each node leaves when what it reads is ready, and what has not
+> changed is not rerun. What it still lacks: the logic, loop and approval nodes, and importing or
+> exporting a workflow. Its chapter comes when it has them. What it does today is in
+> [chapter 3](manual/03-the-window.md), and its limits in [chapter 18](manual/18-limits.md).
 
 ### Appendices
 

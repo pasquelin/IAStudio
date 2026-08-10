@@ -341,7 +341,7 @@ src/renderer/src/
 │   ├── audio/      the waveform, its tools, the decoder
 │   ├── textures/   a material's channels, and their tiled preview
 │   ├── skyboxes/   the immersive sky and its three flat projections
-│   └── graph/      the node editor — it places and saves, it does not run yet
+│   └── graph/      the node editor — it places, saves and runs
 ├── panels/       the fifteen dockable tools
 ├── home/         the home screen and its fourteen bands — a page, not a layout
 ├── settings/     the settings window, loaded on demand
@@ -482,8 +482,9 @@ or a disposal.
 **Six engines, ten folders under `engines/`: the other four are not engines.** `core/` carries the
 shared history, `viewport/` the base of the three 3D views, `gpu/` the shader passes and the frame
 counter, and `graph/` — **the one that could mislead** — is functions only: commands, mutations,
-serialisation, edge validation. The node editor has no engine because it has nothing of its own to
-draw: `@xyflow/react` renders, and the domain decides.
+serialisation, edge validation, and since `f17de270` the run plan and its executor. The node editor
+still has no engine, because it has nothing of its own to draw: `@xyflow/react` renders, the domain
+decides, and running is an order of passage computed and then walked.
 
 The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
