@@ -46,6 +46,8 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
         emptyLabel={t('inspector.studio')}
         chooseLabel={t('inspector.chooseSky')}
         clearLabel={t('inspector.clearSky')}
+        emptyHint={t('inspector.studioHint')}
+        optionHint={t('inspector.pickSkyHint')}
       />
     </PropertySection>
   )

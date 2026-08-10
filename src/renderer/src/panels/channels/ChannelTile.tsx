@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { assetUrl } from '@shared/domain/asset'
 import type { PbrChannel } from '@shared/domain/texture'
 import { cn } from '@/helpers/cn'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
 import { FOCUS_RING, rowSkin } from '@/design/styles'
 import { MediaTile } from '@/design/MediaTile'
 import { MenuButton } from '@/design/MenuButton'
@@ -155,6 +155,7 @@ export function ChannelTile({
                     })}
                     icon={mdiCogOutline}
                     disabled={derivation.state !== 'ready'}
+                    tip={HINT_RIGHT(t('texture.deriveHint'))}
                     onSelect={() => {
                       derivation.run()
                       close()
@@ -168,6 +169,7 @@ export function ChannelTile({
               icon={mdiDeleteOutline}
               checked={map === null}
               tick="one-of"
+              tip={HINT_RIGHT(t('texture.clearChannelHint'))}
               onSelect={() => {
                 onClear()
                 close()
@@ -181,6 +183,7 @@ export function ChannelTile({
                     label={t('texture.noPicture')}
                     icon={mdiImageOffOutline}
                     disabled
+                    tip={HINT_RIGHT(t('texture.noPictureHint'))}
                     onSelect={() => undefined}
                   />,
                 ]
@@ -191,6 +194,7 @@ export function ChannelTile({
                     icon={mdiFileImageOutline}
                     checked={map?.assetId === option.id}
                     tick="one-of"
+                    tip={HINT_RIGHT(t('texture.pickChannelHint'))}
                     onSelect={() => {
                       onPick(option.id)
                       close()
