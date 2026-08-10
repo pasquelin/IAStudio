@@ -115,6 +115,7 @@
     "failed_one": "{{count, number}} failure",
     "failed_other": "{{count, number}} failures",
     "open": "Show generations",
+    "openHint": "Opens the list of generations, running and finished alike",
     "cost": "{{units}} CU",
     "status": {
       "queued": "Queued",
@@ -127,6 +128,7 @@
   },
   "activity": {
     "open": "Show the journal",
+    "openHint": "Opens the log — and marks everything in it as read",
     "none": "Nothing to report.",
     "noMatch": "Nothing matches this filter.",
     "failures_one": "{{count, number}} failure",
@@ -787,6 +789,7 @@
     "use": "Use this account",
     "none": "No account yet. Add an API key to reach the Scenario library.",
     "switch": "Scenario account",
+    "switchHint": "Pick the API key to generate on, or add one",
     "manage": "Manage accounts…",
     "notConnected": "Not connected",
     "fromEnvFile": "secrets/.env",

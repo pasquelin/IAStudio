@@ -6,6 +6,7 @@ import { Flyout } from '@/design/Flyout'
 import { ProgressBar } from '@/design/ProgressBar'
 import { UiIcon } from '@/design/UiIcon'
 import { STATUS_BUTTON } from '@/design/styles'
+import { TIP_TOP } from '@/helpers/tooltip'
 import { Jobs } from '@/panels/jobs/Jobs'
 import { useJobs } from '@/stores/jobs'
 
@@ -49,7 +50,7 @@ export function JobsStatus() {
       <button
         ref={setAnchor}
         type="button"
-        aria-label={t('jobs.open')}
+        {...TIP_TOP(t('jobs.open'), false, t('jobs.openHint'))}
         aria-expanded={open}
         onClick={() => setOpen(current => !current)}
         className={STATUS_BUTTON}

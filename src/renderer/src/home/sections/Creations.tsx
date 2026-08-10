@@ -6,6 +6,7 @@ import { Carousel } from '@/design/Carousel'
 import { FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
@@ -107,7 +108,7 @@ function Recreate({
     <button
       type="button"
       onClick={() => recreate(asset.type, generation)}
-      aria-label={t('home.creations.recreate', { model })}
+      {...TIP_LEFT(t('home.creations.recreate', { model }), false, generation.prompt || undefined)}
       className={cn(
         'border-border bg-panel/90 text-muted hover:text-text absolute top-1 right-1 z-10',
         'flex size-6 cursor-pointer items-center justify-center rounded-full border',

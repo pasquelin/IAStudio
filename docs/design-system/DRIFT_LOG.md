@@ -11,17 +11,13 @@ impossible.
 
 | P | Fichier:ligne | Règle | Preuve |
 |---|---|---|---|
-| P0 | src/renderer/src/app/AccountSelect.tsx:40 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/app/ActivityStatus.tsx:30 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/app/JobsStatus.tsx:49 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/design/Carousel.tsx:205 | P0-button-tooltip | point de page, `aria-label` seul |
-| P0 | src/renderer/src/design/Carousel.tsx:244 | P0-button-tooltip | flèche de rail, `aria-label` seul |
-| P0 | src/renderer/src/home/ShelfCard.tsx:104 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/home/sections/Creations.tsx:107 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/home/sections/Favorites.tsx:71 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/home/sections/Spark.tsx:84 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/panels/channels/ChannelTile.tsx:103 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
 | P0 | src/renderer/src/settings/ShortcutsSettings.tsx:113 | P0-button-tooltip | libellé visible (le raccourci), aucune description |
+
+## Peau recopiée
+
+| P | Fichier:ligne | Règle | Preuve |
+|---|---|---|---|
+| P1 | src/renderer/src/home/sections/Creations.tsx:110 | P1-local-skin | les trois lignes de `SHELF_OVERLAY` recopiées à la main, arrivées avec `feat/accueil` après l'extraction du 2026-08-10 |
 
 ## Boutons à libellé visible — l'infobulle doit expliquer, pas répéter
 
@@ -37,7 +33,6 @@ impossible.
 | P0 | src/renderer/src/dictation/DictationStatus.tsx:68 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/dictation/DictationStatus.tsx:83 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/home/HomeView.tsx:96 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/ShelfCard.tsx:58 | P0-button-tooltip | vignette cliquable, aucune description |
 | P0 | src/renderer/src/home/sections/ByMode.tsx:52 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/home/sections/Explore.tsx:89 | P0-button-tooltip | onglet, aucune description |
 | P0 | src/renderer/src/home/sections/Projects.tsx:65 | P0-button-tooltip | libellé visible, aucune description |

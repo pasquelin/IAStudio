@@ -6,6 +6,7 @@ import { Carousel } from '@/design/Carousel'
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
 import { useFavorites } from '@/stores/favorites'
 import { useProject } from '@/stores/project'
@@ -71,7 +72,7 @@ function Unpin({ recipe }: { recipe: FavoriteRecipe }) {
     <button
       type="button"
       onClick={() => void useFavorites.getState().unpin(recipe.id)}
-      aria-label={t('home.favorites.unpin', { name: recipe.label })}
+      {...TIP_LEFT(t('home.favorites.unpin', { name: recipe.label }))}
       className={cn(
         SHELF_OVERLAY,
         'text-muted hover:text-text top-1 right-1 size-6 focus-visible:opacity-100',

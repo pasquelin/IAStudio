@@ -107,8 +107,7 @@ export function ChannelTile({
         disabled={!map}
         // Named outright: the accessible name would otherwise be the tile's caption, which says
         // which channel this is and nothing about what pressing it does.
-        aria-label={label}
-        title={label}
+        {...TIP_LEFT(label)}
         onClick={onInspect}
         className={cn(
           'absolute inset-0 cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',

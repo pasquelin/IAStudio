@@ -6,6 +6,7 @@ import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { activeAccount, useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
@@ -40,7 +41,7 @@ export function AccountSelect() {
       <button
         ref={setAnchor}
         type="button"
-        aria-label={t('accounts.switch')}
+        {...TIP_BOTTOM(t('accounts.switch'), false, t('accounts.switchHint'))}
         // Only when there is one: with nothing stored the button opens the settings outright,
         // and announcing a menu it will never show sends a screen reader looking for it.
         aria-haspopup={flyout.hasFlyout ? 'menu' : undefined}

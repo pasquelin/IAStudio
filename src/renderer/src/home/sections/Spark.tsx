@@ -6,6 +6,7 @@ import { Button } from '@/design/Button'
 import { UiIcon } from '@/design/UiIcon'
 import { BUTTON_BASE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { openGeneratorOn } from '@/helpers/generation'
 import { getBridge } from '@/services/bridge'
 import { useModels } from '@/stores/models'
@@ -83,8 +84,7 @@ function Idea({ suggestion, modelId }: IdeaProps) {
   return (
     <button
       type="button"
-      title={suggestion.rationale}
-      aria-label={t('home.spark.use', { prompt: suggestion.text })}
+      {...TIP_BOTTOM(t('home.spark.use', { prompt: suggestion.text }), false, suggestion.rationale)}
       onClick={() => openGeneratorOn('image', modelId, suggestion.parameters)}
       // The docks' own button chrome, rather than a fourth hand-written copy of it — laid out
       // from the top, since an idea is two lines of prose beside a glyph.

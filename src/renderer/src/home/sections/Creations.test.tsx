@@ -114,6 +114,20 @@ describe('the creations shelf', () => {
       expect(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ })).toBeVisible()
       expect(screen.getByRole('button', { name: 'En refaire une avec FLUX.2' })).toBeVisible()
     })
+
+    /**
+     * The prompt is the one thing the picture cannot show, and the corner button was the only
+     * control on this shelf carrying none of it. The name stays the verb; the prompt is what
+     * the tooltip adds.
+     */
+    it('carries the prompt of the creation it would remake', async () => {
+      install([creation()])
+      render(<Creations />)
+
+      const again = await screen.findByRole('button', { name: 'En refaire une avec FLUX.2' })
+      expect(again).toHaveAttribute('data-tooltip-content', 'a mossy boulder')
+      expect(again).toHaveAttribute('data-tooltip-place', 'left')
+    })
   })
 
   /**
