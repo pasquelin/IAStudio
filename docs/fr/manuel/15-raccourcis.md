@@ -109,6 +109,27 @@ s’il y en a une, la première cellule visible sinon.
 **Dans l’étagère, la sélection se fait aussi à plusieurs** — `⌘` pioche, `Maj` étend. Voir
 [Choisir plusieurs assets](07-assets.md#choisir-plusieurs-assets).
 
+### Parcourir un menu au clavier
+
+Les menus se traversent comme les listes, à une différence près : **ils prennent le focus en
+s’ouvrant**, sur leur première ligne. Vous n’avez rien à faire pour y entrer.
+
+| Touche | Effet |
+|---|---|
+| `↑` `↓` | la ligne précédente, la suivante — en boucle aux deux bouts |
+| `Début` `Fin` | la première ligne, la dernière |
+| `Entrée` | choisit la ligne |
+| `Échap` | ferme, et rend le focus là où il était |
+| `Tab` | ferme aussi — un menu n’est pas un endroit où l’on tabule |
+
+**Les lignes grisées sont sautées.** Une ligne qu’on ne peut pas choisir à la souris ne se prend
+pas au clavier non plus, et s’y arrêter donnerait un parcours qui semble bloqué.
+
+**Une ligne cochée dit ce que sa coche veut dire.** Certaines sont des alternatives — le mode
+d’un outil, le compte actif, la taille d’une bande de l’accueil : en cocher une décoche les
+autres. D’autres se règlent chacune pour soi, comme les deux cadenas d’un calque. Un lecteur
+d’écran annonce les premières comme des boutons radio et les secondes comme des cases à cocher.
+
 ### Ranger la barre des espaces
 
 | Touche | Effet |

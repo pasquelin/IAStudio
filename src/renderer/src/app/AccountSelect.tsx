@@ -72,6 +72,7 @@ export function AccountSelect() {
               label={account.name}
               icon={mdiCloudOutline}
               checked={account.active}
+              tick="one-of"
               onSelect={() => {
                 flyout.close()
                 void activate(account.id)

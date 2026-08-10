@@ -167,6 +167,7 @@ export function ChannelTile({
               label={t('texture.clearChannel')}
               icon={mdiDeleteOutline}
               checked={map === null}
+              tick="one-of"
               onSelect={() => {
                 onClear()
                 close()
@@ -189,6 +190,7 @@ export function ChannelTile({
                     label={option.name}
                     icon={mdiFileImageOutline}
                     checked={map?.assetId === option.id}
+                    tick="one-of"
                     onSelect={() => {
                       onPick(option.id)
                       close()

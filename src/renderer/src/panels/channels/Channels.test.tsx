@@ -78,7 +78,7 @@ describe('Channels', () => {
     render(<Channels />)
 
     await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Brique/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Brique/ }))
 
     expect(channels().normal?.assetId).toBe('img-1')
     // And only that one: eight tiles offering the same list is how the wrong slot gets filled.
@@ -95,7 +95,7 @@ describe('Channels', () => {
     render(<Channels />)
 
     await userEvent.click(screen.getByRole('button', { name: /Ce que contient Rugosité/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Vider ce canal/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Vider ce canal/ }))
 
     expect(channels().roughness).toBeUndefined()
   })
@@ -105,8 +105,8 @@ describe('Channels', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Ce que contient Rugosité/ }))
 
-    expect(await screen.findByRole('menuitem', { name: /Vider ce canal/ })).toBeInTheDocument()
-    expect(await screen.findByRole('menuitem', { name: /Brique/ })).toBeInTheDocument()
+    expect(await screen.findByRole('menuitemradio', { name: /Vider ce canal/ })).toBeInTheDocument()
+    expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
   })
 
   /**
@@ -284,7 +284,8 @@ describe('Channels', () => {
 
       await open('Normale')
 
-      const rows = await screen.findAllByRole('menuitem')
+      await screen.findByRole('menuitem', { name: /Calculer depuis Hauteur/ })
+      const rows = [...document.querySelectorAll('[role^="menuitem"]')]
       expect(rows[0]).toHaveAccessibleName(/Calculer depuis Hauteur/)
     })
 
@@ -362,7 +363,7 @@ describe('Channels', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))
 
-      expect(screen.queryByRole('menuitem', { name: /Distante/ })).toBeNull()
+      expect(screen.queryByRole('menuitemradio', { name: /Distante/ })).toBeNull()
     })
 
     /**
@@ -382,8 +383,8 @@ describe('Channels', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))
 
-      expect(await screen.findByRole('menuitem', { name: /Coucher/ })).toBeInTheDocument()
-      expect(await screen.findByRole('menuitem', { name: /Rouille/ })).toBeInTheDocument()
+      expect(await screen.findByRole('menuitemradio', { name: /Coucher/ })).toBeInTheDocument()
+      expect(await screen.findByRole('menuitemradio', { name: /Rouille/ })).toBeInTheDocument()
     })
 
     /** A button that refuses without a word is worse than a menu that says why it is empty. */
@@ -414,7 +415,7 @@ describe('Channels', () => {
       render(<Channels />)
 
       await userEvent.click(screen.getByRole('button', { name: /Ce que contient Normale/ }))
-      await userEvent.click(await screen.findByRole('menuitem', { name: /Vider ce canal/ }))
+      await userEvent.click(await screen.findByRole('menuitemradio', { name: /Vider ce canal/ }))
 
       expect(channels().normal).toBeUndefined()
     })

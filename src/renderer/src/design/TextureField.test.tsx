@@ -43,7 +43,7 @@ describe('TextureField', () => {
     const { onChange } = renderField()
 
     await userEvent.click(screen.getByRole('button', { name: /Choisir une texture/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Brick/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Brick/ }))
 
     expect(onChange).toHaveBeenCalledWith('tex-1')
   })
@@ -53,7 +53,7 @@ describe('TextureField', () => {
     const { onChange } = renderField('tex-1')
 
     await userEvent.click(screen.getByRole('button', { name: /Choisir une texture/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Aucune/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Aucune/ }))
 
     expect(onChange).toHaveBeenCalledWith(null)
   })

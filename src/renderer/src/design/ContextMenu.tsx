@@ -2,6 +2,7 @@ import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
+import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
 
 export type ContextMenuProps = {
@@ -27,6 +28,10 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
 
   // A press inside is a row being chosen; the row closes the menu itself.
   useDismiss(onClose, menu)
+
+  // Opened from the keyboard, the menu used to leave focus where it was — and it portals to the
+  // end of `body`, so reaching it meant tabbing through the whole document.
+  useMenuKeys(menu, onClose)
 
   // Placed through a callback ref rather than state, as `Flyout` does: measuring in an effect
   // would draw the menu once off-screen and then move it. Memoised because React re-runs a

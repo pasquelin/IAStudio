@@ -344,7 +344,7 @@ describe('how the scene is looked at', () => {
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /Rendu/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /^Filaire/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Filaire/ }))
 
     expect(setDisplayMode).toHaveBeenCalledWith('wireframe')
   })

@@ -122,7 +122,7 @@ describe('LayersPanel', () => {
       render(<LayersPanel />)
       await userEvent.click(screen.getByRole('button', { name: /^Verrous/ }))
 
-      await userEvent.click(await screen.findByRole('menuitem', { name: 'Position' }))
+      await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'Position' }))
 
       expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.locked).toEqual({
         pixels: false,
