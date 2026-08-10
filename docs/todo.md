@@ -1026,11 +1026,24 @@ publication.
 
 > ### ⏳ Le lot C3 est écrit et **attend sa revue** — ne pas le refaire
 >
-> **Branche `feat/graph-compile`, worktree `.claude/worktrees/graph-compile`**, deux commits
-> (`4b647d54` et `32f2579b`), `pnpm validate` vert : 462 fichiers, 5922 tests. Il n'est **pas
-> fusionné** parce que les deux agents de revue adverse n'avaient pas rendu leur rapport quand le
-> contexte du tour s'est rempli — et fusionner sans les attendre a coûté trois défauts bloquants
-> au lot C2, le tour d'avant.
+> **Branche `feat/graph-compile`, worktree `.claude/worktrees/graph-compile`**, cinq commits,
+> **rebasée sur `develop`**, `pnpm validate` vert : 463 fichiers, 5932 tests. La fusion serait
+> sans conflit (`git merge --no-commit --no-ff` essayé puis annulé).
+>
+> **Il n'est toujours pas fusionné, et ce n'est plus une question de contexte : le mécanisme de
+> revue est en panne.** Deux générations d'agents adverses, quatre au total, n'ont rendu aucun
+> contenu — seulement des notifications « disponible », malgré des questions numérotées. C'est
+> une décision qui revient à l'humain : soit il lance `/code-review` lui-même sur la branche,
+> soit il autorise une fusion sans revue adverse en connaissance de cause. **Le lot C2 a montré
+> ce que la seconde option coûte : trois défauts bloquants trouvés après coup.**
+>
+> **Ce qui a quand même été fait à la place, et qui n'est pas rien** : le lot est vérifié à
+> l'écran de bout en bout (la ligne d'état passe de « Aucune sortie marquée » à « 1 étape »,
+> l'icône apparaît sur l'en-tête du nœud), le harnais de mutation a tourné (6 sur 10 mordent, 3
+> survivantes inobservables et expliquées, 1 refusée), et ma propre relecture a trouvé **deux
+> vrais défauts, tous deux corrigés** : un commentaire qui prétendait régler ce que le débounce
+> ne règle pas, et une étiquette d'interrupteur tronquée en « Sortie du … » sur un canvas dont
+> chaque nœud porte déjà un port « Sortie ».
 >
 > **Ce qu'il contient** : la case « Sortie du workflow » dans l'inspecteur (rien n'écrivait
 > `data.isOutput`, sans quoi le flow compilé est vide), l'icône sur la face du nœud,
