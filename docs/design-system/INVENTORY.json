@@ -559,7 +559,7 @@
     },
     {
       "path": "src/renderer/src/design/Carousel.tsx",
-      "lines": 262,
+      "lines": 261,
       "components": [
         {
           "name": "Carousel",
@@ -2225,7 +2225,7 @@
     },
     {
       "path": "src/renderer/src/home/sections/Favorites.tsx",
-      "lines": 86,
+      "lines": 85,
       "components": [
         {
           "name": "Favorites",

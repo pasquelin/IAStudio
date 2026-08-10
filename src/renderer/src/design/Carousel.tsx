@@ -172,8 +172,11 @@ export function Carousel<T extends { id: string }>({
         tabIndex={0}
         onScroll={measure}
         onKeyDown={onKeyDown}
-        style={{ height: itemHeight, scrollSnapType: 'x proximity' }}
-        className={cn('overflow-x-auto overflow-y-hidden scroll-smooth', FOCUS_RING)}
+        style={{ height: itemHeight }}
+        className={cn(
+          'snap-x snap-proximity overflow-x-auto overflow-y-hidden scroll-smooth',
+          FOCUS_RING,
+        )}
       >
         <div style={{ width: virtualizer.getTotalSize() }} className="relative h-full">
           {virtualItems.map(virtual => {
@@ -183,12 +186,8 @@ export function Carousel<T extends { id: string }>({
             return (
               <div
                 key={item.id}
-                style={{
-                  transform: `translateX(${virtual.start}px)`,
-                  width: itemWidth,
-                  scrollSnapAlign: 'start',
-                }}
-                className="absolute top-0 left-0 h-full"
+                style={{ transform: `translateX(${virtual.start}px)`, width: itemWidth }}
+                className="absolute top-0 left-0 h-full snap-start"
               >
                 {renderCard(item)}
               </div>
