@@ -126,11 +126,15 @@ export function whenSettled(jobId: string, signal?: AbortSignal): Promise<Job | 
 
   const held = answer(useJobs.getState().jobs)
   if (held !== undefined) return Promise.resolve(held)
-  // Asked after the replica, not before: a job that has already succeeded has assets to hand
-  // back, and a stop pressed a moment later must not turn a finished generation into nothing.
+  // Asked after the replica, not before: a job that has already stopped HAS an answer, and
+  // reporting none would invent an absence. What the caller then does with a run it has given up
+  // on is its own business — `executor.ts` drops the values, deliberately and by its own comment.
   if (signal?.aborted) return Promise.resolve(null)
 
   return new Promise(resolve => {
+    // `done` closes over `stop`, assigned below: zustand never calls a subscriber synchronously,
+    // so nothing can read it before it exists. Moving the abort listener above the subscription
+    // would break that, inside a promise executor, where the ReferenceError has nowhere to go.
     const done = (settled: Job | null): void => {
       stop()
       signal?.removeEventListener('abort', onAbort)
