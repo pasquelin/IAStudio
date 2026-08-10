@@ -3,8 +3,10 @@ import {
   mdiHandBackRightOutline,
   mdiMagnifyMinusOutline,
   mdiMagnifyPlusOutline,
+  mdiPlay,
   mdiPlus,
   mdiRedo,
+  mdiStop,
   mdiUndo,
 } from '@mdi/js'
 import type { ToolbarItem } from '@/design/Toolbar'
@@ -12,11 +14,13 @@ import type { ToolbarItem } from '@/design/Toolbar'
 /** What the pointer does on the pane: pick things, or push the view around. */
 export type GraphMode = 'select' | 'pan'
 
-export type GraphToolId = 'add' | GraphMode | 'undo' | 'redo' | 'zoomIn' | 'zoomOut'
+export type GraphToolId = 'run' | 'add' | GraphMode | 'undo' | 'redo' | 'zoomIn' | 'zoomOut'
 
 export type GraphToolbarState = {
   canUndo: boolean
   canRedo: boolean
+  /** The same button, and deliberately: a run and its stop are one place to look, not two. */
+  running: boolean
 }
 
 /**
@@ -28,13 +32,20 @@ export type GraphToolbarState = {
  * above puts them in the middle. Their disabled state is what the pair would have given, and
  * `ToolbarItem` carries it.
  */
-export function graphTools({ canUndo, canRedo }: GraphToolbarState): ToolbarItem[] {
+export function graphTools({ canUndo, canRedo, running }: GraphToolbarState): ToolbarItem[] {
   return [
+    {
+      id: 'run',
+      labelKey: running ? 'graphTools.stop' : 'graphTools.run',
+      descriptionKey: running ? 'graphTools.stopHint' : 'graphTools.runHint',
+      icon: running ? mdiStop : mdiPlay,
+    },
     {
       id: 'add',
       labelKey: 'graphTools.add',
       descriptionKey: 'graphTools.addHint',
       icon: mdiPlus,
+      separatorBefore: true,
     },
     {
       id: 'select',

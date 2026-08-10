@@ -1,42 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
-import { textNode as text } from './graph-fixtures'
-import { handleId } from './handles'
+import type { GraphEdge, GraphState } from '@shared/domain/graph'
+import { graphOf, modelNode as model, textNode as text, wire } from './graph-fixtures'
 import { moveNode, updateNodeData } from './mutations'
 import { planGraph, type GraphPlan, type GraphPlanNode } from './plan'
 import { parseGraph } from './serialize'
-
-/** A generator node with one prompt port, named as `modelPorts` names one: by the field's key. */
-function model(id: string, form: Readonly<Record<string, unknown>> = {}): GraphNode {
-  return {
-    id,
-    type: 'model',
-    position: { x: 0, y: 0 },
-    data: {
-      modelId: 'model_flux',
-      form,
-      inputHandles: [{ id: handleId(id, 'source', 'prompt'), name: 'prompt', type: 'prompt' }],
-      outputHandles: [{ id: handleId(id, 'target', 'image'), name: 'output', type: 'image' }],
-    },
-  }
-}
-
-/** `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention. */
-function wire(consumer: string, port: string, provider: string, from: string): GraphEdge {
-  return {
-    id: `${provider}--TO--${consumer}`,
-    source: consumer,
-    sourceHandle: handleId(consumer, 'source', port),
-    target: provider,
-    targetHandle: handleId(provider, 'target', from),
-  }
-}
-
-const graphOf = (nodes: readonly GraphNode[], edges: readonly GraphEdge[]): GraphState => ({
-  nodes,
-  edges,
-  inputKeys: [],
-})
 
 /** The chain the plan is judged on: a text node feeds a generator, which feeds another. */
 function chain(prompt = 'a knight', last: Readonly<Record<string, unknown>> = {}): GraphState {

@@ -1,5 +1,6 @@
 import type { Edge, EdgeChange, Node, NodeChange } from '@xyflow/react'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
+import type { GraphNodeRun } from '@/engines/graph/executor'
 
 /**
  * The one file that knows what React Flow puts on the objects it is handed.
@@ -16,11 +17,22 @@ import type { GraphNode, GraphState } from '@shared/domain/graph'
  */
 export type CanvasNode = Node<Record<string, unknown>>
 
-const canvasNodeOf = (node: GraphNode, selected: boolean): CanvasNode => ({
+/**
+ * Where a node's run state rides down to its face, since React Flow gives a node no slot of its
+ * own besides `data`. Spelled apart from anything `editorInfo` carries, and one-way only: this
+ * object is what React Flow renders, never what goes back to the store.
+ */
+export const RUN_STATE_KEY = 'runState'
+
+const canvasNodeOf = (
+  node: GraphNode,
+  selected: boolean,
+  run: GraphNodeRun | undefined,
+): CanvasNode => ({
   id: node.id,
   type: node.type,
   position: node.position,
-  data: { ...node.data },
+  data: { ...node.data, [RUN_STATE_KEY]: run },
   selected,
   ...(node.width === undefined ? {} : { width: node.width }),
   ...(node.height === undefined ? {} : { height: node.height }),
@@ -32,7 +44,10 @@ const canvasNodeOf = (node: GraphNode, selected: boolean): CanvasNode => ({
  * rather than a ref, because a ref may not be written during a render — and this is a pure
  * function of its inputs, not state of any component.
  */
-const CACHE = new WeakMap<GraphNode, { selected: boolean; canvas: CanvasNode }>()
+const CACHE = new WeakMap<
+  GraphNode,
+  { selected: boolean; run: GraphNodeRun | undefined; canvas: CanvasNode }
+>()
 
 /**
  * Rebuilds only the nodes that changed, and hands the others back by reference.
@@ -41,15 +56,23 @@ const CACHE = new WeakMap<GraphNode, { selected: boolean; canvas: CanvasNode }>(
  * makes it drop that node's measurements and re-subscribe its `ResizeObserver`. Mapping the whole
  * list afresh does that to EVERY node on every frame of a drag — dozens of observer churns a
  * frame on the UI thread, for the one node that actually moved.
+ *
+ * A run reports node by node, so the same rule earns its keep a second time: one node turning
+ * green must not rebuild the twenty around it.
  */
-export function canvasNodesOf(graph: GraphState, selected: ReadonlySet<string>): CanvasNode[] {
+export function canvasNodesOf(
+  graph: GraphState,
+  selected: ReadonlySet<string>,
+  runs: Readonly<Record<string, GraphNodeRun>> = {},
+): CanvasNode[] {
   return graph.nodes.map(node => {
     const isSelected = selected.has(node.id)
+    const run = runs[node.id]
     const cached = CACHE.get(node)
-    if (cached && cached.selected === isSelected) return cached.canvas
+    if (cached && cached.selected === isSelected && cached.run === run) return cached.canvas
 
-    const canvas = canvasNodeOf(node, isSelected)
-    CACHE.set(node, { selected: isSelected, canvas })
+    const canvas = canvasNodeOf(node, isSelected, run)
+    CACHE.set(node, { selected: isSelected, run, canvas })
     return canvas
   })
 }

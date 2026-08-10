@@ -2,14 +2,60 @@ import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeProps } from '@xyflow/react'
 import type { GraphHandleInput, GraphHandleOutput, GraphNodeType } from '@shared/domain/graph'
+import { isRecord } from '@shared/guards'
+import {
+  GRAPH_RUN_FAILURES,
+  GRAPH_RUN_STATUSES,
+  type GraphNodeRun,
+  type GraphRunStatus,
+} from '@/engines/graph/executor'
+import type { StatusTone } from '@/design/ProgressRow'
 import { cn } from '@/helpers/cn'
+import { RUN_STATE_KEY } from './adapter'
 import { NODE_LABEL_KEYS } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
+
+/** How each state reads. The colour stays in the design system, as `ProgressRow` keeps it. */
+const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
+  idle: 'muted',
+  running: 'accent',
+  cached: 'muted',
+  done: 'success',
+  failed: 'danger',
+}
+
+const TONE_CLASS: Record<StatusTone, string> = {
+  muted: 'text-muted',
+  accent: 'text-accent',
+  success: 'text-success',
+  danger: 'text-danger',
+}
+
+/**
+ * What a node says about the run it is in, in the header where its type would otherwise sit.
+ *
+ * A failure names its own reason: "failed" alone sends the user to the jobs panel for a node that
+ * never reached it — a loop, a missing model and a type this milestone cannot run yet all read
+ * the same otherwise.
+ */
+function RunBadge({ run }: { run: GraphNodeRun }) {
+  const { t } = useTranslation()
+  if (run.status === 'idle') return null
+
+  const key = run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
+
+  return (
+    <span role="status" className={cn('shrink-0 text-[10px]', TONE_CLASS[RUN_TONE[run.status]])}>
+      {t(key)}
+    </span>
+  )
+}
 
 /** Home-made, like the whole dock: React Flow's own node carries hex values of its own. */
 function NodeShell({
   title,
   kind,
+  run,
   selected,
   inputs,
   outputs,
@@ -17,6 +63,7 @@ function NodeShell({
 }: {
   title: string
   kind: string
+  run: GraphNodeRun | undefined
   selected: boolean
   inputs: readonly GraphHandleInput[]
   outputs: readonly GraphHandleOutput[]
@@ -31,9 +78,15 @@ function NodeShell({
     >
       <header className="border-border flex items-baseline justify-between gap-2 border-b px-2 py-1">
         <span className="truncate text-[11px]">{title}</span>
-        {/* Only when it says something the title does not: a node named after its own type would
-            otherwise read the same word twice, once translated and once not. */}
-        {kind !== title && <span className="text-muted shrink-0 text-[10px]">{kind}</span>}
+        {/* The run takes the corner while there is one to report: what a node is doing outranks
+            what it is, and the two side by side crowd a header 40 px wide. */}
+        {run && run.status !== 'idle' ? (
+          <RunBadge run={run} />
+        ) : (
+          // Only when it says something the title does not: a node named after its own type would
+          // otherwise read the same word twice, once translated and once not.
+          kind !== title && <span className="text-muted shrink-0 text-[10px]">{kind}</span>
+        )}
       </header>
 
       {children && <div className="px-2 py-1">{children}</div>}
@@ -54,11 +107,28 @@ type NodeData = {
   modelId?: unknown
   inputHandles?: unknown
   outputHandles?: unknown
+  /** Not `editorInfo` data: the adapter writes it on the way down — see `RUN_STATE_KEY`. */
+  [RUN_STATE_KEY]?: unknown
 }
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '')
 
 const asHandles = <T,>(value: unknown): readonly T[] => (Array.isArray(value) ? value : [])
+
+/**
+ * The run state the adapter put on the node, if any. Read through a guard like everything else
+ * off `data`: React Flow types it as a free record, and a graph read off a file fills it too.
+ */
+function asRun(value: unknown): GraphNodeRun | undefined {
+  if (!isRecord(value)) return undefined
+
+  const status = GRAPH_RUN_STATUSES.find(known => known === value.status)
+  if (status === undefined) return undefined
+  if (status !== 'failed') return { status }
+
+  const failure = GRAPH_RUN_FAILURES.find(known => known === value.failure)
+  return failure ? { status, failure } : undefined
+}
 
 /** The key naming a type, or the type itself — i18next hands a missing key straight back. */
 const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
@@ -82,6 +152,7 @@ function nodeOf(
       <NodeShell
         title={asText(fields.title) || t(labelOf(drawn))}
         kind={type}
+        run={asRun(fields[RUN_STATE_KEY])}
         selected={selected === true}
         inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
         outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}
@@ -145,6 +216,7 @@ const PlainNode = memo(function PlainNode({ data, selected, type }: NodeProps) {
     <NodeShell
       title={asText(fields.title) || type}
       kind={type}
+      run={asRun(fields[RUN_STATE_KEY])}
       selected={selected === true}
       inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
       outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}

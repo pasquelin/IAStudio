@@ -17,6 +17,7 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import type { PaletteEntry } from './palette'
 import { useDocuments } from '@/stores/documents'
+import { runOf, useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { useSelection } from '@/stores/selection'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -189,6 +190,16 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const undo = useCallback(() => useGraphs.getState().undo(documentId), [documentId])
   const redo = useCallback(() => useGraphs.getState().redo(documentId), [documentId])
 
+  const running = useGraphRuns(state => runOf(state, documentId).running)
+  const runs = useGraphRuns(state => runOf(state, documentId).nodes)
+
+  /** One button for the pair, so what it does is read off what the graph is doing right now. */
+  const onRun = useCallback(() => {
+    const store = useGraphRuns.getState()
+    if (runOf(store, documentId).running) return store.stop(documentId)
+    void store.start(documentId)
+  }, [documentId])
+
   const run = useCallback(
     (command: CommandId): void => {
       if (command === 'graph.undo') return undo()
@@ -212,8 +223,11 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onSelectNodes={onSelectNodes}
       onUndo={undo}
       onRedo={redo}
+      onRun={onRun}
       canUndo={canUndo}
       canRedo={canRedo}
+      runs={runs}
+      running={running}
     />
   )
 }

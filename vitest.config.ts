@@ -85,7 +85,10 @@ export default defineConfig({
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
         // fallback arm of a `Map.get` that a topological order makes unreachable, which
         // `noUncheckedIndexedAccess` requires anyway.
-        'src/renderer/src/engines/graph/**': { statements: -18, branches: -24 },
+        // The executor added exactly one of each, and it is that same arm a third time: the node
+        // behind an id the plan just handed back, which cannot be missing from the graph the plan
+        // was built on.
+        'src/renderer/src/engines/graph/**': { statements: -19, branches: -25 },
         // Both covered whole: the diagnostics channel is the studio's only trace of a failure
         // that has no surface, and a branch of it nobody exercises is a failure nobody would
         // ever read.
