@@ -27,7 +27,7 @@ named after the asset and **already active**: it is the one the next stroke will
 |---|---|
 | **Drag and drop** the picture onto the canvas | the image tab open in front of you |
 | **Double-click** the picture in the shelf | an image tab in front — it is the one that receives it |
-| The **Image…** tool (`⇧⌘K`), Shapes group | nothing: it opens the shelf, you pick there |
+| The **Image…** tool, Shapes group | nothing: it opens the shelf, you pick there |
 
 > Only **pictures of the project** come in — the ones showing in the shelf, generated or
 > imported. A picture not yet downloaded into the project cannot be dropped.
@@ -143,8 +143,12 @@ it, as long as the document has not changed size in between.
 | Tool | Shortcut | What it does |
 |---|---|---|
 | **Crop** | `F` | drag a frame over the picture, adjust it, then `⏎` to trim |
-| **Slice** | `⇧S` | *not available yet* |
-| **Cut** | `S` | *not available yet* |
+| **Slice** | — | *not available yet* |
+| **Cut** | — | *not available yet* |
+
+> **These two have no key, and will only get one when they arrive.** The command registry only
+> carries tools that answer: a shortcut written in advance would be a stated intention, not a
+> gesture — that is [chapter 18](18-limits.md)'s rule.
 
 The gesture comes in three steps:
 
@@ -186,7 +190,7 @@ The frame never leaves the picture — a crop trims, it does not grow.
 | **Ellipse** | `O` | Shift for a circle |
 | **Polygon** | — | drawn from its centre |
 | **Star** | — | drawn from its centre |
-| **Image…** | `⇧⌘K` | opens the shelf, to lay a picture down as a layer |
+| **Image…** | — | opens the shelf, to lay a picture down as a layer |
 
 ### Drawing group
 

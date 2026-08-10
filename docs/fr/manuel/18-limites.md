@@ -60,7 +60,7 @@ touche `⎋` frappée sans lire.
 ### Il n’y a pas de menu « Ouvrir », et il n’en faut pas
 
 Une image de l’étagère **entre** dans un document — glissée sur la toile, double-cliquée, ou
-choisie par l’outil **Image…** (`⇧⌘K`) : elle y devient un calque. Voir
+choisie par l’outil **Image…** : elle y devient un calque. Voir
 [Espace Image](08-espace-image.md).
 
 Rouvrir un document composé plus tôt passe par le panneau **Explorateur**, qui liste les
