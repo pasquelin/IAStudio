@@ -11,6 +11,8 @@ vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockEle
 
 const PROJECT = '/Users/someone/Films/Reel.scenario'
 
+const MANIFEST = { version: 1, name: 'Reel', createdAt: '', updatedAt: '' }
+
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
   name: 'A001',
@@ -58,6 +60,51 @@ describe('project handlers', () => {
     resetHandlers()
     vi.clearAllMocks()
     catalog = memoryCatalog()
+  })
+
+  // Same silence as opening, reached by the explorer's own "create a project" button: nothing
+  // on the renderer side watches `createPicked` either.
+  describe('creating a project in a folder that will not take one', () => {
+    const refusing = (): ProjectHandlerDeps => {
+      const injected = deps(catalog)
+      injected.project.create = vi.fn(() => Promise.reject(new Error('EACCES')))
+      return injected
+    }
+
+    it('says so in the journal', async () => {
+      const injected = refusing()
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectCreate, PROJECT, 'Reel')).rejects.toThrow()
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.projectNotCreated',
+      })
+    })
+
+    // An argument this channel refuses is not a sentence about the folder — the same line
+    // `openFailureKey` draws for opening.
+    it('says nothing about a folder when it is the argument that was refused', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectCreate, '', 'Reel')).rejects.toThrow()
+
+      expect(injected.project.create).not.toHaveBeenCalled()
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
+    it('says nothing when the folder takes one', async () => {
+      const injected = deps(catalog)
+      injected.project.create = vi.fn(() => Promise.resolve({ path: PROJECT, manifest: MANIFEST }))
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectCreate, PROJECT, 'Reel')).resolves.toBeDefined()
+
+      expect(injected.record).not.toHaveBeenCalled()
+    })
   })
 
   // The renderer's own `openPicked` watches nothing: without a line in the journal, a folder

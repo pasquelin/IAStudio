@@ -44,6 +44,39 @@ describe('the project explorer', () => {
     expect(screen.getByText(/Aucun projet ouvert/)).toBeInTheDocument()
   })
 
+  /**
+   * The panel is on screen in every workspace, and until it carried these two the only way to
+   * fill it was a trip back to the home — which is also the only place the two gestures live.
+   */
+  describe('with no project open', () => {
+    it('offers both ways out of an empty studio', () => {
+      render(<Explorer />)
+
+      expect(screen.getByRole('button', { name: 'Ouvrir un projet' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Créer un projet' })).toBeInTheDocument()
+    })
+
+    it('picks a folder to open', async () => {
+      const openPicked = vi.fn(() => Promise.resolve())
+      useProject.setState({ openPicked })
+
+      render(<Explorer />)
+      await userEvent.click(screen.getByRole('button', { name: 'Ouvrir un projet' }))
+
+      expect(openPicked).toHaveBeenCalled()
+    })
+
+    it('picks a folder to create one in', async () => {
+      const createPicked = vi.fn(() => Promise.resolve())
+      useProject.setState({ createPicked })
+
+      render(<Explorer />)
+      await userEvent.click(screen.getByRole('button', { name: 'Créer un projet' }))
+
+      expect(createPicked).toHaveBeenCalled()
+    })
+  })
+
   it('lists what the project folder holds', async () => {
     withProject()
     installFakeBridge({ documents: { list: () => Promise.resolve([scene, sequence]) } })

@@ -24,6 +24,10 @@ is a project you lose the day that software stops opening.
 | **New project** | `⌘N` / `Ctrl+N` | File ▸ New project… |
 | **Open project** | `⌘O` / `Ctrl+O` | File ▸ Open project… |
 
+**Both gestures are in the Explorer panel too**, whenever no project is open: it then shows
+**Open project** and **New project**, in its usual place in the left column. It is there so that
+you never have to go back to the home from a workspace.
+
 **Only one project is open at a time.** Opening a second closes the first — losing nothing:
 everything that was saved stayed saved.
 

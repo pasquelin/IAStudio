@@ -52,9 +52,22 @@ export function registerProjectHandlers({
   reveal,
   askUser,
 }: ProjectHandlerDeps): void {
-  handle(CHANNELS.projectCreate, (_event, path, name) =>
-    project.create(parseProjectPath(path), parseProjectName(name)),
-  )
+  handle(CHANNELS.projectCreate, async (_event, path, name) => {
+    // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
+    // about the folder, and `projectOpen` below draws the same line through `openFailureKey`.
+    const folder = parseProjectPath(path)
+    const named = parseProjectName(name)
+
+    try {
+      return await project.create(folder, named)
+    } catch (error) {
+      // Same silence as opening: `createPicked` watches nothing either, so a folder that could
+      // not be written said nothing at all. The path is left out — the user picked it from a
+      // dialog, and whatever `mkdir` says about it is not something they can act on.
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotCreated' })
+      throw error
+    }
+  })
 
   handle(CHANNELS.projectOpen, async (_event, path) => {
     try {
