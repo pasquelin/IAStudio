@@ -84,7 +84,9 @@
       "stickyNote": "Note",
       "approval": "Approbation",
       "ifElse": "Condition",
-      "transformText": "Transformation"
+      "transformText": "Transformation",
+      "forEach": "Boucle",
+      "forEachEnd": "Fin de boucle"
     },
     "approve": "Approuver",
     "approveHint": "Laisser la suite du graphe se servir de ce résultat",
@@ -109,7 +111,12 @@
       "lessThanOrEqual": "inférieur ou égal à",
       "between": "entre"
     },
-    "noField": "Rien"
+    "noField": "Rien",
+    "listKind": {
+      "image": "Images",
+      "text": "Textes"
+    },
+    "noLoop": "Aucune boucle"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} étape",
@@ -757,7 +764,14 @@
     "pickFontHint": "Compose le texte dans cette police",
     "lock_pixelsHint": "Empêche de peindre sur ce calque, sans le figer sur place",
     "lock_positionHint": "Empêche de déplacer le calque ; on peut encore y peindre",
-    "lock_alphaHint": "Ne peint que là où le calque a déjà de la matière"
+    "lock_alphaHint": "Ne peint que là où le calque a déjà de la matière",
+    "lists": "Listes parcourues",
+    "list": "Liste {{number}}",
+    "addList": "Ajouter une liste à parcourir, avec le port qui en donne l’élément",
+    "addListRow": "Ajouter une liste",
+    "removeList": "Supprimer cette liste et le port qui en donne l’élément",
+    "loop": "Boucle fermée",
+    "listContents": "Ce que cette liste contient"
   },
   "transport": {
     "play": "Lire",

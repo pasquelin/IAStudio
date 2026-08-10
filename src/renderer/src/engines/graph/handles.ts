@@ -9,6 +9,14 @@ import type { GraphHandleInput, GraphHandleOutput, GraphNode } from '@shared/dom
 export const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
   `${nodeId}-${side}-${field}`
 
+/**
+ * The nth list a loop walks, which the converter finds by the regexp `/-input-(\d+)$/`.
+ *
+ * Not `handleId`: a loop's own ports are the one place the converter numbers instead of naming,
+ * and it pairs the list coming IN with the item going OUT by that number alone.
+ */
+export const loopInputId = (nodeId: string, index: number): string => `${nodeId}-input-${index}`
+
 /** The nth output of a loop, which the converter finds by the regexp `/-output-(\d+)$/`. */
 export const loopOutputId = (nodeId: string, index: number): string => `${nodeId}-output-${index}`
 
@@ -73,8 +81,15 @@ export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput)
 // engine into the opening chunk. Re-exported so the engine still has one door for its ports.
 export { inputHandleOf, inputHandlesOf } from '@shared/domain/graph'
 
+/**
+ * `Array.isArray` rather than `?? []`, here and on the input side: the type is what the editor
+ * writes, not what a file holds, and `"outputHandles": {}` read off one took every panel that maps
+ * them into its error boundary. `parseGraph` validates the node, never its `data`.
+ */
 export const outputHandlesOf = (node: GraphNode): readonly GraphHandleOutput[] =>
-  node.data.outputHandles ?? []
+  Array.isArray(node.data.outputHandles) ? node.data.outputHandles : []
 
-export const outputHandleOf = (node: GraphNode, id: string): GraphHandleOutput | undefined =>
-  outputHandlesOf(node).find(handle => handle.id === id)
+export const outputHandleOf = (
+  node: GraphNode,
+  id: string | undefined,
+): GraphHandleOutput | undefined => outputHandlesOf(node).find(handle => handle.id === id)

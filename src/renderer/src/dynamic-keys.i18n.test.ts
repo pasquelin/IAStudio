@@ -12,6 +12,7 @@ import {
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
+import { LOOP_LIST_KINDS } from '@/engines/graph/loops'
 import { NODE_LABEL_KEY_LIST } from '@/spaces/graph/node-labels'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
 
@@ -48,6 +49,10 @@ const COMPOSED_KEYS: readonly string[] = [
   // The node palette and the node inspector both name a type through this record, and
   // nothing named these four until now — the palette composed its key and walked free.
   ...NODE_LABEL_KEY_LIST,
+  // What a loop walks, offered per list by the loop inspector. `graph.condition.*` and
+  // `graph.logic.*` are its two neighbours, covered beside the bundles because their list lives
+  // in `shared/`; this one is the renderer's, so it belongs here.
+  ...LOOP_LIST_KINDS.map(kind => `graph.listKind.${kind}`),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.

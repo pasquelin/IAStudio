@@ -125,7 +125,9 @@ describe('the graph canvas', () => {
       inputKeys: [],
     })
 
-    expect(screen.getByText('forEach')).toBeInTheDocument()
+    // The TITLE, which is the translated name of the type — `forEach` is drawn beside it as the
+    // raw kind, so asserting on that word alone passed whatever the node was titled.
+    expect(screen.getByText('Boucle')).toBeInTheDocument()
     expect(screen.getByText('Items')).toBeInTheDocument()
   })
 

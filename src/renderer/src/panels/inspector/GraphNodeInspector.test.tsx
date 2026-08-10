@@ -29,6 +29,14 @@ const ASSET: GraphNode = {
   data: { type: 'image', value: 'asset_Hr7', title: 'Kingfisher' },
 }
 
+/** One of the types the editor still has no name of its own for — the fallback's subject. */
+const UNNAMED: GraphNode = {
+  id: 'splitText1',
+  type: 'splitText',
+  position: { x: 0, y: 0 },
+  data: {},
+}
+
 const LOOP: GraphNode = { id: 'forEach1', type: 'forEach', position: { x: 0, y: 0 }, data: {} }
 
 const TRANSFORM: GraphNode = {
@@ -65,7 +73,7 @@ const MANY_ASSETS: GraphNode = {
 
 beforeEach(() => {
   installGraph(DOCUMENT, {
-    nodes: [TEXT, NOTE, ASSET, LOOP, APPROVAL],
+    nodes: [TEXT, NOTE, ASSET, LOOP, UNNAMED, APPROVAL],
     edges: [],
     inputKeys: [],
   })
@@ -134,12 +142,19 @@ describe('GraphNodeInspector', () => {
     expect(historyOf(useGraphs.getState(), DOCUMENT).past.length).toBe(before + 1)
   })
 
-  /** The eleven types the editor has no face for still say what they are, never nothing. */
+  /** The types the editor has no face for still say what they are, never nothing. */
   it('falls back to the raw name of a type it has no translation for', () => {
+    show(UNNAMED)
+
+    expect(screen.getByText('splitText')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Prompt')).not.toBeInTheDocument()
+  })
+
+  it('names a type that does carry a translation', () => {
     show(LOOP)
 
-    expect(screen.getByText('forEach')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Prompt')).not.toBeInTheDocument()
+    expect(screen.getByText('Boucle')).toBeInTheDocument()
+    expect(screen.queryByText('forEach')).not.toBeInTheDocument()
   })
 
   it('offers no text field on a type that carries no text', () => {

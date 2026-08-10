@@ -8,6 +8,7 @@ import { setGraphNodeData } from '@/engines/graph/commands'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { NODE_LABEL_KEYS } from '@/spaces/graph/node-labels'
 import { useGraphs } from '@/stores/graphs'
+import { ForEachEndFields, ForEachFields } from './ForEachFields'
 import { IfElseFields } from './IfElseFields'
 import { ModelNodeFields } from './ModelNodeFields'
 import { useDocumentEdit, type DocumentEdit } from './useDocumentEdit'
@@ -95,6 +96,12 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
       )}
 
       {node.type === 'ifElse' && <IfElseFields documentId={documentId} node={node} edit={edit} />}
+
+      {node.type === 'forEach' && <ForEachFields node={node} edit={edit} />}
+
+      {node.type === 'forEachEnd' && (
+        <ForEachEndFields documentId={documentId} node={node} edit={edit} />
+      )}
 
       {node.type === 'asset' && <AssetFields node={node} edit={edit} />}
     </PropertyGroup>

@@ -409,7 +409,8 @@ describe a scene in reverse.
 **Node**
 A box on the *graph*'s canvas. Each does one thing — hold a text, run a *model*, carry a note —
 and exposes **ports** through which it takes and gives. Changing a node's model rebuilds its
-ports, and the links whose port is gone leave with them.
+ports, and the links those ports no longer answer for leave with them: the one whose port is gone,
+and the one whose port no longer accepts what is at the other end.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
