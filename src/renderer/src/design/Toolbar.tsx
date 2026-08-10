@@ -5,15 +5,18 @@ import { cn } from '@/helpers/cn'
 import { MenuButton } from './MenuButton'
 import { MenuRow, type MenuRowChoice } from './MenuRow'
 import { Separator } from './Separator'
-import { tipFor, type TooltipFactory } from '@/helpers/tooltip'
+import { HINT_RIGHT, tipFor, type TooltipFactory } from '@/helpers/tooltip'
 import { ToolButton } from './ToolButton'
 
 export type ToolMode = {
   id: string
   /** i18n key of the label — never the displayed text. */
   labelKey: string
-  /** i18n key of the one-line tooltip. Absent tips the label, which is better than nothing. */
-  descriptionKey?: string
+  /**
+   * i18n key of the one-line tooltip. Required: a mode's label is on screen inside its row, so
+   * the tooltip is the only thing that can say more than the label already does.
+   */
+  descriptionKey: string
   icon: string
   shortcut?: string
   /** Declared but not wired yet: shown greyed, so the bar never hides what is coming. */
@@ -87,7 +90,6 @@ export function Toolbar({
   // A vertical bar hugs the left edge, so its tooltips go right — placed on top they would sit
   // over the button above and cover the tool the eye is comparing against.
   const tip = tipFor(orientation)
-  const modeTip = tipFor(orientation, 'flyout')
   const divider = <Separator orientation={vertical ? 'horizontal' : 'vertical'} />
 
   return (
@@ -111,7 +113,6 @@ export function Toolbar({
             // not draw it released.
             active={tool.pressed === true || tool.id === activeTool}
             tip={tip}
-            modeTip={modeTip}
             onTool={onTool}
             onMode={onMode}
           />
@@ -185,7 +186,6 @@ type ToolItemProps = {
   active: boolean
   /** Placement of the button's own tooltip, and of its flyout rows' — both follow the bar. */
   tip: TooltipFactory
-  modeTip: TooltipFactory
   onTool: (id: string) => void
   onMode?: (toolId: string, modeId: string) => void
 }
@@ -195,7 +195,7 @@ type ToolItemProps = {
  * always acts on click, and the flyout only offers to switch mode — so an armed tool never
  * needs the menu to be reachable.
  */
-function ToolItem({ tool, active, tip, modeTip, onTool, onMode }: ToolItemProps) {
+function ToolItem({ tool, active, tip, onTool, onMode }: ToolItemProps) {
   const { t } = useTranslation()
 
   // The button wears the armed mode's icon: a shapes tool armed with the ellipse has to look
@@ -238,11 +238,9 @@ function ToolItem({ tool, active, tip, modeTip, onTool, onMode }: ToolItemProps)
               shortcut={mode.shortcut}
               disabled={mode.disabled}
               {...choice}
-              tip={modeTip(
-                t(mode.labelKey),
-                mode.shortcut,
-                mode.descriptionKey ? t(mode.descriptionKey) : undefined,
-              )}
+              // `HINT_*`, not the bar's own factory: a row shows its label and its shortcut, so
+              // an `aria-label` here would replace a visible name (WCAG 2.5.3).
+              tip={HINT_RIGHT(t(mode.descriptionKey))}
               onSelect={() => {
                 onMode?.(tool.id, mode.id)
                 close()

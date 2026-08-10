@@ -59,6 +59,7 @@ export type SceneTool = ToolbarItem & { command?: CommandId }
 const ADD_MODES: readonly ToolMode[] = ADD_ENTRIES.map(({ entry, labelKey }) => ({
   id: entry.kind,
   labelKey,
+  descriptionKey: `${labelKey}Hint`,
   icon: entry.icon,
   disabled: entry.disabled,
 }))
@@ -67,12 +68,14 @@ const ADD_MODES: readonly ToolMode[] = ADD_ENTRIES.map(({ entry, labelKey }) => 
 const VIEW_MODES: readonly ToolMode[] = VIEW_DIRECTIONS.map(direction => ({
   id: direction,
   labelKey: `sceneViews.${direction}`,
+  descriptionKey: `sceneViews.${direction}Hint`,
   icon: VIEW_ICONS[direction],
 }))
 
 const DISPLAY_TOOL_MODES: readonly ToolMode[] = DISPLAY_MODES.map(mode => ({
   id: mode,
   labelKey: `sceneDisplay.${mode}`,
+  descriptionKey: `sceneDisplay.${mode}Hint`,
   icon: DISPLAY_ICONS[mode],
 }))
 

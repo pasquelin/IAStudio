@@ -70,14 +70,12 @@ export const HINT_LEFT = makeHint('left')
 export const HINT_BOTTOM = makeHint('bottom')
 
 /**
- * Where a bar's tooltips go, so a floating bar never tips over its own canvas. `bar` is the
- * buttons' own; `flyout` is their menu rows', which must not land back on the bar that opened
- * them. One answer to one question — the flyout's placement was being re-derived inline.
+ * Where a bar's tooltips go, so a floating bar never tips over its own canvas.
+ *
+ * It answered for the flyout rows too until they all moved to `HINT_RIGHT`: a row shows its own
+ * label, and a `TooltipFactory` would set an `aria-label` over it (WCAG 2.5.3). One question,
+ * one answer — the second parameter had exactly one caller and now has none.
  */
-export function tipFor(
-  orientation: 'vertical' | 'horizontal',
-  of: 'bar' | 'flyout' = 'bar',
-): TooltipFactory {
-  if (orientation === 'vertical') return TIP_RIGHT
-  return of === 'bar' ? TIP_TOP : TIP_BOTTOM
+export function tipFor(orientation: 'vertical' | 'horizontal'): TooltipFactory {
+  return orientation === 'vertical' ? TIP_RIGHT : TIP_TOP
 }

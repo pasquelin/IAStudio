@@ -627,7 +627,10 @@
   "objects": {
     "sprite": "Sprite",
     "text": "Text",
-    "camera": "Camera"
+    "camera": "Camera",
+    "spriteHint": "A flat picture that always faces the camera",
+    "textHint": "Text set into the scene, with depth",
+    "cameraHint": "A stored point of view, beside the one being flown"
   },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",
@@ -922,12 +925,21 @@
     "left": "Left",
     "right": "Right",
     "top": "Top",
-    "bottom": "Bottom"
+    "bottom": "Bottom",
+    "frontHint": "Looks at the scene from the front, with no perspective",
+    "backHint": "Looks at the scene from behind, with no perspective",
+    "leftHint": "Looks at the scene from the left, with no perspective",
+    "rightHint": "Looks at the scene from the right, with no perspective",
+    "topHint": "Looks down on the scene, with no perspective",
+    "bottomHint": "Looks up at the scene from below, with no perspective"
   },
   "sceneDisplay": {
     "shaded": "Shaded",
     "wireframe": "Wireframe",
-    "both": "Shaded and wireframe"
+    "both": "Shaded and wireframe",
+    "shadedHint": "Surfaces painted by their material, edges left out",
+    "wireframeHint": "The edges alone — which is what shows how dense the mesh is",
+    "bothHint": "Surfaces painted, with the edges drawn over them"
   },
   "project": {
     "none": "No project open",

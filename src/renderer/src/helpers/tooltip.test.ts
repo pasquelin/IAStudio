@@ -76,7 +76,9 @@ describe('tipFor', () => {
     expect(tipFor('horizontal')).toBe(TIP_TOP)
   })
 
-  it('sends a horizontal bar’s flyout rows below it, clear of the bar itself', () => {
-    expect(tipFor('horizontal', 'flyout')).toBe(TIP_BOTTOM)
+  // It used to answer for the flyout rows as well. They are `HINT_RIGHT` now, all thirty-three
+  // of them: a row shows its own label, and a factory would set an `aria-label` over it.
+  it('answers for the bar’s buttons alone', () => {
+    expect(tipFor).toHaveLength(1)
   })
 })
