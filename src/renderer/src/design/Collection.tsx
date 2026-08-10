@@ -45,6 +45,15 @@ export type CollectionProps<T extends { id: string }> = {
    * caller that wired the gesture itself would leave its rows out of the keyboard's reach.
    */
   onActivate?: (item: T) => void
+  /**
+   * Opening on a SINGLE click, for a list whose row leads somewhere instead of being picked —
+   * the Apps panel, whose row swaps the whole panel for the App it names.
+   *
+   * Not `onSelect` with the opening wired into it: that announces a `listbox` whose every row
+   * carries `aria-selected="false"` for ever, since nothing here is ever selected. Not
+   * `onActivate` either, which is the double-click. A list that opens is a `list`.
+   */
+  onOpen?: (item: T) => void
   /** Called as the end nears. Must tolerate being called again before it has answered. */
   onReachEnd?: () => void
   /** The items currently on screen, for whatever a card needs fetched only when it is seen. */
@@ -129,6 +138,7 @@ export function Collection<T extends { id: string }>({
   selectedIds,
   onSelect,
   onActivate,
+  onOpen,
   onReachEnd,
   onVisible,
   empty,
@@ -141,7 +151,7 @@ export function Collection<T extends { id: string }>({
   const grid = card !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
-  const roles = rolesFor(onSelect !== undefined, onActivate !== undefined)
+  const roles = rolesFor(onSelect !== undefined, onActivate !== undefined || onOpen !== undefined)
   const columns = grid ? fitting.columns : 1
   const rows = Math.ceil(items.length / columns)
   /**
@@ -176,9 +186,8 @@ export function Collection<T extends { id: string }>({
    * A cell per tab makes a catalogue of five hundred models five hundred presses deep.
    */
   const selected = new Set(selectedIds)
-  // The anchor is a notion of selection. A collection that only opens its rows has none, and
-  // taking the entry point from what it paints would land the tab on a row nobody picked —
-  // the explorer paints the documents that are open, which it does not choose.
+  // The anchor is a notion of selection, so a collection that only opens its rows has none and
+  // enters at the first mounted cell instead.
   const anchor = onSelect ? selectedIds?.at(-1) : undefined
   const anchored = items.findIndex(item => item.id === anchor)
   const firstMounted = firstVisible * columns
@@ -274,7 +283,13 @@ export function Collection<T extends { id: string }>({
                       // tree: without these a reader announces "1 of 35" over a list of 2000.
                       position={index + 1}
                       total={items.length}
-                      onSelect={onSelect ? modifiers => pick(item, modifiers) : undefined}
+                      // `onOpen` rides the click slot: it IS the single click, and the two are
+                      // mutually exclusive by construction — a row that opens is not one to pick.
+                      onSelect={
+                        onSelect
+                          ? modifiers => pick(item, modifiers)
+                          : onOpen && (() => onOpen(item))
+                      }
                       onActivate={onActivate ? () => onActivate(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >

@@ -254,6 +254,12 @@
   --sc-tab: 40px;
   /* Track header column: wide enough for a name plus mute, solo and lock on one line. */
   --sc-track-header: 140px;
+  /* The label column of a property line, whichever family draws it: `PropertyRow` for a value to
+     read, the fields for a control to change it. Two hardcoded widths — 80 and 64 — used to be
+     two declarations of the same thing, and five inspectors out of six show both families in one
+     group, so their labels started in two different places. 80 is the wider of the two, and the
+     one that was measured: `Aperçu de la répétition` does not fit in 64. */
+  --sc-label: 80px;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }
@@ -266,6 +272,7 @@
   --sc-header: 28px;
   --sc-tab: 32px;
   --sc-track-header: 120px;
+  --sc-label: 72px;
 }
 
 html,

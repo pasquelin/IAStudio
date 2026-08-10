@@ -111,6 +111,23 @@ describe('Apps panel', () => {
     expect(screen.getByRole('button', { name: 'Lancer' })).toBeInTheDocument()
   })
 
+  /**
+   * A row here leads somewhere: clicking it swaps the whole panel for the App it names, so no
+   * row is ever the selected one. Announced as a `listbox` the list promised a selection it
+   * could not have, and every row carried `aria-selected="false"` for the life of the panel.
+   */
+  it('announces a list of rows that open, not a listbox of rows to pick', async () => {
+    installFakeBridge({
+      workflows: { search: () => Promise.resolve({ items: [app()], cursor: null }) },
+    })
+    renderPanel()
+
+    await screen.findByText('Background remover')
+    expect(screen.getByRole('list', { name: 'Apps' })).toBeInTheDocument()
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('listitem')).not.toHaveAttribute('aria-selected')
+  })
+
   it('runs it through the workflow channel, and puts the job in the bar', async () => {
     const started: Job = {
       id: 'job_1',

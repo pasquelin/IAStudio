@@ -40,8 +40,9 @@ export function Explorer() {
     <Collection
       label={t('panels.explorer')}
       items={stored}
-      // Not a selection one makes — it is what "open" looks like in this list.
-      selectedIds={Object.keys(open)}
+      // No `selectedIds`: nothing is picked here. "Open" used to borrow the prop, which painted
+      // the selection tint on rows the user had never chosen — and left the two panels that DO
+      // have a selection showing none. `DocumentRow` carries its own mark for it.
       onActivate={openDocument}
       renderRow={(document: DocumentDescriptor) => (
         <DocumentRow document={document} open={open[document.id] !== undefined} />

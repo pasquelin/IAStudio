@@ -89,10 +89,15 @@ export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
  * The gap is two, never one: at one the label, the track and the number read as a single
  * run-on string rather than as three things. It is the studio's spacing, applied throughout.
  */
-export const FIELD_ROW = 'flex min-w-0 items-center gap-2 text-[11px]'
+export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 text-[11px]'
 
-/** Fixed, so the controls of a section line up rather than each starting where its name ends. */
-export const FIELD_LABEL = 'text-muted w-16 shrink-0 truncate'
+/**
+ * Fixed, so the controls of a section line up rather than each starting where its name ends.
+ *
+ * The gauge is shared with `PropertyRow`, and that is the whole point: five inspectors out of six
+ * draw both families inside one group, so two widths meant two columns of labels in the same box.
+ */
+export const FIELD_LABEL = 'text-muted w-(--sc-label) shrink-0 truncate'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.
