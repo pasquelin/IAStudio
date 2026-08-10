@@ -1,5 +1,6 @@
 import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
-import { DEFAULT_OUTPUT_NAME, handleId } from './handles'
+import { DEFAULT_OUTPUT_NAME, handleId, loopInputId, loopOutputId } from './handles'
+import type { LoopListKind } from './loops'
 
 /**
  * A text node with the one port it is wired by, for the suites whose subject is not the port
@@ -91,6 +92,40 @@ export function transformNode(id: string, value = ''): GraphNode {
       outputHandles: [
         { id: handleId(id, 'target', 'text'), name: DEFAULT_OUTPUT_NAME, type: 'text' },
       ],
+    },
+  }
+}
+
+/**
+ * A loop walking the lists it is given, one numbered pair of ports each.
+ *
+ * The `conditional` port comes first and is NOT a list — it is what keeps these suites honest
+ * about the reader, which has to tell a port the loop walks from a port every node carries.
+ */
+export function forEachNode(id: string, kinds: readonly LoopListKind[] = ['image']): GraphNode {
+  return {
+    id,
+    type: 'forEach',
+    position: { x: 0, y: 0 },
+    data: {
+      inputHandles: [
+        { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
+        ...kinds.map((kind, index) => ({ id: loopInputId(id, index), type: kind })),
+      ],
+      outputHandles: kinds.map((kind, index) => ({ id: loopOutputId(id, index), type: kind })),
+    },
+  }
+}
+
+/** The end of a loop, naming the one it closes — the field the converter pairs the two by. */
+export function forEachEndNode(id: string, parentNodeId?: string): GraphNode {
+  return {
+    id,
+    type: 'forEachEnd',
+    position: { x: 0, y: 0 },
+    data: {
+      ...(parentNodeId === undefined ? {} : { parentNodeId }),
+      inputHandles: [{ id: handleId(id, 'source', 'conditional'), name: 'conditional' }],
     },
   }
 }

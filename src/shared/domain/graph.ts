@@ -260,6 +260,19 @@ export type GraphNodeBody =
    * rather than refusing the flow.
    */
   | { type: 'transformText'; data: GraphNodeData & { value?: string } }
+  /**
+   * The end of a loop, and the only node that names another one in its `data`.
+   *
+   * `parentNodeId` is what pairs it with its `forEach`, and the pair is the loop: the converter
+   * finds the end by scanning for it, walks the body between the two, and resolves every wire
+   * leaving the end to the LOOP's flow item. Without it the end resolves to nothing and the loop
+   * compiles with an empty body — no error at either end, which is why the editor has to offer
+   * the field rather than leave it to a file.
+   *
+   * The `forEach` itself carries no data of its own: what it walks is written in its PORTS, one
+   * numbered pair per list.
+   */
+  | { type: 'forEachEnd'; data: GraphNodeData & { parentNodeId?: string } }
   | {
       type: Exclude<
         GraphNodeType,
@@ -271,6 +284,7 @@ export type GraphNodeBody =
         | 'approval'
         | 'ifElse'
         | 'transformText'
+        | 'forEachEnd'
       >
       data: GraphNodeData
     }

@@ -21,14 +21,14 @@ export const NODE_LABEL_KEYS: Record<GraphNodeType, string | null> = {
   approval: 'graph.nodes.approval',
   ifElse: 'graph.nodes.ifElse',
   transformText: 'graph.nodes.transformText',
+  forEach: 'graph.nodes.forEach',
+  forEachEnd: 'graph.nodes.forEachEnd',
   aspectRatio: null,
   modelInput: null,
   llm: null,
   splitText: null,
   groupItems: null,
   sliceAssets: null,
-  forEach: null,
-  forEachEnd: null,
 }
 
 /** Every key the record names, for the guard that checks the bundles carry them. */

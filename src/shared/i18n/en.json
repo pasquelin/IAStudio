@@ -84,7 +84,9 @@
       "stickyNote": "Note",
       "approval": "Approval",
       "ifElse": "Condition",
-      "transformText": "Transform"
+      "transformText": "Transform",
+      "forEach": "Loop",
+      "forEachEnd": "End of loop"
     },
     "approve": "Approve",
     "approveHint": "Let the rest of the graph use this result",
@@ -109,7 +111,12 @@
       "lessThanOrEqual": "less than or equal to",
       "between": "between"
     },
-    "noField": "Nothing"
+    "noField": "Nothing",
+    "listKind": {
+      "image": "Pictures",
+      "text": "Texts"
+    },
+    "noLoop": "No loop"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
@@ -757,7 +764,14 @@
     "pickFontHint": "Sets the text in this font",
     "lock_pixelsHint": "Stops paint from landing on this layer, without pinning it in place",
     "lock_positionHint": "Stops the layer from being moved; it can still be painted on",
-    "lock_alphaHint": "Paints only where the layer already has something"
+    "lock_alphaHint": "Paints only where the layer already has something",
+    "lists": "Walked lists",
+    "list": "List {{number}}",
+    "listKind": "What this list holds",
+    "addList": "Add a list to walk, with the port giving its item",
+    "addListRow": "Add a list",
+    "removeList": "Remove this list and the port giving its item",
+    "loop": "Loop closed"
   },
   "transport": {
     "play": "Play",

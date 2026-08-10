@@ -9,6 +9,14 @@ import type { GraphHandleInput, GraphHandleOutput, GraphNode } from '@shared/dom
 export const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
   `${nodeId}-${side}-${field}`
 
+/**
+ * The nth list a loop walks, which the converter finds by the regexp `/-input-(\d+)$/`.
+ *
+ * Not `handleId`: a loop's own ports are the one place the converter numbers instead of naming,
+ * and it pairs the list coming IN with the item going OUT by that number alone.
+ */
+export const loopInputId = (nodeId: string, index: number): string => `${nodeId}-input-${index}`
+
 /** The nth output of a loop, which the converter finds by the regexp `/-output-(\d+)$/`. */
 export const loopOutputId = (nodeId: string, index: number): string => `${nodeId}-output-${index}`
 

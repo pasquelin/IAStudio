@@ -7,7 +7,6 @@ import {
   GRAPH_RUN_FAILURES,
   GRAPH_RUN_STATUSES,
   canBeOutput,
-  isGraphNodeType,
   type GraphHandleInput,
   type GraphHandleOutput,
   type GraphCondition,
@@ -338,26 +337,17 @@ const StickyNoteNode = memo(function StickyNoteNode({ data, selected }: NodeProp
 })
 
 /**
- * Every type the editor does not draw yet: its name and its ports, which is all it takes to wire
- * one. A graph read from Scenario holds loops, conditions and approvals long before the editor
- * has a face for them — unlisted, React Flow falls back to a node of its own and warns on every
- * render, and the ports it would need to be wired by are simply not there.
+ * Every type the editor draws by its name and its ports alone, which is all it takes to wire one.
+ * A graph read from Scenario holds loops, conditions and approvals long before the editor has a
+ * face for them — unlisted, React Flow falls back to a node of its own and warns on every render,
+ * and the ports it would need to be wired by are simply not there.
+ *
+ * Through `nodeOf` rather than one shared component reading its own `type`: the type is then known
+ * at build time, so the name it is drawn under is looked up exactly as the drawn types look theirs
+ * up, and DevTools tells the eight apart.
  */
-const PlainNode = memo(function PlainNode({ data, selected, type }: NodeProps) {
-  const fields: NodeData = data
-
-  return (
-    <NodeShell
-      title={asText(fields.title) || type}
-      kind={type}
-      run={asRun(fields[RUN_STATE_KEY])}
-      output={fields.isOutput === true && isGraphNodeType(type) && canBeOutput(type)}
-      selected={selected === true}
-      inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
-      outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}
-    />
-  )
-})
+const plainNode = (name: string, drawn: GraphNodeType): ((props: NodeProps) => ReactNode) =>
+  nodeOf(name, drawn, () => null)
 
 /**
  * Declared once, outside any component: React Flow remounts every node when this object changes
@@ -371,15 +361,15 @@ export const GRAPH_NODE_TYPES: Record<GraphNodeType, (props: NodeProps) => React
   asset: AssetNode,
   model: ModelNode,
   stickyNote: StickyNoteNode,
-  aspectRatio: PlainNode,
-  modelInput: PlainNode,
-  llm: PlainNode,
+  aspectRatio: plainNode('AspectRatioNode', 'aspectRatio'),
+  modelInput: plainNode('ModelInputNode', 'modelInput'),
+  llm: plainNode('LlmNode', 'llm'),
   transformText: TransformTextNode,
-  splitText: PlainNode,
+  splitText: plainNode('SplitTextNode', 'splitText'),
   ifElse: IfElseNode,
-  groupItems: PlainNode,
-  sliceAssets: PlainNode,
-  forEach: PlainNode,
-  forEachEnd: PlainNode,
+  groupItems: plainNode('GroupItemsNode', 'groupItems'),
+  sliceAssets: plainNode('SliceAssetsNode', 'sliceAssets'),
+  forEach: plainNode('ForEachNode', 'forEach'),
+  forEachEnd: plainNode('ForEachEndNode', 'forEachEnd'),
   approval: ApprovalNode,
 }
