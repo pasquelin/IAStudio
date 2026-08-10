@@ -134,6 +134,33 @@ export const EMPTY_SEQUENCE: SequenceState = {
   playhead: 0,
 }
 
+/** The letter a kind's tracks are named after, on the pattern `EMPTY_SEQUENCE` opens with. */
+const TRACK_PREFIX: Record<TrackKind, string> = { video: 'V', audio: 'A' }
+
+/**
+ * The next free name of a kind — V1, V2, A1… — rather than a uuid: `makeTrack` names a track by
+ * its id, and a header column reading `track_9f3c…` shows a name nobody typed. Renaming is a
+ * command of its own, so this only has to be free, not final.
+ */
+export function nextTrackId(state: SequenceState, kind: TrackKind): string {
+  const taken = new Set(state.tracks.map(track => track.id))
+  const prefix = TRACK_PREFIX[kind]
+
+  for (let n = 1; ; n += 1) {
+    const id = `${prefix}${n}`
+    if (!taken.has(id)) return id
+  }
+}
+
+/**
+ * Depth read back from position: the first row of the column is drawn last, so it is the one
+ * seen on top. `videoTracksByDepth` sorts on `index` while the header column reads the array —
+ * without this the two disagree the moment a track is added, removed or moved.
+ */
+export function reindexTracks(tracks: readonly Track[]): Track[] {
+  return tracks.map((track, position) => ({ ...track, index: tracks.length - 1 - position }))
+}
+
 export function frameDuration(settings: SequenceSettings): Us {
   return Math.round(SECOND / settings.fps)
 }

@@ -728,7 +728,16 @@
     "solo": "Solo the {{name}} track",
     "lock": "Lock the {{name}} track",
     "rename": "Track name",
-    "renameHint": "Double-click to rename"
+    "renameHint": "Double-click to rename",
+    "addTrack": {
+      "video": "Add a video track",
+      "audio": "Add an audio track"
+    },
+    "trackActions": "Actions for track {{name}}",
+    "trackActionsHint": "Move the track through the stack, or remove it with what it carries",
+    "moveTrackUp": "Move track up",
+    "moveTrackDown": "Move track down",
+    "removeTrack": "Remove track"
   },
   "videoTools": {
     "select": "Selection",

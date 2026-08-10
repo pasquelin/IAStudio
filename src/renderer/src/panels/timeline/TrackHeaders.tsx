@@ -1,12 +1,15 @@
+import { mdiDotsHorizontal } from '@mdi/js'
 import { useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'
-import { renameTrack } from '@/engines/timeline/commands'
+import { addTrack, renameTrack } from '@/engines/timeline/commands'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import {
   clampTrackHeight,
   playsThrough,
+  TRACK_KINDS,
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
@@ -15,7 +18,8 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { TRACK_FLAGS } from './track-flags'
+import { TRACK_FLAGS, TRACK_KIND_ICONS } from './track-flags'
+import { TrackMenu, TrackMenuRows, TRACK_MENU_ROWS } from './TrackMenu'
 
 export type TrackHeadersProps = { documentId: string }
 
@@ -31,28 +35,70 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
   const scrollTop = useTimelineView(state => viewportOf(state, documentId).scrollTop)
 
   return (
-    <div className="border-border w-(--sc-track-header) shrink-0 overflow-hidden border-r">
+    <div className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r">
       {/* Empty band facing the ruler, so row one lines up with track one. */}
       <div style={{ height: RULER_HEIGHT }} />
-      <div style={{ transform: `translateY(${-scrollTop}px)` }}>
-        {sequence.tracks.map(track => (
-          <TrackHeader key={track.id} documentId={documentId} sequence={sequence} track={track} />
-        ))}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <div style={{ transform: `translateY(${-scrollTop}px)` }}>
+          {sequence.tracks.map((track, row) => (
+            <TrackHeader
+              key={track.id}
+              documentId={documentId}
+              sequence={sequence}
+              track={track}
+              canRise={row > 0}
+              canFall={row < sequence.tracks.length - 1}
+            />
+          ))}
+        </div>
       </div>
+      <AddTrackBar documentId={documentId} />
     </div>
   )
 }
 
-type TrackHeaderProps = { documentId: string; sequence: SequenceState; track: Track }
-
-function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
+/**
+ * The one place a track is born, at the foot of the column it will join. One button per kind
+ * rather than one button that guesses: a video track and an audio track are not the same row,
+ * and a sequence can legitimately want either.
+ */
+function AddTrackBar({ documentId }: TrackHeadersProps) {
   const { t } = useTranslation()
+
+  return (
+    <div className="border-border flex shrink-0 items-center gap-0.5 border-t px-1.5 py-1">
+      {TRACK_KINDS.map(kind => (
+        <ToolButton
+          key={kind}
+          icon={TRACK_KIND_ICONS[kind]}
+          label={t(`timeline.addTrack.${kind}`)}
+          tooltip={TIP_RIGHT}
+          variant="header"
+          onClick={() => useSequences.getState().runCommand(documentId, addTrack(kind))}
+        />
+      ))}
+    </div>
+  )
+}
+
+type TrackHeaderProps = {
+  documentId: string
+  sequence: SequenceState
+  track: Track
+  canRise: boolean
+  canFall: boolean
+}
+
+function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHeaderProps) {
+  const { t } = useTranslation()
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
 
   // Renaming is an edit and goes through a command; the rest is state — see `writeTrack`.
   const write = (change: (current: Track) => Track): void =>
     writeTrack(documentId, track.id, change)
 
   const audible = playsThrough(sequence, track)
+  const rows = { documentId, trackId: track.id, canRise, canFall }
 
   return (
     <div
@@ -60,6 +106,10 @@ function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
       style={{ height: track.height }}
       data-testid={`track-header-${track.id}`}
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
+      onContextMenu={event => {
+        event.preventDefault()
+        setMenuAt({ x: event.clientX, y: event.clientY })
+      }}
     >
       <TrackName documentId={documentId} track={track} dimmed={!audible} />
 
@@ -75,6 +125,18 @@ function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
             onClick={() => write(current => ({ ...current, [flag.key]: !current[flag.key] }))}
           />
         ))}
+        {/* The keyboard's way to the same three rows: `contextmenu` from Shift+F10 targets the
+            focused element, and the listener above it never sees it. */}
+        <MenuButton
+          icon={mdiDotsHorizontal}
+          label={t('timeline.trackActions', { name: track.name })}
+          description={t('timeline.trackActionsHint')}
+          tooltip={TIP_RIGHT}
+          variant="header"
+          rowCount={TRACK_MENU_ROWS}
+          opensOnClick
+          rows={close => <TrackMenuRows {...rows} onClose={close} />}
+        />
       </div>
 
       <ResizeHandle
@@ -82,6 +144,8 @@ function TrackHeader({ documentId, sequence, track }: TrackHeaderProps) {
         size={track.height}
         onSize={height => write(current => ({ ...current, height: clampTrackHeight(height) }))}
       />
+
+      {menuAt && <TrackMenu {...rows} at={menuAt} onClose={() => setMenuAt(null)} />}
     </div>
   )
 }

@@ -728,7 +728,16 @@
     "solo": "Écouter seule la piste {{name}}",
     "lock": "Verrouiller la piste {{name}}",
     "rename": "Nom de la piste",
-    "renameHint": "Double-cliquer pour renommer"
+    "renameHint": "Double-cliquer pour renommer",
+    "addTrack": {
+      "video": "Ajouter une piste vidéo",
+      "audio": "Ajouter une piste audio"
+    },
+    "trackActions": "Actions de la piste {{name}}",
+    "trackActionsHint": "Déplacer la piste dans la pile, ou la retirer avec ce qu’elle porte",
+    "moveTrackUp": "Monter la piste",
+    "moveTrackDown": "Descendre la piste",
+    "removeTrack": "Supprimer la piste"
   },
   "videoTools": {
     "select": "Sélection",

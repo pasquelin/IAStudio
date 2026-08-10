@@ -8,7 +8,10 @@ import {
   clipFrom,
   editableTrack,
   insertClip,
+  makeTrack,
   newClipId,
+  nextTrackId,
+  reindexTracks,
   snapToFrame,
   trackById,
   trackOfClip,
@@ -18,6 +21,7 @@ import {
   type ClipEdge,
   type SequenceState,
   type Track,
+  type TrackKind,
   type Us,
 } from './timeline-state'
 
@@ -257,6 +261,97 @@ export function setClipGain(clipId: string, gain: number): Command<SequenceState
 
 export function setClipSpeed(clipId: string, speed: number): Command<SequenceState> {
   return editClip(`speed:${clipId}`, clipId, clip => ({ ...clip, speed: clampSpeed(speed) }))
+}
+
+/**
+ * Adds a track at the bottom of the column. What it is called is decided as the command is
+ * applied, not as it is built: two adds queued before either runs would otherwise pick the same
+ * free name, and the second would land on a track that already exists.
+ */
+export function addTrack(kind: TrackKind): Command<SequenceState> {
+  let added: string | null = null
+
+  return {
+    id: `track:add:${kind}`,
+    apply: state => {
+      const id = nextTrackId(state, kind)
+      added = id
+      return {
+        ...state,
+        tracks: reindexTracks([...state.tracks, makeTrack({ id, kind, index: 0 })]),
+      }
+    },
+    revert: state =>
+      added === null
+        ? state
+        : { ...state, tracks: reindexTracks(state.tracks.filter(track => track.id !== added)) },
+  }
+}
+
+/**
+ * Removes a track, clips and all. The whole track is captured rather than its id: undo has to
+ * put back what it carried, and at the row it was on — a track restored at the bottom would
+ * silently change what covers what.
+ */
+export function removeTrack(trackId: string): Command<SequenceState> {
+  let before: { position: number; track: Track } | null = null
+
+  return {
+    id: `track:remove:${trackId}`,
+    apply: state => {
+      const position = state.tracks.findIndex(track => track.id === trackId)
+      const track = state.tracks[position]
+      if (!track || track.locked) return state
+
+      before = { position, track }
+      return {
+        ...state,
+        tracks: reindexTracks(state.tracks.filter(current => current.id !== trackId)),
+        selectedId: track.clips.some(clip => clip.id === state.selectedId)
+          ? null
+          : state.selectedId,
+      }
+    },
+    revert: state => {
+      const origin = before
+      if (!origin) return state
+
+      const tracks = [...state.tracks]
+      tracks.splice(origin.position, 0, origin.track)
+      return { ...state, tracks: reindexTracks(tracks) }
+    },
+  }
+}
+
+/**
+ * Moves a track one row up or down. `by` is a step rather than a target row so the two callers
+ * that exist — the two menu entries — cannot disagree on what the rows are numbered from.
+ */
+export function moveTrack(trackId: string, by: number): Command<SequenceState> {
+  let from: number | null = null
+
+  const reorder = (tracks: readonly Track[], position: number, to: number): Track[] => {
+    const track = tracks[position]
+    if (!track) return [...tracks]
+
+    const moved = tracks.filter((_, at) => at !== position)
+    moved.splice(to, 0, track)
+    return reindexTracks(moved)
+  }
+
+  return {
+    id: `track:move:${trackId}`,
+    apply: state => {
+      const position = state.tracks.findIndex(track => track.id === trackId)
+      const to = position + by
+      if (position < 0 || to < 0 || to >= state.tracks.length) return state
+
+      from = position
+      return { ...state, tracks: reorder(state.tracks, position, to) }
+    },
+    revert: state =>
+      from === null ? state : { ...state, tracks: reorder(state.tracks, from + by, from) },
+  }
 }
 
 export function renameTrack(trackId: string, name: string): Command<SequenceState> {
