@@ -39,21 +39,21 @@ Sous la bannière, une bande par sujet, dans cet ordre :
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
 | **Outils** | les sept espaces, et les gestes de projet | rien |
-| **Vos projets** | les projets récents | rien |
-| **Ce que vous avez produit** | vos générations, légendées du modèle qui les a faites | un projet ouvert |
-| **Par type** | six compteurs — Image, Vidéo, Audio, Maillage, Texture, Skybox | un projet ouvert |
 | **Vos recettes** | les réglages que vous avez épinglés | rien |
-| **Votre bibliothèque** | ce qui vit en ligne, sur votre compte Scenario | une clé API |
-| **Vos documents** | les documents du projet | un projet ouvert |
 | **En cours** | les générations en route | une clé API |
-| **Activité récente** | ce que le studio a fait et raté | un projet ouvert |
 | **Dans la même veine** | des créations publiques qui ressemblent à votre dernier asset | une clé API |
 | **Une idée pour commencer** | des départs de prompt écrits pour votre modèle d’image | une clé API |
 | **Ce que vous avez consommé** | vos unités dépensées, en tout et par modèle | une clé API |
 | **Explorer** | ce que tout le monde a publié, par type | une clé API |
 
 **Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
-la bibliothèque n’existe pas sur cet écran.
+**Explorer** n’existe pas sur cet écran.
+
+**Six contenus de l’accueil ne sont pas des bandes**, et c’est ce qui explique qu’ils ne se
+rangent pas comme elles : vos projets, ce que vous avez produit, les compteurs par type, votre
+bibliothèque, vos documents et l’activité récente sont des **panneaux**, logés dans les deux
+colonnes de l’accueil. Une bande est ce que le centre empile ; ce que portent les rails n’en est
+pas une. Le menu **Personnaliser cette section** ne les concerne donc pas.
 
 ### Les quatre bandes qui regardent au-delà de votre projet
 
@@ -115,8 +115,9 @@ pas : il n’y aurait nulle part où écrire.
 
 **Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image et pose le
 filtre : vous arrivez sur les images, pas sur l’étagère entière. Un type à zéro reste sur la
-rangée mais ne répond pas — il n’y a nulle part où aller. Si le projet est vide de bout en bout,
-la bande ne s’affiche pas.
+rangée mais ne répond pas — il n’y a nulle part où aller. **Et le panneau ne disparaît jamais** :
+projet vide, ou pas de projet du tout, il montre ses six types à zéro. Une bande peut se retirer
+de la page ; un panneau posé sous une icône de rail, non — sinon l’icône ouvrirait sur rien.
 
 ### Ranger la page
 
@@ -131,13 +132,17 @@ Chaque bande a son menu — **Personnaliser cette section**.
 Les sections masquées sont comptées en bas de page — « 2 sections masquées » — avec un bouton
 **Les réafficher**. Rien ne disparaît sans laisser de trace.
 
-**Trois bandes ne se masquent pas** : la bannière, les Outils et Vos projets. C’est ce qui
-garantit que l’accueil n’est jamais une page blanche, quoi qu’on décoche.
+**Deux bandes ne se masquent pas** : la bannière et les Outils. C’est ce qui garantit que
+l’accueil n’est jamais une page blanche, quoi qu’on décoche — et ni l’une ni l’autre ne réclame
+de clé API, sans quoi la garantie ne tiendrait pas sur un studio non connecté.
 
 ### La colonne de gauche
 
-Un rail étroit portant l’**Explorateur** : le dossier du projet, en arborescence. Il est là
-pour ce qu’on garde à l’œil pendant qu’on lit la page, au lieu de le lire à son tour.
+Un rail étroit portant **Vos projets** : ceux que vous avez ouverts récemment, à rouvrir d’un
+clic. C’est la place que les espaces de travail donnent à l’Explorateur — ici, ce qu’on garde à
+l’œil pendant qu’on lit la page, c’est la liste des projets, pas le contenu de l’un d’eux. Les
+documents du projet ouvert, eux, sont listés dans la colonne de droite, qui a ses panneaux à
+elle.
 
 > **L’accueil peut être coupé.** **Préférences ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. L’ordre des bandes et celles que vous avez
@@ -352,7 +357,7 @@ De haut en bas :
 | *séparateur* | |
 | Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces |
 | *séparateur* | |
-| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes partout, accueil compris pour l’Explorateur |
+| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets** |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
 
 **Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la
@@ -366,9 +371,12 @@ qu’il **agit** — il crée quelque chose — alors que les autres ne font que
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Assets, Scène,
-Lumières, Mailles — celles que l’espace déclare, dans cet ordre — puis, sous le trait,
-Inspecteur.
+Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
+Mailles, Assets — celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
+
+**Assets vient en dernier, et ce n’est pas un détail** : une moitié sans choix montre le premier
+panneau déclaré, et une étagère listée avant l’arbre de la scène s’ouvrirait devant lui à chaque
+entrée dans l’espace 3D.
 
 ### Le rail ne montre que ce que l’espace sait faire
 
@@ -442,7 +450,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 
 ---
 
-## La liste complète des panneaux
+## La liste complète des panneaux des espaces
 
 | Panneau | Zone | Moitié | Visible dans | Ce que c’est |
 |---|---|---|---|---|
@@ -453,21 +461,24 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
 | **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
 | **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
-| **Assets** | droite | 1re | Vidéo, Audio | l’étagère du projet, en colonne |
-| **Explorateur** | gauche | 2de | partout, accueil compris | le dossier du projet, dossiers et fichiers |
-| **Apps** | gauche | 2de | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
+| **Assets** | droite | 1re | Vidéo, Audio, 3D | l’étagère du projet, en colonne |
+| **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
+| **Apps** | gauche | 2de | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
-| **Assets** | bas | 1re | Image, 3D, Textures, Skyboxes, Graphe | la même étagère, en bande |
-| **Timeline** | bas | 1re | Vidéo, Audio | la séquence en cours de montage |
+| **Assets** | bas | 1re | Image, Textures, Skyboxes, Graphe | la même étagère, en bande |
+| **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation de la scène |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
 > espace est un endroit qui ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun —
-> il ouvre ceux des autres. Il n’a qu’une colonne de gauche, et il y met l’**Explorateur**, à la
-> même place et sous la même icône que les espaces : en moitié basse. N’ayant pas de génération
-> à mettre au-dessus, le panneau y occupe toute la colonne.
+> il ouvre ceux des autres. **L’accueil a ses propres panneaux, et ce tableau ne les liste pas** :
+> il a ses deux colonnes à lui, avec six panneaux qui n’existent nulle part ailleurs. À gauche il
+> met **Vos projets**, à la place où les espaces mettent l’Explorateur : en moitié basse. La
+> logique est la même à un mot près — un espace y range ce **avec** quoi on produit, l’accueil ce
+> **dans** quoi on produit, et c’est la première chose qu’on vient y chercher. N’ayant pas de génération à mettre au-dessus, le panneau
+> occupe toute la colonne.
 
 **La colonne de gauche est celle de ce qui produit**, et elle est coupée en deux.
 
@@ -491,10 +502,14 @@ dans un éditeur, l’inspecteur n’est jamais le panneau qu’il faut quitter 
 
 **Pourquoi l’étagère à assets change de place.** Dans la plupart des espaces, elle est en bas :
 c’est une étagère, elle se lit en largeur, et la colonne latérale est réservée à ce qui agit sur le
-document. Mais en **Vidéo** et en **Audio**, la bande basse appartient au montage, qui a besoin de
-toute la largeur. L’étagère passe alors dans la **colonne de droite**, pour que le montage et elle
-tiennent l’écran **ensemble** : glisser une prise sur une piste est le geste autour duquel ces
-deux espaces sont bâtis.
+document. Mais en **Vidéo**, en **Audio** et en **3D**, la bande basse appartient à la timeline,
+qui a besoin de toute la largeur. L’étagère passe alors dans la **colonne de droite**, pour que la
+timeline et elle tiennent l’écran **ensemble** : glisser une prise sur une piste est le geste
+autour duquel ces espaces sont bâtis.
+
+**La règle appartient à la bande, pas au montage.** La 3D suit les deux autres parce qu’elle a une
+timeline elle aussi — le temps s’y lit sur la même ligne, qu’on y monte des plans ou qu’on y joue
+une animation.
 
 ### Une moitié montre ce que l’espace y met
 
@@ -520,13 +535,13 @@ le premier du rail.
 C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸ Réinitialiser la
 disposition** rétablit :
 
-La moitié basse de gauche s’ouvre partout sur l’**Explorateur**, les Apps derrière lui.
+La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espaces, les Apps derrière lui.
 
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |
 |---|---|---|
 | **Image** | Calques | Assets |
 | **Vidéo** | Assets | Timeline |
-| **3D** | Scène | Assets |
+| **3D** | Scène | Timeline |
 | **Audio** | Assets | Timeline |
 | **Textures** | Canaux | Assets |
 | **Skyboxes** | Skybox | Assets |

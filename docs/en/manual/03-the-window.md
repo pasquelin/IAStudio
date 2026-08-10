@@ -39,21 +39,20 @@ Under the banner, one band per subject, in this order:
 | Band | What it shows | It needs |
 |---|---|---|
 | **Tools** | the seven workspaces, and the project gestures | nothing |
-| **Your projects** | the recent projects | nothing |
-| **What you have made** | your generations, captioned with the model that made them | an open project |
-| **By kind** | six counters — Image, Video, Audio, Mesh, Texture, Skybox | an open project |
 | **Your recipes** | the settings you have pinned | nothing |
-| **Your library** | what lives online, on your Scenario account | an API key |
-| **Your documents** | the project's documents | an open project |
 | **Running now** | the generations under way | an API key |
-| **Recent activity** | what the studio has done and failed to do | an open project |
 | **In the same vein** | public creations that look like your latest asset | an API key |
 | **An idea to start from** | prompt starting points written for your image model | an API key |
 | **What you have spent** | your units spent, in total and per model | an API key |
 | **Explore** | what everyone has published, by kind | an API key |
 
-**A band that lacks what it needs is not greyed out: it is not there.** With no API key, the
-library does not exist on this screen.
+**A band that lacks what it needs is not greyed out: it is not there.** With no API key,
+**Explore** does not exist on this screen.
+
+**Six of the home's contents are not bands**, which is why they do not tidy away like them: your
+projects, what you have made, the counters by kind, your library, your documents and the recent
+activity are **panels**, held in the home's two columns. A band is what the centre stacks; what
+the rails hold is not one. The **Customise this section** menu therefore does not reach them.
 
 ### The four bands that look beyond your project
 
@@ -111,8 +110,9 @@ respond: there would be nowhere to write it.
 
 **A counter leads to its assets.** Clicking the images one opens the Image workspace and sets the
 filter: you land on the images, not on the whole shelf. A kind at zero stays on the row but does
-not respond — there is nowhere to go. If the project is empty throughout, the band does not show
-at all.
+not respond — there is nowhere to go. **And the panel never disappears**: empty project, or no
+project at all, it shows its six kinds at zero. A band can take itself off the page; a panel
+standing under a rail icon cannot — the icon would open onto nothing.
 
 ### Tidying the page
 
@@ -127,13 +127,16 @@ Every band has its menu — **Customise this section**.
 Hidden sections are counted at the foot of the page — "2 sections hidden" — with a **Show them
 again** button. Nothing disappears without leaving a trace.
 
-**Three bands cannot be hidden**: the banner, Tools and Your projects. That is what keeps the home
-from ever being a blank page, whatever you untick.
+**Two bands cannot be hidden**: the banner and Tools. That is what keeps the home from ever being
+a blank page, whatever you untick — and neither of them needs an API key, without which the
+guarantee would not hold on a studio that is not connected.
 
 ### The left column
 
-A narrow rail holding the **Explorer**: the project folder, as a tree. It is there for what
-you keep an eye on while reading the page, rather than what you read in turn.
+A narrow rail holding **Your projects**: the ones you opened recently, reopened with a click.
+That is the place the workspaces give the Explorer — here, what you keep an eye on while reading
+the page is the list of projects, not the contents of one. The open project's documents are
+listed in the right column, which has panels of its own.
 
 > **The home can be skipped.** **Preferences ▸ General ▸ Show the home screen**: unticked, the
 > studio goes straight to the workspace you left. The order of the bands, and which ones you have
@@ -341,7 +344,7 @@ From top to bottom:
 | *separator* | |
 | The **upper half** icons of the left column | Models, then Generate — the same two in every workspace |
 | *separator* | |
-| The **lower half** icons | Explorer, then Apps — the same everywhere, the home included for the Explorer |
+| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 **One separator per cut of the column, never one more.** The rail is the column's legend: it cuts
@@ -355,9 +358,13 @@ The **+** button is solid and blue, where all the others are grey glyphs. That i
 
 ### The right rail
 
-The **right column** icons: Skybox, View, Layers, Channels, Styles, Assets, Scene, Lights,
-Meshes — whichever ones the workspace declares, in that order — then, below the separator,
+The **right column** icons: Skybox, View, Layers, Channels, Styles, Scene, Lights, Meshes,
+Assets — whichever ones the workspace declares, in that order — then, below the separator,
 Inspector.
+
+**Assets comes last, and that is no detail**: a half with nothing chosen shows the first panel
+declared, so a shelf listed above the scene tree would open in front of it every time you enter
+the 3D workspace.
 
 ### The rail only shows what the workspace can do
 
@@ -427,7 +434,7 @@ instead.
 
 ---
 
-## The complete list of panels
+## The complete list of the workspaces' panels
 
 | Panel | Zone | Half | Visible in | What it is |
 |---|---|---|---|---|
@@ -438,21 +445,24 @@ instead.
 | **Layers** | right | 1st | Image | the layer stack of the open image |
 | **Channels** | right | 1st | Textures | the eight channels of the open material, and what each one holds |
 | **Styles** | right | 1st | Textures | saved material settings, to replay on any material |
-| **Assets** | right | 1st | Video, Audio | the project's shelf, as a column |
-| **Explorer** | left | 2nd | everywhere, home included | the project folder, folders and files |
-| **Apps** | left | 2nd | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Scene** | right | 1st | 3D | the tree of the open scene |
 | **Lights** | right | 1st | 3D | the scene's light sources |
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
+| **Assets** | right | 1st | Video, Audio, 3D | the project's shelf, as a column |
+| **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
+| **Apps** | left | 2nd | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, 3D, Textures, Skyboxes, Graph | the same shelf, as a strip |
-| **Timeline** | bottom | 1st | Video, Audio | the sequence being edited |
+| **Assets** | bottom | 1st | Image, Textures, Skyboxes, Graph | the same shelf, as a strip |
+| **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the scene's animation |
 
 > **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
 > workspace is a place that opens documents of a kind of its own; the home opens none — it opens
-> the others'. It has only a left column, and it puts the **Explorer** in the same place and
-> under the same icon as the workspaces do: the lower half. With no generation to sit above it,
-> the panel fills the whole column there.
+> the others'. **The home has panels of its own, and this table does not list them**: it has two
+> columns of its own, holding six panels that exist nowhere else. On the left it puts **Your
+> projects** where the workspaces put the Explorer: the lower half. The logic is the same but for
+> one word — a workspace files what
+> you produce **with**, the home what you produce **in**, and that is the first thing anyone comes
+> to this screen for. With no generation to sit above it, the panel fills the whole column there.
 
 **The left column belongs to what produces**, and it is cut in two.
 
@@ -475,10 +485,15 @@ a model is being chosen and a prompt written: in an editor, the inspector is nev
 have to switch away from to see something else.
 
 **Why the asset shelf moves.** In most workspaces it sits at the bottom: it is a shelf, it reads
-across, and the side column is reserved for what acts on the document. But in the **Video** and
-**Audio** workspaces the bottom strip belongs to the edit, which needs the full width. The shelf
-then moves to the **right column**, so that the edit and the shelf hold the screen **together**:
-dragging a take onto a track is the gesture those two workspaces are built around.
+across, and the side column is reserved for what acts on the document. But in the **Video**,
+**Audio** and **3D** workspaces the bottom strip belongs to the timeline, which needs the full
+width. The shelf then moves to the **right column**, so that the timeline and the shelf hold the
+screen **together**: dragging a take onto a track is the gesture those workspaces are built
+around.
+
+**The rule belongs to the strip, not to the montage.** 3D follows the other two because it has a
+timeline too — time reads along the same line there, whether you are cutting shots or playing an
+animation.
 
 ### A half shows what the workspace puts there
 
@@ -501,13 +516,13 @@ the workspace declares there — the topmost in the table above, and so the firs
 
 That is what you see on first launch, and what **View ▸ Reset layout** restores:
 
-The lower left half opens on the **Explorer** everywhere, the Apps behind it.
+The lower left half opens on the **Explorer** in every workspace, the Apps behind it.
 
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|
 | **Image** | Layers | Assets |
 | **Video** | Assets | Timeline |
-| **3D** | Scene | Assets |
+| **3D** | Scene | Timeline |
 | **Audio** | Assets | Timeline |
 | **Textures** | Channels | Assets |
 | **Skyboxes** | Skybox | Assets |
