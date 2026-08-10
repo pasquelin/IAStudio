@@ -139,6 +139,9 @@ export function modelIdsOf(graph: GraphState): readonly string[] {
   return [...ids]
 }
 
+/** A refusal and the nodes it points at — empty where the refusal points at none. */
+export type FlowRefusal = { problem: GraphCompileProblem; nodes: readonly string[] }
+
 export type CompileDeps = {
   /** Where the validator's own sentence goes: a developer's English, never the user's screen. */
   report: (message: string) => void
@@ -252,7 +255,7 @@ function reachedFrom(
  * - an end naming a node the graph no longer holds: the lookup answers nothing and the wire is
  *   simply dropped, which is the same as drawing no wire.
  */
-function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-ends' | undefined {
+function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
   const consumers = consumersByProvider(graph)
   const read: { end: string; names: string }[] = []
   const firstEnd = new Map<string, string>()
@@ -286,7 +289,10 @@ function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-e
    */
   for (const entry of read) {
     if (!loops.has(entry.names)) continue
-    if (firstEnd.get(entry.names) !== entry.end) return 'loop-two-ends'
+    const kept = firstEnd.get(entry.names)
+    // Both ends, and the kept one first: the fault is the PAIR, and a user shown only the spare
+    // one cannot see which of the two the converter is about to obey.
+    if (kept !== entry.end) return { problem: 'loop-two-ends', nodes: [kept ?? entry.end, entry.end] }
   }
 
   // An end that does not close what it names, either because that is no loop at all or because the
@@ -297,7 +303,8 @@ function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-e
     // Reachability alone, and NOT "is the named node a loop": the harness showed the second test
     // never firing on its own. An end downstream of what it names resolves to it either way, loop
     // or not — and an end that is not downstream is misrouted whatever it named.
-    if (!reachedFrom(consumers, entry.names).has(entry.end)) return 'loop-end-outside'
+    if (!reachedFrom(consumers, entry.names).has(entry.end))
+      return { problem: 'loop-end-outside', nodes: [entry.end] }
   }
 
   return undefined
@@ -316,9 +323,10 @@ export function refuseFlow(
   graph: GraphState,
   flow: readonly WorkflowEditorFlowItem[],
   report: (message: string) => void,
-): GraphCompileProblem | null {
-  // "Nothing is marked as an output" is the one cause of an empty flow the user can act on.
-  if (outputNodesOf(graph).length === 0) return 'no-output'
+): FlowRefusal | null {
+  // "Nothing is marked as an output" is the one cause of an empty flow the user can act on, and
+  // the one refusal with no node to point at: what is wrong is that NO node carries the mark.
+  if (outputNodesOf(graph).length === 0) return { problem: 'no-output', nodes: [] }
 
   // Before anything read off the flow, because the conversion is exactly what hides it: these
   // graphs convert and validate without a word, and the flow that comes out has a wire the graph
@@ -326,7 +334,10 @@ export function refuseFlow(
   const pairing = loopPairingProblem(graph)
   if (pairing) return pairing
 
-  if (flow.length === 0) return 'empty'
+  // The marked outputs, which are where to look: they are marked and the flow still came back
+  // empty, so nothing reaches them.
+  if (flow.length === 0)
+    return { problem: 'empty', nodes: outputNodesOf(graph).map(node => node.id) }
 
   try {
     // Copied because the validator takes a mutable array. It reads only — checked in
@@ -337,7 +348,8 @@ export function refuseFlow(
     // The sentence names a node and what is wrong with it, which is worth keeping — in the
     // journal, where a developer reads it. The screen gets the code.
     report(messageOf(error))
-    return 'invalid'
+    // The sentence names the node; parsing English prose to find it would break on its wording.
+    return { problem: 'invalid', nodes: [] }
   }
 
   return null
@@ -354,5 +366,5 @@ export function compileGraph(
   const flow = toEditorFlow(graph, getModel)
   const problem = refuseFlow(graph, flow, report)
 
-  return problem ? { ok: false, problem } : { ok: true, steps: flow.length }
+  return problem ? { ok: false, ...problem } : { ok: true, steps: flow.length }
 }

@@ -1,7 +1,8 @@
 import type { WorkflowEditorFlowItem } from '@scenario-labs/sdk'
-import type { GraphCompileProblem, GraphPublishResult, GraphState } from '@shared/domain/graph'
+import type { GraphPublishResult, GraphState } from '@shared/domain/graph'
 import { workflowFileOf, type WorkflowInputDefinition } from '@shared/domain/workflow-file'
 import { messageOf } from '@shared/guards'
+import type { FlowRefusal } from './workflow-compile'
 
 /**
  * The two writes a publication is, as a narrow port rather than the SDK's own shape.
@@ -30,7 +31,7 @@ export type PublishDeps = {
   /** The graph as Scenario's own flow — `toEditorFlow`, with the models already resolved. */
   flowOf: (graph: GraphState) => Promise<readonly WorkflowEditorFlowItem[]>
   /** The compile's own verdict on that flow, so one question has one answer. `refuseFlow`. */
-  refuse: (graph: GraphState, flow: readonly WorkflowEditorFlowItem[]) => GraphCompileProblem | null
+  refuse: (graph: GraphState, flow: readonly WorkflowEditorFlowItem[]) => FlowRefusal | null
   report: (message: string) => void
 }
 
@@ -54,7 +55,7 @@ export async function publishGraph(
 ): Promise<GraphPublishResult> {
   const flow = await flowOf(graph)
   const problem = refuse(graph, flow)
-  if (problem) return { ok: false, problem }
+  if (problem) return { ok: false, ...problem }
 
   const file = workflowFileOf(graph, about)
 
@@ -75,6 +76,6 @@ export async function publishGraph(
   } catch (error) {
     // The API's own sentence belongs to the journal; the screen gets the code, like a compile.
     report(messageOf(error))
-    return { ok: false, problem: 'refused' }
+    return { ok: false, problem: 'refused', nodes: [] }
   }
 }

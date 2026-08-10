@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { WorkflowEditorFlowItem } from '@scenario-labs/sdk'
 import type { GraphCompileProblem, GraphState } from '@shared/domain/graph'
+import type { FlowRefusal } from './workflow-compile'
 import { publishGraph, type WorkflowWriter } from './workflow-publish'
 
 const graph: GraphState = {
@@ -34,13 +35,16 @@ const writerOf = (overrides: Partial<WorkflowWriter> = {}): WorkflowWriter => ({
 const deps = (
   writer: WorkflowWriter,
   flow = oneStep,
-  refused: GraphCompileProblem | null = null,
+  refused: FlowRefusal | null = null,
 ) => ({
   write: writer,
   flowOf: () => Promise.resolve(flow),
   refuse: () => refused,
   report: vi.fn(),
 })
+
+/** A refusal pointing at no node, which is what these tests are about — the code, not the ids. */
+const refusalOf = (problem: GraphCompileProblem): FlowRefusal => ({ problem, nodes: [] })
 
 describe('publishing a graph', () => {
   it('creates the workflow, then fills it and marks it ready', async () => {
@@ -83,8 +87,8 @@ describe('publishing a graph', () => {
     const create = vi.fn(() => Promise.resolve({ id: 'workflow_1' }))
 
     await expect(
-      publishGraph(graph, ABOUT, deps(writerOf({ create }), [], 'empty')),
-    ).resolves.toEqual({ ok: false, problem: 'empty' })
+      publishGraph(graph, ABOUT, deps(writerOf({ create }), [], refusalOf('empty'))),
+    ).resolves.toEqual({ ok: false, problem: 'empty', nodes: [] })
     expect(create).not.toHaveBeenCalled()
   })
 
@@ -96,16 +100,16 @@ describe('publishing a graph', () => {
     const create = vi.fn(() => Promise.resolve({ id: 'workflow_1' }))
 
     await expect(
-      publishGraph(graph, ABOUT, deps(writerOf({ create }), oneStep, 'invalid')),
-    ).resolves.toEqual({ ok: false, problem: 'invalid' })
+      publishGraph(graph, ABOUT, deps(writerOf({ create }), oneStep, refusalOf('invalid'))),
+    ).resolves.toEqual({ ok: false, problem: 'invalid', nodes: [] })
     expect(create).not.toHaveBeenCalled()
   })
 
   /** Nothing marked as an output is the refusal the user can act on, and it must survive here. */
   it('passes the no-output refusal through rather than flattening it to empty', async () => {
     await expect(
-      publishGraph(graph, ABOUT, deps(writerOf(), oneStep, 'no-output')),
-    ).resolves.toEqual({ ok: false, problem: 'no-output' })
+      publishGraph(graph, ABOUT, deps(writerOf(), oneStep, refusalOf('no-output'))),
+    ).resolves.toEqual({ ok: false, problem: 'no-output', nodes: [] })
   })
 
   /**
@@ -137,6 +141,7 @@ describe('publishing a graph', () => {
     await expect(publishGraph(graph, ABOUT, given)).resolves.toEqual({
       ok: false,
       problem: 'refused',
+      nodes: [],
     })
     expect(given.report).toHaveBeenCalledWith('403 locked')
   })
@@ -148,6 +153,7 @@ describe('publishing a graph', () => {
     await expect(publishGraph(graph, ABOUT, given)).resolves.toMatchObject({
       ok: false,
       problem: 'refused',
+      nodes: [],
     })
   })
 

@@ -164,7 +164,7 @@ describe('a graph as a document', () => {
 
     it('sends the same to the publication', () => {
       const publish = vi.fn((_graph: GraphState, _name: string): Promise<GraphPublishResult> =>
-        Promise.resolve({ ok: false, problem: 'empty' }),
+        Promise.resolve({ ok: false, problem: 'empty', nodes: [] }),
       )
       installFakeBridge({ workflows: { publish } })
       withOneNode()
@@ -198,7 +198,7 @@ describe('a graph as a document', () => {
       installFakeBridge({
         workflows: {
           publish: (): Promise<GraphPublishResult> =>
-            Promise.resolve({ ok: false, problem: 'refused' }),
+            Promise.resolve({ ok: false, problem: 'refused', nodes: [] }),
         },
       })
       withOneNode()

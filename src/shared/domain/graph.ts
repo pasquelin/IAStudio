@@ -629,7 +629,9 @@ export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
  * "nothing reaches an output", and cannot act on a 403.
  */
 export type GraphPublishResult =
-  { ok: true; workflowId: string } | { ok: false; problem: GraphCompileProblem | 'refused' }
+  | { ok: true; workflowId: string }
+  /** `nodes` as `GraphCompileResult` carries it — empty under `refused`, which is the API's no. */
+  | { ok: false; problem: GraphCompileProblem | 'refused'; nodes: readonly string[] }
 
 /**
  * What compiling a graph answers.
@@ -639,4 +641,11 @@ export type GraphPublishResult =
  * what the two share, so one question keeps one answer.
  */
 export type GraphCompileResult =
-  { ok: true; steps: number } | { ok: false; problem: GraphCompileProblem }
+  | { ok: true; steps: number }
+  /**
+   * `nodes` names the ones at fault, as `GraphPlan.cycle` names a cycle's — and it is EMPTY where
+   * no node is: `no-output` is an absence, and `invalid` comes from the validator, whose sentence
+   * names the node in English prose the studio does not parse. Empty means "nowhere to point",
+   * never "nothing wrong".
+   */
+  | { ok: false; problem: GraphCompileProblem; nodes: readonly string[] }
