@@ -18,13 +18,16 @@ export type LoopListKind = 'text' | 'image'
 
 export const LOOP_LIST_KINDS: readonly LoopListKind[] = ['image', 'text']
 
-/** One list a loop walks: the port it arrives by, the port the item of the iteration leaves by. */
+export const isLoopListKind = (value: unknown): value is LoopListKind =>
+  LOOP_LIST_KINDS.some(candidate => candidate === value)
+
+/** What a list holds until something is wired into it — pictures, which is what a loop mostly walks. */
+export const DEFAULT_LIST_KIND: LoopListKind = 'image'
+
+/** One list a loop walks, as the panel reads one: the number its two ports share, and its kind. */
 export type LoopList = {
-  /** The number the two ports share, and the only thing that pairs them. */
   index: number
   kind: LoopListKind
-  input: GraphHandleInput | undefined
-  output: GraphHandleOutput | undefined
 }
 
 /** What a loop is edited by: its two sides, never written apart. */
@@ -52,19 +55,13 @@ export function loopListsOf(node: GraphNode): readonly LoopList[] {
   const outputs = numbered(ownOutputHandles(node), LOOP_OUTPUT)
   const indices = [...new Set([...inputs.keys(), ...outputs.keys()])].sort((a, b) => a - b)
 
-  return indices.map(index => {
-    const output = outputs.get(index)
-
-    return {
-      index,
-      input: inputs.get(index),
-      output,
-      // The converter's own test, copied rather than reasoned: `outputHandle?.type === 'text'`
-      // decides between `text${n}` and `image${n}`, and everything that is not the word `text`
-      // is a picture to it — an untyped port included.
-      kind: output?.type === 'text' ? 'text' : 'image',
-    }
-  })
+  // The converter's own test, copied rather than reasoned: `outputHandle?.type === 'text'` decides
+  // between `text${n}` and `image${n}`, and everything that is not the word `text` is a picture to
+  // it — an untyped port included.
+  return indices.map(index => ({
+    index,
+    kind: outputs.get(index)?.type === 'text' ? 'text' : 'image',
+  }))
 }
 
 /**
@@ -78,9 +75,19 @@ export function addedList(node: GraphNode, kind: LoopListKind): LoopPatch {
   const lists = loopListsOf(node)
   const index = lists.reduce((highest, list) => Math.max(highest, list.index + 1), 0)
 
+  // Named, as `freePort` names the ports of a branch: a port with no name is drawn on the canvas
+  // under its TYPE, so a loop walking two picture lists would show four ports all reading `image`
+  // while the panel numbers them. The name is document data, so it is written in Scenario's
+  // language and never translated — the same reason `createNode` leaves `label` off.
   return {
-    inputHandles: [...ownInputHandles(node), { id: loopInputId(node.id, index), type: kind }],
-    outputHandles: [...ownOutputHandles(node), { id: loopOutputId(node.id, index), type: kind }],
+    inputHandles: [
+      ...ownInputHandles(node),
+      { id: loopInputId(node.id, index), name: `list${index}`, type: kind },
+    ],
+    outputHandles: [
+      ...ownOutputHandles(node),
+      { id: loopOutputId(node.id, index), name: `item${index}`, type: kind },
+    ],
   }
 }
 
@@ -104,6 +111,9 @@ export function removedList(node: GraphNode, index: number): LoopPatch {
  * The output's is what the converter reads to name the item; the input's is what the canvas
  * refuses a wrong wire by. Written apart, a text list would accept a picture and then ask the
  * server for a variable it never declared.
+ *
+ * The wire already on a retyped list is cut by `replaceNodePorts`, which asks `typesConnect` of
+ * every edge it keeps — the port ids do not change here, so nothing else would have.
  */
 export function setListKind(node: GraphNode, index: number, kind: LoopListKind): LoopPatch {
   const retyped = <T>(handles: readonly T[], pattern: RegExp): T[] =>
@@ -124,6 +134,10 @@ export function setListKind(node: GraphNode, index: number, kind: LoopListKind):
  * "no loop": a picker whose value matches no option renders BLANK, so the screen would read as an
  * end that closes nothing over one that names something, and the next stray change would
  * overwrite it unseen. `IfElseFields` keeps a deleted field visible for the same reason.
+ *
+ * An end naming nothing is not a silent failure: `validateWorkflowFlow` refuses a `for-each`
+ * whose `loopBodyNodeIds` is empty, and `compileGraph` reports it as `invalid`. What the field
+ * buys is the pairing itself — without it the studio could only close a loop a file had closed.
  *
  * `typeof` rather than the type: `parseGraph` keeps `data` as it found it, so a file may well
  * hold a number here, and it would reach a `<select>` as its value.

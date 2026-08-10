@@ -265,9 +265,9 @@ export type GraphNodeBody =
    *
    * `parentNodeId` is what pairs it with its `forEach`, and the pair is the loop: the converter
    * finds the end by scanning for it, walks the body between the two, and resolves every wire
-   * leaving the end to the LOOP's flow item. Without it the end resolves to nothing and the loop
-   * compiles with an empty body — no error at either end, which is why the editor has to offer
-   * the field rather than leave it to a file.
+   * leaving the end to the LOOP's flow item. Without it the loop compiles with an empty body,
+   * which the SDK's own validator then refuses — so the graph is unpublishable until an editor
+   * offers the field, rather than only a file being able to write it.
    *
    * The `forEach` itself carries no data of its own: what it walks is written in its PORTS, one
    * numbered pair per list.
@@ -510,7 +510,10 @@ export function inputHandlesOf(node: GraphNode): readonly GraphHandleInput[] {
   const flatten = (handles: readonly GraphHandleInput[]): GraphHandleInput[] =>
     handles.flatMap(handle => [handle, ...flatten(handle.subHandles ?? [])])
 
-  return flatten(node.data.inputHandles ?? [])
+  // `Array.isArray` rather than `?? []`, as `outputHandlesOf` does it: the type is what the editor
+  // writes, not what a file holds, and `"inputHandles": "x"` read off one reached `flatMap` and
+  // took every panel that maps a port into its error boundary.
+  return flatten(Array.isArray(node.data.inputHandles) ? node.data.inputHandles : [])
 }
 
 /** `id` may be missing: an edge read off a file names no handle, and that is no port either. */

@@ -767,11 +767,11 @@
     "lock_alphaHint": "Paints only where the layer already has something",
     "lists": "Walked lists",
     "list": "List {{number}}",
-    "listKind": "What this list holds",
     "addList": "Add a list to walk, with the port giving its item",
     "addListRow": "Add a list",
     "removeList": "Remove this list and the port giving its item",
-    "loop": "Loop closed"
+    "loop": "Loop closed",
+    "listContents": "What this list holds"
   },
   "transport": {
     "play": "Play",

@@ -767,11 +767,11 @@
     "lock_alphaHint": "Ne peint que là où le calque a déjà de la matière",
     "lists": "Listes parcourues",
     "list": "Liste {{number}}",
-    "listKind": "Ce que cette liste contient",
     "addList": "Ajouter une liste à parcourir, avec le port qui en donne l’élément",
     "addListRow": "Ajouter une liste",
     "removeList": "Supprimer cette liste et le port qui en donne l’élément",
-    "loop": "Boucle fermée"
+    "loop": "Boucle fermée",
+    "listContents": "Ce que cette liste contient"
   },
   "transport": {
     "play": "Lire",

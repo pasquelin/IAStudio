@@ -345,9 +345,13 @@ const StickyNoteNode = memo(function StickyNoteNode({ data, selected }: NodeProp
  * Through `nodeOf` rather than one shared component reading its own `type`: the type is then known
  * at build time, so the name it is drawn under is looked up exactly as the drawn types look theirs
  * up, and DevTools tells the eight apart.
+ *
+ * The component's name is DERIVED from the type rather than passed beside it: written twice, one
+ * of the eight would sooner or later be drawn under another's label, and nothing would compile
+ * differently.
  */
-const plainNode = (name: string, drawn: GraphNodeType): ((props: NodeProps) => ReactNode) =>
-  nodeOf(name, drawn, () => null)
+const plainNode = (drawn: GraphNodeType): ((props: NodeProps) => ReactNode) =>
+  nodeOf(`${drawn.charAt(0).toUpperCase()}${drawn.slice(1)}Node`, drawn, () => null)
 
 /**
  * Declared once, outside any component: React Flow remounts every node when this object changes
@@ -361,15 +365,15 @@ export const GRAPH_NODE_TYPES: Record<GraphNodeType, (props: NodeProps) => React
   asset: AssetNode,
   model: ModelNode,
   stickyNote: StickyNoteNode,
-  aspectRatio: plainNode('AspectRatioNode', 'aspectRatio'),
-  modelInput: plainNode('ModelInputNode', 'modelInput'),
-  llm: plainNode('LlmNode', 'llm'),
+  aspectRatio: plainNode('aspectRatio'),
+  modelInput: plainNode('modelInput'),
+  llm: plainNode('llm'),
   transformText: TransformTextNode,
-  splitText: plainNode('SplitTextNode', 'splitText'),
+  splitText: plainNode('splitText'),
   ifElse: IfElseNode,
-  groupItems: plainNode('GroupItemsNode', 'groupItems'),
-  sliceAssets: plainNode('SliceAssetsNode', 'sliceAssets'),
-  forEach: plainNode('ForEachNode', 'forEach'),
-  forEachEnd: plainNode('ForEachEndNode', 'forEachEnd'),
+  groupItems: plainNode('groupItems'),
+  sliceAssets: plainNode('sliceAssets'),
+  forEach: plainNode('forEach'),
+  forEachEnd: plainNode('forEachEnd'),
   approval: ApprovalNode,
 }

@@ -455,15 +455,34 @@ describe('stopping and forgetting a run', () => {
   })
 
   /**
-   * `parseGraph` validates the node, not its `data`, so a `.graph` read off disk can carry
-   * `inputHandles` that is not a list — and the plan throws on it. Left uncaught, the document
-   * stayed `running` for the rest of the session: the button froze on Stop and every later press
-   * was refused.
+   * Left uncaught, a throw inside the run kept the document `running` for the rest of the
+   * session: the button froze on Stop and every later press was refused.
+   *
+   * The failure is forced rather than fed in, and that is a change: a `.graph` carrying
+   * `inputHandles` that is not a list used to be enough, since the plan read it straight. It no
+   * longer throws — `inputHandlesOf` guards it — so what is left to test here is the `finally`
+   * itself, against a throw of any origin.
    */
   it('stops saying it is running when the run throws', async () => {
     installJobs()
-    // Through the reader, which is the path a file actually takes: it validates the node and
-    // hands `data` over as it stands, so `inputHandles` reaches the plan as a string.
+    installGraph(DOC, graphOf([textNode('text1')], []))
+    const read = vi.spyOn(useGraphs, 'getState').mockImplementation(() => {
+      throw new Error('rejected promise')
+    })
+
+    await expect(useGraphRuns.getState().start(DOC)).rejects.toThrow()
+    read.mockRestore()
+
+    expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
+  })
+
+  /**
+   * And the shape that used to cause it now runs: `parseGraph` validates the node and not its
+   * `data`, so a `.graph` read off disk can carry `inputHandles` as a string, and the plan reads
+   * a node with no ports rather than falling over.
+   */
+  it('runs a graph whose ports a file wrote as something other than a list', async () => {
+    installJobs()
     installGraph(
       DOC,
       parseGraph({
@@ -475,8 +494,7 @@ describe('stopping and forgetting a run', () => {
       }),
     )
 
-    await expect(useGraphRuns.getState().start(DOC)).rejects.toThrow()
-
+    await expect(useGraphRuns.getState().start(DOC)).resolves.toBeUndefined()
     expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
   })
 

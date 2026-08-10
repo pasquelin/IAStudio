@@ -7,14 +7,15 @@ import { CONTROL } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
 import { setGraphNodeData, setGraphNodePorts } from '@/engines/graph/commands'
 import {
+  DEFAULT_LIST_KIND,
   LOOP_LIST_KINDS,
   addedList,
+  isLoopListKind,
   loopListsOf,
   loopsOf,
   namedLoopId,
   removedList,
   setListKind,
-  type LoopListKind,
   type LoopPatch,
 } from '@/engines/graph/loops'
 import { cn } from '@/helpers/cn'
@@ -54,9 +55,12 @@ export function ForEachFields({ node, edit }: ForEachFieldsProps) {
       {lists.map(list => (
         <PropertyRow key={list.index} label={t('inspector.list', { number: list.index + 1 })}>
           <select
-            aria-label={t('inspector.listKind')}
+            aria-label={t('inspector.listContents')}
             value={list.kind}
-            onChange={event => write(setListKind(node, list.index, kindOf(event.target.value)))}
+            onChange={event =>
+              isLoopListKind(event.target.value) &&
+              write(setListKind(node, list.index, event.target.value))
+            }
             className={cn(CONTROL, 'min-w-0 flex-1 px-1')}
           >
             {LOOP_LIST_KINDS.map(kind => (
@@ -81,7 +85,7 @@ export function ForEachFields({ node, edit }: ForEachFieldsProps) {
           label={t('inspector.addList')}
           tooltip={TIP_LEFT}
           variant="header"
-          onClick={() => write(addedList(node, 'image'))}
+          onClick={() => write(addedList(node, DEFAULT_LIST_KIND))}
         />
       </PropertyRow>
     </PropertyGroup>
@@ -95,9 +99,9 @@ export type ForEachEndFieldsProps = {
 }
 
 /**
- * The one field the end of a loop carries, and the one that decides whether the loop has a body
- * at all: without it the converter resolves every wire leaving the end to nothing, and compiles a
- * `for-each` that walks an empty body without a word of complaint.
+ * The one field the end of a loop carries, and the one that pairs it with its `forEach`: the
+ * converter walks the body between the two, and resolves every wire leaving the end to the loop.
+ * Without it the loop compiles with an empty body, which the SDK's validator refuses.
  */
 export function ForEachEndFields({ documentId, node, edit }: ForEachEndFieldsProps) {
   const { t } = useTranslation()
@@ -119,9 +123,9 @@ export function ForEachEndFields({ documentId, node, edit }: ForEachEndFieldsPro
             `ModelFamilySettings` a stored model — a `<select>` whose value matches no option
             renders blank, and the panel would read "no loop" over an end that names one. */}
         <option value="">{t('graph.noLoop')}</option>
-        {withChosen(loopsOf(graph), chosen).map(loop => (
-          <option key={loop.id} value={loop.id}>
-            {loop.data.title ?? loop.id}
+        {withChosen(loopsOf(graph).map(nameOf), chosen).map(loop => (
+          <option key={loop.value} value={loop.value}>
+            {loop.label}
           </option>
         ))}
       </select>
@@ -129,11 +133,24 @@ export function ForEachEndFields({ documentId, node, edit }: ForEachEndFieldsPro
   )
 }
 
-/** The named loop kept among the options whatever the graph holds — see the comment above. */
-function withChosen(loops: readonly GraphNode[], chosen: string | undefined): readonly GraphNode[] {
-  if (chosen === undefined || chosen === '' || loops.some(loop => loop.id === chosen)) return loops
-  return [{ id: chosen, type: 'forEach', position: { x: 0, y: 0 }, data: {} }, ...loops]
-}
+type LoopOption = { value: string; label: string }
 
-/** The `<select>` hands back a string; only two of them name a kind the converter reads. */
-const kindOf = (value: string): LoopListKind => (value === 'text' ? 'text' : 'image')
+/**
+ * `||` rather than `??`, as the canvas names a node: emptying the title field writes `''`, and a
+ * nullish check would then legend the option with nothing at all — the very blank the picker
+ * below is written to avoid.
+ */
+const nameOf = (loop: GraphNode): LoopOption => ({
+  value: loop.id,
+  label: loop.data.title || loop.id,
+})
+
+/** The named loop kept among the options whatever the graph holds — see the comment above. */
+function withChosen(
+  loops: readonly LoopOption[],
+  chosen: string | undefined,
+): readonly LoopOption[] {
+  if (chosen === undefined || chosen === '' || loops.some(loop => loop.value === chosen))
+    return loops
+  return [{ value: chosen, label: chosen }, ...loops]
+}

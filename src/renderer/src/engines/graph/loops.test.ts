@@ -10,10 +10,10 @@ describe('loopListsOf', () => {
   it('pairs an input with the output carrying the same number', () => {
     const lists = loopListsOf(forEachNode('forEach1', ['image', 'text']))
 
-    expect(lists.map(list => list.index)).toEqual([0, 1])
-    expect(lists[0]?.input?.id).toBe(loopInputId('forEach1', 0))
-    expect(lists[0]?.output?.id).toBe(loopOutputId('forEach1', 0))
-    expect(lists.map(list => list.kind)).toEqual(['image', 'text'])
+    expect(lists).toEqual([
+      { index: 0, kind: 'image' },
+      { index: 1, kind: 'text' },
+    ])
   })
 
   it('leaves out the conditional port every node carries', () => {
@@ -33,9 +33,7 @@ describe('loopListsOf', () => {
       },
     }
 
-    expect(loopListsOf(node)).toEqual([
-      { index: 7, kind: 'text', input: { id: 'forEach1-input-7' }, output: expect.anything() },
-    ])
+    expect(loopListsOf(node)).toEqual([{ index: 7, kind: 'text' }])
   })
 
   // `getForEachIterationRefName` in the converter: `type === 'text'` gives `text${n}`, and
@@ -59,7 +57,7 @@ describe('loopListsOf', () => {
       data: { inputHandles: [{ id: loopInputId('forEach1', 0) }] },
     }
 
-    expect(loopListsOf(node)[0]).toMatchObject({ index: 0, output: undefined })
+    expect(loopListsOf(node)).toEqual([{ index: 0, kind: 'image' }])
   })
 
   /**
@@ -86,8 +84,8 @@ describe('loopListsOf', () => {
       position: { x: 0, y: 0 },
       data: { inputHandles: [null, { id: 12 }, 'nope'], outputHandles: {} },
     }
-    // The one cast of the suite, and what it buys: `data` is typed as the editor writes it, and
-    // the case being tested is a file that did not.
+    // The cast, here and in the two below, buys the one case the type forbids: `data` is typed as
+    // the editor writes it, and what is being tested is a file that did not.
     const read = (): unknown => loopListsOf(node as unknown as GraphNode)
 
     expect(read).not.toThrow()
@@ -102,6 +100,15 @@ describe('addedList', () => {
     expect(idsOf(patch.inputHandles)).toContain(loopInputId('forEach1', 1))
     expect(idsOf(patch.outputHandles)).toContain(loopOutputId('forEach1', 1))
     expect(patch.outputHandles.at(-1)?.type).toBe('text')
+  })
+
+  // A port with no name is drawn under its TYPE, so two picture lists would show four ports all
+  // reading `image` while the panel numbers them.
+  it('names both ports, so the canvas can tell two lists apart', () => {
+    const patch = addedList(forEachNode('forEach1', ['image']), 'image')
+
+    expect(patch.inputHandles.at(-1)?.name).toBe('list1')
+    expect(patch.outputHandles.at(-1)?.name).toBe('item1')
   })
 
   it('keeps the ports already there, conditional included', () => {

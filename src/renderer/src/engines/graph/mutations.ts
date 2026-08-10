@@ -2,7 +2,13 @@ import type { GraphEdge, GraphNode, GraphPosition, GraphState } from '@shared/do
 import type { Connection } from './connect'
 import { edgeOf } from './connect'
 import { takesManyWires } from '@shared/domain/graph'
-import { inputHandleOf, inputHandlesOf, outputHandlesOf } from './handles'
+import {
+  inputHandleOf,
+  inputHandlesOf,
+  outputHandleOf,
+  outputHandlesOf,
+  typesConnect,
+} from './handles'
 
 /**
  * The id the webapp gives a node: its type in camel case, then the smallest free number.
@@ -109,6 +115,11 @@ export function updateNodeData(
  * And only the SIDE the patch redeclares. A branch gaining or losing a case rewrites its outputs
  * and says nothing about what feeds it — judged against input handles a file left undeclared, its
  * every incoming wire would be cut by an edit that never mentioned them.
+ *
+ * A port that SURVIVES with another type is judged too, by the very rule the canvas refuses a
+ * connection with. A loop whose list is retyped from pictures to texts keeps its port ids, so a
+ * check on ids alone left the picture wire in place — an edge the editor would no longer draw,
+ * and one the compiler then reads under a name the flow never declared.
  */
 export function replaceNodePorts(
   graph: GraphState,
@@ -133,7 +144,8 @@ export function replaceNodePorts(
 
     return (
       (feeds || inputs === undefined || inputs.has(edge.sourceHandle ?? '')) &&
-      (reads || outputs === undefined || outputs.has(edge.targetHandle ?? ''))
+      (reads || outputs === undefined || outputs.has(edge.targetHandle ?? '')) &&
+      stillConnects(next, edge)
     )
   })
 
@@ -142,6 +154,26 @@ export function replaceNodePorts(
 
 const idsOf = (handles: readonly { id: string }[]): ReadonlySet<string> =>
   new Set(handles.map(handle => handle.id))
+
+/**
+ * Whether an edge is still one the canvas would draw — the same `typesConnect` a dropped wire is
+ * refused by, asked again of a wire that is already there.
+ *
+ * Silence on either end is a yes, exactly as it is at connect time: Scenario leaves the type off
+ * wherever it does not narrow, and a port the patch never mentioned must not lose its wire to a
+ * type nobody declared.
+ */
+function stillConnects(graph: GraphState, edge: GraphEdge): boolean {
+  const consumer = graph.nodes.find(node => node.id === edge.source)
+  const provider = graph.nodes.find(node => node.id === edge.target)
+  if (!consumer || !provider) return true
+
+  const input = inputHandleOf(consumer, edge.sourceHandle)
+  const output = outputHandleOf(provider, edge.targetHandle)
+  if (!input || !output) return true
+
+  return typesConnect(output, input)
+}
 
 /** The edges that feed a node, and the ones it feeds — the inverted convention, read both ways. */
 export const providersOf = (graph: GraphState, id: string): readonly GraphEdge[] =>

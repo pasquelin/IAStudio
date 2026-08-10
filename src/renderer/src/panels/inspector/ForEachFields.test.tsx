@@ -112,6 +112,56 @@ describe('the lists a loop walks', () => {
     expect(nodeOf('forEach1')?.data.inputHandles?.at(-1)?.type).toBe('text')
   })
 
+  /**
+   * And the wire already on it goes: the port ids do not change, so nothing else would have cut
+   * it, and the canvas would refuse to draw it now. Left in place, the compiled flow declares the
+   * list under the PROVIDER's kind while the body reads it under the port's — two names for one
+   * list, and `validateWorkflowFlow` says nothing.
+   */
+  it('cuts the wire a retyped list would no longer accept', async () => {
+    const feeds: GraphEdge = {
+      id: 'e2',
+      source: 'forEach1',
+      target: 'text1',
+      sourceHandle: loopInputId('forEach1', 0),
+      targetHandle: 'text1-target-prompt',
+    }
+    installGraph(DOCUMENT, {
+      nodes: [forEachNode('forEach1', ['text']), END, TEXT],
+      edges: [feeds],
+      inputKeys: [],
+    })
+    show('forEach1')
+    expect(graphOf(useGraphs.getState(), DOCUMENT).edges).toHaveLength(1)
+
+    await userEvent.selectOptions(screen.getByLabelText('Ce que cette liste contient'), 'image')
+
+    expect(graphOf(useGraphs.getState(), DOCUMENT).edges).toEqual([])
+  })
+
+  /** And a wire the new kind still accepts stays: only what no longer connects is cut. */
+  it('keeps the wire of another list while one is retyped', async () => {
+    const feeds: GraphEdge = {
+      id: 'e3',
+      source: 'forEach1',
+      target: 'text1',
+      sourceHandle: loopInputId('forEach1', 1),
+      targetHandle: 'text1-target-prompt',
+    }
+    installGraph(DOCUMENT, {
+      nodes: [forEachNode('forEach1', ['image', 'text']), END, TEXT],
+      edges: [feeds],
+      inputKeys: [],
+    })
+    show('forEach1')
+
+    const [first] = screen.getAllByLabelText('Ce que cette liste contient')
+    if (!first) throw new Error('no list to retype')
+    await userEvent.selectOptions(first, 'text')
+
+    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual(['e3'])
+  })
+
   /** One entry, so ⌘Z never gives a list back without the port its item leaves by. */
   it('undoes the two sides together', async () => {
     show('forEach1')
@@ -166,6 +216,15 @@ describe('the loop an end closes', () => {
     await userEvent.selectOptions(screen.getByLabelText('Boucle fermée'), 'forEach1')
 
     expect(nodeOf('end1')?.data).toMatchObject({ parentNodeId: 'forEach1' })
+  })
+
+  /** And back again: the fixture omits the field, the editor writes it, and both must read as none. */
+  it('unpairs an end from its loop', async () => {
+    show('end1')
+    await userEvent.selectOptions(screen.getByLabelText('Boucle fermée'), '')
+
+    expect(nodeOf('end1')?.data).toMatchObject({ parentNodeId: '' })
+    expect(screen.getByLabelText('Boucle fermée')).toHaveValue('')
   })
 
   it('offers the loops of the graph, and the option of none', () => {

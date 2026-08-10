@@ -125,7 +125,9 @@ export function forEachEndNode(id: string, parentNodeId?: string): GraphNode {
     position: { x: 0, y: 0 },
     data: {
       ...(parentNodeId === undefined ? {} : { parentNodeId }),
-      inputHandles: [{ id: handleId(id, 'source', 'conditional'), name: 'conditional' }],
+      inputHandles: [
+        { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
+      ],
     },
   }
 }

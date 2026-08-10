@@ -81,8 +81,15 @@ export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput)
 // engine into the opening chunk. Re-exported so the engine still has one door for its ports.
 export { inputHandleOf, inputHandlesOf } from '@shared/domain/graph'
 
+/**
+ * `Array.isArray` rather than `?? []`, here and on the input side: the type is what the editor
+ * writes, not what a file holds, and `"outputHandles": {}` read off one took every panel that maps
+ * them into its error boundary. `parseGraph` validates the node, never its `data`.
+ */
 export const outputHandlesOf = (node: GraphNode): readonly GraphHandleOutput[] =>
-  node.data.outputHandles ?? []
+  Array.isArray(node.data.outputHandles) ? node.data.outputHandles : []
 
-export const outputHandleOf = (node: GraphNode, id: string): GraphHandleOutput | undefined =>
-  outputHandlesOf(node).find(handle => handle.id === id)
+export const outputHandleOf = (
+  node: GraphNode,
+  id: string | undefined,
+): GraphHandleOutput | undefined => outputHandlesOf(node).find(handle => handle.id === id)

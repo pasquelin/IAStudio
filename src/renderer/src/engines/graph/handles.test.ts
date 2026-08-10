@@ -9,6 +9,7 @@ import {
   inputHandlesOf,
   loopOutputId,
   outputHandleOf,
+  outputHandlesOf,
   typesConnect,
 } from './handles'
 
@@ -136,5 +137,18 @@ describe('the ports of a node', () => {
 
   it('reads a node with no ports at all as having none', () => {
     expect(inputHandlesOf(node({}))).toEqual([])
+  })
+
+  /**
+   * `parseGraph` validates the node and not its `data`, so a file can put anything under either
+   * list. Handed straight on, `"outputHandles": {}` reached a `.find` and took every panel that
+   * reads a port into its error boundary.
+   */
+  it('reads ports a file wrote as something other than a list as none', () => {
+    // Cast because the case being tested is exactly the one the type forbids.
+    const wrong = node(JSON.parse('{"inputHandles":"x","outputHandles":{}}') as TextNode['data'])
+
+    expect(inputHandlesOf(wrong)).toEqual([])
+    expect(outputHandlesOf(wrong)).toEqual([])
   })
 })
