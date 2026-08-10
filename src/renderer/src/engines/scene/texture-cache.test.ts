@@ -195,3 +195,23 @@ describe('createTextureCache', () => {
     for (const dispose of disposals) expect(dispose).toHaveBeenCalledTimes(1)
   })
 })
+
+const SOURCES: Record<string, string> = import.meta.glob(
+  ['../../**/*.ts', '../../**/*.tsx', '!../../**/*.test.ts', '!../../**/*.test.tsx'],
+  { query: '?raw', import: 'default', eager: true },
+)
+
+/**
+ * `loadTexture` exists so the one implementation lives on one line — the JSDoc above it says
+ * three spaces had already grown their own copy. A fourth had grown back inside `SceneRenderer`,
+ * which built a `TextureLoader` of its own to fill the very port this module declares.
+ */
+describe('the one texture loader', () => {
+  it('is built in exactly one place', () => {
+    const building = Object.entries(SOURCES)
+      .filter(([, source]) => source.includes('new TextureLoader('))
+      .map(([path]) => path)
+
+    expect(building).toEqual(['./texture-cache.ts'])
+  })
+})

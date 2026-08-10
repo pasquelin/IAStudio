@@ -14,7 +14,6 @@ import {
   SpotLight,
   Sprite,
   SpriteMaterial,
-  TextureLoader,
   Vector2,
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
@@ -86,7 +85,12 @@ import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmo-target'
 import { exportObjects } from './scene-export'
 import { snapSteps } from './snap-steps'
-import { createTextureCache, type TextureCache, type TextureSource } from './texture-cache'
+import {
+  createTextureCache,
+  loadTexture,
+  type TextureCache,
+  type TextureSource,
+} from './texture-cache'
 
 export type { TransformMode, TransformSpace } from './gizmo-target'
 
@@ -220,7 +224,6 @@ export class SceneRenderer {
   private readonly spriteMaps = new Map<string, SpriteTexture>()
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
-  private readonly loader = new TextureLoader()
   private readonly textureCache: TextureCache
   private readonly modelCache: ModelCache
   private readonly gltf: GltfSource
@@ -269,9 +272,8 @@ export class SceneRenderer {
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
-    this.textureCache = createTextureCache(
-      options.loadTexture ?? (url => this.loader.loadAsync(url)),
-      (assetId, error) => reportFailure('scene.texture', assetId, error),
+    this.textureCache = createTextureCache(options.loadTexture ?? loadTexture, (assetId, error) =>
+      reportFailure('scene.texture', assetId, error),
     )
     this.gltf = options.loadModel
       ? { load: options.loadModel, dispose: () => {} }
