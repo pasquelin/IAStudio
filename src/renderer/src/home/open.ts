@@ -1,7 +1,11 @@
 import type { Asset } from '@shared/domain/asset'
+import { workspaceOfType } from '@shared/domain/asset-kind'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { openDocument } from '@/app/dockview-api'
 import { createDocumentIn } from '@/app/new-document'
+import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
+import { useProject } from '@/stores/project'
 
 /**
  * Leaves the home for a workspace, on a blank document when there is a project to write one in.
@@ -16,13 +20,32 @@ export function enterWorkspace(workspace: WorkspaceId): void {
 }
 
 /**
- * Opens an asset from a shelf, loading the cascade on the click rather than at mount.
+ * Opens an asset from a shelf, making the document it needs when there is none.
  *
- * `openAsset` reads `ASSET_INTENTS`, which reaches into every editor's folder to know where a
- * sound or a channel lands. Imported at the top of a band, that lands the audio loader and the
- * texture placer in the opening chunk — which `eager-graph.test.ts` holds a budget on, and which
- * is the whole reason the panels went lazy.
+ * That second half is what makes the gesture keep its word HERE and not elsewhere: the cascade
+ * only ever sends an asset into a document already open, and the home is on screen precisely
+ * when none is. Left to `openAsset` alone, a click on a fresh home would journal "no
+ * destination" and paint nothing — the very complaint this gesture answers.
+ *
+ * Loaded on the click rather than at mount: `openAsset` reads `ASSET_INTENTS`, which reaches
+ * into every editor's folder to know where a sound or a channel lands. Imported at the top of a
+ * band it drags the audio loader and the texture placer into the opening chunk, which
+ * `eager-graph.test.ts` holds a budget on.
  */
-export function openFromHome(asset: Asset): void {
-  void import('@/helpers/open-asset').then(({ openAsset }) => openAsset(asset))
+export async function openFromHome(asset: Asset): Promise<void> {
+  const { defaultIntent } = await import('@/helpers/asset-intents')
+  const { openAsset } = await import('@/helpers/open-asset')
+
+  // The project guard is `createDocumentIn`'s, and it is needed here for the same reason: a
+  // document is a file in a folder, and `create` alone would post a descriptor for a tab that
+  // has nowhere to be saved. `openAsset` then says the asset has nowhere to go, as it does for
+  // any other — one silence, not two.
+  if (!defaultIntent(asset) && useProject.getState().project) {
+    const workspace = workspaceOfType(asset.type)
+    useLayouts.getState().setActiveWorkspace(workspace)
+    const created = await useDocuments.getState().create(workspace)
+    if (created) openDocument(created)
+  }
+
+  await openAsset(asset)
 }
