@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { assetsById, useAssets } from './assets'
@@ -41,21 +41,27 @@ describe('assetsById', () => {
   })
 })
 
+/** The queries the catalogue was asked, in order — and its length is how many reads happened. */
+function watchSearch(): readonly unknown[] {
+  const asked: unknown[] = []
+  installFakeBridge({
+    assets: {
+      search: query => {
+        asked.push(query)
+        return Promise.resolve([])
+      },
+    },
+  })
+  return asked
+}
+
 describe('the kinds the catalogue is asked for', () => {
   beforeEach(() => {
     useAssets.setState({ items: [], scope: null })
   })
 
   it('asks for the kinds the space uses, and nothing else', async () => {
-    const asked: unknown[] = []
-    installFakeBridge({
-      assets: {
-        search: query => {
-          asked.push(query)
-          return Promise.resolve([])
-        },
-      },
-    })
+    const asked = watchSearch()
 
     await useAssets.getState().setScope(['image', 'texture'])
 
@@ -63,15 +69,7 @@ describe('the kinds the catalogue is asked for', () => {
   })
 
   it('asks for everything once the scope is dropped', async () => {
-    const asked: unknown[] = []
-    installFakeBridge({
-      assets: {
-        search: query => {
-          asked.push(query)
-          return Promise.resolve([])
-        },
-      },
-    })
+    const asked = watchSearch()
     useAssets.setState({ scope: ['audio'] })
 
     await useAssets.getState().setScope(null)
@@ -82,36 +80,60 @@ describe('the kinds the catalogue is asked for', () => {
   // The panel calls this on every render; without the guard it would re-read the catalogue in
   // a loop, and each read sets state that triggers the next render.
   it('does not read the catalogue again for a scope it already holds', async () => {
-    let reads = 0
-    installFakeBridge({
-      assets: {
-        search: () => {
-          reads += 1
-          return Promise.resolve([])
-        },
-      },
-    })
+    const asked = watchSearch()
 
     await useAssets.getState().setScope(['image'])
     await useAssets.getState().setScope(['image'])
 
-    expect(reads).toBe(1)
+    expect(asked).toHaveLength(1)
   })
 
   it('tells two scopes apart by what they hold, not by identity', async () => {
-    let reads = 0
-    installFakeBridge({
-      assets: {
-        search: () => {
-          reads += 1
-          return Promise.resolve([])
-        },
-      },
-    })
+    const asked = watchSearch()
 
     await useAssets.getState().setScope(['image', 'texture'])
     await useAssets.getState().setScope(['image', 'skybox'])
 
-    expect(reads).toBe(2)
+    expect(asked).toHaveLength(2)
+  })
+})
+
+/**
+ * The timer `invalidate` arms lives at MODULE scope, so it outlives the case that armed it. Left
+ * alone it fires inside a LATER case and re-reads the catalogue through whatever bridge that one
+ * installed — which is how a shelf changes under an element a test is already holding.
+ */
+describe('the coalesced read, and cancelling it', () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('reads the catalogue once for a burst of invalidations', () => {
+    const asked = watchSearch()
+
+    useAssets.getState().invalidate()
+    useAssets.getState().invalidate()
+    useAssets.getState().invalidate()
+    vi.runAllTimers()
+
+    expect(asked).toHaveLength(1)
+  })
+
+  it('reads nothing more once the pending one is cancelled', () => {
+    const asked = watchSearch()
+
+    useAssets.getState().invalidate()
+    useAssets.getState().cancelInvalidate()
+    vi.runAllTimers()
+
+    expect(asked).toHaveLength(0)
+  })
+
+  it('leaves no timer behind, which is what the harness relies on', () => {
+    watchSearch()
+
+    useAssets.getState().invalidate()
+    useAssets.getState().cancelInvalidate()
+
+    expect(vi.getTimerCount()).toBe(0)
   })
 })
