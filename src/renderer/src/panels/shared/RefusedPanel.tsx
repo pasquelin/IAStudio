@@ -27,7 +27,7 @@ export function RefusedPanel({ tool, message, onRetry }: RefusedPanelProps) {
     <EmptyState
       icon={toolIcon(tool)}
       message={message ?? t('home.refused')}
-      action={{ label: t('home.retry'), onClick: onRetry }}
+      action={{ label: t('home.retry'), hint: t('actions.retryHint'), onClick: onRetry }}
     />
   )
 }

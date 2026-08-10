@@ -43,10 +43,12 @@ export function Documents() {
         message={t('explorer.noProject')}
         action={{
           label: t('project.open'),
+          hint: t('project.openHint'),
           onClick: () => void useProject.getState().openPicked(),
         }}
         secondary={{
           label: t('project.create'),
+          hint: t('project.createHint'),
           onClick: () => void useProject.getState().createPicked(),
         }}
       />

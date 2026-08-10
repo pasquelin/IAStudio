@@ -50,10 +50,12 @@ export function Projects() {
           message={t('home.projects.none')}
           action={{
             label: t('project.create'),
+            hint: t('project.createHint'),
             onClick: () => void useProject.getState().createPicked(),
           }}
           secondary={{
             label: t('project.open'),
+            hint: t('project.openHint'),
             onClick: () => void useProject.getState().openPicked(),
           }}
         />
