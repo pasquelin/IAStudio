@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { GraphNodeRun } from '@shared/domain/graph'
+import { isRunnable, type GraphNodeRun } from '@shared/domain/graph'
 import { isFinished } from '@shared/domain/job'
 import type { GraphCache } from '@/engines/graph/plan'
 import { getBridge } from '@/services/bridge'
@@ -108,6 +108,11 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
 
     start: async documentId => {
       if (runOf(get(), documentId).running) return
+      /**
+       * Nothing to run is not a run: the button would flip to Stop and back for the time it takes
+       * to pull in the executor chunk, and the space would report having done something.
+       */
+      if (!isRunnable(graphOf(useGraphs.getState(), documentId))) return
 
       const controller = new AbortController()
       stopping.set(documentId, controller)

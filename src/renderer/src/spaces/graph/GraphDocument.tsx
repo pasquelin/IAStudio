@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { CommandId } from '@shared/domain/command'
-import type { GraphPosition } from '@shared/domain/graph'
+import { isRunnable, type GraphPosition } from '@shared/domain/graph'
 import {
   addGraphNode,
   connectGraph,
@@ -32,6 +32,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const active = useDocuments(state => state.activeId === documentId)
   const canUndo = useGraphs(state => historyOf(state, documentId).past.length > 0)
   const canRedo = useGraphs(state => historyOf(state, documentId).future.length > 0)
+  const canRun = useGraphs(state => isRunnable(graphOf(state, documentId)))
   /**
    * Held here, not in the global selection: that one carries a single kind at a time, so clicking
    * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
@@ -211,10 +212,11 @@ export function GraphDocument({ documentId }: { documentId: string }) {
 
   const run = useCallback(
     (command: CommandId): void => {
+      if (command === 'graph.run') return onRun()
       if (command === 'graph.undo') return undo()
       if (command === 'graph.redo') return redo()
     },
-    [undo, redo],
+    [onRun, undo, redo],
   )
 
   useShortcuts({ scope: 'graph', enabled: active, onCommand: run })
@@ -236,6 +238,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onDecide={onDecide}
       canUndo={canUndo}
       canRedo={canRedo}
+      canRun={canRun}
       runs={runs}
       running={running}
     />

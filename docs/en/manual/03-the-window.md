@@ -189,10 +189,12 @@ It does not carry the file name. It carries the **seven workspaces**:
 > **Changing a node's model rebuilds its ports**, and the links whose port is gone leave with
 > them — in one gesture, so one `⌘Z` takes it all back.
 >
-> **It runs.** The first button of its bar runs the graph: each node starts once what it reads is
+> **It runs.** The first button of its bar runs the graph — or `⌘Enter`, or **Graph ▸ Run**: each
+> node starts once what it reads is
 > ready, independent branches start together, and the generations go through the same queue as the
 > rest of the studio — they show in the jobs bar and count against the same budget. The button
 > becomes **Stop** while it goes: nothing more is submitted, and what is in flight is cancelled.
+> On an empty graph it is **greyed out**: there is nothing to run.
 >
 > **Every node says where it stands**, in the corner of its header: *running*, *done*,
 > *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
@@ -646,6 +648,7 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **Edit** | Undo, Redo, and the system's text commands |
 | **View** | Tool windows (reopen a panel), Reset layout, Full screen, and image zoom |
 | **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
+| **Graph** | Run / Stop the graph — in the Graph workspace |
 | **Window** | the system's window commands |
 | **Help** | About Scenario Studio, Usage…, Licences |
 

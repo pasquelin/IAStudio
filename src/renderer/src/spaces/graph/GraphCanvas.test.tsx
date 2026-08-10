@@ -61,6 +61,7 @@ const canvas = (state: GraphState = graph, overrides: Overrides = {}) =>
       onDecide={noop}
       canUndo={false}
       canRedo={false}
+      canRun={true}
       runs={{}}
       running={false}
       {...overrides}
@@ -244,7 +245,9 @@ describe('the graph canvas', () => {
   describe('running the graph', () => {
     it('offers a run, and a stop in its place while one is going', () => {
       const { rerender } = canvas()
-      expect(screen.getByRole('button', { name: 'Exécuter le graphe' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' }),
+      ).toBeInTheDocument()
 
       rerender(
         <GraphCanvas
@@ -263,20 +266,25 @@ describe('the graph canvas', () => {
           onDecide={noop}
           canUndo={false}
           canRedo={false}
+          canRun={true}
           runs={{}}
           running
         />,
       )
 
-      expect(screen.getByRole('button', { name: 'Arrêter l’exécution' })).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Exécuter le graphe' })).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: 'Arrêter l’exécution (⌘Entrée)' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' }),
+      ).not.toBeInTheDocument()
     })
 
     it('asks upward on the press, whichever of the two the button is offering', () => {
       const onRun = vi.fn()
       canvas(graph, { onRun })
 
-      fireEvent.click(screen.getByRole('button', { name: 'Exécuter le graphe' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' }))
 
       expect(onRun).toHaveBeenCalledOnce()
     })

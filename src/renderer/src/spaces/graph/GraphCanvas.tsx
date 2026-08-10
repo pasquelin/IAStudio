@@ -54,6 +54,8 @@ export type GraphCanvasProps = {
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
+  /** Whether a run would report anything — the bar greys the button when it would not. */
+  canRun: boolean
   /** What each node is doing in the run under way, or in the last one. Absent means idle. */
   runs: Readonly<Record<string, GraphNodeRun>>
   running: boolean
@@ -92,6 +94,7 @@ export function GraphCanvas({
   onRedo,
   canUndo,
   canRedo,
+  canRun,
   runs,
   running,
   onRun,
@@ -221,6 +224,7 @@ export function GraphCanvas({
               onRun={onRun}
               canUndo={canUndo}
               canRedo={canRedo}
+              canRun={canRun}
               running={running}
             />
             <ViewportBridge

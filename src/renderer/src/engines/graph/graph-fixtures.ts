@@ -66,6 +66,11 @@ export function approvalNode(id: string, message = ''): GraphNode {
   }
 }
 
+/** A note: drawn on the canvas, compiled to nothing, and read by no port at either end. */
+export function noteNode(id: string, content = ''): GraphNode {
+  return { id, type: 'stickyNote', position: { x: 0, y: 0 }, data: { content } }
+}
+
 /**
  * A transform node, spelled as `createNode` spells one: an untyped `text` input beside the
  * conditional port every node carries, and an output the next node reads as text.

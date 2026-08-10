@@ -144,6 +144,15 @@ describe('looking a command up by its suffix', () => {
   })
 
   /**
+   * The graph space is the one whose main gesture lived on a floating bar alone — no key, no
+   * menu row, nothing in the shortcuts screen. Being a command is what gave it all three.
+   */
+  it('finds the run the graph is for', () => {
+    expect(commandIn('graph', 'run')).toBe('graph.run')
+    expect(bindingOf('graph.run', {})).toBe('Meta+Enter')
+  })
+
+  /**
    * The native menu asks every scope for `undo` and `redo` and greys the row out when the
    * answer is `null` — so the answer for a scope that has no such command is what the menu is
    * actually built on, and it was the one path never exercised.

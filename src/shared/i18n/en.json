@@ -975,7 +975,8 @@
     "about": "About {{name}}",
     "licences": "Licences",
     "imageTools": "Tools",
-    "usage": "Usage…"
+    "usage": "Usage…",
+    "graph": "Graph"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -1336,6 +1337,10 @@
     "sceneDelete": {
       "title": "Delete",
       "help": "Removes everything selected from the scene. Nothing is lost for good: ⌘Z brings it back."
+    },
+    "graphRun": {
+      "title": "Run / Stop the graph",
+      "help": "Runs every node in the order its wires allow, and stops a run already under way. What has not changed since the last run is not run again."
     },
     "undo": {
       "title": "Undo",

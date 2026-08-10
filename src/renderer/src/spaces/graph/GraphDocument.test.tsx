@@ -5,7 +5,9 @@ import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
 import { FAMILY_FACET } from '@/panels/models/family-facet'
+import { publishCommand } from '@/services/command-bus'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { useDocuments } from '@/stores/documents'
 import { useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { useLayouts } from '@/stores/layouts'
@@ -79,11 +81,14 @@ beforeEach(() => {
   useSelection.getState().clear()
   // Restored by hand, and named: one test below swaps `decide` for a spy, and a store action
   // left replaced would silently follow the suite into every file that shares this module.
-  useGraphRuns.setState({ runs: {}, decide: REAL_DECIDE })
+  useGraphRuns.setState({ runs: {}, ...REAL_RUN_ACTIONS })
+  // Left behind, a document in front would arm the keyboard for every suite sharing this module.
+  useDocuments.setState({ activeId: null })
 })
 
-/** The store's own answer, kept before any test can replace it. */
-const REAL_DECIDE = useGraphRuns.getState().decide
+/** The store's own answers, kept before any test can replace them. */
+const { decide, start, stop } = useGraphRuns.getState()
+const REAL_RUN_ACTIONS = { decide, start, stop }
 
 describe('a graph as a document', () => {
   it('draws what the store holds', () => {
@@ -95,6 +100,91 @@ describe('a graph as a document', () => {
 
     expect(screen.getByText('a small grey rock')).toBeInTheDocument()
     expect(screen.getByText('model_flux')).toBeInTheDocument()
+  })
+
+  /**
+   * The bar's own rule is proved beside it, on `graphTools`; what only the document knows is WHICH
+   * graph it is being asked about, and what counts as something to run.
+   */
+  describe('offering the run at all', () => {
+    it('greys the button while nothing on the canvas would report anything', () => {
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
+
+      // A text node is read, never run: on its own it leaves the button exactly as it was.
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
+
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(model)))
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeEnabled()
+    })
+  })
+
+  /**
+   * The gesture the space exists for, reached by the keyboard for the first time. The bar is
+   * tested on its own; what no other suite can prove is that the key gets there at all.
+   */
+  describe('running from the keyboard', () => {
+    it('starts the run of the document in front', () => {
+      const start = vi.fn(async () => {})
+      useGraphRuns.setState({ start })
+      useDocuments.setState({ activeId: DOCUMENT })
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text))
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.keyDown(window, { code: 'Enter', metaKey: true })
+
+      expect(start).toHaveBeenCalledWith(DOCUMENT)
+    })
+
+    /** The same key is the Stop, which is the whole point of one button for the pair. */
+    it('stops a run already under way', () => {
+      const stop = vi.fn()
+      useGraphRuns.setState({
+        runs: { [DOCUMENT]: { running: true, nodes: {}, cache: new Map() } },
+        stop,
+      })
+      useDocuments.setState({ activeId: DOCUMENT })
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text))
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.keyDown(window, { code: 'Enter', metaKey: true })
+
+      expect(stop).toHaveBeenCalledWith(DOCUMENT)
+    })
+
+    /**
+     * The menu row does not press a key: it publishes the command. Two suites prove each side of
+     * that frontier — the row fires `runCommand` in the main process, a keydown reaches `start`
+     * here — and neither would redden if `graph.run` were refiled under another scope, which
+     * would leave the row inert with the whole suite green.
+     */
+    it('starts the run when the native menu publishes the command', () => {
+      const start = vi.fn(async () => {})
+      useGraphRuns.setState({ start })
+      useDocuments.setState({ activeId: DOCUMENT })
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(model))
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      act(() => publishCommand('graph.run'))
+
+      expect(start).toHaveBeenCalledWith(DOCUMENT)
+    })
+
+    /** A tab in the background keeps its own run to itself, as ⌘Z already does. */
+    it('says nothing when the document is not the one in front', () => {
+      const start = vi.fn(async () => {})
+      useGraphRuns.setState({ start })
+      useDocuments.setState({ activeId: 'graph_2' })
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text))
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.keyDown(window, { code: 'Enter', metaKey: true })
+
+      expect(start).not.toHaveBeenCalled()
+    })
   })
 
   /**

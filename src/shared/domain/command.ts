@@ -103,6 +103,7 @@ export type CommandId =
   | 'skybox.probes'
   | 'skybox.undo'
   | 'skybox.redo'
+  | 'graph.run'
   | 'graph.undo'
   | 'graph.redo'
 
@@ -807,6 +808,20 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.redo.title',
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+  /**
+   * The gesture the space exists for, and the only one that had no key at all.
+   *
+   * A chord rather than a bare letter, and unlike the five image commands that spend credit and
+   * ship with nothing: this one is also the Stop, which has to be fast, and `Meta+Enter` is not
+   * a key one lands on by accident. It fires nothing on a graph with no node — see `start`.
+   */
+  command({
+    id: 'graph.run',
+    scope: 'graph',
+    titleKey: 'commands.graphRun.title',
+    helpKey: 'commands.graphRun.help',
+    defaultBinding: 'Meta+Enter',
   }),
   command({
     id: 'graph.undo',

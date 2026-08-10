@@ -319,6 +319,22 @@ export type GraphState = {
 
 export const EMPTY_GRAPH: GraphState = { nodes: [], edges: [], inputKeys: [] }
 
+/**
+ * Types a local run passes over without a word: a value read straight off the canvas, and a note
+ * that compiles to nothing. Read off `engines/graph/executor.ts`, which is what actually decides —
+ * every other type either generates, transforms, asks, or reports that the studio cannot run it
+ * yet, and all four of those are answers worth pressing the button for.
+ */
+const SILENT_NODE_TYPES: readonly GraphNodeType[] = ['text', 'asset', 'stickyNote']
+
+/**
+ * Whether running this graph would report anything at all — what greys the Run button, and what
+ * `start` refuses. Named once and shared, because a bar that offers a run the store then declines
+ * is two surfaces of one screen disagreeing.
+ */
+export const isRunnable = (graph: GraphState): boolean =>
+  graph.nodes.some(node => !SILENT_NODE_TYPES.includes(node.type))
+
 /** Scenario's own limit on a workflow, which only the export has to obey — see the plan, step 9. */
 export const MAX_GRAPH_NODES_FOR_EXPORT = 50
 

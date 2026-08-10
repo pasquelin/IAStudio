@@ -393,15 +393,19 @@ The Skyboxes workspace answers the keyboard like the others.
 
 ## In the graph
 
-The seventh context, and the shortest: the Graph workspace listens for undo and nothing else.
+The seventh context, and the shortest: the Graph workspace listens for the run and for undo.
 
 | Action | Key | What it does |
 |---|---|---|
+| **Run / Stop the graph** | `⌘Enter` | runs every node in the order its wires allow, and stops a run already under way — what has not changed since the last run is not run again |
 | **Undo** | `⌘Z` | |
 | **Redo** | `⇧⌘Z` | |
 
-They cover everything the graph can do — placing a node, moving it, wiring it, renaming it,
-changing its model — because all of it goes through a command. Nodes are placed with the mouse
+`⌘Enter` does nothing on an empty graph, just as the bar's button is greyed out there.
+
+The three of them cover everything the graph can do — placing a node, moving it, wiring it,
+renaming it, changing its model, running all of it — because all of it goes through a command.
+Nodes are placed with the mouse
 from the palette: there is no key yet that arms one, the way there is one per tool in the Image
 workspace.
 
@@ -497,6 +501,7 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌃⌘F` | Full screen |  |  |  |  |  |  |
 | `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo |
 | `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo |
+| `⌘Enter` |  |  |  |  |  |  | Run |
 | `⌘G` |  |  | Group |  |  |  |  |
 | `⌘D` |  |  | Duplicate |  | Deselect |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |

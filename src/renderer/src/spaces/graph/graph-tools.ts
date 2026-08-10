@@ -19,8 +19,15 @@ export type GraphToolId = 'run' | 'add' | GraphMode | 'undo' | 'redo' | 'zoomIn'
 export type GraphToolbarState = {
   canUndo: boolean
   canRedo: boolean
+  /** Whether a run would report anything: a graph of notes offers a button that does nothing. */
+  canRun: boolean
   /** The same button, and deliberately: a run and its stop are one place to look, not two. */
   running: boolean
+  /**
+   * The key `graph.run` answers to, already spelled for the screen. Passed in rather than read
+   * here: a remap has to move the button with the menu, and this file has no hook to read one.
+   */
+  runShortcut: string
 }
 
 /**
@@ -32,13 +39,22 @@ export type GraphToolbarState = {
  * above puts them in the middle. Their disabled state is what the pair would have given, and
  * `ToolbarItem` carries it.
  */
-export function graphTools({ canUndo, canRedo, running }: GraphToolbarState): ToolbarItem[] {
+export function graphTools({
+  canUndo,
+  canRedo,
+  canRun,
+  running,
+  runShortcut,
+}: GraphToolbarState): ToolbarItem[] {
   return [
     {
       id: 'run',
       labelKey: running ? 'graphTools.stop' : 'graphTools.run',
       descriptionKey: running ? 'graphTools.stopHint' : 'graphTools.runHint',
       icon: running ? mdiStop : mdiPlay,
+      // A run under way is always stoppable, whatever the graph holds by then.
+      disabled: !running && !canRun,
+      shortcut: runShortcut,
     },
     {
       id: 'add',

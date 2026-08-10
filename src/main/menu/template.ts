@@ -385,6 +385,21 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /**
+   * The one gesture the graph space is for. It lives on a floating bar over the canvas and
+   * nowhere else — no menu row, and until now no key — which left the space's main action
+   * reachable by pointer alone.
+   */
+  const graphMenu: MenuItemConstructorOptions[] =
+    workspace === 'graph'
+      ? [
+          {
+            label: t.menu.graph,
+            submenu: [commandItem('graph.run', t.commands.graphRun.title, false)],
+          },
+        ]
+      : []
+
   /** Only where a scene is what is being edited: an Add menu elsewhere would add nothing. */
   const addMenu: MenuItemConstructorOptions[] =
     workspace === '3d'
@@ -433,6 +448,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
     editMenu,
     ...toolsMenu,
     ...imageMenu,
+    ...graphMenu,
     ...addMenu,
     {
       label: t.menu.view,
