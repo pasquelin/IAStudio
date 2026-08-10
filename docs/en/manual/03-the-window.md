@@ -579,7 +579,7 @@ showing nothing until something breaks leaves the user with nowhere to look **be
 
 **One click opens the list and marks everything read** — opening it is reading it. Two filters
 wait there: the **level** (information, warning, failure) and the **topic** (generation, import,
-library, document). A **Show everything** button releases them.
+library, document, project). A **Show everything** button releases them.
 
 **To close it**: a click outside, `Esc`, or switching to another application — clicking the icon
 again works too. That holds for both panels of the status line, and for anything that floats over
