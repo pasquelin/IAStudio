@@ -85,11 +85,23 @@ describe('the documents panel', () => {
     ['Créer un projet', 'createPicked'],
   ])('offers %s as a way out when no project is open', async (label, gesture) => {
     const picked = vi.fn(() => Promise.resolve())
-    useProject.setState({ project: null, [gesture]: picked })
+    useProject.setState({ project: null, known: true, [gesture]: picked })
     render(<Documents />)
 
     await userEvent.click(screen.getByRole('button', { name: label }))
 
     expect(picked).toHaveBeenCalled()
+  })
+
+  /**
+   * The studio reopens the last project on launch, and `project` is `null` until the main
+   * process says so. Offering to create one during that wait tells someone who already has a
+   * project that they have none — which is what this panel did before it read `NoProject`.
+   */
+  it('waits for the answer rather than calling the absence a fact', () => {
+    useProject.setState({ project: null, known: false })
+    render(<Documents />)
+
+    expect(screen.queryByRole('button', { name: 'Créer un projet' })).not.toBeInTheDocument()
   })
 })

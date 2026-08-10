@@ -5,6 +5,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { openDocument } from '@/app/dockview-api'
+import { NoProject } from '@/panels/shared/NoProject'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { DocumentRow } from './DocumentRow'
@@ -34,25 +35,11 @@ export function Documents() {
     void useDocuments.getState().relist()
   }, [projectPath])
 
-  // Its own way out rather than a trip elsewhere: with no folder open there is nothing to list,
-  // and the two gestures that fix it are the ones the whole home is built around.
+  // Its own way out rather than a trip elsewhere: with no folder open there is nothing to list.
+  // The same call the Explorer makes, word for word — and `NoProject` is what waits for the
+  // main process to answer before offering to create one the studio is already reopening.
   if (!projectPath)
-    return (
-      <EmptyState
-        icon={mdiFolderOpenOutline}
-        message={t('explorer.noProject')}
-        action={{
-          label: t('project.open'),
-          hint: t('project.openHint'),
-          onClick: () => void useProject.getState().openPicked(),
-        }}
-        secondary={{
-          label: t('project.create'),
-          hint: t('project.createHint'),
-          onClick: () => void useProject.getState().createPicked(),
-        }}
-      />
-    )
+    return <NoProject icon={mdiFolderOpenOutline} message={t('explorer.noProject')} />
 
   return (
     <Collection
