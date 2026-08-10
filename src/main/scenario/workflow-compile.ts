@@ -215,8 +215,11 @@ function reachedFrom(
   const reached = new Set<string>()
   const queue = [id]
 
-  for (let at = 0; at < queue.length; at += 1) {
-    for (const consumer of consumers.get(queue[at] ?? '') ?? []) {
+  // Walked while it grows, which an array iterator allows — it reads `length` on every turn, as
+  // `plan.ts` does it. Indexed instead, the bound would guarantee an element the TYPE does not,
+  // and the `?? ''` covering that gap is a branch no test could ever enter.
+  for (const current of queue) {
+    for (const consumer of consumers.get(current) ?? []) {
       if (reached.has(consumer)) continue
       reached.add(consumer)
       queue.push(consumer)
@@ -261,6 +264,11 @@ function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-e
   // Two ends of one loop, BOTH read: the converter keeps the first and resolves the other's wires
   // to the loop all the same, which pulls whatever read that other end into the loop's body — a
   // node outside the loop running once per item instead of once.
+  //
+  // Only over real loops, and that is why this one asks the type while the check below does not:
+  // "the converter keeps the first end" happens in the scan it runs PER `forEach`, so two ends
+  // naming a generator do nothing of the sort. The check below is about `getSourceRef`, which
+  // runs for whatever a wire leaves.
   for (const loop of loops) {
     if (read.filter(entry => entry.names === loop).length > 1) return 'loop-two-ends'
   }

@@ -561,13 +561,17 @@ export type GraphCompileProblem =
   /** `validateWorkflowFlow` refused it. Its sentence goes to the journal, not to the screen. */
   | 'invalid'
   /**
-   * A `forEachEnd` names a loop it is not inside of — and the two below are the studio's own, not
-   * the validator's: it accepts both without a word.
+   * A `forEachEnd` does not close what it names — and the two below are the studio's own, not the
+   * validator's: it accepts both without a word.
    *
-   * Measured by running the converter, not deduced. The converter resolves EVERY wire leaving a
-   * `forEachEnd` to its named loop, whether or not that end is downstream of it: the node really
-   * feeding the end is compiled, and then nothing reads it, while what read the end reads the
-   * loop's own result instead. One wire silently changed where it comes from.
+   * Measured by running the converter, not deduced. A wire LEAVING an end is resolved to the node
+   * that end names, whatever that node is and wherever the end sits. So this covers both an end
+   * outside the loop it names and an end naming something that is no loop at all: either way, the
+   * node really feeding the end is compiled and then read by nobody, while what read the end
+   * reads the named node instead.
+   *
+   * An end NOTHING reads is never this: with no wire leaving it, there is nothing to misroute —
+   * measured, a spare end gives a flow identical item for item to the graph without it.
    */
   | 'loop-end-outside'
   /**

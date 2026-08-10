@@ -150,7 +150,8 @@ function withChosen(
   loops: readonly LoopOption[],
   chosen: string | undefined,
 ): readonly LoopOption[] {
-  if (chosen === undefined || chosen === '' || loops.some(loop => loop.value === chosen))
-    return loops
+  // No `chosen === ''` test: `namedLoopId` collapses the empty string the picker writes into
+  // `undefined`, so there is one spelling of "no loop" to answer here rather than two.
+  if (chosen === undefined || loops.some(loop => loop.value === chosen)) return loops
   return [{ value: chosen, label: chosen }, ...loops]
 }
