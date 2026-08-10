@@ -570,7 +570,22 @@
     "removeHint": "Retirer de la scène les mailles sélectionnées",
     "visible": "Afficher ou masquer",
     "empty": "Aucune maille. Ajoutez-en une pour commencer.",
-    "noDocument": "Ouvrez une scène pour voir ses mailles."
+    "noDocument": "Ouvrez une scène pour voir ses mailles.",
+    "boxHint": "Six faces égales — la brique avec laquelle on bloque une scène",
+    "capsuleHint": "Un cylindre fermé par deux demi-sphères",
+    "circleHint": "Un disque plat, visible d’un seul côté",
+    "cylinderHint": "Un tube plein, dont les rayons du haut et du bas se règlent à part",
+    "dodecahedronHint": "Douze faces pentagonales",
+    "icosahedronHint": "Vingt faces triangulaires",
+    "latheHint": "Un profil tourné autour de l’axe vertical",
+    "octahedronHint": "Huit faces triangulaires — deux pyramides base contre base",
+    "planeHint": "Un rectangle plat, visible d’un seul côté",
+    "ringHint": "Un disque plat percé en son centre",
+    "sphereHint": "Une boule lisse, 32 segments sur 16",
+    "tetrahedronHint": "Quatre faces triangulaires — une pyramide",
+    "torusHint": "Un anneau épais, en forme de beignet",
+    "torusKnotHint": "Un tore noué sur lui-même — la forme qui juge le mieux un matériau",
+    "tubeHint": "Un tube fin qui suit une courbe"
   },
   "lights": {
     "ambient": "Ambiante",
@@ -584,7 +599,12 @@
     "removeHint": "Retirer de la scène les lumières sélectionnées",
     "visible": "Afficher ou masquer",
     "empty": "Aucune lumière. La scène restera noire.",
-    "noDocument": "Ouvrez une scène pour voir ses lumières."
+    "noDocument": "Ouvrez une scène pour voir ses lumières.",
+    "ambientHint": "Éclaire tout uniformément, sans direction ni ombre",
+    "directionalHint": "Une lumière parallèle venue de l’infini, comme le soleil",
+    "hemisphereHint": "Une couleur venue du ciel, une autre venue du sol",
+    "pointHint": "Rayonne dans toutes les directions depuis un point",
+    "spotHint": "Un cône de lumière, avec son angle et son bord adouci"
   },
   "scene": {
     "root": "Scène",

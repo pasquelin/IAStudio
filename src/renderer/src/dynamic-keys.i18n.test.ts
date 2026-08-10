@@ -13,6 +13,7 @@ import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { LOOP_LIST_KINDS } from '@/engines/graph/loops'
+import { labelKeyOf, NODE_KINDS } from '@/engines/scene/node-kinds'
 import { ASSET_INTENTS } from '@/helpers/asset-intents'
 import { NODE_LABEL_KEY_LIST } from '@/spaces/graph/node-labels'
 import { PALETTE, paletteHintKey } from '@/spaces/graph/palette'
@@ -59,6 +60,11 @@ const COMPOSED_KEYS: readonly string[] = [
   // palette's sentence is not `<label>Hint`: a generator explains a NODE, not a model family.
   ...ASSET_INTENTS.map(intent => `${intent.labelKey}Hint`),
   ...PALETTE.map(paletteHintKey),
+  // The add menus of the mesh and light panels. Only the two families a panel draws: `objects`
+  // is in `ADD_ENTRIES` and in no menu, and a sentence nobody reads is worse than none.
+  ...Object.values(NODE_KINDS).flatMap(({ entries, namespace }) =>
+    entries.flatMap(entry => [labelKeyOf(namespace, entry), `${labelKeyOf(namespace, entry)}Hint`]),
+  ),
   ...WORKSPACE_IDS.map(workspace => `home.tools.${workspace}`),
   // The rail label, built by `workspaceLabelKey` — the most visible string in the window, and
   // the one thing the workspace table does NOT make the compiler demand of a new space.

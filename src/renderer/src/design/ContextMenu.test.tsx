@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { ContextMenu } from './ContextMenu'
 import { MenuRow } from './MenuRow'
 
@@ -94,8 +95,18 @@ describe('a menu at the pointer', () => {
     function Host({ onClose }: { onClose: () => void }) {
       return (
         <ContextMenu at={AT} onClose={onClose}>
-          <MenuRow label="Cut" icon={mdiContentCut} onSelect={() => undefined} />
-          <MenuRow label="Copy" icon={mdiContentCopy} onSelect={() => undefined} />
+          <MenuRow
+            label="Cut"
+            icon={mdiContentCut}
+            tip={HINT_RIGHT('Takes it away and keeps a copy')}
+            onSelect={() => undefined}
+          />
+          <MenuRow
+            label="Copy"
+            icon={mdiContentCopy}
+            tip={HINT_RIGHT('Leaves it where it is and keeps a copy')}
+            onSelect={() => undefined}
+          />
         </ContextMenu>
       )
     }

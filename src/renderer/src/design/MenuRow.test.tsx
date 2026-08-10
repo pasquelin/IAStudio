@@ -1,9 +1,15 @@
 import { mdiContentCopy } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { MenuRow } from './MenuRow'
 
-const props = { label: 'Copy', icon: mdiContentCopy, onSelect: () => undefined }
+const props = {
+  label: 'Copy',
+  icon: mdiContentCopy,
+  tip: HINT_RIGHT('Puts a copy on the clipboard'),
+  onSelect: () => undefined,
+}
 
 describe('one row of a menu', () => {
   it('is a plain item when it answers no question', () => {
@@ -49,6 +55,20 @@ describe('one row of a menu', () => {
 
   // `useMenuKeys` owns which row holds the single tab stop; a `tabIndex` written here would be
   // put back by React on every render.
+  /**
+   * Required rather than optional, on `ToolButton`'s pattern: it was optional over thirty-three
+   * rows and thirty-two of them said nothing. A type is the only guard that catches the
+   * thirty-fourth.
+   */
+  it('wears the tooltip attributes it is handed, and no accessible name of its own', () => {
+    render(<MenuRow {...props} />)
+
+    const row = screen.getByRole('menuitem', { name: 'Copy' })
+    expect(row).toHaveAttribute('data-tooltip-content', 'Puts a copy on the clipboard')
+    expect(row).toHaveAttribute('data-tooltip-place', 'right')
+    expect(row).not.toHaveAttribute('aria-label')
+  })
+
   it('leaves its place in the tab sequence to the menu', () => {
     render(<MenuRow {...props} />)
 
