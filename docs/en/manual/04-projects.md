@@ -98,6 +98,16 @@ A small text file, readable in any editor:
 **It is this file that makes a folder a project**, never its name: the studio opens the folder you
 point it at and looks for this file inside.
 
+- **`updatedAt` moves on every document saved.** It is the last time this project did some work,
+  not the last time it was opened.
+- **Pointing at a folder that holds none** gets you "This folder is not a Scenario project", in the
+  journal and in a toast at the bottom right — not a system message.
+- **A file that was truncated or edited by hand** is reported as unreadable, and the studio refuses
+  to open it rather than guessing at what it holds.
+- **A project made by a NEWER build of the studio is refused.** It is not opened as best it can be:
+  the studio does not know what that build added, and the first save would wipe it without a word.
+  Update the studio to open the project again; the folder itself has not been touched.
+
 > **A project made by an earlier version opens as it is.** Its folder was called "My project
 > .scenario" and its identity card `project.json`, with no dot — the studio recognises both and
 > writes the new shape beside them. **The old file is left where it is**: the folder is yours, you

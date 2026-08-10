@@ -138,8 +138,12 @@
       "generation": "Génération",
       "import": "Import",
       "library": "Bibliothèque",
-      "document": "Document"
+      "document": "Document",
+      "project": "Projet"
     },
+    "projectNotAProject": "Ce dossier n’est pas un projet Scenario",
+    "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
+    "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
     "jobFailed": "La génération « {{name}} » a échoué",
     "jobCancelled": "Génération « {{name}} » annulée",
     "generated": "{{count, number}} asset généré",

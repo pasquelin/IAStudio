@@ -8,10 +8,12 @@ import {
   MANIFEST_VERSION,
   LEGACY_MANIFEST_FILE,
   PROJECT_FOLDERS,
+  type Manifest,
   type Project,
 } from '@shared/domain/project'
+import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
-import { isMissing } from '@main/persistence'
+import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import type { AsyncCatalog } from './catalog-client'
 import { parseManifest } from './validation'
 
@@ -21,6 +23,44 @@ export class NoProjectError extends Error {
     super('no-project')
     this.name = 'NoProjectError'
   }
+}
+
+/**
+ * Why a folder would not open as a project. The three cases the user can act on, and they ask
+ * for three different sentences: pick another folder, repair this one, or update the studio.
+ */
+export type ProjectOpenFailure = 'not-a-project' | 'unreadable' | 'too-new'
+
+/**
+ * One error carrying a reason rather than three classes: what every caller does with it is
+ * choose a sentence, and a union keeps that choice exhaustive. `cause` holds what actually
+ * threw — for the log, never for the user.
+ */
+export class ProjectOpenError extends Error {
+  constructor(
+    readonly reason: ProjectOpenFailure,
+    cause?: unknown,
+  ) {
+    super(reason, { cause })
+    this.name = 'ProjectOpenError'
+  }
+}
+
+const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, string> = {
+  'not-a-project': 'activity.projectNotAProject',
+  unreadable: 'activity.projectUnreadable',
+  'too-new': 'activity.projectTooNew',
+}
+
+/**
+ * What the user reads when a folder will not open, or nothing for a failure that is not about
+ * the folder — a disk that gave out mid-open is not a sentence about the choice they made.
+ *
+ * Beside the error rather than in the handler: two paths open a project, the picker and the
+ * reopening at startup, and only one of them goes through a channel.
+ */
+export function openFailureKey(error: unknown): string | null {
+  return error instanceof ProjectOpenError ? OPEN_FAILURE_KEYS[error.reason] : null
 }
 
 export type ProjectStoreDeps = {
@@ -40,10 +80,31 @@ export type ProjectStore = {
   path: () => string
   /** The open project's catalogue. Throws rather than answering an empty one. */
   catalog: () => AsyncCatalog
+  /**
+   * Stamps the manifest with the moment the project last did some work. Called on every document
+   * saved, so it never throws and never makes a caller wait: what it says is nice to have, and a
+   * save that failed over it would be a real loss for a cosmetic one.
+   */
+  touch: () => void
+  /**
+   * Resolves once the stamp `touch` fired is on disk — what the shutdown awaits, so a studio
+   * quit right after a save does not leave the write it started behind.
+   */
+  settled: () => Promise<void>
   close: () => void
 }
 
 const execFile = promisify(execFileCallback)
+
+/**
+ * Indented, because a project folder is meant to be opened by hand — and atomic, because this
+ * is now written on every document saved rather than once at creation: a process that dies
+ * mid-write would otherwise leave the file that carries the project's identity truncated, and
+ * the folder would stop opening at all.
+ */
+async function writeManifest({ path, manifest }: Project): Promise<void> {
+  await writeAtomic(join(path, MANIFEST_FILE), JSON.stringify(manifest, null, 2))
+}
 
 async function ensureFolders(root: string): Promise<void> {
   await Promise.all(PROJECT_FOLDERS.map(folder => mkdir(join(root, folder), { recursive: true })))
@@ -95,6 +156,45 @@ async function readManifest(path: string): Promise<string> {
   }
 }
 
+/**
+ * The manifest of a folder, or the reason it is not a project.
+ *
+ * Named failures rather than whatever `readFile` and zod happened to throw: the four callers of
+ * `open` all do `void openPicked()`, so what reached the user was an `ENOENT` — a sentence about
+ * a path they never typed, for a folder they picked with a dialog.
+ */
+async function loadManifest(path: string): Promise<Manifest> {
+  let body: string
+  try {
+    body = await readManifest(path)
+  } catch (error) {
+    // No manifest under either name is a folder picked by mistake. Anything else — permissions,
+    // a folder where the file belongs — is a project that exists and will not open.
+    throw new ProjectOpenError(isMissing(error) ? 'not-a-project' : 'unreadable', error)
+  }
+
+  let head: unknown
+  try {
+    head = JSON.parse(body)
+  } catch (error) {
+    throw new ProjectOpenError('unreadable', error)
+  }
+
+  // Read before the schema caps it: zod turns "too new" and "malformed" into the same failure,
+  // and those two ask the user for opposite things — update the studio, or repair the file.
+  // Integers only: `1.5` is a broken manifest, and telling its owner to update would send them
+  // after a release that will never fix it.
+  if (isRecord(head) && Number.isInteger(head.version) && Number(head.version) > MANIFEST_VERSION) {
+    throw new ProjectOpenError('too-new')
+  }
+
+  try {
+    return parseManifest(head)
+  } catch (error) {
+    throw new ProjectOpenError('unreadable', error)
+  }
+}
+
 export function createProjectStore({
   openCatalog,
   now,
@@ -103,6 +203,8 @@ export function createProjectStore({
 }: ProjectStoreDeps): ProjectStore {
   let project: Project | null = null
   let catalog: AsyncCatalog | null = null
+  /** Two stamps a millisecond apart must not have the older one land last. */
+  const writes = writeQueue()
 
   const close = (): void => {
     // The thread is told to stop, but nothing waits for it: a project is closed from menus and
@@ -126,8 +228,9 @@ export function createProjectStore({
     const opening = await openCatalog(file)
 
     // Whatever is still queued belongs to the project that is closing, and its catalogue is
-    // about to stop answering.
-    await settle?.()
+    // about to stop answering. The stamp goes with it: it is being written into the folder the
+    // studio is about to leave.
+    await Promise.all([settle?.(), writes.settled()])
 
     close()
     catalog = opening
@@ -142,20 +245,23 @@ export function createProjectStore({
       await ensureFolders(root)
 
       const timestamp = now()
-      const manifest = {
-        version: MANIFEST_VERSION,
-        name,
-        createdAt: timestamp,
-        updatedAt: timestamp,
+      const made: Project = {
+        path: root,
+        manifest: {
+          version: MANIFEST_VERSION,
+          name,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        },
       }
-      await writeFile(join(root, MANIFEST_FILE), JSON.stringify(manifest, null, 2), 'utf8')
+      await writeManifest(made)
       await hideFromExplorer(join(root, MANIFEST_FILE))
 
-      return await activate({ path: root, manifest })
+      return await activate(made)
     },
 
     open: async path => {
-      const manifest = parseManifest(JSON.parse(await readManifest(path)))
+      const manifest = await loadManifest(path)
 
       // Repairs a project whose subfolders were deleted between two sessions — the folder is
       // the user's, and a missing `assets/vid` must not stop it from opening.
@@ -175,6 +281,24 @@ export function createProjectStore({
       if (!catalog) throw new NoProjectError()
       return catalog
     },
+
+    touch: () => {
+      const stamped = now()
+      if (!project || project.manifest.updatedAt === stamped) return
+
+      // The in-memory copy first: two saves in the same millisecond then cost one write, and
+      // whatever reads the open project sees the stamp without waiting for the disk.
+      const stamping = { ...project, manifest: { ...project.manifest, updatedAt: stamped } }
+      project = stamping
+
+      void writes
+        .next(() => writeManifest(stamping))
+        .catch((error: unknown) => {
+          log.warn('project', `stamping the manifest failed: ${String(error)}`)
+        })
+    },
+
+    settled: writes.settled,
 
     close: () => {
       close()

@@ -38,7 +38,7 @@ export function registerIpc(services: Services): void {
     }),
   })
   registerScenarioHandlers(services)
-  registerProjectHandlers(services)
+  registerProjectHandlers({ ...services, record: entry => services.journal.record(entry) })
   registerAssetHandlers({
     catalog: () => services.project.catalog(),
     remote: services.remote,

@@ -4,6 +4,7 @@ import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
+import { ProjectOpenError, type ProjectOpenFailure } from './store'
 import type { AsyncCatalog } from './catalog-client'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
@@ -28,8 +29,11 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
       current: () => null,
       path: () => PROJECT,
       catalog: () => catalog,
+      touch: vi.fn(),
+      settled: vi.fn(async () => undefined),
       close: vi.fn(),
     } as unknown as ProjectHandlerDeps['project'],
+    record: vi.fn(),
     assets: {} as ProjectHandlerDeps['assets'],
     newAssetId: () => 'asset-new',
     // Untouched by the channels under test, which read the catalogue and show a file.
@@ -54,6 +58,82 @@ describe('project handlers', () => {
     resetHandlers()
     vi.clearAllMocks()
     catalog = memoryCatalog()
+  })
+
+  // The renderer's own `openPicked` watches nothing: without a line in the journal, a folder
+  // that is not a project failed in silence.
+  describe('opening a folder that will not open', () => {
+    const failing = (reason: ProjectOpenFailure): ProjectHandlerDeps => {
+      const injected = deps(catalog)
+      injected.project.open = vi.fn(() => Promise.reject(new ProjectOpenError(reason)))
+      return injected
+    }
+
+    const said: [ProjectOpenFailure, string][] = [
+      ['not-a-project', 'activity.projectNotAProject'],
+      ['unreadable', 'activity.projectUnreadable'],
+      ['too-new', 'activity.projectTooNew'],
+    ]
+
+    it.each(said)('says %s in the journal', async (reason, messageKey) => {
+      const injected = failing(reason)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectOpen, PROJECT)).rejects.toThrow()
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey,
+      })
+    })
+
+    // Rethrown as well as recorded: `open` on the renderer side forgets a folder nothing can
+    // open, and it only knows to when the promise rejects.
+    it('still lets the failure through', async () => {
+      registerProjectHandlers(failing('not-a-project'))
+
+      await expect(invoke(CHANNELS.projectOpen, PROJECT)).rejects.toThrow()
+    })
+
+    // Only the named ones: a disk that gave out mid-open is not a sentence about the folder.
+    it('says nothing for a failure that is not about the folder', async () => {
+      const injected = deps(catalog)
+      injected.project.open = vi.fn(() => Promise.reject(new Error('EIO')))
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectOpen, PROJECT)).rejects.toThrow()
+
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * `updatedAt` is what says when the project last did some work, so it moves when a document
+   * lands — and only then: a manifest stamped for a save the disk refused would lie.
+   */
+  describe('saving a document', () => {
+    it('stamps the manifest once the document is written', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.documentWrite, 'doc-1', 'image', { title: 'A', content: '{}' })
+
+      expect(injected.documents.write).toHaveBeenCalled()
+      expect(injected.project.touch).toHaveBeenCalled()
+    })
+
+    it('leaves the stamp alone when the write failed', async () => {
+      const injected = deps(catalog)
+      injected.documents.write = vi.fn(() => Promise.reject(new Error('ENOSPC')))
+      registerProjectHandlers(injected)
+
+      await expect(
+        invoke(CHANNELS.documentWrite, 'doc-1', 'image', { title: 'A', content: '{}' }),
+      ).rejects.toThrow()
+
+      expect(injected.project.touch).not.toHaveBeenCalled()
+    })
   })
 
   // The renderer has no filesystem: a path there is only ever text on screen, and handing the

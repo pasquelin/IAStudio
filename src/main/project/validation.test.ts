@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { DOCUMENT_VERSION } from '@shared/domain/document'
+import { MANIFEST_VERSION } from '@shared/domain/project'
 import {
   parseAssetQuery,
   parseDocumentDraft,
   parseDocumentEnvelope,
   parseDocumentId,
   parseDocumentKind,
+  parseManifest,
 } from './validation'
 
 const valid = {
@@ -83,6 +85,31 @@ describe('parseDocumentEnvelope', () => {
     // A file from a later build is refused, not read as if it were this one and then
     // flattened by the next save.
     expect(() => parseDocumentEnvelope({ ...valid, version: DOCUMENT_VERSION + 1 })).toThrow()
+  })
+})
+
+describe('parseManifest', () => {
+  const manifest = {
+    version: MANIFEST_VERSION,
+    name: 'Reel',
+    createdAt: '2026-08-06T10:00:00.000Z',
+    updatedAt: '2026-08-06T10:00:00.000Z',
+  }
+
+  it('reads a manifest this build wrote', () => {
+    expect(parseManifest(manifest)).toEqual(manifest)
+  })
+
+  // The same cap `documentEnvelope` has always carried, and for a heavier reason: a document
+  // flattened by a later save is one file, a project is the whole folder.
+  it('refuses a version outside the range this build understands', () => {
+    expect(() => parseManifest({ ...manifest, version: 0 })).toThrow()
+    expect(() => parseManifest({ ...manifest, version: 1.5 })).toThrow()
+    expect(() => parseManifest({ ...manifest, version: MANIFEST_VERSION + 1 })).toThrow()
+  })
+
+  it('refuses a manifest a field short', () => {
+    expect(() => parseManifest({ version: MANIFEST_VERSION, name: 'Reel' })).toThrow()
   })
 })
 

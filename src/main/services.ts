@@ -56,7 +56,7 @@ import {
 import { runnerOf } from './scenario/runner'
 import type { AskUser } from './project/document-dialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
-import { createProjectStore, type ProjectStore } from './project/store'
+import { createProjectStore, openFailureKey, type ProjectStore } from './project/store'
 import { createActivityLog, type ActivityLog } from './project/activity-log'
 import { openCatalogThread } from './project/catalog-thread'
 import { catalogOf } from './scenario/model-catalog'
@@ -743,6 +743,10 @@ export function createServices(settings: SettingsStore): Services {
   if (lastProject) {
     void project.open(lastProject).catch((error: unknown) => {
       log.warn('project', `reopening ${lastProject} failed: ${String(error)}`)
+      // The same sentence the picker would have shown. Written here as well because this path
+      // never reaches a handler: without it, the studio starts with no project and no reason.
+      const messageKey = openFailureKey(error)
+      if (messageKey) journal.record({ level: 'error', topic: 'project', messageKey })
     })
   }
 
