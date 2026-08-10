@@ -60,6 +60,9 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
   let nextId = 1
   let closed = false
 
+  /** Named once: the close and the death of the thread are the same news to a caller. */
+  const CLOSED = 'catalogue is closed'
+
   /** Rejects everything still waiting. A dead thread answers nothing, ever. */
   const abandon = (reason: string): void => {
     const waiting = [...pending.values()]
@@ -92,7 +95,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
   ): Promise<CatalogResults[Op]> =>
     new Promise((resolve, reject) => {
       if (closed) {
-        reject(new Error('catalogue is closed'))
+        reject(new Error(CLOSED))
         return
       }
 
@@ -104,12 +107,27 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
 
       const id = nextId++
 
+      // Sent before anything is recorded, the order `bvh-inflight` settled on: a port whose
+      // thread is gone throws here, and everything below would then be left behind — the entry
+      // AND the abort listener on someone else's signal, with the promise never settling. The
+      // throw rejects this promise on its own, which is the answer the caller needs.
+      //
+      // Safe in this order because a port cannot answer during `postMessage`: its message event
+      // is always a turn later.
+      port.postMessage(build(id))
+
       // Reachable only while the request is still waiting: `release` drops this listener on both
       // paths that settle one, which is what makes the state a guard here would defend against
       // impossible. Two tests hold that, one per path.
       const abort = (): void => {
         pending.delete(id)
-        port.postMessage({ op: 'abandon', target: id })
+        // The port may have gone since; the caller hears the search was abandoned either way,
+        // and a throw from inside an `abort` listener would surface nowhere useful.
+        try {
+          port.postMessage({ op: 'abandon', target: id })
+        } catch {
+          closed = true
+        }
         reject(new Error(ABANDONED))
       }
       signal?.addEventListener('abort', abort, { once: true })
@@ -121,7 +139,6 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
         reject,
         release: () => signal?.removeEventListener('abort', abort),
       })
-      port.postMessage(build(id))
     })
 
   return {
@@ -146,7 +163,7 @@ export function createCatalogClient(port: CatalogPort): AsyncCatalog {
     close: async () => {
       closed = true
       // Whoever is still waiting is waiting on a thread that is about to stop answering.
-      abandon('catalogue is closed')
+      abandon(CLOSED)
       await port.terminate()
     },
   }

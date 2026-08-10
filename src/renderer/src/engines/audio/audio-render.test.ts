@@ -278,3 +278,78 @@ describe('a worker that dies', () => {
     expect(second.sent).toHaveLength(1)
   })
 })
+
+/**
+ * A worker that will not take the message at all — the other half of the same story as one that
+ * dies mid-take, and the one the editor never heard about. The render was recorded BEFORE it was
+ * sent, so the throw left an entry nothing could ever settle and a caller waiting on it for as
+ * long as the editor stayed open.
+ */
+describe('a worker that refuses the take', () => {
+  function refusingPort(): WorkerPort {
+    return {
+      onerror: null,
+      postMessage: () => {
+        throw new Error('worker is gone')
+      },
+      addEventListener: () => {},
+      terminate: () => {},
+    }
+  }
+
+  it('answers the render rather than leaving the editor waiting on it', async () => {
+    const renderer = createAudioRenderer(refusingPort)
+
+    await expect(renderer.render([{ kind: 'normalize', targetLufs: -14 }])).resolves.toBeNull()
+  })
+
+  // Null and not a rejection: that is what a worker dying mid-take already answers, and no
+  // caller of `render` catches one.
+  it('answers the same way whichever way the worker went', async () => {
+    const dying = fakePort()
+    const alive = createAudioRenderer(() => dying.port)
+    const refusing = createAudioRenderer(refusingPort)
+
+    const afterDeath = alive.render([{ kind: 'normalize', targetLufs: -14 }])
+    dying.fail()
+
+    await expect(afterDeath).resolves.toBe(
+      await refusing.render([{ kind: 'normalize', targetLufs: -14 }]),
+    )
+  })
+
+  it('opens a fresh worker for the next take rather than the one that refused', async () => {
+    const working = fakePort()
+    const ports = [refusingPort(), working.port]
+    const renderer = createAudioRenderer(() => ports.shift() ?? working.port)
+
+    await renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    void renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+
+    expect(working.sent).toHaveLength(1)
+  })
+
+  /**
+   * Nothing was recorded, so nothing is left to settle. Measured through the answer that WOULD
+   * come: a later take resolves with its own render and not with the refused one's `null`.
+   */
+  it('leaves nothing behind that a later answer would settle', async () => {
+    const working = fakePort()
+    const ports = [refusingPort(), working.port]
+    const renderer = createAudioRenderer(() => ports.shift() ?? working.port)
+
+    await renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    const second = renderer.render([{ kind: 'normalize', targetLufs: -14 }])
+    const request = working.sent[0]?.message
+    if (request?.kind !== 'render') throw new Error('the second take was never sent')
+    working.reply({
+      kind: 'rendered',
+      id: request.id,
+      sampleRate: 48_000,
+      channels: [new Float32Array([0.5])],
+      wav: new Uint8Array([9]),
+    })
+
+    await expect(second).resolves.not.toBeNull()
+  })
+})
