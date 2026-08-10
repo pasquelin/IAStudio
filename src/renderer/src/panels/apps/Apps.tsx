@@ -108,7 +108,10 @@ export function Apps() {
       <Collection
         label={t('panels.apps')}
         items={items}
-        onSelect={app => setOpenedId(app.id)}
+        // `onOpen`, not `onSelect`: clicking a row swaps this whole panel for the App it names,
+        // so there is never a selected row to show. Announced as a `listbox` it promised one,
+        // and every row carried `aria-selected="false"` for the life of the panel.
+        onOpen={app => setOpenedId(app.id)}
         onReachEnd={loadMore}
         rowHeight={ROW_HEIGHT}
         renderRow={app => <AppRow app={app} />}

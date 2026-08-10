@@ -13,18 +13,25 @@ export type PropertyRowProps = {
  * One property of whatever is selected: a label on the left, its value or its control on the
  * right. Written once so the inspector's four faces share a gauge and an alignment rather than
  * each inventing a two-column layout.
+ *
+ * The horizontal inset belongs to the group holding the row, not to the row: the fields have
+ * none of their own, so a row that carried its own started eight pixels further in than the
+ * control right under it.
  */
 export function PropertyRow({ label, children, stacked = false }: PropertyRowProps) {
   return (
     <div
       className={cn(
-        'px-2 py-1 text-[11px]',
+        'py-1 text-[11px]',
         stacked ? 'flex flex-col gap-2' : 'flex min-h-(--sc-control) items-center gap-2',
       )}
     >
       {/* Titled because the column truncates: `Repeat preview` fits eighty pixels and
           `Aperçu de la répétition` does not, so the label was readable in one language only. */}
-      <span title={label} className={cn('text-muted shrink-0', stacked ? '' : 'w-20 truncate')}>
+      <span
+        title={label}
+        className={cn('text-muted shrink-0', stacked ? '' : 'w-(--sc-label) truncate')}
+      >
         {label}
       </span>
       <div className={cn('text-text min-w-0', stacked ? '' : 'flex-1 truncate text-right')}>

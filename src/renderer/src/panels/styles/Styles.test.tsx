@@ -6,7 +6,9 @@ import { DEFAULT_TEXTURE_MATERIAL } from '@shared/domain/texture'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useStyles } from '@/stores/styles'
+import { installTexture } from '@/stores/texture-fixtures'
 import { useTextures } from '@/stores/textures'
+import { newTexture } from '@/engines/texture/texture-state'
 import { Styles } from './Styles'
 
 const METAL: MaterialStyle = {
@@ -47,6 +49,38 @@ describe('the styles panel', () => {
 
     expect(screen.getByRole('list', { name: 'Styles' })).toBeInTheDocument()
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Which style is in force is read by comparison, since applying keeps no name. The tint is the
+   * studio's one answer to "this line is the one" — the same `accent-soft` the other panels use.
+   */
+  describe('the style in force', () => {
+    const openTexture = (material = DEFAULT_TEXTURE_MATERIAL): void => {
+      installTexture('doc-1', { ...newTexture(), material })
+      useDocuments.setState({ activeId: 'doc-1' })
+    }
+
+    it('paints the style whose values the material carries', () => {
+      openTexture(METAL.values)
+      render(<Styles />)
+
+      expect(screen.getByText('Style 1').closest('.bg-accent-soft')).not.toBeNull()
+    })
+
+    /** Move one slider afterwards and no style is in force any more — which is the truth. */
+    it('paints none once the material has drifted from it', () => {
+      openTexture({ ...METAL.values, roughness: 0.42 })
+      render(<Styles />)
+
+      expect(screen.getByText('Style 1').closest('.bg-accent-soft')).toBeNull()
+    })
+
+    it('paints none when no texture is open to carry one', () => {
+      render(<Styles />)
+
+      expect(screen.getByText('Style 1').closest('.bg-accent-soft')).toBeNull()
+    })
   })
 
   it('offers renaming and removing on a right click, JetBrains-style', async () => {

@@ -78,6 +78,24 @@ describe('the project explorer', () => {
   })
 
   /**
+   * "Open" used to borrow `selectedIds`, which painted the selection tint on rows nobody had
+   * chosen — while Styles and Apps, which do have a selection, showed none. The mark is the
+   * row's own now, and it must not be the tint.
+   */
+  it('marks an open document without borrowing the selection tint', async () => {
+    withProject()
+    useDocuments.setState({ documents: { 'doc-1': scene } })
+    installFakeBridge({ documents: { list: () => Promise.resolve([scene, sequence]) } })
+
+    const { container } = render(<Explorer />)
+
+    await screen.findByText('Niveau')
+    expect(container.querySelector('.bg-accent-soft')).toBeNull()
+    // The dot, drawn for the open one and not for the other.
+    expect(container.querySelectorAll('.bg-accent')).toHaveLength(1)
+  })
+
+  /**
    * `create` posts a descriptor without writing a file — deliberately, so a tab opened and never
    * typed in leaves nothing in the project. Reading the folder must therefore never settle which
    * tabs are open, or opening this panel would evict that document while its tab is on screen,

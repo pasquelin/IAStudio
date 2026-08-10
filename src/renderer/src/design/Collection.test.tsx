@@ -239,14 +239,48 @@ describe('Collection', () => {
   })
 
   // A shelf whose rows are only opened selects nothing: saying "selected" of a row the user
-  // cannot pick — the explorer paints the documents that are OPEN — describes a state they can
-  // neither set nor clear, and the row already says it in words.
+  // cannot pick describes a state they can neither set nor clear.
   it('is a plain list when its rows can only be opened', () => {
     renderCollection(rows(4), { view: 'list' }, { onActivate: vi.fn() })
 
     expect(screen.getByRole('list')).toBeInTheDocument()
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     expect(screen.getAllByRole('listitem')[0]).not.toHaveAttribute('aria-selected')
+  })
+
+  /**
+   * Opening on a single click is still opening. The Apps panel wired it through `onSelect` for
+   * want of anything else, which announced a `listbox` whose rows are never selected — and a
+   * row there swaps the whole panel for the App it names.
+   */
+  describe('a list whose rows open on a single click', () => {
+    it('stays a list rather than becoming a listbox', () => {
+      renderCollection(rows(4), { view: 'list' }, { onOpen: vi.fn() })
+
+      expect(screen.getByRole('list')).toBeInTheDocument()
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+      expect(screen.getAllByRole('listitem')[0]).not.toHaveAttribute('aria-selected')
+    })
+
+    it('opens the row that was clicked, once', async () => {
+      const onOpen = vi.fn()
+      renderCollection(rows(4), { view: 'list' }, { onOpen })
+
+      await userEvent.click(screen.getByText('Row 1'))
+
+      expect(onOpen).toHaveBeenCalledTimes(1)
+      expect(onOpen.mock.calls[0]?.[0]).toMatchObject({ name: 'Row 1' })
+    })
+
+    it('opens from the keyboard too, which is what a wired-up click would have lost', async () => {
+      const onOpen = vi.fn()
+      renderCollection(rows(4), { view: 'list' }, { onOpen })
+
+      await userEvent.tab()
+      await userEvent.keyboard('{Enter}')
+
+      expect(onOpen).toHaveBeenCalledTimes(1)
+    })
   })
 
   // A `listbox` is a widget, and an unnamed widget is announced as the bare word "listbox" —
@@ -402,5 +436,29 @@ describe('Collection', () => {
     await userEvent.keyboard('{ArrowUp}')
 
     expect(screen.getByText('Row 0').closest('[role="option"]')).toHaveFocus()
+  })
+
+  /** The other way along a row of cards — the one direction the walk had never been asked for. */
+  it('moves one card back with the left arrow', async () => {
+    renderCollection(rows(40), { view: 'grid' }, { onSelect: vi.fn() })
+
+    await userEvent.tab()
+    await userEvent.keyboard('{ArrowRight}{ArrowLeft}')
+
+    expect(screen.getByText('Row 0').closest('[role="option"]')).toHaveFocus()
+  })
+
+  /**
+   * A key that is not an arrow is nobody's business here: swallowing it would take type-ahead
+   * and every shortcut away from a focused row.
+   */
+  it('leaves a key that is not an arrow alone', async () => {
+    renderCollection(rows(5), { view: 'list' }, { onSelect: vi.fn() })
+
+    await userEvent.tab()
+    const focused = document.activeElement
+    await userEvent.keyboard('a')
+
+    expect(document.activeElement).toBe(focused)
   })
 })
