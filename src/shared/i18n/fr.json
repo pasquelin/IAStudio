@@ -1844,6 +1844,7 @@
     "hidden_other": "{{count, number}} sections masquées",
     "restore": "Les réafficher",
     "retry": "Réessayer",
+    "refused": "Cette section n’a pas obtenu de réponse.",
     "spark": {
       "ask": "Proposez-moi une idée",
       "asking": "Un instant…",

@@ -6,6 +6,7 @@ import { assetIcon } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
 import { recreate } from '../recreate'
@@ -26,11 +27,19 @@ export function Creations() {
   const sections = useSettings(state => state.settings.home.sections)
   const limit = homeSectionLimit(sections, 'creations')
 
-  const assets = useShelf(
+  const {
+    value: assets,
+    state,
+    retry,
+  } = useShelf(
     NOTHING,
     () => getBridge()?.assets.search({ generated: true, limit }),
     `${path}/${limit}`,
   )
+
+  // The local catalogue rarely refuses — and when it does, an empty band said nothing about it.
+  if (state === 'refused')
+    return <RefusedSection id="creations" title={t('home.sections.creations')} onRetry={retry} />
 
   if (assets.length === 0) return null
 

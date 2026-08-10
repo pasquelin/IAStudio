@@ -1844,6 +1844,7 @@
     "hidden_other": "{{count, number}} sections hidden",
     "restore": "Show them again",
     "retry": "Try again",
+    "refused": "This section did not get an answer.",
     "spark": {
       "ask": "Suggest an idea",
       "asking": "One moment…",

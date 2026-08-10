@@ -6,6 +6,7 @@ import { activeOwnerId, useSettings } from '@/stores/settings'
 // `format.ts` is the one file of the usage window the opening chunk may reach — the rest of it
 // pulls the chart library in with it, which `eager-graph.test.ts` holds the line on.
 import { formatUnits } from '@/usage/format'
+import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
@@ -21,15 +22,24 @@ const CARD_WIDTH = 220
  * has the charts. What belongs on a home is the one figure a person checks — how much went, over
  * the period the window itself opens on, so the two never disagree.
  *
- * Silent about a failure, like every other band: a revoked key among several is the ordinary
- * case, and the report already folds those into `silent` rather than refusing.
+ * A revoked key among several is the ordinary case, and the report folds those into an empty
+ * one rather than refusing — so what reaches `refused` here is the whole read failing, which
+ * the band says rather than disappearing on.
  */
 export function Usage() {
   const { t, i18n } = useTranslation()
   const owner = useSettings(activeOwnerId)
   // Below the fold on any window, so it is read when reached rather than at mount. Read again
   // when the active key changes too: another key spends its own units.
-  const { value: report, marker } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
+  const {
+    value: report,
+    state,
+    retry,
+    marker,
+  } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
+
+  if (state === 'refused')
+    return <RefusedSection id="usage" title={t('home.sections.usage')} onRetry={retry} />
 
   // Nothing spent is not nothing to say — but nothing READ is, and the two look alike from here
   // until the report lands.

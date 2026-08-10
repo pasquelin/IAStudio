@@ -85,6 +85,33 @@ describe('the library shelf', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  /**
+   * The one an empty band could not say. A 429 took the shelf off the page without a word —
+   * and since `cloudBrowse` goes through `quietlyReducedBy`, the journal did not say it either,
+   * so there was no trace of it anywhere the user could look.
+   */
+  it('stays and says so when the library refuses, rather than disappearing', async () => {
+    installFakeBridge({ cloud: { browse: () => Promise.reject(new Error('429')) } })
+    render(<Library />)
+
+    expect(await screen.findByText(/n’a pas obtenu de réponse/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+  })
+
+  it('reads the library again when that button is pressed', async () => {
+    const browse = vi
+      .fn<() => Promise<{ assets: CloudAsset[]; cursor: string | null }>>()
+      .mockRejectedValueOnce(new Error('429'))
+      .mockResolvedValueOnce({ assets: [cloudAsset()], cursor: null })
+    installFakeBridge({ cloud: { browse } })
+    render(<Library />)
+    await screen.findByRole('button', { name: 'Réessayer' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
+
+    expect(await screen.findByText('FLUX.2')).toBeInTheDocument()
+  })
+
   it('reads the library again when the active key changes', async () => {
     const { browse } = install([cloudAsset()])
     render(<Library />)

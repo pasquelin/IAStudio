@@ -1,4 +1,5 @@
-import { act, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UsageReport } from '@shared/domain/usage'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -68,17 +69,30 @@ describe('the usage band', () => {
     expectSilent(container)
   })
 
-  it('stays silent when the key is refused, like every other band', async () => {
-    // Waited on the call, then on a tick: the band is empty at first render too, so asserting
-    // emptiness straight away would pass before the refusal had even been read.
-    const { usageReport } = install(null)
-    const { container } = render(<Usage />)
+  /**
+   * It used to stay silent, and that was the debt: a refused read and a period nobody spent
+   * anything in became the same empty band, so a revoked key looked like a quiet month.
+   */
+  it('says the read was refused, and offers to try again, rather than disappearing', async () => {
+    install(null)
+    render(<Usage />)
 
-    await vi.waitFor(() => expect(usageReport).toHaveBeenCalled())
-    await act(async () => {
-      await new Promise(done => setTimeout(done, 0))
-    })
-    expectSilent(container)
+    expect(await screen.findByText(/n’a pas obtenu de réponse/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+  })
+
+  it('reads again when that button is pressed', async () => {
+    const usageReport = vi
+      .fn<(days: number) => Promise<UsageReport>>()
+      .mockRejectedValueOnce(new Error('missing'))
+      .mockResolvedValueOnce(report())
+    installFakeBridge({ scenario: { usageReport } })
+    render(<Usage />)
+    await screen.findByRole('button', { name: 'Réessayer' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Réessayer' }))
+
+    expect(await screen.findByText(/1 240 unités sur 31 jours/)).toBeInTheDocument()
   })
 
   it('reports a period nobody spent anything in, rather than hiding', async () => {

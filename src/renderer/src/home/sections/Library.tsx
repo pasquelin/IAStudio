@@ -8,6 +8,7 @@ import { getBridge } from '@/services/bridge'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { activeOwnerId, useSettings } from '@/stores/settings'
+import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
 import { useShelf } from '../use-shelf'
@@ -32,7 +33,12 @@ export function Library() {
 
   // Read again when the active key changes: another key is another library, and the tiles of the
   // previous one would be pictures nobody in this account can fetch.
-  const page = useShelf(NOTHING, () => browse(limit), `${owner}/${limit}`)
+  const { value: page, state, retry } = useShelf(NOTHING, () => browse(limit), `${owner}/${limit}`)
+
+  // A 429 used to take the band off the page without a word — and since `cloudBrowse` goes
+  // through `quietlyReducedBy`, the journal did not say it either.
+  if (state === 'refused')
+    return <RefusedSection id="library" title={t('home.sections.library')} onRetry={retry} />
 
   if (page.length === 0) return null
 

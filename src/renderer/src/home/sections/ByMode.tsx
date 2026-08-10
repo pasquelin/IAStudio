@@ -7,6 +7,7 @@ import { revealAssetsOfKind } from '@/helpers/reveal-panel'
 import { assetIcon } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
+import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { useShelf } from '../use-shelf'
 
@@ -21,7 +22,14 @@ const NONE = emptyAssetCounts()
 export function ByMode() {
   const { t } = useTranslation()
   const path = useProject(state => state.project?.path ?? null)
-  const counts = useShelf(NONE, () => getBridge()?.assets.counts(), path ?? '')
+  const {
+    value: counts,
+    state,
+    retry,
+  } = useShelf(NONE, () => getBridge()?.assets.counts(), path ?? '')
+
+  if (state === 'refused')
+    return <RefusedSection id="byMode" title={t('home.sections.byMode')} onRetry={retry} />
 
   const total = ASSET_TYPES.reduce((sum, type) => sum + counts[type], 0)
   if (total === 0) return null
