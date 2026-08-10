@@ -854,13 +854,13 @@ ne relance que lui. Le manuel le décrit dans les deux langues.
 
 ## 5.1 Ce qui reste — étapes 7 à 9
 
-Le cœur exécutable : **compiler** vers le `flow` et **valider** (lot C3, le seul de l'étape 7 qui
-reste). Puis la logique, les boucles, les transforms, l'approbation, et enfin l'import/export et la
-publication.
+**L'étape 7 est terminée** : le graphe se compile vers le `flow` et se valide (lot C3). Restent la
+logique, les boucles, les transforms, l'approbation, puis l'import/export et la publication.
 
-> **Le lot C3 commence par un geste que le plan ne nommait pas** : rien dans le studio n'écrit
-> `data.isOutput`, et le convertisseur ne compile QUE les branches menant à un nœud qui le porte —
-> sans ce geste, le flow compilé est **vide**.
+> **Le convertisseur ne compile QUE les branches menant à un nœud portant `data.isOutput`** — le
+> lot C3 a livré le geste qui l'écrit (la case « Sortie du workflow »), et sans lui le flow compilé
+> était **vide**. La case n'est offerte que sur les trois types où le convertisseur lit le champ
+> (`OUTPUT_NODE_TYPES`) : ailleurs il est ignoré en silence.
 
 ### 🔴 `typesConnect` refuse le fil pour lequel l'espace Graphe existe — TRANCHÉ PAR UN APPEL
 
@@ -900,52 +900,55 @@ d'un nœud texte, là où `createNode` écrit `'text'`. **Les fixtures ne reprod
 studio fabrique**, et les lots C1 et C2 s'appuient dessus — c'est ce qui a permis à trois lots de
 passer au-dessus du défaut. La corriger d'abord, pour que ce qui doit rougir rougisse.
 
-> ### ⏳ Le lot C3 est écrit et **attend sa revue** — ne pas le refaire
+### 🔴 Un fil tiré vers un générateur n'arrive pas dans le flow compilé — MESURÉ dans le SDK
+
+**Le geste attendu** : relier un nœud Texte au port prompt d'un générateur, puis exporter — le
+workflow exporté doit porter ce lien.
+
+**Ce qui se passe** : le lien n'existe pas dans le flow. `convertWorkflowEditorToFlow` tire
+`modelInputs` de `getModel`, **que le lot C3 ne lui passe pas**, puis saute chaque arête qu'il ne
+sait pas nommer — `if (!modelInput) continue`, `workflow_converter.ts:1378`, même chose pour
+`inputs_array` ligne 1321. Le générateur garde les valeurs de son formulaire et perd son câblage.
+La ligne d'état répond quand même « 2 étapes ».
+
+**Pourquoi ce n'est pas une ligne à ajouter** : le convertisseur veut le **type d'entrée de l'API**
+(`WorkflowEditorModelInput.type`), et `ModelRegistry` le traduit en `FieldKind` avant de le mettre
+en cache — ce type brut n'existe plus nulle part côté main. Le lot doit donc soit conserver le type
+brut à côté du descripteur, soit demander le modèle une seconde fois. Le reste est facile : le
+handler `workflows:compile` est **déjà asynchrone** et déjà débouncé à 400 ms, donc il peut
+résoudre les modèles du graphe avant d'appeler le convertisseur, qui, lui, est synchrone.
+
+**Le test qui le tient déjà** : `refuses to carry a wire into a generator, for want of the model
+behind it` (`workflow-compile.test.ts`) épingle le comportement actuel — **il doit rougir** le jour
+où le trou est comblé, et être réécrit à l'endroit.
+
+> **Ce que la revue du lot C3 a laissé ouvert, et qui n'est pas corrigé** :
 >
-> **Branche `feat/graph-compile`, worktree `.claude/worktrees/graph-compile`**, cinq commits,
-> **rebasée sur `develop`**, `pnpm validate` vert : 463 fichiers, 5932 tests. La fusion serait
-> sans conflit (`git merge --no-commit --no-ff` essayé puis annulé).
+> 1. **L'icône de sortie sur la face du nœud n'a ni nom accessible ni survol.** `UiIcon` pose
+>    `aria-hidden` sur tout ; `design/AssetBadge.tsx` a déjà réglé le même problème avec un
+>    `<span title aria-label role="img">`. Et `text-accent` dit déjà « en cours » (`RUN_TONE`) et
+>    « sélectionné » sur le même en-tête.
+> 2. **Un graphe neuf s'annonce en rouge** : « Aucune sortie marquée » s'affiche au montage d'un
+>    document vide, là où le dépôt a `design/EmptyState.tsx`. « Rien n'est encore dessiné » est un
+>    quatrième refus, absent de `GraphCompileProblem`.
+> 3. **Le studio dit « Apps », le lot dit « workflow »** : `grep "orkflow" fr.json` sur `develop`
+>    rendait zéro. « Résultat de l'App » lèverait aussi l'homonymie avec le port « Sortie » que
+>    chaque nœud porte déjà.
+> 4. **`src/renderer/src/spaces/**` n'a AUCUN budget de couverture** (`vitest.config.ts`), et le
+>    lot y pose `GraphStatus.tsx`. Le fichier a désormais sa suite, mais rien n'empêche le suivant
+>    d'arriver sans.
+> 5. **`FIELD_LABEL` tronque chez huit autres champs sans `title`** (`TextField`, `SliderField`,
+>    `RangeField`, `ColorField`, `VectorField`, `TextureField`, `NumberField`, `panels/view/View`).
+>    `design/property-line.test.ts` fait déjà ce travail pour `PropertyRow` : élargir son
+>    `import.meta.glob` les sortirait d'un coup.
+> 6. **`parseGraphState` (zod, main) et `parseGraph` (renderer) disent deux choses différentes** du
+>    même graphe : nœud malformé jeté ici, exception là ; ids réservés et doublons refusés d'un
+>    côté, acceptés de l'autre ; `nodeGroups` silencieusement supprimé par le `z.object`.
 >
-> **Il n'est toujours pas fusionné, et ce n'est plus une question de contexte : le mécanisme de
-> revue est en panne.** Deux générations d'agents adverses, quatre au total, n'ont rendu aucun
-> contenu — seulement des notifications « disponible », malgré des questions numérotées. C'est
-> une décision qui revient à l'humain : soit il lance `/code-review` lui-même sur la branche,
-> soit il autorise une fusion sans revue adverse en connaissance de cause. **Le lot C2 a montré
-> ce que la seconde option coûte : trois défauts bloquants trouvés après coup.**
->
-> **Ce qui a quand même été fait à la place, et qui n'est pas rien** : le lot est vérifié à
-> l'écran de bout en bout (la ligne d'état passe de « Aucune sortie marquée » à « 1 étape »,
-> l'icône apparaît sur l'en-tête du nœud), le harnais de mutation a tourné (6 sur 10 mordent, 3
-> survivantes inobservables et expliquées, 1 refusée), et ma propre relecture a trouvé **deux
-> vrais défauts, tous deux corrigés** : un commentaire qui prétendait régler ce que le débounce
-> ne règle pas, et une étiquette d'interrupteur tronquée en « Sortie du … » sur un canvas dont
-> chaque nœud porte déjà un port « Sortie ».
->
-> **Ce qu'il contient** : la case « Sortie du workflow » dans l'inspecteur (rien n'écrivait
-> `data.isOutput`, sans quoi le flow compilé est vide), l'icône sur la face du nœud,
-> `src/main/scenario/workflow-compile.ts` qui adapte notre domaine vers
-> `convertWorkflowEditorToFlow` du SDK et appelle `validateWorkflowFlow`, le canal
-> `workflows:compile`, et la ligne d'état en bas du canvas.
->
-> **Le prochain tour** : ouvrir **deux agents NEUFS** sur `git show 4b647d54 32f2579b 52de4228`,
-> appliquer ce qui est retenu, puis fusionner.
->
-> **Ne pas essayer de reprendre `revue-c3-correction` ni `revue-c3-conception`** : ils ont rendu
-> des rapports complets au tour du lot C2, puis se sont mis à ne plus émettre que des
-> notifications « disponible ». Six relances, dont trois avec des questions numérotées : aucun
-> contenu. Leur écrire à nouveau est du temps perdu.
->
-> **Ne pas donner d'accès en écriture au worktree à un agent de revue** — l'un d'eux a muté un
-> fichier puis l'a restauré par `git checkout --`, ce qui a effacé une modification en cours.
-> Lecture seule, et les mutations se font depuis la session, où le harnais est gardé.
->
-> **Si les agents ne rendent toujours rien**, le dire à l'utilisateur plutôt que de fusionner :
-> le harnais de mutation et une relecture seule sont plus faibles qu'une revue adverse, et le
-> lot C2 l'a démontré au prix de trois défauts bloquants.
->
-> **Six mutations sur dix mordent.** Les trois survivantes le sont parce qu'elles sont
-> inobservables à travers le flow, et c'est écrit dans le message de `32f2579b` ; la quatrième a
-> été refusée, son motif ne s'appliquant plus après un refactor.
+> **Trois mutations de l'adaptateur survivent, et c'est inobservable, pas un trou de test** : un
+> `modelInput` sans nom, un `sourceHandle` non transmis et une note collante muée en nœud texte
+> donnent le **même flow** — le convertisseur les jette de toute façon. Ne pas y revenir sans
+> d'abord se demander ce qu'un test pourrait en voir. Les cinq autres mordent.
 
 ### Ce que les revues du lot C2 ont laissé ouvert, et qu'il ne faut pas redécouvrir
 
@@ -980,39 +983,6 @@ est écrit ici parce que chacun demande une décision, pas une correction :**
 8. **`role="status"` est posé par nœud**, donc vingt régions live sur un graphe de vingt nœuds.
    Ailleurs le dépôt n'en met qu'une, et `ProgressRow` — qui peint la même information pour les
    jobs — n'en a pas.
-0. ### 🔴 **Un nœud texte ne peut pas être relié au port prompt d'un générateur — MESURÉ**
-
-   **Le geste attendu** : poser un nœud Texte, poser un générateur d'image, tirer un fil de la
-   sortie du texte vers l'entrée « prompt » du générateur. C'est le geste pour lequel l'espace
-   Graphe existe.
-
-   **Ce qui se passe** : le fil est refusé. Mesuré en appelant `refuseConnection` sur les nœuds
-   que `createNode` et `createModelNode` fabriquent réellement — pas sur des fixtures :
-
-   ```
-   textOutput  { id: 'text1-target-prompt',           name: 'output', type: 'text'   }
-   modelPrompt { id: 'imageGenerator1-source-prompt',  name: 'prompt', type: 'prompt' }
-   refusal     'type-mismatch'
-   ```
-
-   `factory.ts` type la sortie d'un nœud texte `'text'` (`OUTPUTS.text`) et le port prompt d'un
-   générateur `'prompt'` (`portTypeOf` sur `field.promptSpark`) ; `typesConnect` n'accepte que
-   `'prompt'`, donc `refuseConnection` rend `'type-mismatch'` et `canDropConnection` est faux.
-
-   **Pourquoi personne ne l'a vu** : `engines/graph/graph-fixtures.ts` écrit `type: 'prompt'` sur
-   la sortie d'un nœud texte. **Les fixtures ne reproduisent pas ce que `createNode` fabrique**, et
-   toute la suite des lots C1 et C2 s'appuie dessus. Corriger la fixture est le premier geste — il
-   fera rougir ce qui doit rougir.
-
-   **Ce qui n'est pas tranché, et ne doit pas l'être seul** : qui a tort des deux. Soit la sortie
-   d'un texte doit être typée `'prompt'`, soit le port prompt doit accepter `['prompt', 'text']`.
-   La seconde est plus permissive et colle à ce que `typesConnect` documente déjà (« un port non
-   typé accepte tout, le studio ne doit pas refuser ce que la webapp permet ») — **mais la valeur
-   `'text'` vient d'une App publique lue le 9 août**, donc c'est la webapp qui décide, et ça se
-   vérifie par un appel avant d'écrire quoi que ce soit.
-
-   **À vérifier à l'écran aussi** : le fil doit se voir refusé au pointeur.
-
 9. **`whenSettled` n'a ni signal ni échéance** : un job qui n'atteindrait jamais d'état terminal
    fige l'exécution. Le `try/finally` empêche l'application de rester bloquée, pas l'attente
    d'être infinie.

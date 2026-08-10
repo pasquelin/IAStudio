@@ -15,9 +15,10 @@ import { messageOf } from '@shared/guards'
  * The two unions are the same shape written twice, because `shared/` carries no runtime
  * dependency (invariant 2), and TypeScript cannot see that a narrowed `type` picks the matching
  * arm of the OTHER union. Spelling the arms out costs fourteen lines and buys two things a cast
- * would have thrown away: a sixteenth node type stops compiling HERE, and `stickyNote` — which
- * the converter's union has no variant for at all — is refused by the type system rather than
- * by a list kept in step by hand.
+ * would have thrown away: a sixteenth node type stops compiling — in `unhandled` below, which is
+ * what makes that true and without which the `switch` proved nothing — and `stickyNote`, which
+ * the converter's union has no variant for at all, is refused by the type system rather than by
+ * a list kept in step by hand.
  *
  * `undefined` for a node that does not compile. `data` is handed over as it stands: `parseGraph`
  * validates the node and not its contents, and the converter reads it defensively.
@@ -63,7 +64,20 @@ function asEditorNode(node: GraphNode): WorkflowEditorNode | undefined {
     case 'stickyNote':
       return undefined
   }
+
+  // Outside the `switch` rather than a `default` arm, which would be a branch no test can enter
+  // and which the coverage budget of this folder counts as one.
+  return unhandled(node)
 }
+
+/**
+ * The arm a sixteenth node type would not have.
+ *
+ * Without it the `switch` proves nothing: `noImplicitReturns` is off and the function already
+ * answers `undefined`, so a type added to the union would fall out of every flow in silence.
+ * Reached only by a type the compiler cannot see, which is why the parameter is `never`.
+ */
+const unhandled = (_node: never): undefined => undefined
 
 const asEditorEdge = (edge: GraphEdge): WorkflowEditorEdge => ({
   source: edge.source,
@@ -87,11 +101,16 @@ export type CompileDeps = {
  * step 9 export needs this very array, and a verdict reduced to a number is a contract no test can
  * hold to account — four mutations of the adapter survived a suite that could only assert `ok`.
  *
- * `getModel` is deliberately NOT passed. It resolves aspect-ratio presets and input-type indices,
- * it is SYNCHRONOUS, and the registry holding those answers is asynchronous — wiring it means
- * prefetching every model of the graph on every keystroke. It costs nothing today: the only node
- * that reads it is `aspectRatio`, which the editor cannot yet create. Written down in
- * `docs/todo.md` rather than left as a surprise for step 8.
+ * ⚠️ **`getModel` is NOT passed, and that is a hole, not a saving.** Read off the converter rather
+ * than off its documentation: `workflow_converter.ts` derives `modelInputs` from `getModel` and
+ * then skips every wire it cannot name — `if (!modelInput) continue`. So a generator's INCOMING
+ * EDGES are dropped from the flow while its form values are kept, and this function answers a
+ * flow that would export a workflow whose generators are wired to nothing.
+ *
+ * Not fixed here because it is a lot of its own: the converter wants the API's own input type,
+ * and `ModelRegistry` translates that away into a `FieldKind` before caching. It is written up in
+ * `docs/todo.md` § 5.1, and `refuses to carry a wire into a generator` pins the behaviour so the
+ * day it is fixed a test says so.
  */
 export function toEditorFlow(graph: GraphState): readonly WorkflowEditorFlowItem[] {
   const nodes: WorkflowEditorNode[] = []

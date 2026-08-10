@@ -99,12 +99,6 @@ describe('compiling a graph', () => {
   /**
    * The generator carries its form into the flow, which is what makes a compiled workflow runnable
    * without the editor beside it.
-   *
-   * What is NOT asserted here, deliberately: that the wire OVERRIDES that value. It does not —
-   * measured, with the node's own handle ids from `factory.ts` — and the reason is a question this
-   * lot cannot answer, written up in `docs/todo.md` § 5.1: a text node's output is typed `text`
-   * while a model's prompt port is typed `prompt`, so `typesConnect` would refuse the connection
-   * on our own canvas. Claiming a resolution here would be claiming a measurement nobody made.
    */
   it('carries the form of a generator into the step it becomes', () => {
     const graph = graphOf([modelNode('m1', true)])
@@ -181,6 +175,30 @@ describe('compiling a graph', () => {
     // canvas: counted off `graph.nodes`, this would answer two.
     expect(idsOf(graph)).toEqual(['m1'])
     expect(compile(graph).result).toEqual({ ok: true, steps: 1 })
+  })
+
+  /**
+   * The hole this lot leaves, pinned so it cannot be forgotten — read off the converter, not
+   * guessed: it derives `modelInputs` from `getModel`, which is not passed, and then skips every
+   * wire it cannot name (`if (!modelInput) continue`). A text node feeding a generator therefore
+   * reaches the flow as a step of its own, and the generator's prompt still holds the form value
+   * rather than a reference to it.
+   *
+   * Written as an assertion rather than a comment because the day `getModel` is wired — the lot
+   * `docs/todo.md` § 5.1 asks for — this test must fail and be rewritten the other way round.
+   */
+  it('refuses to carry a wire into a generator, for want of the model behind it', () => {
+    const graph = graphOf(
+      [textNode('text1', 'a knight'), modelNode('m1', true)],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
+    )
+    const generator = toEditorFlow(graph).find(step => step.id === 'm1')
+
+    expect(generator?.inputs).toContainEqual(
+      expect.objectContaining({ name: 'prompt', value: 'a knight' }),
+    )
+    // No input of the generator refers to the text node, so nothing wires the two together.
+    expect(JSON.stringify(generator?.inputs)).not.toContain('text1')
   })
 })
 
