@@ -67,7 +67,9 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > champ mesuré dans `SPRITE_SPECS` pour être tenable.
 >
 > **Les décisions qui attendaient sont toutes prises le 10 août 2026** — 39, 12, 40, 29, la forme
-> de la dictée (41), et l'encodeur HDRI des Skyboxes, dont la dépendance est **accordée sous
+> de la dictée (41), les quatre de l'animation 3D (**46** : pistes additives, caméra devenue objet
+> de scène, ajout et suppression de piste dans les trois espaces, les trois volets en base utile),
+> et l'encodeur HDRI des Skyboxes, dont la dépendance est **accordée sous
 > réserve de la soumettre avant installation**. Elles sont écrites dans leur entrée, et **ne se
 > redemandent pas**. **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
 >
@@ -120,10 +122,12 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > chaque document enregistré — **c'est la décision prise, ne pas la redemander**. Ce que le lot a
 > laissé ouvert est écrit au § 1.1.
 >
-> Les candidats, sans priorité imposée : l'**entrée 39**, l'Explorateur en arbre, dont les trois
-> questions sont tranchées · l'**entrée 41**, la dictée · l'**entrée 32**, le clavier des menus ·
-> les **étapes 7 à 9 du node editor** (§ 5) · les **manques par espace** (§ 4), dont deux qui ne se
-> jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
+> Les candidats, sans priorité imposée : l'**entrée 46**, l'animation 3D et les pistes des trois
+> espaces, dont les quatre décisions sont tranchées et le plan écrit · l'**entrée 39**,
+> l'Explorateur en arbre, dont les trois questions sont tranchées · l'**entrée 41**, la dictée ·
+> l'**entrée 32**, le clavier des menus · les **étapes 7 à 9 du node editor** (§ 5) · les **manques
+> par espace** (§ 4), dont deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des
+> Textures.
 >
 > **Le § 5 du node editor est tenu au 10 août 2026** — worktree `types-connect`, et l'ordre de ses
 > lots est tranché. **Ne pas l'ouvrir.** `arith-partagee`, `docs-a-jour`, `design-system`,
@@ -759,6 +763,59 @@ toujours. **Aucun test ne peut les regarder — il n'y a pas de GPU sous vitest.
 ---
 
 ## 4.3 Espace 3D
+
+### 46. Un personnage animé par Scenario s'importe immobile, et rien ne le dit
+
+**Le geste attendu.** J'importe un personnage que Scenario a animé — je le vois **marcher**.
+J'ajoute une piste, j'en supprime une : c'est une timeline. Je pose des clés sur un os pour
+corriger un bras. J'ajoute une caméra, je l'anime, et **je sors une vidéo**.
+
+**Le plan complet est dans
+[`docs/plans/2026-08-10-animation-3d.md`](plans/2026-08-10-animation-3d.md) — le lire avant de
+commencer.** Ce qui suit n'en est que le résumé.
+
+**Vu le 10 août 2026, par appel au MCP `scenario` et lecture du code.** Sur les **50 modèles 3D
+publics**, **onze** produisent du rig ou du mouvement — rigging bipède et six morphologies non
+bipèdes, texte→mouvement, et mocap depuis une vidéo. Le studio n'en affiche aucun mouvement, et la
+cause tient en une ligne : **`gltf-source.ts:62` rend `gltf.scene` et jette `gltf.animations`.**
+Aucun `AnimationMixer` n'existe dans `engines/`, `ModelRef` n'est qu'un identifiant, et `SceneState`
+ne connaît ni le temps ni la caméra.
+
+**Le manque n'est pas propre à la 3D : aucun espace ne sait ajouter une piste.**
+`engines/timeline/commands.ts` porte `renameTrack`, et **ni `addTrack` ni `removeTrack`** ; aucun
+appelant côté interface. Vidéo et Audio ont des pistes fixes.
+
+**Cinq choses déjà en place rendent le chantier plus petit qu'il n'en a l'air**, et il ne faut pas
+les redécouvrir : `ViewportEngine` expose déjà `onFrame(delta)` et `resetClock()` ; `model-cache.ts`
+clone déjà par `SkeletonUtils.clone`, donc le piège du squelette partagé est payé ; `clock.ts` est
+réutilisable tel quel ; `Command<S>` donne l'annulation ; et **three 0.185.1 porte
+`AdditiveAnimationBlendMode` et `makeClipAdditive` nativement**.
+
+**Les décisions sont prises le 10 août 2026 avec l'utilisateur, et ne se redemandent pas :**
+
+1. **Les pistes s'additionnent** — pas « le dessus gagne ». Conséquence non facultative : il faut
+   une **piste armée**, sinon le gizmo écrit dans le vide et l'objet revient sous la main.
+2. **La caméra devient un objet de la scène**, sélectionnable et exportable — glTF sait la porter.
+3. **Ajouter et supprimer une piste s'écrit pour les trois espaces**, Vidéo et Audio compris. Les
+   deux modèles de données diffèrent : **c'est le patron qui se partage, pas le code.**
+4. **Les trois volets sont au programme** — lire ce que Scenario produit, créer du mouvement, sortir
+   une vidéo — en base utile, ce que le plan définit lot par lot.
+
+**Deux conséquences qui débordent de cette entrée :**
+
+- **Le § 10.1 sera à réécrire quand le lot des panneaux passera** : l'étagère va à droite et la
+  timeline en bas dans l'espace 3D, ce que la règle actuelle n'autorise qu'en Vidéo et en Audio.
+  C'est la même règle étendue, pas une contradiction — mais elle est écrite comme tranchée.
+- **Un `outputFormat` autre que `glb` fait payer une génération inaffichable** : `IMPORTABLE_TYPES`
+  déclare `mesh: ['glb']`, et les modèles de motion offrent cinq formats FBX/Maya. À contraindre au
+  formulaire, pas à découvrir après coup.
+
+**Ce qui n'est pas mesuré, et ne doit pas être présenté comme acquis** : aucun GLB animé n'est passé
+par le studio, donc la forme réelle des clips produits reste à constater ; rien n'encode une vidéo
+aujourd'hui (ffmpeg sert la lecture) ; et ni le coût d'un mixer par frame ni le plafond d'un
+document lourd en clés n'ont été mesurés.
+
+---
 
 L'espace porte 17 primitives, 5 types de lumières, gizmos, sélection multiple, groupes et reparentage,
 import glTF/GLB avec Draco et KTX2, magnétisme et repère local, ombres par nœud, environnement IBL,
