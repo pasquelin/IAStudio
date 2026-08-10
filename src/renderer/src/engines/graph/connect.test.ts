@@ -160,6 +160,34 @@ describe('what the canvas may connect', () => {
     expect(refuseConnection(wired, feeding)).toBe('input-taken')
   })
 
+  /**
+   * And the node the exception is NOT for. A branch reads its condition fields through that very
+   * port — `conditionFieldsOf` builds them from its wires, whatever their handle — so holding it
+   * to one wire would hold every branch to a single field, where the converter compiles two.
+   */
+  it('lets a branch take a second wire on its own conditional port', () => {
+    const branch: GraphNode = {
+      id: 'ifElse1',
+      type: 'ifElse',
+      position: { x: 0, y: 0 },
+      data: { inputHandles: [{ id: 'ifElse1-source-conditional', name: 'conditional' }] },
+    }
+
+    const feeding = {
+      source: 'ifElse1',
+      sourceHandle: 'ifElse1-source-conditional',
+      target: 'image1',
+      targetHandle: 'image1-target-image',
+    }
+    const wired: GraphState = {
+      ...graph,
+      nodes: [...graph.nodes, branch],
+      edges: [edgeOf({ ...feeding, target: 'sound1', targetHandle: 'sound1-target-image' })!],
+    }
+
+    expect(refuseConnection(wired, feeding)).toBeNull()
+  })
+
   it('names an edge that already exists rather than doubling it', () => {
     const wired: GraphState = { ...graph, edges: [edgeOf(feeding)!] }
 

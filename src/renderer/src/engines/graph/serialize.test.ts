@@ -119,7 +119,7 @@ describe('reading a graph back', () => {
     expect(nodes[0]?.position).toEqual({ x: 0, y: 0 })
   })
 
-  /** One producer per input is what the whole editor is written around — including its reader. */
+  /** One producer per input, on every port the editor holds to one — its reader included. */
   it('keeps the first of two edges feeding the same input', () => {
     const doubled = {
       nodes: [
@@ -136,6 +136,76 @@ describe('reading a graph back', () => {
     const edges = parseGraph(doubled).edges
     expect(edges).toHaveLength(1)
     expect(edges[0]?.target).toBe('text1')
+  })
+
+  /**
+   * And the port that keeps both, which is what makes the whole thing survive a save: a transform
+   * reading two nodes is written to disk, and read back with both its wires. Dropped here, the
+   * expression naming the second would fail on the next Run — and a workflow imported from the
+   * webapp with two wires would never reach the plan at all.
+   */
+  it('keeps both edges where the port they land on takes several', () => {
+    const doubled = {
+      nodes: [
+        { id: 'text1', type: 'text', position: { x: 0, y: 0 }, data: {} },
+        { id: 'text2', type: 'text', position: { x: 0, y: 9 }, data: {} },
+        {
+          id: 'transformText1',
+          type: 'transformText',
+          position: { x: 9, y: 0 },
+          data: { inputHandles: [{ id: 'transformText1-source-text', name: 'text' }] },
+        },
+      ],
+      edges: [
+        {
+          id: 'a',
+          source: 'transformText1',
+          sourceHandle: 'transformText1-source-text',
+          target: 'text1',
+        },
+        {
+          id: 'b',
+          source: 'transformText1',
+          sourceHandle: 'transformText1-source-text',
+          target: 'text2',
+        },
+      ],
+    }
+
+    expect(parseGraph(doubled).edges.map(edge => edge.target)).toEqual(['text1', 'text2'])
+  })
+
+  /** A wire written twice is still one wire: the key is the whole edge, not the port alone. */
+  it('drops a duplicate of the very same wire on such a port', () => {
+    const twice = {
+      nodes: [
+        { id: 'text1', type: 'text', position: { x: 0, y: 0 }, data: {} },
+        {
+          id: 'transformText1',
+          type: 'transformText',
+          position: { x: 9, y: 0 },
+          data: { inputHandles: [{ id: 'transformText1-source-text', name: 'text' }] },
+        },
+      ],
+      edges: [
+        {
+          id: 'a',
+          source: 'transformText1',
+          sourceHandle: 'transformText1-source-text',
+          target: 'text1',
+          targetHandle: 'text1-target-prompt',
+        },
+        {
+          id: 'b',
+          source: 'transformText1',
+          sourceHandle: 'transformText1-source-text',
+          target: 'text1',
+          targetHandle: 'text1-target-prompt',
+        },
+      ],
+    }
+
+    expect(parseGraph(twice).edges).toHaveLength(1)
   })
 
   /**

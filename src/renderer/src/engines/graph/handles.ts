@@ -69,22 +69,12 @@ export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput)
   return accepted.some(type => type === offered || (ALSO_ACCEPTED[type] ?? []).includes(offered))
 }
 
-/** Input ports, nested ones included: a sub-handle is a port that can be wired like any other. */
-export function inputHandlesOf(node: GraphNode): readonly GraphHandleInput[] {
-  const flatten = (handles: readonly GraphHandleInput[]): GraphHandleInput[] =>
-    handles.flatMap(handle => [handle, ...flatten(handle.subHandles ?? [])])
-
-  return flatten(node.data.inputHandles ?? [])
-}
+// Both live in `shared/domain/graph.ts`, where the READER can reach them without pulling the
+// engine into the opening chunk. Re-exported so the engine still has one door for its ports.
+export { inputHandleOf, inputHandlesOf } from '@shared/domain/graph'
 
 export const outputHandlesOf = (node: GraphNode): readonly GraphHandleOutput[] =>
   node.data.outputHandles ?? []
-
-/** `id` may be missing: an edge read off a file names no handle, and that is no port either. */
-export const inputHandleOf = (
-  node: GraphNode,
-  id: string | undefined,
-): GraphHandleInput | undefined => inputHandlesOf(node).find(handle => handle.id === id)
 
 export const outputHandleOf = (node: GraphNode, id: string): GraphHandleOutput | undefined =>
   outputHandlesOf(node).find(handle => handle.id === id)
