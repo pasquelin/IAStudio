@@ -43,7 +43,7 @@ Sous la bannière, une bande par sujet, dans cet ordre :
 | **Ce que vous avez produit** | vos générations, légendées du modèle qui les a faites | un projet ouvert |
 | **Par type** | six compteurs — Image, Vidéo, Audio, Maillage, Texture, Skybox | un projet ouvert |
 | **Vos recettes** | les réglages que vous avez épinglés | rien |
-| **Votre bibliothèque** | ce qui vit en ligne, sur votre compte Scenario — **un clic rapatrie** | une clé API |
+| **Votre bibliothèque** | ce qui vit en ligne, sur votre compte Scenario | une clé API |
 | **Vos documents** | les documents du projet | un projet ouvert |
 | **En cours** | les générations en route | une clé API |
 | **Activité récente** | ce que le studio a fait et raté | un projet ouvert |
@@ -93,17 +93,25 @@ ne se contredisent jamais. C’est un résumé, pas la fenêtre : le détail est
 projets, elle vous suit d’un projet à l’autre. C’est la seule bande qui ait encore quelque chose
 à montrer quand aucun dossier n’est ouvert.
 
-### Deux gestes qui font gagner du temps
+### Cliquer une vignette l’ouvre
 
-**Refaire une image ne coûte aucun appel réseau.** Sous chaque création, « En refaire une
-avec… » rouvre le formulaire déjà rempli : le modèle, le prompt et les réglages sont gardés à
-côté de l’asset, dans le projet.
+**C’est la règle de toute la page, et il n’y a qu’elle à retenir.** Un clic sur une image
+l’ouvre dans son espace. Ce qui n’est pas « ouvrir » est une action **secondaire**, révélée au
+survol dans le coin de la vignette, et chaque bouton dit son verbe.
 
-**C'est ici, et nulle part ailleurs, qu'on rapatrie.** Cliquer une vignette de **Votre
-bibliothèque** fait descendre l'asset dans le projet ouvert. L'étagère, elle, sait envoyer et
-pas reprendre : chaque sens a sa porte, et ce n'est pas la même — voir
-[Les assets](07-assets.md). Sans projet ouvert, ou pendant qu'un transfert tourne, la vignette
-reste une image et ne répond pas : il n'y aurait nulle part où écrire.
+**Refaire une image ne coûte aucun appel réseau.** Dans le coin de chaque création, « En refaire
+une avec… » rouvre le formulaire déjà rempli : le modèle, le prompt et les réglages sont gardés
+à côté de l’asset, dans le projet.
+
+**Une exception, et une seule : un asset de la bibliothèque que vous n’avez pas encore
+rapatrié.** Il n’est pas sur votre disque, donc il n’y a rien à ouvrir — le clic le **récupère**,
+et le bouton le dit. Une fois descendu, la vignette rejoint la règle commune et s’ouvre. Rien
+n’est jamais téléchargé sans que vous l’ayez demandé.
+
+**C’est là, et nulle part ailleurs, qu’on rapatrie.** L’étagère, elle, sait envoyer et pas
+reprendre : chaque sens a sa porte, et ce n’est pas la même — voir [Les assets](07-assets.md).
+Sans projet ouvert, ou pendant qu’un transfert tourne, la vignette reste une image et ne répond
+pas : il n’y aurait nulle part où écrire.
 
 **Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image et pose le
 filtre : vous arrivez sur les images, pas sur l’étagère entière. Un type à zéro reste sur la

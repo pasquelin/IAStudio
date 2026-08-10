@@ -7,7 +7,17 @@ import { settleHome } from '../home-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { connectPreparation } from '@/stores/preparation'
+import { openFromHome } from '../open'
+import type * as HomeOpenModule from '../open'
 import { Creations } from './Creations'
+
+// Where the asset lands is `ASSET_INTENTS`' business, and it needs open documents to have one.
+// What this band answers for is which gesture it calls. Mocked at `home/open` rather than at the
+// helper: the band loads the cascade on the click, to keep it out of the opening chunk.
+vi.mock('../open', async importOriginal => ({
+  ...(await importOriginal<typeof HomeOpenModule>()),
+  openFromHome: vi.fn(),
+}))
 
 function creation(overrides: Partial<Asset> = {}): Asset {
   return {
@@ -78,6 +88,32 @@ describe('the creations shelf', () => {
     const models = useModels.getState()
     expect(models.selected.image).toBe('flux_2')
     expect(models.preset.image).toEqual({ prompt: 'a mossy boulder', width: 1024 })
+  })
+
+  /**
+   * "I click a thumbnail, there is some activity, but it does not open the file." Three shelves
+   * drew the same square and did three different things with it, none of which was opening.
+   * The tile opens now; recreating is the corner, and both say which is which by name.
+   */
+  describe('what a click on the picture does', () => {
+    it('opens the asset rather than starting a generation', async () => {
+      install([creation()])
+      render(<Creations />)
+
+      await userEvent.click(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ }))
+
+      expect(openFromHome).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(openFromHome).mock.calls[0]?.[0]).toMatchObject({ id: 'asset_1' })
+    })
+
+    /** The verb was in an `aria-label` only — heard by a reader, never seen by the eye. */
+    it('names both actions, so neither has to be guessed from the picture', async () => {
+      install([creation()])
+      render(<Creations />)
+
+      expect(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ })).toBeVisible()
+      expect(screen.getByRole('button', { name: 'En refaire une avec FLUX.2' })).toBeVisible()
+    })
   })
 
   /**

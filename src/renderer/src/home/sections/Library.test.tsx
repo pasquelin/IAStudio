@@ -1,13 +1,38 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { settleHome } from '../home-fixtures'
+import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { openFromHome } from '../open'
+import type * as HomeOpenModule from '../open'
 import { Library } from './Library'
+
+// Where the asset lands is `ASSET_INTENTS`' business, and it needs open documents to have one.
+// What this band answers for is which of the two gestures it calls. Mocked at `home/open` rather
+// than at the helper: the band loads the cascade on the click, to keep it out of the opening chunk.
+vi.mock('../open', async importOriginal => ({
+  ...(await importOriginal<typeof HomeOpenModule>()),
+  openFromHome: vi.fn(),
+}))
+
+/** The local twin of `cloudAsset`, as the collector writes it after a pull. */
+function localAsset(overrides: Partial<Asset> = {}): Asset {
+  return {
+    id: 'asset_1',
+    name: 'boulder.png',
+    type: 'image',
+    location: 'local',
+    tags: [],
+    createdAt: '2026-08-08T10:00:00.000Z',
+    ...overrides,
+  }
+}
 
 function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {
   return {
@@ -35,9 +60,13 @@ function install(assets: readonly CloudAsset[]) {
 }
 
 beforeEach(() => {
+  // `vi.fn` keeps its calls across tests, and a count read from the previous one proves nothing.
+  vi.clearAllMocks()
   settleHome()
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
   useCloud.setState({ busy: false, outcomes: [] })
+  // Which of these the project holds decides what a click does, so it has to start from nothing.
+  useAssets.setState({ items: [] })
 })
 
 describe('the library shelf', () => {
@@ -83,6 +112,36 @@ describe('the library shelf', () => {
 
     await vi.waitFor(() => expect(browse).toHaveBeenCalled())
     expect(container).toBeEmptyDOMElement()
+  })
+
+  /**
+   * The rule the whole home follows now: a click on a picture opens it. A library asset already
+   * on the disk has something to open, so it opens — and one that is not has nothing, so
+   * fetching stays the main action there and only there. Implicit fetching was ruled out.
+   */
+  describe('what a click on the picture does', () => {
+    it('opens an asset the project has already fetched', async () => {
+      install([cloudAsset()])
+      useAssets.setState({
+        items: [{ ...localAsset(), remoteAssetId: 'cloud_1' }],
+      })
+      render(<Library />)
+
+      await userEvent.click(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ }))
+
+      expect(openFromHome).toHaveBeenCalledTimes(1)
+    })
+
+    it('fetches one the project does not hold, and says so by name', async () => {
+      const { pull } = install([cloudAsset()])
+      render(<Library />)
+
+      // Loose on the spaces: the French bundle sets a non-breaking one inside its quotes.
+      await userEvent.click(await screen.findByRole('button', { name: /Récupérer.+boulder\.png/ }))
+
+      expect(pull).toHaveBeenCalledWith(['cloud_1'])
+      expect(openFromHome).not.toHaveBeenCalled()
+    })
   })
 
   /**

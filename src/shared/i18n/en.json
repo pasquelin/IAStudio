@@ -1845,6 +1845,7 @@
     "restore": "Show them again",
     "retry": "Try again",
     "refused": "This section did not get an answer.",
+    "open": "Open “{{name}}”",
     "spark": {
       "ask": "Suggest an idea",
       "asking": "One moment…",
