@@ -110,8 +110,18 @@ export const useJobs = create<JobsState>()((set, get) => ({
  * `null` for a job the replica no longer holds. It is not "not yet": `submit` puts the entry in
  * the list before it returns, so a job missing AFTERWARDS is one the main process dropped — a
  * project closed under it, most of the time. Waited on, it would never come back.
+ *
+ * `signal` gives the wait a way out that does not depend on the job ever ending. Without one, a
+ * caller that has given up — a graph run the user stopped — stays parked on this promise for the
+ * rest of the session, holding its whole frame: the main process polls an unfinished job with no
+ * ceiling, deliberately, so nothing else was ever going to resolve it. Aborted, it answers `null`,
+ * which every caller already reads as "no result to use".
+ *
+ * Required rather than optional, and `null` spelled out where there is genuinely nothing to give
+ * up on: optional, the next caller reproduces the parked frame this exists to remove, and nothing
+ * mechanical refuses it. The same lock `ToolButton` puts on its tooltip, for the same reason.
  */
-export function whenSettled(jobId: string): Promise<Job | null> {
+export function whenSettled(jobId: string, signal: AbortSignal | null): Promise<Job | null> {
   const answer = (jobs: readonly Job[]): Job | null | undefined => {
     const job = jobs.find(candidate => candidate.id === jobId)
     if (!job) return null
@@ -120,13 +130,29 @@ export function whenSettled(jobId: string): Promise<Job | null> {
 
   const held = answer(useJobs.getState().jobs)
   if (held !== undefined) return Promise.resolve(held)
+  // Asked after the replica, not before: a job that has already stopped HAS an answer, and
+  // reporting none would invent an absence. What the caller then does with a run it has given up
+  // on is its own business — `executor.ts` drops the values, deliberately and by its own comment.
+  if (signal?.aborted) return Promise.resolve(null)
 
   return new Promise(resolve => {
+    // `done` closes over `stop`, assigned below: zustand never calls a subscriber synchronously,
+    // so nothing can read it before it exists. Moving the abort listener above the subscription
+    // would break that, inside a promise executor, where the ReferenceError has nowhere to go.
+    const done = (settled: Job | null): void => {
+      stop()
+      signal?.removeEventListener('abort', onAbort)
+      resolve(settled)
+    }
+
+    const onAbort = (): void => done(null)
+
     const stop = useJobs.subscribe(state => {
       const settled = answer(state.jobs)
       if (settled === undefined) return
-      stop()
-      resolve(settled)
+      done(settled)
     })
+
+    signal?.addEventListener('abort', onAbort, { once: true })
   })
 }

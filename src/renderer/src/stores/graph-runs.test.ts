@@ -327,6 +327,30 @@ describe('stopping and forgetting a run', () => {
     expect(runOf(useGraphRuns.getState(), DOC).nodes.m2).toEqual({ status: 'idle' })
   })
 
+  /**
+   * The stop has to end the wait, not merely ask the job to end. The main process polls an
+   * unfinished job with no ceiling — deliberately — so a run whose job never settles used to sit
+   * on that promise for the rest of the session: `running` stayed true, the button stayed on
+   * Stop, and every later press of it was refused.
+   */
+  it('finishes the run even when the cancelled job never settles', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, chain())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    useJobs.setState({ cancel: vi.fn(async () => {}) })
+    useGraphRuns.getState().stop(DOC)
+    // Nothing settles `job_1`: the API never answers, which is the case this exists for.
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
+    // Idle, not failed: the wait was abandoned on the user's word, and painting the node red
+    // would blame the API for what the user just did.
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.m1).toEqual({ status: 'idle' })
+  })
+
   it('leaves a job that already landed alone', async () => {
     const jobs = installJobs()
     installGraph(DOC, chain())

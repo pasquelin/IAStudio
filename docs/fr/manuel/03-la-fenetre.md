@@ -196,11 +196,16 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > avec eux — en un seul geste, donc annulable d’un seul `⌘Z`.
 >
 > **Il s’exécute.** Le premier bouton de sa barre lance le graphe — ou `⌘Entrée`, ou **Graphe ▸
-> Exécuter** : chaque nœud part quand ce
-> qu’il lit est prêt, les branches indépendantes partent ensemble, et les générations passent par
-> la même file que le reste du studio — elles s’affichent dans la barre des tâches et se comptent
-> dans le même budget. Le bouton devient **Arrêter** pendant ce temps : plus rien n’est soumis, et
-> ce qui est en vol est annulé. Sur un graphe vide, il est **grisé** : il n’y a rien à exécuter.
+> Exécuter** : chaque nœud part quand ce qu’il lit est prêt, les branches indépendantes partent
+> ensemble, et les générations passent par la même file que le reste du studio — elles s’affichent
+> dans la barre des tâches et se comptent dans le même budget. Le bouton devient **Arrêter**
+> pendant ce temps : plus rien n’est soumis, et ce qui est en vol est annulé. Sur un graphe vide,
+> il est **grisé** : il n’y a rien à exécuter.
+>
+> **Arrêter rend la main tout de suite**, sans attendre que l’API réponde sur les générations
+> déjà lancées. L’annulation leur est bien envoyée, mais l’exécution ne reste pas suspendue à
+> leur réponse : le bouton redevient **Exécuter** dès la pression, y compris si le service ne
+> donne plus jamais de nouvelles de l’une d’elles.
 >
 > **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en cours*, *terminé*,
 > *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,

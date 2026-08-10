@@ -150,7 +150,7 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               // user has already asked to stop paying for.
               if (controller.signal.aborted) cancelIfRunning(job.id)
 
-              const settled = await whenSettled(job.id)
+              const settled = await whenSettled(job.id, controller.signal)
               if (settled?.status !== 'succeeded') throw new Error(`${job.id} did not succeed`)
 
               return settled.assetIds

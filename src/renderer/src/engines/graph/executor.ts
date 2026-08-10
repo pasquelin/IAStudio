@@ -34,7 +34,12 @@ export type GraphRunPorts = {
   ) => Promise<readonly string[] | null>
   /** Called on every change of state, so the canvas paints while the run is still going. */
   report: (nodeId: string, run: GraphNodeRun) => void
-  /** Nodes not started yet are left alone; nothing interrupts a generation already on the wire. */
+  /**
+   * Nodes not started yet are left alone, and the remote generation itself is never interrupted:
+   * it has been paid for, and only its own API can end it. What an abort DOES end is the host's
+   * WAIT on it — `generate` may hand back nothing once this is raised, rather than parking on a
+   * job that the main process would go on polling with no ceiling.
+   */
   signal?: AbortSignal
 }
 
