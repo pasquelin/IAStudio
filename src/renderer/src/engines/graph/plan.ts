@@ -144,20 +144,19 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
   const outgoing = new Map<string, GraphEdge[]>()
   const waitingOn = new Map(graph.nodes.map(node => [node.id, 0]))
 
-  const depend = (consumer: string, provider: string, edge: GraphEdge): void => {
-    push(outgoing, provider, edge)
-    waitingOn.set(consumer, (waitingOn.get(consumer) ?? 0) + 1)
+  // `source` is the consumer and `target` the provider, here as everywhere in this format.
+  const depend = (edge: GraphEdge): void => {
+    push(outgoing, edge.target, edge)
+    waitingOn.set(edge.source, (waitingOn.get(edge.source) ?? 0) + 1)
   }
 
   for (const edge of edges) {
     push(incoming, edge.source, edge)
-    depend(edge.source, edge.target, edge)
+    depend(edge)
   }
 
   for (const [consumer, approvals] of awaited) {
-    for (const approval of approvals) {
-      depend(consumer, approval, { id: '', source: consumer, target: approval })
-    }
+    for (const approval of approvals) depend({ id: '', source: consumer, target: approval })
   }
 
   const hashes = new Map<string, string>()

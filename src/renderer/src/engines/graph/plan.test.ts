@@ -317,6 +317,22 @@ describe('waiting on an approval', () => {
     expect(hashOf(planGraph(guarded()), 'm2')).toBe(hashOf(planGraph(plain), 'm2'))
   })
 
+  /**
+   * The order of `graph.nodes` is what seeds Kahn's queue, so a graph holding the consumer FIRST
+   * and the approval LAST is the case where a missing dependency would show: the executor awaits
+   * `settled.get(approval)`, and an approval planned after its consumer would hand it
+   * `undefined` — read as a refusal, and the branch would go `blocked` on a question nobody was
+   * ever asked.
+   */
+  it('puts the approval first even where the graph holds it last', () => {
+    const reversed = graphOf(
+      [model('m2'), model('m1'), approval('approval1')],
+      [wire('m2', 'prompt', 'm1', 'image'), guards('approval1', 'm1')],
+    )
+
+    expect(idsOf(planGraph(reversed))).toEqual(['m1', 'approval1', 'm2'])
+  })
+
   it('waits once where two wires join the same guarded node', () => {
     const twice = graphOf(
       [model('m1'), model('m2'), approval('approval1')],

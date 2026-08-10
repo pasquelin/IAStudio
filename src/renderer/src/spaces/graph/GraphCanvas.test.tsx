@@ -191,6 +191,7 @@ describe('the graph canvas', () => {
       expect(screen.getByRole('menuitem', { name: 'Texte' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Asset' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Note' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Approbation' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Image' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Vidéo' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: '3D' })).toBeInTheDocument()
