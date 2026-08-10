@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createFfmpegResolver, peaksArgs, probeArgs, proxyArgs, resolveFfmpeg } from './ffmpeg'
+import {
+  FRAME_PATTERN,
+  createFfmpegResolver,
+  frameName,
+  peaksArgs,
+  probeArgs,
+  proxyArgs,
+  resolveFfmpeg,
+  sequenceArgs,
+} from './ffmpeg'
 
 describe('ffmpeg resolution', () => {
   it('prefers the bundled binary', () => {
@@ -112,5 +121,34 @@ describe('ffmpeg arguments', () => {
     const args = peaksArgs('/in.mov')
     expect(args).toContain('s16le')
     expect(args).toContain('pipe:1')
+  })
+})
+
+describe('encoding a render', () => {
+  it('declares the rate of the stills rather than a rate to reach', () => {
+    const args = sequenceArgs('/tmp/render/frame_%06d.png', '/out.mp4', 25)
+    const rate = args.indexOf('-framerate')
+    const input = args.indexOf('-i')
+
+    // Placed after `-i`, the same flag means "resample to this", and ffmpeg would duplicate or
+    // drop frames to reach it.
+    expect(rate).toBeGreaterThanOrEqual(0)
+    expect(rate).toBeLessThan(input)
+    expect(args[rate + 1]).toBe('25')
+  })
+
+  it('writes a pixel format players actually accept', () => {
+    expect(sequenceArgs('/in/%06d.png', '/out.mp4', 25)).toContain('yuv420p')
+  })
+
+  it('names its frames zero-padded, in the order ffmpeg reads them', () => {
+    expect(frameName(1)).toBe('frame_000001.png')
+    expect(frameName(1234)).toBe('frame_001234.png')
+    // The pattern and the names have to agree, or ffmpeg finds no frame at all.
+    expect(FRAME_PATTERN.replace('%06d', '000001')).toBe(frameName(1))
+  })
+
+  it('ends on the file it writes', () => {
+    expect(sequenceArgs('/in/%06d.png', '/out.mp4', 30).at(-1)).toBe('/out.mp4')
   })
 })

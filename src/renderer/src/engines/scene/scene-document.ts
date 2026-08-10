@@ -10,6 +10,7 @@
  * allowed to hold a value today's bounds would refuse.
  */
 import {
+  DEFAULT_CAMERA,
   readEnvironment,
   TEXTURE_SLOTS,
   type EnvironmentRef,
@@ -102,6 +103,9 @@ function revived(node: SceneNode): SceneNode {
   if (filled.type === 'sprite') {
     return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
   }
+  if (filled.type === 'camera') {
+    return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
+  }
   if (filled.type !== 'text') return filled
 
   return {
@@ -158,6 +162,9 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'text') return isText(value.text) && isMaterial(value.material)
   // A group carries nothing of its own: everything it is has already been checked above.
   if (value.type === 'group') return true
+  // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
+  // camera is without them, and `revived` lays them under whatever the file did say.
+  if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
 }

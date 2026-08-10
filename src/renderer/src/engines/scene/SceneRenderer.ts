@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  CameraHelper,
   DirectionalLight,
   GridHelper,
   Light,
@@ -7,6 +8,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   Object3D,
+  PerspectiveCamera,
   Raycaster,
   SkeletonHelper,
   SpotLight,
@@ -827,8 +829,24 @@ export class SceneRenderer {
     if (node.type === 'model') return this.buildModel(node)
     if (node.type === 'sprite') return this.buildSprite(node)
     if (node.type === 'text') return this.buildText(node)
+    if (node.type === 'camera') return this.buildCamera(node)
     // A group is its transform and nothing else: an empty object others hang from.
     return new Object3D()
+  }
+
+  /**
+   * A camera of the scene, drawn as the frustum it sees — the helper is what makes it clickable
+   * and readable, since a camera itself draws nothing.
+   *
+   * Hung UNDER the camera rather than beside it, unlike a light's helper: this one has to follow
+   * the object it draws through every move, and a camera is aimed far more often than a lamp.
+   */
+  private buildCamera(node: SceneNode & { type: 'camera' }): Object3D {
+    const camera = new PerspectiveCamera(node.camera.fov, 1, node.camera.near, node.camera.far)
+    const helper = new CameraHelper(camera)
+    // The helper reads the camera's world matrix, which is only right once three has updated it.
+    camera.add(helper)
+    return camera
   }
 
   /**

@@ -7,6 +7,7 @@
  */
 import {
   STUDIO_ENVIRONMENT,
+  type CameraDescriptor,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -42,6 +43,9 @@ export type SceneNode = SceneNodeBase &
     | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
+    // What a render looks through. Not the viewport's camera: that one is how the scene is being
+    // WATCHED, and this one is part of what the scene IS.
+    | { type: 'camera'; camera: CameraDescriptor }
   )
 
 /** Derived, never restated: a member added to the union above is a member here on the spot. */
@@ -98,12 +102,13 @@ export function shadowDefaults(node: ShadowSubject): {
  */
 export function canCastShadow(node: ShadowSubject): boolean {
   if (node.type === 'light') return SHADOW_CASTING_LIGHTS.includes(node.light.kind)
-  return node.type !== 'sprite'
+  // A camera draws nothing at all, so it can neither throw a shadow nor be drawn into a map.
+  return node.type !== 'sprite' && node.type !== 'camera'
 }
 
 /** Whether a node catches the shadows of others. A light catches none, and a sprite is unlit. */
 export function canReceiveShadow(node: ShadowSubject): boolean {
-  return node.type !== 'light' && node.type !== 'sprite'
+  return node.type !== 'light' && node.type !== 'sprite' && node.type !== 'camera'
 }
 
 /**

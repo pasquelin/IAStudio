@@ -275,7 +275,9 @@ describe('sceneFromPayload', () => {
     ['no name', nodeWith({ name: null })],
     ['a visibility that is not a flag', nodeWith({ visible: 'yes' })],
     ['a transform missing an axis', nodeWith({ transform: { ...IDENTITY_TRANSFORM, scale: {} } })],
-    ['a type nothing renders', nodeWith({ type: 'camera' })],
+    // 'camera' used to stand for an unknown type here; it is a node of its own since renders
+    // need one, so the example moved to something the studio still draws nothing for.
+    ['a type nothing renders', nodeWith({ type: 'projector' })],
     ['a geometry of an unknown kind', nodeWith({ geometry: { kind: 'blob', radius: 1 } })],
     ['a geometry missing a parameter', nodeWith({ geometry: { kind: 'box', width: 1 } })],
     ['a geometry whose parameter is text', nodeWith({ geometry: { kind: 'sphere', radius: '1' } })],
