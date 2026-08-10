@@ -56,11 +56,13 @@ export type GraphCanvasProps = {
   canRedo: boolean
   /** Whether a run would report anything — the bar greys the button when it would not. */
   canRun: boolean
+  canExport: boolean
   /** What each node is doing in the run under way, or in the last one. Absent means idle. */
   runs: Readonly<Record<string, GraphNodeRun>>
   running: boolean
   /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
   onRun: () => void
+  onExport: () => void
   /** The answer given to an approval node the run has stopped on. */
   onDecide: (nodeId: string, approved: boolean) => void
 }
@@ -95,9 +97,11 @@ export function GraphCanvas({
   canUndo,
   canRedo,
   canRun,
+  canExport,
   runs,
   running,
   onRun,
+  onExport,
   onDecide,
 }: GraphCanvasProps) {
   /** An edge has no inspector face, so which one is picked never leaves this surface. */
@@ -222,9 +226,11 @@ export function GraphCanvas({
               onUndo={onUndo}
               onRedo={onRedo}
               onRun={onRun}
+              onExport={onExport}
               canUndo={canUndo}
               canRedo={canRedo}
               canRun={canRun}
+              canExport={canExport}
               running={running}
             />
             <ViewportBridge

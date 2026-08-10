@@ -5,6 +5,7 @@ const bar = (given: Partial<GraphToolbarState> = {}): GraphToolbarState => ({
   canUndo: false,
   canRedo: false,
   canRun: true,
+  canExport: true,
   running: false,
   runShortcut: '⌘Entrée',
   ...given,
@@ -12,6 +13,35 @@ const bar = (given: Partial<GraphToolbarState> = {}): GraphToolbarState => ({
 
 const tool = (state: GraphToolbarState, id: string): boolean | undefined =>
   graphTools(state).find(item => item.id === id)?.disabled
+
+describe('the export button', () => {
+  /** `workflow_create` refuses empty `nodes`/`edges`: an empty graph writes a file nothing opens. */
+  it('offers nothing to export on a graph with no node', () => {
+    expect(tool(bar({ canExport: false }), 'export')).toBe(true)
+  })
+
+  it('offers the export as soon as the graph holds something', () => {
+    expect(tool(bar({ canExport: true }), 'export')).toBe(false)
+  })
+
+  /**
+   * Beside the run rather than at the end: both act on the whole graph, and the groups after it
+   * are about one node or about the view.
+   */
+  it('sits beside the run, before the group that adds a node', () => {
+    expect(graphTools(bar()).map(item => item.id)).toEqual([
+      'run',
+      'export',
+      'add',
+      'select',
+      'pan',
+      'undo',
+      'redo',
+      'zoomIn',
+      'zoomOut',
+    ])
+  })
+})
 
 describe('the run button', () => {
   it('offers nothing to run on a graph with no node', () => {

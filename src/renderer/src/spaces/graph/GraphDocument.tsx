@@ -33,6 +33,10 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const canUndo = useGraphs(state => historyOf(state, documentId).past.length > 0)
   const canRedo = useGraphs(state => historyOf(state, documentId).future.length > 0)
   const canRun = useGraphs(state => isRunnable(graphOf(state, documentId)))
+  const title = useDocuments(state => state.documents[documentId]?.title ?? '')
+  // `workflow_create` refuses empty `nodes`/`edges`, so an empty graph writes a file the webapp
+  // would not take back.
+  const canExport = graph.nodes.length > 0
   /**
    * Held here, not in the global selection: that one carries a single kind at a time, so clicking
    * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
@@ -204,6 +208,17 @@ export function GraphDocument({ documentId }: { documentId: string }) {
     void store.start(documentId).catch(error => reportFailure('graph.run', documentId, error))
   }, [documentId])
 
+  /**
+   * The graph as a file, which the main process writes: the renderer has no filesystem, and the
+   * picker it opens is a native one. Nothing is painted on the way back — a closed picker is not
+   * a failure, and a written file is a file the user just named.
+   */
+  const onExport = useCallback(() => {
+    void getBridge()
+      ?.workflows.export(graph, title)
+      .catch(error => reportFailure('graph.export', documentId, error))
+  }, [documentId, graph, title])
+
   const onDecide = useCallback(
     (nodeId: string, approved: boolean) =>
       useGraphRuns.getState().decide(documentId, nodeId, approved),
@@ -239,6 +254,8 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       canUndo={canUndo}
       canRedo={canRedo}
       canRun={canRun}
+      canExport={canExport}
+      onExport={onExport}
       runs={runs}
       running={running}
     />

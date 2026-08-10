@@ -399,6 +399,7 @@ export type LogScope =
   | 'graph.node'
   | 'graph.run'
   | 'graph.compile'
+  | 'graph.export'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -425,6 +426,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'graph.node',
   'graph.run',
   'graph.compile',
+  'graph.export',
 ]
 
 /**
