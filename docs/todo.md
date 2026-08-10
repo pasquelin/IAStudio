@@ -71,7 +71,15 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > réserve de la soumettre avant installation**. Elles sont écrites dans leur entrée, et **ne se
 > redemandent pas**. **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
 >
-> **Un lot de sept dettes courtes est livré le 10 août 2026** — la police `Inter` qui n'était
+> **Deux lots sont livrés le 10 août 2026.** Le second réunit les entrées 43 et 40 : la colonne
+> de libellés est une gauge, `--sc-label`, lue par les deux familles de ligne, et le retrait
+> remonte au groupe qui les tient ; la sélection cesse d'être peinte par le seul panneau qui n'en
+> a pas. **Ce que ce lot a montré et qui resservira** : le todo se trompait sur Apps — ouvrir une
+> App REMPLACE la liste, donc aucune ligne n'y est jamais sélectionnée, et lui passer
+> `selectedIds` aurait été du code mort. Son vrai défaut était le contrat annoncé, et `Collection`
+> a désormais `onOpen` pour une liste qui ouvre au clic simple sans se déclarer `listbox`.
+>
+> **Le premier lot, sept dettes courtes** — la police `Inter` qui n'était
 > chargée nulle part, le motif de sortie `txt$` qui rangeait un LLM dans l'espace Image, l'horloge
 > du viewport qui n'avait pas d'état de repos, le badge d'un canal qu'un bouton en `inset-0`
 > rendait insurvolable, la bande « Activité récente » éteinte par défaut, et les deux manuels qui
@@ -116,8 +124,8 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > - **Mets la doc à jour** quand le code change ce qu'elle affirme — manuel fr *et* en, et ce
 >   fichier. Un grep sur les tournures de manque (« ne sait pas », « pas encore », « aucun bouton »)
 >   trouve en trente secondes ce qu'aucune fusion ne signalera. Et **relis les chapitres que ton
->   propre lot vient de rendre faux** : le déplacement du § 3.6 a laissé « colonne de droite » dans
->   le chapitre 6 pendant une heure.
+>   propre lot vient de rendre faux** : un déplacement de panneau a laissé « colonne de droite »
+>   dans le chapitre 6 pendant une heure.
 > - **Ce fichier est une liste de ce qui reste, pas un journal.** N'y écris que ce qui coûterait une
 >   seconde fois — y compris une mesure qui n'a rien donné, pour qu'elle ne soit pas retentée.
 >
@@ -480,62 +488,10 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 # 3. Ce que l'interface ne dit pas
 
-Neuf entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
+Six entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
-## 3.1 L'état d'une ligne — ce que trois panneaux en font
-
-`rowSkin` est l'unique fonction qui peint hover, sélection et focus d'une ligne, et sa JSDoc
-énonce la règle — « the same line must not light up differently depending on whether a `Tree` or
-a `Collection` is holding it ». Ce qui reste ouvert est **la sélection peinte là où elle n'existe
-pas**, et absente des deux listes où elle voudrait dire quelque chose.
-
-> **L'autre moitié est livrée** (`feat/tile-selection`, 9 août 2026) : en vue Icônes la sélection
-> ne se voyait nulle part, la tuile opaque couvrant le fond de la cellule au pixel près. La
-> cellule d'une grille est désormais encartée de 4 px, ce qui suffit. **Ne pas re-signaler.**
-
-### 40. La même liste s'allume en bleu, en gris, ou pas du tout
-
-**Le geste attendu.** Voir d'un coup d'œil quelle ligne est sélectionnée — et que ce soit **la même couleur** dans les
-trois panneaux.
-
-**Vu le 9 août 2026, captures à l'appui** — trois panneaux côte à côte, trois aspects : l'Explorateur
-peint une ligne en **bleu plein**, Styles en **gris**, Apps en **gris avec un liseré**.
-
-**Ce n'est pas du code custom, et c'est ce qui rend le défaut trouvable.** Les trois passent par le
-**même** `Collection`, dont les cellules peignent par le **même** `rowSkin`, et leurs trois lignes
-sont le **même** `Row` du design system — vérifié fichier par fichier. Ce qui diverge est **ce que
-chaque panneau met derrière la même prop** :
-
-| Panneau | Ce qu'il passe à `Collection` | Ce qui s'affiche |
-|---|---|---|
-| **Explorateur** | `selectedIds={Object.keys(open)}` — les documents **ouverts** | `bg-accent-soft`, le **bleu de sélection** |
-| **Styles** | ni `selectedIds` ni `onSelect` | aucune ligne n'est jamais sélectionnée : le gris est le **survol** (`hover:bg-elevated`) |
-| **Apps** | `onSelect` **sans** `selectedIds` — l'id ouvert reste dans le state du panneau | même chose, plus l'anneau de `FOCUS_RING` |
-
-**Le seul panneau qui peint une sélection est donc le seul qui n'en a pas.** L'Explorateur détourne
-la prop pour dire « ouvert », et son commentaire l'assume : « Not a selection one makes — it is what
-"open" looks like in this list ». `Collection` a même dû s'en défendre côté accessibilité —
-`aria-selected` n'est posé que si `role === 'option'`, avec la raison en commentaire. **L'entrée 9
-avait corrigé ce que la ligne annonce ; personne n'a corrigé ce qu'elle montre.**
-
-**Et l'inverse est vrai là où ça compterait** : quel style est appliqué et quelle App est ouverte
-sont exactement ce qu'une sélection dirait, et ni l'un ni l'autre ne le dit.
-
-**`accent-soft` veut dire « sélectionné » — tranché le 10 août 2026.** C'est la ligne que
-l'utilisateur a désignée, jamais l'élément en vigueur. Trois conséquences, dans cet ordre :
-
-1. **Styles et Apps passent enfin `selectedIds`** : le style appliqué et l'App ouverte deviennent
-   des sélections, ce qu'ils étaient déjà pour l'utilisateur.
-2. **L'Explorateur cesse de détourner la prop.** « Ouvert » n'est pas une sélection et prend sa
-   propre marque — un troisième jeton n'est pas nécessaire, `chipSkin` ayant déjà tranché la même
-   question dans l'autre sens (« il lit en `accent-soft` où les autres utilisent `elevated` »).
-3. **Un point à ne pas manquer en écrivant** : l'Explorateur perd alors sa seule marque visuelle
-   tant que la nouvelle n'est pas posée. Les deux moitiés vont ensemble, ou le panneau régresse.
-
----
-
-## 3.2 Les cinq bandes de l'accueil disparaissent quand on leur refuse la réponse
+## 3.1 Les cinq bandes de l'accueil disparaissent quand on leur refuse la réponse
 
 ### 42. `useShelf` avale les rejets, et une bande refusée se retire de la page
 
@@ -598,62 +554,7 @@ dette. La piste : le même bloc pour les cinq, `SectionNote` en ton `muted` et u
 
 ---
 
-## 3.3 Les mises en page qui divergent d'un panneau à l'autre
-
-Deux surfaces qui devraient se ressembler ne se ressemblent pas parce qu'**un gabarit existe et
-n'est pas partagé** — ici la largeur d'une colonne de libellés. C'est la question que
-`--sc-control` a déjà tranchée pour la hauteur des contrôles : une gauge déclarée une fois, lue
-partout.
-
-> **L'autre moitié est livrée** (`feat/panel-header`, 10 août 2026) : le nom du modèle était rogné
-> en hauteur dans le panneau Génération, `truncate` ayant désarmé la protection `min-height: auto`
-> de son item flex. `FormHeader` porte désormais cette ligne dans les deux panneaux qui rendent le
-> même formulaire. **Ne pas re-signaler**, et **ne pas confondre avec `PanelHeader`** : celui-là
-> est l'en-tête du dock — `--sc-header`, 13 px, semi-gras —, pas une ligne de sous-titre. L'entrée
-> le désignait comme le gabarit à réutiliser ; c'en était un autre.
-
-### 43. Deux familles de lignes, deux largeurs de label, dans le même groupe
-
-**Le geste attendu.** Dans un même bloc de l'inspecteur, **toutes les lignes s'alignent** : même
-colonne de libellés, même retrait, même hauteur — quel que soit l'espace où l'on se trouve.
-
-**Vu le 9 août 2026, capture à l'appui** (l'inspecteur d'un nœud de graphe) : « Identité » et
-« Type » sur une colonne, « Titre » et « Mots » sur une autre, et les champs qui commencent ailleurs
-encore.
-
-**Mesuré dans le code, pas déduit.** Deux gabarits coexistent, et rien ne les accorde :
-
-| | `PropertyRow` (`design/PropertyRow.tsx`) | Les champs (`TextField`… via `FIELD_ROW`) |
-|---|---|---|
-| Largeur du libellé | **`w-20`** — 80 px | **`w-16`** — 64 px |
-| Retrait horizontal | `px-2` | **aucun** |
-| Hauteur | `min-h-(--sc-control)` | aucune |
-| Retrait vertical | `py-1` | aucun |
-| Valeur | `flex-1 truncate text-right` | champ `flex-1`, texte à gauche |
-
-**Le `gap-2` n'est pas en cause** — les deux l'ont, et `panels/inspector/` ne contient aucun autre
-espacement. Ce qui décale tout, c'est **80 px contre 64**, et **8 px de retrait contre zéro**.
-
-**Et ce n'est pas un défaut du graphe : cinq inspecteurs sur six mélangent les deux familles**, sur
-`develop` — `LayerInspector` (7 lignes contre 13 champs), `TextureInspector` (5 contre 16),
-`ClipInspector` (10 contre 4), `TrackInspector` (6 contre 1), `GraphNodeInspector` (5 contre 4).
-Seul `AssetInspector` n'emploie que `PropertyRow`, et c'est pourquoi lui seul est aligné.
-
-> **Remesuré le 9 août au soir** : `GraphNodeInspector.tsx` a été fusionné entre-temps
-> (`feat/workflows`) et il est désormais sur `develop`, où il rejoint les quatre autres. La capture
-> venait de son worktree ; **le défaut qu'elle montre était en amont**, et le corriger dans le graphe
-> seul le laisserait dans les quatre autres.
-
-**Ce que ça demande** : que les deux familles partagent une seule colonne de libellé. `FIELD_LABEL`
-et le `w-20` de `PropertyRow` sont deux déclarations de la même chose — une gauge, comme
-`--sc-control` en est une pour la hauteur des contrôles. Les commentaires des deux fichiers disent
-d'ailleurs le même but avec des mots différents : « so the controls of a section line up rather than
-each starting where its name ends » d'un côté, « share a gauge and an alignment rather than each
-inventing a two-column layout » de l'autre.
-
----
-
-## 3.4 L'Explorateur n'explore rien
+## 3.2 L'Explorateur n'explore rien
 
 ### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
 
@@ -699,7 +600,7 @@ première ligne ; elles ne se redemandent pas.
 
 ---
 
-## 3.5 L'accueil — deux entrées, une surface
+## 3.3 L'accueil — deux entrées, une surface
 
 **Regroupées** : l'entrée 13 finit sur le constat de l'entrée 12 — le menu « … » qui masque une
 bande n'a pas été trouvé, « l'accueil ne montre pas ce qu'il permet ». Même page, même défaut
@@ -745,7 +646,7 @@ Ce n'est donc pas un défaut de compréhension mais **d'affordance**.
 
 ---
 
-## 3.6 Les Apps — ce qu'une App produit
+## 3.4 Les Apps — ce qu'une App produit
 
 > **Dire ce qu'est une App est livré** (`feat/apps-blurb`, 10 août 2026) : la phrase du registre
 > — « la Génération, c'est un modèle, une étape ; une App, c'est plusieurs modèles enchaînés,
