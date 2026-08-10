@@ -5,6 +5,7 @@ import { ProgressBar } from '@/design/ProgressBar'
 import { UiIcon } from '@/design/UiIcon'
 import { formatBytes } from '@/helpers/format'
 import { useDictation } from './useDictation'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 /**
  * What dictation has to say to the whole application, rather than to one field.
@@ -37,6 +38,7 @@ export function DictationStatus() {
     return (
       <button
         type="button"
+        {...HINT_TOP(t('dictation.downloadHint'))}
         onClick={() => void dictation.downloadModel()}
         className="hover:text-text flex items-center gap-1.5"
       >
@@ -67,6 +69,7 @@ export function DictationStatus() {
         />
         <button
           type="button"
+          {...HINT_TOP(t('dictation.cancelDownloadHint'))}
           onClick={() => void dictation.cancelDownload()}
           className="hover:text-text"
         >
@@ -82,6 +85,7 @@ export function DictationStatus() {
       // way out of a refused microphone — a screen reader has to find it among the buttons.
       <button
         type="button"
+        {...HINT_TOP(t('dictation.openPrivacySettingsHint'))}
         onClick={() => void dictation.openPrivacySettings()}
         className="hover:text-text flex items-center gap-1.5"
       >

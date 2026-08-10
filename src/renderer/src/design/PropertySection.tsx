@@ -3,6 +3,8 @@ import { useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { FOCUS_RING } from './styles'
 import { UiIcon } from './UiIcon'
+import { HINT_LEFT } from '@/helpers/tooltip'
+import { useTranslation } from 'react-i18next'
 
 export type PropertySectionProps = {
   title: string
@@ -13,6 +15,7 @@ export type PropertySectionProps = {
 
 /** One group of properties under a heading that folds. What is open is session state. */
 export function PropertySection({ title, children, defaultOpen = true }: PropertySectionProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(defaultOpen)
 
   return (
@@ -20,6 +23,7 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
       <button
         type="button"
         aria-expanded={open}
+        {...HINT_LEFT(t(open ? 'inspector.sectionFoldHint' : 'inspector.sectionUnfoldHint'))}
         onClick={() => setOpen(current => !current)}
         className={cn(
           'text-text flex h-(--sc-control) w-full cursor-pointer items-center gap-2',

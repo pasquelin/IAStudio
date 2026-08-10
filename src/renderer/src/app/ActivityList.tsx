@@ -16,6 +16,7 @@ import { chipSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useActivity, visibleActivity } from '@/stores/activity'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 export const GLYPHS: Record<ActivityLevel, string> = {
   info: mdiCheckCircleOutline,
@@ -138,6 +139,7 @@ function FilterRow<T extends string>({
   label: (value: T) => string
   onChange: (values: T[]) => void
 }) {
+  const { t } = useTranslation()
   return (
     <div role="group" aria-label={name} className="flex flex-wrap items-center gap-2">
       {/* Nothing selected is "everything" to `matchesActivity`, so this clears rather than adds.
@@ -147,6 +149,7 @@ function FilterRow<T extends string>({
       <button
         type="button"
         aria-pressed={active.length === 0}
+        {...HINT_TOP(t('activity.allHint'))}
         onClick={() => onChange([])}
         className={chipSkin(active.length === 0)}
       >
@@ -158,6 +161,7 @@ function FilterRow<T extends string>({
           key={value}
           type="button"
           aria-pressed={active.includes(value)}
+          {...HINT_TOP(t('activity.filterHint'))}
           onClick={() =>
             onChange(
               active.includes(value) ? active.filter(one => one !== value) : [...active, value],

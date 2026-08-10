@@ -13,7 +13,8 @@
     "graph": "Graphe",
     "moveLeft": "Déplacer à gauche",
     "moveRight": "Déplacer à droite",
-    "moved": "{{label}} en position {{position}} sur {{total}}"
+    "moved": "{{label}} en position {{position}} sur {{total}}",
+    "switchHint": "Ouvre cet espace — glissez-le pour changer l’ordre de la barre"
   },
   "panels": {
     "layers": "Calques",
@@ -201,12 +202,15 @@
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
       "document.load": "Le document n’a pas pu être ouvert"
-    }
+    },
+    "allHint": "Enlève ce filtre : le journal remontre tout",
+    "filterHint": "N’affiche que les entrées de ce genre — plusieurs peuvent être cochées"
   },
   "updates": {
     "available": "Version {{version}} disponible",
     "downloading": "Téléchargement de la version {{version}}",
-    "restart": "Redémarrer pour installer la version {{version}}"
+    "restart": "Redémarrer pour installer la version {{version}}",
+    "restartHint": "Redémarre le studio pour installer la version déjà téléchargée"
   },
   "assets": {
     "none": "Aucun asset. Générez quelque chose pour commencer.",
@@ -338,7 +342,9 @@
     "loading": "Chargement…",
     "noMatch": "Aucun résultat pour ce filtre.",
     "more": "Plus de filtres",
-    "fewer": "Moins de filtres"
+    "fewer": "Moins de filtres",
+    "moreHint": "Montre les filtres restants et les options d’affichage",
+    "fewerHint": "Replie les filtres, pour laisser la place à la collection"
   },
   "documents": {
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
@@ -654,7 +660,9 @@
     "title": "Titre",
     "isOutput": "Résultat de l’App",
     "nodeId": "Identifiant",
-    "noModel": "Aucun"
+    "noModel": "Aucun",
+    "sectionFoldHint": "Replie ce groupe de propriétés",
+    "sectionUnfoldHint": "Déplie ce groupe de propriétés"
   },
   "transport": {
     "play": "Lire",
@@ -1772,7 +1780,10 @@
       "modelDownloadFailed": "Le téléchargement du modèle a échoué.",
       "modelChecksumMismatch": "Le modèle téléchargé est abîmé ; il a été supprimé.",
       "engineCrashed": "La reconnaissance vocale s’est arrêtée."
-    }
+    },
+    "downloadHint": "Une seule fois : le modèle reste ensuite sur cette machine",
+    "cancelDownloadHint": "Arrête le téléchargement ; ce qui est déjà reçu est jeté",
+    "openPrivacySettingsHint": "Ouvre les réglages du système, à la section du microphone"
   },
   "units": {
     "byte": "o",

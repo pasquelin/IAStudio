@@ -1,13 +1,18 @@
 # SCORE
 
-Courant : 0 (dette 173 · 260 composants) — itération 9, 2026-08-10
+Courant : 0 (dette 463 · 260 composants) — itération 10, 2026-08-10
 
-Le score s'effondre parce qu'un invariant vient d'être déclaré, pas parce que le code a
-régressé : 53 boutons enfreignent une règle qui n'existait pas hier. Il n'est pas lissé —
-un P0 pèse dix, et 53 P0 sur 260 composants dépassent le plancher.
+Le score s'est effondré à l'itération 4 parce qu'un invariant venait d'être déclaré, pas
+parce que le code avait régressé.
+
+**La dette remonte à l'itération 10 sans qu'aucun bouton n'ait été ajouté** : le recensement
+des itérations 4 à 9 ne comptait que les `<button>` bruts et les `<ToolButton>`, et manquait
+les 10 appels à `<Button>` et les 27 rangées de `<MenuRow>`. Le chiffre corrigé est plus
+haut ; il n'est pas plus mauvais. Ne pas lisser vaut aussi pour ça.
 
 | # | Date | Score | Dette | P0 | P1 | P2 | Lot traité |
 |---|---|---|---|---|---|---|---|
+| 10 | 2026-08-10 | 0 | 463 | 46 | 1 | 0 | neuf boutons des docks et de la ligne d'état — et le recensement corrigé |
 | 9 | 2026-08-10 | 0 | 173 | 17 | 1 | 0 | les dix-sept boutons à libellé des Préférences |
 | 8 | 2026-08-10 | 0 | 343 | 34 | 1 | 0 | fenêtre Licences : son hôte, et le geste que sa rangée offre |
 | 7 | 2026-08-10 | 0 | 353 | 35 | 1 | 0 | les onze boutons à icône de la fenêtre principale |
