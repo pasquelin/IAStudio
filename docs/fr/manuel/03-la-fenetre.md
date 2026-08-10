@@ -190,7 +190,9 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en cours*, *terminé*,
 > *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,
 > ou la raison pour laquelle il n’a rien produit : *boucle*, *sans modèle*, *non exécutable*,
-> *en attente*. Relancer après avoir changé le prompt du dernier nœud ne relance **que** lui.
+> *échec*, et **amont en échec** — celui-là ne veut pas dire « ça arrive », mais « ça n’arrivera
+> pas » : ce dont il dépend a échoué, donc il ne partira jamais de cette exécution. Relancer après
+> avoir changé le prompt du dernier nœud ne relance **que** lui.
 >
 > Ce qu’il ne sait **pas encore** : les nœuds de logique, de boucle et d’approbation, et
 > l’import/export d’un workflow Scenario. Son chapitre viendra quand il les saura.
