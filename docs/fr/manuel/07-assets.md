@@ -133,7 +133,7 @@ Les lignes apparaissent toujours dans le même ordre, celui que suit le double-c
 | **Placer comme calque** | l’image ouverte, espace Image | images |
 | **Ajouter au montage** | la séquence ouverte, espace Vidéo | tous |
 | **Utiliser comme couleur de base** | la matière ouverte, espace Textures | images |
-| **Montrer dans le Finder** | ouvre le dossier qui contient le fichier | tous |
+| **Révéler dans le gestionnaire de fichiers** | ouvre le dossier qui contient le fichier | tous |
 
 Chaque ligne porte l’icône de son espace, la même que dans la barre de titre. Le menu ne montre
 que les destinations capables de recevoir **ce type-là** : le clic droit sur un son n’offre pas
@@ -223,18 +223,22 @@ vous le demandiez**.
 
 ### Ce que le badge d’une vignette raconte
 
-Chaque vignette porte une petite marque qui dit où en est cet asset vis-à-vis de la
-bibliothèque :
+Une petite marque dit où en est un asset vis-à-vis de la bibliothèque :
 
 | Badge | Ce qu’il veut dire |
 |---|---|
 | **Local seulement** | le fichier est chez vous, la bibliothèque ne le connaît pas |
-| **Synchronisé** | les deux côtés ont la même version |
+| **Synchronisé avec la bibliothèque** | les deux côtés ont la même version |
 | **Modifié ici — à envoyer** | votre copie a bougé depuis le dernier envoi |
 | **Modifié dans la bibliothèque — à rapatrier** | c’est l’autre côté qui a bougé |
 | **Modifié des deux côtés** | les deux versions ont divergé |
 | **Le dernier envoi a échoué** | la tentative précédente n’est pas passée |
 | **Appartient à un autre projet** | le jumeau en ligne relève d’une autre clé API que celle qui est active |
+
+**Les deux premiers ne se dessinent qu’en vue liste.** Sur une vignette, « local seulement » et
+« synchronisé » restent muets : ce sont les deux états ordinaires, et les marquer couvrirait la
+grille de pastilles qui ne disent rien. Une vignette sans badge est donc une vignette qui va
+bien : ce qu’on cherche du regard, c’est ce qui s’affiche.
 
 Ce badge n’est pas stocké, il est **recalculé** : il dépend du compte actif, et une clé API
 ouvre sur un projet et un seul. Changez de compte dans la barre de titre, et les badges se
@@ -272,8 +276,17 @@ Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
 ### Nommer par ce que l’API voit
 
 Le bouton **Décrire**, à côté, demande à l’API de regarder les images sélectionnées et de leur
-donner un nom tiré de leur contenu. Rien ne part sans le clic, et les noms obtenus atterrissent
-dans le catalogue du projet.
+donner un nom tiré de leur contenu. Les noms obtenus atterrissent dans le catalogue du projet.
+
+**Il ne voit que les images que la bibliothèque connaît déjà.** L’API décrit ce qu’elle héberge :
+une image qui n’a jamais été envoyée est écartée de la demande, sans le dire. Envoyez-la d’abord,
+décrivez ensuite.
+
+> **Ce bouton n’est pas la seule porte, et c’est la seule chose à retenir ici.** Le réglage
+> **Décrire les assets rapatriés**, dans **Génération**, est **coché par défaut** : une image qui
+> arrive sans nom utile est envoyée à l’API sans qu’on ait cliqué, et cela **consomme des unités
+> créatives**. Le chapitre [Tous les réglages](14-reglages.md) le détaille — c’est le seul endroit
+> où le studio dépense de lui-même, et le décocher suffit à l’arrêter.
 
 ---
 
@@ -349,11 +362,19 @@ Le studio essaie trois candidats, dans cet ordre :
 2. le chemin que vous avez indiqué dans **Réglages ▸ Médias ▸ Chemin de ffmpeg** ;
 3. ce qui se trouve sur le `PATH` de votre système.
 
-Et il retient le premier qui **démarre**, pas le premier qui existe : il le lance pour vérifier.
-Un binaire présent mais cassé est traité comme absent — voir
+Il retient le **premier qui existe**, et s’arrête là : il ne redescend pas la liste. Le binaire
+retenu est bien lancé ensuite, mais pour dire si la préparation vidéo est disponible — pas pour
+choisir.
+
+**Deux conséquences, et la seconde surprend.** Le chemin des réglages ne sert que si le binaire
+livré est **absent** — c’est le cas quand on lance le studio depuis son code source sans avoir
+exécuté `pnpm ffmpeg:fetch`. Et si le binaire retenu est présent mais ne démarre pas, indiquer un
+autre chemin dans les réglages **ne le rattrape pas** : le studio annonce l’indisponibilité, il
+faut réparer ou remplacer ce binaire-là. Voir
 [Quand ça coince](16-depannage.md#le-cas-déroutant--ffmpeg-est-là-et-le-studio-dit-quil-ny-est-pas).
 
-Si aucun des trois ne répond, un **triangle d’alerte ambre** apparaît dans la barre de titre de
+Quand le candidat retenu ne démarre pas — ou qu’il n’y en a aucun — un **triangle d’alerte ambre**
+apparaît dans la barre de titre de
 l’étagère à assets, à gauche du compteur. Survolez-le, ou atteignez-le au clavier, et il dit :
 « Préparation vidéo indisponible : ni copie allégée ni forme d’onde. » `Échap` referme l’infobulle.
 

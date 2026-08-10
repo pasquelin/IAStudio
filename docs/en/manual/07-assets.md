@@ -126,7 +126,7 @@ Right-click lists them all, always in the same order — the one double-click fo
 | **Place as a layer** | the open image, Image workspace | pictures |
 | **Add to the montage** | the open sequence, Video workspace | all |
 | **Use as base colour** | the open material, Textures workspace | pictures |
-| **Show in Finder** | opens the folder holding the file | all |
+| **Show in the file manager** | opens the folder holding the file | all |
 
 Each row carries its workspace's icon, the same one as in the title bar. The menu only shows
 destinations able to take **that type**: right-clicking a sound does not offer to lay it out as a
@@ -197,7 +197,7 @@ knows:
 | **File** | the duration, dimensions, size, creation date, location on disk |
 | **Generation** | the model, the prompt, the seed — and the **Regenerate** button |
 
-The **Reveal in file browser** button opens the folder containing the file, in Finder, Explorer or
+The **Show in the file manager** button opens the folder containing the file, in Finder, Explorer or
 your file manager.
 
 > "**File not found**" means a linked medium has been moved or deleted from its original location.
@@ -212,7 +212,7 @@ The two exist separately, and **nothing travels between them unless you ask**.
 
 ### What a thumbnail's badge tells you
 
-Every thumbnail carries a small mark saying where that asset stands with respect to the library:
+A small mark says where an asset stands with respect to the library:
 
 | Badge | What it means |
 |---|---|
@@ -223,6 +223,11 @@ Every thumbnail carries a small mark saying where that asset stands with respect
 | **Changed on both sides** | the two versions have diverged |
 | **The last upload failed** | the previous attempt did not go through |
 | **Belongs to another project** | the online twin answers to a different API key than the active one |
+
+**The first two only ever draw in list view.** On a thumbnail, "local only" and "in sync" stay
+silent: those are the two ordinary states, and marking them would cover the grid in dots that say
+nothing. A thumbnail with no badge is therefore a thumbnail that is fine: what the eye goes
+looking for is whatever does show.
 
 The badge is not stored, it is **recomputed**: it depends on the active account, and an API key
 opens onto one project and one only. Switch accounts in the title bar and the badges are read
@@ -257,8 +262,16 @@ An unselected asset, or a closed project, leaves the button greyed out.
 ### Naming from what the API sees
 
 The **Describe** button, next to it, asks the API to look at the selected pictures and give them a
-name drawn from their content. Nothing leaves without the click, and the names land in the
-project's catalogue.
+name drawn from their content. The names land in the project's catalogue.
+
+**It only sees pictures the library already knows.** The API describes what it hosts: a picture
+that has never been sent is dropped from the request, silently. Send it first, describe it after.
+
+> **This button is not the only door, and that is the one thing to take away here.** The
+> **Describe fetched assets** setting, under **Generation**, is **on by default**: a picture that
+> arrives without a useful name is sent to the API with nobody clicking, and that **spends creative
+> units**. The chapter [All the settings](14-settings.md) covers it — it is the one place where the
+> studio spends of its own accord, and unticking it is enough to stop it.
 
 ---
 
@@ -332,11 +345,19 @@ The studio tries three candidates, in this order:
 2. the path you set in **Settings ▸ Media ▸ Path to ffmpeg**;
 3. whatever is on your system's `PATH`.
 
-And it keeps the first that **runs**, not the first that exists: it launches it to check. A binary
-that is present but broken is treated as missing — see
+It keeps the **first that exists**, and stops there: it does not walk back down the list. The
+binary it keeps is launched afterwards, but to say whether video preparation is available — not
+to choose.
+
+**Two consequences, and the second one surprises.** The settings path only ever matters when the
+shipped binary is **absent** — which happens when you run the studio from its source code without
+having run `pnpm ffmpeg:fetch`. And if the chosen binary is present but does not run, pointing at
+another path in the settings **will not rescue it**: the studio reports the feature unavailable,
+and that binary is the one to repair or replace. See
 [When something goes wrong](16-troubleshooting.md#the-puzzling-case-ffmpeg-is-there-and-the-studio-says-it-is-not).
 
-If none of the three answers, an **amber warning triangle** appears on the asset shelf's title
+When the chosen candidate does not run — or when there is none — an **amber warning triangle**
+appears on the asset shelf's title
 bar, left of the counter. Hover it, or reach it with the keyboard, and it says: "Video preparation
 unavailable: no lighter copy, no waveform." `Esc` closes the tooltip.
 

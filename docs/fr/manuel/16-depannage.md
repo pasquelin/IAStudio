@@ -327,8 +327,9 @@ devrait pas apparaître sur une application installée normalement. S’il appar
 
 1. **vous avez lancé le studio depuis son code source** — exécutez `pnpm ffmpeg:fetch`, qui
    télécharge les binaires manquants ;
-2. **vous avez indiqué un chemin à vous** dans Réglages → **Médias** → **Chemin de ffmpeg**, et il
-   ne répond pas — videz le champ pour revenir à celui de l’application ;
+2. **le binaire livré est là, mais il ne démarre pas** — c’est lui qui est retenu, et le chemin
+   que vous indiqueriez dans Réglages → **Médias** → **Chemin de ffmpeg** ne le remplace pas :
+   ce champ ne sert que si le binaire livré est absent. Réparez ou remplacez celui-là ;
 3. **sinon**, s’en passer reste parfaitement viable sur des fichiers courts ou légers.
 
 #### Le cas déroutant : ffmpeg est là, et le studio dit qu’il n’y est pas
@@ -336,10 +337,15 @@ devrait pas apparaître sur une application installée normalement. S’il appar
 Vous tapez `which ffmpeg` dans un terminal, il répond un chemin. Le fichier existe. Et le studio
 continue d’afficher que la préparation vidéo est indisponible.
 
-**Ce n’est pas une contradiction.** Le studio ne se contente pas de *trouver* le programme : il le
-**lance**, avec `ffmpeg -version`, et n’accepte que celui qui répond. Un ffmpeg installé par
-Homebrew dont une bibliothèque a disparu — après une mise à jour de macOS, ou un
-`brew cleanup` un peu large — existe toujours en tant que fichier, mais ne démarre plus.
+**Ce n’est pas une contradiction.** Le studio ne se contente pas de *trouver* le programme : il
+**lance** celui qu’il a retenu, avec `ffmpeg -version`, et n’annonce la préparation vidéo que s’il
+répond. Un ffmpeg installé par Homebrew dont une bibliothèque a disparu — après une mise à jour de
+macOS, ou un `brew cleanup` un peu large — existe toujours en tant que fichier, mais ne démarre
+plus.
+
+**Attention à ce que « retenu » veut dire** : le studio prend le **premier candidat présent** —
+livré, puis celui des réglages, puis le `PATH` — et ne redescend pas la liste. Le `which ffmpeg`
+que vous venez de taper n’est donc consulté que si les deux autres manquent.
 
 Un programme qu’on trouve sans pouvoir l’exécuter serait pire qu’un programme absent : le studio
 promettrait des proxies qu’il ne saurait pas fabriquer.
