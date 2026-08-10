@@ -7,6 +7,7 @@ import { ToggleField } from '@/design/ToggleField'
 import { setGraphNodeData } from '@/engines/graph/commands'
 import { NODE_LABEL_KEYS } from '@/spaces/graph/node-labels'
 import { useGraphs } from '@/stores/graphs'
+import { IfElseFields } from './IfElseFields'
 import { ModelNodeFields } from './ModelNodeFields'
 import { useDocumentEdit, type DocumentEdit } from './useDocumentEdit'
 
@@ -78,6 +79,8 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
           {...edit.gesture}
         />
       )}
+
+      {node.type === 'ifElse' && <IfElseFields documentId={documentId} node={node} edit={edit} />}
 
       {node.type === 'asset' && <AssetFields node={node} edit={edit} />}
     </PropertyGroup>

@@ -234,4 +234,52 @@ describe('swapping what a node is wired by', () => {
   it('hands the very same graph back when the node is not there', () => {
     expect(replaceNodePorts(fed, 'nobody', withoutMask)).toBe(fed)
   })
+
+  /**
+   * A branch gaining or losing a case rewrites its OUTPUTS and says nothing about what feeds it.
+   * Judged against input handles the node never declared — which a file is free not to write —
+   * every wire into it would be cut by an edit that never mentioned them.
+   */
+  it('leaves the side the patch does not redeclare alone', () => {
+    // The node declares NO input handles, which is what makes the test discriminating: judged
+    // against them, both wires into it would be cut. A node that declares its own keeps them
+    // either way, so a fixture carrying handles proved nothing about the change.
+    const undeclared: GraphState = {
+      ...fed,
+      nodes: [text('text1'), { ...generator, data: { modelId: 'model_flux' } }],
+    }
+    const outputsOnly: Partial<GraphNode['data']> = {
+      outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
+    }
+
+    expect(
+      replaceNodePorts(undeclared, 'imageGenerator1', outputsOnly).edges.map(edge => edge.id),
+    ).toEqual(['a', 'b'])
+  })
+
+  /** And the other way round, so the rule is the contract rather than the one case that needed it. */
+  it('judges the inputs alone when the patch redeclares only those', () => {
+    const consumed: GraphState = {
+      ...fed,
+      edges: [
+        ...fed.edges,
+        {
+          id: 'd',
+          source: 'other1',
+          sourceHandle: 'other1-source-image',
+          target: 'imageGenerator1',
+          targetHandle: 'imageGenerator1-target-gone',
+        },
+      ],
+    }
+    const inputsOnly: Partial<GraphNode['data']> = {
+      inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' }],
+    }
+
+    // `b` goes, its input port having departed; `d` stays, though it reads an output no handle
+    // names — the patch said nothing about the outputs.
+    expect(
+      replaceNodePorts(consumed, 'imageGenerator1', inputsOnly).edges.map(edge => edge.id),
+    ).toEqual(['a', 'd'])
+  })
 })

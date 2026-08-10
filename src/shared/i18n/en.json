@@ -82,13 +82,33 @@
       "asset": "Asset",
       "model": "Model",
       "stickyNote": "Note",
-      "approval": "Approval"
+      "approval": "Approval",
+      "ifElse": "Condition"
     },
     "approve": "Approve",
     "approveHint": "Let the rest of the graph use this result",
     "decline": "Decline",
     "declineHint": "Stop everything that reads this node",
-    "askApproval": "Approve this result?"
+    "askApproval": "Approve this result?",
+    "noConditions": "No condition",
+    "logic": {
+      "and": "and",
+      "or": "or"
+    },
+    "condition": {
+      "isEmpty": "is empty",
+      "isNotEmpty": "is not empty",
+      "equals": "equals",
+      "notEquals": "differs from",
+      "contains": "contains",
+      "notContains": "does not contain",
+      "greaterThan": "greater than",
+      "greaterThanOrEqual": "greater than or equal to",
+      "lessThan": "less than",
+      "lessThanOrEqual": "less than or equal to",
+      "between": "between"
+    },
+    "noField": "Nothing"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
@@ -708,7 +728,20 @@
     "pauseClip": "Pause",
     "clipSpeed": "Speed",
     "clipLoop": "Loop",
-    "revealHint": "Opens the system file browser with this asset selected"
+    "revealHint": "Opens the system file browser with this asset selected",
+    "conditions": "Conditions",
+    "branch": "Branch {{number}}",
+    "otherwise": "Otherwise",
+    "addBranch": "Add a branch, with its output",
+    "removeBranch": "Remove this branch and its output",
+    "addCondition": "Add a condition to this branch",
+    "removeCondition": "Remove this condition",
+    "conditionField": "What is tested",
+    "conditionOperator": "Comparison",
+    "conditionValue": "Compared value",
+    "combine": "How this combines with the condition above",
+    "rangeFrom": "Lower bound",
+    "rangeTo": "Upper bound"
   },
   "transport": {
     "play": "Play",

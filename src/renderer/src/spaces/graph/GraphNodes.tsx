@@ -1,4 +1,5 @@
 import { mdiExportVariant } from '@mdi/js'
+import type { TFunction } from 'i18next'
 import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeProps } from '@xyflow/react'
@@ -9,6 +10,8 @@ import {
   isGraphNodeType,
   type GraphHandleInput,
   type GraphHandleOutput,
+  type GraphCondition,
+  type GraphConditionBlock,
   type GraphNodeRun,
   type GraphNodeType,
   type GraphRunStatus,
@@ -19,6 +22,7 @@ import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
+import { readConditionBlocks } from '@/engines/graph/conditions'
 import { RUN_STATE_KEY } from './adapter'
 import { useNodeDecision } from './node-decision'
 import { NODE_LABEL_KEYS } from './node-labels'
@@ -129,6 +133,7 @@ type NodeData = {
   content?: unknown
   modelId?: unknown
   message?: unknown
+  conditionBlocks?: unknown
   inputHandles?: unknown
   outputHandles?: unknown
   isOutput?: unknown
@@ -207,6 +212,52 @@ const ModelNode = nodeOf('ModelNode', 'model', data => (
 const ApprovalNode = nodeOf('ApprovalNode', 'approval', (data, id) => (
   <ApprovalBody id={id} message={asText(data.message)} run={asRun(data[RUN_STATE_KEY])} />
 ))
+
+const IfElseNode = nodeOf('IfElseNode', 'ifElse', data => (
+  <IfElseBody blocks={readConditionBlocks(data.conditionBlocks)} />
+))
+
+/**
+ * What each branch asks, in the order its output ports carry them — the first line leaves by the
+ * first port, and so on down to the else.
+ *
+ * Read on the face rather than in the inspector alone: which way a graph forks is the one thing
+ * about it that cannot be worked out from the wires, and a node showing only its ports would have
+ * the user click each one to find out what it tests.
+ */
+function IfElseBody({ blocks }: { blocks: readonly GraphConditionBlock[] }) {
+  const { t } = useTranslation()
+
+  if (blocks.length === 0) {
+    return <p className="text-muted text-[11px]">{t('graph.noConditions')}</p>
+  }
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {blocks.map((block, index) => (
+        <li key={index} className="text-muted truncate text-[11px]">
+          {block.conditions
+            .map(condition => readableCondition(condition, t))
+            .join(` ${t(`graph.logic.${block.logic}`)} `)}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/**
+ * One condition as a line — outside the component, which is the rule of this file: React Flow
+ * re-renders every mounted node on each frame of a pan, and a closure rebuilt per render is one
+ * per node per frame.
+ */
+const readableCondition = (condition: GraphCondition, t: TFunction): string =>
+  [
+    condition.field ?? t('graph.noField'),
+    t(`graph.condition.${condition.operator}`),
+    Array.isArray(condition.value) ? condition.value.join('…') : (condition.value ?? ''),
+  ]
+    .filter(part => part !== '')
+    .join(' ')
 
 /**
  * The question an approval puts, and the two answers to it while a run is stopped on it.
@@ -317,7 +368,7 @@ export const GRAPH_NODE_TYPES: Record<GraphNodeType, (props: NodeProps) => React
   llm: PlainNode,
   transformText: PlainNode,
   splitText: PlainNode,
-  ifElse: PlainNode,
+  ifElse: IfElseNode,
   groupItems: PlainNode,
   sliceAssets: PlainNode,
   forEach: PlainNode,

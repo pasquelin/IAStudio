@@ -249,6 +249,85 @@ describe('compiling a graph', () => {
   })
 })
 
+describe('a branch as the converter compiles one', () => {
+  /**
+   * The one assertion that proves the studio's `conditionBlocks` ARE what Scenario reads: the
+   * converter is its own, so a field spelt our way compiles to `'false'`, is filtered out, and
+   * leaves a logic item whose cases are `undefined` — a branch that always takes the else, with
+   * no error at either end.
+   */
+  const branch = (id: string, blocks: unknown): GraphNode => ({
+    id,
+    type: 'ifElse',
+    position: { x: 0, y: 0 },
+    // Through `JSON.parse` the way a file reaches it, so the test cannot be typed into agreement.
+    ...JSON.parse(JSON.stringify({ data: { conditionBlocks: blocks } })),
+  })
+
+  const graph = (blocks: unknown): GraphState =>
+    graphOf(
+      [textNode('text1', 'a knight'), branch('ifElse1', blocks), modelNode('m1', true)],
+      [
+        wire('ifElse1', 'conditional', 'text1', 'prompt'),
+        {
+          id: 'm1--case',
+          source: 'm1',
+          sourceHandle: handleId('m1', 'source', 'prompt'),
+          target: 'ifElse1',
+          targetHandle: `ifElse1-target-case1`,
+        },
+      ],
+    )
+
+  const logicOf = (blocks: unknown) =>
+    toEditorFlow(graph(blocks)).find(step => step.id.startsWith('ifElse1'))
+
+  it('compiles one case per block, numbered from two', () => {
+    const step = logicOf([
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+    ])
+
+    expect(step?.logicType).toBe('if-else')
+    expect(step?.logic?.cases?.map(entry => entry.value)).toEqual(['2', '3'])
+    expect(step?.logic?.default).toBe('1')
+  })
+
+  it('joins the conditions of one block the way the block says', () => {
+    const step = logicOf([
+      {
+        logic: 'or',
+        conditions: [
+          { field: 'text1', operator: 'contains', value: 'knight' },
+          { field: 'text1', operator: 'isEmpty' },
+        ],
+      },
+    ])
+
+    expect(step?.logic?.cases?.[0]?.condition).toContain(' || ')
+  })
+
+  /**
+   * A field naming a node that feeds nothing is NOT dropped — measured here rather than reasoned,
+   * and it went the other way from the guess: `conditionBlockToCEL` falls back to the raw name, so
+   * the case compiles against a variable no `inputs` entry declares. Which is the whole argument
+   * for the inspector offering a list of wired nodes instead of a field to type into.
+   */
+  it('compiles a field naming nothing into a variable the flow never declares', () => {
+    const step = logicOf([{ logic: 'and', conditions: [{ field: 'nobody', operator: 'equals' }] }])
+
+    expect(step?.logic?.cases?.[0]?.condition).toBe("trim(nobody) == ''")
+    expect(JSON.stringify(step?.inputs ?? [])).not.toContain('nobody')
+  })
+
+  /** Without a field there is no expression at all: `'false'` is filtered, and the else takes it. */
+  it('leaves no case for a block whose condition has no field', () => {
+    const step = logicOf([{ logic: 'and', conditions: [{ operator: 'equals', value: 'a' }] }])
+
+    expect(step?.logic?.cases).toBeUndefined()
+  })
+})
+
 describe('the models a graph names', () => {
   const node = (id: string, type: 'model' | 'llm' | 'text', data: Record<string, unknown>) => ({
     id,

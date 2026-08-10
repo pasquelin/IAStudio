@@ -118,6 +118,76 @@ export type GraphNodeData = {
 export type GraphPosition = { x: number; y: number }
 
 /**
+ * The comparisons an `ifElse` makes, spelled as Scenario's own converter reads them.
+ *
+ * A closed union rather than the SDK's `string`, and the difference is a branch that exists
+ * against one that never fires: `conditionToCelExpression` answers `'false'` for an operator it
+ * does not know, `conditionBlockToCEL` then drops the condition, and a misspelt one compiles to a
+ * branch nothing can take — with no error at either end.
+ */
+export type GraphConditionOperator =
+  | 'isEmpty'
+  | 'isNotEmpty'
+  | 'equals'
+  | 'notEquals'
+  | 'contains'
+  | 'notContains'
+  | 'greaterThan'
+  | 'greaterThanOrEqual'
+  | 'lessThan'
+  | 'lessThanOrEqual'
+  | 'between'
+
+export const GRAPH_CONDITION_OPERATORS: readonly GraphConditionOperator[] = [
+  'isEmpty',
+  'isNotEmpty',
+  'equals',
+  'notEquals',
+  'contains',
+  'notContains',
+  'greaterThan',
+  'greaterThanOrEqual',
+  'lessThan',
+  'lessThanOrEqual',
+  'between',
+]
+
+export const isGraphConditionOperator = (value: unknown): value is GraphConditionOperator =>
+  GRAPH_CONDITION_OPERATORS.some(candidate => candidate === value)
+
+/** How many values an operator reads: none, one, or the pair `between` compiles a range from. */
+export type ConditionArity = 'none' | 'one' | 'range'
+
+export function conditionArity(operator: GraphConditionOperator): ConditionArity {
+  if (operator === 'isEmpty' || operator === 'isNotEmpty') return 'none'
+  return operator === 'between' ? 'range' : 'one'
+}
+
+/**
+ * One comparison an `ifElse` makes.
+ *
+ * `field` names the node whose output is tested — its id, or `` `${id}_${handleName}` `` for a node
+ * with several outputs, which is what `resolveIfElseConditionField` matches. Optional because the
+ * converter types it so, and because a condition being written has not chosen one yet: without a
+ * field it compiles to `'false'` and is dropped, so a half-written branch is silent rather than
+ * wrong.
+ */
+export type GraphCondition = {
+  field?: string
+  operator: GraphConditionOperator
+  /** A pair for `between`, which refuses anything else; a single value for the rest. */
+  value?: string | readonly string[]
+}
+
+/** The conditions of ONE branch, and how they combine. One block is one output of the node. */
+export type GraphConditionBlock = {
+  conditions: readonly GraphCondition[]
+  logic: 'and' | 'or'
+}
+
+export const CONDITION_LOGICS: readonly GraphConditionBlock['logic'][] = ['and', 'or']
+
+/**
  * The node types this milestone draws. The other eleven are declared above and land in the
  * editor with the loops and the logic — until then a graph can hold one, and it renders as the
  * type it says it is with nothing but its ports.
@@ -170,10 +240,22 @@ export type GraphNodeBody =
    * the two answers, so a graph with three approvals does not ask the same question three times.
    */
   | { type: 'approval'; data: GraphNodeData & { message?: string } }
+  /**
+   * A branch, and the one node whose `data` holds a query instead of a value.
+   *
+   * Each block is one output, in order: the converter finds the port an edge leaves by its INDEX
+   * among the output handles, gives block `i` the case value `i + 2`, and treats every handle past
+   * the last block as the else — value `1`. So the node's ports and its blocks are one fact
+   * written twice, and a block added without its port silently re-routes the ones after it.
+   */
+  | {
+      type: 'ifElse'
+      data: GraphNodeData & { conditionBlocks?: readonly GraphConditionBlock[] }
+    }
   | {
       type: Exclude<
         GraphNodeType,
-        'text' | 'stickyNote' | 'asset' | 'model' | 'modelInput' | 'approval'
+        'text' | 'stickyNote' | 'asset' | 'model' | 'modelInput' | 'approval' | 'ifElse'
       >
       data: GraphNodeData
     }
