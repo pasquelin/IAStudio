@@ -189,6 +189,22 @@ describe('namedLoopId', () => {
     expect(namedLoopId(textNode('text1'))).toBeUndefined()
   })
 
+  /**
+   * And not even when that node carries the field: only a `forEachEnd` closes a loop, and the
+   * converter reads `parentNodeId` off no other type. Answering here would let a panel offer to
+   * re-pair a node the compiler pairs with nothing.
+   */
+  it('answers nothing for another type carrying the field anyway', () => {
+    const node = {
+      id: 'text1',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: { parentNodeId: 'forEach1' },
+    }
+
+    expect(namedLoopId(node as unknown as GraphNode)).toBeUndefined()
+  })
+
   // `parseGraph` validates the node and not its `data`: a number here would reach a `<select>` as
   // its value, and React would hand the DOM `"12"` over a loop nobody named.
   it('answers nothing for a parent a file wrote as a number', () => {
