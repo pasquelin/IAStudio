@@ -22,6 +22,7 @@ import { textureOf, useTextures } from '@/stores/textures'
 import { seamOf, useTextureViews } from '@/stores/texture-views'
 import { EnvironmentSection } from './EnvironmentSection'
 import { useDocumentEdit } from './useDocumentEdit'
+import { HINT_LEFT } from '@/helpers/tooltip'
 
 export type TextureInspectorProps = { documentId: string }
 
@@ -215,6 +216,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
               <button
                 key={times}
                 type="button"
+                {...HINT_LEFT(t('texture.tilingPreviewHint'))}
                 onClick={() => onPreview('tilingPreview', times)}
                 aria-pressed={preview.tilingPreview === times}
                 className={chipSkin(preview.tilingPreview === times)}
@@ -238,6 +240,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
             <button
               key={shape}
               type="button"
+              {...HINT_LEFT(t('texture.previewShapeHint'))}
               onClick={() => onPreview('shape', shape)}
               aria-pressed={preview.shape === shape}
               className={chipSkin(preview.shape === shape)}

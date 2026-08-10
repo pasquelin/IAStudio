@@ -37,7 +37,8 @@
     "empty": "Open a skybox to change how it is being displayed.",
     "projection": "Projection",
     "mode": "Mode",
-    "helpers": "Helpers"
+    "helpers": "Helpers",
+    "modeHint": "Changes how the skybox is looked at, never the file itself"
   },
   "actions": {
     "undo": "Undo",
@@ -1540,7 +1541,9 @@
     },
     "inspectChannel": "Look at {{channel}} on its own",
     "showMaterial": "Back to the lit material",
-    "noPicture": "No picture in this project"
+    "noPicture": "No picture in this project",
+    "tilingPreviewHint": "Changes the preview only — the exported texture is not repeated for it",
+    "previewShapeHint": "Changes the shape the preview is laid on, not the texture"
   },
   "licences": {
     "title": "Licences",
@@ -1905,6 +1908,10 @@
     "explore": {
       "loading": "Loading the feed…",
       "none": "Nothing published in this category yet."
-    }
+    },
+    "restoreHint": "Puts every hidden section back on the home, at once",
+    "byModeHint": "Opens the asset browser, filtered on this kind",
+    "exploreTabHint": "Shows only this category in the shelf",
+    "createProjectHint": "Pick a folder on disk: everything the studio produces is written there"
   }
 }

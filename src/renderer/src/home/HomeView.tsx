@@ -13,6 +13,7 @@ import { HOME_COMPONENTS } from './home-registry'
 import { SectionNote } from './SectionNote'
 import { enterWorkspace } from './open'
 import { useHomeSections } from './use-home-sections'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 /**
  * The studio's entry point: what you were doing, what it can do, and what it is doing now.
@@ -95,6 +96,7 @@ function Hidden() {
       {t('home.hidden', { count: hidden.length })}
       <button
         type="button"
+        {...HINT_TOP(t('home.restoreHint'))}
         onClick={restore}
         className={cn(
           'text-accent cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',

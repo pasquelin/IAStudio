@@ -130,6 +130,19 @@ describe('TextureInspector', () => {
     expect(preview().envRotation).toBeCloseTo(Math.PI)
   })
 
+  /**
+   * These two rows change how the texture is LOOKED at and never reach a scene — a distinction
+   * the chips cannot draw, since they sit under the values they seem to multiply.
+   */
+  it('says that the preview rows change nothing that gets exported', () => {
+    show()
+
+    expect(screen.getByRole('button', { name: 'Sphère' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Change la forme sur laquelle l’aperçu est plaqué, pas la texture',
+    )
+  })
+
   it('chooses the shape the material is judged on', () => {
     show()
 

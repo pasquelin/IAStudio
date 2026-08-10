@@ -10,6 +10,7 @@ import { useProject } from '@/stores/project'
 import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { useShelf } from '../use-shelf'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 const NONE = emptyAssetCounts()
 
@@ -52,6 +53,7 @@ function Counter({ type, total }: { type: AssetType; total: number }) {
     <button
       type="button"
       disabled={total === 0}
+      {...HINT_TOP(t('home.byModeHint'))}
       onClick={() => revealAssetsOfKind(type)}
       className={cn(
         'bg-surface flex items-center gap-2.5 rounded-(--radius-sc-md) border-none px-3 py-2',

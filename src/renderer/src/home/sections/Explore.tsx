@@ -9,6 +9,7 @@ import { assetIcon } from '@/helpers/workspaces'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { useExplore } from '../use-explore'
+import { HINT_BOTTOM } from '@/helpers/tooltip'
 
 /** What one column aims for. Wider than a shelf tile: this is the band people browse. */
 const COLUMN_WIDTH = 220
@@ -90,6 +91,7 @@ function Tab({ type, current, onSelect }: TabProps) {
       type="button"
       role="tab"
       aria-selected={current}
+      {...HINT_BOTTOM(t('home.exploreTabHint'))}
       onClick={onSelect}
       className={chipSkin(current)}
     >
