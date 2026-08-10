@@ -6,7 +6,7 @@ import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { activeAccount, useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
@@ -73,6 +73,7 @@ export function AccountSelect() {
               icon={mdiCloudOutline}
               checked={account.active}
               tick="one-of"
+              tip={HINT_RIGHT(t('accounts.useHint'))}
               onSelect={() => {
                 flyout.close()
                 void activate(account.id)
@@ -85,6 +86,7 @@ export function AccountSelect() {
           <MenuRow
             label={t('accounts.manage')}
             icon={mdiCogOutline}
+            tip={HINT_RIGHT(t('accounts.manageHint'))}
             onSelect={() => {
               flyout.close()
               manage()

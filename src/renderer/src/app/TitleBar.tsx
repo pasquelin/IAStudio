@@ -23,7 +23,7 @@ import {
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { dragChannel } from '@/helpers/drag'
 import { useSettings } from '@/stores/settings'
-import { HINT_BOTTOM } from '@/helpers/tooltip'
+import { HINT_BOTTOM, HINT_RIGHT } from '@/helpers/tooltip'
 
 /** Its own MIME type, so a file from the desktop never reads as one of the bar's pills. */
 const SPACES = dragChannel('application/x-scenario-workspace')
@@ -149,6 +149,7 @@ export function TitleBar({
             label={t('workspaces.moveLeft')}
             icon={mdiArrowLeft}
             disabled={!canMoveWorkspace(order, menuAt.id, 'left')}
+            tip={HINT_RIGHT(t('workspaces.moveLeftHint'))}
             onSelect={() => {
               step(menuAt.id, 'left')
               setMenuAt(null)
@@ -158,6 +159,7 @@ export function TitleBar({
             label={t('workspaces.moveRight')}
             icon={mdiArrowRight}
             disabled={!canMoveWorkspace(order, menuAt.id, 'right')}
+            tip={HINT_RIGHT(t('workspaces.moveRightHint'))}
             onSelect={() => {
               step(menuAt.id, 'right')
               setMenuAt(null)

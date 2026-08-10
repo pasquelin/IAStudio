@@ -13,7 +13,7 @@ import {
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
 import { useHomeSections } from './use-home-sections'
 
@@ -53,6 +53,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
             icon={mdiArrowUp}
             label={t('home.moveUp')}
             disabled={!canMoveHomeSection(stored, id, 'up', shown)}
+            tip={HINT_RIGHT(t('home.moveUpHint'))}
             onSelect={() => {
               write(movedHomeSection(stored, id, 'up', shown))
               close()
@@ -62,6 +63,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
             icon={mdiArrowDown}
             label={t('home.moveDown')}
             disabled={!canMoveHomeSection(stored, id, 'down', shown)}
+            tip={HINT_RIGHT(t('home.moveDownHint'))}
             onSelect={() => {
               write(movedHomeSection(stored, id, 'down', shown))
               close()
@@ -72,6 +74,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
             <MenuRow
               icon={mdiEyeOffOutline}
               label={t('home.hide')}
+              tip={HINT_RIGHT(t('home.hideHint'))}
               onSelect={() => {
                 write(shownHomeSection(stored, id, false))
                 close()
@@ -89,6 +92,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
                   label={t('home.showCount', { count: value })}
                   checked={limit === value}
                   tick="one-of"
+                  tip={HINT_RIGHT(t('home.showCountHint', { count: value }))}
                   onSelect={() => {
                     write(limitedHomeSection(stored, id, value))
                     close()

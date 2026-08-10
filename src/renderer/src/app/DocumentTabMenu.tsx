@@ -2,6 +2,7 @@ import { mdiClose, mdiCloseBoxMultipleOutline, mdiTrashCanOutline } from '@mdi/j
 import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { reportFailure } from '@/services/diagnostics'
 import { closeTab } from './close-tab'
 import { closeDocument, deleteDocument } from './document-io'
@@ -36,12 +37,14 @@ export function DocumentTabMenu({ documentId, at, onClose }: DocumentTabMenuProp
       <MenuRow
         label={t('documents.close')}
         icon={mdiClose}
+        tip={HINT_RIGHT(t('documents.closeHint'))}
         onSelect={choose(() => closeTab(documentId))}
       />
       <MenuRow
         label={t('documents.closeOthers')}
         icon={mdiCloseBoxMultipleOutline}
         disabled={openPanelIds().length < 2}
+        tip={HINT_RIGHT(t('documents.closeOthersHint'))}
         onSelect={choose(() => {
           void closeOthers(documentId).catch(error =>
             reportFailure('document.close', documentId, error),
@@ -51,6 +54,7 @@ export function DocumentTabMenu({ documentId, at, onClose }: DocumentTabMenuProp
       <MenuRow
         label={t('documents.delete')}
         icon={mdiTrashCanOutline}
+        tip={HINT_RIGHT(t('documents.deleteHint'))}
         onSelect={choose(() => {
           void deleteDocument(documentId).catch(error =>
             reportFailure('document.delete', documentId, error),

@@ -14,7 +14,9 @@
     "moveLeft": "Déplacer à gauche",
     "moveRight": "Déplacer à droite",
     "moved": "{{label}} en position {{position}} sur {{total}}",
-    "switchHint": "Ouvre cet espace — glissez-le pour changer l’ordre de la barre"
+    "switchHint": "Ouvre cet espace — glissez-le pour changer l’ordre de la barre",
+    "moveLeftHint": "Place cet espace avant son voisin de gauche dans la barre",
+    "moveRightHint": "Place cet espace après son voisin de droite dans la barre"
   },
   "panels": {
     "layers": "Calques",
@@ -384,7 +386,10 @@
     "cancel": "Annuler",
     "deleteTitle": "Supprimer « {{title}} » du projet ?",
     "deleteBody": "Le fichier est retiré du dossier du projet. Cette action est irréversible.",
-    "deleteConfirm": "Supprimer"
+    "deleteConfirm": "Supprimer",
+    "closeHint": "Retire l’onglet de la barre ; le document reste dans le projet",
+    "closeOthersHint": "Ferme tous les autres onglets, un par un",
+    "deleteHint": "Retire le document du projet, son fichier compris"
   },
   "imageTools": {
     "pointer": "Curseur",
@@ -847,7 +852,8 @@
     "removeHint": "Oublie la clé sur cette machine ; le compte Scenario n’est pas touché",
     "saveHint": "Garde le nouveau nom, si aucun autre compte ne le porte déjà",
     "cancelHint": "Laisse le nom tel qu’il était",
-    "addHint": "Enregistre la clé, chiffrée par le trousseau du système"
+    "addHint": "Enregistre la clé, chiffrée par le trousseau du système",
+    "manageHint": "Ouvre les préférences pour ajouter, renommer ou retirer un compte"
   },
   "errors": {
     "missingCredentials": "Aucun identifiant enregistré.",
@@ -1947,6 +1953,11 @@
     "sparkAskHint": "Demande trois départs à l’API, écrits pour le modèle du générateur",
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
     "spotlightConnectHint": "Ouvre les préférences, à la section du compte",
-    "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère"
+    "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère",
+    "moveUpHint": "Remonte cette section d’un cran sur l’accueil",
+    "moveDownHint": "Descend cette section d’un cran sur l’accueil",
+    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit",
+    "showCountHint_one": "Ne garde que {{count, number}} élément dans cette section",
+    "showCountHint_other": "Ne garde que {{count, number}} éléments dans cette section"
   }
 }

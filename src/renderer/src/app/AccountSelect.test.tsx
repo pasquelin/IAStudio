@@ -57,6 +57,24 @@ describe('AccountSelect', () => {
     expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toBeInTheDocument()
   })
 
+  it('explains each row instead of repeating the name it already shows', async () => {
+    given([studio])
+    render(<AccountSelect />)
+    await openMenu()
+
+    const account = screen.getByRole('menuitemradio', { name: 'Studio' })
+    expect(account).toHaveAttribute(
+      'data-tooltip-content',
+      'Toutes les générations partiront désormais de cette clé',
+    )
+    // A visible label answers for itself: an `aria-label` here would replace it (WCAG 2.5.3).
+    expect(account).not.toHaveAttribute('aria-label')
+    expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre les préférences pour ajouter, renommer ou retirer un compte',
+    )
+  })
+
   it('switches to the account that was picked', async () => {
     const activate = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [] }))
     installFakeBridge({ accounts: { activate } })
