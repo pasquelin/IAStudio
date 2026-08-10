@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FolderEntry } from '@shared/domain/folder'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -43,12 +44,13 @@ function install(byFolder: Record<string, FolderEntry[]>, documents: DocumentDes
   const openFile = vi.fn(() => Promise.resolve(true))
   const revealFile = vi.fn(() => Promise.resolve())
   const renameFile = vi.fn(() => Promise.resolve(true))
+  const moveFile = vi.fn(() => Promise.resolve(true))
   const trashFile = vi.fn(() => Promise.resolve(true))
   installFakeBridge({
-    project: { listFolder, openFile, revealFile, renameFile, trashFile },
+    project: { listFolder, openFile, revealFile, renameFile, moveFile, trashFile },
     documents: { list: () => Promise.resolve(documents) },
   })
-  return { listFolder, openFile, revealFile, renameFile, trashFile }
+  return { listFolder, openFile, revealFile, renameFile, moveFile, trashFile }
 }
 
 beforeEach(() => {
@@ -386,6 +388,99 @@ describe('the project explorer', () => {
 
       await waitFor(() => expect(listFolder).toHaveBeenCalledTimes(2))
     })
+  })
+})
+
+/**
+ * Dragging moves; the menu's "Rename" stays in the folder the file already sits in. The
+ * refusals are read from `shared/`, so what the panel greys out is what the main process would
+ * refuse — and a drag names both sides, which is the half the menu never had to answer for.
+ */
+describe('dragging a row of the explorer', () => {
+  const rowFor = async (name: string): Promise<HTMLElement> => {
+    const label = await screen.findByText(name)
+    const row = label.closest('[role="treeitem"]')
+    if (!(row instanceof HTMLElement)) throw new Error(`no row for ${name}`)
+    return row
+  }
+
+  const drag = async (from: string, onto: string): Promise<void> => {
+    const data = dragTransfer()
+    fireEvent.dragStart(await rowFor(from), { dataTransfer: data })
+    fireEvent.drop(await rowFor(onto), { dataTransfer: data })
+  }
+
+  it('moves the dragged file into the folder it was dropped on', async () => {
+    withProject()
+    const { moveFile } = install({ '': [folder('notes'), file('brief.pdf')] })
+
+    render(<Explorer />)
+    await drag('brief.pdf', 'notes')
+
+    expect(moveFile).toHaveBeenCalledWith('brief.pdf', 'notes')
+  })
+
+  it('moves it by its whole path, not by the name the row shows', async () => {
+    withProject()
+    const { moveFile } = install({
+      '': [folder('notes'), folder('refs')],
+      notes: [file('brief.pdf', 'notes')],
+    })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.keyboard('{ArrowRight}')
+    await drag('brief.pdf', 'refs')
+
+    expect(moveFile).toHaveBeenCalledWith('notes/brief.pdf', 'refs')
+  })
+
+  // The catalogue stores every asset by a path under `assets/`, and the studio's own folders
+  // refuse on both sides of the gesture — as what moves, and as what receives.
+  it('will not pick up a studio folder', async () => {
+    withProject()
+    install({ '': [folder('assets'), folder('notes')] })
+
+    render(<Explorer />)
+
+    expect(await rowFor('assets')).not.toHaveAttribute('draggable', 'true')
+    expect(await rowFor('notes')).toHaveAttribute('draggable', 'true')
+  })
+
+  it('drops nothing into a studio folder', async () => {
+    withProject()
+    const { moveFile } = install({ '': [folder('assets'), file('brief.pdf')] })
+
+    render(<Explorer />)
+    await drag('brief.pdf', 'assets')
+
+    expect(moveFile).not.toHaveBeenCalled()
+  })
+
+  // A file is not a place. Dropping onto one used to be worth an outline it could not honour.
+  it('drops nothing onto a file', async () => {
+    withProject()
+    const { moveFile } = install({ '': [file('brief.pdf'), file('notes.txt')] })
+
+    render(<Explorer />)
+    await drag('brief.pdf', 'notes.txt')
+
+    expect(moveFile).not.toHaveBeenCalled()
+  })
+
+  it('drops nothing onto a folder inside the one being dragged', async () => {
+    withProject()
+    const { moveFile } = install({
+      '': [folder('notes')],
+      notes: [folder('drafts', 'notes')],
+    })
+
+    render(<Explorer />)
+    await userEvent.click(await screen.findByText('notes'))
+    await userEvent.keyboard('{ArrowRight}')
+    await drag('notes', 'drafts')
+
+    expect(moveFile).not.toHaveBeenCalled()
   })
 })
 

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
 
@@ -44,21 +45,6 @@ describe('flattenTree', () => {
     expect(flattenTree([{ id: 'orphan', parentId: 'gone' }], new Set(['gone']))).toEqual([])
   })
 })
-
-/** jsdom implements no `DataTransfer`; the tree reads exactly these three members of one. */
-function dragData() {
-  const held = new Map<string, string>()
-  const data = {
-    // Read on the event after the one that set it, so it has to follow along.
-    types: [] as string[],
-    setData: (type: string, value: string) => {
-      held.set(type, value)
-      data.types = [...held.keys()]
-    },
-    getData: (type: string) => held.get(type) ?? '',
-  }
-  return data
-}
 
 type Selector = (ids: readonly string[], mode: SelectionMode) => void
 
@@ -196,7 +182,7 @@ describe('Tree', () => {
     )
 
     const rows = screen.getAllByRole('treeitem')
-    const data = dragData()
+    const data = dragTransfer()
     fireEvent.dragStart(rows[1]!, { dataTransfer: data })
     fireEvent.drop(rows[2]!, { dataTransfer: data })
 
@@ -219,9 +205,126 @@ describe('Tree', () => {
     )
 
     const row = screen.getAllByRole('treeitem')[1]!
-    const data = dragData()
+    const data = dragTransfer()
     fireEvent.dragStart(row, { dataTransfer: data })
     fireEvent.drop(row, { dataTransfer: data })
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  it('refuses to pick up a row the caller will not let move', () => {
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={() => {}}
+        draggable={node => node.id !== 'a'}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const [, refused, allowed] = screen.getAllByRole('treeitem')
+    expect(refused).not.toHaveAttribute('draggable', 'true')
+    expect(allowed).toHaveAttribute('draggable', 'true')
+  })
+
+  it('drops nothing on a row the caller will not let receive', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        droppable={node => node.id !== 'b'}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rows = screen.getAllByRole('treeitem')
+    const data = dragTransfer()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.drop(rows[2]!, { dataTransfer: data })
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  // A row that will not take the drop must not offer to: the refusal belongs in the hand, not
+  // at the release, and the outline is the whole of what the hand sees.
+  it('draws no landing outline on a row it would refuse', () => {
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={() => {}}
+        droppable={node => node.id !== 'b'}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rows = screen.getAllByRole('treeitem')
+    const data = dragTransfer()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.dragOver(rows[2]!, { dataTransfer: data })
+    expect(rows[2]!.className).not.toContain('outline-accent')
+
+    fireEvent.dragOver(rows[0]!, { dataTransfer: data })
+    expect(screen.getAllByRole('treeitem')[0]!.className).toContain('outline-accent')
+  })
+
+  it('tells the caller what is being dragged, so a target can judge the pair', () => {
+    const droppable = vi.fn(() => true)
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={() => {}}
+        droppable={droppable}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rows = screen.getAllByRole('treeitem')
+    const data = dragTransfer()
+    fireEvent.dragStart(rows[1]!, { dataTransfer: data })
+    fireEvent.drop(rows[2]!, { dataTransfer: data })
+
+    expect(droppable).toHaveBeenCalledWith(
+      { id: 'b', parentId: 'scene' },
+      { id: 'a', parentId: 'scene' },
+    )
+  })
+
+  // The drag channel is shared by every tree of the studio, so `carries` alone would let a
+  // scene node be dropped into a file browser and reported as one of its own rows.
+  it('ignores a drop whose drag began in another tree', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const elsewhere = dragTransfer()
+    elsewhere.setData('application/x-scenario-tree-row', 'from-another-tree')
+    fireEvent.drop(screen.getAllByRole('treeitem')[2]!, { dataTransfer: elsewhere })
 
     expect(onDrop).not.toHaveBeenCalled()
   })

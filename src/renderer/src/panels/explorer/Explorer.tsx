@@ -2,6 +2,7 @@ import { mdiFileOutline, mdiFolderOpenOutline, mdiFolderOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { kindForExtension, type DocumentDescriptor } from '@shared/domain/document'
+import { canMoveInto, isStudioFolder } from '@shared/domain/folder'
 import { EmptyState } from '@/design/EmptyState'
 import { Tree } from '@/design/Tree'
 import { openDocument } from '@/app/dockview-api'
@@ -106,6 +107,14 @@ export function Explorer() {
       // A folder is expandable before anything under it has been read: what the tree can see is
       // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
       expandable={node => node.kind === 'folder'}
+      // Dragging moves; the menu's "Rename" stays in the folder it is already in, deliberately.
+      // Both refusals are the same one, read from `shared/` so the main process refuses the
+      // same things — and read on BOTH sides of the gesture, what moves and what receives.
+      draggable={node => !isStudioFolder(node.path)}
+      droppable={(node, dragged) => node.kind === 'folder' && canMoveInto(dragged.path, node.path)}
+      // Nothing is written here on faith: the watch says the folder changed and the tree reads
+      // it again, so what appears in the new folder is what the disk actually holds.
+      onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={activate}
       onContextMenu={(node, at) => setMenu({ node, at })}
       renderRow={row => {

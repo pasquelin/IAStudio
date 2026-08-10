@@ -71,10 +71,24 @@ export type TreeProps<T extends TreeNode> = {
   /** A right-click on a row, with where the pointer was. Absent leaves the browser's own menu. */
   onContextMenu?: (node: T, at: { x: number; y: number }) => void
   /**
-   * A row was dropped onto another. Absent leaves the tree undraggable — a file browser has
-   * nothing to reorder, and offering the gesture there would promise something it cannot do.
+   * A row was dropped onto another. Absent leaves the tree undraggable — a tree with nothing to
+   * reorder that offered the gesture would promise something it cannot do.
    */
   onDrop?: (id: string, parentId: string) => void
+  /**
+   * Which rows may be picked up. A row that cannot move never becomes draggable, so the refusal
+   * is in the hand rather than at the release: a gesture that runs its course and then does
+   * nothing is the one outcome worse than no gesture.
+   */
+  draggable?: (node: T) => boolean
+  /**
+   * Which rows may receive `dragged`. Refused rows take no outline and no drop, which is why
+   * the tree keeps the dragged node rather than reading the drag payload: `getData` answers
+   * nothing until the drop itself, so a target asked at hover has no other way to know what is
+   * coming. It is also what tells a drag that began in ANOTHER tree — the channel is shared —
+   * from one of this tree's own rows.
+   */
+  droppable?: (node: T, dragged: T) => boolean
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
 }
@@ -94,13 +108,16 @@ export function Tree<T extends TreeNode>({
   selectable,
   expandable,
   onDrop,
+  draggable,
+  droppable,
   onActivate,
   onContextMenu,
   renderRow,
 }: TreeProps<T>) {
-  // Which row the pointer is over during a drag. Session state of the gesture itself, so it
-  // never reaches the caller: what the caller hears about is the drop.
+  // Which row the pointer is over during a drag, and what is being dragged. Session state of
+  // the gesture itself, so neither reaches the caller: what the caller hears about is the drop.
   const [over, setOver] = useState<string | null>(null)
+  const [dragged, setDragged] = useState<T | null>(null)
   const scroller = useRef<HTMLDivElement>(null)
   const rows = useMemo(
     () => flattenTree(nodes, expandedIds, expandable),
@@ -138,6 +155,14 @@ export function Tree<T extends TreeNode>({
     0,
     rows.findIndex(row => row.node.id === anchor),
   )
+
+  // A row that a selection may not hold is not a node either: it has nothing to move.
+  const canDrag = (node: T): boolean =>
+    onDrop !== undefined && (selectable?.(node) ?? true) && (draggable?.(node) ?? true)
+
+  // A row never receives itself, whatever the caller answers: that one belongs to the tree.
+  const accepts = (node: T): boolean =>
+    dragged !== null && node.id !== dragged.id && (droppable?.(node, dragged) ?? true)
 
   const pick = (node: T, modifiers: Modifiers): void => {
     // An unselectable row selects nothing rather than itself — clicking a header clears.
@@ -210,28 +235,33 @@ export function Tree<T extends TreeNode>({
                   // The row a drop would land in, told apart from the row that is selected.
                   over === row.node.id && 'outline-accent outline -outline-offset-1',
                 )}
-                // A row that a selection may not hold is not a node either: it has nothing to
-                // move. And the handle is the row itself — a `draggable` makes every control
-                // inside it draggable too, so the eye would reparent instead of toggling.
-                draggable={onDrop !== undefined && (selectable?.(row.node) ?? true)}
+                // The handle is the row itself — a `draggable` makes every control inside it
+                // draggable too, so the eye would reparent instead of toggling.
+                draggable={canDrag(row.node)}
                 onDragStart={event => {
                   if (event.target !== event.currentTarget) return event.preventDefault()
                   ROWS.start(event, row.node.id)
+                  setDragged(row.node)
                 }}
                 onDragOver={event => {
-                  if (!onDrop || !ROWS.carries(event)) return
+                  if (!onDrop || !ROWS.carries(event) || !accepts(row.node)) return
                   // Without this the browser refuses the drop, and `onDrop` never fires.
                   event.preventDefault()
                   event.dataTransfer.dropEffect = 'move'
                   setOver(row.node.id)
                 }}
                 onDragLeave={() => setOver(current => (current === row.node.id ? null : current))}
-                onDragEnd={() => setOver(null)}
+                onDragEnd={() => {
+                  setOver(null)
+                  setDragged(null)
+                }}
                 onDrop={event => {
                   event.preventDefault()
                   setOver(null)
-                  const dragged = ROWS.idFrom(event)
-                  if (dragged && dragged !== row.node.id) onDrop?.(dragged, row.node.id)
+                  if (dragged && accepts(row.node)) onDrop?.(dragged.id, row.node.id)
+                  // Cleared here as well as on `dragEnd`: the source row is virtualized, so a
+                  // drag that scrolled it out of view has no element left to end on.
+                  setDragged(null)
                 }}
                 onPointerDown={event => pick(row.node, event)}
                 onDoubleClick={() => onActivate?.(row.node)}
