@@ -53,9 +53,11 @@ part.
 | 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
 | 13 | [Espace Skyboxes](manuel/13-espace-skyboxes.md) | Fabriquer un ciel à 360° et le régler |
 
-> **Le septième espace, le Graphe, n’a pas encore son chapitre.** Il s’ouvre, on y pose des nœuds
-> et on les enregistre, mais il ne sait pas encore exécuter ce qu’il décrit : le décrire comme les
-> six autres promettrait un travail qu’on ne peut pas faire. Ce qu’il fait aujourd’hui est au
+> **Le septième espace, le Graphe, n’a pas encore son chapitre.** Il s’ouvre, on y pose des
+> nœuds, on les relie, on les enregistre, et **il les exécute** — chaque nœud part quand ce qu’il
+> lit est prêt, et ce qui n’a pas changé n’est pas relancé. Ce qui lui manque encore : les nœuds
+> de logique, de boucle et d’approbation, et l’import/export d’un workflow. Son chapitre viendra
+> quand il les saura. Ce qu’il fait aujourd’hui est au
 > [chapitre 3](manuel/03-la-fenetre.md) et ses limites au [chapitre 18](manuel/18-limites.md).
 
 ### Les annexes
