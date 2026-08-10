@@ -534,8 +534,11 @@ chemins d’entrée d’une image dans un ciel.
 *description* d’un nœud séparée de son instanciation three.js — une scène se sérialise donc sans
 traîner le moteur de rendu avec elle, et se reconstruit depuis cette seule sérialisation.
 
-La lecture passe par un jeton unique détenu par le `PlaybackManager` : deux lecteurs actifs, et
-le scrubbing se met à saccader sans raison visible.
+La lecture passe par un **jeton unique**, `playbackToken` — une valeur de module dans
+`engines/timeline/playback.ts`, pas un gestionnaire : celui qui veut jouer l'acquiert et fournit
+de quoi l'arrêter, et l'acquisition suivante coupe le précédent. Deux lecteurs actifs, et le
+scrubbing se met à saccader sans raison visible. La timeline et la forme d'onde de l'espace Audio
+le prennent tous les deux au même endroit.
 
 ---
 
