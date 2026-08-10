@@ -34,11 +34,18 @@ export const useModelClips = create<ModelClipsState>()(set => ({
     }),
 }))
 
+/**
+ * Answered for a node nothing has reported for. Shared rather than built on the spot: this is
+ * read through a zustand selector, and a fresh array per call is a new snapshot every render —
+ * the loop then never settles, which is the very trap `SceneInspector` carries a note about.
+ */
+const NO_CLIPS: readonly string[] = []
+
 /** The clips a node can be asked to play, or none — a model still loading has none yet. */
 export function clipsOfNode(
   state: ModelClipsState,
   documentId: string,
   nodeId: string,
 ): readonly string[] {
-  return state.clips[documentId]?.[nodeId] ?? []
+  return state.clips[documentId]?.[nodeId] ?? NO_CLIPS
 }

@@ -8,6 +8,7 @@ import {
   MeshStandardMaterial,
   Object3D,
   Raycaster,
+  SkeletonHelper,
   SpotLight,
   Sprite,
   SpriteMaterial,
@@ -209,6 +210,9 @@ export class SceneRenderer {
   private readonly gltf: GltfSource
   /** The clips of every model on stage. Apart from the nodes: see `animation.ts`. */
   private readonly animations = new SceneAnimations()
+  /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
+  private readonly skeletons = new Map<string, SkeletonHelper>()
+  private showSkeletons = false
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -473,6 +477,47 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /**
+   * Whether the bones of every rigged model are drawn over it. A rig is what a motion model
+   * hands back, and nothing else in the viewport says whether a mesh carries one.
+   */
+  setSkeletons(shown: boolean): void {
+    if (shown === this.showSkeletons) return
+    this.showSkeletons = shown
+
+    for (const helper of this.skeletons.values()) helper.visible = shown
+    this.viewport.requestRender()
+  }
+
+  /**
+   * A helper is built from the instance and hung beside the nodes, like the grid and the
+   * trihedron — never inside the model, where the outliner would list it as part of the scene
+   * and a click could pick it.
+   */
+  private bindSkeleton(nodeId: string, root: Object3D): void {
+    this.unbindSkeleton(nodeId)
+
+    const bones = root.getObjectByProperty('isBone', true)
+    if (!bones) return
+
+    const helper = new SkeletonHelper(root)
+    helper.visible = this.showSkeletons
+    // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
+    // on a line rather than on the model it belongs to.
+    helper.raycast = () => {}
+    this.skeletons.set(nodeId, helper)
+    this.viewport.scene.add(helper)
+  }
+
+  private unbindSkeleton(nodeId: string): void {
+    const helper = this.skeletons.get(nodeId)
+    if (!helper) return
+
+    helper.removeFromParent()
+    helper.dispose()
+    this.skeletons.delete(nodeId)
+  }
+
   setMotion(held: Set<MotionId>): void {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
@@ -507,6 +552,7 @@ export class SceneRenderer {
     this.environment?.dispose()
     this.environment = null
     this.animations.clear()
+    for (const id of [...this.skeletons.keys()]) this.unbindSkeleton(id)
     this.textureCache.dispose()
     this.modelCache.dispose()
     this.gltf.dispose()
@@ -810,6 +856,7 @@ export class SceneRenderer {
       this.animations.add(node.id, holder, clipsOf(source))
       if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
       this.options.onClips?.(node.id, clipNamesOf(source))
+      this.bindSkeleton(node.id, holder)
 
       applyShadowFlags(
         holder,
@@ -953,6 +1000,7 @@ export class SceneRenderer {
     // Before the instance goes: a mixer holding actions keeps every bone of a released model
     // alive with it.
     this.animations.remove(id)
+    this.unbindSkeleton(id)
 
     this.applied.delete(id)
 

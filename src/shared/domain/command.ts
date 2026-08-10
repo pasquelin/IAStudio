@@ -37,6 +37,7 @@ export type CommandId =
   | 'scene.space'
   | 'scene.projection'
   | 'scene.display'
+  | 'scene.skeletons'
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
@@ -279,6 +280,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneDisplay.title',
     helpKey: 'commands.sceneDisplay.help',
     defaultBinding: 'KeyZ',
+  }),
+  // `KeyB` as in bones. Nothing in the scene scope claims it, and the fly keys are all on the
+  // left hand — see the note above `scene.snap`.
+  command({
+    id: 'scene.skeletons',
+    scope: 'scene',
+    titleKey: 'commands.sceneSkeletons.title',
+    helpKey: 'commands.sceneSkeletons.help',
+    defaultBinding: 'KeyB',
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({

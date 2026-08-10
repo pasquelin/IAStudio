@@ -20,6 +20,8 @@ import { installCanvas } from '@/stores/canvas-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { installGraph } from '@/stores/graph-fixtures'
 import { useSelection } from '@/stores/selection'
+import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { useModelClips } from '@/stores/model-clips'
 import { installScene } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
@@ -791,5 +793,28 @@ describe('inspector panel', () => {
 
       expect(screen.queryByLabelText('Prompt')).toBeNull()
     })
+  })
+})
+
+describe('the inspector on an imported model', () => {
+  // The panel selection outlives a test file, and one left behind puts another face of the
+  // inspector in front — an asset's, a layer's — where this one reads a scene node.
+  beforeEach(() => {
+    useSelection.getState().clear()
+  })
+
+  it('offers no clip picker while the file has reported none', () => {
+    install(modelNodeFixture('model-1'))
+    render(<Content />)
+
+    expect(screen.queryByLabelText('Séquence')).not.toBeInTheDocument()
+  })
+
+  it('offers the clips the file brought', () => {
+    install(modelNodeFixture('model-1'))
+    useModelClips.setState({ clips: { 'doc-1': { 'model-1': ['walk'] } } })
+    render(<Content />)
+
+    expect(screen.getByLabelText('Séquence')).toBeInTheDocument()
   })
 })

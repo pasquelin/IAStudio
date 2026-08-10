@@ -5,9 +5,15 @@ import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 export type SceneView = {
   projection: ProjectionKind
   display: DisplayMode
+  /** Whether the bones of every rigged model are drawn over it. Off, like every other overlay. */
+  skeletons: boolean
 }
 
-const DEFAULT_SCENE_VIEW: SceneView = { projection: 'perspective', display: 'shaded' }
+const DEFAULT_SCENE_VIEW: SceneView = {
+  projection: 'perspective',
+  display: 'shaded',
+  skeletons: false,
+}
 
 /**
  * How each scene document is being looked at. Session state, exactly like `canvas-views` for an
@@ -21,6 +27,7 @@ export type SceneViewsState = {
   views: Record<string, SceneView>
   setProjection: (documentId: string, projection: ProjectionKind) => void
   setDisplay: (documentId: string, display: DisplayMode) => void
+  setSkeletons: (documentId: string, skeletons: boolean) => void
 }
 
 export const useSceneViews = create<SceneViewsState>()(set => ({
@@ -34,6 +41,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setDisplay: (documentId, display) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), display } },
+    })),
+
+  setSkeletons: (documentId, skeletons) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), skeletons } },
     })),
 }))
 

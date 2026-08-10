@@ -25,6 +25,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSpace = vi.fn()
     setProjection = vi.fn()
     setDisplayMode = vi.fn()
+    setSkeletons = vi.fn()
     viewFrom = vi.fn()
     frameSelection = vi.fn()
   },

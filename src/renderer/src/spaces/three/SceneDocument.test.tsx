@@ -30,6 +30,7 @@ const setSnapping = vi.fn()
 const setSpace = vi.fn()
 const setProjection = vi.fn()
 const setDisplayMode = vi.fn()
+const setSkeletons = vi.fn()
 const viewFrom = vi.fn()
 // At module scope like the others, so a test can make the encoding itself refuse: the exporters
 // throw on a texture they cannot write, and that is the half no bridge failure stands in for.
@@ -50,6 +51,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSpace = setSpace
     setProjection = setProjection
     setDisplayMode = setDisplayMode
+    setSkeletons = setSkeletons
     viewFrom = viewFrom
     frameSelection = frameSelection
     exportTo = exportTo
@@ -433,5 +435,14 @@ describe('exporting the scene', () => {
         message: expect.stringContaining('setTextureUtils'),
       }),
     )
+  })
+  it('shows the bones of a rigged model on the bound key, and hides them again', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{b}')
+    expect(setSkeletons).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{b}')
+    expect(setSkeletons).toHaveBeenLastCalledWith(false)
   })
 })

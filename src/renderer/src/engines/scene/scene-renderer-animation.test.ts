@@ -1,4 +1,4 @@
-import { AnimationClip, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
+import { AnimationClip, Bone, Group, Mesh, SphereGeometry, VectorKeyframeTrack } from 'three'
 import type { Object3D } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import type { AnimationRef } from '@shared/domain/scene'
@@ -124,6 +124,64 @@ describe('SceneRenderer and the clips a model brought', () => {
 
     // With no action left driving it, three puts back the value the file was loaded with.
     expect(cubeOf(loaded).position.x).toBe(0)
+    engine.dispose()
+  })
+})
+
+describe('SceneRenderer and the bones a rig carries', () => {
+  const rigged = (): Group => {
+    const root = animatedModel([walk()])
+    const bone = new Bone()
+    bone.name = 'spine'
+    root.add(bone)
+    return root
+  }
+
+  /**
+   * The helpers hang beside the nodes, so the scene is where they are counted — reached by
+   * walking up from the mounted model rather than into the engine: holder, then scene.
+   */
+  const helpersAround = (loaded: Group): number =>
+    (loaded.parent?.parent?.children ?? []).filter(child => child.type === 'SkeletonHelper').length
+
+  it('draws no helper for a model that carries no bone', async () => {
+    const loaded = animatedModel([walk()])
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
+
+    await vi.waitFor(() => expect(loaded.parent).not.toBeNull())
+    expect(helpersAround(loaded)).toBe(0)
+    engine.dispose()
+  })
+
+  it('hangs one beside the nodes for a rigged model, hidden until asked for', async () => {
+    const loaded = rigged()
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
+
+    await vi.waitFor(() => expect(helpersAround(loaded)).toBe(1))
+
+    const helper = (loaded.parent?.parent?.children ?? []).find(
+      child => child.type === 'SkeletonHelper',
+    )
+    expect(helper?.visible).toBe(false)
+
+    engine.setSkeletons(true)
+    expect(helper?.visible).toBe(true)
+    engine.dispose()
+  })
+
+  it('takes the helper away with the node it belonged to', async () => {
+    const loaded = rigged()
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)] })
+    await vi.waitFor(() => expect(helpersAround(loaded)).toBe(1))
+
+    // Kept before the node goes: the model is unparented with it, and the walk up would end early.
+    const scene = loaded.parent?.parent
+    engine.apply(EMPTY_SCENE)
+
+    expect((scene?.children ?? []).filter(child => child.type === 'SkeletonHelper')).toHaveLength(0)
     engine.dispose()
   })
 })

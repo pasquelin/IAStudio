@@ -146,6 +146,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setDisplayMode(view.display)
   }, [view.display])
 
+  useEffect(() => {
+    engine.current?.setSkeletons(view.skeletons)
+  }, [view.skeletons])
+
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them. Only while this tab is in front, or two
   // open scenes would both answer one menu click.
@@ -183,6 +187,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setLocalFrame(current => !current)
         case 'scene.display':
           return useSceneViews.getState().setDisplay(documentId, nextDisplayMode(view.display))
+        case 'scene.skeletons':
+          return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
         case 'scene.projection':
           return useSceneViews
             .getState()
@@ -258,6 +264,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.snap': snapping,
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
+      'scene.skeletons': view.skeletons,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
