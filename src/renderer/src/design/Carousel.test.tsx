@@ -99,6 +99,18 @@ describe('the arrows', () => {
   })
 })
 
+describe('the snapping', () => {
+  /** Proximity, never mandatory: a rail that drags itself back cannot be read halfway. */
+  it('snaps the rail to a card without forcing it', () => {
+    renderCarousel(cards(500))
+
+    const rail = screen.getByRole('region', { name: 'Shelf' })
+    expect(rail.className).toContain('snap-x')
+    expect(rail.className).toContain('snap-proximity')
+    expect(screen.getByText('Card 0').parentElement?.className).toContain('snap-start')
+  })
+})
+
 describe('the page dots', () => {
   it('offers one per page and marks the one being read', async () => {
     renderCarousel(cards(500))
