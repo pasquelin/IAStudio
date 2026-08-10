@@ -121,8 +121,18 @@ function materialsOf(mesh: Mesh): readonly Material[] {
   return Array.isArray(mesh.material) ? mesh.material : [mesh.material]
 }
 
-/** Names the edges the renderer hangs under a mesh, so removing them is a test rather than a map. */
-const OVERLAY_NAME = 'wireframe-overlay'
+/**
+ * Names the edges the renderer hangs under a mesh, so removing them is a test rather than a map —
+ * what marks an overlay as decoration rather than content.
+ *
+ * Exported because the exporter has to strip them and was naming them itself: a rename here would
+ * have left wireframes baked into every delivered GLB, and nothing would have failed to compile.
+ *
+ * The NAME is shared, never the removal. This module owns the geometry and disposes it; the
+ * exporter works on a `cloneSkinned` that shares the buffers, so disposing there would free
+ * what the scene on screen is still drawing with.
+ */
+export const OVERLAY_NAME = 'wireframe-overlay'
 
 /**
  * The edges drawn over a shaded mesh, for the one mode a material cannot express.

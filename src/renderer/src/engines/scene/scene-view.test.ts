@@ -322,3 +322,27 @@ describe('framingPlacement', () => {
     expect(framingPlacement([lamp, other], 60).target.x).toBeCloseTo(15, 5)
   })
 })
+
+/**
+ * Every source of the renderer, as text — read through Vite rather than through `fs`, for the
+ * reason `no-hardcoded-text.test.ts` gives: a test living here has no filesystem.
+ */
+const SOURCES: Record<string, string> = import.meta.glob(
+  ['../../**/*.ts', '../../**/*.tsx', '!../../**/*.test.ts', '!../../**/*.test.tsx'],
+  { query: '?raw', import: 'default', eager: true },
+)
+
+/**
+ * The exporter strips these overlays by name, and used to spell that name itself. A rename here
+ * would then have left wireframes baked into every delivered GLB — silently, since neither side
+ * would have failed to compile. Counted rather than reviewed: the two spellings were identical.
+ */
+describe('the wireframe overlay marker', () => {
+  it('is spelled in exactly one place', () => {
+    const spelling = Object.entries(SOURCES)
+      .filter(([, source]) => source.includes("'wireframe-overlay'"))
+      .map(([path]) => path)
+
+    expect(spelling).toEqual(['./scene-view.ts'])
+  })
+})

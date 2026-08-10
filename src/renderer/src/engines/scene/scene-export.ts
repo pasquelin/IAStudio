@@ -12,6 +12,7 @@ import { USDZExporter } from 'three/addons/exporters/USDZExporter.js'
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { decompress } from 'three/addons/utils/WebGLTextureUtils.js'
 import type { ExportFormat } from '@shared/domain/scene'
+import { OVERLAY_NAME } from './scene-view'
 
 /**
  * A scene on its way out of the studio.
@@ -27,8 +28,6 @@ import type { ExportFormat } from '@shared/domain/scene'
  * viewport mid-export; and the wireframe overlay is the one thing that really is a child of a
  * mesh, so it is dropped from the copy instead of hidden in the original.
  */
-
-const OVERLAY_NAME = 'wireframe-overlay'
 
 /**
  * How a compressed texture becomes one an exporter can write. Neither format holds a GPU
