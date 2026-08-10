@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   GRAPH_NODE_TYPES,
+  type GraphConditionBlock,
   type GraphEdge,
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
+import { blockToCel } from '@shared/domain/branch'
 import {
   compileGraph,
   editorModelOf,
@@ -363,6 +365,58 @@ describe('a branch as the converter compiles one', () => {
     const step = logicOf([{ logic: 'and', conditions: [{ operator: 'equals', value: 'a' }] }])
 
     expect(step?.logic?.cases).toBeUndefined()
+  })
+
+  /**
+   * The studio decides a branch LOCALLY off `blockToCel`, and Scenario decides the published one
+   * off the string below. They have to be the same string, or a graph would take one branch in
+   * the editor and another once published — the one defect a local run cannot have.
+   *
+   * `approvals.ts` was transcribed from this same converter and never checked against it. This is
+   * that check, for every operator the inspector offers.
+   */
+  it('writes, for every operator, the CEL the studio decides a branch with', () => {
+    const blocks: GraphConditionBlock[] = [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isEmpty' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'notEquals', value: 'a knight' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'contains', value: 'kni.ght' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'notContains', value: 'kni.ght' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'greaterThan', value: '3' }] },
+      {
+        logic: 'and',
+        conditions: [{ field: 'text1', operator: 'greaterThanOrEqual', value: '3' }],
+      },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'lessThan', value: '3' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'lessThanOrEqual', value: '3' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'between', value: ['2', '7'] }] },
+    ]
+
+    const scenario = logicOf(blocks)?.logic?.cases?.map(entry => entry.condition)
+    // The converter binds a provider to its own input name; locally the same field resolves to
+    // the CEL variable that provider's value arrives under. Identity here, so the two strings
+    // are comparable at all — what is being measured is the OPERATOR, not the naming.
+    const ours = blocks.map(block => blockToCel(block, field => field))
+
+    expect(ours).toEqual(scenario)
+  })
+
+  /** Joining is the converter's too, and an `or` that joined with `&&` would decide backwards. */
+  it('joins a block the way the studio joins it', () => {
+    const blocks: GraphConditionBlock[] = [
+      {
+        logic: 'or',
+        conditions: [
+          { field: 'text1', operator: 'contains', value: 'knight' },
+          { field: 'text1', operator: 'isEmpty' },
+        ],
+      },
+    ]
+
+    expect(blocks.map(block => blockToCel(block, field => field))).toEqual(
+      logicOf(blocks)?.logic?.cases?.map(entry => entry.condition),
+    )
   })
 })
 
