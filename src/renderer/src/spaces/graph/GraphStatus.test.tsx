@@ -56,6 +56,36 @@ describe('what the canvas says of a graph it would export', () => {
   })
 })
 
+describe('what the canvas says of a graph it has just published', () => {
+  /**
+   * One line for the two answers, and the publication has it: a WRITE on the user's account is
+   * the one thing the pane must never drop for a verdict about what it would export.
+   */
+  it('takes the line over from the compile verdict, in the same corner and the same tones', () => {
+    const { rerender } = render(
+      <GraphStatus result={{ ok: true, steps: 3 }} published={{ ok: true, workflowId: 'w1' }} />,
+    )
+
+    const line = screen.getByRole('status')
+    expect(line).toHaveTextContent('Publié sur Scenario')
+    expect(line).toHaveClass(TONE_TEXT.muted)
+    expect(line).toHaveClass('absolute', 'bottom-2', 'left-2')
+
+    rerender(
+      <GraphStatus result={{ ok: true, steps: 3 }} published={{ ok: false, problem: 'refused' }} />,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent('Scenario l’a refusé')
+    expect(screen.getByRole('status')).toHaveClass(TONE_TEXT.danger)
+  })
+
+  it('says a compile problem the publication ran into in the words the canvas already uses', () => {
+    render(<GraphStatus result={null} published={{ ok: false, problem: 'no-output' }} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('Aucune sortie marquée')
+  })
+})
+
 describe('asking the main process whether a graph compiles', () => {
   it('hands over the graph on screen, and paints what comes back', async () => {
     const compile = vi.fn((): Promise<GraphCompileResult> =>
