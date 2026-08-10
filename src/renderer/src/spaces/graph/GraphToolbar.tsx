@@ -1,6 +1,8 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
+import { cn } from '@/helpers/cn'
 import { useBinding } from '@/stores/bindings'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { graphTools, type GraphMode, type GraphToolbarState } from './graph-tools'
@@ -78,7 +80,8 @@ export function GraphToolbar({
   )
 
   return (
-    <div ref={bar} className="absolute top-2 left-2 z-10">
+    // `z-10` on top of the shared inset: React Flow paints its pane over anything without one.
+    <div ref={bar} className={cn(PANE_TOOLBAR, 'z-10')}>
       <Toolbar
         tools={graphTools({ canUndo, canRedo, canRun, canExport, canImport, running, runShortcut })}
         activeTool={mode}

@@ -141,6 +141,16 @@ export const MENU_SURFACE = cn(
   'rounded-(--radius-sc-lg) border p-1 shadow-(--sc-shadow-floating)',
 )
 
+/**
+ * Where a workspace's own bar floats over its pane. The graph, the image and the 3D space put it
+ * in the same corner with the same inset, and a bar that moves has to move in all three.
+ *
+ * The inset only, never the skin: `Toolbar` wears that. The graph adds a `z-10` of its own —
+ * React Flow paints its pane above anything without one, and the other two spaces have nothing
+ * to climb over.
+ */
+export const PANE_TOOLBAR = 'absolute top-2 left-2'
+
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */
 export const MEDIA_FRAME =
   'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'

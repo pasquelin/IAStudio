@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { GraphCanvas, type GraphCanvasProps } from './GraphCanvas'
 import { canvasNode, clickNode } from './graph-canvas-fixtures'
 
@@ -75,6 +76,16 @@ const canvas = (state: GraphState = graph, overrides: Overrides = {}) =>
   )
 
 describe('the graph canvas', () => {
+  /**
+   * The inset is read from the design system, as the image and 3D spaces read it; the `z-10` is
+   * the graph's own, and React Flow is why — its pane paints over anything without one.
+   */
+  it('places its bar where every space places it, one layer above the pane', () => {
+    canvas()
+
+    expect(screen.getByRole('toolbar').parentElement).toHaveClass(PANE_TOOLBAR, 'z-10')
+  })
+
   it('draws each node with the component its type names', () => {
     canvas()
 

@@ -3,6 +3,7 @@ import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
@@ -313,7 +314,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
       <Toolbar
-        className="absolute top-2 left-2"
+        className={PANE_TOOLBAR}
         tools={tools}
         activeTool={mode}
         onTool={id => {
