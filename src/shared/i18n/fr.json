@@ -84,7 +84,12 @@
       "stickyNote": "Note",
       "approval": "Approbation",
       "ifElse": "Condition",
-      "transformText": "Transformation"
+      "transformText": "Transformation",
+      "textHint": "Un texte que les nœuds suivants liront — un prompt, le plus souvent",
+      "assetHint": "Une image, une vidéo ou un son du projet, donné en entrée au graphe",
+      "stickyNoteHint": "Une note pour qui lira le graphe ; elle n’entre dans aucune exécution",
+      "approvalHint": "Met l’exécution en pause jusqu’à ce que quelqu’un valide ce qui précède",
+      "transformTextHint": "Réécrit le texte reçu avant de le transmettre plus loin"
     },
     "approve": "Approuver",
     "approveHint": "Laisser la suite du graphe se servir de ce résultat",
@@ -109,7 +114,13 @@
       "lessThanOrEqual": "inférieur ou égal à",
       "between": "entre"
     },
-    "noField": "Rien"
+    "noField": "Rien",
+    "generators": {
+      "image": "Génère une image depuis ses entrées — le modèle se choisit dans le panneau Modèles",
+      "video": "Génère une vidéo depuis ses entrées — le modèle se choisit dans le panneau Modèles",
+      "3d": "Génère un modèle 3D depuis ses entrées — le modèle se choisit dans le panneau Modèles",
+      "audio": "Génère un son depuis ses entrées — le modèle se choisit dans le panneau Modèles"
+    }
   },
   "graphCompile": {
     "steps_one": "{{count, number}} étape",
@@ -1884,7 +1895,13 @@
     "audioTake": "Ouvrir dans l’éditeur audio",
     "imageLayer": "Placer comme calque",
     "videoClip": "Ajouter au montage",
-    "textureChannel": "Utiliser comme couleur de base"
+    "textureChannel": "Utiliser comme couleur de base",
+    "skyboxSourceHint": "Ouvre l’espace Ciels et pose cette image comme source du panorama",
+    "sceneMeshHint": "Ouvre la scène 3D et y ajoute le modèle",
+    "audioTakeHint": "Ouvre l’éditeur audio et y charge cette prise",
+    "imageLayerHint": "Ouvre le document image et pose l’asset en nouveau calque",
+    "videoClipHint": "Ouvre le montage et y ajoute l’asset comme clip",
+    "textureChannelHint": "Ouvre le document de texture et remplit son canal de couleur de base"
   },
   "prompt": {
     "suggest": "Proposer des variantes",

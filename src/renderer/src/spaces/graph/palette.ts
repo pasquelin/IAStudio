@@ -33,3 +33,13 @@ export function paletteLabelKey(entry: PaletteEntry): string {
   if (entry.group === 'input') return NODE_LABEL_KEYS[entry.node] ?? entry.node
   return `families.${entry.family}`
 }
+
+/**
+ * The key of the sentence explaining what the row would add. Not `<label>Hint`: a family names
+ * what a MODEL produces and is read across the studio, while this explains the node a graph
+ * gains — so the generators' sentences live under the graph rather than beside `families.image`.
+ */
+export function paletteHintKey(entry: PaletteEntry): string {
+  if (entry.group === 'input') return `${paletteLabelKey(entry)}Hint`
+  return `graph.generators.${entry.family}`
+}

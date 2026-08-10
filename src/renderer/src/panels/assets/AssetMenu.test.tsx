@@ -36,6 +36,21 @@ describe('what the shelf offers to do with an asset', () => {
     expect(screen.getByRole('menuitem', { name: /montage/ })).toBeInTheDocument()
   })
 
+  // Every destination opens its own document before writing into it — which is the half of the
+  // gesture "Use as sky" does not say, and the one that surprises.
+  it('says that a destination opens its document, not only that it takes the asset', () => {
+    render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
+
+    expect(screen.getByRole('menuitem', { name: /ciel/ })).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre l’espace Ciels et pose cette image comme source du panorama',
+    )
+    expect(screen.getByRole('menuitem', { name: /calque/ })).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre le document image et pose l’asset en nouveau calque',
+    )
+  })
+
   it('offers a take nothing a picture would take', () => {
     render(<AssetMenu asset={asset({ type: 'audio' })} at={AT} onClose={() => {}} />)
 
