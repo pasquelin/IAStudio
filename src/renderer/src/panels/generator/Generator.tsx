@@ -21,6 +21,7 @@ import { FormHeader } from '@/design/FormHeader'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
+import { NoProject } from '@/panels/shared/NoProject'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
 
 /**
@@ -105,6 +106,11 @@ export function Generator() {
 
   if (!authenticated) return <MissingCredentials icon={mdiCreationOutline} />
 
+  // A job collects into its own project and nowhere else, so generating without one produces
+  // assets that land nowhere. The panel asks for a project rather than drawing a form whose
+  // button is dead — which is what it did, with one muted line to say why.
+  if (!project) return <NoProject icon={mdiCreationOutline} message={t('generation.noProject')} />
+
   // Unreachable: a section without a model offers no generator at all — the rail drops its icon
   // and `shownTool` puts Models in this half. The guard is what makes `modelId` a string below.
   if (!modelId) return null
@@ -137,9 +143,6 @@ export function Generator() {
     <div className="flex h-full min-h-0 flex-col overflow-auto">
       <FormHeader title={descriptor.data?.name ?? t('collection.loading')} />
 
-      {/* A project is where a generated asset lands; without one there is nowhere to put it. */}
-      {!project && <p className="text-muted px-2 text-xs">{t('generation.noProject')}</p>}
-
       {descriptor.data && (
         // Above the `Suspense`: a rejected `lazy()` import is an error, not a fallback. Without
         // it the throw leaves the panel, leaves the dock, and takes the whole window down.
@@ -153,7 +156,6 @@ export function Generator() {
               submitLabel={t('actions.generate')}
               submitNote={cost.note}
               onValuesChange={cost.onValuesChange}
-              busy={!project}
               preset={preset}
               // Two accessories, on two different sets of fields. Assistance hangs on the one
               // the API marks as its prompt, because only that one can be rewritten for the

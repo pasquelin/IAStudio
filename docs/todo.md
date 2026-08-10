@@ -396,9 +396,10 @@ propriété.
 
 ## 1.1 La couche projet — ce qui reste après les entrées 16 et 15
 
-**Les entrées 16 et 15 sont livrées les 10 août 2026** : le manifeste est défendu à la lecture et
-honnête à l'écriture, et l'Explorateur sans projet porte enfin ses deux sorties. Ce qui reste du
-bloc est la question des prérequis de panneau — ci-dessous — et celle des layouts.
+**Les entrées 16, 15 et 44 sont livrées le 10 août 2026** : le manifeste est défendu à la lecture
+et honnête à l'écriture, l'Explorateur sans projet porte ses deux sorties, et le Générateur les
+porte aussi — il exige un projet plutôt que de dessiner un formulaire que rien ne peut soumettre.
+Ce qui reste du bloc est la question des layouts.
 
 > **Ce que les deux lots ont laissé derrière eux, et qu'il ne faut pas redécouvrir :**
 >
@@ -419,39 +420,7 @@ bloc est la question des prérequis de panneau — ci-dessous — et celle des l
 >   main, `openFailureKey` pour l'ouverture et `activity.projectNotCreated` pour la création. **Un
 >   nouvel échec de ces deux chemins se dit là-bas, jamais dans le store.**
 
-### 44. Un panneau ne déclare toujours pas ce dont il a besoin
-
-**Le geste attendu.** Depuis n'importe quel panneau qui exige un projet, savoir ce qui manque et
-comment le combler — comme l'Explorateur le fait depuis le 10 août.
-
-**Ce qui est livré, et qui ne se refait pas.** L'entrée 15 est fermée : `EmptyState` accepte une
-`secondary`, l'Explorateur sans projet offre « Ouvrir un projet » et « Créer un projet », et les
-deux appellent `openPicked` / `createPicked`, qui n'avalaient pas leur refus. **Le panneau reste
-plutôt que de disparaître** — c'était le choix, et il évite le piège de l'autre : retirer un panneau
-touche le **layout persisté**, et un panneau ajouté à l'API sortante est jeté par le `fromJSON` du
-suivant (§ 4.1).
-
-**Ce qui reste est la notion, pas le bouton.** `ToolPlacement` (`shared/domain/tool.ts`) déclare
-`id`, `zone`, `slot`, `workspaces` — **jamais de prérequis**. Ils sont **cinq** à lire `useProject`
-chacun de son côté : `Explorer`, `Generator`, `AssetBrowser`, `AssetBrowserActions`, `Apps`, et
-**un seul des cinq offre une sortie**. Porter `requires` dans `TOOL_PLACEMENTS` réunirait ces cinq
-réponses en une règle testable — l'accueil a déjà exactement cette notion (`HOME_SECTIONS` porte
-`requires: ['project' | 'api']`), avec une politique inverse : « a section whose requirements are
-unmet is **dropped rather than drawn empty** ».
-
-**La question qui bloquait est tranchée le 10 août 2026, et ne se redemande pas : le Générateur
-EXIGE un projet**, et affiche sa sortie — « Ouvrir un projet » / « Créer un projet » — comme
-l'Explorateur depuis l'entrée 15. Générer sans projet produirait un job qui ne se collecte nulle
-part (« un job ne collecte que dans son propre projet », § 10.3), et rien ne doit se générer dans
-le vide.
-
-**Ce qui n'a PAS été retenu, et il faut le savoir avant de le reproposer** : porter `requires`
-dans `TOOL_PLACEMENTS` pour que les cinq panneaux répondent d'une seule règle. L'utilisateur a
-choisi le geste, pas la refonte. Le faire quand même reviendrait à décider à sa place — le
-mécanisme reste écrit ci-dessus pour le jour où un sixième panneau poserait la question.
-
 ---
-
 
 # 2. Les gestes qui n'aboutissent pas
 
@@ -1427,6 +1396,15 @@ de volet ne garantit une ligne.
 - **Mutualiser la file de promesses du BVH avec `catalog-client.ts`** : écarté. Les deux fichiers sont de
   part et d'autre de la frontière main/renderer, et les sémantiques divergent — le catalogue rejette à la
   fermeture, le BVH résout `null`.
+- **Un panneau qui exige un projet le demande, et n'invente pas de mécanisme.** L'Explorateur et
+  le Générateur passent par `panels/shared/NoProject`, qui dit pourquoi CE panneau en a besoin et
+  offre les deux gestes. **Porter `requires` dans `TOOL_PLACEMENTS` a été explicitement écarté par
+  l'utilisateur le 10 août 2026** : il a choisi le geste, pas la refonte des cinq panneaux. Ne pas
+  le reproposer sans le lui redemander.
+- **`project` vaut `null` avant que le main ait répondu, et ce n'est pas une réponse.** `known` est
+  ce qui le dit. Le studio rouvre le dernier projet au démarrage, donc un panneau qui lit ce `null`
+  offre de créer un projet à quelqu'un qui en a un — le temps que la réouverture prenne, à chaque
+  lancement. `NoProject` attend `known` ; **tout nouveau lecteur de `project` doit faire de même**.
 - **`configure({ defaultHidden: true })` dans `test-setup.ts`** : mesuré à **33 %** de gain sur tout le
   dépôt, et refusé. Un bouton `aria-hidden` deviendrait trouvable par `getByRole` dans les quatre cents
   fichiers — un angle mort permanent.

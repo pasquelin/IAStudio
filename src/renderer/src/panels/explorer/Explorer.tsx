@@ -9,6 +9,7 @@ import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { NoProject } from '@/panels/shared/NoProject'
 import { EntryMenu } from './EntryMenu'
 import { EntryRow } from './EntryRow'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
@@ -80,26 +81,13 @@ export function Explorer() {
   }
 
   if (!projectPath)
-    return (
-      <EmptyState
-        icon={mdiFolderOpenOutline}
-        message={t('explorer.noProject')}
-        action={{
-          label: t('project.open'),
-          onClick: () => void useProject.getState().openPicked(),
-        }}
-        secondary={{
-          label: t('project.create'),
-          onClick: () => void useProject.getState().createPicked(),
-        }}
-      />
-    )
+    return <NoProject icon={mdiFolderOpenOutline} message={t('explorer.noProject')} />
 
-  // The name the disk shows is what is renamed, so the answer settles when the folder is read
-  // again — the watch does that on its own, and this only closes the field.
   const isOpen = (document: DocumentDescriptor | null): boolean =>
     document !== null && open[document.id] !== undefined
 
+  // The name the disk shows is what is renamed, so the answer settles when the folder is read
+  // again — the watch does that on its own, and this only closes the field.
   const commitRename = (node: FolderNode, name: string): void => {
     setRenaming(null)
     if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
@@ -155,9 +143,7 @@ export function Explorer() {
         <EntryMenu
           node={menu.node}
           at={menu.at}
-          openInTab={
-            documentOf(menu.node) !== null && open[documentOf(menu.node)!.id] !== undefined
-          }
+          openInTab={isOpen(documentOf(menu.node))}
           onRename={() => setRenaming(menu.node.id)}
           onClose={() => setMenu(null)}
         />
