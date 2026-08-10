@@ -2,13 +2,13 @@ import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, emptyAssetCounts, type AssetType } from '@shared/domain/asset'
 import { UiIcon } from '@/design/UiIcon'
 import { rowSkin } from '@/design/styles'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { revealAssetsOfKind } from '@/helpers/reveal-panel'
 import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
-import { HINT_LEFT } from '@/helpers/tooltip'
 import { RefusedPanel } from '@/panels/shared/RefusedPanel'
 
 const NONE = emptyAssetCounts()
@@ -45,7 +45,13 @@ export function Counts() {
   )
 }
 
-/** A kind with nothing in it stays on the list and stops responding — see `AssetCounts`. */
+/**
+ * A kind with nothing in it stays on the list and stops responding — see `AssetCounts`.
+ *
+ * `HINT_LEFT` and not a tooltip naming the row: the count and the kind are already on screen, so
+ * the sentence has to say what the click DOES — open the shelf, narrowed — which an integer laid
+ * on a glyph cannot. `left` because the host is the right column; the placement is the host's.
+ */
 function Counter({ type, total }: { type: AssetType; total: number }) {
   const { t } = useTranslation()
 
@@ -55,6 +61,7 @@ function Counter({ type, total }: { type: AssetType; total: number }) {
       disabled={total === 0}
       {...HINT_LEFT(t('home.counts.reveal'))}
       onClick={() => revealAssetsOfKind(type)}
+      {...HINT_LEFT(t('home.counts.reveal'))}
       // `rowSkin` rather than the hover and the focus ring written out again: the same line must
       // not light up differently depending on which panel lists it. A count of nothing keeps its
       // place and stops answering — dimmed, and `disabled` takes the hover away on its own.

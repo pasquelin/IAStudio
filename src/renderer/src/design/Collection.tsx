@@ -161,7 +161,10 @@ export function Collection<T extends { id: string }>({
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
   // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
-  const card = state.view === 'grid' ? renderCard : undefined
+  // "No row to draw ⇒ always a grid", which is what the prop's own doc claims. Structural rather
+  // than documented: a caller passing only `renderCard` under a `view: 'list'` state would
+  // otherwise mount focusable, arrow-walkable cells that paint nothing — a blank list, not an error.
+  const card = renderRow === undefined || state.view === 'grid' ? renderCard : undefined
   const grid = card !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize, grid)
 

@@ -9,16 +9,6 @@ import { reconcileOrder } from './order'
  */
 
 /**
- * What a section cannot be drawn without. A section with none is drawable at all times.
- *
- * A key, and nothing else. There was a `'project'` requirement too, worn by the four bands that
- * listed what a folder held — and all four are panels now, where an open folder is an empty
- * state rather than a reason to disappear. A requirement no section declares is a branch nobody
- * can reach, so it went with them.
- */
-export type HomeRequirement = 'api'
-
-/**
  * A band of the page, and only that. Six ids left this union on 10 August for
  * `domain/tool.ts` — the projects, what was made, the counts, the library, the documents and
  * the journal became panels of the home's two columns. A section is what the CENTRE stacks;
@@ -29,10 +19,19 @@ export type HomeSectionId =
 
 export type HomeSectionEntry = {
   id: HomeSectionId
-  requires: readonly HomeRequirement[]
+  /**
+   * Whether the band needs an API key to draw anything at all.
+   *
+   * A flag and not a list of requirements. It WAS a list, and its second value — a project had to
+   * be open — went with the four bands that listed what a folder held, which are panels now: a
+   * closed folder is an empty state there, not a reason to disappear. What the list then became
+   * was a loop asking one question several times, where a second value added later would have
+   * compiled, passed every test, and silently meant "api".
+   */
+  requiresApi?: boolean
   /**
    * Sections the user may not hide. Together they are what keeps the screen from ever being
-   * empty — which is why `home.test.ts` demands that every pinned section require nothing.
+   * empty — which is why `home.test.ts` demands that no pinned section need a key.
    */
   pinned?: boolean
   /** How many items the section shows before the user says otherwise. */
@@ -52,18 +51,18 @@ export type HomeSectionEntry = {
  * that draws it: an id nothing renders is a line in the settings nobody can act on.
  */
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
-  { id: 'spotlight', requires: [], pinned: true },
-  { id: 'tools', requires: [], pinned: true },
-  // Requires nothing: a recipe is kept outside every project, and the shelf is the one place
-  // that still has something to show when no folder is open.
-  { id: 'favorites', requires: [], defaultLimit: 12 },
-  { id: 'jobs', requires: ['api'], defaultLimit: 8 },
-  { id: 'similar', requires: ['api'] },
-  { id: 'spark', requires: ['api'] },
-  { id: 'usage', requires: ['api'], defaultLimit: 6 },
+  { id: 'spotlight', pinned: true },
+  { id: 'tools', pinned: true },
+  // Needs no key: a recipe is kept outside every project, and the shelf is the one place that
+  // still has something to show with nothing connected.
+  { id: 'favorites', defaultLimit: 12 },
+  { id: 'jobs', requiresApi: true, defaultLimit: 8 },
+  { id: 'similar', requiresApi: true },
+  { id: 'spark', requiresApi: true },
+  { id: 'usage', requiresApi: true, defaultLimit: 6 },
   // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
   // count would cap what the reader can reach rather than how much is drawn at once.
-  { id: 'explore', requires: ['api'], anchored: true },
+  { id: 'explore', requiresApi: true, anchored: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
@@ -99,7 +98,7 @@ export type HomeContext = {
 }
 
 function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
-  return entry.requires.every(() => context.authenticated)
+  return entry.requiresApi !== true || context.authenticated
 }
 
 /**

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { MediaTile } from './MediaTile'
 import { FOCUS_RING } from './styles'
 import { cn } from '@/helpers/cn'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { TIP_BOTTOM, type TooltipFactory } from '@/helpers/tooltip'
 
 /** What a picture tile measures, square. Read by the bands still laid out sideways. */
 export const SHELF_TILE_SIZE = 132
@@ -19,6 +19,11 @@ export type ShelfTileProps = {
   onClick?: () => void
   /** A second action, laid over the corner. Beside the tile rather than inside it: no nesting. */
   corner?: ReactNode
+  /**
+   * Placement of the name's tooltip, from the host. A band read across the page wants it below;
+   * a grid in a 260 px column wants it to the side, or it overflows the panel it is in.
+   */
+  tip?: TooltipFactory
 }
 
 /**
@@ -36,6 +41,7 @@ export function ShelfTile({
   label,
   onClick,
   corner,
+  tip = TIP_BOTTOM,
 }: ShelfTileProps) {
   const tile = <MediaTile url={url} caption={caption} fallbackIcon={fallbackIcon} />
 
@@ -47,7 +53,7 @@ export function ShelfTile({
         <button
           type="button"
           onClick={onClick}
-          {...TIP_BOTTOM(label, false, hint)}
+          {...tip(label, false, hint)}
           className={cn(
             'absolute inset-0 cursor-pointer rounded-(--radius-sc-md) border-none',
             'bg-transparent p-0 hover:opacity-90',

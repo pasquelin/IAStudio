@@ -7,6 +7,7 @@ import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
 import { toolIcon } from '@/helpers/tool-registry'
 import { TILES_ONLY } from '@/helpers/collection-state'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
@@ -108,6 +109,7 @@ function Tile({ asset, fetched }: { asset: CloudAsset; fetched: Asset | undefine
       fallbackIcon={assetIcon(asset.type)}
       hint={asset.name}
       label={act?.label ?? asset.name}
+      tip={TIP_LEFT}
       {...(act ? { onClick: act.run } : {})}
     />
   )

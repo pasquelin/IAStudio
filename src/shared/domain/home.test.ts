@@ -27,9 +27,9 @@ const ALL_HIDDEN: HomeSectionSetting[] = HOME_SECTIONS.map(entry => ({
 }))
 
 describe('the pinned sections', () => {
-  it('require nothing, which is what makes an empty home impossible', () => {
+  it('need no key, which is what makes an empty home impossible', () => {
     for (const entry of HOME_SECTIONS.filter(candidate => candidate.pinned === true)) {
-      expect(entry.requires).toEqual([])
+      expect(entry.requiresApi).toBeUndefined()
     }
   })
 })

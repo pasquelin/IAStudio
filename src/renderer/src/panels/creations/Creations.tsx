@@ -79,6 +79,7 @@ function Tile({ asset }: { asset: Asset }) {
       fallbackIcon={assetIcon(asset.type)}
       hint={generation?.prompt || asset.name}
       label={t('home.open', { name: asset.name })}
+      tip={TIP_LEFT}
       onClick={() => void openFromHome(asset)}
       corner={
         generation && (
