@@ -98,7 +98,12 @@ surface.
 | **Ambient occlusion** | the corners light struggles to reach | depth in the hollows |
 | **Height** | the real relief | an actual displacement of the surface, stronger than normals |
 | **Emission** | what glows by itself | a neon sign, embers |
-| **Cavity** | the hollows and edges of the surface | darkens the bottom of grooves, tuned by the *Cavity* slider in the **Material** section |
+| **Cavity** | the hollows and edges of the surface | darkens the bottom of grooves, adjusted by the *Cavity* slider in the **Material** section |
+
+> **The panel writes two of these names shorter**: the tile says **Normal** and **Occlusion**
+> where this table and the [glossary](17-glossary.md) say *Normals* and *Ambient occlusion*. They
+> are the same channels — the long names are the trade's, the short ones fit under a thumbnail.
+> (In French a third differs: the tile says *Métal* for *Métallicité*.)
 
 Each channel has an **origin**:
 
