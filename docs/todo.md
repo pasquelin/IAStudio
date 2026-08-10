@@ -258,72 +258,50 @@ le but : **un fichier neuf non testé dans un panneau fait rougir la porte** au 
 
 ---
 
-## 0.2 `develop` est rouge par intermittence, et jamais deux fois au même endroit — sauf une
+## 0.2 `develop` est rouge par intermittence — un groupe sur trois est fermé
 
 **Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d'affilée. Un `validate` rouge qu'il
 faut réexécuter pour croire est un filet qui ne tient plus.
 
-### Le troisième groupe — un endroit fixe, et une reproduction qui n'a PAS tenu
+### Le troisième groupe — TRAITÉ le 10 août 2026, cause trouvée
 
-> **La chasse est faite le 10 août 2026, et elle n'a rien donné. Ne pas la refaire :** ce qui suit
-> dit ce qui a été essayé, pour que la prochaine session parte d'ailleurs.
+**`Library.test.tsx > opens an asset the project has already fetched` avait une cause, et ce
+n'était ni un délai ni le `Carousel`.** Le geste : `useCloud.pull()` finit par
+`useAssets.invalidate()`, qui arme un **`setTimeout` de 200 ms dans la portée du module**. Le cas
+qui rapatrie pose ce minuteur ; **trois cas plus loin**, celui qui ouvre seed `useAssets` et
+laisse le pont répondre que le projet ne tient rien. Si le minuteur tombe pendant ce cas-là,
+`refresh()` contredit le seed, la bande rebascule de « Ouvrir » à « Récupérer », et le nœud que
+`userEvent` tient est détaché avant le clic.
 
-**Ce qui est solide** : `Library.test.tsx > opens an asset the project has already fetched` a rougi
-**quatre fois en une demi-heure, toujours au même endroit et sur la même assertion** — deux
-`pnpm validate` complets, puis deux exécutions du fichier seul. C'est le seul cas connu où
-l'intermittence a une **identité stable**, et c'est ce qui distingue ce groupe des deux autres.
+**Ce qui l'a montré, et rien d'autre ne l'aurait fait** : une sonde qui, au moment de l'échec,
+relève le bouton présent à l'écran. Il disait « Récupérer ». Toute la chasse précédente lisait la
+trace, qui ne dit que « le mock n'a pas été appelé ».
 
-La trace, et c'est tout ce qu'elle dit :
+**Le correctif est dans la fixture, qui mentait** : `install` prend désormais ce que le projet
+tient et le pont le dit comme le store, si bien qu'un `refresh`, d'où qu'il vienne, ne contredit
+plus rien.
 
-```
-× opens an asset the project has already fetched
-AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
-  Library.test.tsx:132  expect(openFromHome).toHaveBeenCalledTimes(1)
-```
+> **Ce qui reste vrai du mécanisme et vaut pour tout le dépôt** : un cas qui seed un store et
+> laisse le pont dire l'inverse est un cas qu'un rafraîchissement démolit. Et **`invalidate()`
+> n'est pas annulable** — le minuteur de 200 ms traverse les frontières de cas sans que rien ne
+> le signale. Chercher ce motif avant d'accuser le hasard.
 
-**Le bouton est donc trouvé** — `findByRole` n'a pas expiré — **et cliqué, et son `onClick` ne part
-pas.**
+**Ce que la mesure NE prouve pas, et il ne faut pas le faire dire plus.** Sous couverture, le
+défaut tombait **3 fois sur 8** ; après correctif, **0 sur 12**. Mais la machine est redevenue
+calme entre les deux, et **8 tours sans le correctif n'ont rien rendu non plus**. C'est le
+**mécanisme** qui est observé, pas le taux — un A/B sur un défaut dont la fréquence suit la charge
+ne se contrôle pas depuis une seule session.
 
-**Ce qui a été mesuré ensuite, et qui n'a rien donné : 57 exécutions du fichier intact, aucun
-échec**, en quatre conditions choisies pour se contredire l'une l'autre :
+> **Le coût des chasses précédentes, pour qu'il ne se repaie pas.** 57 exécutions du fichier
+> intact — worktree neuf, dépôt principal, sous une suite `renderer` complète, et au commit exact —
+> **zéro échec**, parce que la machine était calme. Une intermittence dont le taux suit la charge
+> ne s'infirme pas en la relançant au calme, et j'avais écrit « se reproduit seul, sans autre
+> session » sans avoir vérifié la dernière moitié. **Le levier n'était pas de relancer, c'était
+> d'INSTRUMENTER** — et de le faire dans la condition où ça tombe, ici la couverture.
 
-| Condition | Tours | Échecs |
-|---|---|---|
-| Fichier seul, `--maxWorkers=3`, worktree neuf | 15 | 0 |
-| Fichier seul, dépôt principal | 15 | 0 |
-| Fichier seul **pendant** une suite `renderer` complète en parallèle | 12 | 0 |
-| Fichier seul, **au commit exact où il avait rougi** (`f2eec12a`) | 15 | 0 |
-
-Plus 18 tours d'une version instrumentée, et 70 d'un scénario isolé réécrit : rien.
-
-**Trois conclusions, dont une qui corrige ce fichier :**
-
-1. **« Se reproduit seul, une fois sur cinq » était faux, et c'est moi qui l'avais écrit.** Les
-   quatre échecs sont tombés dans une fenêtre où **trois autres sessions fusionnaient** (`types-
-   connect`, `design-tooltips`, la dictée). Je n'avais pas vérifié « sans autre session » : je
-   l'avais supposé. **Un chiffre rapporté n'est pas un chiffre mesuré**, y compris quand c'est le
-   sien — le § 0.1 le dit déjà d'un autre chiffre, et il vient de se repayer.
-2. **Ni le code ni la charge ordinaire ne suffisent.** Le commit exact ne rougit pas, et une suite
-   complète tournant à côté ne rougit pas non plus. Ce qui distingue la fenêtre d'échec reste
-   **les conditions**, exactement comme le disent les deux autres groupes — mais d'une charge d'un
-   autre ordre : trois ou quatre `pnpm validate` **avec couverture** en même temps.
-3. **La piste de cause n'a pas été ouverte, et elle reste ouverte.** `Carousel` est **virtualisé**
-   (`useVirtualizer`, `ResizeObserver`, un `rAF` de coalescence) : sous jsdom, `clientWidth` vaut 0,
-   et une mesure qui tomberait entre le `findByRole` et le clic démonterait le nœud que
-   `userEvent` tient. **C'est une hypothèse, pas un diagnostic** — elle n'a pas pu être mise en
-   défaut faute d'échec à observer.
-
-**Ce qu'il faudrait pour aller plus loin, et ce que ça coûte** : reproduire demande de saturer la
-machine comme trois ou quatre sessions le font, ce qu'une session seule ne sait pas fabriquer
-honnêtement.
-
-**Et une fausse bonne idée, écartée sur relecture du test — ne pas la reproposer.** « Chercher le
-bouton au moment du clic plutôt que de tenir un nœud trouvé plus tôt » ne change **rien** : le
-test écrit déjà `await userEvent.click(await screen.findByRole(…))`, en une seule expression. La
-fenêtre n'est pas entre deux lignes du test, elle est entre la résolution de `findByRole` et la
-séquence de pointeur d'`userEvent` — et aucune écriture du test ne la referme. **Il n'y a donc pas
-de correctif côté test tant que la cause n'est pas connue**, et c'est pour ça que la piste du
-Carousel virtualisé reste la seule porte.
+> **Deux fausses pistes, écartées et notées.** Le `Carousel` virtualisé sous jsdom : plausible,
+> et faux. Et « chercher le bouton au moment du clic » : le test écrit déjà
+> `await userEvent.click(await screen.findByRole(…))`, en une expression — ça ne change rien.
 
 **Le premier groupe est un dépassement de délai sous charge.** Le pire des trois est traité
 (`55ddf63`, `ShortcutsSettings.test.tsx` de 26 s à 3 s). Restent :
@@ -589,30 +567,43 @@ flèches.
 > sorties — pression à côté, `Échap`, fenêtre qui perd le focus — et `Flyout` l'offre en option
 > à ses appelants qui n'ouvrent pas au survol. `Flyout` ne pose plus `role="menu"` d'office non
 > plus : le rôle se déclare, et le seul appelant qui héberge des curseurs ne le déclare pas.
-> **Ne pas re-signaler ces deux-là.** Ce qui reste de `Flyout` est le clavier : aucun piège de
-> focus, aucune navigation aux flèches.
+> **Ne pas re-signaler ces deux-là.**
 
-> **Une deuxième dette entre dans ce lot** : `design/MenuRow.tsx` n'expose aucun
-> `aria-checked` — aucun lecteur d'écran ne dit quelle ligne est active, dans **tous** les menus
-> du studio.
+> **Le clavier et `aria-checked` sont livrés** (`feat/menu-clavier`, 10 août 2026), pour
+> `ContextMenu` et pour `MenuRow`. **Ne pas les réécrire.** Ce qui reste de ce lot est
+> `Flyout`, et **il tient dans une ligne** : `useMenuKeys(surface, onClose)` existe et est le
+> même hook. Voir l'entrée 46.
 
-### 32. Un menu contextuel ne se prend jamais au clavier
+### 46. `Flyout` n'a toujours pas les manières d'un menu au clavier
 
-**Le geste attendu.** Ouvrir un menu contextuel au clavier, le parcourir aux flèches, en sortir par `Échap`, et
-retrouver le focus là où on l'avait laissé.
+**Le geste attendu.** Ouvrir un flyout de la barre d'outils au clavier, le parcourir aux flèches,
+en sortir par `Échap`, et retrouver le focus là où on l'avait laissé — ce que le menu contextuel
+fait depuis le 10 août.
 
-**Vu le 9 août 2026.** `design/ContextMenu.tsx` est un `createPortal` vers `document.body` portant
-`role="menu"`, avec des `MenuRow` en `role="menuitem"`. Il n'a **aucune gestion du focus** : ni entrée
-au focus, ni `tabIndex`, ni piège de focus, ni traitement des flèches, ni restauration à la fermeture.
+**Ce qui est déjà écrit et ne se refait pas.** `hooks/useMenuKeys.ts` porte le patron APG en
+entier — focus sur la première ligne à l'ouverture, flèches en boucle, `Début`/`Fin`, `tabindex`
+roving, `Tab` qui ferme, focus rendu à l'ouvreur. `ContextMenu` l'appelle en une ligne, et onze
+tests le tiennent.
 
-**Ce que ça coûte** : même quand l'ouverture est possible au clavier, le focus reste où il était, et
-le menu — ajouté en fin de `body` — ne s'atteint qu'en traversant tout le document à la tabulation.
+**Ce qui reste, et les deux pièges qui vont avec :**
 
-**Le patron APG existe et il est nommé** : entrée au focus sur la première ligne, navigation aux
-flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le menu.
+1. **Deux des appelants de `Flyout` ouvrent au survol**, avec un délai de grâce — c'est déjà la
+   raison pour laquelle `useDismiss` s'y déclare au lieu d'être d'office. Un flyout qui prend le
+   focus en s'ouvrant sous la souris volerait le curseur du texte à qui passe devant. **Le
+   clavier doit donc être une option de plus, jamais un défaut** — même forme que le rejet.
+2. **`Flyout` ne pose plus `role="menu"` d'office**, et `useMenuKeys` ne trouve ses lignes que par
+   leur rôle. Un appelant qui ne se déclare pas menu n'aura pas le clavier, et c'est cohérent —
+   celui qui héberge des curseurs n'en veut pas — mais ça ne se devine pas à la lecture du hook.
 
-> **C'est préexistant et ça touche tout le monde** : `DocumentTab`, `DraggableAsset`, `AssetMenu`,
-> `StyleRow`, et la barre des espaces. Le menu seul ferme WCAG 2.5.7, jamais 2.1.1.
+> **`feat/flyout-virtual` tenait `design/Flyout.tsx` au 10 août** : c'est pourquoi ce lot s'est
+> arrêté au menu contextuel. `git worktree list` avant d'ouvrir celui-ci.
+
+> **Ce que le lot du 10 août a montré et qui resservira** : le nettoyage d'un effet tourne
+> **après** que React a retiré les nœuds, donc la ligne qui avait le focus n'existe plus et
+> `document.activeElement` est retombé sur `body`. Une garde en `menu.contains(activeElement)`
+> seule ne rend donc **jamais** le focus — il faut accepter `body`, et c'est ce qui distingue
+> « fermé au clavier » de « fermé parce qu'on a cliqué ailleurs », où le focus est sur ce qu'on
+> a cliqué et ne doit surtout pas bouger.
 
 ---
 
