@@ -2,6 +2,18 @@
 
 **Branche** `feat/workflows` · **Worktree** `.claude/worktrees/workflows` · **Base** `develop`
 
+> **Deux sources que ce plan cite n'existent plus sur le disque.** Écrit le 8 août 2026, il les
+> nomme quatorze et deux fois ; les paragraphes n'ont pas été réécrits, parce que ce sont les
+> renvois d'un plan daté et que les récrire réviserait l'histoire plutôt que le plan.
+>
+> - **`docs/REPRISE.md`** a été **fusionné dans [`docs/todo.md`](../todo.md)** par `94567bf` le
+>   9 août. Sa numérotation n'a pas survécu : le « § 4 » cité ici est la section
+>   **« Le node editor et les workflows Scenario »** du suivi. **Chercher par le titre, jamais
+>   par le numéro** — il a déjà bougé deux fois dans la nuit du 9 au 10 août. La version longue
+>   se relit par `git show 94567bf~1:docs/REPRISE.md`.
+> - **`docs/scenario-api/`** a disparu du dépôt dans la nuit du 9 au 10 août. Il se régénère par
+>   `pnpm docs:scenario`.
+
 Ce plan couvre le **§ 4 de `docs/REPRISE.md`** en entier, plus les deux dettes d’API du § 3.6 qui le
 bloquent. Il est écrit pour être exécuté **sans supervision** : chaque étape porte sa décision, ses
 fichiers, ses pièges et son critère de fin.
