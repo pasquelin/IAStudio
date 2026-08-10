@@ -173,6 +173,7 @@ export function Generator() {
               fields={descriptor.data.fields}
               onSubmit={generate}
               submitLabel={t('actions.generate')}
+              submitHint={t('actions.generateHint')}
               submitNote={cost.note}
               onValuesChange={cost.onValuesChange}
               // `project` is not in this: the panel returns before the form when there is none.

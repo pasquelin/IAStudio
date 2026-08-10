@@ -14,6 +14,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { openDocument } from '@/app/dockview-api'
 import { enterWorkspace } from '../open'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 /** Banner-sized, like the reference: two of them fill the band, three make it a shelf. */
 const CARD_WIDTH = 560
@@ -28,7 +29,7 @@ type Slide = {
   title: string
   body: string
   /** Absent on a card that only reports — the section under it is already the way there. */
-  action?: { label: string; onClick: () => void }
+  action?: { label: string; hint: string; onClick: () => void }
   /** The one card the eye should land on first. Set once, on the first card that acts. */
   leading?: boolean
 }
@@ -74,6 +75,7 @@ export function Spotlight() {
       body: t('home.spotlight.resumeBody', { project: project.manifest.name, name: last.title }),
       action: {
         label: t('home.spotlight.resumeAction'),
+        hint: t('home.spotlightResumeHint'),
         onClick: () => openDocument(last),
       },
     })
@@ -96,6 +98,7 @@ export function Spotlight() {
       body: t('home.spotlight.connectBody'),
       action: {
         label: t('home.spotlight.connectAction'),
+        hint: t('home.spotlightConnectHint'),
         onClick: () => void getBridge()?.settings.open('account'),
       },
     })
@@ -120,6 +123,7 @@ export function Spotlight() {
       body: t('home.spotlight.readyBody', { project: project?.manifest.name ?? '' }),
       action: {
         label: t('home.spotlight.readyAction'),
+        hint: t('home.spotlightReadyHint'),
         onClick: () => enterWorkspace(DEFAULT_WORKSPACE),
       },
     })
@@ -203,7 +207,11 @@ function Card({ slide, layout }: { slide: Slide; layout: 'banner' | 'stacked' })
 
       {slide.action && (
         <span className="shrink-0">
-          <Button variant={slide.leading ? 'primary' : 'neutral'} onClick={slide.action.onClick}>
+          <Button
+            variant={slide.leading ? 'primary' : 'neutral'}
+            {...HINT_TOP(slide.action.hint)}
+            onClick={slide.action.onClick}
+          >
             {slide.action.label}
           </Button>
         </span>

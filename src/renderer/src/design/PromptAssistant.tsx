@@ -5,7 +5,7 @@ import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/d
 import { cn } from '@/helpers/cn'
 import { Button } from './Button'
 import { ToolButton } from './ToolButton'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
 
 export type PromptAssistantProps = {
   /** Reads the draft at the moment it is asked for — never during a render. */
@@ -173,9 +173,13 @@ function Suggestion({
       )}
 
       <div className="flex gap-2">
-        <Button onClick={onAdoptText}>{t('prompt.useText')}</Button>
+        <Button {...HINT_TOP(t('prompt.useTextHint'))} onClick={onAdoptText}>
+          {t('prompt.useText')}
+        </Button>
         {settings.length > 0 && (
-          <Button onClick={onAdoptCall}>{t('prompt.useTextAndSettings')}</Button>
+          <Button {...HINT_TOP(t('prompt.useTextAndSettingsHint'))} onClick={onAdoptCall}>
+            {t('prompt.useTextAndSettings')}
+          </Button>
         )}
       </div>
     </div>

@@ -205,6 +205,7 @@ function AppRunner({ workflowId, onBack }: { workflowId: string; onBack: () => v
               fields={app.fields}
               onSubmit={start}
               submitLabel={t('apps.run')}
+              submitHint={t('apps.runHint')}
               submitNote={cost.note}
               onValuesChange={cost.onValuesChange}
               busy={!project || !isRunnable(app)}

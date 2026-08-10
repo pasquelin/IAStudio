@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/design/Button'
 import { Section } from './Section'
 import { SectionNote } from './SectionNote'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 export type RefusedSectionProps = {
   id: HomeSectionId
@@ -29,7 +30,11 @@ export function RefusedSection({ id, message, onRetry }: RefusedSectionProps) {
     <Section
       id={id}
       title={t(`home.sections.${id}`)}
-      actions={<Button onClick={onRetry}>{t('home.retry')}</Button>}
+      actions={
+        <Button {...HINT_TOP(t('actions.retryHint'))} onClick={onRetry}>
+          {t('home.retry')}
+        </Button>
+      }
     >
       <SectionNote>{message ?? t('home.refused')}</SectionNote>
     </Section>

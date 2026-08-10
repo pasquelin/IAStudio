@@ -65,7 +65,7 @@ function Empty() {
   return (
     <button
       type="button"
-      {...HINT_TOP(t('home.createProjectHint'))}
+      {...HINT_TOP(t('project.createHint'))}
       onClick={() => void useProject.getState().createPicked()}
       className={cn(
         'border-border text-muted hover:border-accent hover:text-text flex cursor-pointer',

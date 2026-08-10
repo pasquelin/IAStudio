@@ -5,40 +5,17 @@ libellé est déjà à l'écran, l'infobulle explique au lieu de le répéter (`
 donne aussi le nom accessible (`TIP_*`). Source : décision de l'utilisateur du 2026-08-10,
 portée dans `CLAUDE.md` § Interface.
 
-**Le recensement des itérations 4 à 9 était incomplet.** Il ne comptait que les `<button>`
-bruts et les `<ToolButton>` : les appels à `<Button>` et à `<MenuRow>`, qui rendent eux aussi un
-bouton, n'y figuraient pas. Trente-sept sites manquaient. Le tableau ci-dessous les inclut, et
-c'est pourquoi le compte remonte alors qu'aucun bouton n'a été ajouté au logiciel.
+Sont clos et n'y figurent plus : les `<ToolButton>` (le type exige `tooltip`), les `<button>`
+écrits à la main, et les appels à `<Button>`. Restent les rangées de menu.
 
-Les `<ToolButton>` n'y figurent pas : le type l'exige, la régression est impossible.
-
-## `<button>` bruts sans infobulle (0)
-
-Aucun. Tous les `<button>` écrits à la main portent leur infobulle.
-
-## Appels à `<Button>` (10)
-
-`Button` répand ses props sur son `<button>`, donc `{...HINT_*}` y passe sans rien changer au
-composant. Deux d'entre eux tiennent leur libellé d'un appelant (`EmptyState`) : la phrase doit
-venir du même endroit que le mot, donc du descripteur d'action.
-
-| P | Fichier:ligne | Règle | Preuve |
-|---|---|---|---|
-| P0 | src/renderer/src/design/DynamicForm.tsx:256 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/design/EmptyState.tsx:34 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/design/EmptyState.tsx:35 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/design/PromptAssistant.tsx:176 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/design/PromptAssistant.tsx:178 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/home/HomeView.tsx:67 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/home/RefusedSection.tsx:32 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/home/sections/Spark.tsx:58 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/home/sections/Spotlight.tsx:206 | P0-button-tooltip | aucune infobulle au site d'appel |
-| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:326 | P0-button-tooltip | aucune infobulle au site d'appel |
-
-## Rangées de menu (27)
+## Rangées de menu (29)
 
 `MenuRow` porte déjà une prop `tip` — le design system l'avait prévu — et un seul appelant
 s'en sert (`Toolbar`, via `tipFor(orientation, 'flyout')`). Les autres ne passent rien.
+
+**Le compte monte tout seul** : 27 au recensement du matin, 29 maintenant, sans qu'aucune
+n'ait été traitée. Ce sont des menus ajoutés par d'autres branches fusionnées entre-temps —
+la dérive est vivante, et c'est exactement ce que ce journal existe pour montrer.
 
 | P | Fichier:ligne | Règle | Preuve |
 |---|---|---|---|
@@ -51,7 +28,6 @@ s'en sert (`Toolbar`, via `tipFor(orientation, 'flyout')`). Les autres ne passen
 | P0 | src/renderer/src/app/TitleBar.tsx:157 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/design/TextureField.tsx:67 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/design/TextureField.tsx:79 | P0-button-tooltip | prop `tip` non passée |
-| P0 | src/renderer/src/design/Toolbar.tsx:234 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/home/SectionMenu.tsx:52 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/home/SectionMenu.tsx:61 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/home/SectionMenu.tsx:72 | P0-button-tooltip | prop `tip` non passée |
@@ -62,13 +38,16 @@ s'en sert (`Toolbar`, via `tipFor(orientation, 'flyout')`). Les autres ne passen
 | P0 | src/renderer/src/panels/channels/ChannelTile.tsx:165 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/channels/ChannelTile.tsx:179 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/channels/ChannelTile.tsx:188 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/explorer/EntryMenu.tsx:45 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/explorer/EntryMenu.tsx:50 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/explorer/EntryMenu.tsx:59 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/layers/LayerRow.tsx:117 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/layers/LayerStackActions.tsx:127 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/layers/LayerStackActions.tsx:150 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/shared/NodeActions.tsx:48 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/styles/StyleMenu.tsx:26 | P0-button-tooltip | prop `tip` non passée |
 | P0 | src/renderer/src/panels/styles/StyleMenu.tsx:34 | P0-button-tooltip | prop `tip` non passée |
-| P0 | src/renderer/src/spaces/graph/GraphMenu.tsx:50 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/spaces/graph/GraphMenu.tsx:63 | P0-button-tooltip | prop `tip` non passée |
 
 ## Peau recopiée
 
@@ -78,11 +57,12 @@ s'en sert (`Toolbar`, via `tipFor(orientation, 'flyout')`). Les autres ne passen
 
 ## Ce qui reste à savoir
 
-Les quatre fenêtres montent leur `TooltipHost` : la principale depuis toujours, les
-Préférences, l'Usage et les Licences depuis le 2026-08-10. Plus rien n'est bloqué.
-
-Un `<Tooltip>` fermé **ne rend rien du tout** — vérifié. Le seul test qui prouve qu'un hôte
-est monté est donc un survol de bout en bout.
+Les quatre fenêtres montent leur `TooltipHost`. Un `<Tooltip>` fermé ne rend rien du tout, donc
+la seule preuve qu'un hôte est monté est un survol de bout en bout.
 
 Les boutons à libellé visible se câblent par `HINT_*`, jamais par `TIP_*` : ce dernier pose un
 `aria-label`, qui remplacerait le nom visible.
+
+Trois descripteurs exigent désormais leur phrase en même temps que leur mot —
+`EmptyStateAction`, la diapositive de `Spotlight`, et le `submitHint` de `DynamicForm`. Un
+appelant qui oublie l'un des deux premiers ne compile pas.
