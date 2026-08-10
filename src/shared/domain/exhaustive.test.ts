@@ -10,8 +10,10 @@ import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './as
 import {
   GRAPH_COMPILE_PROBLEMS,
   GRAPH_RUN_FAILURES,
+  GRAPH_RUN_STATUSES,
   type GraphCompileProblem,
   type GraphRunFailure,
+  type GraphRunStatus,
 } from './graph'
 import {
   MODEL_FAMILIES,
@@ -204,5 +206,20 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(GRAPH_RUN_FAILURES)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /** `asRun` reads this one four lines above the other, and it had no guard of its own. */
+  it('names every state a running node reports', () => {
+    const all: Record<GraphRunStatus, true> = {
+      idle: true,
+      running: true,
+      awaiting: true,
+      cached: true,
+      done: true,
+      skipped: true,
+      failed: true,
+    }
+
+    expect(sorted(GRAPH_RUN_STATUSES)).toEqual(sorted(Object.keys(all)))
   })
 })

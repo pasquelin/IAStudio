@@ -220,8 +220,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 >
 > **Every node says where it stands**, in the corner of its header: *running*, *done*,
 > *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
-> produced nothing: *loop*, *no model*, *not runnable*, *unwired branch* — the branch it chose
-> has no output to leave by —, *failed*, *invalid expression*, and
+> produced nothing: *loop*, *no model*, *not runnable*, *branch with no output* — the branch it
+> chose has no port to leave by —, *failed*, *invalid expression*, and
 > **upstream failed** — which
 > does not mean "it is coming", but "it is not": something it depends on failed, so it will never
 > leave in this run. Running it again after changing the last node's prompt runs **only** that
