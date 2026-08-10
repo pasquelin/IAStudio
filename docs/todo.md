@@ -992,6 +992,44 @@ publication.
 > `data.isOutput`, et le convertisseur ne compile QUE les branches menant à un nœud qui le porte —
 > sans ce geste, le flow compilé est **vide**.
 
+### 🔴 `typesConnect` refuse le fil pour lequel l'espace Graphe existe — TRANCHÉ PAR UN APPEL
+
+**Le geste attendu** : poser un nœud Texte, poser un générateur d'image, tirer un fil de la sortie
+du texte vers l'entrée « prompt » du générateur.
+
+**Ce qui se passe** : le fil est refusé. `refuseConnection` rend `'type-mismatch'` — mesuré sur les
+nœuds que `createNode` et `createModelNode` fabriquent réellement, pas sur des fixtures :
+
+```
+textOutput  { id: 'text1-target-prompt',          name: 'output', type: 'text'   }
+modelPrompt { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' }
+refusal     'type-mismatch'
+```
+
+**Qui a tort — réglé par un appel, pas par un raisonnement.** `workflow_get` sur l'App publique
+`wflow_H1bKz78jgpinWPKJfVCM5uAp` (62 nœuds, 94 fils) : la webapp écrit **exactement les mêmes deux
+types que nous** — `type: "text"` sur la sortie d'un nœud texte, `type: "prompt"` sur le port
+prompt d'un générateur — **et elle les relie**. Toutes les paires réellement câblées de cette App,
+sans exception :
+
+| Sortie → entrée | Occurrences |
+|---|---|
+| `image` → `image` | 69 |
+| `text` → `prompt` | 25 |
+
+Donc `factory.ts` est juste des deux côtés, et **c'est `typesConnect` qui est faux** : il refuse ce
+que la webapp fait. Sa propre JSDoc énonce pourtant la règle qu'il enfreint — « the studio must not
+refuse a connection the webapp would allow ».
+
+**Le correctif** : un port d'entrée `prompt` doit accepter `text` en plus de `prompt`. À écrire
+comme une table de compatibilité dans `handles.ts`, pas comme un cas particulier — et verrouillée
+par un test qui rejoue les deux paires ci-dessus.
+
+**Et d'abord la fixture** : `engines/graph/graph-fixtures.ts` écrit `type: 'prompt'` sur la sortie
+d'un nœud texte, là où `createNode` écrit `'text'`. **Les fixtures ne reproduisent pas ce que le
+studio fabrique**, et les lots C1 et C2 s'appuient dessus — c'est ce qui a permis à trois lots de
+passer au-dessus du défaut. La corriger d'abord, pour que ce qui doit rougir rougisse.
+
 > ### ⏳ Le lot C3 est écrit et **attend sa revue** — ne pas le refaire
 >
 > **Branche `feat/graph-compile`, worktree `.claude/worktrees/graph-compile`**, cinq commits,
