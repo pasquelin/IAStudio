@@ -405,8 +405,8 @@ projet » (§ 10.3). Soit il exige un projet, soit il faut dire ce que devient c
 
 # 2. Les gestes qui n'aboutissent pas
 
-Deux entrées. La première échoue **complètement et en silence** ; l'autre ne se constate qu'en
-lâchant la souris.
+Trois entrées. La première échoue **complètement et en silence**, la deuxième la remplace par un
+geste plus large ; la dernière ne se constate qu'en lâchant la souris.
 
 ## 2.1 La dictée — le geste demandé n'a jamais existé
 
@@ -449,6 +449,72 @@ devine.
 > `utilityProcess` : **rien de ce qui est dicté ne quitte la machine**, et rien ne se facture à la
 > minute. C'est `ADR-17`, et la question a été reposée à l'utilisateur qui l'a confirmée. **Les 640 Mo
 > ne sont pas le défaut ; le défaut est qu'on les télécharge pour un geste qui n'aboutit pas.**
+
+> **Ne pas traiter cette entrée seule — l'entrée 45 la referme.** Les quatre correctifs listés
+> ci-dessus réparent le micro par champ ; la décision du 10 août est de **le supprimer**. Les faire
+> serait payer un chemin qu'on retire à l'étape 4 du plan.
+
+### 45. L'assistant vocal — parler à l'application au lieu de dicter dans un champ
+
+**Le geste attendu.** J'appuie sur un raccourci, ou je clique **un** bouton dans la barre de
+l'application. Je parle. **Le studio fait ce que j'ai demandé** : il crée le projet, choisit le
+modèle, écrit dans le champ que j'ai nommé, lance la génération. Ce qui coûte ou ne se défait pas me
+demande d'abord, en affichant le prix. Ce qu'il n'a pas compris, il le dit.
+
+**Décidé avec l'utilisateur le 10 août 2026**, après six appels réels à l'API. Le plan complet, avec
+les schémas, les étapes et les pièges, est dans
+[`docs/plans/2026-08-10-assistant-vocal.md`](plans/2026-08-10-assistant-vocal.md). **Le lire avant de
+commencer** — ce qui suit n'en est que le résumé.
+
+**Ce qui rend le chantier petit, et qui a été vérifié plutôt que supposé :** `model_scenario-llm` est
+un **modèle Scenario ordinaire** (`txt2txt`, `img2txt`), lancé par `generate.runModel`. Il traverse
+donc le `JobManager`, le `ModelRegistry` et `costEstimatorOf` déjà en place. Aucun nouveau chemin
+réseau, aucune clé supplémentaire, aucune dépendance. Le SDK n'a **pas** de méthode `analyze` : sa
+classe `Generate` expose `caption`, `describeStyle`, `detect`, `embed`, `patch`, `prompt`,
+`runModel`, `translate` — ne pas en chercher une autre.
+
+**Les coûts, mesurés en `dryRun` sur le compte réel :**
+
+| Opération | Unités créatives |
+|---|---|
+| Transcrire la voix (Parakeet, local) | **0** |
+| Rédiger un prompt (`PromptAssist.suggest`, déjà branché) | **0** |
+| Comprendre une intention (`claude-haiku-4-5`) | **0,75** |
+| Générer une image (Gemini 3.1 Flash) | **12** |
+
+Seize commandes coûtent une image : le coût justifie que l'assistant soit **désactivable**, pas qu'on
+y renonce.
+
+**Les quatre étapes, chacune livrable seule :**
+
+1. **Le registre d'outils**, pilotable **au clavier** — sans micro et sans réseau. C'est ce qui rend
+   tout le reste testable. Les outils sont **dérivés** de `shared/domain/command.ts` et
+   `shared/ipc.ts`, jamais recopiés.
+2. **Le cerveau** : `generate.runModel` + validation zod + le réglage de modèle construit depuis les
+   `allowed_values` du schéma. **La latence et le taux d'erreur se mesurent ici** — aucun des deux
+   n'est connu à ce jour.
+3. **La surface** : le bouton unique, le raccourci `app.assist` (`held`, sur le patron d'`app.dictate`),
+   le retour à l'écran, les confirmations.
+4. **Le retrait des micros par champ** — en dernier, quand le remplacement a fait ses preuves.
+   `insertAtCaret` **reste** : c'est lui qui exécute `field.set`.
+
+**Deux outils viennent directement de la demande** — « saisis tel texte dans telle partie de l'app »,
+« génère-moi le texte pour le générateur d'image » : `field.set({target, value})` et
+`prompt.draft({target})`. Le second délègue à `PromptAssist.suggest()`, **gratuit**, qui rend en plus
+des paramètres conformes au modèle visé. Les `target` sont un **vocabulaire fermé** — jamais un
+sélecteur CSS, jamais `document.activeElement`.
+
+> **La phrase de vie privée des réglages doit changer**, et c'est bloquant. « Tout se passe sur cet
+> ordinateur : rien de ce que vous dites n'est envoyé nulle part » cesse d'être vraie dès que
+> l'assistant est actif. Ce qui reste vrai sans réserve : **la voix ne quitte jamais la machine**.
+> Ce qui devient faux : la phrase transcrite part chez Scenario avec la liste des outils. Dire les
+> deux séparément. Un mensonge dans un réglage de vie privée est pire que pas de réglage.
+
+> **Trois pièges déjà identifiés, à ne pas redécouvrir en production.** Chaque appel **crée un asset
+> texte** dans le projet Scenario (mesuré) : cinquante commandes, cinquante parasites dans
+> l'Explorateur. Le texte de la réponse est dans `metadata.preview` tant que `hasFullPreview` est
+> vrai, et au bout d'une **URL CDN signée qui expire** au-delà — traiter les deux cas dès l'écriture.
+> Et `textInputs`/`images` **ignorent silencieusement** une valeur qui n'est pas un tableau.
 
 ## 2.2 Les surcouches flottantes — un seul lot, trois composants
 
