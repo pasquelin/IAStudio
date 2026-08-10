@@ -27,7 +27,7 @@ import {
   ungroupLayer,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 
 /** What the stack menu offers. Each one names itself from `layers.<operation>`. */
@@ -128,6 +128,7 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
               key={kind}
               label={t(`adjustment.${kind}`)}
               icon={mdiTune}
+              tip={HINT_RIGHT(t(`adjustment.${kind}Hint`))}
               onSelect={() => {
                 perform(addLayer(adjustmentLayer(newId(), t(`adjustment.${kind}`), kind)))
                 close()
@@ -152,6 +153,7 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
               label={t(`layers.${operation.key}`)}
               icon={operation.icon}
               disabled={!operation.enabled}
+              tip={HINT_RIGHT(t(`layers.${operation.key}Hint`))}
               onSelect={() => {
                 operation.run()
                 close()

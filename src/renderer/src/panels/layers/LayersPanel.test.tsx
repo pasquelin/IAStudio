@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { addLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
 import { groupLayer } from '@/engines/canvas/canvas-state'
@@ -129,6 +130,22 @@ describe('LayersPanel', () => {
         position: true,
         alpha: false,
       })
+    })
+
+    // Three nouns that say what is locked and never what locking it costs — the padlock on the
+    // alpha is the one nobody guesses.
+    it('says what each padlock forbids', async () => {
+      render(<LayersPanel />)
+      await userEvent.click(screen.getByRole('button', { name: /^Verrous/ }))
+
+      const rows = await screen.findAllByRole('menuitemcheckbox')
+      expect(rows.map(row => row.getAttribute('data-tooltip-content'))).toEqual([
+        'Empêche de peindre sur ce calque, sans le figer sur place',
+        `Empêche de déplacer le calque${NO_BREAK_SPACE}; on peut encore y peindre`,
+        'Ne peint que là où le calque a déjà de la matière',
+      ])
+      // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
+      for (const row of rows) expect(row).not.toHaveAttribute('aria-label')
     })
 
     it('nests the children of a group and folds them away on the chevron', async () => {

@@ -98,6 +98,22 @@ describe('LayersActions', () => {
       const rows = await screen.findAllByRole('menuitem')
       expect(rows.map(row => row.textContent)).toEqual(['Grouper', 'Dégrouper', 'Dupliquer'])
     })
+
+    // The label is composed from the operation key, and so is the sentence: neither is written
+    // beside the row, and both go missing the same silent way.
+    it('explains each operation rather than reading its label back', async () => {
+      render(<LayersActions />)
+      await userEvent.click(screen.getByRole('button', { name: /^Opérations/ }))
+
+      const rows = await screen.findAllByRole('menuitem')
+      expect(rows.map(row => row.getAttribute('data-tooltip-content'))).toEqual([
+        'Range le calque actif dans un nouveau groupe',
+        'Sort les calques du groupe et supprime le groupe',
+        'Copie le calque actif juste au-dessus de lui',
+      ])
+      // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
+      for (const row of rows) expect(row).not.toHaveAttribute('aria-label')
+    })
   })
 
   describe('adjustment layers', () => {
@@ -122,6 +138,19 @@ describe('LayersActions', () => {
         'Contraste',
         'Saturation',
         'Température',
+      ])
+    })
+
+    it('says what each dial does, which four nouns cannot', async () => {
+      render(<LayersActions />)
+      await userEvent.click(screen.getByRole('button', { name: /^Ajouter un réglage/ }))
+
+      const rows = await screen.findAllByRole('menuitem')
+      expect(rows.map(row => row.getAttribute('data-tooltip-content'))).toEqual([
+        'Éclaircit ou assombrit tout ce qui est en dessous',
+        'Écarte les tons clairs des tons sombres, ou les rapproche',
+        'Ravive les couleurs ou les éteint, jusqu’au gris',
+        'Réchauffe vers l’orange ou refroidit vers le bleu',
       ])
     })
 
