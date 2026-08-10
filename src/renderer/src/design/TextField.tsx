@@ -20,7 +20,9 @@ export function TextField({
 }: TextFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <input
         type="text"

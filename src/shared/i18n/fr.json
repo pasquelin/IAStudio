@@ -651,7 +651,7 @@
     "fontMissing": "{{family}} (absente)",
     "node": "Nœud",
     "title": "Titre",
-    "isOutput": "Sortie du workflow",
+    "isOutput": "Résultat de l’App",
     "nodeId": "Identifiant",
     "noModel": "Aucun"
   },

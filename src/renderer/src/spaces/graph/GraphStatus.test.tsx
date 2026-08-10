@@ -111,6 +111,27 @@ describe('asking the main process whether a graph compiles', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2 étapes')
   })
 
+  /**
+   * A document just created holds no node at all. Asked, the compiler answers "no output marked"
+   * — true, and useless: it paints a refusal in the red of a failure about a canvas nobody has
+   * touched. Not asking is also one round trip fewer per new document.
+   */
+  it('says nothing, and asks nothing, of a canvas with nothing drawn on it', async () => {
+    const compile = vi.fn((): Promise<GraphCompileResult> =>
+      Promise.resolve({ ok: true, steps: 1 }),
+    )
+    installFakeBridge({ workflows: { compile } })
+
+    const { rerender } = render(<Live graph={{ nodes: [], edges: [], inputKeys: [] }} />)
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(compile).not.toHaveBeenCalled()
+
+    // And it starts answering as soon as something IS drawn, rather than staying silent for good.
+    rerender(<Live graph={graphOf('text1')} />)
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('1 étape'))
+  })
+
   it('writes a boundary that refuses to the journal, and paints nothing', async () => {
     const { entries } = bridgeWatchingLogs({
       workflows: { compile: () => Promise.reject(new Error('no channel')) },

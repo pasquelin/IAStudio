@@ -176,7 +176,7 @@ describe('GraphNodeInspector', () => {
       installGraph(DOCUMENT, { nodes: [GENERATOR], edges: [], inputKeys: [] })
       show(GENERATOR)
 
-      await userEvent.click(screen.getByLabelText('Sortie du workflow'))
+      await userEvent.click(screen.getByLabelText('Résultat de l’App'))
 
       const node = graphOf(useGraphs.getState(), DOCUMENT).nodes[0]
       expect(node?.data.isOutput).toBe(true)
@@ -187,7 +187,7 @@ describe('GraphNodeInspector', () => {
       installGraph(DOCUMENT, { nodes: [GENERATOR], edges: [], inputKeys: [] })
       show(GENERATOR)
 
-      expect(screen.getByLabelText('Sortie du workflow')).toBeInTheDocument()
+      expect(screen.getByLabelText('Résultat de l’App')).toBeInTheDocument()
     })
 
     /**
@@ -202,7 +202,7 @@ describe('GraphNodeInspector', () => {
       installGraph(DOCUMENT, { nodes: [node], edges: [], inputKeys: [] })
       show(node)
 
-      expect(screen.queryByLabelText('Sortie du workflow')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Résultat de l’App')).not.toBeInTheDocument()
     })
   })
 })

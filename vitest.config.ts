@@ -110,6 +110,11 @@ export default defineConfig({
         'src/renderer/src/app/**': { statements: -48, branches: -26 },
         'src/renderer/src/panels/**': { statements: -147, branches: -120 },
         'src/renderer/src/design/**': { statements: -59, branches: -66 },
+        // The fourth glob that had none, found the day a lot posted `GraphStatus.tsx` into it and
+        // nothing moved. Measured at 235 and 195 the day it was set — what the six spaces carry,
+        // which is mostly what jsdom cannot run: a WebGL viewport, a Pixi brush, a React Flow
+        // canvas laid out at zero. Not a round number, and not room anyone decided to grant.
+        'src/renderer/src/spaces/**': { statements: -235, branches: -195 },
       },
     },
     projects: [
