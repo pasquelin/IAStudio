@@ -208,8 +208,11 @@ describe('the small rules around the head', () => {
 
   it('says whether a track is heard', () => {
     const one = track('a', 'position', [])
-    expect(playsThrough(timelineOf([one]), one)).toBe(true)
-    expect(playsThrough(timelineOf([{ ...one, muted: true }]), { ...one, muted: true })).toBe(false)
+    expect(playsThrough(one, false)).toBe(true)
+    expect(playsThrough({ ...one, muted: true }, false)).toBe(false)
+    // Once anything is soloed, a track that is not soloed goes quiet.
+    expect(playsThrough(one, true)).toBe(false)
+    expect(playsThrough({ ...one, solo: true }, true)).toBe(true)
   })
 })
 

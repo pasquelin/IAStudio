@@ -61,10 +61,10 @@ import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
 import { SceneAnimations, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animation-eval'
-import { evenSize, flipRows, frameTimes, type FilmRequest } from './film'
-import type { AnimationTimeline } from '@shared/domain/animation'
+import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
-import { carry, placePivot, release, transformOf } from './pivot'
+import { applyTransform, carry, placePivot, release, transformOf } from './pivot'
 import {
   applyShadowFlags,
   applyShadowQuality,
@@ -168,6 +168,9 @@ BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
 BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
 Mesh.prototype.raycast = acceleratedRaycast
 
+/** Posed on long-lived helpers: a fresh closure each would keep its enclosing scope alive. */
+const NOOP = (): void => {}
+
 /** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
 function isBone(object: Object3D): boolean {
   return Reflect.get(object, 'isBone') === true
@@ -227,7 +230,7 @@ export class SceneRenderer {
   private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
   /** The tracks of the document, and where the head stands over them. */
-  private timeline: AnimationTimeline | null = null
+  private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead = 0
   /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
   private readonly boneRests = new Map<string, Transform>()
@@ -366,6 +369,10 @@ export class SceneRenderer {
     this.timeline = state.animation
     // After the transforms are written, never before: a pose is what the tracks ADD to the one
     // the node holds, so it has to be laid over a rest pose that is already up to date.
+    //
+    // Unconditional: gating it on `state.animation !== this.timeline` would skip the pass after a
+    // node was rebuilt under an unchanged timeline, and that node would stand in its rest pose.
+    // It costs nothing on a scene with no track, and the loop is over driven nodes, not all.
     this.applyPoses()
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
@@ -385,11 +392,11 @@ export class SceneRenderer {
 
   /**
    * Lays the timeline over the rest poses. Only the nodes it drives are touched, and a scene
-   * with no track at all costs one `Set` of nothing.
+   * with no track at all leaves before building anything.
    */
   private applyPoses(): void {
     const timeline = this.timeline
-    if (!timeline || timeline.tracks.length === 0) return
+    if (timeline.tracks.length === 0) return
 
     for (const nodeId of drivenNodes(timeline)) {
       const object = this.objects.get(nodeId)
@@ -398,10 +405,7 @@ export class SceneRenderer {
       // writing a world pose into it mid-drag would teleport it, exactly as `syncNode` warns.
       if (!object || !rest || object.parent === this.pivot) continue
 
-      const pose = poseAt(rest, timeline, nodeId, this.playhead)
-      object.position.set(pose.position.x, pose.position.y, pose.position.z)
-      object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z)
-      object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z)
+      applyTransform(object, poseAt(rest, timeline, nodeId, this.playhead))
     }
 
     this.applyBonePoses(timeline)
@@ -589,7 +593,7 @@ export class SceneRenderer {
     helper.visible = this.showSkeletons
     // Off the raycaster: the bones of a rig cross every mesh it drives, and a click would land
     // on a line rather than on the model it belongs to.
-    helper.raycast = () => {}
+    helper.raycast = NOOP
     this.skeletons.set(nodeId, helper)
     this.viewport.scene.add(helper)
   }
@@ -643,6 +647,10 @@ export class SceneRenderer {
     const context = surface.getContext('2d')
     if (!context) throw new Error('no 2d context to read the frames back through')
 
+    // Hoisted with the pixel buffer: at 1920×1080 an `ImageData` per frame is 8 MB of churn, and
+    // a thousand-frame film would hand the collector sixteen gigabytes for nothing.
+    const image = context.createImageData(width, height)
+
     const helper = camera.children.find(child => child instanceof CameraHelper)
     const wasVisible = helper?.visible ?? false
     if (helper) helper.visible = false
@@ -661,10 +669,7 @@ export class SceneRenderer {
         gl.render(this.viewport.scene, camera)
         gl.readRenderTargetPixels(target, 0, 0, width, height, pixels)
 
-        // Through the context's own buffer: an `ImageData` built from a typed array is typed
-        // against a narrower array type than the one three hands back.
-        const image = context.createImageData(width, height)
-        image.data.set(flipRows(pixels, width, height))
+        flipInto(image.data, pixels, width, height)
         context.putImageData(image, 0, 0)
         const blob = await surface.convertToBlob({ type: 'image/png' })
         index += 1

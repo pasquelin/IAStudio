@@ -9,6 +9,7 @@ import {
   type TrackProperty,
 } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
+import { clamp } from '@shared/numeric'
 
 /**
  * What the timeline adds to a pose, and how the additions are combined.
@@ -67,10 +68,19 @@ export function valueAt(track: AnimationTrack, time: number): Vector3 {
   }
 }
 
-/** A muted track adds nothing; and once anything is soloed, only the soloed ones are heard. */
-export function playsThrough(timeline: AnimationTimeline, track: AnimationTrack): boolean {
+/** Whether anything at all is soloed. Derived ONCE per pass — see `playsThrough`. */
+function anySoloed(timeline: AnimationTimeline): boolean {
+  return timeline.tracks.some(candidate => candidate.solo)
+}
+
+/**
+ * A muted track adds nothing; and once anything is soloed, only the soloed ones are heard.
+ *
+ * `soloed` is passed in rather than derived here: this is called once per track of a filter that
+ * already walks them all, so deriving it inside made the pass quadratic — on the frame path.
+ */
+export function playsThrough(track: AnimationTrack, soloed: boolean): boolean {
   if (track.muted) return false
-  const soloed = timeline.tracks.some(candidate => candidate.solo)
   return !soloed || track.solo
 }
 
@@ -97,7 +107,8 @@ export function contributionAt(
   time: number,
   bone?: string,
 ): Transform | null {
-  const tracks = tracksFor(timeline, nodeId, bone).filter(track => playsThrough(timeline, track))
+  const soloed = anySoloed(timeline)
+  const tracks = tracksFor(timeline, nodeId, bone).filter(track => playsThrough(track, soloed))
   if (tracks.length === 0) return null
 
   let position = ZERO
@@ -196,7 +207,7 @@ export function snapToFrame(time: number, fps: number): number {
 }
 
 export function clampPlayhead(time: number, duration: number): number {
-  return Math.min(Math.max(time, 0), duration)
+  return clamp(time, 0, duration)
 }
 
 /** What a track is called when nobody has named it: what it drives, and what of it. */

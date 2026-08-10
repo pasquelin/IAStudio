@@ -1,7 +1,7 @@
 import { AnimationClip, Object3D, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
-import { SceneAnimations, clipNamesOf, defaultAnimation } from './animation'
+import { SceneAnimations, clipNamesOf } from './animation'
 
 /** A cube travelling one unit along X over one second, which is enough to read a mixer by. */
 function walkClip(name = 'walk', to = 1): AnimationClip {
@@ -32,15 +32,8 @@ describe('the clips a model brought', () => {
     expect(clipNamesOf(source)).toEqual(['walk', 'run'])
   })
 
-  it('opens on the first clip, stopped at the start', () => {
-    const source = scene()
-    source.animations = [walkClip('walk'), walkClip('run')]
-
-    expect(defaultAnimation(source)).toEqual({ ...DEFAULT_ANIMATION, clip: 'walk' })
-  })
-
-  it('answers nothing for a model carrying no clip at all', () => {
-    expect(defaultAnimation(scene())).toBeNull()
+  it('answers an empty list for a model carrying no clip at all', () => {
+    expect(clipNamesOf(scene())).toEqual([])
   })
 })
 
@@ -108,14 +101,6 @@ describe('SceneAnimations', () => {
     expect(cubeOf(root).position.x).toBeCloseTo(0.75, 5)
   })
 
-  it('reports where the head stands, for whoever writes it back', () => {
-    const { animations } = withWalk()
-    animations.apply('node-1', ref())
-    animations.update(0.4)
-
-    expect(animations.timeOf('node-1')).toBeCloseTo(0.4, 5)
-  })
-
   it('starts the clip over when it loops', () => {
     const { animations, root } = withWalk()
     animations.apply('node-1', ref({ loop: true }))
@@ -134,12 +119,13 @@ describe('SceneAnimations', () => {
   })
 
   it('keeps the head where it was when only the speed changes, rather than restarting', () => {
-    const { animations } = withWalk()
+    const { animations, root } = withWalk()
     animations.apply('node-1', ref())
     animations.update(0.4)
     animations.apply('node-1', ref({ speed: 2 }))
 
-    expect(animations.timeOf('node-1')).toBeCloseTo(0.4, 5)
+    // Read off the object rather than off a getter: what the head is worth is what it shows.
+    expect(cubeOf(root).position.x).toBeCloseTo(0.4, 5)
   })
 
   it('switches clip without carrying the previous head over', () => {
@@ -151,7 +137,8 @@ describe('SceneAnimations', () => {
     animations.update(0.5)
     animations.apply('node-1', ref({ clip: 'run' }))
 
-    expect(animations.timeOf('node-1')).toBe(0)
+    // Back to the start of the new clip, which for `run` means the origin.
+    expect(cubeOf(root).position.x).toBe(0)
   })
 
   it('ignores a clip name the file no longer holds, rather than throwing', () => {
@@ -191,13 +178,5 @@ describe('SceneAnimations', () => {
 
     expect(animations.has('node-1')).toBe(false)
     expect(animations.has('node-2')).toBe(false)
-  })
-
-  it('answers an empty list of names for a node it does not hold', () => {
-    expect(new SceneAnimations().clipNames('nobody')).toEqual([])
-  })
-
-  it('answers a zero head for a node it does not hold', () => {
-    expect(new SceneAnimations().timeOf('nobody')).toBe(0)
   })
 })

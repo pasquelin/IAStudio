@@ -10,7 +10,12 @@ import {
 } from '@mdi/js'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TRACK_PROPERTIES, type AnimationTrack, type TrackProperty } from '@shared/domain/animation'
+import {
+  neutralOf,
+  TRACK_PROPERTIES,
+  type AnimationTrack,
+  type TrackProperty,
+} from '@shared/domain/animation'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
@@ -21,7 +26,6 @@ import {
   removeAnimationTrack,
   setAnimationKey,
 } from '@/engines/scene/animation-commands'
-import { neutralOf } from '@shared/domain/animation'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_TOP } from '@/helpers/tooltip'
@@ -31,7 +35,7 @@ import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/scene-engines'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { TRACK_FLAGS } from './track-flags'
 
@@ -265,7 +269,7 @@ function TrackRow({
 }) {
   const { t } = useTranslation()
   const write = (change: (current: AnimationTrack) => AnimationTrack): void =>
-    useScenes.setState(state => writeTrack(state, documentId, track.id, change))
+    writeAnimationTrack(documentId, track.id, change)
 
   const at = snapToFrame(clampPlayhead(playhead, duration), fps)
   const standing = keyAt(track.keys, at)
@@ -343,28 +347,4 @@ function TrackRow({
       </div>
     </div>
   )
-}
-
-/** Flags are how one works, not what one made: they stay off the undo stack, as a mute does. */
-function writeTrack(
-  state: ReturnType<typeof useScenes.getState>,
-  documentId: string,
-  trackId: string,
-  change: (track: AnimationTrack) => AnimationTrack,
-): Partial<ReturnType<typeof useScenes.getState>> {
-  const scene = sceneOf(state, documentId)
-  return {
-    states: {
-      ...state.states,
-      [documentId]: {
-        ...scene,
-        animation: {
-          ...scene.animation,
-          tracks: scene.animation.tracks.map(track =>
-            track.id === trackId ? change(track) : track,
-          ),
-        },
-      },
-    },
-  }
 }

@@ -26,7 +26,7 @@ import {
   type Keyframe,
 } from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
-import { isRecord } from '@shared/guards'
+import { isRecord, readNumber } from '@shared/guards'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
@@ -200,12 +200,14 @@ function readTimeline(value: unknown): AnimationTimeline {
   if (!isRecord(value)) return EMPTY_TIMELINE
 
   const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
+  // `readNumber` gives the fallback for anything that is not a finite number; zero and below are
+  // finite and still meaningless here, so the positive test stays.
+  const duration = readNumber(value, 'duration', DEFAULT_DURATION)
+  const fps = readNumber(value, 'fps', DEFAULT_FPS)
+
   return {
-    duration:
-      Number.isFinite(value.duration) && Number(value.duration) > 0
-        ? Number(value.duration)
-        : DEFAULT_DURATION,
-    fps: Number.isFinite(value.fps) && Number(value.fps) > 0 ? Number(value.fps) : DEFAULT_FPS,
+    duration: duration > 0 ? duration : DEFAULT_DURATION,
+    fps: fps > 0 ? fps : DEFAULT_FPS,
     tracks,
   }
 }

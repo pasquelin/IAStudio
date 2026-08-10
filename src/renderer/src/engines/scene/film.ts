@@ -23,15 +23,24 @@ export function frameTimes(duration: number, fps: number): number[] {
  * WebGL reads its pixels bottom-up, a canvas writes them top-down. Without this every frame of
  * a film is upside down — and it is the kind of thing nobody notices until the film is watched.
  */
-export function flipRows(pixels: Uint8Array, width: number, height: number): Uint8ClampedArray {
+export function flipInto(
+  into: Uint8ClampedArray,
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+): void {
   const stride = width * 4
-  const flipped = new Uint8ClampedArray(pixels.length)
 
   for (let row = 0; row < height; row += 1) {
     const from = row * stride
-    const to = (height - row - 1) * stride
-    flipped.set(pixels.subarray(from, from + stride), to)
+    into.set(pixels.subarray(from, from + stride), (height - row - 1) * stride)
   }
+}
+
+/** The same, into a buffer of its own — what a test reads, and what a one-off caller wants. */
+export function flipRows(pixels: Uint8Array, width: number, height: number): Uint8ClampedArray {
+  const flipped = new Uint8ClampedArray(pixels.length)
+  flipInto(flipped, pixels, width, height)
   return flipped
 }
 

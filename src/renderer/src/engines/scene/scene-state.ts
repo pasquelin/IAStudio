@@ -17,6 +17,7 @@ import {
   type TextDescriptor,
   type Transform,
 } from '@shared/domain/scene'
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
 
 export type SceneNodeBase = {
@@ -260,4 +261,3 @@ export function subtreeOf(nodes: readonly SceneNode[], id: string): SceneNode[] 
 export function nodesOfType(nodes: readonly SceneNode[], type: SceneNodeType): SceneNode[] {
   return nodes.filter(node => node.type === type)
 }
-import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'

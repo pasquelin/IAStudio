@@ -1,11 +1,4 @@
-import {
-  EMPTY_TIMELINE,
-  neutralOf,
-  type AnimationTrack,
-  type Keyframe,
-  type TrackProperty,
-  type TrackTarget,
-} from '@shared/domain/animation'
+import type { AnimationTrack, Keyframe, TrackTarget } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Command } from '../core/history'
 import { deltaOf, withKey, withoutKey } from './animation-eval'
@@ -23,24 +16,36 @@ import type { SceneState } from './scene-state'
 const write = (
   state: SceneState,
   change: (tracks: readonly AnimationTrack[]) => AnimationTrack[],
-): SceneState => {
-  const timeline = state.animation ?? EMPTY_TIMELINE
-  return { ...state, animation: { ...timeline, tracks: reindexed(change(timeline.tracks)) } }
-}
+): SceneState => ({
+  ...state,
+  animation: { ...state.animation, tracks: rowIndexed(change(state.animation.tracks)) },
+})
 
-/** Row order read back from position, so the array and the numbers cannot drift apart. */
-const reindexed = (tracks: readonly AnimationTrack[]): AnimationTrack[] =>
+/**
+ * Row order read back from position, so the array and the numbers cannot drift apart.
+ *
+ * NOT `reindexTracks` of the montage, which reads a DEPTH — there the first row is drawn last, so
+ * its number is the highest. Here the tracks add up and none hides another: the number is the row.
+ */
+const rowIndexed = (tracks: readonly AnimationTrack[]): AnimationTrack[] =>
   tracks.map((track, position) => ({ ...track, index: position }))
 
-const editTrack = (
+/**
+ * One track rewritten, as a pure function of the state. Exported because the flags of a track —
+ * muted, solo, locked, armed — are how one WORKS rather than what one made: they go through the
+ * store without an entry in the history, exactly as a montage's do.
+ */
+export const updateAnimationTrack = (
   state: SceneState,
   trackId: string,
   change: (track: AnimationTrack) => AnimationTrack,
 ): SceneState =>
   write(state, tracks => tracks.map(track => (track.id === trackId ? change(track) : track)))
 
+const editTrack = updateAnimationTrack
+
 const trackById = (state: SceneState, trackId: string): AnimationTrack | undefined =>
-  state.animation?.tracks.find(track => track.id === trackId)
+  state.animation.tracks.find(track => track.id === trackId)
 
 /**
  * Adds a track for one property of one target. The id is minted with the command rather than
@@ -79,7 +84,7 @@ export function removeAnimationTrack(trackId: string): Command<SceneState> {
   return {
     id: `track:remove:${trackId}`,
     apply: state => {
-      const tracks = state.animation?.tracks ?? []
+      const tracks = state.animation.tracks
       const position = tracks.findIndex(track => track.id === trackId)
       const track = tracks[position]
       if (!track || track.locked) return state
@@ -95,54 +100,6 @@ export function removeAnimationTrack(trackId: string): Command<SceneState> {
         restored.splice(origin.position, 0, origin.track)
         return restored
       })
-    },
-  }
-}
-
-export function moveAnimationTrack(trackId: string, by: number): Command<SceneState> {
-  let from: number | null = null
-
-  const reorder = (tracks: readonly AnimationTrack[], position: number, to: number) => {
-    const track = tracks[position]
-    if (!track) return [...tracks]
-
-    const moved = tracks.filter((_, at) => at !== position)
-    moved.splice(to, 0, track)
-    return moved
-  }
-
-  return {
-    id: `track:move:${trackId}`,
-    apply: state => {
-      const tracks = state.animation?.tracks ?? []
-      const position = tracks.findIndex(track => track.id === trackId)
-      const to = position + by
-      if (position < 0 || to < 0 || to >= tracks.length) return state
-
-      from = position
-      return write(state, current => reorder(current, position, to))
-    },
-    revert: state => {
-      const origin = from
-      return origin === null ? state : write(state, tracks => reorder(tracks, origin + by, origin))
-    },
-  }
-}
-
-export function renameAnimationTrack(trackId: string, name: string): Command<SceneState> {
-  let previous: string | null = null
-
-  return {
-    id: `track:rename:${trackId}`,
-    apply: state => {
-      previous = trackById(state, trackId)?.name ?? null
-      return editTrack(state, trackId, track => ({ ...track, name }))
-    },
-    revert: state => {
-      const origin = previous
-      return origin === null
-        ? state
-        : editTrack(state, trackId, track => ({ ...track, name: origin }))
     },
   }
 }
@@ -215,20 +172,14 @@ export function setTimelineSettings(
   return {
     id: 'timeline:settings',
     apply: state => {
-      const timeline = state.animation ?? EMPTY_TIMELINE
-      previous = { duration: timeline.duration, fps: timeline.fps }
-      return { ...state, animation: { ...timeline, ...settings } }
+      previous = { duration: state.animation.duration, fps: state.animation.fps }
+      return { ...state, animation: { ...state.animation, ...settings } }
     },
-    revert: state =>
-      previous === null
-        ? state
-        : { ...state, animation: { ...(state.animation ?? EMPTY_TIMELINE), ...previous } },
+    revert: state => {
+      const origin = previous
+      return origin === null ? state : { ...state, animation: { ...state.animation, ...origin } }
+    },
   }
-}
-
-/** What a key would hold to leave the object exactly where it is: the neutral of its property. */
-export function neutralKey(property: TrackProperty): Vector3 {
-  return neutralOf(property)
 }
 
 /**
@@ -243,7 +194,7 @@ export function neutralKey(property: TrackProperty): Vector3 {
  * behave exactly as it did before any of this existed.
  */
 export function armedTracksFor(state: SceneState, nodeId: string): AnimationTrack[] {
-  return (state.animation?.tracks ?? []).filter(
+  return state.animation.tracks.filter(
     track => track.armed && !track.locked && track.target.nodeId === nodeId && !track.target.bone,
   )
 }

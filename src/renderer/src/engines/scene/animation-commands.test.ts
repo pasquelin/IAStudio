@@ -4,10 +4,8 @@ import {
   addAnimationTrack,
   armedTracksFor,
   recordMove,
-  moveAnimationTrack,
   removeAnimationKey,
   removeAnimationTrack,
-  renameAnimationTrack,
   setAnimationKey,
   setTimelineSettings,
 } from './animation-commands'
@@ -85,30 +83,6 @@ describe('adding and removing tracks', () => {
     }
 
     expect(removeAnimationTrack('track-1').apply(locked)).toEqual(locked)
-  })
-
-  it('moves a track down and back up again', () => {
-    const command = moveAnimationTrack('track-1', 1)
-    const state = withTwoTracks()
-    const after = command.apply(state)
-
-    expect(tracksOf(after).map(track => track.id)).toEqual(['track-2', 'track-1'])
-    expect(command.revert(after)).toEqual(state)
-  })
-
-  it('refuses to move a track off either end', () => {
-    const state = withTwoTracks()
-    expect(moveAnimationTrack('track-1', -1).apply(state)).toEqual(state)
-    expect(moveAnimationTrack('track-2', 1).apply(state)).toEqual(state)
-  })
-
-  it('renames a track, and undo gives the old name back', () => {
-    const command = renameAnimationTrack('track-1', 'Walk in')
-    const state = withTwoTracks()
-    const after = command.apply(state)
-
-    expect(tracksOf(after)[0]?.name).toBe('Walk in')
-    expect(tracksOf(command.revert(after))[0]?.name).toBe('Cube position')
   })
 })
 
@@ -227,8 +201,6 @@ describe('a command asked to revert what it never applied', () => {
     const state = withTwoTracks()
 
     expect(removeAnimationTrack('track-1').revert(state)).toEqual(state)
-    expect(moveAnimationTrack('track-1', 1).revert(state)).toEqual(state)
-    expect(renameAnimationTrack('track-1', 'x').revert(state)).toEqual(state)
     expect(setAnimationKey('track-1', 1, vec(1)).revert(state)).toEqual(state)
     expect(removeAnimationKey('track-1', 1).revert(state)).toEqual(state)
     expect(setTimelineSettings({ fps: 60 }).revert(state)).toEqual(state)
@@ -238,13 +210,6 @@ describe('a command asked to revert what it never applied', () => {
     const state = withTwoTracks()
 
     expect(removeAnimationTrack('nobody').apply(state)).toEqual(state)
-    expect(moveAnimationTrack('nobody', 1).apply(state)).toEqual(state)
     expect(removeAnimationKey('nobody', 1).apply(state)).toEqual(state)
-  })
-
-  it('renames nothing where there is nothing to rename', () => {
-    const state = withTwoTracks()
-    const command = renameAnimationTrack('nobody', 'x')
-    expect(command.revert(command.apply(state))).toEqual(state)
   })
 })

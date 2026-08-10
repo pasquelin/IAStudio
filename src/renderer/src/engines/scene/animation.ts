@@ -1,5 +1,5 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationClip, type Object3D } from 'three'
-import { DEFAULT_ANIMATION, type AnimationRef } from '@shared/domain/scene'
+import type { AnimationRef } from '@shared/domain/scene'
 
 /** The clips a loaded file brought, in the order it spells them. */
 export function clipsOf(source: Object3D): AnimationClip[] {
@@ -8,12 +8,6 @@ export function clipsOf(source: Object3D): AnimationClip[] {
 
 export function clipNamesOf(source: Object3D): string[] {
   return clipsOf(source).map(clip => clip.name)
-}
-
-/** What a model animates like when the document says nothing: its first clip, stopped at zero. */
-export function defaultAnimation(source: Object3D): AnimationRef | null {
-  const first = clipsOf(source)[0]
-  return first ? { ...DEFAULT_ANIMATION, clip: first.name } : null
 }
 
 type Player = {
@@ -65,11 +59,6 @@ export class SceneAnimations {
     return this.players.has(nodeId)
   }
 
-  /** The names a node can be asked to play, for whoever offers the choice. */
-  clipNames(nodeId: string): string[] {
-    return this.players.get(nodeId)?.clips.map(clip => clip.name) ?? []
-  }
-
   /**
    * Makes a node play what the document says. `null` puts the model back to its rest pose: with
    * no action left driving them, three restores the values the file was loaded with.
@@ -113,16 +102,6 @@ export class SceneAnimations {
     player.bound = ref
     // A seek has to show without waiting for a frame, and a paused player never gets one.
     player.mixer.update(0)
-  }
-
-  /** Where a node's head stands, for whoever writes it back into the document. */
-  timeOf(nodeId: string): number {
-    const player = this.players.get(nodeId)
-    const bound = player?.bound
-    if (!player || !bound) return 0
-
-    const clip = player.clips.find(candidate => candidate.name === bound.clip)
-    return clip ? player.mixer.clipAction(clip).time : 0
   }
 
   /**
