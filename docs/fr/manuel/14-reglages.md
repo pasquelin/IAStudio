@@ -77,7 +77,7 @@ La langue de tous les textes de l’application : menus, boutons, messages.
 Chaque langue s’écrit dans sa propre langue — « Français » reste « Français » même sur un écran en
 anglais. C’est volontaire : on reconnaît sa langue avant de savoir lire celle de l’écran.
 
-Le changement est **immédiat**, il n’y a rien à relancer. Il ne touche ni vos projets, ni ce que
+Une fois appliqué, le changement est **immédiat** : il n’y a rien à relancer. Il ne touche ni vos projets, ni ce que
 vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 
 > **Le formulaire de génération suit aussi, mais pas toujours jusqu’au bout.** Les noms des

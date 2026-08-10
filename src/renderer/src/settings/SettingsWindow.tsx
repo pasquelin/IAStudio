@@ -168,10 +168,9 @@ function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
  * rather than a panel — settings are not a document, they outlive the workspace being edited,
  * and ⌘, is expected to open one.
  *
- * Changes are written as they are made rather than behind an Apply button — a text field when
- * it is left, everything else on the spot. Every setting here is reversible and immediately
- * visible, and a buffered form would add a dirty state to reconcile against the other windows
- * already replicating these settings.
+ * Nothing is written until Apply or OK: an editing buffer holds the changes, and Cancel drops
+ * them. Writing on the spot left no way back from a settings session — the per-row ↺ restores
+ * the FACTORY value, not the one held before the window opened.
  */
 export function SettingsWindow() {
   const { t } = useTranslation()

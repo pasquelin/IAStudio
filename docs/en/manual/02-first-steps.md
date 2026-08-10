@@ -102,9 +102,15 @@ connected?".
 
 Still in settings, section **General**, setting **Language**.
 
-Three choices: **System** (your computer's language), **Français**, **English**. The change is
-immediate, nothing needs restarting, and it touches neither your projects nor what you write in
-them.
+Three choices: **System** (your computer's language), **Français**, **English**.
+
+**A setting you have chosen is not yet a setting you have saved.** Click **Apply**, which leaves
+the window open, or **OK**, which closes it. That is the difference with the previous step, where
+**Add an account** wrote straight away: settings are held aside until you confirm. A dot marks the
+changed setting meanwhile, and **Cancel** drops those changes.
+
+Once applied, the language change shows straight away — nothing needs restarting — and it touches
+neither your projects nor what you write in them.
 
 ---
 

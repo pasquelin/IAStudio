@@ -104,9 +104,16 @@ elle demande seulement « suis-je connecté ? ».
 
 Toujours dans les réglages, section **Général**, réglage **Langue**.
 
-Trois choix : **Système** (la langue de votre ordinateur), **Français**, **English**. Le
-changement est immédiat, il n’y a rien à relancer, et cela ne touche ni vos projets ni ce que
-vous écrivez dedans.
+Trois choix : **Système** (la langue de votre ordinateur), **Français**, **English**.
+
+**Un réglage choisi n’est pas encore un réglage enregistré.** Cliquez **Appliquer**, qui laisse la
+fenêtre ouverte, ou **OK**, qui la ferme. C’est la différence avec l’étape précédente, où
+**Ajouter un compte** écrivait sur-le-champ : les réglages, eux, sont mis de côté jusqu’à ce que
+vous validiez. Une pastille marque le réglage modifié en attendant, et **Annuler** jette ces
+changements-là.
+
+Une fois appliqué, le changement de langue se voit tout de suite — il n’y a rien à relancer — et
+cela ne touche ni vos projets ni ce que vous écrivez dedans.
 
 ---
 
