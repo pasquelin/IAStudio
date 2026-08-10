@@ -144,6 +144,41 @@ l’œil pendant qu’on lit la page, c’est la liste des projets, pas le conte
 documents du projet ouvert, eux, sont listés dans la colonne de droite, qui a ses panneaux à
 elle.
 
+### La colonne de droite
+
+Quatre panneaux en moitié haute, un en moitié basse, et ils se lisent dans cet ordre : de ce que
+ce projet vient de produire à ce qu’il y a dedans à ouvrir, en passant par ce que votre compte
+détient en dehors de lui.
+
+| Panneau | Moitié | Ce qu’il montre | Il faut |
+|---|---|---|---|
+| **Ce que vous avez produit** | 1re | les générations de ce projet, la plus récente d’abord | un projet ouvert |
+| **Par type** | 1re | un nombre par type d’asset ; un type qui n’est pas à zéro mène à sa part de l’étagère | rien |
+| **Votre bibliothèque** | 1re | ce que votre compte détient en ligne | une clé API |
+| **Vos documents** | 1re | les documents du projet, ouverts ou non | un projet ouvert |
+| **Activité récente** | 2de | le journal du studio, filtrable | rien |
+
+**« Il faut » ne veut pas dire la même chose ici que pour les bandes.** Une bande à qui il manque
+quelque chose disparaît ; **un panneau reste**, et dit ce qui lui manque — son icône est dans le
+rail, et une icône qui ouvre sur rien serait pire qu’un panneau vide. Sans projet, *Vos documents*
+propose d’en ouvrir un ; sans clé, *Votre bibliothèque* dit qu’elle **n’a pas obtenu de réponse**
+et offre de réessayer — c’est le même message qu’un refus du serveur, et c’est voulu : de son point
+de vue, une demande sans clé et une demande refusée reviennent au même, et **Réessayer** est le
+bon geste dans les deux cas. Le message « la bibliothèque est vide » ne s’affiche, lui, que
+lorsque la question a bien été posée et que la réponse ne contenait rien.
+
+**Vos documents n’est pas l’Explorateur, et c’est tout l’intérêt.** L’Explorateur parcourt le
+dossier du projet en arborescence, où un document est un fichier parmi d’autres, un pli plus bas.
+Ce panneau-ci liste les documents eux-mêmes — la question que pose l’accueil est « qu’y a-t-il à
+ouvrir ». **C’est ce qui rend retrouvable un document fermé** : la disposition dit lesquels sont
+à l’écran, le dossier dit lesquels existent, et un document fermé alors qu’aucune disposition ne
+le tenait ne se retrouve que là.
+
+**Activité récente est le journal complet**, celui-là même que déroule la barre d’état — avec ses
+filtres par niveau et par sujet, et son état vide. Ce n’est pas un extrait des dernières lignes :
+un résumé ne peut rien dire de ce qu’il a laissé de côté, alors que « qu’est-ce qui a raté »
+demande précisément de filtrer.
+
 > **L’accueil peut être coupé.** **Préférences ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. L’ordre des bandes et celles que vous avez
 > masquées se règlent sur l’accueil lui-même, pas dans les préférences.
