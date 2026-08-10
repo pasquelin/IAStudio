@@ -142,6 +142,19 @@ export const MEDIA_FRAME =
   'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
 
 /**
+ * A control laid over a shelf's artwork — the carousel's arrows, the button a tile puts in its
+ * corner. Hidden until the shelf is hovered: a control permanently over the picture hides part
+ * of what the shelf exists to show. Gauge, tone and corner stay with the caller.
+ *
+ * Written once because the group it reveals itself on is declared by `Carousel` and read from
+ * files that never import it — a copy of the class is a copy of that name, going stale in silence.
+ */
+export const SHELF_OVERLAY = cn(
+  'border-border bg-panel/90 absolute z-10 flex cursor-pointer items-center justify-center',
+  'rounded-full border opacity-0 transition-opacity group-hover/carousel:opacity-100',
+)
+
+/**
  * How a status reads. The caller names the MEANING — queued, running, cached, failed — and the
  * colour stays here: the jobs bar, the media import and a node of the graph all say "this one
  * went wrong", and they must say it in the same red.

@@ -1,0 +1,5084 @@
+{
+  "version": 1,
+  "root": "src",
+  "files": [
+    {
+      "path": "src/main/project/documents.ts",
+      "lines": 355,
+      "components": [],
+      "probes": [
+        {
+          "probe": "anyCast",
+          "line": 53,
+          "text": "as any"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/app/AccountSelect.tsx",
+      "lines": 96,
+      "components": [
+        {
+          "name": "AccountSelect",
+          "line": 21,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 9,
+            "shape": "div>button>span>span>UiIcon>Flyout>MenuRow>Separator>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/ActivityList.tsx",
+      "lines": 239,
+      "components": [
+        {
+          "name": "ActivityMessage",
+          "line": 83,
+          "exported": false,
+          "props": [
+            "entry"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>span>span"
+          }
+        },
+        {
+          "name": "ActivityRow",
+          "line": 110,
+          "exported": false,
+          "props": [
+            "entry",
+            "time"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "li>UiIcon>ActivityMessage>span"
+          }
+        },
+        {
+          "name": "FilterRow",
+          "line": 126,
+          "exported": false,
+          "props": [
+            "active",
+            "allLabel",
+            "label",
+            "name",
+            "onChange",
+            "values"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>button>button"
+          }
+        },
+        {
+          "name": "ActivityList",
+          "line": 182,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 7,
+            "shape": "div>div>FilterRow>FilterRow>EmptyState>ul>ActivityRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/ActivityStatus.tsx",
+      "lines": 58,
+      "components": [
+        {
+          "name": "ActivityStatus",
+          "line": 21,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 6,
+            "shape": "button>UiIcon>span>Flyout>div>ActivityList"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/ActivityToasts.tsx",
+      "lines": 56,
+      "components": [
+        {
+          "name": "ActivityToasts",
+          "line": 23,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 5,
+            "shape": "div>div>UiIcon>ActivityMessage>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/Application.tsx",
+      "lines": 114,
+      "components": [
+        {
+          "name": "Application",
+          "line": 23,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "QueryClientProvider>Shell"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/Breadcrumb.tsx",
+      "lines": 16,
+      "components": [
+        {
+          "name": "Breadcrumb",
+          "line": 6,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 0,
+            "shape": ""
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/DocumentArea.tsx",
+      "lines": 69,
+      "components": [
+        {
+          "name": "DocumentArea",
+          "line": 17,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "DockviewReact"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/DocumentTab.tsx",
+      "lines": 54,
+      "components": [
+        {
+          "name": "DocumentTab",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "props"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "DockviewDefaultTab>ToolButton>DocumentTabMenu"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/DocumentTabMenu.tsx",
+      "lines": 75,
+      "components": [
+        {
+          "name": "DocumentTabMenu",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "at",
+            "documentId",
+            "onClose"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "ContextMenu>MenuRow>MenuRow>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/Footer.tsx",
+      "lines": 25,
+      "components": [
+        {
+          "name": "Footer",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "left",
+            "right"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "footer>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/JobsStatus.tsx",
+      "lines": 77,
+      "components": [
+        {
+          "name": "JobsStatus",
+          "line": 32,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 8,
+            "shape": "button>span>ProgressBar>span>UiIcon>Flyout>div>Jobs"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/Rail.tsx",
+      "lines": 167,
+      "components": [
+        {
+          "name": "Rail",
+          "line": 38,
+          "exported": false,
+          "props": [
+            "side"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "div>div>NewButton>Separator>RailGroup>RailGroup"
+          }
+        },
+        {
+          "name": "NewButton",
+          "line": 74,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "ToolButton"
+          }
+        },
+        {
+          "name": "RailGroup",
+          "line": 118,
+          "exported": false,
+          "props": [
+            "zone"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "div>Fragment>Separator>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/Shell.tsx",
+      "lines": 195,
+      "components": [
+        {
+          "name": "Shell",
+          "line": 40,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 23,
+            "shape": "div>TitleBar>AccountSelect>div>Rail>div>Edge>div>Edge>Panel>HomeView>DocumentArea"
+          }
+        },
+        {
+          "name": "Edge",
+          "line": 107,
+          "exported": false,
+          "props": [
+            "zone"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>ToolWindow>ResizeHandle>ToolWindow>ResizeHandle"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 145,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/app/TitleBar.tsx",
+      "lines": 278,
+      "components": [
+        {
+          "name": "TitleBar",
+          "line": 46,
+          "exported": false,
+          "props": [
+            "actions",
+            "activeWorkspace",
+            "home",
+            "onHome",
+            "onWorkspace"
+          ],
+          "signature": {
+            "tags": 9,
+            "shape": "header>nav>BarButton>BarButton>ContextMenu>MenuRow>MenuRow>p>div"
+          }
+        },
+        {
+          "name": "BarButton",
+          "line": 217,
+          "exported": false,
+          "props": [
+            "current",
+            "icon",
+            "label",
+            "onClick",
+            "reorder"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/ToolWindow.tsx",
+      "lines": 109,
+      "components": [
+        {
+          "name": "ToolWindow",
+          "line": 37,
+          "exported": true,
+          "props": [
+            "length",
+            "onClose",
+            "onFocus",
+            "tool",
+            "zone"
+          ],
+          "signature": {
+            "tags": 12,
+            "shape": "ToolZoneProvider>Panel>PanelHeader>Separator>ToolButton>ErrorBoundary>Suspense>Actions>div>ErrorBoundary>Suspense>Content"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/UpdateStatus.tsx",
+      "lines": 37,
+      "components": [
+        {
+          "name": "UpdateStatus",
+          "line": 8,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 7,
+            "shape": "span>span>span>ProgressBar>button>UiIcon>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/documents.tsx",
+      "lines": 91,
+      "components": [
+        {
+          "name": "Home",
+          "line": 69,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
+          }
+        },
+        {
+          "name": "Loading",
+          "line": 74,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
+          }
+        },
+        {
+          "name": "WithDocument",
+          "line": 84,
+          "exported": false,
+          "props": [
+            "children",
+            "id"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "EmptyState>Suspense>Loading"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/app/tool-zone.tsx",
+      "lines": 27,
+      "components": [
+        {
+          "name": "ToolZoneProvider",
+          "line": 14,
+          "exported": false,
+          "props": [
+            "children",
+            "zone"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ToolZoneContext"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/AssetBadge.tsx",
+      "lines": 76,
+      "components": [
+        {
+          "name": "AssetBadge",
+          "line": 54,
+          "exported": false,
+          "props": [
+            "badge",
+            "label",
+            "overlay",
+            "showQuiet"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "span>UiIcon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/AssetDropField.tsx",
+      "lines": 78,
+      "components": [
+        {
+          "name": "AssetDropField",
+          "line": 29,
+          "exported": false,
+          "props": [
+            "initial",
+            "placeholder",
+            "registration"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "AssetDropTarget>Thumbnail>span>UiIcon>input"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/AssetDropTarget.tsx",
+      "lines": 77,
+      "components": [
+        {
+          "name": "AssetDropTarget",
+          "line": 29,
+          "exported": false,
+          "props": [
+            "accepts",
+            "children",
+            "className",
+            "exclusive",
+            "onDrop"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Button.tsx",
+      "lines": 43,
+      "components": [
+        {
+          "name": "Button",
+          "line": 19,
+          "exported": false,
+          "props": [
+            "children",
+            "className",
+            "ref",
+            "rest",
+            "type",
+            "variant"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Carousel.tsx",
+      "lines": 262,
+      "components": [
+        {
+          "name": "Carousel",
+          "line": 66,
+          "exported": false,
+          "props": [
+            "empty",
+            "itemHeight",
+            "itemWidth",
+            "items",
+            "label",
+            "renderCard"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "div>div>div>div>Arrow>Arrow>div>button"
+          }
+        },
+        {
+          "name": "Arrow",
+          "line": 240,
+          "exported": false,
+          "props": [
+            "hidden",
+            "onClick",
+            "side"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 175,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 178,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 186,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/Collection.tsx",
+      "lines": 395,
+      "components": [
+        {
+          "name": "Collection",
+          "line": 131,
+          "exported": false,
+          "props": [
+            "empty",
+            "footer",
+            "items",
+            "label",
+            "multiple",
+            "onActivate",
+            "onOpen",
+            "onReachEnd",
+            "onSelect",
+            "onVisible",
+            "renderCard",
+            "renderRow",
+            "rowHeight",
+            "selectedIds",
+            "state"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "div>div>div>CollectionCell"
+          }
+        },
+        {
+          "name": "CollectionCell",
+          "line": 332,
+          "exported": false,
+          "props": [
+            "children",
+            "className",
+            "index",
+            "onActivate",
+            "onArrow",
+            "onSelect",
+            "position",
+            "role",
+            "selected",
+            "tabbable",
+            "total"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>div"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 243,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 255,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/CollectionBar.tsx",
+      "lines": 269,
+      "components": [
+        {
+          "name": "Dropdown",
+          "line": 47,
+          "exported": false,
+          "props": [
+            "anyLabel",
+            "className",
+            "label",
+            "onPick",
+            "options",
+            "value"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>select>option>option>UiIcon"
+          }
+        },
+        {
+          "name": "CollectionBar",
+          "line": 98,
+          "exported": false,
+          "props": [
+            "className",
+            "facets",
+            "layout",
+            "onChange",
+            "sorts",
+            "state"
+          ],
+          "signature": {
+            "tags": 21,
+            "shape": "label>UiIcon>input>Dropdown>Dropdown>div>ToolButton>ToolButton>div>ToolButton>ToolButton>div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/ColorField.tsx",
+      "lines": 52,
+      "components": [
+        {
+          "name": "ColorField",
+          "line": 12,
+          "exported": false,
+          "props": [
+            "label",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart",
+            "value"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "label>span>input>span"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 26,
+          "text": "#ff0000"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/ContextMenu.tsx",
+      "lines": 61,
+      "components": [
+        {
+          "name": "ContextMenu",
+          "line": 25,
+          "exported": false,
+          "props": [
+            "at",
+            "children",
+            "onClose"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/DynamicForm.tsx",
+      "lines": 264,
+      "components": [
+        {
+          "name": "Control",
+          "line": 72,
+          "exported": false,
+          "props": [
+            "field",
+            "initial",
+            "onRoll",
+            "registration"
+          ],
+          "signature": {
+            "tags": 12,
+            "shape": "textarea>input>select>option>option>input>div>input>ToolButton>input>AssetDropField>input"
+          }
+        },
+        {
+          "name": "DynamicForm",
+          "line": 154,
+          "exported": false,
+          "props": [
+            "accessory",
+            "busy",
+            "fields",
+            "onSubmit",
+            "onValuesChange",
+            "preset",
+            "submitLabel",
+            "submitNote"
+          ],
+          "signature": {
+            "tags": 13,
+            "shape": "p>form>fieldset>legend>Fragment>label>span>span>Control>span>span>Button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/EmptyState.tsx",
+      "lines": 27,
+      "components": [
+        {
+          "name": "EmptyState",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "action",
+            "icon",
+            "message"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "div>UiIcon>p>Button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Failure.tsx",
+      "lines": 24,
+      "components": [
+        {
+          "name": "Failure",
+          "line": 13,
+          "exported": false,
+          "props": [
+            "onRetry",
+            "scope"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Flyout.tsx",
+      "lines": 112,
+      "components": [
+        {
+          "name": "Flyout",
+          "line": 48,
+          "exported": false,
+          "props": [
+            "anchor",
+            "children",
+            "onDismiss",
+            "onPointerEnter",
+            "onPointerLeave",
+            "placement",
+            "role"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/FormHeader.tsx",
+      "lines": 31,
+      "components": [
+        {
+          "name": "FormHeader",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "leading",
+            "title"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>p"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Masonry.tsx",
+      "lines": 204,
+      "components": [
+        {
+          "name": "Masonry",
+          "line": 52,
+          "exported": false,
+          "props": [
+            "columnWidth",
+            "empty",
+            "items",
+            "label",
+            "onReachEnd",
+            "ratioOf",
+            "renderCard"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>div>div>div>div"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 161,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 164,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 177,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 185,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/MediaTile.tsx",
+      "lines": 76,
+      "components": [
+        {
+          "name": "MediaTile",
+          "line": 38,
+          "exported": false,
+          "props": [
+            "badge",
+            "caption",
+            "fallbackIcon",
+            "fill",
+            "url"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "figure>img>UiIcon>figcaption"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/MenuButton.tsx",
+      "lines": 68,
+      "components": [
+        {
+          "name": "MenuButton",
+          "line": 36,
+          "exported": false,
+          "props": [
+            "button",
+            "menu",
+            "onClick",
+            "opensOnClick",
+            "rowCount",
+            "rows",
+            "tooltip"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>ToolButton>Flyout"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/MenuRow.tsx",
+      "lines": 56,
+      "components": [
+        {
+          "name": "MenuRow",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "checked",
+            "disabled",
+            "icon",
+            "label",
+            "onSelect",
+            "shortcut",
+            "tip"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "button>span>UiIcon>UiIcon>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/NumberField.tsx",
+      "lines": 147,
+      "components": [
+        {
+          "name": "NumberField",
+          "line": 30,
+          "exported": false,
+          "props": [
+            "label",
+            "layout",
+            "max",
+            "min",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart",
+            "step",
+            "value"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>span>input"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Panel.tsx",
+      "lines": 18,
+      "components": [
+        {
+          "name": "Panel",
+          "line": 5,
+          "exported": false,
+          "props": [
+            "children",
+            "className",
+            "rest"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "section"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/PanelHeader.tsx",
+      "lines": 40,
+      "components": [
+        {
+          "name": "PanelHeader",
+          "line": 15,
+          "exported": false,
+          "props": [
+            "children",
+            "fillActions",
+            "title",
+            "trailing"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "header>span>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/ProgressBar.tsx",
+      "lines": 29,
+      "components": [
+        {
+          "name": "ProgressBar",
+          "line": 13,
+          "exported": false,
+          "props": [
+            "className",
+            "label",
+            "ratio"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>div"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 25,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/ProgressRow.tsx",
+      "lines": 57,
+      "components": [
+        {
+          "name": "ProgressRow",
+          "line": 26,
+          "exported": false,
+          "props": [
+            "cancel",
+            "detail",
+            "label",
+            "ratio",
+            "status",
+            "tone"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "li>div>span>ProgressBar>span>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/PromptAssistant.tsx",
+      "lines": 180,
+      "components": [
+        {
+          "name": "PromptAssistant",
+          "line": 36,
+          "exported": false,
+          "props": [
+            "describeStyle",
+            "failureMessage",
+            "onAdoptCall",
+            "onAdoptText",
+            "readDraft",
+            "readReferences",
+            "request",
+            "translate"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "div>div>ToolButton>ToolButton>ToolButton>p>p>Suggestion"
+          }
+        },
+        {
+          "name": "Suggestion",
+          "line": 145,
+          "exported": false,
+          "props": [
+            "onAdoptCall",
+            "onAdoptText",
+            "suggestion"
+          ],
+          "signature": {
+            "tags": 7,
+            "shape": "div>p>p>p>div>Button>Button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/PropertyGroup.tsx",
+      "lines": 21,
+      "components": [
+        {
+          "name": "PropertyGroup",
+          "line": 11,
+          "exported": false,
+          "props": [
+            "children",
+            "title"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "section>h3>div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/PropertyRow.tsx",
+      "lines": 43,
+      "components": [
+        {
+          "name": "PropertyRow",
+          "line": 21,
+          "exported": false,
+          "props": [
+            "children",
+            "label",
+            "stacked"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>span>div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/PropertySection.tsx",
+      "lines": 40,
+      "components": [
+        {
+          "name": "PropertySection",
+          "line": 15,
+          "exported": false,
+          "props": [
+            "children",
+            "defaultOpen",
+            "title"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "section>button>UiIcon>div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/RangeField.tsx",
+      "lines": 125,
+      "components": [
+        {
+          "name": "RangeField",
+          "line": 43,
+          "exported": false,
+          "props": [
+            "fromLabel",
+            "label",
+            "max",
+            "min",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart",
+            "step",
+            "toLabel",
+            "value"
+          ],
+          "signature": {
+            "tags": 9,
+            "shape": "div>span>div>div>div>div>input>input>Readout"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 88,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/Readout.tsx",
+      "lines": 32,
+      "components": [
+        {
+          "name": "Readout",
+          "line": 15,
+          "exported": false,
+          "props": [
+            "values"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "output"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/ResizeHandle.tsx",
+      "lines": 73,
+      "components": [
+        {
+          "name": "ResizeHandle",
+          "line": 25,
+          "exported": false,
+          "props": [
+            "axis",
+            "invert",
+            "onSize",
+            "size"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Row.tsx",
+      "lines": 59,
+      "components": [
+        {
+          "name": "Row",
+          "line": 29,
+          "exported": false,
+          "props": [
+            "actions",
+            "icon",
+            "leading",
+            "media",
+            "muted",
+            "subtitle",
+            "tip",
+            "title"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>UiIcon>div>p>p"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "classNameConcat",
+          "line": 49,
+          "text": "className={`"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/ScrollHost.tsx",
+      "lines": 34,
+      "components": [
+        {
+          "name": "ScrollHostProvider",
+          "line": 26,
+          "exported": false,
+          "props": [
+            "children",
+            "host"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ScrollHost.Provider"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Separator.tsx",
+      "lines": 21,
+      "components": [
+        {
+          "name": "Separator",
+          "line": 9,
+          "exported": false,
+          "props": [
+            "className",
+            "orientation"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/SliderField.tsx",
+      "lines": 53,
+      "components": [
+        {
+          "name": "SliderField",
+          "line": 19,
+          "exported": false,
+          "props": [
+            "label",
+            "max",
+            "min",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart",
+            "step",
+            "value"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "label>span>input>Readout"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/TextField.tsx",
+      "lines": 37,
+      "components": [
+        {
+          "name": "TextField",
+          "line": 14,
+          "exported": false,
+          "props": [
+            "label",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart",
+            "value"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "label>span>input"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/TextureField.tsx",
+      "lines": 104,
+      "components": [
+        {
+          "name": "TextureField",
+          "line": 36,
+          "exported": false,
+          "props": [
+            "chooseLabel",
+            "clearLabel",
+            "emptyLabel",
+            "label",
+            "onChange",
+            "options",
+            "value"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "div>span>Thumbnail>span>MenuButton>MenuRow>MenuRow>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Thumbnail.tsx",
+      "lines": 25,
+      "components": [
+        {
+          "name": "Thumbnail",
+          "line": 13,
+          "exported": false,
+          "props": [
+            "className",
+            "url"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "img>div>UiIcon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Timecode.tsx",
+      "lines": 22,
+      "components": [
+        {
+          "name": "Timecode",
+          "line": 15,
+          "exported": false,
+          "props": [
+            "className",
+            "settings",
+            "time"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/ToggleField.tsx",
+      "lines": 28,
+      "components": [
+        {
+          "name": "ToggleField",
+          "line": 14,
+          "exported": false,
+          "props": [
+            "label",
+            "onChange",
+            "value"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "label>span>input"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/ToolButton.tsx",
+      "lines": 82,
+      "components": [
+        {
+          "name": "ToolButton",
+          "line": 40,
+          "exported": false,
+          "props": [
+            "accented",
+            "active",
+            "children",
+            "className",
+            "description",
+            "icon",
+            "iconSize",
+            "label",
+            "ref",
+            "rest",
+            "shortcut",
+            "tooltip",
+            "variant"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Toolbar.tsx",
+      "lines": 246,
+      "components": [
+        {
+          "name": "Toolbar",
+          "line": 69,
+          "exported": false,
+          "props": [
+            "activeTool",
+            "canRedo",
+            "canUndo",
+            "className",
+            "extras",
+            "onMode",
+            "onRedo",
+            "onTool",
+            "onUndo",
+            "orientation",
+            "redoShortcut",
+            "style",
+            "tools",
+            "undoShortcut"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "Separator>div>Fragment>ToolItem>HistoryButton>HistoryButton"
+          }
+        },
+        {
+          "name": "HistoryButton",
+          "line": 153,
+          "exported": false,
+          "props": [
+            "description",
+            "enabled",
+            "icon",
+            "label",
+            "onClick",
+            "shortcut",
+            "tip"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ToolButton"
+          }
+        },
+        {
+          "name": "ToolItem",
+          "line": 198,
+          "exported": false,
+          "props": [
+            "active",
+            "modeTip",
+            "onMode",
+            "onTool",
+            "tip",
+            "tool"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "MenuButton>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/TooltipHost.tsx",
+      "lines": 29,
+      "components": [
+        {
+          "name": "TooltipHost",
+          "line": 16,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "Tooltip"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/Tree.tsx",
+      "lines": 233,
+      "components": [
+        {
+          "name": "Tree",
+          "line": 72,
+          "exported": false,
+          "props": [
+            "expandedIds",
+            "nodes",
+            "onDrop",
+            "onSelect",
+            "onToggle",
+            "renderRow",
+            "selectable",
+            "selectedIds"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "div>ul>li>div>span>UiIcon"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 152,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 161,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 173,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/design/UiIcon.tsx",
+      "lines": 18,
+      "components": [
+        {
+          "name": "UiIcon",
+          "line": 15,
+          "exported": false,
+          "props": [
+            "className",
+            "path",
+            "size"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "Icon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/design/VectorField.tsx",
+      "lines": 61,
+      "components": [
+        {
+          "name": "VectorField",
+          "line": 25,
+          "exported": false,
+          "props": [
+            "bounds",
+            "label",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart",
+            "value"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "div>span>div>NumberField"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 43,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/dictation/DictationButton.tsx",
+      "lines": 88,
+      "components": [
+        {
+          "name": "DictationButton",
+          "line": 27,
+          "exported": false,
+          "props": [
+            "variant"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "span>ToolButton>LevelMeter>span"
+          }
+        },
+        {
+          "name": "LevelMeter",
+          "line": 68,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "span>span"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 82,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/dictation/DictationField.tsx",
+      "lines": 55,
+      "components": [
+        {
+          "name": "DictationField",
+          "line": 18,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "div>div>DictationButton>p"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/dictation/DictationStatus.tsx",
+      "lines": 101,
+      "components": [
+        {
+          "name": "DictationStatus",
+          "line": 20,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 13,
+            "shape": "span>UiIcon>button>UiIcon>span>span>span>ProgressBar>button>button>UiIcon>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/engines/canvas/CanvasEngine.ts",
+      "lines": 2437,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 354,
+          "text": "#34363a"
+        },
+        {
+          "probe": "hexColour",
+          "line": 355,
+          "text": "#2e436e"
+        },
+        {
+          "probe": "hexColour",
+          "line": 356,
+          "text": "#3c3f44"
+        },
+        {
+          "probe": "hexColour",
+          "line": 357,
+          "text": "#868a91"
+        },
+        {
+          "probe": "hexColour",
+          "line": 358,
+          "text": "#868a91"
+        },
+        {
+          "probe": "hexColour",
+          "line": 359,
+          "text": "#3574f0"
+        },
+        {
+          "probe": "hexColour",
+          "line": 360,
+          "text": "#ffffff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 361,
+          "text": "#000000"
+        },
+        {
+          "probe": "hexColour",
+          "line": 362,
+          "text": "#00000099"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/engines/canvas/cursors.ts",
+      "lines": 84,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 75,
+          "text": "#000"
+        },
+        {
+          "probe": "hexColour",
+          "line": 76,
+          "text": "#000"
+        },
+        {
+          "probe": "hexColour",
+          "line": 76,
+          "text": "#000"
+        },
+        {
+          "probe": "hexColour",
+          "line": 77,
+          "text": "#fff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 78,
+          "text": "#fff"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/engines/scene/light-types.ts",
+      "lines": 82,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 31,
+          "text": "#222222"
+        },
+        {
+          "probe": "hexColour",
+          "line": 37,
+          "text": "#ffffff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 46,
+          "text": "#00aaff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 47,
+          "text": "#ffaa00"
+        },
+        {
+          "probe": "hexColour",
+          "line": 53,
+          "text": "#ffffff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 59,
+          "text": "#ffffff"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/engines/scene/scene-fixtures.ts",
+      "lines": 99,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 38,
+          "text": "#ffffff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 46,
+          "text": "#222222"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/engines/timeline/painter.ts",
+      "lines": 331,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 76,
+          "text": "#000"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/home/HomeView.tsx",
+      "lines": 110,
+      "components": [
+        {
+          "name": "HomeView",
+          "line": 24,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 7,
+            "shape": "div>ScrollHostProvider>div>div>ErrorBoundary>Section>Closing"
+          }
+        },
+        {
+          "name": "Closing",
+          "line": 61,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "div>SectionNote>Button>Hidden"
+          }
+        },
+        {
+          "name": "Hidden",
+          "line": 78,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "p>button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/Section.tsx",
+      "lines": 61,
+      "components": [
+        {
+          "name": "Section",
+          "line": 34,
+          "exported": false,
+          "props": [
+            "actions",
+            "children",
+            "id",
+            "sticky",
+            "title"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "section>header>h2>div>span>SectionMenu"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/SectionMenu.tsx",
+      "lines": 104,
+      "components": [
+        {
+          "name": "SectionMenu",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "id"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "MenuButton>MenuRow>MenuRow>MenuRow>Separator>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/SectionNote.tsx",
+      "lines": 21,
+      "components": [
+        {
+          "name": "SectionNote",
+          "line": 16,
+          "exported": false,
+          "props": [
+            "children",
+            "standalone"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "p"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/ShelfCard.tsx",
+      "lines": 124,
+      "components": [
+        {
+          "name": "ShelfCard",
+          "line": 34,
+          "exported": false,
+          "props": [
+            "hint",
+            "icon",
+            "onClick",
+            "subtitle",
+            "title"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "span>UiIcon>span>span>div>button"
+          }
+        },
+        {
+          "name": "ShelfTile",
+          "line": 90,
+          "exported": false,
+          "props": [
+            "caption",
+            "corner",
+            "fallbackIcon",
+            "hint",
+            "label",
+            "onClick",
+            "url"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "MediaTile>div>button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Activity.tsx",
+      "lines": 35,
+      "components": [
+        {
+          "name": "Activity",
+          "line": 17,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>ul>ActivityRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/ByMode.tsx",
+      "lines": 64,
+      "components": [
+        {
+          "name": "ByMode",
+          "line": 21,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>div>Counter"
+          }
+        },
+        {
+          "name": "Counter",
+          "line": 41,
+          "exported": false,
+          "props": [
+            "total",
+            "type"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "button>UiIcon>span>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Creations.tsx",
+      "lines": 73,
+      "components": [
+        {
+          "name": "Creations",
+          "line": 23,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>Carousel>Tile"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 54,
+          "exported": false,
+          "props": [
+            "asset"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ShelfTile"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Documents.tsx",
+      "lines": 57,
+      "components": [
+        {
+          "name": "Documents",
+          "line": 26,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "Section>Carousel>SectionNote>ShelfCard"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Explore.tsx",
+      "lines": 118,
+      "components": [
+        {
+          "name": "Explore",
+          "line": 27,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 6,
+            "shape": "Section>div>Tab>Masonry>SectionNote>Tile"
+          }
+        },
+        {
+          "name": "Tab",
+          "line": 85,
+          "exported": false,
+          "props": [
+            "current",
+            "onSelect",
+            "type"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "button"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 106,
+          "exported": false,
+          "props": [
+            "asset"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "MediaTile"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Favorites.tsx",
+      "lines": 86,
+      "components": [
+        {
+          "name": "Favorites",
+          "line": 22,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>Carousel>Tile"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 43,
+          "exported": false,
+          "props": [
+            "recipe"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "ShelfTile>Unpin"
+          }
+        },
+        {
+          "name": "Unpin",
+          "line": 67,
+          "exported": false,
+          "props": [
+            "recipe"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Jobs.tsx",
+      "lines": 34,
+      "components": [
+        {
+          "name": "Jobs",
+          "line": 15,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>ul>JobRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Library.tsx",
+      "lines": 84,
+      "components": [
+        {
+          "name": "Library",
+          "line": 27,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Section>Carousel>Tile"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 64,
+          "exported": false,
+          "props": [
+            "asset"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ShelfTile"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Projects.tsx",
+      "lines": 81,
+      "components": [
+        {
+          "name": "Projects",
+          "line": 26,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "Section>Carousel>Empty>ShelfCard"
+          }
+        },
+        {
+          "name": "Empty",
+          "line": 61,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 74,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/home/sections/Similar.tsx",
+      "lines": 124,
+      "components": [
+        {
+          "name": "Similar",
+          "line": 47,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 6,
+            "shape": "Section>Button>SectionNote>Section>Carousel>Tile"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 111,
+          "exported": false,
+          "props": [
+            "asset"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ShelfTile"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Spark.tsx",
+      "lines": 101,
+      "components": [
+        {
+          "name": "Spark",
+          "line": 29,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 5,
+            "shape": "Section>Button>SectionNote>div>Idea"
+          }
+        },
+        {
+          "name": "Idea",
+          "line": 80,
+          "exported": false,
+          "props": [
+            "modelId",
+            "suggestion"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "button>UiIcon>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Spotlight.tsx",
+      "lines": 214,
+      "components": [
+        {
+          "name": "Spotlight",
+          "line": 56,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "Waiting>Card>Carousel>Card"
+          }
+        },
+        {
+          "name": "Waiting",
+          "line": 154,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "div"
+          }
+        },
+        {
+          "name": "Card",
+          "line": 171,
+          "exported": false,
+          "props": [
+            "layout",
+            "slide"
+          ],
+          "signature": {
+            "tags": 7,
+            "shape": "article>UiIcon>span>h3>p>span>Button"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 159,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/home/sections/Tools.tsx",
+      "lines": 114,
+      "components": [
+        {
+          "name": "Tools",
+          "line": 27,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "Section>div>Group>Group"
+          }
+        },
+        {
+          "name": "Group",
+          "line": 86,
+          "exported": false,
+          "props": [
+            "columns",
+            "entries",
+            "title"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "div>h3>div>button>UiIcon>span>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/home/sections/Usage.tsx",
+      "lines": 76,
+      "components": [
+        {
+          "name": "Usage",
+          "line": 27,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "Section>SectionNote>Carousel>ShelfCard"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/licences/LicencesWindow.tsx",
+      "lines": 62,
+      "components": [
+        {
+          "name": "LicencesWindow",
+          "line": 15,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 13,
+            "shape": "div>header>h1>p>ul>li>button>span>span>span>div>p"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/main.tsx",
+      "lines": 83,
+      "components": [
+        {
+          "name": "Route",
+          "line": 46,
+          "exported": false,
+          "props": [
+            "hash"
+          ],
+          "signature": {
+            "tags": 7,
+            "shape": "Suspense>SettingsWindow>Suspense>LicencesWindow>Suspense>UsageWindow>Application"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/apps/Apps.tsx",
+      "lines": 211,
+      "components": [
+        {
+          "name": "Apps",
+          "line": 60,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 9,
+            "shape": "MissingCredentials>AppRunner>EmptyState>div>p>Collection>AppRow>EmptyState>p"
+          }
+        },
+        {
+          "name": "AppRow",
+          "line": 135,
+          "exported": false,
+          "props": [
+            "app"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "Row>Thumbnail"
+          }
+        },
+        {
+          "name": "AppRunner",
+          "line": 150,
+          "exported": false,
+          "props": [
+            "onBack",
+            "workflowId"
+          ],
+          "signature": {
+            "tags": 10,
+            "shape": "div>FormHeader>ToolButton>p>EmptyState>p>ErrorBoundary>Suspense>EmptyState>DynamicForm"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/AssetBrowser.tsx",
+      "lines": 119,
+      "components": [
+        {
+          "name": "AssetBrowser",
+          "line": 31,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 7,
+            "shape": "div>CollectionBar>ImportProgress>Collection>AssetCard>AssetRow>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/AssetBrowserActions.tsx",
+      "lines": 109,
+      "components": [
+        {
+          "name": "AssetBrowserActions",
+          "line": 32,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 7,
+            "shape": "CollectionBar>span>UiIcon>span>ToolButton>ToolButton>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/AssetCard.tsx",
+      "lines": 37,
+      "components": [
+        {
+          "name": "AssetCard",
+          "line": 23,
+          "exported": true,
+          "props": [
+            "asset",
+            "badgeLabels",
+            "ownerId"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "DraggableAsset>MediaTile>AssetBadge"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/AssetMenu.tsx",
+      "lines": 70,
+      "components": [
+        {
+          "name": "AssetMenu",
+          "line": 27,
+          "exported": false,
+          "props": [
+            "asset",
+            "at",
+            "onClose"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "ContextMenu>MenuRow>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/AssetRow.tsx",
+      "lines": 41,
+      "components": [
+        {
+          "name": "AssetRow",
+          "line": 17,
+          "exported": true,
+          "props": [
+            "asset",
+            "badgeLabels",
+            "ownerId",
+            "typeLabel"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "DraggableAsset>Row>span>AssetBadge>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/DraggableAsset.tsx",
+      "lines": 63,
+      "components": [
+        {
+          "name": "DraggableAsset",
+          "line": 24,
+          "exported": false,
+          "props": [
+            "asset",
+            "children",
+            "className"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>AssetMenu"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/ImportProgress.tsx",
+      "lines": 33,
+      "components": [
+        {
+          "name": "ImportProgress",
+          "line": 11,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "div>ul>ImportProgressRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/assets/ImportProgressRow.tsx",
+      "lines": 40,
+      "components": [
+        {
+          "name": "ImportProgressRow",
+          "line": 17,
+          "exported": true,
+          "props": [
+            "entry",
+            "name"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ProgressRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/channels/ChannelTile.tsx",
+      "lines": 205,
+      "components": [
+        {
+          "name": "ChannelTile",
+          "line": 74,
+          "exported": false,
+          "props": [
+            "channel",
+            "derivation",
+            "inspected",
+            "map",
+            "onClear",
+            "onInspect",
+            "onPick",
+            "options"
+          ],
+          "signature": {
+            "tags": 11,
+            "shape": "div>MediaTile>button>span>UiIcon>div>MenuButton>MenuRow>MenuRow>MenuRow>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/channels/Channels.tsx",
+      "lines": 137,
+      "components": [
+        {
+          "name": "Channels",
+          "line": 24,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "Grid>EmptyState"
+          }
+        },
+        {
+          "name": "Grid",
+          "line": 38,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>AssetDropTarget>ChannelTile"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/explorer/DocumentRow.tsx",
+      "lines": 39,
+      "components": [
+        {
+          "name": "DocumentRow",
+          "line": 19,
+          "exported": false,
+          "props": [
+            "document",
+            "open"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "Row>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/explorer/Explorer.tsx",
+      "lines": 54,
+      "components": [
+        {
+          "name": "Explorer",
+          "line": 24,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "EmptyState>Collection>DocumentRow>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/generator/Generator.tsx",
+      "lines": 188,
+      "components": [
+        {
+          "name": "Generator",
+          "line": 78,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 11,
+            "shape": "MissingCredentials>EmptyState>EmptyState>div>FormHeader>p>ErrorBoundary>Suspense>EmptyState>DynamicForm>PromptAssistant"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/AssetInspector.tsx",
+      "lines": 157,
+      "components": [
+        {
+          "name": "AssetInspector",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "asset"
+          ],
+          "signature": {
+            "tags": 12,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>PropertyRow>PropertyRow>PropertyRow>PropertyRow>GenerationGroup>PropertyGroup>PropertyRow>span>ToolButton"
+          }
+        },
+        {
+          "name": "GenerationGroup",
+          "line": 93,
+          "exported": false,
+          "props": [
+            "assetId",
+            "generation"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>PropertyRow>p>div>ToolButton>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/ClipInspector.tsx",
+      "lines": 97,
+      "components": [
+        {
+          "name": "ClipInspector",
+          "line": 27,
+          "exported": false,
+          "props": [
+            "clip",
+            "documentId",
+            "sequence"
+          ],
+          "signature": {
+            "tags": 12,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>PropertyRow>PropertyRow>PropertyRow>PropertyRow>PropertyGroup>NumberField>NumberField>NumberField>NumberField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/DescriptorSection.tsx",
+      "lines": 48,
+      "components": [
+        {
+          "name": "DescriptorSection",
+          "line": 22,
+          "exported": false,
+          "props": [
+            "children",
+            "fields",
+            "gesture",
+            "onChange",
+            "title"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "PropertySection>PropertyControl"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/EnvironmentSection.tsx",
+      "lines": 53,
+      "components": [
+        {
+          "name": "EnvironmentSection",
+          "line": 25,
+          "exported": false,
+          "props": [
+            "environment",
+            "onChange"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "PropertySection>TextureField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/FontField.tsx",
+      "lines": 70,
+      "components": [
+        {
+          "name": "FontField",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "label",
+            "onChange",
+            "value"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "TextureField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/GraphNodeInspector.tsx",
+      "lines": 94,
+      "components": [
+        {
+          "name": "GraphNodeInspector",
+          "line": 20,
+          "exported": false,
+          "props": [
+            "documentId",
+            "node"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>TextField>ModelNodeFields>TextField>TextField>AssetFields"
+          }
+        },
+        {
+          "name": "AssetFields",
+          "line": 74,
+          "exported": false,
+          "props": [
+            "edit",
+            "node"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "PropertyRow>PropertyRow>TextField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/Inspector.tsx",
+      "lines": 171,
+      "components": [
+        {
+          "name": "Inspector",
+          "line": 40,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "div>Face"
+          }
+        },
+        {
+          "name": "Face",
+          "line": 49,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 11,
+            "shape": "AssetSelection>ClipInspector>Empty>LayerInspector>Empty>NodeSelection>TrackInspector>Empty>SceneInspector>TextureInspector>Empty"
+          }
+        },
+        {
+          "name": "Empty",
+          "line": 117,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
+          }
+        },
+        {
+          "name": "NodeSelection",
+          "line": 132,
+          "exported": false,
+          "props": [
+            "ids",
+            "ownerId"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "GraphNodeInspector>Empty"
+          }
+        },
+        {
+          "name": "AssetSelection",
+          "line": 147,
+          "exported": false,
+          "props": [
+            "ids"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "Empty>AssetInspector>PropertyGroup>PropertyRow>PropertyRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/InspectorActions.tsx",
+      "lines": 48,
+      "components": [
+        {
+          "name": "InspectorActions",
+          "line": 20,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/LayerInspector.tsx",
+      "lines": 226,
+      "components": [
+        {
+          "name": "LayerInspector",
+          "line": 52,
+          "exported": false,
+          "props": [
+            "documentId",
+            "layer"
+          ],
+          "signature": {
+            "tags": 25,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>PropertyGroup>PropertyRow>select>option>SliderField>SliderField>ToggleField>PropertyGroup>ToggleField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/MaterialSection.tsx",
+      "lines": 49,
+      "components": [
+        {
+          "name": "MaterialSection",
+          "line": 20,
+          "exported": false,
+          "props": [
+            "fallbackColor",
+            "gesture",
+            "material",
+            "onChange"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "DescriptorSection>PictureField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/ModelNodeFields.tsx",
+      "lines": 217,
+      "components": [
+        {
+          "name": "ModelNodeFields",
+          "line": 50,
+          "exported": false,
+          "props": [
+            "documentId",
+            "edit",
+            "node"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "PropertyRow>select>option>option>NodeForm"
+          }
+        },
+        {
+          "name": "NodeForm",
+          "line": 140,
+          "exported": false,
+          "props": [
+            "documentId",
+            "edit",
+            "fields",
+            "node"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "PropertyGroup>ErrorBoundary>Suspense>EmptyState>DynamicForm"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/PictureField.tsx",
+      "lines": 42,
+      "components": [
+        {
+          "name": "PictureField",
+          "line": 18,
+          "exported": false,
+          "props": [
+            "label",
+            "onChange",
+            "value"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "TextureField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/PropertyControl.tsx",
+      "lines": 67,
+      "components": [
+        {
+          "name": "PropertyControl",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "field",
+            "gesture",
+            "label",
+            "onChange"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "SliderField>NumberField>VectorField>ColorField>TextField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/SceneInspector.tsx",
+      "lines": 138,
+      "components": [
+        {
+          "name": "SceneInspector",
+          "line": 38,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 9,
+            "shape": "EnvironmentSection>TransformSection>ShadowSection>DescriptorSection>MaterialSection>TextSection>MaterialSection>SpriteSection>DescriptorSection"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/ShadowSection.tsx",
+      "lines": 49,
+      "components": [
+        {
+          "name": "ShadowSection",
+          "line": 19,
+          "exported": false,
+          "props": [
+            "edit",
+            "node",
+            "selection"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "PropertySection>ToggleField>ToggleField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/SpriteSection.tsx",
+      "lines": 36,
+      "components": [
+        {
+          "name": "SpriteSection",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "fallbackColor",
+            "gesture",
+            "onChange",
+            "sprite"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "DescriptorSection>PictureField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/TextSection.tsx",
+      "lines": 46,
+      "components": [
+        {
+          "name": "TextSection",
+          "line": 21,
+          "exported": false,
+          "props": [
+            "gesture",
+            "onChange",
+            "text"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "DescriptorSection>TextField>FontField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/TextureInspector.tsx",
+      "lines": 338,
+      "components": [
+        {
+          "name": "TextureInspector",
+          "line": 54,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 32,
+            "shape": "PropertySection>ColorField>SliderField>RangeField>SliderField>RangeField>SliderField>SliderField>PropertySection>SliderField>ToggleField>SliderField"
+          }
+        },
+        {
+          "name": "SeamReading",
+          "line": 293,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "PropertyRow>div>span>Button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/TrackInspector.tsx",
+      "lines": 65,
+      "components": [
+        {
+          "name": "TrackInspector",
+          "line": 22,
+          "exported": false,
+          "props": [
+            "documentId",
+            "track"
+          ],
+          "signature": {
+            "tags": 8,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>PropertyRow>PropertyGroup>PropertyRow>ToolButton>NumberField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/inspector/TransformSection.tsx",
+      "lines": 115,
+      "components": [
+        {
+          "name": "TransformSection",
+          "line": 57,
+          "exported": false,
+          "props": [
+            "edit",
+            "node",
+            "nodes",
+            "selection"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "PropertySection>TextField>VectorField>VectorField>VectorField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/jobs/JobRow.tsx",
+      "lines": 69,
+      "components": [
+        {
+          "name": "JobDetail",
+          "line": 19,
+          "exported": false,
+          "props": [
+            "job"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "span>span"
+          }
+        },
+        {
+          "name": "JobRow",
+          "line": 49,
+          "exported": true,
+          "props": [
+            "job"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "ProgressRow>JobDetail"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/jobs/Jobs.tsx",
+      "lines": 24,
+      "components": [
+        {
+          "name": "Jobs",
+          "line": 8,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "EmptyState>ul>JobRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/layers/LayerList.tsx",
+      "lines": 61,
+      "components": [
+        {
+          "name": "LayerList",
+          "line": 18,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "Collection>LayerRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/layers/LayerRow.tsx",
+      "lines": 141,
+      "components": [
+        {
+          "name": "LayerRow",
+          "line": 44,
+          "exported": true,
+          "props": [
+            "depth",
+            "documentId",
+            "labels",
+            "layer"
+          ],
+          "signature": {
+            "tags": 9,
+            "shape": "div>ToolButton>span>div>InlineRename>Row>VisibilityToggle>MenuButton>MenuRow"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 60,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/panels/layers/LayerStackActions.tsx",
+      "lines": 166,
+      "components": [
+        {
+          "name": "LayerStackActions",
+          "line": 39,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "ToolButton>ToolButton>MenuButton>MenuRow>MenuButton>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/layers/LayersActions.tsx",
+      "lines": 14,
+      "components": [
+        {
+          "name": "LayersActions",
+          "line": 8,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "LayerStackActions"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/layers/LayersPanel.tsx",
+      "lines": 22,
+      "components": [
+        {
+          "name": "LayersPanel",
+          "line": 15,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "EmptyState>LayerList"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/models/Models.tsx",
+      "lines": 340,
+      "components": [
+        {
+          "name": "Models",
+          "line": 97,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 11,
+            "shape": "MissingCredentials>EmptyState>div>SelectedModel>CollectionBar>div>Collection>ModelCard>ModelRow>EmptyState>p"
+          }
+        },
+        {
+          "name": "SelectedModel",
+          "line": 276,
+          "exported": false,
+          "props": [
+            "model",
+            "picture"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>Row>Thumbnail"
+          }
+        },
+        {
+          "name": "ModelCard",
+          "line": 292,
+          "exported": false,
+          "props": [
+            "model",
+            "picture"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "MediaTile>span"
+          }
+        },
+        {
+          "name": "ModelRow",
+          "line": 323,
+          "exported": false,
+          "props": [
+            "model",
+            "picture"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "Row>Thumbnail"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/scene/Scene.tsx",
+      "lines": 19,
+      "components": [
+        {
+          "name": "Scene",
+          "line": 12,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "EmptyState>SceneTree"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/scene/SceneTree.tsx",
+      "lines": 86,
+      "components": [
+        {
+          "name": "SceneTree",
+          "line": 16,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "Tree>SceneNodeRow>Row"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/InlineRename.tsx",
+      "lines": 97,
+      "components": [
+        {
+          "name": "InlineRename",
+          "line": 21,
+          "exported": false,
+          "props": [
+            "label",
+            "onCommit",
+            "value"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "input"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/MissingCredentials.tsx",
+      "lines": 22,
+      "components": [
+        {
+          "name": "MissingCredentials",
+          "line": 10,
+          "exported": false,
+          "props": [
+            "icon"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/NodeActions.tsx",
+      "lines": 74,
+      "components": [
+        {
+          "name": "NodeActions",
+          "line": 18,
+          "exported": false,
+          "props": [
+            "documentId",
+            "type"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "MenuButton>MenuRow>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/NodeList.tsx",
+      "lines": 41,
+      "components": [
+        {
+          "name": "NodeList",
+          "line": 12,
+          "exported": false,
+          "props": [
+            "documentId",
+            "type"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "Collection>SceneNodeRow>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/SceneNodeRow.tsx",
+      "lines": 45,
+      "components": [
+        {
+          "name": "SceneNodeRow",
+          "line": 23,
+          "exported": true,
+          "props": [
+            "documentId",
+            "node",
+            "visibleLabel"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "Row>VisibilityToggle"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/VisibilityToggle.tsx",
+      "lines": 33,
+      "components": [
+        {
+          "name": "VisibilityToggle",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "description",
+            "label",
+            "onToggle",
+            "visible"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/node-panel.tsx",
+      "lines": 34,
+      "components": [
+        {
+          "name": "Content",
+          "line": 17,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 2,
+            "shape": "EmptyState>NodeList"
+          }
+        },
+        {
+          "name": "Actions",
+          "line": 25,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "NodeActions"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/skybox/AdjustmentSliders.tsx",
+      "lines": 43,
+      "components": [
+        {
+          "name": "AdjustmentSliders",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "adjustments",
+            "onChange",
+            "onGestureEnd",
+            "onGestureStart"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "SliderField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/skybox/Skybox.tsx",
+      "lines": 140,
+      "components": [
+        {
+          "name": "Skybox",
+          "line": 24,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 16,
+            "shape": "EmptyState>div>PropertySection>SliderField>SliderField>SliderField>ColorField>PropertySection>AdjustmentSliders>PropertySection>SliderField>ToggleField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/styles/StyleMenu.tsx",
+      "lines": 62,
+      "components": [
+        {
+          "name": "StyleMenuRows",
+          "line": 21,
+          "exported": false,
+          "props": [
+            "id",
+            "onClose",
+            "onRename"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "MenuRow>MenuRow"
+          }
+        },
+        {
+          "name": "StyleMenu",
+          "line": 47,
+          "exported": false,
+          "props": [
+            "at",
+            "id",
+            "onClose",
+            "onRename"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "ContextMenu>StyleMenuRows"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/styles/StyleRow.tsx",
+      "lines": 82,
+      "components": [
+        {
+          "name": "StyleRow",
+          "line": 28,
+          "exported": true,
+          "props": [
+            "style"
+          ],
+          "signature": {
+            "tags": 7,
+            "shape": "div>InlineRename>div>Row>MenuButton>StyleMenuRows>StyleMenu"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/styles/Styles.tsx",
+      "lines": 54,
+      "components": [
+        {
+          "name": "Styles",
+          "line": 21,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Collection>StyleRow>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/timeline/SequenceActions.tsx",
+      "lines": 28,
+      "components": [
+        {
+          "name": "SequenceActions",
+          "line": 8,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "Toolbar"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/timeline/TimelineActions.tsx",
+      "lines": 14,
+      "components": [
+        {
+          "name": "TimelineActions",
+          "line": 8,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "SequenceActions"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/timeline/TimelinePanel.tsx",
+      "lines": 30,
+      "components": [
+        {
+          "name": "TimelinePanel",
+          "line": 14,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 5,
+            "shape": "EmptyState>div>TrackHeaders>div>TimelineCanvas"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/timeline/TrackHeaders.tsx",
+      "lines": 138,
+      "components": [
+        {
+          "name": "TrackHeaders",
+          "line": 29,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "div>div>div>TrackHeader"
+          }
+        },
+        {
+          "name": "TrackHeader",
+          "line": 48,
+          "exported": false,
+          "props": [
+            "documentId",
+            "sequence",
+            "track"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>TrackName>div>ToolButton>ResizeHandle"
+          }
+        },
+        {
+          "name": "TrackName",
+          "line": 89,
+          "exported": false,
+          "props": [
+            "dimmed",
+            "documentId",
+            "track"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "input>span"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 36,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 37,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 60,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/panels/view/View.tsx",
+      "lines": 87,
+      "components": [
+        {
+          "name": "View",
+          "line": 35,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 10,
+            "shape": "EmptyState>div>PropertySection>div>span>div>button>SliderField>PropertySection>ToggleField"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/AccountSettings.tsx",
+      "lines": 248,
+      "components": [
+        {
+          "name": "AccountSettings",
+          "line": 28,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 8,
+            "shape": "div>p>ul>AccountRow>p>AddAccountForm>p>p"
+          }
+        },
+        {
+          "name": "AccountRow",
+          "line": 71,
+          "exported": false,
+          "props": [
+            "account",
+            "authenticated"
+          ],
+          "signature": {
+            "tags": 13,
+            "shape": "li>form>input>button>button>p>li>span>span>span>button>button"
+          }
+        },
+        {
+          "name": "AddAccountForm",
+          "line": 168,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 9,
+            "shape": "form>label>input>label>input>label>input>p>button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/DictationSettings.tsx",
+      "lines": 61,
+      "components": [
+        {
+          "name": "DictationSettings",
+          "line": 15,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 6,
+            "shape": "label>span>select>option>option>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/MediaSettings.tsx",
+      "lines": 28,
+      "components": [
+        {
+          "name": "MediaSettings",
+          "line": 10,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 1,
+            "shape": "p"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/ModelFamilySettings.tsx",
+      "lines": 85,
+      "components": [
+        {
+          "name": "ModelFamilySettings",
+          "line": 46,
+          "exported": false,
+          "props": [
+            "family"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>label>select>option>option"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/SettingActions.tsx",
+      "lines": 55,
+      "components": [
+        {
+          "name": "ActionRow",
+          "line": 12,
+          "exported": false,
+          "props": [
+            "action"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "SettingLine>p>button"
+          }
+        },
+        {
+          "name": "SettingActions",
+          "line": 42,
+          "exported": false,
+          "props": [
+            "section"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>ActionRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/SettingLine.tsx",
+      "lines": 72,
+      "components": [
+        {
+          "name": "SettingLine",
+          "line": 29,
+          "exported": false,
+          "props": [
+            "children",
+            "disabled",
+            "help",
+            "labelFor",
+            "staged",
+            "stagedLabel",
+            "title"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "span>div>div>span>label>div"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/SettingList.tsx",
+      "lines": 17,
+      "components": [
+        {
+          "name": "SettingList",
+          "line": 8,
+          "exported": false,
+          "props": [
+            "descriptors"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>SettingRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/settings/SettingRow.tsx",
+      "lines": 364,
+      "components": [
+        {
+          "name": "TextControl",
+          "line": 40,
+          "exported": false,
+          "props": [
+            "describedBy",
+            "descriptor",
+            "id",
+            "onCommit",
+            "stored"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "input"
+          }
+        },
+        {
+          "name": "PathControl",
+          "line": 101,
+          "exported": false,
+          "props": [
+            "describedBy",
+            "descriptor",
+            "id",
+            "onCommit",
+            "stored"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>TextControl>button"
+          }
+        },
+        {
+          "name": "ColorControl",
+          "line": 143,
+          "exported": false,
+          "props": [
+            "describedBy",
+            "id",
+            "onChange",
+            "value"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "input"
+          }
+        },
+        {
+          "name": "Control",
+          "line": 168,
+          "exported": false,
+          "props": [
+            "describedBy",
+            "descriptor",
+            "id",
+            "onChange",
+            "value"
+          ],
+          "signature": {
+            "tags": 10,
+            "shape": "select>option>input>div>input>span>input>ColorControl>PathControl>TextControl"
+          }
+        },
+        {
+          "name": "SettingRow",
+          "line": 297,
+          "exported": false,
+          "props": [
+            "descriptor"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "SettingLine>p>span>Control>button>UiIcon"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "anyCast",
+          "line": 305,
+          "text": "as any"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/settings/SettingsWindow.tsx",
+      "lines": 330,
+      "components": [
+        {
+          "name": "NavigationEntry",
+          "line": 28,
+          "exported": false,
+          "props": [
+            "depth",
+            "onSelect",
+            "section",
+            "selected"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "li>button>span>ul>NavigationEntry"
+          }
+        },
+        {
+          "name": "SearchResults",
+          "line": 93,
+          "exported": false,
+          "props": [
+            "found",
+            "onGo"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "p>div>section>button>SettingList>ResultRow"
+          }
+        },
+        {
+          "name": "ResultRow",
+          "line": 136,
+          "exported": false,
+          "props": [
+            "hit",
+            "onGo"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "button>span>span>span>span"
+          }
+        },
+        {
+          "name": "SettingsWindow",
+          "line": 171,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 16,
+            "shape": "div>header>div>nav>input>ul>NavigationEntry>main>h2>SearchResults>h2>p"
+          }
+        },
+        {
+          "name": "DraftBar",
+          "line": 304,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "footer>button>button>button"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 51,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/settings/ShortcutsSettings.tsx",
+      "lines": 291,
+      "components": [
+        {
+          "name": "CommandRow",
+          "line": 72,
+          "exported": false,
+          "props": [
+            "capturing",
+            "clashing",
+            "descriptor",
+            "onBind",
+            "onCapture",
+            "overrides"
+          ],
+          "signature": {
+            "tags": 7,
+            "shape": "SettingLine>p>span>UiIcon>button>button>UiIcon"
+          }
+        },
+        {
+          "name": "ShortcutsSettings",
+          "line": 150,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "div>SearchByChord>Scope>p"
+          }
+        },
+        {
+          "name": "Scope",
+          "line": 214,
+          "exported": false,
+          "props": [
+            "capturing",
+            "clashing",
+            "descriptors",
+            "onBind",
+            "onCapture",
+            "overrides",
+            "scope"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "section>h3>CommandRow"
+          }
+        },
+        {
+          "name": "SearchByChord",
+          "line": 257,
+          "exported": false,
+          "props": [
+            "listening",
+            "onListen",
+            "onQuery",
+            "query"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>button>button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/audio/AudioDocument.tsx",
+      "lines": 224,
+      "components": [
+        {
+          "name": "AudioDocument",
+          "line": 38,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 9,
+            "shape": "AssetDropTarget>EmptyState>EmptyState>AssetDropTarget>div>div>EmptyState>Toolbar>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/GraphCanvas.tsx",
+      "lines": 227,
+      "components": [
+        {
+          "name": "GraphCanvas",
+          "line": 77,
+          "exported": false,
+          "props": [
+            "canRedo",
+            "canUndo",
+            "graph",
+            "onAdd",
+            "onConnect",
+            "onDisconnect",
+            "onDropAsset",
+            "onMove",
+            "onRedo",
+            "onRemoveNodes",
+            "onRun",
+            "onSelectNodes",
+            "onUndo",
+            "running",
+            "runs",
+            "selectedNodeIds"
+          ],
+          "signature": {
+            "tags": 7,
+            "shape": "AssetDropTarget>div>ReactFlow>Background>GraphToolbar>ViewportBridge>GraphMenu"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/GraphDocument.tsx",
+      "lines": 237,
+      "components": [
+        {
+          "name": "GraphDocument",
+          "line": 30,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "GraphCanvas"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/GraphMenu.tsx",
+      "lines": 65,
+      "components": [
+        {
+          "name": "GraphMenu",
+          "line": 38,
+          "exported": false,
+          "props": [
+            "at",
+            "onAdd",
+            "onClose"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "ContextMenu>Fragment>Separator>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/GraphNodes.tsx",
+      "lines": 244,
+      "components": [
+        {
+          "name": "RunBadge",
+          "line": 36,
+          "exported": false,
+          "props": [
+            "run"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "span"
+          }
+        },
+        {
+          "name": "NodeShell",
+          "line": 48,
+          "exported": false,
+          "props": [
+            "children",
+            "inputs",
+            "kind",
+            "outputs",
+            "run",
+            "selected",
+            "title"
+          ],
+          "signature": {
+            "tags": 9,
+            "shape": "div>header>span>RunBadge>span>div>div>InputPorts>OutputPorts"
+          }
+        },
+        {
+          "name": "Node",
+          "line": 140,
+          "exported": false,
+          "props": [
+            "data",
+            "selected",
+            "type"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "NodeShell"
+          }
+        },
+        {
+          "name": "StickyNoteNode",
+          "line": 179,
+          "exported": false,
+          "props": [
+            "data",
+            "selected"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>p"
+          }
+        },
+        {
+          "name": "PlainNode",
+          "line": 205,
+          "exported": false,
+          "props": [
+            "data",
+            "selected",
+            "type"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "NodeShell"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/GraphToolbar.tsx",
+      "lines": 72,
+      "components": [
+        {
+          "name": "GraphToolbar",
+          "line": 24,
+          "exported": false,
+          "props": [
+            "canRedo",
+            "canUndo",
+            "mode",
+            "onAdd",
+            "onMode",
+            "onRedo",
+            "onRun",
+            "onUndo",
+            "running"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "div>Toolbar"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/NodePorts.tsx",
+      "lines": 76,
+      "components": [
+        {
+          "name": "InputPorts",
+          "line": 37,
+          "exported": false,
+          "props": [
+            "handles"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "ul>li>Handle>span"
+          }
+        },
+        {
+          "name": "OutputPorts",
+          "line": 57,
+          "exported": false,
+          "props": [
+            "handles"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "ul>li>span>Handle"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/image/ImageDocument.tsx",
+      "lines": 494,
+      "components": [
+        {
+          "name": "ImageDocument",
+          "line": 79,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "div>AssetDropTarget>div>Toolbar>BrushControls>ZoomBar"
+          }
+        },
+        {
+          "name": "BrushControls",
+          "line": 411,
+          "exported": false,
+          "props": [
+            "brush",
+            "onBrush",
+            "shortcuts"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>input>MenuButton>div>SliderField"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 378,
+          "text": "style={{"
+        },
+        {
+          "probe": "inlineStyle",
+          "line": 386,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/spaces/image/ZoomBar.tsx",
+      "lines": 76,
+      "components": [
+        {
+          "name": "ZoomBar",
+          "line": 28,
+          "exported": false,
+          "props": [
+            "onActual",
+            "onFit",
+            "onZoomIn",
+            "onZoomOut",
+            "scale",
+            "shortcuts"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>ToolButton>ToolButton>ToolButton>ToolButton"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/image/image-tools.ts",
+      "lines": 391,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 388,
+          "text": "#fff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 388,
+          "text": "#000"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/spaces/skyboxes/SkyboxDocument.tsx",
+      "lines": 164,
+      "components": [
+        {
+          "name": "SkyboxDocument",
+          "line": 60,
+          "exported": true,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "AssetDropTarget>div>div>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/textures/TextureDocument.tsx",
+      "lines": 140,
+      "components": [
+        {
+          "name": "TextureDocument",
+          "line": 61,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "AssetDropTarget>div>div>img>div>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/three/SceneDocument.tsx",
+      "lines": 304,
+      "components": [
+        {
+          "name": "SceneDocument",
+          "line": 62,
+          "exported": true,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "AssetDropTarget>div>Toolbar"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/video/Monitor.tsx",
+      "lines": 152,
+      "components": [
+        {
+          "name": "Monitor",
+          "line": 50,
+          "exported": false,
+          "props": [
+            "keyboard",
+            "onTime",
+            "owner",
+            "placeholder",
+            "sequence",
+            "title"
+          ],
+          "signature": {
+            "tags": 6,
+            "shape": "section>div>div>Toolbar>span>Timecode"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/video/SequenceDocument.tsx",
+      "lines": 92,
+      "components": [
+        {
+          "name": "SequenceDocument",
+          "line": 26,
+          "exported": false,
+          "props": [
+            "documentId"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>Monitor>EmptyState>Separator>Monitor"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/video/TimelineCanvas.tsx",
+      "lines": 376,
+      "components": [
+        {
+          "name": "TimelineCanvas",
+          "line": 43,
+          "exported": true,
+          "props": [
+            "documentId",
+            "tool"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "canvas"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/usage/UsageActivities.tsx",
+      "lines": 77,
+      "components": [
+        {
+          "name": "UsageActivities",
+          "line": 7,
+          "exported": false,
+          "props": [
+            "report"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "p>div>Tallies>Tallies"
+          }
+        },
+        {
+          "name": "Tallies",
+          "line": 47,
+          "exported": false,
+          "props": [
+            "nameHeader",
+            "names",
+            "rows",
+            "title",
+            "withUnits"
+          ],
+          "signature": {
+            "tags": 10,
+            "shape": "section>h3>UsageTable>HeadCell>HeadCell>HeadCell>Row>td>td>td"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/usage/UsageJournal.tsx",
+      "lines": 67,
+      "components": [
+        {
+          "name": "UsageJournal",
+          "line": 13,
+          "exported": false,
+          "props": [
+            "period"
+          ],
+          "signature": {
+            "tags": 18,
+            "shape": "p>p>p>div>UsageTable>HeadCell>HeadCell>HeadCell>HeadCell>HeadCell>Row>td"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/usage/UsageModels.tsx",
+      "lines": 50,
+      "components": [
+        {
+          "name": "UsageModels",
+          "line": 7,
+          "exported": false,
+          "props": [
+            "report"
+          ],
+          "signature": {
+            "tags": 13,
+            "shape": "p>UsageTable>HeadCell>HeadCell>HeadCell>HeadCell>Row>td>span>span>td>td"
+          }
+        }
+      ],
+      "probes": [
+        {
+          "probe": "inlineStyle",
+          "line": 37,
+          "text": "style={{"
+        }
+      ]
+    },
+    {
+      "path": "src/renderer/src/usage/UsageNotes.tsx",
+      "lines": 23,
+      "components": [
+        {
+          "name": "UsageNotes",
+          "line": 11,
+          "exported": false,
+          "props": [
+            "report"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "footer>p>p>p"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/usage/UsageOverview.tsx",
+      "lines": 99,
+      "components": [
+        {
+          "name": "UsageOverview",
+          "line": 6,
+          "exported": false,
+          "props": [
+            "report"
+          ],
+          "signature": {
+            "tags": 21,
+            "shape": "div>section>Figure>span>Figure>Figure>p>section>h2>div>ResponsiveContainer>BarChart"
+          }
+        },
+        {
+          "name": "Figure",
+          "line": 82,
+          "exported": false,
+          "props": [
+            "children",
+            "label",
+            "value"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "div>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/usage/UsageTable.tsx",
+      "lines": 24,
+      "components": [
+        {
+          "name": "UsageTable",
+          "line": 5,
+          "exported": false,
+          "props": [
+            "children",
+            "head"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "table>thead>tr>tbody"
+          }
+        },
+        {
+          "name": "HeadCell",
+          "line": 17,
+          "exported": false,
+          "props": [
+            "label",
+            "numeric"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "th"
+          }
+        },
+        {
+          "name": "Row",
+          "line": 21,
+          "exported": false,
+          "props": [
+            "children"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "tr"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/usage/UsageWindow.tsx",
+      "lines": 166,
+      "components": [
+        {
+          "name": "UsageWindow",
+          "line": 42,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 15,
+            "shape": "div>header>div>button>div>nav>ul>li>button>button>UiIcon>main"
+          }
+        },
+        {
+          "name": "Body",
+          "line": 132,
+          "exported": false,
+          "props": [
+            "failure",
+            "id",
+            "onRetry",
+            "period",
+            "report"
+          ],
+          "signature": {
+            "tags": 11,
+            "shape": "div>p>button>p>p>div>UsageOverview>UsageModels>UsageActivities>UsageJournal>UsageNotes"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/shared/constants.ts",
+      "lines": 27,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 13,
+          "text": "#2b2d30"
+        },
+        {
+          "probe": "hexColour",
+          "line": 14,
+          "text": "#dcdde1"
+        },
+        {
+          "probe": "hexColour",
+          "line": 22,
+          "text": "#22242a"
+        },
+        {
+          "probe": "hexColour",
+          "line": 23,
+          "text": "#eceef1"
+        }
+      ]
+    },
+    {
+      "path": "src/shared/domain/skybox.ts",
+      "lines": 159,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 95,
+          "text": "#ffffff"
+        }
+      ]
+    },
+    {
+      "path": "src/shared/domain/texture.ts",
+      "lines": 243,
+      "components": [],
+      "probes": [
+        {
+          "probe": "hexColour",
+          "line": 146,
+          "text": "#ffffff"
+        },
+        {
+          "probe": "hexColour",
+          "line": 156,
+          "text": "#000000"
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "files": 190,
+    "components": 257,
+    "probes": 63
+  }
+}
