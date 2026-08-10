@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { UiIcon } from '@/design/UiIcon'
 import { STATUS_BUTTON } from '@/design/styles'
+import { TIP_TOP } from '@/helpers/tooltip'
 import { failureCount, useActivity } from '@/stores/activity'
 import { ActivityList } from './ActivityList'
 
@@ -30,7 +31,7 @@ export function ActivityStatus() {
       <button
         ref={setAnchor}
         type="button"
-        aria-label={t('activity.open')}
+        {...TIP_TOP(t('activity.open'), false, t('activity.openHint'))}
         aria-expanded={open}
         onClick={() => {
           // Opening it IS reading it: the toasts have said their piece by the time one gets here.

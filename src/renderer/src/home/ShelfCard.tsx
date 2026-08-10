@@ -3,6 +3,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { UiIcon } from '@/design/UiIcon'
 import { BUTTON_BASE, FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 
 /** What one card of a home shelf measures. Written once so two shelves cannot drift apart. */
 export const SHELF_CARD_HEIGHT = 84
@@ -46,7 +47,7 @@ export function ShelfCard({ icon, title, subtitle, hint, onClick }: ShelfCardPro
   // reader who then finds none.
   if (!onClick) {
     return (
-      <div title={hint} className={CARD}>
+      <div {...(hint ? HINT_BOTTOM(hint) : {})} className={CARD}>
         {body}
       </div>
     )
@@ -58,7 +59,7 @@ export function ShelfCard({ icon, title, subtitle, hint, onClick }: ShelfCardPro
     <button
       type="button"
       onClick={onClick}
-      title={hint}
+      {...(hint ? HINT_BOTTOM(hint) : {})}
       className={cn(BUTTON_BASE, CARD, 'hover:bg-elevated text-left')}
     >
       {body}
@@ -99,12 +100,12 @@ export function ShelfTile({
   const tile = <MediaTile url={url} caption={caption} fallbackIcon={fallbackIcon} />
 
   return (
-    <div className="relative size-full" title={hint}>
+    <div className="relative size-full">
       {onClick ? (
         <button
           type="button"
           onClick={onClick}
-          aria-label={label}
+          {...TIP_BOTTOM(label, false, hint)}
           className={cn(
             'absolute inset-0 cursor-pointer rounded-(--radius-sc-md) border-none',
             'bg-transparent p-0 hover:opacity-90',

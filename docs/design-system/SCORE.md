@@ -1,6 +1,6 @@
 # SCORE
 
-Courant : 0 (dette 460 · 260 composants) — itération 6, 2026-08-10
+Courant : 0 (dette 353 · 260 composants) — itération 7, 2026-08-10
 
 Le score s'effondre parce qu'un invariant vient d'être déclaré, pas parce que le code a
 régressé : 53 boutons enfreignent une règle qui n'existait pas hier. Il n'est pas lissé —
@@ -8,6 +8,7 @@ un P0 pèse dix, et 53 P0 sur 260 composants dépassent le plancher.
 
 | # | Date | Score | Dette | P0 | P1 | P2 | Lot traité |
 |---|---|---|---|---|---|---|---|
+| 7 | 2026-08-10 | 0 | 353 | 35 | 1 | 0 | les onze boutons à icône de la fenêtre principale |
 | 6 | 2026-08-10 | 0 | 460 | 46 | 0 | 0 | fenêtre Usage : son hôte, ses cinq boutons, et les fabriques `HINT_*` |
 | 5 | 2026-08-10 | 0 | 510 | 51 | 0 | 0 | les Préférences montent leur hôte, deux `title` natifs convertis |
 | 4 | 2026-08-10 | 0 | 530 | 53 | 0 | 0 | infobulle obligatoire sur `ToolButton`, 12 sites câblés |

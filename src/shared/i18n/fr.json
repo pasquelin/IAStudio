@@ -115,6 +115,7 @@
     "failed_one": "{{count, number}} échec",
     "failed_other": "{{count, number}} échecs",
     "open": "Afficher les générations",
+    "openHint": "Ouvre la liste des générations, en cours comme terminées",
     "cost": "{{units}} UC",
     "status": {
       "queued": "En file",
@@ -127,6 +128,7 @@
   },
   "activity": {
     "open": "Afficher le journal",
+    "openHint": "Ouvre le journal — et marque comme lu tout ce qui s’y trouve",
     "none": "Rien à signaler.",
     "noMatch": "Rien ne correspond à ce filtre.",
     "failures_one": "{{count, number}} échec",
@@ -787,6 +789,7 @@
     "use": "Utiliser ce compte",
     "none": "Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque Scenario.",
     "switch": "Compte Scenario",
+    "switchHint": "Choisir la clé API sur laquelle générer, ou en ajouter une",
     "manage": "Gérer les comptes…",
     "notConnected": "Non connecté",
     "fromEnvFile": "secrets/.env",

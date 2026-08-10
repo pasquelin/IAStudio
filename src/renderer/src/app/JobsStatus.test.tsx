@@ -35,6 +35,22 @@ describe('the jobs indicator', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  /**
+   * The face of the button is a count — "2 générations". What pressing it does is nowhere on
+   * screen, and the accessible name alone reaches no sighted pointer. Read the content, not the
+   * name: the name was already right.
+   */
+  it('says what opening it does, which its own face never shows', () => {
+    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    render(<JobsStatus />)
+
+    expect(screen.getByRole('button')).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre la liste des générations, en cours comme terminées',
+    )
+    expect(screen.getByRole('button')).toHaveAttribute('data-tooltip-place', 'top')
+  })
+
   it('counts what is under way and averages its progress', () => {
     useJobs.setState({ jobs: [job('a', 'running', 0.4), job('b', 'running', 0.8)] })
     render(<JobsStatus />)

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { FOCUS_RING, SHELF_OVERLAY } from './styles'
+import { TIP_BOTTOM, TIP_TOP } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 import { GAP } from './virtual'
 
@@ -205,7 +206,7 @@ export function Carousel<T extends { id: string }>({
             <button
               key={page}
               type="button"
-              aria-label={t('carousel.page', { number: page + 1 })}
+              {...TIP_BOTTOM(t('carousel.page', { number: page + 1 }))}
               aria-current={page === position.page ? 'true' : undefined}
               onClick={() => scrollToPage(page)}
               className={cn(
@@ -244,7 +245,7 @@ function Arrow({ side, hidden, onClick }: ArrowProps) {
     <button
       type="button"
       tabIndex={-1}
-      aria-label={t(side === 'left' ? 'carousel.previous' : 'carousel.next')}
+      {...TIP_TOP(t(side === 'left' ? 'carousel.previous' : 'carousel.next'))}
       onClick={onClick}
       className={cn(
         SHELF_OVERLAY,
