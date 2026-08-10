@@ -31,11 +31,21 @@ const READ_FIELDS = new Set([
   'title',
 ])
 
+/**
+ * Test material is out, `-fixtures.ts` included: a fixture builds the data a suite asserts on and
+ * never reaches a screen, so a job it names `Flux` is the label the API returns, not a word this
+ * studio writes. Coverage draws the same line (`vitest.config.ts`), and the exclusion is a
+ * DECISION, taken 11/08 — a fixture forced through a bundle key says nothing truer and reads worse.
+ *
+ * `.tsx` as well as `.ts`: the sweep was widened to components, and a fixture is a fixture on
+ * either side.
+ */
 function sourceFiles(directory: string, into: string[] = []): string[] {
   for (const name of readdirSync(directory)) {
     const path = join(directory, name)
     if (statSync(path).isDirectory()) sourceFiles(path, into)
-    else if (/\.tsx?$/.test(path) && !/\.(test|bench)\.tsx?$/.test(path)) into.push(path)
+    else if (/\.tsx?$/.test(path) && !/(\.(test|bench)|-fixtures)\.tsx?$/.test(path))
+      into.push(path)
   }
 
   return into
@@ -292,5 +302,16 @@ describe('the registries', () => {
     ]
 
     expect(quiet.flatMap((code, index) => registryFindingsIn(`probe${index}.ts`, code))).toEqual([])
+  })
+
+  /**
+   * The exclusion above is worth exactly what its edge is worth: dropping fixtures must not drop
+   * anything a screen reads, and `stores/` holds both kinds side by side.
+   */
+  it('steps over the fixtures and over nothing else', () => {
+    const stores = sourceFiles(join(MAIN, '..', 'renderer', 'src', 'stores'))
+
+    expect(stores.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
+    expect(stores.some(path => path.endsWith('jobs.ts'))).toBe(true)
   })
 })

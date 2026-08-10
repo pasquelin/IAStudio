@@ -16,24 +16,11 @@ import { updateNodeData } from '@/engines/graph/mutations'
 import { parseGraph } from '@/engines/graph/serialize'
 import { runOf, useGraphRuns } from './graph-runs'
 import { installGraph } from './graph-fixtures'
+import { job } from './job-fixtures'
 import { useGraphs } from './graphs'
 import { useJobs } from './jobs'
 
 const DOC = 'doc_graph'
-
-function job(id: string, overrides: Partial<Job> = {}): Job {
-  return {
-    id,
-    kind: 'model',
-    targetId: 'model_flux',
-    label: 'Flux',
-    status: 'running',
-    progress: 0,
-    createdAt: '2026-08-10T10:00:00.000Z',
-    assetIds: [],
-    ...overrides,
-  }
-}
 
 /**
  * A stand-in for the whole job round trip: `submit` puts an entry in the replica, and the test
@@ -55,7 +42,7 @@ function installJobs(): {
   const submit = vi.fn(async (target: JobTarget, _body: Record<string, unknown>) => {
     count += 1
     submitted.push(target)
-    const entry = job(`job_${count}`, { targetId: target.id })
+    const entry = job({ id: `job_${count}`, targetId: target.id })
     useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
     return entry
   })
@@ -415,7 +402,7 @@ describe('stopping and forgetting a run', () => {
       jobs: [],
       cancel,
       submit: async () => {
-        const entry = job('job_1')
+        const entry = job({ id: 'job_1' })
         useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
         return new Promise<Job>(resolve => {
           answer = resolve
@@ -428,7 +415,7 @@ describe('stopping and forgetting a run', () => {
     await vi.waitFor(() => expect(answer).toBeDefined())
 
     useGraphRuns.getState().stop(DOC)
-    answer?.(job('job_1'))
+    answer?.(job({ id: 'job_1' }))
 
     await vi.waitFor(() => expect(cancel).toHaveBeenCalledWith('job_1'))
     useJobs.setState(state => ({

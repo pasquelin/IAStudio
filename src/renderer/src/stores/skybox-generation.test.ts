@@ -4,6 +4,7 @@ import type { Job, JobStatus } from '@shared/domain/job'
 import { useAssets } from './assets'
 import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
+import { job as jobOf } from './job-fixtures'
 import { useJobs } from './jobs'
 import { claimSkyboxOnSubmit, connectSkyboxGeneration } from './skybox-generation'
 import { skyboxOf, useSkyboxes } from './skyboxes'
@@ -18,17 +19,9 @@ const panorama: Asset = {
   createdAt: '2026-08-07T10:00:00.000Z',
 }
 
-const job = (overrides: Partial<Job> = {}): Job => ({
-  id: 'job-1',
-  kind: 'model',
-  targetId: 'model_sky',
-  label: 'Scenario Skybox Flux.1',
-  status: 'running',
-  progress: 0.5,
-  createdAt: '2026-08-07T10:00:00.000Z',
-  assetIds: [],
-  ...overrides,
-})
+/** The shared fixture, told what this suite asserts on: the sky model, and the id its asset names. */
+const job = (overrides: Partial<Job> = {}): Job =>
+  jobOf({ id: 'job-1', targetId: 'model_sky', label: 'Scenario Skybox Flux.1', ...overrides })
 
 /**
  * The catalogue as the main process would answer it once the ingest is done. `refresh` is what
