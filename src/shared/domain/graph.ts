@@ -539,7 +539,10 @@ export const inputHandleOf = (
  */
 export function namedLoopId(node: GraphNode): string | undefined {
   if (node.type !== 'forEachEnd') return undefined
-  return typeof node.data.parentNodeId === 'string' ? node.data.parentNodeId : undefined
+  const named = node.data.parentNodeId
+  // `''` and `undefined` are one answer, not two: choosing "no loop" in the inspector writes the
+  // empty string, and a third caller that forgot to test for it would read a pairing to nothing.
+  return typeof named === 'string' && named !== '' ? named : undefined
 }
 
 /** The nodes the converter would compile a branch for, in the order the graph holds them. */

@@ -466,9 +466,9 @@ describe('what a graph is refused for', () => {
 /**
  * The two the SDK's validator accepts without a word — and the reason this check is ours.
  *
- * Both were measured by running the converter rather than read off it: each produces a flow that
- * `validateWorkflowFlow` passes, carrying a wire the graph never drew. Reported here, before the
- * conversion, because the conversion is what hides them.
+ * Every case below was measured by running the converter, the refusals and the acceptances alike.
+ * The defect is always about a wire LEAVING an end, so an end nothing reads cannot misroute
+ * anything: refusing one would refuse a graph that compiles, which two of these tests pin down.
  */
 describe('a loop and its end, paired so the converter reads them otherwise', () => {
   const loop = (id: string): GraphNode => ({
@@ -488,65 +488,68 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
     data: {
       ...(parentNodeId === undefined ? {} : { parentNodeId }),
       isOutput: true,
-      inputHandles: [{ id: `${id}-source-results`, name: 'results' }],
+      inputHandles: [{ id: handleId(id, 'source', 'results'), name: 'results' }],
     },
   })
 
-  /** `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention. */
-  const reads = (consumer: string, provider: string): GraphEdge => ({
-    id: `${provider}--TO--${consumer}`,
+  /** The item port a loop hands out, which `wire` cannot spell: a loop numbers its ports. */
+  const readsItem = (consumer: string, loopId: string): GraphEdge => ({
+    id: `${loopId}--TO--${consumer}`,
     source: consumer,
-    sourceHandle: `${consumer}-source-results`,
-    target: provider,
-    targetHandle: `${provider}-target-image`,
-  })
-
-  /** The pair as it should be: the end reads what the loop feeds, so it is downstream of it. */
-  const inside = (): readonly [readonly GraphNode[], readonly GraphEdge[]] => [
-    [loop('forEach1'), modelNode('m1', false), end('end1', 'forEach1')],
-    [
-      {
-        id: 'forEach1--TO--m1',
-        source: 'm1',
-        sourceHandle: 'm1-source-prompt',
-        target: 'forEach1',
-        targetHandle: 'forEach1-output-0',
-      },
-      reads('end1', 'm1'),
-    ],
-  ]
-
-  it('accepts an end that reads what its loop feeds', () => {
-    const [nodes, edges] = inside()
-
-    expect(compile(graphOf(nodes, edges)).result).toMatchObject({ ok: true })
+    sourceHandle: handleId(consumer, 'source', 'prompt'),
+    target: loopId,
+    targetHandle: `${loopId}-output-0`,
   })
 
   /**
-   * Measured: the node really feeding the stray end is compiled, and then nothing reads it, while
-   * whatever read the end reads `{ node: forEach1 }` — the loop's own result. One wire changed
-   * where it comes from, and `validateWorkflowFlow` answered OK.
+   * The loop, its body and one end that closes it — the shape everything below departs from.
+   * `m1` reads the item, `e1` reads `m1`, so `e1` really is downstream of the loop.
    */
-  it('refuses an end that names a loop it is not inside of', () => {
-    // ONE end, and it reads a node the loop does not feed — so the loop has an end on paper and
-    // none in the flow. A second end here would be the other problem, which is reported first.
+  const paired = (): { nodes: GraphNode[]; edges: GraphEdge[] } => ({
+    nodes: [loop('L'), modelNode('m1', false), end('e1', 'L')],
+    edges: [readsItem('m1', 'L'), wire('e1', 'results', 'm1', 'image')],
+  })
+
+  it('accepts a loop whose end reads what it feeds', () => {
+    const { nodes, edges } = paired()
     const graph = graphOf(
+      [...nodes, modelNode('reader', true)],
+      [...edges, wire('reader', 'prompt', 'e1', 'results')],
+    )
+
+    expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+
+  /**
+   * Measured: whatever reads the stray end reads `{ node: L }` — the loop's own result — while the
+   * node really feeding that end is compiled and then read by nobody. `validateWorkflowFlow`
+   * answers OK.
+   */
+  it('refuses an end that is read and names a loop it is not inside of', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, modelNode('outside', false), end('e2', 'L'), modelNode('reader', true)],
       [
-        loop('forEach1'),
-        modelNode('m1', false),
-        modelNode('outside', false),
-        end('end1', 'forEach1'),
+        ...edges,
+        wire('e2', 'results', 'outside', 'image'),
+        wire('reader', 'prompt', 'e2', 'results'),
       ],
-      [
-        {
-          id: 'forEach1--TO--m1',
-          source: 'm1',
-          sourceHandle: 'm1-source-prompt',
-          target: 'forEach1',
-          targetHandle: 'forEach1-output-0',
-        },
-        reads('end1', 'outside'),
-      ],
+    )
+
+    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-end-outside' })
+  })
+
+  /**
+   * Measured, and the case a comment of this file once waved away as impossible: the converter
+   * indexes every node but the inputs, the ends and the workflow inputs, so a wire leaving an end
+   * lands on whatever it names — a generator included. The reader then reads a node nothing wired
+   * it to, and the validator says OK.
+   */
+  it('refuses an end that is read and names a node that is no loop at all', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, modelNode('other', true), end('e2', 'other'), modelNode('reader', true)],
+      [...edges, wire('e2', 'results', 'm1', 'image'), wire('reader', 'prompt', 'e2', 'results')],
     )
 
     expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-end-outside' })
@@ -557,63 +560,131 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
    * the same, which pulls whatever read the second INTO the loop's body — a node outside the loop
    * running once per item instead of once.
    */
-  it('refuses two ends naming the same loop', () => {
-    const [nodes, edges] = inside()
-    const graph = graphOf([...nodes, end('end2', 'forEach1')], [...edges, reads('end2', 'm1')])
+  it('refuses two ends of one loop when both are read', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, end('e2', 'L'), modelNode('reader', true), modelNode('reader2', true)],
+      [
+        ...edges,
+        wire('reader', 'prompt', 'e1', 'results'),
+        wire('e2', 'results', 'm1', 'image'),
+        wire('reader2', 'prompt', 'e2', 'results'),
+      ],
+    )
 
     expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-two-ends' })
   })
 
-  /** Two loops, an end each: what makes the check about the PAIR rather than about a count. */
-  it('accepts two loops closed by one end each', () => {
-    const [nodes, edges] = inside()
+  /**
+   * And the acceptance that keeps the rule honest — measured item for item: a second end with no
+   * wire leaving it gives a flow IDENTICAL to the graph without it. Refusing this refuses a graph
+   * that compiles, on a node the user has not finished wiring.
+   */
+  it('accepts a second end of the same loop while nothing reads it', () => {
+    const { nodes, edges } = paired()
     const graph = graphOf(
-      [...nodes, loop('forEach2'), modelNode('m2', false), end('end2', 'forEach2')],
+      [...nodes, end('e2', 'L'), modelNode('reader', true)],
+      [...edges, wire('reader', 'prompt', 'e1', 'results')],
+    )
+
+    expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+
+  /**
+   * And the acceptance pinned to the CONVERTER rather than to a memory of having measured it: the
+   * flow is compared item for item against the same graph without the second end. The day the SDK
+   * starts making something of an end nothing reads, this reddens instead of the rule quietly
+   * becoming wrong.
+   */
+  it('compiles a second end nothing reads to exactly the flow without it', () => {
+    const { nodes, edges } = paired()
+    const withReader = [...nodes, modelNode('reader', true)]
+    const readerEdge = wire('reader', 'prompt', 'e1', 'results')
+
+    const alone = toEditorFlow(graphOf(withReader, [...edges, readerEdge]))
+    const spare = toEditorFlow(graphOf([...withReader, end('e2', 'L')], [...edges, readerEdge]))
+
+    expect(spare).toEqual(alone)
+  })
+
+  /** Same rule, the other case it saves: an end fed from outside the loop, and read by nobody. */
+  it('accepts an end that names a loop it is not inside of while nothing reads it', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, modelNode('outside', false), end('e2', 'L'), modelNode('reader', true)],
       [
         ...edges,
-        {
-          id: 'forEach2--TO--m2',
-          source: 'm2',
-          sourceHandle: 'm2-source-prompt',
-          target: 'forEach2',
-          targetHandle: 'forEach2-output-0',
-        },
-        reads('end2', 'm2'),
+        wire('e2', 'results', 'outside', 'image'),
+        wire('reader', 'prompt', 'e1', 'results'),
       ],
     )
 
     expect(compile(graph).result).toMatchObject({ ok: true })
   })
 
-  /** An end naming nothing is not this problem: the converter leaves it out, and says so its way. */
+  /** Two loops, an end each: what makes the check about the PAIR rather than about a count. */
+  it('accepts two loops closed by one end each', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [
+        ...nodes,
+        modelNode('reader', true),
+        loop('L2'),
+        modelNode('m2', false),
+        end('e2', 'L2'),
+        modelNode('reader2', true),
+      ],
+      [
+        ...edges,
+        wire('reader', 'prompt', 'e1', 'results'),
+        readsItem('m2', 'L2'),
+        wire('e2', 'results', 'm2', 'image'),
+        wire('reader2', 'prompt', 'e2', 'results'),
+      ],
+    )
+
+    expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+
+  /** An end naming nothing claims no pairing, so there is none to be wrong about. */
   it('says nothing about an end that names no loop', () => {
-    const [nodes, edges] = inside()
-    const graph = graphOf([...nodes, end('end2')], edges)
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, end('e2'), modelNode('reader', true)],
+      [...edges, wire('e2', 'results', 'm1', 'image'), wire('reader', 'prompt', 'e2', 'results')],
+    )
 
     expect(compile(graph).result).toMatchObject({ ok: true })
   })
 
   /**
    * `parseGraph` validates the node and not its `data`, so a file can put a number under
-   * `parentNodeId`. Read as a pairing, it would key the map on `"12"` and refuse a graph nobody
+   * `parentNodeId`. Read as a pairing, it would key the check on `"12"` and refuse a graph nobody
    * mispaired.
    */
   it('says nothing about a parent a file wrote as a number', () => {
-    const [nodes, edges] = inside()
+    const { nodes, edges } = paired()
     const theirs: GraphNode = {
-      id: 'end2',
+      id: 'e2',
       type: 'forEachEnd',
       position: { x: 0, y: 0 },
       ...JSON.parse('{"data":{"parentNodeId":12}}'),
     }
+    const graph = graphOf(
+      [...nodes, theirs, modelNode('reader', true)],
+      [...edges, wire('reader', 'prompt', 'e1', 'results')],
+    )
 
-    expect(compile(graphOf([...nodes, theirs], edges)).result).toMatchObject({ ok: true })
+    expect(compile(graph).result).toMatchObject({ ok: true })
   })
 
-  /** And an end naming a node that is no loop at all: nothing is claimed, so nothing is refused. */
-  it('says nothing about an end naming a node that is not a loop', () => {
-    const [nodes, edges] = inside()
-    const graph = graphOf([...nodes, end('end2', 'm1')], edges)
+  /** A loop since deleted: the lookup answers nothing, and the wire is dropped as if never drawn. */
+  it('says nothing about an end naming a loop the graph no longer holds', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, end('e2', 'gone'), modelNode('reader', true)],
+      [...edges, wire('e2', 'results', 'm1', 'image'), wire('reader', 'prompt', 'e2', 'results')],
+    )
 
     expect(compile(graph).result).toMatchObject({ ok: true })
   })

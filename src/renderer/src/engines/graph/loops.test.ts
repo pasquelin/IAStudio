@@ -188,6 +188,14 @@ describe('namedLoopId', () => {
     expect(namedLoopId(forEachEndNode('end1', 'gone'))).toBe('gone')
   })
 
+  /**
+   * `''` and `undefined` are ONE answer: choosing "no loop" in the inspector writes the empty
+   * string, and a caller that forgot to test for it would read a pairing to a node called nothing.
+   */
+  it('answers nothing for an end whose parent the inspector emptied', () => {
+    expect(namedLoopId(forEachEndNode('end1', ''))).toBeUndefined()
+  })
+
   it('answers nothing for an end that names none', () => {
     expect(namedLoopId(forEachEndNode('end1'))).toBeUndefined()
   })
