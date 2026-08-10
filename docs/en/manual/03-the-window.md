@@ -196,6 +196,11 @@ It does not carry the file name. It carries the **seven workspaces**:
 > becomes **Stop** while it goes: nothing more is submitted, and what is in flight is cancelled.
 > On an empty graph it is **greyed out**: there is nothing to run.
 >
+> **Stop hands control back at once**, without waiting for the API to answer on the generations
+> already sent. They are told to cancel, but the run does not stay parked on their answer: the
+> button turns back to **Run** the moment you press it, even if the service never says another
+> word about one of them.
+>
 > **Every node says where it stands**, in the corner of its header: *running*, *done*,
 > *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
 > produced nothing: *loop*, *no model*, *not runnable*, *failed*, *invalid expression*, and
