@@ -597,5 +597,15 @@ export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
  * whole workflow for a number. The day it is exported this gains a field; until then it answers
  * what the editor can act on.
  */
+/**
+ * What publishing a graph answers: the workflow it became, or why it did not.
+ *
+ * `refused` is the API's own no — its sentence goes to the journal, never to the screen — and it
+ * is kept apart from the compile problems for the reason those exist: the user can act on
+ * "nothing reaches an output", and cannot act on a 403.
+ */
+export type GraphPublishResult =
+  { ok: true; workflowId: string } | { ok: false; problem: GraphCompileProblem | 'refused' }
+
 export type GraphCompileResult =
   { ok: true; steps: number } | { ok: false; problem: GraphCompileProblem }
