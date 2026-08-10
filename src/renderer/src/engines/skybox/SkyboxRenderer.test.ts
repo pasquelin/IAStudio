@@ -1,4 +1,4 @@
-import { Texture, WebGLRenderTarget } from 'three'
+import { DirectionalLight, Texture, WebGLRenderTarget } from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { SphericalAngles } from '@shared/domain/angles'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
@@ -317,6 +317,21 @@ describe('the renderer of a skybox', () => {
 
       expect(environment.setIntensity).toHaveBeenCalledWith(0.25)
       expect(environment.setBackgroundVisible).toHaveBeenCalledWith(false)
+    })
+
+    it('recolours the sun in place, keeping the instance three was given', () => {
+      const renderer = mounted()
+      // The scene is only reachable through the group the test-objects mock captured.
+      const light = probes.group.parent?.children.find(child => child instanceof DirectionalLight)
+      if (!light) throw new Error('the renderer never put its sun in the scene')
+      const instance = light.color
+      const content = createSkyboxContent()
+      content.sun = { ...content.sun, color: '#ff8800' }
+
+      renderer.apply(content)
+
+      expect(light.color).toBe(instance)
+      expect(light.color.getHexString()).toBe('ff8800')
     })
   })
 
