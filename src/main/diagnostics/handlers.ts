@@ -40,6 +40,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'font.face': 'document',
   'graph.node': 'document',
   'graph.run': 'document',
+  'graph.compile': 'document',
 }
 
 /**

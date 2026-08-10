@@ -154,4 +154,55 @@ describe('GraphNodeInspector', () => {
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.queryByLabelText('Source')).not.toBeInTheDocument()
   })
+
+  /**
+   * Without this gesture nothing in the studio ever writes `data.isOutput`, and the converter
+   * compiles only the branches that reach a node carrying it: the flow would be empty, in silence.
+   */
+  describe('marking a node as the output of the workflow', () => {
+    /**
+     * An `llm` rather than a `model`, and the difference is only in what it drags: a generator's
+     * face asks the catalogue and would need a query client here, while the field under test is
+     * the same one on both — `canBeOutput` names three types and the converter reads all three.
+     */
+    const GENERATOR: GraphNode = {
+      id: 'llm1',
+      type: 'llm',
+      position: { x: 0, y: 0 },
+      data: {},
+    }
+
+    it('writes it into the node, through the history the canvas writes to', async () => {
+      installGraph(DOCUMENT, { nodes: [GENERATOR], edges: [], inputKeys: [] })
+      show(GENERATOR)
+
+      await userEvent.click(screen.getByLabelText('Sortie du workflow'))
+
+      const node = graphOf(useGraphs.getState(), DOCUMENT).nodes[0]
+      expect(node?.data.isOutput).toBe(true)
+      expect(historyOf(useGraphs.getState(), DOCUMENT).past).toHaveLength(1)
+    })
+
+    it('offers it on a node the converter reads it on', () => {
+      installGraph(DOCUMENT, { nodes: [GENERATOR], edges: [], inputKeys: [] })
+      show(GENERATOR)
+
+      expect(screen.getByLabelText('Sortie du workflow')).toBeInTheDocument()
+    })
+
+    /**
+     * The converter reads `isOutput` on `model`, `llm` and `forEachEnd`, and nowhere else. A
+     * checkbox on a text node would be a promise the compiler does not keep — the field would be
+     * written into the file and ignored, and the flow would still come back empty.
+     */
+    it.each([
+      ['a text node', TEXT],
+      ['a loop', LOOP],
+    ])('does not offer it on %s, where it would be ignored', (_name, node) => {
+      installGraph(DOCUMENT, { nodes: [node], edges: [], inputKeys: [] })
+      show(node)
+
+      expect(screen.queryByLabelText('Sortie du workflow')).not.toBeInTheDocument()
+    })
+  })
 })

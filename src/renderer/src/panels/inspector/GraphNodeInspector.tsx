@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
+import { canBeOutput, type GraphNode, type GraphState } from '@shared/domain/graph'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { TextField } from '@/design/TextField'
+import { ToggleField } from '@/design/ToggleField'
 import { setGraphNodeData } from '@/engines/graph/commands'
 import { NODE_LABEL_KEYS } from '@/spaces/graph/node-labels'
 import { useGraphs } from '@/stores/graphs'
@@ -36,6 +37,16 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
         onChange={title => edit.run(setGraphNodeData(node.id, { title }))}
         {...edit.gesture}
       />
+
+      {/* Offered only where the converter reads it. Marked on any other type it is ignored in
+          silence, so a checkbox there would be a promise the compiler does not keep. */}
+      {canBeOutput(node.type) && (
+        <ToggleField
+          label={t('inspector.isOutput')}
+          value={node.data.isOutput === true}
+          onChange={isOutput => edit.run(setGraphNodeData(node.id, { isOutput }))}
+        />
+      )}
 
       {node.type === 'model' && <ModelNodeFields documentId={documentId} node={node} edit={edit} />}
 

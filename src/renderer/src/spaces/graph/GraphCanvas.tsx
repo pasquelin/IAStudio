@@ -24,6 +24,7 @@ import {
 } from './adapter'
 import { GRAPH_NODE_TYPES } from './GraphNodes'
 import { GraphMenu } from './GraphMenu'
+import { GraphStatus, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
 import { ViewportBridge } from './ViewportBridge'
 import type { GraphMode } from './graph-tools'
@@ -124,6 +125,8 @@ export function GraphCanvas({
     setMenuAt({ x: event.clientX, y: event.clientY })
   }, [])
 
+  const compiled = useGraphCompile(graph)
+
   const nodes = useMemo(
     () => canvasNodesOf(graph, selectedNodes, runs),
     [graph, selectedNodes, runs],
@@ -219,6 +222,7 @@ export function GraphCanvas({
             }, [])}
           />
           {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
+          <GraphStatus result={compiled} />
         </ReactFlow>
       </div>
     </AssetDropTarget>

@@ -13,6 +13,7 @@ import type {
   DocumentFile,
   DocumentKind,
 } from './domain/document'
+import type { GraphCompileResult, GraphState } from './domain/graph'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -73,6 +74,7 @@ export type Channels = {
   workflowsSearch: 'workflows:search'
   workflowsDescribe: 'workflows:describe'
   workflowsRun: 'workflows:run'
+  workflowsCompile: 'workflows:compile'
 
   projectCreate: 'project:create'
   projectOpen: 'project:open'
@@ -182,6 +184,7 @@ export const CHANNELS: Channels = {
   workflowsSearch: 'workflows:search',
   workflowsDescribe: 'workflows:describe',
   workflowsRun: 'workflows:run',
+  workflowsCompile: 'workflows:compile',
 
   projectCreate: 'project:create',
   projectOpen: 'project:open',
@@ -348,6 +351,7 @@ export type LogScope =
   | 'font.face'
   | 'graph.node'
   | 'graph.run'
+  | 'graph.compile'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -372,6 +376,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'font.face',
   'graph.node',
   'graph.run',
+  'graph.compile',
 ]
 
 /**
@@ -554,6 +559,14 @@ export type StudioBridge = {
     /** Its inputs, translated into the very fields a model's form is built from. */
     describe: (workflowId: string) => Promise<WorkflowDescriptor>
     run: (workflowId: string, body: Record<string, unknown>) => Promise<Job>
+    /**
+     * Compiles a graph the way an export would, and says whether it holds together.
+     *
+     * Here rather than in the renderer because the compiler is Scenario's own and lives in the
+     * SDK, which only the main process speaks (invariant 2) — and because a compiler written on
+     * this side would drift from what the webapp produces on the first node type they add.
+     */
+    compile: (graph: GraphState) => Promise<GraphCompileResult>
   }
   project: {
     create: (path: string, name: string) => Promise<Project>

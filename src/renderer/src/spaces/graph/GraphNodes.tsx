@@ -1,9 +1,12 @@
+import { mdiExportVariant } from '@mdi/js'
 import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeProps } from '@xyflow/react'
 import {
   GRAPH_RUN_FAILURES,
   GRAPH_RUN_STATUSES,
+  canBeOutput,
+  isGraphNodeType,
   type GraphHandleInput,
   type GraphHandleOutput,
   type GraphNodeRun,
@@ -12,6 +15,7 @@ import {
 } from '@shared/domain/graph'
 import { isRecord } from '@shared/guards'
 import { TONE_TEXT, type StatusTone } from '@/design/styles'
+import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { RUN_STATE_KEY } from './adapter'
 import { NODE_LABEL_KEYS } from './node-labels'
@@ -49,6 +53,7 @@ function NodeShell({
   title,
   kind,
   run,
+  output,
   selected,
   inputs,
   outputs,
@@ -57,6 +62,8 @@ function NodeShell({
   title: string
   kind: string
   run: GraphNodeRun | undefined
+  /** Whether the compiler would start from this node — `isOutput`, where it is read. */
+  output: boolean
   selected: boolean
   inputs: readonly GraphHandleInput[]
   outputs: readonly GraphHandleOutput[]
@@ -70,6 +77,11 @@ function NodeShell({
       )}
     >
       <header className="border-border flex items-baseline justify-between gap-2 border-b px-2 py-1">
+        {/* The one node the compiler starts from. Marked on the face rather than in the inspector
+            alone: which node a workflow ends on is read at a glance on the canvas, or not at all. */}
+        {output && (
+          <UiIcon path={mdiExportVariant} size={12} className="text-accent shrink-0 self-center" />
+        )}
         <span className="truncate text-[11px]">{title}</span>
         {/* The run takes the corner while there is one to report: the header holds a title that
             truncates and one thing beside it, and what a node is DOING outranks what it is. */}
@@ -100,6 +112,7 @@ type NodeData = {
   modelId?: unknown
   inputHandles?: unknown
   outputHandles?: unknown
+  isOutput?: unknown
   /** Not `editorInfo` data: the adapter writes it on the way down — see `RUN_STATE_KEY`. */
   [RUN_STATE_KEY]?: unknown
 }
@@ -146,6 +159,7 @@ function nodeOf(
         title={asText(fields.title) || t(labelOf(drawn))}
         kind={type}
         run={asRun(fields[RUN_STATE_KEY])}
+        output={fields.isOutput === true && canBeOutput(drawn)}
         selected={selected === true}
         inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
         outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}
@@ -210,6 +224,7 @@ const PlainNode = memo(function PlainNode({ data, selected, type }: NodeProps) {
       title={asText(fields.title) || type}
       kind={type}
       run={asRun(fields[RUN_STATE_KEY])}
+      output={fields.isOutput === true && isGraphNodeType(type) && canBeOutput(type)}
       selected={selected === true}
       inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
       outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}

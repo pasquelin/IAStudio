@@ -1,6 +1,8 @@
 import type { Job, JobTarget } from '@shared/domain/job'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { log } from '@main/log'
+import { compileGraph } from './workflow-compile'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
@@ -13,6 +15,7 @@ import {
   parseAssetName,
   parseBase64,
   parseGenerationBody,
+  parseGraphState,
   parseJobId,
   parseModelId,
   parseModelIds,
@@ -114,6 +117,16 @@ export function registerScenarioHandlers({
 
   handle(CHANNELS.workflowsDescribe, (_event, workflowId) =>
     reduced(() => workflows.describe(parseWorkflowId(workflowId))),
+  )
+
+  // No account, no network, no key: the compiler is a pure function of the SDK, and it answers
+  // while the user is still wiring. It is here because only this side speaks SDK (invariant 2).
+  handle(CHANNELS.workflowsCompile, (_event, graph) =>
+    Promise.resolve(
+      compileGraph(parseGraphState(graph), {
+        report: message => log.warn('scenario', `workflow compile: ${message}`),
+      }),
+    ),
   )
 
   handle(CHANNELS.workflowsRun, (_event, workflowId, body) =>

@@ -71,6 +71,15 @@
       "stickyNote": "Note"
     }
   },
+  "graphCompile": {
+    "steps_one": "{{count, number}} étape",
+    "steps_other": "{{count, number}} étapes",
+    "problem": {
+      "no-output": "Aucune sortie marquée",
+      "empty": "Rien ne mène à la sortie",
+      "invalid": "Le graphe ne compile pas"
+    }
+  },
   "graphRun": {
     "running": "en cours",
     "cached": "inchangé",
@@ -184,6 +193,7 @@
       "font.face": "Une police n’a pas pu être chargée",
       "graph.node": "Un nœud n’a pas pu être créé",
       "graph.run": "Le graphe n’a pas pu être lancé",
+      "graph.compile": "Le graphe n’a pas pu être vérifié",
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
       "document.load": "Le document n’a pas pu être ouvert"
@@ -638,6 +648,7 @@
     "fontMissing": "{{family}} (absente)",
     "node": "Nœud",
     "title": "Titre",
+    "isOutput": "Sortie du workflow",
     "nodeId": "Identifiant",
     "noModel": "Aucun"
   },

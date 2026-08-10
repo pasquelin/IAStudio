@@ -57,6 +57,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       search: () => Promise.resolve({ items: [], cursor: null }),
       describe: () => Promise.reject(new Error('no workflow')),
       run: () => Promise.reject(new Error('no workflow')),
+      compile: () => Promise.resolve({ ok: false, problem: 'no-output' }),
       ...overrides.workflows,
     },
     project: {

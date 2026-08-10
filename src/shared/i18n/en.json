@@ -71,6 +71,15 @@
       "stickyNote": "Note"
     }
   },
+  "graphCompile": {
+    "steps_one": "{{count, number}} step",
+    "steps_other": "{{count, number}} steps",
+    "problem": {
+      "no-output": "No output marked",
+      "empty": "Nothing reaches the output",
+      "invalid": "The graph does not compile"
+    }
+  },
   "graphRun": {
     "running": "running",
     "cached": "unchanged",
@@ -184,6 +193,7 @@
       "font.face": "A font could not be loaded",
       "graph.node": "A node could not be created",
       "graph.run": "The graph could not be run",
+      "graph.compile": "The graph could not be checked",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened"
@@ -638,6 +648,7 @@
     "fontMissing": "{{family}} (missing)",
     "node": "Node",
     "title": "Title",
+    "isOutput": "Workflow output",
     "nodeId": "Identifier",
     "noModel": "None"
   },
