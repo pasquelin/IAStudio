@@ -71,7 +71,17 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > réserve de la soumettre avant installation**. Elles sont écrites dans leur entrée, et **ne se
 > redemandent pas**. **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
 >
-> **Deux lots sont livrés le 10 août 2026.** Le second réunit les entrées 43 et 40 : la colonne
+> **Trois lots sont livrés le 10 août 2026.** Le troisième est l'accueil, entrées 42 et 12 :
+> `useShelf` rend son état et son `retry`, si bien qu'une bande refusée reste à l'écran, le dit
+> et propose de réessayer au lieu de se retirer ; et cliquer une vignette l'OUVRE, « Recréer »
+> passant au coin, « Récupérer » restant l'action principale des seules vignettes pas encore
+> rapatriées. **Deux choses que ce lot a montrées et qui resserviront** : `openAsset` n'envoie un
+> asset que dans un document DÉJÀ ouvert, or l'accueil est à l'écran quand il n'y en a pas — d'où
+> `openFromHome`, qui crée le document manquant, sans quoi la promesse est vide sur un démarrage
+> frais. Et importer `openAsset` en tête d'une bande fait entrer le chargeur audio et le placeur
+> de textures dans le chunk d'ouverture : `eager-graph.test.ts` en tient le budget et il a mordu.
+>
+> **Le deuxième lot.** Le second réunit les entrées 43 et 40 : la colonne
 > de libellés est une gauge, `--sc-label`, lue par les deux familles de ligne, et le retrait
 > remonte au groupe qui les tient ; la sélection cesse d'être peinte par le seul panneau qui n'en
 > a pas. **Ce que ce lot a montré et qui resservira** : le todo se trompait sur Apps — ouvrir une
@@ -488,73 +498,10 @@ flèches, `tabindex` roving, `Échap` qui rend le focus à ce qui a ouvert le me
 
 # 3. Ce que l'interface ne dit pas
 
-Six entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
+Deux entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
-## 3.1 Les cinq bandes de l'accueil disparaissent quand on leur refuse la réponse
-
-### 42. `useShelf` avale les rejets, et une bande refusée se retire de la page
-
-**Le geste attendu.** Quand une bande de l'accueil n'obtient pas sa réponse, **elle reste à
-l'écran**, le dit sobrement, et propose de réessayer. Elle ne s'efface pas.
-
-**Vérifié le 9 août 2026**, fichier par fichier. `useShelf` a **une** politique d'échec et son
-`.catch` remet la valeur initiale : « refusé » et « rien à montrer » deviennent le même état, et la
-bande se retire de la page.
-
-| Bande | Ce qu'elle lit | Ce qu'elle fait d'un refus |
-|---|---|---|
-| **Library** | `cloud.browse` | `if (page.length === 0) return null` — un 429 la fait disparaître sans un mot. Et depuis que `cloudBrowse` passe par `quietlyReducedBy`, **le journal ne le dit pas non plus** : plus aucune trace côté utilisateur |
-| **Usage** | `scenario.usageReport` | `if (!report) return marker` — même confusion, même silence |
-| **Creations** | `assets.search` | catalogue local : un échec est rare, la confusion est la même |
-| **ByMode** | `assets.counts` | idem |
-| **Similar** | `cloud.browse` + `cloud.similar` | **la seule qui s'en sort — mais par le haut** |
-
-**Similar est déjà sortie de là, et c'est le vrai signal.** Elle s'est donné un type à trois états,
-son propre `try/catch` dans `lookalikes()`, et un compteur `attempt` glissé dans la clé de `useShelf`
-pour se fabriquer un « Réessayer ». **C'est un mécanisme de relance générique reconstruit dans un
-composant** — la deuxième bande qui le voudra le recopiera.
-
-**La forme juste : `useShelf` rend l'état, pas seulement la valeur.**
-
-    { value, state: 'reading' | 'refused' | 'ready', retry }
-
-Le `attempt` de Similar disparaît alors dans le hook, et `Similar.tsx` n'a plus à attraper ce que le
-hook aurait dû lui dire.
-
-**Trois points que la lecture du code a tranchés, et qu'il ne faut pas redécouvrir :**
-
-- **Un `read()` qui répond `undefined` doit devenir `ready`, pas `reading`.** C'est le cas ordinaire
-  — pas de projet ouvert, pas de pont — et le laisser en lecture ferait dessiner à toute bande sans
-  projet une attente qui ne finit jamais.
-- **`useDeferredShelf` doit forcer `reading` tant que la bande n'a pas été atteinte.** Sinon une
-  bande jamais lue se déclare prête, retire son marqueur — et **n'est alors jamais lue**, puisque le
-  marqueur est ce qui se fait observer.
-- **Le retry doit vivre dans le hook**, pas dans la bande : l'effet dépend déjà de `source`, un
-  compteur interne ajouté à ses deps suffit. Vérifier qu'il fonctionne sur une bande **différée dont
-  le `seen` est déjà verrouillé** — c'est le cas de Similar et d'Usage.
-
-**Ce que chaque bande affiche sur un refus, à décider.** Similar montre une ligne et un bouton ; les
-quatre autres n'ont pas eu la question posée. **Une bande décorative qui afficherait une erreur rouge
-serait pire que le silence** — mais disparaître sans laisser de trace est ce qui a produit cette
-dette. La piste : le même bloc pour les cinq, `SectionNote` en ton `muted` et un bouton
-« Réessayer » (`home.retry` existe déjà), sorti dans un composant partagé plutôt que copié cinq fois.
-
-> **Deux pièges déjà payés sur ce chantier.** Un test qui passe ne prouve rien tant qu'il n'a pas
-> échoué : vérifier que chaque test rougit quand on retire son correctif. **Attention au faux
-> `IntersectionObserver` de `test-setup.ts`** — il répond « visible » par défaut, donc un test de
-> chargement différé passe même si le mécanisme est entièrement supprimé ; installer
-> `installIntersectionObserver({ eager: false })`. Et **ne jamais écrire un fichier de test sans
-> l'avoir lu** : les quatre tests de `useShelf` ont été écrasés comme ça, et c'est le compteur de
-> tests qui l'a révélé.
-
-> **Deux manuels deviennent faux le jour où c'est fait.** Le chapitre 03, fr et en, affirme depuis le
-> 9 août que Similar est **« la seule du lot »** à distinguer un refus d'un compte qui n'a rien de
-> ressemblant.
-
----
-
-## 3.2 L'Explorateur n'explore rien
+## 3.1 L'Explorateur n'explore rien
 
 ### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
 
@@ -600,53 +547,7 @@ première ligne ; elles ne se redemandent pas.
 
 ---
 
-## 3.3 L'accueil — deux entrées, une surface
-
-**Regroupées** : l'entrée 13 finit sur le constat de l'entrée 12 — le menu « … » qui masque une
-bande n'a pas été trouvé, « l'accueil ne montre pas ce qu'il permet ». Même page, même défaut
-de fond, et le correctif de l'une se juge en regardant l'autre.
-
-### 12. L'accueil ne dit pas ce que cliquer va faire — et ça n'ouvre jamais le fichier
-
-**Le geste attendu.** Sur l'accueil, savoir **avant** de cliquer ce que la vignette va faire — et pouvoir simplement
-ouvrir le fichier.
-
-**Vu le 9 août 2026, capture à l'appui.** « Je clique sur une vignette, il y a une activité, mais ça
-n'ouvre pas le fichier, et je ne comprends pas ce qui se passe. »
-
-**Le fichier ne s'ouvre pas parce qu'aucune étagère n'ouvre quoi que ce soit.** Trois étagères
-dessinent le **même carré** et font **trois choses différentes**, dont aucune n'est « ouvrir » :
-
-| Étagère | Ce que le clic fait |
-|---|---|
-| **Ce que vous avez produit** | `recreate(asset.type, generation)` — **relance une génération** |
-| **Votre bibliothèque** | `useCloud.pull([asset.id])` — **rapatrie** l'asset dans le projet |
-| **Votre bibliothèque**, asset déjà rapatrié | **rien** : `fetchable` faux retire le `onClick`, et la vignette devient inerte sans le dire |
-
-Sur la capture, la **même image** figure dans les deux étagères — deux carrés identiques côte à côte,
-l'un qui régénère et l'autre qui télécharge.
-
-**L'intention est écrite, mais nulle part visible.** Chaque vignette porte son verbe —
-`home.creations.recreate`, `home.library.fetch` — dans un **`aria-label`** : un lecteur d'écran
-l'entend, l'œil ne le voit jamais. Le `hint` est un `title` natif. Ce qui reste à l'écran est un
-`hover:opacity-90`, identique pour les trois.
-
-Ce n'est donc pas un défaut de compréhension mais **d'affordance**.
-
-> **Tranché le 10 août 2026 : « ouvrir » devient l'action par défaut.** Le clic ouvre le fichier
-> dans son espace ; « Recréer » et « Rapatrier » deviennent secondaires — au survol ou au menu
-> contextuel. C'est ce que la capture dit qu'on croit cliquer.
->
-> **Le dernier cas est tranché le 10 août 2026 : « Rapatrier » reste l'action principale sur une
-> vignette pas encore rapatriée**, et sur celles-là seulement. Un asset qui n'est pas sur le disque
-> n'a rien à ouvrir, et le rapatriement implicite avait été écarté ; le verbe est donc visible à
-> l'écran plutôt que deviné. Une fois l'asset descendu, la vignette rejoint la règle commune et son
-> clic ouvre. **Ce n'est pas une exception à « ouvrir par défaut », c'est ce que la règle donne
-> quand il n'y a rien à ouvrir.**
-
----
-
-## 3.4 Les Apps — ce qu'une App produit
+## 3.2 Les Apps — ce qu'une App produit
 
 > **Dire ce qu'est une App est livré** (`feat/apps-blurb`, 10 août 2026) : la phrase du registre
 > — « la Génération, c'est un modèle, une étape ; une App, c'est plusieurs modèles enchaînés,
