@@ -39,6 +39,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // still there, drawn in the fallback, and this is what says why it does not look right.
   'font.face': 'document',
   'graph.node': 'document',
+  'graph.run': 'document',
 }
 
 /**

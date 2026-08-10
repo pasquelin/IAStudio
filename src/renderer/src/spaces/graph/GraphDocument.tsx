@@ -197,7 +197,10 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const onRun = useCallback(() => {
     const store = useGraphRuns.getState()
     if (runOf(store, documentId).running) return store.stop(documentId)
-    void store.start(documentId)
+    // Reported rather than swallowed: a run that cannot even be planned — a `.graph` whose
+    // handles are not a list, a chunk that failed to load — would otherwise be a button that
+    // does nothing at all, with nothing anywhere saying why.
+    void store.start(documentId).catch(error => reportFailure('graph.run', documentId, error))
   }, [documentId])
 
   const run = useCallback(

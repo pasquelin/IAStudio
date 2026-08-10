@@ -66,6 +66,16 @@ export const RESERVED_NODE_ID = 'workflow'
 export const isReservedNodeId = (id: string): boolean => id === RESERVED_NODE_ID
 
 /**
+ * The port every node carries so an `ifElse` can steer it — read off a published App, where all
+ * four nodes declare it.
+ *
+ * It is NOT a model input: whatever is wired into it decides whether the node runs at all, so a
+ * run must keep it out of the body it submits, or the generator is handed a parameter its schema
+ * has never heard of.
+ */
+export const CONDITIONAL_PORT = 'conditional'
+
+/**
  * An input port, on the LEFT of a node. `type` may be a list, which means the port is
  * polymorphic and accepts any of them — that is what the connection check and the port colours
  * are made of. `subHandles` are the ports nested under one, as a model's grouped inputs are.
@@ -188,3 +198,54 @@ export const EMPTY_GRAPH: GraphState = { nodes: [], edges: [], inputKeys: [] }
 
 /** Scenario's own limit on a workflow, which only the export has to obey — see the plan, step 9. */
 export const MAX_GRAPH_NODES_FOR_EXPORT = 50
+
+/**
+ * What a node is doing in a run, as the canvas paints it.
+ *
+ * Here rather than beside the executor that produces it, for the reason `JobStatus` lives in
+ * `domain/job.ts`: the canvas builds its label as `` t(`graphRun.${status}`) ``, so a value added
+ * without its line in the bundles shows the user the key itself and no typecheck sees it. The
+ * guard that catches that (`i18n/bundles.test.ts`) is in `shared/` and cannot reach the renderer.
+ */
+export type GraphRunStatus = 'idle' | 'running' | 'cached' | 'done' | 'failed'
+
+export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
+  'idle',
+  'running',
+  'cached',
+  'done',
+  'failed',
+]
+
+/**
+ * Why a node produced nothing. A code, never a message — the renderer translates it, exactly as
+ * it does for a job's own failure (`domain/failure.ts`).
+ */
+export type GraphRunFailure =
+  /** Caught in a loop: the plan refused before anything ran. */
+  | 'cycle'
+  /** A type this milestone has no execution for — the logic and the loops arrive with step 8. */
+  | 'unsupported'
+  /** A generator with no model chosen. */
+  | 'no-model'
+  /** Something it reads failed, so it was never asked to run. */
+  | 'blocked'
+  /** It ran and the job did not succeed. */
+  | 'rejected'
+
+export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
+  'cycle',
+  'unsupported',
+  'no-model',
+  'blocked',
+  'rejected',
+]
+
+/**
+ * The two states with no line of their own in the bundles, and it is deliberate: `idle` is a node
+ * saying nothing, and `failed` never shows on its own — a failure always names its reason.
+ */
+export const SILENT_RUN_STATUSES: readonly GraphRunStatus[] = ['idle', 'failed']
+
+export type GraphNodeRun =
+  { status: Exclude<GraphRunStatus, 'failed'> } | { status: 'failed'; failure: GraphRunFailure }

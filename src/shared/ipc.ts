@@ -347,6 +347,7 @@ export type LogScope =
   | 'assets.open'
   | 'font.face'
   | 'graph.node'
+  | 'graph.run'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -370,6 +371,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.open',
   'font.face',
   'graph.node',
+  'graph.run',
 ]
 
 /**

@@ -36,6 +36,8 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   // first attempt failed — silenced, a second try looks exactly like a dialog somebody dismissed.
   'texture.export',
   'skybox.export',
+  // Pressing Run is one too, and the second press is exactly what says the first did nothing.
+  'graph.run',
 ])
 
 /**

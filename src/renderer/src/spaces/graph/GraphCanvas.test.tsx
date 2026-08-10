@@ -298,7 +298,9 @@ describe('the graph canvas', () => {
       })
 
       expect(screen.getByText('boucle')).toBeInTheDocument()
-      expect(screen.getByText('en attente')).toBeInTheDocument()
+      // Not « en attente » : a node whose providers are still going says nothing at all, so that
+      // wording read as "not started yet" on the one state that means the opposite.
+      expect(screen.getByText('amont en échec')).toBeInTheDocument()
     })
 
     it('leaves a node it has nothing to say about showing its type', () => {
