@@ -10,6 +10,7 @@ import {
   type LayerKind,
 } from '@/engines/canvas/canvas-state'
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
+import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
 import { NODE_LABEL_KEY_LIST } from '@/spaces/graph/node-labels'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
@@ -33,6 +34,11 @@ function resolve(code: Language, key: string): unknown {
  */
 const COMPOSED_KEYS: readonly string[] = [
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}`),
+  // The sentence beside each of them. A menu row explains what it does, and the explanation is
+  // composed the same way the label is — so it goes missing the same way, and is caught here.
+  ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}Hint`),
+  ...LAYER_LOCKS.map(padlock => `${padlock.labelKey}Hint`),
+  ...LAYER_OPERATIONS.map(operation => `layers.${operation}Hint`),
   ...BLEND_MODES.map(mode => `blend.${mode}`),
   ...LAYER_KINDS.map(kind => `inspector.layerKind_${kind}`),
   ...TRACK_KINDS.map(kind => `inspector.kind_${kind}`),

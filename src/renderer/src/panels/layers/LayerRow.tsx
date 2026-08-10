@@ -8,7 +8,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { isGroup, type CanvasState, type Layer } from '@/engines/canvas/canvas-state'
 import { renameLayer, setLayerLocks, setLayerVisible } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
-import { TIP_RIGHT } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { InlineRename } from '@/panels/shared/InlineRename'
 import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LAYER_LOCKS } from './layer-locks'
@@ -120,6 +120,7 @@ export const LayerRow = memo(function LayerRow({
                       icon={padlock.iconFor(layer.locked[padlock.key])}
                       checked={layer.locked[padlock.key]}
                       tick="on-off"
+                      tip={HINT_RIGHT(t(`${padlock.labelKey}Hint`))}
                       onSelect={() =>
                         run(
                           setLayerLocks(layer.id, {

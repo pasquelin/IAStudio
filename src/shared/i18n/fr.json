@@ -516,7 +516,7 @@
     "collapse": "Replier le groupe",
     "expand": "Déplier le groupe",
     "operations": "Opérations",
-    "operationsHint": "Grouper, dupliquer, fusionner ou aplatir la pile",
+    "operationsHint": "Grouper, dégrouper ou dupliquer le calque actif",
     "group": "Grouper",
     "ungroup": "Dégrouper",
     "duplicate": "Dupliquer",
@@ -525,7 +525,10 @@
     "groupName": "Groupe",
     "copyName": "{{name}} copie",
     "flatName": "Image aplatie",
-    "rename": "Renommer le calque"
+    "rename": "Renommer le calque",
+    "groupHint": "Range le calque actif dans un nouveau groupe",
+    "ungroupHint": "Sort les calques du groupe et supprime le groupe",
+    "duplicateHint": "Copie le calque actif juste au-dessus de lui"
   },
   "meshes": {
     "box": "Cube",
@@ -751,7 +754,10 @@
     "studioHint": "Éclaire la scène avec l’environnement par défaut, sans ciel importé",
     "pickSkyHint": "Éclaire la scène avec ce ciel et l’affiche en fond",
     "noFontHint": "Aucune police choisie ; le texte garde celle du document",
-    "pickFontHint": "Compose le texte dans cette police"
+    "pickFontHint": "Compose le texte dans cette police",
+    "lock_pixelsHint": "Empêche de peindre sur ce calque, sans le figer sur place",
+    "lock_positionHint": "Empêche de déplacer le calque ; on peut encore y peindre",
+    "lock_alphaHint": "Ne peint que là où le calque a déjà de la matière"
   },
   "transport": {
     "play": "Lire",
@@ -1866,7 +1872,11 @@
     "saturation": "Saturation",
     "temperature": "Température",
     "add": "Ajouter un réglage",
-    "addHint": "Poser un calque de réglage sur ce qui est en dessous"
+    "addHint": "Poser un calque de réglage sur ce qui est en dessous",
+    "exposureHint": "Éclaircit ou assombrit tout ce qui est en dessous",
+    "contrastHint": "Écarte les tons clairs des tons sombres, ou les rapproche",
+    "saturationHint": "Ravive les couleurs ou les éteint, jusqu’au gris",
+    "temperatureHint": "Réchauffe vers l’orange ou refroidit vers le bleu"
   },
   "intents": {
     "skyboxSource": "Utiliser comme ciel",

@@ -516,7 +516,7 @@
     "collapse": "Collapse group",
     "expand": "Expand group",
     "operations": "Operations",
-    "operationsHint": "Group, duplicate, merge or flatten the stack",
+    "operationsHint": "Group, ungroup or duplicate the active layer",
     "group": "Group",
     "ungroup": "Ungroup",
     "duplicate": "Duplicate",
@@ -525,7 +525,10 @@
     "groupName": "Group",
     "copyName": "{{name}} copy",
     "flatName": "Flattened",
-    "rename": "Rename layer"
+    "rename": "Rename layer",
+    "groupHint": "Puts the active layer into a new group",
+    "ungroupHint": "Takes the layers out of the group and removes the group",
+    "duplicateHint": "Copies the active layer just above itself"
   },
   "meshes": {
     "box": "Box",
@@ -751,7 +754,10 @@
     "studioHint": "Lights the scene with the default environment, no imported sky",
     "pickSkyHint": "Lights the scene with this sky and draws it behind",
     "noFontHint": "No font picked; the text keeps the document’s own",
-    "pickFontHint": "Sets the text in this font"
+    "pickFontHint": "Sets the text in this font",
+    "lock_pixelsHint": "Stops paint from landing on this layer, without pinning it in place",
+    "lock_positionHint": "Stops the layer from being moved; it can still be painted on",
+    "lock_alphaHint": "Paints only where the layer already has something"
   },
   "transport": {
     "play": "Play",
@@ -1866,7 +1872,11 @@
     "saturation": "Saturation",
     "temperature": "Temperature",
     "add": "Add an adjustment",
-    "addHint": "Lay an adjustment layer over what is below it"
+    "addHint": "Lay an adjustment layer over what is below it",
+    "exposureHint": "Brightens or darkens everything below it",
+    "contrastHint": "Pushes light and dark tones apart, or brings them together",
+    "saturationHint": "Revives the colours or drains them, down to grey",
+    "temperatureHint": "Warms towards orange or cools towards blue"
   },
   "intents": {
     "skyboxSource": "Use as sky",
