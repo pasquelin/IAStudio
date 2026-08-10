@@ -258,10 +258,37 @@ le but : **un fichier neuf non testé dans un panneau fait rougir la porte** au 
 
 ---
 
-## 0.2 `develop` est rouge par intermittence, et jamais deux fois au même endroit
+## 0.2 `develop` est rouge par intermittence — et un troisième groupe se reproduit, lui
 
 **Vu le 9 août 2026**, sur quatre exécutions de `pnpm validate` d'affilée. Un `validate` rouge qu'il
 faut réexécuter pour croire est un filet qui ne tient plus.
+
+### Le troisième groupe, mesuré le 10 août 2026 — et il n'est ni un délai ni la charge
+
+**`Library.test.tsx > opens an asset the project has already fetched` échoue seul, sans charge,
+environ une fois sur cinq.** Mesuré : deux `pnpm validate` d'affilée rouges au **même** endroit,
+puis le fichier lancé **seul**, sans autre projet ni autre session — 1 échec sur 5, puis 1 sur 5
+encore. C'est la première intermittence de ce fichier qui **se reproduit à la demande**, et elle
+dément le titre que cette section portait.
+
+Ce que la trace dit, et c'est tout ce qu'elle dit :
+
+```
+× opens an asset the project has already fetched
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+  Library.test.tsx:132  expect(openFromHome).toHaveBeenCalledTimes(1)
+```
+
+**Le bouton est donc trouvé** — `findByRole` n'a pas expiré — **et cliqué, et son `onClick` ne part
+pas.** Le geste vient du lot des entrées 42 et 12 : `act.run` est posé par `Library.tsx:94`, et
+`ShelfTile` ne rend un `<button>` que s'il reçoit un `onClick`.
+
+**La cause n'est pas cherchée, et surtout pas devinée** — ce fichier dit ailleurs ce que coûte une
+cause trouvée à la volée. La piste à ouvrir en premier est celle qu'un nœud remplacé entre le
+`findByRole` et le clic laisserait : le shelf se peuple de façon asynchrone (`useShelf` → `browse`),
+et un `<button>` qui redevient une carte non cliquable, ou l'inverse, changerait le nœud sous la
+main de `userEvent`. **La reproduction est gratuite** : cinq exécutions du fichier seul suffisent,
+ce qui est la première fois que ce § peut se traiter autrement qu'à l'aveugle.
 
 **Le premier groupe est un dépassement de délai sous charge.** Le pire des trois est traité
 (`55ddf63`, `ShortcutsSettings.test.tsx` de 26 s à 3 s). Restent :
