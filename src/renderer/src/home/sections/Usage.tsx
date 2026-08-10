@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { DEFAULT_USAGE_PERIOD, type ModelSpend, type UsageReport } from '@shared/domain/usage'
 import { Carousel } from '@/design/Carousel'
 import { getBridge } from '@/services/bridge'
+import { homeSectionLimit } from '@shared/domain/home'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 // `format.ts` is the one file of the usage window the opening chunk may reach — the rest of it
 // pulls the chart library in with it, which `eager-graph.test.ts` holds the line on.
@@ -10,7 +11,7 @@ import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
-import { useDeferredShelf } from '../use-shelf'
+import { useDeferredShelf } from '@/hooks/use-shelf'
 
 /** Wide enough for a model name and two figures under it, without wrapping either. */
 const CARD_WIDTH = 220
@@ -29,6 +30,7 @@ const CARD_WIDTH = 220
 export function Usage() {
   const { t, i18n } = useTranslation()
   const owner = useSettings(activeOwnerId)
+  const sections = useSettings(state => state.settings.home.sections)
   // Below the fold on any window, so it is read when reached rather than at mount. Read again
   // when the active key changes too: another key spends its own units.
   const {
@@ -54,7 +56,7 @@ export function Usage() {
 
       {report.models.length > 0 && (
         <Carousel
-          items={report.models.map(withId)}
+          items={report.models.slice(0, homeSectionLimit(sections, 'usage')).map(withId)}
           itemWidth={CARD_WIDTH}
           itemHeight={SHELF_CARD_HEIGHT}
           label={t('home.sections.usage')}

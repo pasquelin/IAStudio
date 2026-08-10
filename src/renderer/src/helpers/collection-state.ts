@@ -53,6 +53,15 @@ export const DEFAULT_COLLECTION_STATE: CollectionState = {
 /** For panels with no grid and no filters: a fixed state, never persisted. */
 export const LIST_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, view: 'list' }
 
+/**
+ * Its twin the other way round: pictures in a narrow column, with neither search nor facets.
+ *
+ * A module constant rather than an object built in the panel, for the reason every fixed state
+ * here is one — nothing may hand out a shared mutable, and a preset belongs beside the defaults
+ * it is a variation of.
+ */
+export const TILES_ONLY: CollectionState = { ...DEFAULT_COLLECTION_STATE, thumbnailSize: 96 }
+
 export function resizeThumbnails(state: CollectionState, delta: number): CollectionState {
   const thumbnailSize = clamp(state.thumbnailSize + delta, MIN_THUMBNAIL, MAX_THUMBNAIL)
   return thumbnailSize === state.thumbnailSize ? state : { ...state, thumbnailSize }

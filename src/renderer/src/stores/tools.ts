@@ -88,16 +88,15 @@ export const DEFAULT_SPLIT = 240
 /**
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
  * each surface opens on the panel it declares first: the layers in Image, the shelf in Video,
- * the sky in Skyboxes, the models in the upper left of every space, and the Explorer in the
- * lower left everywhere, the home included.
+ * the sky in Skyboxes, the models in the upper left of every space, the Explorer in the lower
+ * left of each, and the projects in the home's.
  *
  * Every half a surface has is named here, and the lower left is no exception: two halves of two
  * exist so the generator stays visible WHILE the Explorer is read, and a half that starts closed
  * would be that arrangement withheld until someone goes looking for it in the rail.
  *
- * The home names only the left column, the one zone it has — and only its lower half, which is
- * where its Explorer sits. `Edge` gives a lone half the whole zone, so the panel fills the
- * column there rather than hanging under an empty one.
+ * The home names the two columns it has and no band. Its left column is a lone half — `Edge`
+ * gives one the whole zone, so the projects fill it rather than hanging under an empty top.
  */
 export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
@@ -105,7 +104,10 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     right: { primary: null, secondary: null },
     bottom: { primary: null },
   },
-  home: { left: { secondary: null } },
+  home: {
+    left: { secondary: null },
+    right: { primary: null, secondary: null },
+  },
 }
 
 export const DEFAULT_ARRANGEMENTS: Record<SurfaceFamily, Arrangement> = {
@@ -241,9 +243,10 @@ function openEverywhereItSits(open: OpenByZone): OpenByZone {
 }
 
 /**
- * What an older store comes back as. Every version this runs for predates the split, so the
- * whole stored arrangement is the workspaces': the home had no zones of its own to arrange. It
- * becomes theirs, and the home starts on its default — one column, open, on the Explorer.
+ * What an older store comes back as. The whole stored arrangement is read as the workspaces':
+ * every version this runs for either predates the split — the home had no zones of its own to
+ * arrange — or gave the home a single column. It becomes theirs, and the home starts on its
+ * default, which is now two columns rather than one.
  */
 export function migrateTools(
   persisted: unknown,
@@ -394,8 +397,10 @@ export const useTools = create<ToolsState>()(
       // 6 had the generation panels on the right, where everything else sits today, 7 named
       // a panel in every default half, which imposed one section's answer on the other five,
       // and 8 held ONE arrangement for the whole studio — the home then took the left column
-      // the spaces keep for generation, and a click on either was a click on both.
-      version: 9,
+      // the spaces keep for generation, and a click on either was a click on both. 9 gave the
+      // home a left column and nothing else; it has two now, and a stored arrangement naming
+      // only the first would withhold the right one from everyone who had ever opened the app.
+      version: 10,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

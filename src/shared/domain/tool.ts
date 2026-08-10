@@ -54,6 +54,12 @@ export type ToolId =
   | 'styles'
   | 'view'
   | 'apps'
+  | 'projects'
+  | 'creations'
+  | 'counts'
+  | 'library'
+  | 'documents'
+  | 'activity'
 
 /**
  * The panels the UPPER HALF of the left column is reserved for: choosing a model, then filling
@@ -108,16 +114,12 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
-  // The lower half, in the spaces AND on the home. What one looks left for is something to
-  // produce with, and both of these are that: the documents to produce into, and the pipelines
-  // that produce. A half rather than two more turns in the upper one — four icons stacked in a
-  // rail is the moment a column stops being a place one knows and becomes a pile one searches,
-  // and two halves of two keep the generator visible WHILE the Explorer is read.
-  //
-  // One placement rather than two, which is what keeps the panel in the same rail row
-  // everywhere: the home has no generation to sit under, so its lower half simply fills the
-  // column — `Edge` gives a lone half the whole zone.
-  { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: [...WORKSPACE_IDS, HOME_SURFACE] },
+  // The lower half. What one looks left for is something to produce with, and both of these are
+  // that: the documents to produce into, and the pipelines that produce. A half rather than two
+  // more turns in the upper one — four icons stacked in a rail is the moment a column stops
+  // being a place one knows and becomes a pile one searches, and two halves of two keep the
+  // generator visible WHILE the Explorer is read.
+  { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: WORKSPACE_IDS },
   // Scenario's Apps — public workflows, run as they are. An App produces assets, which is
   // generating, so it belongs to the column one produces from.
   { id: 'apps', zone: 'left', slot: 'secondary', surfaces: WORKSPACE_IDS },
@@ -166,6 +168,32 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The band is the montage's, across the whole width — that is how a montage is read, in Audio
   // as in Video.
   { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio'] },
+
+  // The home's own six, and they serve it ALONE. It is a surface like the others now — two
+  // columns and a centre — rather than the one page in the studio that scrolls: what one opens
+  // on the left, what the open project holds on the right, the journal under it, and the centre
+  // kept for the two things that earn the width, the tools and the gallery.
+  //
+  // Each of them reads the studio rather than a document, which is exactly why none reaches a
+  // workspace: a column beside an editor is for what acts on what is in front of you.
+
+  // The left column, where every space puts what one produces WITH. The home produces nothing,
+  // so it puts what one produces IN — and that is the first thing anyone comes to this screen
+  // for. The Explorer left the surface for it; the project's documents are listed on the right
+  // now, under the name that page always gave them.
+  { id: 'projects', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+
+  // The right column, in rail order: from the newest thing this project made to the files it
+  // was made into, by way of what the account holds outside it.
+  { id: 'creations', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+  { id: 'counts', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+  { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+  { id: 'documents', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+
+  // The lower half, as the inspector takes it in the spaces, and for the same reason: what just
+  // happened is read WHILE what it produced is looked at. A journal one has to switch away to is
+  // a journal nobody reads — which is what it was here, a band hidden by default.
+  { id: 'activity', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
 ]
 
 /**

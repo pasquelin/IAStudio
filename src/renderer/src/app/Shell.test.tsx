@@ -1,11 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 import { arrangedFor } from '@/stores/tool-fixtures'
-import { DEFAULT_ARRANGEMENTS, DEFAULT_OPEN, useTools, type OpenByZone } from '@/stores/tools'
+import {
+  arrangementOf,
+  DEFAULT_ARRANGEMENTS,
+  DEFAULT_OPEN,
+  useTools,
+  type OpenByZone,
+} from '@/stores/tools'
+import { HOME_SURFACE } from '@shared/domain/tool'
 import { Shell } from './Shell'
 
 vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
@@ -172,36 +179,85 @@ describe('a side column', () => {
 
 describe('the home', () => {
   /**
-   * The panels of the right column and the bottom strip all act on an open document, and the
-   * home has none: their zones are not drawn, so neither are their rails.
+   * Two columns and no band: the montage and the asset strip act on an open document, and the
+   * home has none. Those zones are not drawn, so neither are their rails.
    */
-  it('leaves out every zone but the left column', () => {
+  it('draws its two columns and neither band', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
-    // One divider: the left column's. The zones that would carry the others are absent.
-    expect(handles()).toHaveLength(1)
+    // Three dividers: one per column, and the cut between the right column's two halves. The
+    // zones that would carry a fourth are absent.
+    expect(handles()).toHaveLength(3)
   })
 
   /**
-   * The Explorer is a panel, and it opens where panels open — under an icon in the left rail,
-   * in a tool window that closes and reopens like the others. The home puts it there because
-   * its own left column is free: the six spaces reserve theirs for generation.
+   * Its panels open where panels open — under a rail icon, in a tool window that closes and
+   * reopens like the others. What an unchosen half draws is the first panel the registry puts
+   * there, which is why no arrangement here names one.
    */
-  it('stands the Explorer in the left column, reachable from the rail', () => {
+  it('opens on the projects, what was made, and the journal', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
-    expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
+    expect(screen.getByLabelText('Vos projets')).toBeInTheDocument()
+    expect(screen.getByLabelText('Ce que vous avez produit')).toBeInTheDocument()
+    expect(screen.getByLabelText('Activité récente')).toBeInTheDocument()
+    // The spaces' own two, which no placement gives this surface.
     expect(screen.queryByLabelText('Modèles')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Explorateur')).not.toBeInTheDocument()
+  })
+
+  /**
+   * The other three of the right column's upper half take turns with what is open there: a half
+   * shows ONE panel at a time. The rail is how one swaps them, and it has its own suite — this
+   * file mocks it away so that a title queried here can only be a panel.
+   */
+  it('shows one panel per half, never the whole upper right at once', () => {
+    useLayouts.setState({ home: true })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    renderShell()
+
+    for (const name of ['Par type', 'Votre bibliothèque', 'Vos documents']) {
+      expect(screen.queryByLabelText(name)).not.toBeInTheDocument()
+    }
   })
 
   // The status line is the studio's global view — jobs, activity, updates — and the home is
   // where a global view is most wanted, not least.
+  /**
+   * The two cuts a surface with two columns has: the one between a column and the centre, and
+   * the one between a column's two halves. Both write to the arrangement of the surface being
+   * looked at — the home writes the home's, never the workspaces'.
+   *
+   * jsdom implements neither pointer capture nor layout, so the capture is stubbed and the
+   * measured container reads zero: what is under test is which store each handle writes to, not
+   * the arithmetic, which `fitZoneSize` and `fitSplit` own and are tested on directly.
+   */
+  it('resizes its own zones and its own split, and writes them to the home', () => {
+    useLayouts.setState({ home: true })
+    useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
+    Element.prototype.setPointerCapture = vi.fn()
+    renderShell()
+
+    // The right column carries both: its own handle, and the divider between its two halves.
+    for (const handle of handles()) {
+      fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, clientY: 300 })
+      fireEvent.pointerMove(handle, { pointerId: 1, clientX: 340, clientY: 260 })
+    }
+
+    const home = arrangementOf(useTools.getState(), HOME_SURFACE)
+    expect(home.sizes.left).toBeDefined()
+    expect(home.sizes.right).toBeDefined()
+    expect(home.splits.right).toBeDefined()
+    // The spaces' own arrangement is untouched: the two families never share a drag.
+    expect(arrangementOf(useTools.getState(), 'image').sizes).toEqual({})
+  })
+
   it('keeps the status line under it', () => {
     useLayouts.setState({ home: true })
     renderShell()

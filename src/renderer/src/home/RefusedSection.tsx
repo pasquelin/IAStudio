@@ -14,7 +14,7 @@ export type RefusedSectionProps = {
 /**
  * What a band draws when its read was refused: it stays, says so quietly, and offers to try.
  *
- * Written once because five bands need it and the alternative is what produced the debt — each
+ * Written once because several bands needed it and the alternative is what produced the debt — each
  * one taking itself off the page on a refusal, indistinguishably from having nothing to show.
  * A red error on a decorative band would be worse than the silence; a muted line and a button
  * is the whole of it.

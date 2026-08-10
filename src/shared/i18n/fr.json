@@ -31,7 +31,13 @@
     "channels": "Canaux",
     "styles": "Styles",
     "view": "Vue",
-    "apps": "Apps"
+    "apps": "Apps",
+    "projects": "Vos projets",
+    "creations": "Ce que vous avez produit",
+    "counts": "Par type",
+    "library": "Votre bibliothèque",
+    "documents": "Vos documents",
+    "activity": "Activité récente"
   },
   "view": {
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
@@ -1827,14 +1833,8 @@
     "sections": {
       "spotlight": "Où vous en étiez",
       "tools": "Outils",
-      "projects": "Vos projets",
-      "creations": "Ce que vous avez produit",
-      "byMode": "Par type",
       "favorites": "Vos recettes",
-      "library": "Votre bibliothèque",
-      "documents": "Vos documents",
       "jobs": "En cours",
-      "activity": "Activité récente",
       "spark": "Une idée pour commencer",
       "similar": "Dans la même veine",
       "usage": "Ce que vous avez consommé",
@@ -1861,14 +1861,13 @@
     "projects": {
       "none": "Créer votre premier projet"
     },
-    "documents": {
-      "none": "Ce projet ne contient encore aucun document. Choisissez un outil ci-dessus."
-    },
     "creations": {
-      "recreate": "En refaire une avec {{model}}"
+      "recreate": "En refaire une avec {{model}}",
+      "none": "Ce que vous générerez dans ce projet s’affichera ici."
     },
     "library": {
-      "fetch": "Récupérer « {{name}} » dans le projet"
+      "fetch": "Récupérer « {{name}} » dans le projet",
+      "none": "La bibliothèque de votre compte Scenario est vide, ou aucune clé API n’est renseignée."
     },
     "favorites": {
       "unpin": "Retirer « {{name}} » de vos recettes"
@@ -1927,8 +1926,13 @@
       "none": "Rien de publié dans cette catégorie pour le moment."
     },
     "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
-    "byModeHint": "Ouvre l’explorateur d’assets, filtré sur ce type",
     "exploreTabHint": "Ne montre que cette catégorie dans la bande",
-    "createProjectHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit"
+    "createProjectHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit",
+    "documents": {
+      "none": "Ce projet ne contient encore aucun document. Choisissez un outil au centre pour en créer un."
+    },
+    "counts": {
+      "reveal": "Ouvrir la bibliothèque d’assets du projet, filtrée sur ce type"
+    }
   }
 }

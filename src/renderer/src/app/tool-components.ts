@@ -41,6 +41,12 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   styles: { load: () => import('@/panels/styles'), role: null },
   view: { load: () => import('@/panels/view'), role: null },
   apps: { load: () => import('@/panels/apps'), role: null },
+  projects: { load: () => import('@/panels/projects'), role: null },
+  creations: { load: () => import('@/panels/creations'), role: null },
+  counts: { load: () => import('@/panels/counts'), role: null },
+  library: { load: () => import('@/panels/library'), role: null },
+  documents: { load: () => import('@/panels/documents'), role: null },
+  activity: { load: () => import('@/panels/activity'), role: null },
 }
 
 /** A panel that publishes no actions still needs something for `lazy` to resolve to. */

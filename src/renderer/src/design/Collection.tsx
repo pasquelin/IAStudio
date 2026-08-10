@@ -19,7 +19,12 @@ export type CollectionProps<T extends { id: string }> = {
    * thumbnails has no card to draw, and inventing one so it is never called is noise.
    */
   renderCard?: (item: T) => ReactNode
-  renderRow: (item: T) => ReactNode
+  /**
+   * Absent for a collection that is only ever a grid — the home's shelves of pictures, whose
+   * state is a module constant with no bar to change it. A row written for a view nobody can
+   * reach is a second rendering of the item that no eye ever checks.
+   */
+  renderRow?: (item: T) => ReactNode
   /**
    * What the list is called. A `listbox` is a widget, and an unnamed widget is announced as the
    * bare word "listbox" — the same word in all six panels that draw one.
@@ -156,7 +161,10 @@ export function Collection<T extends { id: string }>({
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
   // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
-  const card = state.view === 'grid' ? renderCard : undefined
+  // "No row to draw ⇒ always a grid", which is what the prop's own doc claims. Structural rather
+  // than documented: a caller passing only `renderCard` under a `view: 'list'` state would
+  // otherwise mount focusable, arrow-walkable cells that paint nothing — a blank list, not an error.
+  const card = renderRow === undefined || state.view === 'grid' ? renderCard : undefined
   const grid = card !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
@@ -303,7 +311,7 @@ export function Collection<T extends { id: string }>({
                       onActivate={onActivate ? () => onActivate(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >
-                      {card ? card(item) : renderRow(item)}
+                      {card ? card(item) : renderRow?.(item)}
                     </CollectionCell>
                   )
                 })}

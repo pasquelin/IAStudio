@@ -8,31 +8,30 @@ import { reconcileOrder } from './order'
  * The renderer enriches these ids with icons and components; nothing here knows about React.
  */
 
-/** What a section cannot be drawn without. A section with none is drawable at all times. */
-export type HomeRequirement = 'api' | 'project'
-
+/**
+ * A band of the page, and only that. Six ids left this union on 10 August for
+ * `domain/tool.ts` — the projects, what was made, the counts, the library, the documents and
+ * the journal became panels of the home's two columns. A section is what the CENTRE stacks;
+ * anything the rails hold is a placement, and the two registries never name the same thing.
+ */
 export type HomeSectionId =
-  | 'spotlight'
-  | 'tools'
-  | 'projects'
-  | 'creations'
-  | 'byMode'
-  | 'favorites'
-  | 'library'
-  | 'documents'
-  | 'jobs'
-  | 'activity'
-  | 'usage'
-  | 'similar'
-  | 'spark'
-  | 'explore'
+  'spotlight' | 'tools' | 'favorites' | 'jobs' | 'usage' | 'similar' | 'spark' | 'explore'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
-  requires: readonly HomeRequirement[]
+  /**
+   * Whether the band needs an API key to draw anything at all.
+   *
+   * A flag and not a list of requirements. It WAS a list, and its second value — a project had to
+   * be open — went with the four bands that listed what a folder held, which are panels now: a
+   * closed folder is an empty state there, not a reason to disappear. What the list then became
+   * was a loop asking one question several times, where a second value added later would have
+   * compiled, passed every test, and silently meant "api".
+   */
+  requiresApi?: boolean
   /**
    * Sections the user may not hide. Together they are what keeps the screen from ever being
-   * empty — which is why `home.test.ts` demands that every pinned section require nothing.
+   * empty — which is why `home.test.ts` demands that no pinned section need a key.
    */
   pinned?: boolean
   /** How many items the section shows before the user says otherwise. */
@@ -45,13 +44,6 @@ export type HomeSectionEntry = {
    * the menu should be able to express.
    */
   anchored?: boolean
-  /**
-   * Off on a fresh install, and offered back by the section menu like any hidden band.
-   *
-   * For a section whose content is already on screen elsewhere: the activity feed is the same
-   * `useActivity` entries the bottom panel draws, so a default install showed them twice.
-   */
-  hiddenByDefault?: boolean
 }
 
 /**
@@ -59,25 +51,18 @@ export type HomeSectionEntry = {
  * that draws it: an id nothing renders is a line in the settings nobody can act on.
  */
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
-  { id: 'spotlight', requires: [], pinned: true },
-  { id: 'tools', requires: [], pinned: true },
-  { id: 'projects', requires: [], pinned: true, defaultLimit: 12 },
-  { id: 'creations', requires: ['project'], defaultLimit: 12 },
-  // No limit: the band is one counter per kind, and there are exactly six kinds.
-  { id: 'byMode', requires: ['project'] },
-  // Requires nothing: a recipe is kept outside every project, and the shelf is the one place
-  // that still has something to show when no folder is open.
-  { id: 'favorites', requires: [], defaultLimit: 12 },
-  { id: 'library', requires: ['api'], defaultLimit: 12 },
-  { id: 'documents', requires: ['project'], defaultLimit: 12 },
-  { id: 'jobs', requires: ['api'], defaultLimit: 8 },
-  { id: 'activity', requires: ['project'], defaultLimit: 6, hiddenByDefault: true },
-  { id: 'similar', requires: ['api'] },
-  { id: 'spark', requires: ['api'] },
-  { id: 'usage', requires: ['api'], defaultLimit: 6 },
+  { id: 'spotlight', pinned: true },
+  { id: 'tools', pinned: true },
+  // Needs no key: a recipe is kept outside every project, and the shelf is the one place that
+  // still has something to show with nothing connected.
+  { id: 'favorites', defaultLimit: 12 },
+  { id: 'jobs', requiresApi: true, defaultLimit: 8 },
+  { id: 'similar', requiresApi: true },
+  { id: 'spark', requiresApi: true },
+  { id: 'usage', requiresApi: true, defaultLimit: 6 },
   // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
   // count would cap what the reader can reach rather than how much is drawn at once.
-  { id: 'explore', requires: ['api'], anchored: true },
+  { id: 'explore', requiresApi: true, anchored: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
@@ -102,21 +87,18 @@ export function homeSectionOf(id: unknown): HomeSectionEntry | null {
 }
 
 function settingOf(entry: HomeSectionEntry): HomeSectionSetting {
-  return { id: entry.id, visible: entry.hiddenByDefault !== true }
+  return { id: entry.id, visible: true }
 }
 
 export const DEFAULT_HOME_SECTIONS: readonly HomeSectionSetting[] = HOME_SECTIONS.map(settingOf)
 
-/** What the studio can currently draw from. Both answers come from stores, never from here. */
+/** What the studio can currently draw from. The answer comes from a store, never from here. */
 export type HomeContext = {
   authenticated: boolean
-  hasProject: boolean
 }
 
 function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
-  return entry.requires.every(requirement =>
-    requirement === 'api' ? context.authenticated : context.hasProject,
-  )
+  return entry.requiresApi !== true || context.authenticated
 }
 
 /**
@@ -173,7 +155,7 @@ export type HomeMove = 'up' | 'down'
  * It steps over the sections that are not being drawn. Swapping with a hidden neighbour is a
  * write that changes the stored order and nothing on screen — an enabled row that does nothing,
  * which is exactly what `canMoveHomeSection` exists to prevent. Explore made it plain: it sits
- * last, behind three bands that need a project, so moving it up did nothing until one was open.
+ * last, behind bands that needed a project, so moving it up did nothing until one was open.
  *
  * `shown` absent means every section counts, which is what a caller with nothing hidden wants.
  */

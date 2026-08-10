@@ -3,18 +3,19 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { settleHome } from '../home-fixtures'
+import { HOME_PROJECT, settleHome } from '@/home/home-fixtures'
 import { useLayouts } from '@/stores/layouts'
+import { useProject } from '@/stores/project'
 import { useModels } from '@/stores/models'
 import { connectPreparation } from '@/stores/preparation'
-import { openFromHome } from '../open'
-import type * as HomeOpenModule from '../open'
+import { openFromHome } from '@/home/open'
+import type * as HomeOpenModule from '@/home/open'
 import { Creations } from './Creations'
 
 // Where the asset lands is `ASSET_INTENTS`' business, and it needs open documents to have one.
 // What this band answers for is which gesture it calls. Mocked at `home/open` rather than at the
 // helper: the band loads the cascade on the click, to keep it out of the opening chunk.
-vi.mock('../open', async importOriginal => ({
+vi.mock('@/home/open', async importOriginal => ({
   ...(await importOriginal<typeof HomeOpenModule>()),
   openFromHome: vi.fn(),
 }))
@@ -49,7 +50,54 @@ beforeEach(() => {
   useModels.setState({ selected: {}, preset: {}, prepared: null })
 })
 
-describe('the creations shelf', () => {
+describe('the creations panel', () => {
+  /**
+   * The read is keyed on the open folder, so opening another project reads again — a panel that
+   * kept the first one's tiles would offer to recreate work from somewhere else.
+   */
+  it('reads again when another project is opened', async () => {
+    const search = install([creation()])
+    useProject.setState({
+      project: {
+        path: '/projects/one',
+        manifest: { version: 1, name: 'one', createdAt: '', updatedAt: '' },
+      },
+    })
+    render(<Creations />)
+
+    await screen.findByText('FLUX.2')
+    useProject.setState({
+      project: {
+        path: '/projects/two',
+        manifest: { version: 1, name: 'two', createdAt: '', updatedAt: '' },
+      },
+    })
+
+    await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(2))
+  })
+
+  it('stays and offers to read again when the catalogue refuses', async () => {
+    installFakeBridge({ assets: { search: () => Promise.reject(new Error('locked')) } })
+    render(<Creations />)
+
+    expect(await screen.findByText(/n’a pas obtenu de réponse/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+  })
+
+  /**
+   * An asset the catalogue holds no generation for — imported rather than generated, or written
+   * by a version that stored none. It is still openable; only recreating is impossible, so the
+   * corner is what goes, and the caption falls back to the file name it does have.
+   */
+  it('names an asset it cannot recreate by its file name, and offers no corner', async () => {
+    install([creation({ generation: undefined })])
+    render(<Creations />)
+
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ouvrir.+boulder\.png/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /En refaire une/ })).not.toBeInTheDocument()
+  })
+
   it('asks the catalogue for what was generated, and nothing else', async () => {
     const search = install([creation()])
     render(<Creations />)
@@ -67,12 +115,22 @@ describe('the creations shelf', () => {
     expect(screen.queryByText('boulder.png')).not.toBeInTheDocument()
   })
 
-  it('draws nothing at all when the project has produced nothing', async () => {
+  /**
+   * A panel drawing nothing under a rail icon reads as a bug — with a folder open or without
+   * one. The band could take itself off the page; a column cannot, so it says what would fill it.
+   */
+  it.each([
+    ['a project open', HOME_PROJECT],
+    ['no project at all', null],
+  ])('says what would fill it with %s', async (_case, project) => {
     const search = install([])
-    const { container } = render(<Creations />)
+    settleHome(project)
+    render(<Creations />)
 
     await vi.waitFor(() => expect(search).toHaveBeenCalled())
-    expect(container).toBeEmptyDOMElement()
+    expect(
+      screen.getByText('Ce que vous générerez dans ce projet s’affichera ici.'),
+    ).toBeInTheDocument()
   })
 
   /**
@@ -93,7 +151,7 @@ describe('the creations shelf', () => {
   /**
    * "I click a thumbnail, there is some activity, but it does not open the file." Three shelves
    * drew the same square and did three different things with it, none of which was opening.
-   * The tile opens now; recreating is the corner, and both say which is which by name.
+   * The cell opens now — that is `Collection`'s single click — and recreating is the corner.
    */
   describe('what a click on the picture does', () => {
     it('opens the asset rather than starting a generation', async () => {

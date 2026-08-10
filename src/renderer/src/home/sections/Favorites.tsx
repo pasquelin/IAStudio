@@ -8,10 +8,12 @@ import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
+import { homeSectionLimit } from '@shared/domain/home'
 import { useFavorites } from '@/stores/favorites'
+import { useSettings } from '@/stores/settings'
 import { useProject } from '@/stores/project'
 import { Section } from '../Section'
-import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
+import { ShelfTile, SHELF_TILE_SIZE } from '@/design/ShelfTile'
 import { recreate } from '../recreate'
 
 /**
@@ -22,7 +24,14 @@ import { recreate } from '../recreate'
  */
 export function Favorites() {
   const { t } = useTranslation()
-  const recipes = useFavorites(state => state.recipes)
+  const sections = useSettings(state => state.settings.home.sections)
+  // Cut to what the section menu was asked for. Every band carrying a count reads it: the row
+  // offers 6, 12, 24 or 48, and a control that writes a setting nothing draws is a control that
+  // silently does nothing.
+  const recipes = useFavorites(state => state.recipes).slice(
+    0,
+    homeSectionLimit(sections, 'favorites'),
+  )
 
   useEffect(() => void useFavorites.getState().load(), [])
 

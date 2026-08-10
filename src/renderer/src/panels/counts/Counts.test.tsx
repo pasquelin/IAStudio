@@ -5,10 +5,11 @@ import { emptyAssetCounts, type AssetCounts } from '@shared/domain/asset'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { settleHome } from '../home-fixtures'
+import { HOME_PROJECT, settleHome } from '@/home/home-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
-import { ByMode } from './ByMode'
+import { useProject } from '@/stores/project'
+import { Counts } from './Counts'
 
 const NONE = emptyAssetCounts()
 
@@ -24,10 +25,44 @@ beforeEach(() => {
   useAssets.setState({ collection: DEFAULT_COLLECTION_STATE, items: [], scope: null })
 })
 
-describe('the counters', () => {
+describe('the counts panel', () => {
+  /**
+   * The read is keyed on the open folder: another project is another set of totals, and a panel
+   * that kept the first one's would describe a project one has just left.
+   */
+  it('counts again when another project is opened', async () => {
+    const read = install({ image: 2 })
+    useProject.setState({
+      project: {
+        path: '/projects/one',
+        manifest: { version: 1, name: 'one', createdAt: '', updatedAt: '' },
+      },
+    })
+    render(<Counts />)
+
+    await screen.findByText('2')
+    useProject.setState({
+      project: {
+        path: '/projects/two',
+        manifest: { version: 1, name: 'two', createdAt: '', updatedAt: '' },
+      },
+    })
+
+    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(2))
+  })
+
+  // The local catalogue rarely refuses, and an empty panel said nothing about it when it did.
+  it('stays and offers to count again when the catalogue refuses', async () => {
+    installFakeBridge({ assets: { counts: () => Promise.reject(new Error('locked')) } })
+    render(<Counts />)
+
+    expect(await screen.findByText(/n’a pas obtenu de réponse/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+  })
+
   it('asks the catalogue for totals rather than for the rows behind them', async () => {
     const read = install({ image: 12 })
-    render(<ByMode />)
+    render(<Counts />)
 
     expect(await screen.findByText('12')).toBeInTheDocument()
     expect(read).toHaveBeenCalledTimes(1)
@@ -36,18 +71,28 @@ describe('the counters', () => {
   /** Six of them, always: a counter that vanished at zero would read as a bug in the count. */
   it('keeps a kind the project has none of, and refuses the click', async () => {
     install({ image: 3 })
-    render(<ByMode />)
+    render(<Counts />)
 
     await screen.findByText('3')
     expect(screen.getByRole('button', { name: /Vidéo/ })).toBeDisabled()
   })
 
-  it('draws nothing at all on a project that holds nothing', async () => {
+  /**
+   * All six at zero rather than an empty panel, with a folder open or without one: the numbers
+   * ARE the answer, and they say the project has been counted rather than not yet read. A band
+   * could take itself off the page; a column standing under a rail icon cannot.
+   */
+  it.each([
+    ['a project open', HOME_PROJECT],
+    ['no project at all', null],
+  ])('draws the six kinds at zero with %s', async (_case, project) => {
     const read = install({})
-    const { container } = render(<ByMode />)
+    settleHome(project)
+    render(<Counts />)
 
     await vi.waitFor(() => expect(read).toHaveBeenCalled())
-    expect(container).toBeEmptyDOMElement()
+    expect(screen.getAllByText('0')).toHaveLength(6)
+    expect(screen.getByRole('button', { name: /Image/ })).toBeDisabled()
   })
 
   /**
@@ -56,7 +101,7 @@ describe('the counters', () => {
    */
   it('narrows the shelf to the kind and leaves the home', async () => {
     install({ skybox: 4 })
-    render(<ByMode />)
+    render(<Counts />)
 
     await userEvent.click(await screen.findByRole('button', { name: /Skybox/ }))
 

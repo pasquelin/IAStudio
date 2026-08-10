@@ -150,12 +150,18 @@ export const MEDIA_FRAME =
  * corner. Hidden until the shelf is hovered: a control permanently over the picture hides part
  * of what the shelf exists to show. Gauge, tone and corner stay with the caller.
  *
- * Written once because the group it reveals itself on is declared by `Carousel` and read from
- * files that never import it — a copy of the class is a copy of that name, going stale in silence.
+ * Written once because the groups it reveals itself on are declared by `Carousel` and by
+ * `ShelfTile`, and read from files that never import either: a copy of the class is a copy of
+ * those names, going stale in silence.
+ *
+ * Two groups because the same tile is read in both shapes now: a band scrolled sideways on the
+ * home, where hovering anywhere in the shelf brings up every corner at once, and a grid in a
+ * panel column, which has no carousel around it to hover.
  */
 export const SHELF_OVERLAY = cn(
   'border-border bg-panel/90 absolute z-10 flex cursor-pointer items-center justify-center',
   'rounded-full border opacity-0 transition-opacity group-hover/carousel:opacity-100',
+  'group-hover/tile:opacity-100',
 )
 
 /**

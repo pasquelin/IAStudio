@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { runningJobs } from '@shared/domain/job'
 import { JobRow } from '@/panels/jobs/JobRow'
+import { homeSectionLimit } from '@shared/domain/home'
 import { useJobs } from '@/stores/jobs'
+import { useSettings } from '@/stores/settings'
 import { SHELF_BLOCK } from '../styles'
 import { Section } from '../Section'
 
@@ -17,7 +19,11 @@ export function Jobs() {
   // The whole list, filtered here — the same subscription the jobs panel takes. This band draws
   // the progress, so it has to follow it; `JobRow` is memoised, so only the rows that moved
   // re-render.
-  const running = runningJobs(useJobs(state => state.jobs))
+  const sections = useSettings(state => state.settings.home.sections)
+  const running = runningJobs(useJobs(state => state.jobs)).slice(
+    0,
+    homeSectionLimit(sections, 'jobs'),
+  )
 
   if (running.length === 0) return null
 

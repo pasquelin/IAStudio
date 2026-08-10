@@ -4,5 +4,5 @@
  * dock has no use for them.
  */
 
-/** A band whose content sits on a surface rather than on cards — the journal, the running jobs. */
+/** A band whose content sits on a surface rather than on cards — the jobs still running. */
 export const SHELF_BLOCK = 'bg-surface m-0 flex list-none flex-col rounded-(--radius-sc-lg) p-2'

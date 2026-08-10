@@ -7,8 +7,8 @@ import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
-import { ShelfTile, SHELF_TILE_SIZE } from '../ShelfCard'
-import { useDeferredShelf } from '../use-shelf'
+import { ShelfTile, SHELF_TILE_SIZE } from '@/design/ShelfTile'
+import { useDeferredShelf } from '@/hooks/use-shelf'
 
 /**
  * How many of the newest assets are looked at to find one to measure against.
