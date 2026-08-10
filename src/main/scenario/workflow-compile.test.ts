@@ -569,7 +569,11 @@ describe('what a graph is refused for', () => {
       data: { value: 'a knight', isOutput: true },
     }
 
-    expect(compile(graphOf([marked])).result).toEqual({ ok: false, problem: 'no-output', nodes: [] })
+    expect(compile(graphOf([marked])).result).toEqual({
+      ok: false,
+      problem: 'no-output',
+      nodes: [],
+    })
   })
 
   it('refuses a generator with no model, and says why in the journal', () => {

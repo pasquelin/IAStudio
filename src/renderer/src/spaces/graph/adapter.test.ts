@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { NodeChange } from '@xyflow/react'
 import type { GraphState } from '@shared/domain/graph'
 import {
+  PROBLEM_KEY,
   RUN_STATE_KEY,
   canvasNodesOf,
   isDragging,
@@ -37,7 +38,9 @@ describe('handing the graph to the canvas', () => {
       id: 'text1',
       type: 'text',
       position: { x: 0, y: 0 },
-      data: { value: 'a rock' },
+      // The refusal mark is written on every node, blamed or not — as the run state is, and for
+      // the same reason: a key that appears and disappears is a key every reader must guard.
+      data: { value: 'a rock', [PROBLEM_KEY]: false },
       selected: false,
     })
   })
@@ -89,6 +92,25 @@ describe('handing the graph to the canvas', () => {
 
     expect(second[0]).not.toBe(first[0])
     expect(second[1]).toBe(first[1])
+  })
+
+  /**
+   * The same rule a third time, and it is not the run's: a refusal changes when the GRAPH does, so
+   * a node the verdict stopped pointing at must be rebuilt, and its twenty neighbours must not.
+   */
+  it('rebuilds a node the compiler stopped blaming, and nothing else', () => {
+    const first = canvasNodesOf(graph, new Set(), {}, new Set(['text1']))
+    const second = canvasNodesOf(graph, new Set(), {}, new Set())
+
+    expect(second[0]).not.toBe(first[0])
+    expect(second[1]).toBe(first[1])
+  })
+
+  it('marks the node a refusal points at, and no other', () => {
+    const [text, note] = canvasNodesOf(graph, new Set(), {}, new Set(['text1']))
+
+    expect(text?.data[PROBLEM_KEY]).toBe(true)
+    expect(note?.data[PROBLEM_KEY]).toBe(false)
   })
 
   it('carries the run state down to the node it belongs to, and to no other', () => {

@@ -32,11 +32,7 @@ const writerOf = (overrides: Partial<WorkflowWriter> = {}): WorkflowWriter => ({
   ...overrides,
 })
 
-const deps = (
-  writer: WorkflowWriter,
-  flow = oneStep,
-  refused: FlowRefusal | null = null,
-) => ({
+const deps = (writer: WorkflowWriter, flow = oneStep, refused: FlowRefusal | null = null) => ({
   write: writer,
   flowOf: () => Promise.resolve(flow),
   refuse: () => refused,

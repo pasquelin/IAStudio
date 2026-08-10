@@ -292,7 +292,8 @@ function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
     const kept = firstEnd.get(entry.names)
     // Both ends, and the kept one first: the fault is the PAIR, and a user shown only the spare
     // one cannot see which of the two the converter is about to obey.
-    if (kept !== entry.end) return { problem: 'loop-two-ends', nodes: [kept ?? entry.end, entry.end] }
+    if (kept !== entry.end)
+      return { problem: 'loop-two-ends', nodes: [kept ?? entry.end, entry.end] }
   }
 
   // An end that does not close what it names, either because that is no loop at all or because the

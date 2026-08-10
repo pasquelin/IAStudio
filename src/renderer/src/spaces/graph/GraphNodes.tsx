@@ -22,7 +22,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { readConditionBlocks } from '@/engines/graph/conditions'
-import { RUN_STATE_KEY } from './adapter'
+import { PROBLEM_KEY, RUN_STATE_KEY } from './adapter'
 import { useNodeDecision } from './node-decision'
 import { NODE_LABEL_KEYS } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
@@ -64,6 +64,7 @@ function NodeShell({
   run,
   output,
   selected,
+  problem,
   inputs,
   outputs,
   children,
@@ -74,6 +75,8 @@ function NodeShell({
   /** Whether the compiler would start from this node — `isOutput`, where it is read. */
   output: boolean
   selected: boolean
+  /** Whether the compiler's refusal points AT this node. The status line says which refusal. */
+  problem: boolean
   inputs: readonly GraphHandleInput[]
   outputs: readonly GraphHandleOutput[]
   children?: ReactNode
@@ -84,7 +87,9 @@ function NodeShell({
     <div
       className={cn(
         'bg-panel flex min-w-40 flex-col rounded-(--radius-sc-md) border',
-        selected ? 'border-accent' : 'border-border',
+        // Selection wins: it is the user's own pointing, and a node they just clicked must show
+        // it. The refusal has the status line to say itself either way.
+        selected ? 'border-accent' : problem ? 'border-danger' : 'border-border',
       )}
     >
       <header className="border-border flex items-baseline justify-between gap-2 border-b px-2 py-1">
@@ -140,6 +145,7 @@ type NodeData = {
   isOutput?: unknown
   /** Not `editorInfo` data: the adapter writes it on the way down — see `RUN_STATE_KEY`. */
   [RUN_STATE_KEY]?: unknown
+  [PROBLEM_KEY]?: unknown
 }
 
 const asText = (value: unknown): string => (typeof value === 'string' ? value : '')
@@ -187,6 +193,7 @@ function nodeOf(
         run={asRun(fields[RUN_STATE_KEY])}
         output={fields.isOutput === true && canBeOutput(drawn)}
         selected={selected === true}
+        problem={fields[PROBLEM_KEY] === true}
         inputs={asHandles<GraphHandleInput>(fields.inputHandles)}
         outputs={asHandles<GraphHandleOutput>(fields.outputHandles)}
       >

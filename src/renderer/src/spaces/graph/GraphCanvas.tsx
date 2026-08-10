@@ -152,9 +152,16 @@ export function GraphCanvas({
 
   const compiled = useGraphCompile(graph)
 
+  // A new Set only when the verdict changes, never on a drag: `canvasNodesOf` hands a node back by
+  // reference when nothing about it moved, and a fresh Set every render would defeat that.
+  const problems = useMemo(
+    () => new Set(compiled && !compiled.ok ? compiled.nodes : []),
+    [compiled],
+  )
+
   const nodes = useMemo(
-    () => canvasNodesOf(graph, selectedNodes, runs),
-    [graph, selectedNodes, runs],
+    () => canvasNodesOf(graph, selectedNodes, runs, problems),
+    [graph, selectedNodes, runs, problems],
   )
   const edges = useMemo(() => toCanvasEdges(graph, selectedEdges), [graph, selectedEdges])
 
