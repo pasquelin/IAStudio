@@ -249,9 +249,10 @@ Three things describe it better than an introduction would:
 
 An unselected asset, or a closed project, leaves the button greyed out.
 
-> **There is no Fetch button yet**, and no screen for browsing the library from the studio. The
-> studio knows how — the mechanism is written and tested — but nothing triggers it for now. So
-> the transfer runs one way only: from you to the library.
+> **The shelf has no Fetch button; the home screen does.** Its **Your library** band lists what
+> your account holds, and clicking a thumbnail brings it down into the open project. So the
+> transfer runs both ways — but each way has its own door, and they are not the same one:
+> sending starts from the shelf, fetching from the home screen.
 
 ### Naming from what the API sees
 

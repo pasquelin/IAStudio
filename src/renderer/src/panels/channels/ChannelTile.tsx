@@ -95,20 +95,6 @@ export function ChannelTile({
         url={map ? assetUrl(map.assetId) : undefined}
         caption={name}
         fallbackIcon={mdiTextureBox}
-        badge={
-          origin && (
-            // Top LEFT: the menu button owns the other corner. `MediaTile` hands its slot straight
-            // through, so the corner belongs to the badge — same chrome as `AssetBadge` overlay.
-            <span
-              className="bg-chassis/75 text-text absolute top-1 left-1 rounded-(--radius-sc-sm) p-px"
-              title={t(origin.key)}
-              aria-label={t(origin.key)}
-              role="img"
-            >
-              <UiIcon path={origin.icon} size={12} />
-            </span>
-          )
-        }
       />
 
       {/* Laid over the tile rather than wrapped around it: `MediaTile` renders a `figure`, and a
@@ -130,6 +116,20 @@ export function ChannelTile({
           FOCUS_RING,
         )}
       />
+
+      {/* After the button rather than in `MediaTile`'s badge slot, and for the same reason the
+          menu is: the button covers the whole tile, so a badge underneath it can be seen but
+          never hovered, and its `title` never opened. Top LEFT — the menu owns the other corner. */}
+      {origin && (
+        <span
+          className="bg-chassis/75 text-text absolute top-1 left-1 rounded-(--radius-sc-sm) p-px"
+          title={t(origin.key)}
+          aria-label={t(origin.key)}
+          role="img"
+        >
+          <UiIcon path={origin.icon} size={12} />
+        </span>
+      )}
 
       <div className="absolute top-1 right-1">
         <MenuButton

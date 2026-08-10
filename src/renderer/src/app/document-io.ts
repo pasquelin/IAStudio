@@ -360,6 +360,20 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
  * Its refusal to save is dropped too: the id is the project folder's to hand out again, and a
  * document reopened later must not inherit the verdict passed on the one before it.
  */
+/**
+ * Drops what `refresh` closed without going through `forgetDocument`.
+ *
+ * `refresh` settles which tabs survive by rewriting the store's map, so a document left behind
+ * by a project change never passes through the one function that empties the session views. The
+ * caller hands in the ids that were open before, since after the write nothing names them.
+ */
+export function forgetClosedDocuments(before: readonly string[]): void {
+  const { documents } = useDocuments.getState()
+  for (const documentId of before) {
+    if (!documents[documentId]) forgetDocument(documentId)
+  }
+}
+
 function forgetDocument(documentId: string): void {
   ioOf(documentId)?.forget(documentId)
   unreadable.delete(documentId)

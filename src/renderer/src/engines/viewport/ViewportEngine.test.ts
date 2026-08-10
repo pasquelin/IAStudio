@@ -192,6 +192,25 @@ describe('a viewport', () => {
       expect(frames.size).toBe(1)
     })
 
+    /**
+     * The gap a resting viewport leaves is however long the user was away, not a frame. Left on
+     * the clock, the next run of the loop opens on a `MAX_DELTA` jump — and every caller that
+     * starts an animation would have to remember `resetClock` to avoid it.
+     */
+    it('opens a new run of the loop from rest, not on the time it spent asleep', () => {
+      const onFrame = vi.fn(() => false)
+      const clock = vi.spyOn(performance, 'now').mockReturnValue(1_000)
+      const engine = atRest({ controls: 'none', onFrame })
+
+      // Five seconds away, then something asks for a frame again.
+      clock.mockReturnValue(6_000)
+      engine.requestRender()
+      drawFrames()
+
+      expect(onFrame).toHaveBeenLastCalledWith(0)
+      clock.mockRestore()
+    })
+
     it('draws the overlay without clearing what is under it', () => {
       let clearedDuringOverlay = true
       const engine = mounted({

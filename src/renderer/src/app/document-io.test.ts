@@ -31,7 +31,13 @@ import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
-import { closeDocument, deleteDocument, restoreDocument, saveDocument } from './document-io'
+import {
+  closeDocument,
+  deleteDocument,
+  forgetClosedDocuments,
+  restoreDocument,
+  saveDocument,
+} from './document-io'
 
 // The real one needs a live Dockview; what this file checks is that closing reaches it.
 const closePanel = vi.fn()
@@ -832,6 +838,28 @@ describe('closing a document', () => {
     await expect(closeDocument(created.id)).resolves.toBe(true)
 
     expect(useGraphRuns.getState().runs[created.id]).toBeUndefined()
+  })
+
+  /**
+   * A project change does not close tab by tab: `refresh` rewrites the store's map in one write,
+   * so the documents it drops never pass through `forgetDocument` — and their session views
+   * outlived the project they belonged to.
+   */
+  it('forgets the session views of documents a project change dropped', async () => {
+    installFakeBridge({})
+    const left = await useDocuments.getState().create('textures')
+    const kept = await useDocuments.getState().create('textures')
+    if (!left || !kept) throw new Error('expected two documents')
+    useTextureViews.getState().inspect(left.id, 'normal')
+    useTextureViews.getState().inspect(kept.id, 'roughness')
+
+    // What `refresh` does to the map, without the listing: the tab of the project being left goes.
+    const wereOpen = Object.keys(useDocuments.getState().documents)
+    useDocuments.setState({ documents: { [kept.id]: kept } })
+    forgetClosedDocuments(wereOpen)
+
+    expect(inspectedChannel(useTextureViews.getState(), left.id)).toBeNull()
+    expect(inspectedChannel(useTextureViews.getState(), kept.id)).toBe('roughness')
   })
 
   it('leaves the flat view of a document it did not close alone', async () => {

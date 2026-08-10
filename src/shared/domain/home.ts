@@ -45,6 +45,13 @@ export type HomeSectionEntry = {
    * the menu should be able to express.
    */
   anchored?: boolean
+  /**
+   * Off on a fresh install, and offered back by the section menu like any hidden band.
+   *
+   * For a section whose content is already on screen elsewhere: the activity feed is the same
+   * `useActivity` entries the bottom panel draws, so a default install showed them twice.
+   */
+  hiddenByDefault?: boolean
 }
 
 /**
@@ -64,7 +71,7 @@ export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'library', requires: ['api'], defaultLimit: 12 },
   { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
-  { id: 'activity', requires: ['project'], defaultLimit: 6 },
+  { id: 'activity', requires: ['project'], defaultLimit: 6, hiddenByDefault: true },
   { id: 'similar', requires: ['api'] },
   { id: 'spark', requires: ['api'] },
   { id: 'usage', requires: ['api'], defaultLimit: 6 },
@@ -95,7 +102,7 @@ export function homeSectionOf(id: unknown): HomeSectionEntry | null {
 }
 
 function settingOf(entry: HomeSectionEntry): HomeSectionSetting {
-  return { id: entry.id, visible: true }
+  return { id: entry.id, visible: entry.hiddenByDefault !== true }
 }
 
 export const DEFAULT_HOME_SECTIONS: readonly HomeSectionSetting[] = HOME_SECTIONS.map(settingOf)

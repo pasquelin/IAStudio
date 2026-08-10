@@ -54,7 +54,22 @@ describe('the sections a home draws', () => {
     })
 
     expect(sections).not.toContain('jobs')
-    expect(sections).toContain('activity')
+    expect(sections).toContain('documents')
+  })
+
+  /**
+   * The activity band draws the same `useActivity` entries as the bottom panel, which is always
+   * on screen: a default install showed the same lines twice. Hidden, not removed — the section
+   * menu offers it back like any other.
+   */
+  it('leaves a band that duplicates another surface off a fresh install', () => {
+    const sections = visibleHomeSections(DEFAULT_HOME_SECTIONS, {
+      authenticated: true,
+      hasProject: true,
+    })
+
+    expect(sections).not.toContain('activity')
+    expect(hiddenHomeSections(DEFAULT_HOME_SECTIONS)).toContain('activity')
   })
 
   it('drops what needs a project when none is open', () => {
