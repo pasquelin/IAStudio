@@ -46,7 +46,8 @@ du **lot C0** dans `develop` (`9298e64`).
 >    sessions du même clone. `develop` bouge vite — il a pris **quinze commits pendant la session
 >    du 10 août**, dont deux pendant une seule exécution de `pnpm validate`.
 >
-> **Ce que tu fais, dans l'ordre : les lots C1, C2 et C3 de l'étape 7, puis les étapes 8 et 9.**
+> **Ce que tu fais, dans l'ordre : le lot C3 de l'étape 7, puis les étapes 8 et 9.** Les lots C1 et
+> C2 sont fusionnés dans `develop`.
 >
 > **Definition of Done à chaque lot, sans demander** : tests écrits avec le code, `pnpm validate`
 > vert, `/simplify`, revue de code par **deux agents adverses** (`/code-review` n'est pas invocable
@@ -76,12 +77,13 @@ traduits avant qu'un job parte).
 
 | Ce qui marche aujourd'hui | Ce qui ne marche pas encore |
 |---|---|
-| Le graphe est un espace, avec son document `.graph`, sa palette, sa barre et son `⌘Z` | **Rien ne s'exécute** : le graphe décrit, il ne lance pas |
-| Un nœud se pose, se déplace, se relie, se supprime | Aucune compilation vers le `flow` de Scenario |
-| Un nœud s'édite dans l'inspecteur : texte, note, titre, source d'asset | Onze des quinze types de nœuds n'ont ni face ni comportement |
-| Un générateur choisit son modèle, et ses ports se reconstruisent | Aucun import ni export de `.workflow.json` |
-| Les Apps de Scenario se listent et se lancent | Aucun nœud n'est marqué comme **sortie**, et sans ça le compilateur rend un flow **vide** |
+| Le graphe est un espace, avec son document `.graph`, sa palette, sa barre et son `⌘Z` | Aucune compilation vers le `flow` de Scenario |
+| Un nœud se pose, se déplace, se relie, se supprime | Onze des quinze types de nœuds n'ont ni face ni comportement |
+| Un nœud s'édite dans l'inspecteur : texte, note, titre, source d'asset | Aucun import ni export de `.workflow.json` |
+| Un générateur choisit son modèle, et ses ports se reconstruisent | Aucun nœud n'est marqué comme **sortie**, et sans ça le compilateur rend un flow **vide** |
+| Les Apps de Scenario se listent et se lancent | **L'exécution n'a jamais été lancée contre l'API** — tout est prouvé sous vitest, rien à l'écran |
 | **Une image donnée en référence atteint enfin le modèle** (lot C0) | |
+| **Le graphe s'exécute** : un bouton, un état par nœud, et le cache qui ne relance que ce qui a changé (lot C2) | |
 
 ---
 
@@ -154,13 +156,19 @@ ce nœud.
 > après avoir mesuré sur la suite complète (une mesure sur le seul dossier ment : `commands.ts` est
 > couvert depuis `GraphDocument.test.tsx`).
 
-### Lot C2 — l'exécution branchée
+### Lot C2 — l'exécution branchée — **LIVRÉ le 10 août 2026**
 
-Le port de soumission passe par `useJobs.submit` — **jamais un appel direct au SDK**, c'est un bug
-(`CLAUDE.md`). Un nœud abouti rend des `assetIds` **locaux** (le collecteur les importe), que le lot
-C0 retraduit tout seul au nœud suivant : **il n'y a rien à faire de plus de ce côté.** Reste l'état
-par nœud sur le canvas (`idle` / `running` / `cached` / `done` / `failed`), le bouton Exécuter dans
-la barre, et l'exécution par vagues sous le sémaphore du `JobManager`.
+`engines/graph/executor.ts`, `stores/graph-runs.ts`, le bouton Exécuter / Arrêter, et l'état de
+chaque nœud dans le coin de son en-tête. Le détail de ce que le lot a appris est sous l'étape 7 du
+plan (« Le lot C2 »). Les trois choses à ne pas redécouvrir :
+
+1. **`document-io.ts` est dans le chunk d'ouverture** et atteint `stores/graph-runs.ts` pour
+   oublier un document fermé, d'où l'**import dynamique** de l'exécuteur. `eager-graph.test.ts`
+   refuse tout module de `engines/graph/` autre que le lecteur sur le premier écran.
+2. **Les blancs du formulaire sont retirés du corps** avant soumission : `modelDataOf` écrit
+   `defaultValues`, qui ne passe pas par `buildBody`, et une énumération optionnelle vide vaut 400.
+3. **L'exécution n'a jamais été lancée contre l'API.** Ce serait une vraie génération, donc des
+   crédits. À grouper avec la vérification du lot C0.
 
 ### Lot C3 — compiler et valider
 

@@ -9,7 +9,7 @@ import {
   type GraphNodeRun,
   type GraphRunStatus,
 } from '@/engines/graph/executor'
-import type { StatusTone } from '@/design/ProgressRow'
+import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { RUN_STATE_KEY } from './adapter'
 import { NODE_LABEL_KEYS } from './node-labels'
@@ -24,13 +24,6 @@ const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
   failed: 'danger',
 }
 
-const TONE_CLASS: Record<StatusTone, string> = {
-  muted: 'text-muted',
-  accent: 'text-accent',
-  success: 'text-success',
-  danger: 'text-danger',
-}
-
 /**
  * What a node says about the run it is in, in the header where its type would otherwise sit.
  *
@@ -40,12 +33,10 @@ const TONE_CLASS: Record<StatusTone, string> = {
  */
 function RunBadge({ run }: { run: GraphNodeRun }) {
   const { t } = useTranslation()
-  if (run.status === 'idle') return null
-
   const key = run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
 
   return (
-    <span role="status" className={cn('shrink-0 text-[10px]', TONE_CLASS[RUN_TONE[run.status]])}>
+    <span role="status" className={cn('shrink-0 text-[10px]', TONE_TEXT[RUN_TONE[run.status]])}>
       {t(key)}
     </span>
   )

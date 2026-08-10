@@ -1018,13 +1018,21 @@ graphe est un espace pour de bon : document `.graph`, entrée dans `IO_BY_KIND`,
 palette et barre, et **un nœud sélectionné s'ouvre dans l'Inspecteur** depuis `61b1955` — identifiant,
 genre, titre, et ce que le nœud porte selon son type. Depuis `7f5c440`, **le modèle d'un nœud se
 choisit** et son formulaire s'ouvre dessous : changer de modèle refait les ports et emporte les liens
-dont le port a disparu, en une commande annulable. Le manuel le décrit dans les deux langues, avec
-l'avertissement qui convient — **il ne sait toujours pas exécuter ce qu'il décrit.**
+dont le port a disparu, en une commande annulable.
+
+**Et depuis le lot C2, il s'exécute** : un bouton dans sa barre, un état par nœud sur sa face, et
+la réutilisation de ce qu'une exécution précédente a produit — changer le prompt du dernier nœud
+ne relance que lui. Le manuel le décrit dans les deux langues.
 
 ## 5.1 Ce qui reste — étapes 7 à 9
 
-Le cœur exécutable : **compiler** vers le `flow`, **valider**, **exécuter** en local. Puis la logique,
-les boucles, les transforms, l'approbation, et enfin l'import/export et la publication.
+Le cœur exécutable : **compiler** vers le `flow` et **valider** (lot C3, le seul de l'étape 7 qui
+reste). Puis la logique, les boucles, les transforms, l'approbation, et enfin l'import/export et la
+publication.
+
+> **Le lot C3 commence par un geste que le plan ne nommait pas** : rien dans le studio n'écrit
+> `data.isOutput`, et le convertisseur ne compile QUE les branches menant à un nœud qui le porte —
+> sans ce geste, le flow compilé est **vide**.
 
 **Trois limites à porter dans le domaine** : 50 nodes par workflow, 10 jobs de workflow concurrents,
 100 requêtes par minute. Les deux dernières sont bornées ; la première appartient à l'export et doit
@@ -1033,9 +1041,12 @@ les boucles, les transforms, l'approbation, et enfin l'import/export et la publi
 > Une App publique compte **62 nœuds** (`wflow_H1bKz78jgpinWPKJfVCM5uAp`) : le plafond de 50 n'est pas
 > opposé aux workflows publiés, **ce qui est à vérifier avant d'écrire le refus d'export de l'étape 9.**
 
-## 5.2 La décision d'architecture : où le graphe s'exécute — NON TRANCHÉE
+## 5.2 La décision d'architecture : où le graphe s'exécute — TRANCHÉE, et livrée
 
-C'est **la** question du chantier.
+**B comme moteur, A comme export.** Le lot C2 a livré B — l'exécuteur local, le cache de hash, un
+`useJobs.submit` par nœud — et le lot C3 livrera A, la compilation vers le `flow` pour l'export.
+Le tableau reste ici parce qu'il dit **pourquoi**, et parce que les colonnes « nodes non-Scenario »
+et « re-run partiel » sont les deux choses que déléguer aurait interdites.
 
 | | **A — déléguer à Scenario** | **B — exécuteur local** |
 |---|---|---|
@@ -1046,12 +1057,10 @@ C'est **la** question du chantier.
 | Re-run partiel par cache de hash | **impossible** | possible |
 | Publication en App, partage | natif | impossible |
 
-**La recommandation est B comme moteur, A comme export**, et la raison est le cache : changer le prompt
-du dernier node ne doit relancer que ce node. C'est ce qui rend un node editor supportable, et c'est
-exactement ce que déléguer interdit. Mais B est une semaine de plus, et A seul serait déjà un produit.
-**À arbitrer avec l'utilisateur avant d'ouvrir la branche.**
+La raison du choix était le cache : changer le prompt du dernier node ne doit relancer que ce node.
+C'est ce qui rend un node editor supportable, et c'est exactement ce que déléguer interdit.
 
-Un point qui penche : les nodes que Scenario n'a pas sont ceux qui donneraient sa valeur au studio —
+Un point qui penchait : les nodes que Scenario n'a pas sont ceux qui donneraient sa valeur au studio —
 `localFile`, `ffmpegConcat`, un aperçu PBR sur le noyau GPU existant, un export Unity ou Godot. **Ils
 n'existent que sous B.**
 

@@ -181,8 +181,19 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > **Changer le modèle d’un nœud refait ses ports**, et les liens dont le port a disparu s’en vont
 > avec eux — en un seul geste, donc annulable d’un seul `⌘Z`.
 >
-> Ce qu’il ne sait **pas encore** : exécuter ce qu’il décrit. Son chapitre viendra quand il le
-> saura.
+> **Il s’exécute.** Le premier bouton de sa barre lance le graphe : chaque nœud part quand ce
+> qu’il lit est prêt, les branches indépendantes partent ensemble, et les générations passent par
+> la même file que le reste du studio — elles s’affichent dans la barre des tâches et se comptent
+> dans le même budget. Le bouton devient **Arrêter** pendant ce temps : plus rien n’est soumis, et
+> ce qui est en vol est annulé.
+>
+> **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en cours*, *terminé*,
+> *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,
+> ou la raison pour laquelle il n’a rien produit : *boucle*, *sans modèle*, *non exécutable*,
+> *en attente*. Relancer après avoir changé le prompt du dernier nœud ne relance **que** lui.
+>
+> Ce qu’il ne sait **pas encore** : les nœuds de logique, de boucle et d’approbation, et
+> l’import/export d’un workflow Scenario. Son chapitre viendra quand il les saura.
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 
