@@ -18,6 +18,8 @@ docs/superpowers
 # l'état d'outillage : utile sur la machine, hors sujet pour qui clone le dépôt.
 docs/todo.md
 docs/plans/
+docs/design-system/
+docs/prompt-loop.md
 CLAUDE.md
 .idea/
 .vscode/
