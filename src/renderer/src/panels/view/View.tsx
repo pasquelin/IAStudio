@@ -13,6 +13,7 @@ import { ToggleField } from '@/design/ToggleField'
 import { chipSkin, FIELD_LABEL, FIELD_ROW, PANEL_SCROLL } from '@/design/styles'
 import { activeSkyboxId, useDocuments } from '@/stores/documents'
 import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
+import { HINT_LEFT } from '@/helpers/tooltip'
 
 /** i18n key of a projection — never the label itself, as `SkyboxDocument` did before it. */
 const VIEW_LABELS: Record<SkyboxView, string> = {
@@ -56,6 +57,7 @@ export function View() {
               <button
                 key={candidate}
                 type="button"
+                {...HINT_LEFT(t('view.modeHint'))}
                 onClick={() => set(documentId, { view: candidate })}
                 aria-pressed={settings.view === candidate}
                 className={chipSkin(settings.view === candidate)}

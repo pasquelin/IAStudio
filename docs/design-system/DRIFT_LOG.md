@@ -12,19 +12,9 @@ c'est pourquoi le compte remonte alors qu'aucun bouton n'a été ajouté au logi
 
 Les `<ToolButton>` n'y figurent pas : le type l'exige, la régression est impossible.
 
-## `<button>` bruts sans infobulle (9)
+## `<button>` bruts sans infobulle (0)
 
-| P | Fichier:ligne | Règle | Preuve |
-|---|---|---|---|
-| P0 | src/renderer/src/home/HomeView.tsx:96 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/ShelfCard.tsx:59 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/ByMode.tsx:52 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/Explore.tsx:89 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/Projects.tsx:65 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/Tools.tsx:93 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:215 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:238 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/panels/view/View.tsx:56 | P0-button-tooltip | libellé visible, aucune description |
+Aucun. Tous les `<button>` écrits à la main portent leur infobulle.
 
 ## Appels à `<Button>` (10)
 

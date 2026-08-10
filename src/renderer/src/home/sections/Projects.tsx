@@ -10,6 +10,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Section } from '../Section'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 const CARD_WIDTH = 220
 
@@ -64,6 +65,7 @@ function Empty() {
   return (
     <button
       type="button"
+      {...HINT_TOP(t('home.createProjectHint'))}
       onClick={() => void useProject.getState().createPicked()}
       className={cn(
         'border-border text-muted hover:border-accent hover:text-text flex cursor-pointer',

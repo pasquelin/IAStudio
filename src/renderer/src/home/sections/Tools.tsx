@@ -9,6 +9,7 @@ import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import { enterWorkspace } from '../open'
 import { Section } from '../Section'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 type Entry = {
   key: string
@@ -93,6 +94,9 @@ function Group({ title, entries, columns }: GroupProps) {
           <button
             key={entry.key}
             type="button"
+            // The entry's own help, under the pointer: it is drawn under the label, and a
+            // narrow window truncates it before the button goes with it.
+            {...HINT_TOP(entry.help)}
             onClick={entry.onClick}
             className={cn(
               'hover:bg-elevated flex cursor-pointer items-start gap-2.5 text-left',

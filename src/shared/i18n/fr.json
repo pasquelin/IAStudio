@@ -37,7 +37,8 @@
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
     "projection": "Projection",
     "mode": "Mode",
-    "helpers": "Repères"
+    "helpers": "Repères",
+    "modeHint": "Change la façon dont la skybox est regardée, jamais le fichier lui-même"
   },
   "actions": {
     "undo": "Annuler",
@@ -1540,7 +1541,9 @@
     },
     "inspectChannel": "Regarder {{channel}} seul",
     "showMaterial": "Revenir au matériau éclairé",
-    "noPicture": "Aucune image dans ce projet"
+    "noPicture": "Aucune image dans ce projet",
+    "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
+    "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture"
   },
   "licences": {
     "title": "Licences",
@@ -1905,6 +1908,10 @@
     "explore": {
       "loading": "Chargement du fil…",
       "none": "Rien de publié dans cette catégorie pour le moment."
-    }
+    },
+    "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
+    "byModeHint": "Ouvre l’explorateur d’assets, filtré sur ce type",
+    "exploreTabHint": "Ne montre que cette catégorie dans la bande",
+    "createProjectHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit"
   }
 }
