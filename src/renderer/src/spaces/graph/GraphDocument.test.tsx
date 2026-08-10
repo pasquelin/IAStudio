@@ -6,6 +6,7 @@ import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
 import { FAMILY_FACET } from '@/panels/models/family-facet'
 import { publishCommand } from '@/services/command-bus'
+import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useGraphRuns } from '@/stores/graph-runs'
@@ -19,6 +20,8 @@ import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { GraphDocument } from './GraphDocument'
 import { canvasNode, clickNode } from './graph-canvas-fixtures'
+
+vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
 
 const DOCUMENT = 'graph_1'
 
@@ -246,8 +249,14 @@ describe('a graph as a document', () => {
       expect(state().nodes.map(node => node.id)).toEqual([text.id])
     })
 
-    /** A closed picker answers `null`, and it is not a failure: nothing happens, nothing is said. */
-    it('leaves the canvas alone where the picker was closed', async () => {
+    /**
+     * A closed picker answers `null`, and it is NOT a failure — which is the whole difference
+     * between it and a file holding no graph. Both leave the canvas alone, so the canvas cannot
+     * tell them apart; the journal is where it shows, and journalling a closed picker would put a
+     * red line under a gesture the user simply changed their mind about.
+     */
+    it('says nothing at all where the picker was closed', async () => {
+      vi.mocked(reportFailure).mockClear()
       installFakeBridge({ workflows: { import: () => Promise.resolve(null) } })
       withOneNode()
 
@@ -256,6 +265,18 @@ describe('a graph as a document', () => {
       await Promise.resolve()
 
       expect(state().nodes.map(node => node.id)).toEqual([text.id])
+      expect(vi.mocked(reportFailure)).not.toHaveBeenCalled()
+    })
+
+    /** A file holding no graph, on the other hand, is worth a line: the gesture did not work. */
+    it('journals a file that holds no graph', async () => {
+      vi.mocked(reportFailure).mockClear()
+      installFakeBridge({ workflows: { import: () => Promise.resolve({ nothing: true }) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+      await waitFor(() => expect(vi.mocked(reportFailure)).toHaveBeenCalled())
     })
 
     /** A refusal from the other side is journalled, never thrown at the window. */
