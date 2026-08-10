@@ -131,6 +131,22 @@ describe('a graph as a document', () => {
       act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
     }
 
+    /**
+     * The bar greys what it is told to grey; deciding an EMPTY graph has nothing to hand over is
+     * the document's own call — `workflow_create` refuses empty arrays on the other side.
+     */
+    it('greys both gestures while the canvas holds nothing', () => {
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exporter le graphe' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Publier sur Scenario' })).toBeDisabled()
+
+      withOneNode()
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(screen.getByRole('button', { name: 'Exporter le graphe' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Publier sur Scenario' })).toBeEnabled()
+    })
+
     it('sends the graph and the document title to the export', () => {
       const exportGraph = vi.fn((_graph: GraphState, _name: string) => Promise.resolve(true))
       installFakeBridge({ workflows: { export: exportGraph } })
