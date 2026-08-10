@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { isStudioFolder } from '@shared/domain/folder'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import type { FolderNode } from './use-folder-tree'
 
@@ -45,6 +46,7 @@ export function EntryMenu({ node, at, openInTab, onRename, onClose }: EntryMenuP
       <MenuRow
         label={t('explorer.reveal')}
         icon={mdiFolderOpenOutline}
+        tip={HINT_RIGHT(t('explorer.revealHint'))}
         onSelect={choose(() => void getBridge()?.project.revealFile(node.path))}
       />
       <MenuRow
@@ -54,12 +56,14 @@ export function EntryMenu({ node, at, openInTab, onRename, onClose }: EntryMenuP
         // costs nothing; renaming one a tab is holding orphans that tab, and the next save would
         // write the old name back beside the new file.
         disabled={ownFolder || openInTab}
+        tip={HINT_RIGHT(t('explorer.renameHint'))}
         onSelect={choose(onRename)}
       />
       <MenuRow
         label={t('explorer.trash')}
         icon={mdiTrashCanOutline}
         disabled={ownFolder}
+        tip={HINT_RIGHT(t('explorer.trashHint'))}
         onSelect={choose(() => void getBridge()?.project.trashFile(node.path))}
       />
     </ContextMenu>

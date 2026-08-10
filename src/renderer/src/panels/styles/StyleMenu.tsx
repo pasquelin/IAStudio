@@ -2,6 +2,7 @@ import { mdiDeleteOutline, mdiRenameOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useStyles } from '@/stores/styles'
 
 export type StyleMenuProps = {
@@ -26,6 +27,7 @@ export function StyleMenuRows({ id, onRename, onClose }: StyleMenuProps) {
       <MenuRow
         label={t('styles.rename')}
         icon={mdiRenameOutline}
+        tip={HINT_RIGHT(t('styles.renameHint'))}
         onSelect={() => {
           onRename()
           onClose()
@@ -34,6 +36,7 @@ export function StyleMenuRows({ id, onRename, onClose }: StyleMenuProps) {
       <MenuRow
         label={t('styles.remove')}
         icon={mdiDeleteOutline}
+        tip={HINT_RIGHT(t('styles.removeHint'))}
         onSelect={() => {
           void useStyles.getState().remove(id)
           onClose()

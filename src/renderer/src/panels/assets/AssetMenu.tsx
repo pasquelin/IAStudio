@@ -4,6 +4,7 @@ import type { Asset } from '@shared/domain/asset'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { intentsFor } from '@/helpers/asset-intents'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -62,6 +63,7 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
         label={t('inspector.reveal')}
         icon={mdiFolderOpenOutline}
         disabled={asset.location !== 'local'}
+        tip={HINT_RIGHT(t('inspector.revealHint'))}
         onSelect={choose(reveal)}
       />
     </ContextMenu>

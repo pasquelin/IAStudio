@@ -554,7 +554,10 @@
     "trash": "Mettre à la corbeille",
     "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
     "empty": "Ce dossier de projet n’a pas pu être lu.",
-    "open": "Ouvert"
+    "open": "Ouvert",
+    "revealHint": "Ouvre le dossier du système de fichiers, le fichier sélectionné",
+    "renameHint": "Change le nom du fichier sur le disque, pas seulement à l’écran",
+    "trashHint": "Envoie le fichier à la corbeille du système ; rien n’est effacé tout de suite"
   },
   "objects": {
     "sprite": "Sprite",
@@ -704,7 +707,8 @@
     "playClip": "Jouer la séquence",
     "pauseClip": "Mettre en pause",
     "clipSpeed": "Vitesse",
-    "clipLoop": "En boucle"
+    "clipLoop": "En boucle",
+    "revealHint": "Ouvre le dossier du système de fichiers, l’asset sélectionné"
   },
   "transport": {
     "play": "Lire",
@@ -752,7 +756,10 @@
     "trackActionsHint": "Déplacer la piste dans la pile, ou la retirer avec ce qu’elle porte",
     "moveTrackUp": "Monter la piste",
     "moveTrackDown": "Descendre la piste",
-    "removeTrack": "Supprimer la piste"
+    "removeTrack": "Supprimer la piste",
+    "moveTrackUpHint": "Échange cette piste avec celle du dessus",
+    "moveTrackDownHint": "Échange cette piste avec celle du dessous",
+    "removeTrackHint": "Retire la piste et tous les clips qu’elle porte"
   },
   "videoTools": {
     "select": "Sélection",
@@ -1533,7 +1540,9 @@
     "remove": "Supprimer",
     "newName": "Style",
     "save": "Enregistrer comme style",
-    "saveHint": "Garde les réglages du matériau courant, sans ses maps, pour les rejouer sur une autre texture."
+    "saveHint": "Garde les réglages du matériau courant, sans ses maps, pour les rejouer sur une autre texture.",
+    "renameHint": "Change le nom du style enregistré, sans toucher à ce qu’il contient",
+    "removeHint": "Retire le style de la liste ; les documents qui s’en servaient gardent leur réglage"
   },
   "texture": {
     "shapeSphere": "Sphère",

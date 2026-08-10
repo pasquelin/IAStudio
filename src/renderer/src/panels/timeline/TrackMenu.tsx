@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { moveTrack, removeTrack } from '@/engines/timeline/commands'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { useSequences } from '@/stores/sequences'
 
 export type TrackMenuProps = {
@@ -35,17 +36,20 @@ export function TrackMenuRows({ documentId, trackId, canRise, canFall, onClose }
         label={t('timeline.moveTrackUp')}
         icon={mdiArrowUp}
         disabled={!canRise}
+        tip={HINT_RIGHT(t('timeline.moveTrackUpHint'))}
         onSelect={run(-1)}
       />
       <MenuRow
         label={t('timeline.moveTrackDown')}
         icon={mdiArrowDown}
         disabled={!canFall}
+        tip={HINT_RIGHT(t('timeline.moveTrackDownHint'))}
         onSelect={run(1)}
       />
       <MenuRow
         label={t('timeline.removeTrack')}
         icon={mdiDeleteOutline}
+        tip={HINT_RIGHT(t('timeline.removeTrackHint'))}
         onSelect={() => {
           useSequences.getState().runCommand(documentId, removeTrack(trackId))
           onClose()

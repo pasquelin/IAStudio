@@ -554,7 +554,10 @@
     "trash": "Move to trash",
     "noProject": "No project open. Create or open one to see its documents.",
     "empty": "This project folder could not be read.",
-    "open": "Open"
+    "open": "Open",
+    "revealHint": "Opens the system file browser with this file selected",
+    "renameHint": "Changes the file’s name on disk, not only on screen",
+    "trashHint": "Sends the file to the system trash; nothing is erased right away"
   },
   "objects": {
     "sprite": "Sprite",
@@ -704,7 +707,8 @@
     "playClip": "Play the clip",
     "pauseClip": "Pause",
     "clipSpeed": "Speed",
-    "clipLoop": "Loop"
+    "clipLoop": "Loop",
+    "revealHint": "Opens the system file browser with this asset selected"
   },
   "transport": {
     "play": "Play",
@@ -752,7 +756,10 @@
     "trackActionsHint": "Move the track through the stack, or remove it with what it carries",
     "moveTrackUp": "Move track up",
     "moveTrackDown": "Move track down",
-    "removeTrack": "Remove track"
+    "removeTrack": "Remove track",
+    "moveTrackUpHint": "Swaps this track with the one above it",
+    "moveTrackDownHint": "Swaps this track with the one below it",
+    "removeTrackHint": "Removes the track and every clip it carries"
   },
   "videoTools": {
     "select": "Selection",
@@ -1533,7 +1540,9 @@
     "remove": "Delete",
     "newName": "Style",
     "save": "Save as style",
-    "saveHint": "Keeps the current material settings, without its maps, to replay on another texture."
+    "saveHint": "Keeps the current material settings, without its maps, to replay on another texture.",
+    "renameHint": "Changes the saved style’s name, leaving what it holds alone",
+    "removeHint": "Takes the style off the list; documents already using it keep their settings"
   },
   "texture": {
     "shapeSphere": "Sphere",
