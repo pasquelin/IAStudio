@@ -59,6 +59,10 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
       }
 
       const gltf = await loader.loadAsync(url)
+      // Carried on the root rather than returned beside it: `Object3D.animations` is where three
+      // itself keeps them, and the cache hands one object back. Dropping them here is what left
+      // every model Scenario animates standing still, with nothing said.
+      gltf.scene.animations = gltf.animations
       return gltf.scene
     },
     // `KTX2Loader` counts live instances: an undisposed one makes the next engine warn about itself.

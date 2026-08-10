@@ -63,7 +63,33 @@ export type TextureRef = { assetId: string }
  * that is the right trade for a generation studio, and an explicit "explode" command is what
  * would lift it the day it matters.
  */
-export type ModelRef = { assetId: string }
+export type ModelRef = { assetId: string; animation?: AnimationRef }
+
+/**
+ * Which clip of a model plays, and how. Absent on a model carrying none, and on every document
+ * written before animation existed — the reader fills it in rather than refusing the node.
+ *
+ * The head position is part of it on purpose: an engine is rebuilt from its state, and a scene
+ * reopened on frame one would lose the pose its author saved it on.
+ */
+export type AnimationRef = {
+  /** The clip's name as the file spells it. A name the file no longer holds simply plays nothing. */
+  clip: string
+  playing: boolean
+  /** Where the head stands inside the clip, in seconds. */
+  time: number
+  /** A multiplier, never a frame rate: the clip carries its own timing. */
+  speed: number
+  loop: boolean
+}
+
+/** What a model animates like when nothing has been chosen: its first clip, stopped at the start. */
+export const DEFAULT_ANIMATION: Omit<AnimationRef, 'clip'> = Object.freeze({
+  playing: false,
+  time: 0,
+  speed: 1,
+  loop: true,
+})
 
 /**
  * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters

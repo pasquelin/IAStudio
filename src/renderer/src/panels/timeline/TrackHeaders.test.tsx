@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
@@ -129,5 +129,21 @@ describe('TrackHeaders', () => {
 
     expect(screen.getByRole('menuitem', { name: 'Monter la piste' })).toBeDisabled()
     expect(screen.getByRole('menuitem', { name: 'Descendre la piste' })).toBeEnabled()
+  })
+  it('moves a track up its stack from the same menu', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Actions de la piste A1/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Monter la piste' }))
+
+    const ids = sequenceOf(useSequences.getState(), 'doc-1').tracks.map(track => track.id)
+    expect(ids).toEqual(['A1', 'V1'])
+  })
+
+  it('opens the same three rows on a right-click', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    fireEvent.contextMenu(screen.getByTestId('track-header-V1'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Supprimer la piste' }))
+
+    expect(trackOf('V1')).toBeUndefined()
   })
 })

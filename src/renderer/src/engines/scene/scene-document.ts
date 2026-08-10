@@ -132,7 +132,11 @@ function isSceneNode(value: unknown): value is SceneNode {
   // never the file. What it points at is resolved when the scene is built, not here — a project
   // whose assets moved still opens, with a hole where the model was.
   if (value.type === 'model')
-    return isRecord(value.model) && typeof value.model.assetId === 'string'
+    return (
+      isRecord(value.model) &&
+      typeof value.model.assetId === 'string' &&
+      isOptionalAnimation(value.model.animation)
+    )
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
   // checked against the same table.
   if (value.type === 'sprite') return isSprite(value.sprite)
@@ -146,6 +150,24 @@ function isSceneNode(value: unknown): value is SceneNode {
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/**
+ * Absent is legal and means "still": every document written before animation existed says
+ * nothing here. A record that is there but malformed costs the node, like every other field —
+ * a file that says nothing is not a file that says wrong.
+ */
+function isOptionalAnimation(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  return (
+    typeof value.clip === 'string' &&
+    typeof value.playing === 'boolean' &&
+    typeof value.loop === 'boolean' &&
+    Number.isFinite(value.time) &&
+    Number.isFinite(value.speed)
+  )
 }
 
 function isTransform(value: unknown): value is Transform {

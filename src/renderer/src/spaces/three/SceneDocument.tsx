@@ -25,6 +25,7 @@ import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { selectedNodes } from '@/engines/scene/scene-state'
+import { useModelClips } from '@/stores/model-clips'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews, viewOf } from '@/stores/scene-views'
@@ -99,6 +100,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // nothing, which is what stops a near miss from undoing the picking that came before it.
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
       onTransform: moves => useScenes.getState().runCommand(documentId, moveNodes(moves)),
+      onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
     })
 
     renderer.mount(element)
@@ -106,6 +108,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     return () => {
       renderer.dispose()
       engine.current = null
+      // The names came out of files this viewport parsed; nothing outside it can answer for them.
+      useModelClips.getState().forget(documentId)
     }
   }, [documentId])
 

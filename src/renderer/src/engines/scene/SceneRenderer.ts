@@ -55,6 +55,7 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
+import { SceneAnimations, clipNamesOf, clipsOf } from './animation'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
 import { carry, placePivot, release, transformOf } from './pivot'
 import {
@@ -89,6 +90,11 @@ export type SceneRendererOptions = {
    */
   onSelect: (ids: readonly string[], mode: SelectionMode) => void
   onTransform: (moves: readonly NodeMove[]) => void
+  /**
+   * What clips a model brought, once its file has landed. React cannot ask the cache: the names
+   * live in the file, not in the document, and a panel offering a choice has to know them.
+   */
+  onClips?: (nodeId: string, clips: readonly string[]) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
@@ -201,6 +207,8 @@ export class SceneRenderer {
   private readonly textureCache: TextureCache
   private readonly modelCache: ModelCache
   private readonly gltf: GltfSource
+  /** The clips of every model on stage. Apart from the nodes: see `animation.ts`. */
+  private readonly animations = new SceneAnimations()
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -498,6 +506,7 @@ export class SceneRenderer {
     this.sky.release()
     this.environment?.dispose()
     this.environment = null
+    this.animations.clear()
     this.textureCache.dispose()
     this.modelCache.dispose()
     this.gltf.dispose()
@@ -643,6 +652,13 @@ export class SceneRenderer {
     }
     if (node.type === 'light') this.tuneShadow(object)
 
+    // The clips of a model that is already on stage. Skipped for one still loading: `buildModel`
+    // binds what the file brought the moment it lands, and applies this reference there.
+    if (node.type === 'model' && this.animations.has(node.id)) {
+      this.animations.apply(node.id, node.model.animation ?? null)
+      this.viewport.requestRender()
+    }
+
     // A carried object holds a transform relative to the pivot, and the state holds one relative
     // to the scene: writing the second into the first mid-drag teleports it. The release puts
     // the truth back, so an undo during a gesture repaints everything but where things are.
@@ -787,6 +803,14 @@ export class SceneRenderer {
       // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
       // and the next one skips an unchanged node — the model would throw nothing until edited.
       const applied = this.applied.get(node.id) ?? node
+
+      // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
+      // carry them, and a clip addresses its targets by name — so the source's drive any
+      // instance built from it.
+      this.animations.add(node.id, holder, clipsOf(source))
+      if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
+      this.options.onClips?.(node.id, clipNamesOf(source))
+
       applyShadowFlags(
         holder,
         applied.castShadow,
@@ -926,6 +950,9 @@ export class SceneRenderer {
     // pointed at, and nothing else remembers it.
     const applied = this.applied.get(id)
     if (applied?.type === 'model') this.modelCache.release(applied.model.assetId)
+    // Before the instance goes: a mixer holding actions keeps every bone of a released model
+    // alive with it.
+    this.animations.remove(id)
 
     this.applied.delete(id)
 
@@ -1143,7 +1170,8 @@ export class SceneRenderer {
   private advance(delta: number): boolean {
     const moving = this.flying && this.held.size > 0
     if (moving) this.fly(delta)
-    return moving
+    // Both, never short-circuited: a clip has to keep running while the camera flies over it.
+    return this.animations.update(delta) || moving
   }
 
   private fly(delta: number): void {

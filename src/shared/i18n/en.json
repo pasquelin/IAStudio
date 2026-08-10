@@ -222,7 +222,10 @@
       "graph.compile": "The graph could not be checked",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
-      "document.load": "The document could not be opened"
+      "document.load": "The document could not be opened",
+      "scene": {
+        "render": "Video render"
+      }
     },
     "allHint": "Clears this filter: the log shows everything again",
     "filterHint": "Shows only the entries of this kind — several can be ticked at once"
@@ -550,7 +553,8 @@
   },
   "objects": {
     "sprite": "Sprite",
-    "text": "Text"
+    "text": "Text",
+    "camera": "Camera"
   },
   "inspector": {
     "noDocument": "Open a scene to inspect what is in it.",
@@ -689,7 +693,13 @@
     "nodeId": "Identifier",
     "noModel": "None",
     "sectionFoldHint": "Folds this group of properties",
-    "sectionUnfoldHint": "Unfolds this group of properties"
+    "sectionUnfoldHint": "Unfolds this group of properties",
+    "animation": "Animation",
+    "noClip": "None",
+    "playClip": "Play the clip",
+    "pauseClip": "Pause",
+    "clipSpeed": "Speed",
+    "clipLoop": "Loop"
   },
   "transport": {
     "play": "Play",
@@ -781,7 +791,9 @@
     "paste": "Paste",
     "pasteHint": "Put what was copied into this scene",
     "delete": "Delete",
-    "deleteHint": "Remove whatever is selected from the scene"
+    "deleteHint": "Remove whatever is selected from the scene",
+    "skeletons": "Skeletons",
+    "skeletonsHint": "Shows the bones of rigged models, changing nothing of the scene"
   },
   "exportFormats": {
     "glb": "Binary glTF (.glb)",
@@ -1501,6 +1513,10 @@
     "canvasBrushLarger": {
       "title": "Larger brush",
       "help": "Widens the brush, the eraser and the shape stroke by one step of the scale."
+    },
+    "sceneSkeletons": {
+      "title": "Show skeletons",
+      "help": "Draws the bones of every rigged model over the scene"
     }
   },
   "styles": {
@@ -1957,5 +1973,24 @@
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the preferences, at the account section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens"
+  },
+  "animation": {
+    "play": "Play",
+    "pause": "Pause",
+    "toStart": "Back to the start",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Scale",
+    "addTrack": "Add a {{property}} track",
+    "removeTrack": "Remove track {{name}}",
+    "arm": "Arm track {{name}} for writing",
+    "addKey": "Set a key here",
+    "removeKey": "Remove the key set here",
+    "noTrack": "No track yet. Select an object, then add the track to animate.",
+    "render": "Render to video",
+    "renderHint": "Writes a video file of what the scene camera sees",
+    "renderNeedsCamera": "Add a camera to the scene to render it",
+    "bone": "Bone",
+    "wholeModel": "The whole model"
   }
 }
