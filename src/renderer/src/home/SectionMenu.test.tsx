@@ -1,12 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import { useSettings } from '@/stores/settings'
 import { SectionMenu } from './SectionMenu'
-
-/** French takes a no-break space before a semicolon, and eslint refuses the character itself. */
-const NBSP = ' '
 
 const openMenu = async (): Promise<void> => {
   await userEvent.click(screen.getByRole('button', { name: 'Personnaliser cette section' }))
@@ -35,7 +33,7 @@ describe('SectionMenu', () => {
     expect(said('Monter')).toBe('Remonte cette section d’un cran sur l’accueil')
     expect(said('Descendre')).toBe('Descend cette section d’un cran sur l’accueil')
     expect(said('Masquer cette section')).toBe(
-      `Retire la section de l’accueil${NBSP}; une ligne en bas de la page la rétablit`,
+      `Retire la section de l’accueil${NO_BREAK_SPACE}; une ligne en bas de la page la rétablit`,
     )
     expect(screen.getByRole('menuitemradio', { name: 'Afficher 12 éléments' })).toHaveAttribute(
       'data-tooltip-content',

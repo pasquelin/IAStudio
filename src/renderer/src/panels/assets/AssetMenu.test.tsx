@@ -90,6 +90,18 @@ describe('what the shelf offers to do with an asset', () => {
     expect(screen.getAllByRole('menuitem', { name: /montage/ })[1]).toBeEnabled()
   })
 
+  it('explains what revealing does rather than repeating the row', () => {
+    render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
+
+    const row = screen.getByRole('menuitem', { name: /gestionnaire de fichiers/ })
+    expect(row).toHaveAttribute(
+      'data-tooltip-content',
+      'Ouvre le dossier du système de fichiers, l’asset sélectionné',
+    )
+    // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
+    expect(row).not.toHaveAttribute('aria-label')
+  })
+
   it('closes on Escape without doing anything', async () => {
     const onClose = vi.fn()
     render(<AssetMenu asset={asset()} at={AT} onClose={onClose} />)

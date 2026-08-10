@@ -1,13 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { DocumentTabMenu } from './DocumentTabMenu'
 
 vi.mock('./close-tab', () => ({ closeTab: vi.fn() }))
 vi.mock('./document-io', () => ({ closeDocument: vi.fn(), deleteDocument: vi.fn() }))
 vi.mock('./dockview-api', () => ({ openPanelIds: () => ['a', 'b'] }))
-
-/** French takes a no-break space before a semicolon, and eslint refuses the character itself. */
-const NBSP = ' '
 
 const open = (): void => {
   render(<DocumentTabMenu documentId="a" at={{ x: 10, y: 10 }} onClose={vi.fn()} />)
@@ -21,7 +19,7 @@ describe('DocumentTabMenu', () => {
       screen.getByRole('menuitem', { name }).getAttribute('data-tooltip-content')
 
     expect(said('Fermer l’onglet')).toBe(
-      `Retire l’onglet de la barre${NBSP}; le document reste dans le projet`,
+      `Retire l’onglet de la barre${NO_BREAK_SPACE}; le document reste dans le projet`,
     )
     expect(said('Fermer les autres onglets')).toBe('Ferme tous les autres onglets, un par un')
     expect(said('Supprimer le document…')).toBe('Retire le document du projet, son fichier compris')
