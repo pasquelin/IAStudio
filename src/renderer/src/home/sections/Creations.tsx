@@ -43,8 +43,7 @@ export function Creations() {
   )
 
   // The local catalogue rarely refuses — and when it does, an empty band said nothing about it.
-  if (state === 'refused')
-    return <RefusedSection id="creations" title={t('home.sections.creations')} onRetry={retry} />
+  if (state === 'refused') return <RefusedSection id="creations" onRetry={retry} />
 
   if (assets.length === 0) return null
 

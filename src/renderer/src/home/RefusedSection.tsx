@@ -6,7 +6,6 @@ import { SectionNote } from './SectionNote'
 
 export type RefusedSectionProps = {
   id: HomeSectionId
-  title: string
   /** What did not answer, in the band's own words. The generic line stands in when it has none. */
   message?: string
   onRetry: () => void
@@ -20,11 +19,18 @@ export type RefusedSectionProps = {
  * A red error on a decorative band would be worse than the silence; a muted line and a button
  * is the whole of it.
  */
-export function RefusedSection({ id, title, message, onRetry }: RefusedSectionProps) {
+export function RefusedSection({ id, message, onRetry }: RefusedSectionProps) {
   const { t } = useTranslation()
 
   return (
-    <Section id={id} title={title} actions={<Button onClick={onRetry}>{t('home.retry')}</Button>}>
+    // The heading is the registry's, derived rather than passed: a band that reads its own from
+    // elsewhere when it has something to show — Similar names its reference — would otherwise
+    // carry two titles, and the refused one is the plain name of the section either way.
+    <Section
+      id={id}
+      title={t(`home.sections.${id}`)}
+      actions={<Button onClick={onRetry}>{t('home.retry')}</Button>}
+    >
       <SectionNote>{message ?? t('home.refused')}</SectionNote>
     </Section>
   )

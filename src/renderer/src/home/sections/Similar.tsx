@@ -49,14 +49,7 @@ export function Similar() {
   } = useDeferredShelf<Lookalikes>(null, lookalikes, `${owner}`)
 
   if (state === 'refused')
-    return (
-      <RefusedSection
-        id="similar"
-        title={t('home.sections.similar')}
-        message={t('home.similar.refused')}
-        onRetry={retry}
-      />
-    )
+    return <RefusedSection id="similar" message={t('home.similar.refused')} onRetry={retry} />
 
   if (!page) return marker
 

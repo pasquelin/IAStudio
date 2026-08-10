@@ -51,8 +51,7 @@ export function Library() {
 
   // A 429 used to take the band off the page without a word — and since `cloudBrowse` goes
   // through `quietlyReducedBy`, the journal did not say it either.
-  if (state === 'refused')
-    return <RefusedSection id="library" title={t('home.sections.library')} onRetry={retry} />
+  if (state === 'refused') return <RefusedSection id="library" onRetry={retry} />
 
   if (page.length === 0) return null
 

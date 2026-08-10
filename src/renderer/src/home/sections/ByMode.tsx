@@ -28,8 +28,7 @@ export function ByMode() {
     retry,
   } = useShelf(NONE, () => getBridge()?.assets.counts(), path ?? '')
 
-  if (state === 'refused')
-    return <RefusedSection id="byMode" title={t('home.sections.byMode')} onRetry={retry} />
+  if (state === 'refused') return <RefusedSection id="byMode" onRetry={retry} />
 
   const total = ASSET_TYPES.reduce((sum, type) => sum + counts[type], 0)
   if (total === 0) return null

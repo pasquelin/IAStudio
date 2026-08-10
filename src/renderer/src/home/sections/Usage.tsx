@@ -38,8 +38,7 @@ export function Usage() {
     marker,
   } = useDeferredShelf<UsageReport | null>(null, spending, `${owner}`)
 
-  if (state === 'refused')
-    return <RefusedSection id="usage" title={t('home.sections.usage')} onRetry={retry} />
+  if (state === 'refused') return <RefusedSection id="usage" onRetry={retry} />
 
   // Nothing spent is not nothing to say — but nothing READ is, and the two look alike from here
   // until the report lands.
