@@ -250,32 +250,43 @@ function reachedFrom(
 function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-ends' | undefined {
   const consumers = consumersByProvider(graph)
   const read: { end: string; names: string }[] = []
+  const firstEnd = new Map<string, string>()
 
   for (const node of graph.nodes) {
     // The inspector's own reader, not a second one: it guards what a file may have written under
     // `parentNodeId`, and two readings of one field are two chances to disagree about it.
     const names = namedLoopId(node)
     if (names === undefined) continue
+    // In NODE ORDER, because that is how the converter picks: `nodes.find`, first match wins.
+    if (!firstEnd.has(names)) firstEnd.set(names, node.id)
     if ((consumers.get(node.id) ?? []).length > 0) read.push({ end: node.id, names })
   }
 
   const loops = new Set(graph.nodes.filter(node => node.type === 'forEach').map(node => node.id))
 
-  // Two ends of one loop, BOTH read: the converter keeps the first and resolves the other's wires
-  // to the loop all the same, which pulls whatever read that other end into the loop's body — a
-  // node outside the loop running once per item instead of once.
-  //
-  // Only over real loops, and that is why this one asks the type while the check below does not:
-  // "the converter keeps the first end" happens in the scan it runs PER `forEach`, so two ends
-  // naming a generator do nothing of the sort. The check below is about `getSourceRef`, which
-  // runs for whatever a wire leaves.
-  for (const loop of loops) {
-    if (read.filter(entry => entry.names === loop).length > 1) return 'loop-two-ends'
+  /*
+   * A loop whose read end is NOT the one the converter retained. The retained end is where the
+   * body walk stops; wires leaving any other end still resolve to the loop, so whatever reads one
+   * is pulled INTO the body and runs once per item instead of once — measured, a list of ten turns
+   * two generations into twenty, paid for, with `validateWorkflowFlow` answering OK.
+   *
+   * The POSITION is what decides, and that is not a detail: the same two ends with the spare one
+   * written after the read one compile to a flow identical, item for item, to the graph without
+   * it. Counting ends would refuse that graph — measured too.
+   *
+   * Only over real loops, and that is why this one asks the type while the check below does not:
+   * "the converter keeps the first end" happens in the scan it runs PER `forEach`, so two ends
+   * naming a generator do nothing of the sort. The check below is about `getSourceRef`, which runs
+   * for whatever a wire leaves.
+   */
+  for (const entry of read) {
+    if (!loops.has(entry.names)) continue
+    if (firstEnd.get(entry.names) !== entry.end) return 'loop-two-ends'
   }
 
-  // An end that does not close what it names, either because that is no loop at all or because
-  // the end is not downstream of it. Measured both ways: the wire leaving it lands on the named
-  // node instead of its own provider, or is dropped and the reader falls back to its form.
+  // An end that does not close what it names, either because that is no loop at all or because the
+  // end is not downstream of it. Measured both ways: the wire leaving it lands on the named node
+  // instead of its own provider, or is dropped and the reader falls back to its form.
   for (const entry of read) {
     if (!graph.nodes.some(node => node.id === entry.names)) continue
     // Reachability alone, and NOT "is the named node a loop": the harness showed the second test

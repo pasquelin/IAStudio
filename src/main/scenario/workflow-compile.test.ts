@@ -526,13 +526,20 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
    * answers OK.
    */
   it('refuses an end that is read and names a loop it is not inside of', () => {
-    const { nodes, edges } = paired()
+    // ONE end, so the other rule cannot speak first: it names the loop and reads a node the loop
+    // does not feed, which is what makes it not downstream of it.
     const graph = graphOf(
-      [...nodes, modelNode('outside', false), end('e2', 'L'), modelNode('reader', true)],
       [
-        ...edges,
-        wire('e2', 'results', 'outside', 'image'),
-        wire('reader', 'prompt', 'e2', 'results'),
+        loop('L'),
+        modelNode('m1', false),
+        modelNode('outside', false),
+        end('e1', 'L'),
+        modelNode('reader', true),
+      ],
+      [
+        readsItem('m1', 'L'),
+        wire('e1', 'results', 'outside', 'image'),
+        wire('reader', 'prompt', 'e1', 'results'),
       ],
     )
 
@@ -588,6 +595,38 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
     )
 
     expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+
+  /**
+   * The POSITION of the spare end is what decides, measured both ways on the real converter.
+   * Written BEFORE the read one, it is the end the converter retains — the body walk then stops
+   * at a node no wire reaches, and everything reading the real end is pulled into the loop's body:
+   * a list of ten turns two generations into twenty, and the validator answers OK.
+   */
+  it('refuses a spare end written before the one that is read', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [
+        loop('L'),
+        modelNode('m1', false),
+        end('e0', 'L'),
+        end('e1', 'L'),
+        modelNode('reader', true),
+      ],
+      [...edges, wire('reader', 'prompt', 'e1', 'results')],
+    )
+
+    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-two-ends' })
+    // The same two ends the other way round compile to a flow identical to the graph without the
+    // spare one — which is why counting ends refused a graph that compiles.
+    expect(
+      compile(
+        graphOf(
+          [...nodes, end('e0', 'L'), modelNode('reader', true)],
+          [...edges, wire('reader', 'prompt', 'e1', 'results')],
+        ),
+      ).result,
+    ).toMatchObject({ ok: true })
   })
 
   /**
