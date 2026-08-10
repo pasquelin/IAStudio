@@ -3,6 +3,7 @@ import { createCatalog, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import { emptyAssetCounts, type Asset } from '@shared/domain/asset'
+import type { ActivityLevel, ActivityTopic } from '@shared/domain/activity'
 
 function catalogOf(): Catalog {
   return createCatalog(openMemoryDatabase())
@@ -91,6 +92,68 @@ describe('dispatchCatalogRequest', () => {
       ok: true,
       value: { ...NO_ASSETS, image: 1, mesh: 1 },
     })
+  })
+
+  // The four operations below reached the worker without a single test walking through the
+  // dispatch: a `case` nobody exercises is a `case` a rename can silently drop.
+  it('finds an asset by the bytes it holds, which is how a duplicate import is caught', () => {
+    const catalog = catalogOf()
+    dispatchCatalogRequest(catalog, { id: 1, op: 'add', asset: { ...asset, hash: 'abc123' } })
+
+    const found = dispatchCatalogRequest(catalog, { id: 2, op: 'findByHash', hash: 'abc123' })
+    const absent = dispatchCatalogRequest(catalog, { id: 3, op: 'findByHash', hash: 'nothing' })
+
+    expect(found).toEqual({ id: 2, ok: true, value: { ...asset, hash: 'abc123' } })
+    expect(absent).toEqual({ id: 3, ok: true, value: null })
+  })
+
+  it('removes a row, and answers without carrying anything back', () => {
+    const catalog = catalogOf()
+    dispatchCatalogRequest(catalog, { id: 1, op: 'add', asset })
+
+    const response = dispatchCatalogRequest(catalog, { id: 2, op: 'remove', assetId: 'asset-1' })
+
+    expect(response).toEqual({ id: 2, ok: true, value: undefined })
+    expect(dispatchCatalogRequest(catalog, { id: 3, op: 'find', assetId: 'asset-1' })).toEqual({
+      id: 3,
+      ok: true,
+      value: null,
+    })
+  })
+
+  it('appends journal lines and reads them back, newest first', () => {
+    const catalog = catalogOf()
+    const draft = (at: string, messageKey: string) => ({
+      at,
+      level: 'info' as ActivityLevel,
+      topic: 'project' as ActivityTopic,
+      messageKey,
+    })
+
+    const appended = dispatchCatalogRequest(catalog, {
+      id: 1,
+      op: 'appendActivity',
+      entries: [draft('2026-08-10T10:00:00.000Z', 'a'), draft('2026-08-10T11:00:00.000Z', 'b')],
+    })
+    expect(appended).toMatchObject({ id: 1, ok: true })
+
+    // Newest first, which is the order the journal panel opens on.
+    const read = dispatchCatalogRequest(catalog, { id: 2, op: 'readActivity', query: {} })
+    expect(read).toMatchObject({
+      id: 2,
+      ok: true,
+      value: [{ messageKey: 'b' }, { messageKey: 'a' }],
+    })
+  })
+
+  it('answers an empty batch without touching the disk', () => {
+    const response = dispatchCatalogRequest(catalogOf(), {
+      id: 1,
+      op: 'appendActivity',
+      entries: [],
+    })
+
+    expect(response).toEqual({ id: 1, ok: true, value: [] })
   })
 
   // The worker must answer every request: a thrown query that killed the message loop would
