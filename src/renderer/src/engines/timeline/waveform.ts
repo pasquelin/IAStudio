@@ -1,4 +1,5 @@
 import { PEAKS_PER_SECOND } from '@shared/domain/asset'
+import { clamp } from '@shared/numeric'
 import { timeToX, xToTime, type Viewport } from './timeline-geometry'
 import { clipEnd, type Clip } from './timeline-state'
 
@@ -38,7 +39,7 @@ export function waveformColumns(
   for (let x = left; x <= right; x++) {
     const start = Math.max(0, indexAt(x))
     // One column can span many pairs; the loudest of them is what has to survive.
-    const end = Math.min(pairs, Math.max(start + 1, indexAt(x + 1)))
+    const end = clamp(indexAt(x + 1), start + 1, pairs)
     if (start >= pairs) break
 
     let min = 0

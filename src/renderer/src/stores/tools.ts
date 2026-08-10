@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { clamp } from '@shared/numeric'
 import {
   familyOf,
   isHorizontal,
@@ -129,13 +130,13 @@ const OPPOSITE: Record<ToolZone, ToolZone> = {
  */
 export function fitZoneSize(size: number, available: number, opposite: number): number {
   const ceiling = Math.max(MIN_SIZE, Math.round(available - opposite - MIN_CENTER))
-  return Math.min(ceiling, Math.max(MIN_SIZE, Math.round(size)))
+  return clamp(Math.round(size), MIN_SIZE, ceiling)
 }
 
 /** Same idea one level down: neither half of a zone may swallow the other. */
 export function fitSplit(size: number, available: number): number {
   const ceiling = Math.max(MIN_SPLIT, Math.round(available - MIN_SPLIT))
-  return Math.min(ceiling, Math.max(MIN_SPLIT, Math.round(size)))
+  return clamp(Math.round(size), MIN_SPLIT, ceiling)
 }
 
 /** True once either half holds something: an empty zone takes no room at all. */

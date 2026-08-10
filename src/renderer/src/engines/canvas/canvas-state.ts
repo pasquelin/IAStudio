@@ -5,6 +5,7 @@ import {
 } from '@shared/domain/adjustments'
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
+import { clamp } from '@shared/numeric'
 import type { Point } from './shape-geometry'
 
 /**
@@ -372,7 +373,7 @@ export function mapLayers(
 
 export function clampOpacity(value: number): number {
   if (Number.isNaN(value)) return 1
-  return Math.min(1, Math.max(0, value))
+  return clamp(value, 0, 1)
 }
 
 export function serializeCanvas(state: CanvasState): string {

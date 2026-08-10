@@ -1,3 +1,4 @@
+import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
 
 /**
@@ -81,7 +82,7 @@ export function shapeGeometry(
 }
 
 function sideCount(sides: number): number {
-  return Math.round(Math.min(MAX_SIDES, Math.max(MIN_SIDES, sides)))
+  return Math.round(clamp(sides, MIN_SIDES, MAX_SIDES))
 }
 
 /** Normalised so width and height are never negative: dragging up-left is still a rectangle. */

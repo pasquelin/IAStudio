@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { clipFixture } from './timeline-fixtures'
 import {
   clampFades,
+  clampGain,
+  clampSpeed,
   clipFrom,
   clampTrackHeight,
   clipEnd,
@@ -13,7 +15,11 @@ import {
   insertClip,
   makeClip,
   makeTrack,
+  MAX_GAIN_DB,
+  MAX_SPEED,
   MAX_TRACK_HEIGHT,
+  MIN_GAIN_DB,
+  MIN_SPEED,
   MIN_TRACK_HEIGHT,
   newClipId,
   playsThrough,
@@ -234,6 +240,22 @@ describe('track height', () => {
     expect(clampTrackHeight(4)).toBe(MIN_TRACK_HEIGHT)
     expect(clampTrackHeight(10_000)).toBe(MAX_TRACK_HEIGHT)
     expect(clampTrackHeight(72.4)).toBe(72)
+  })
+})
+
+// Both ranges are asymmetric, so a value left alone in the middle is what tells the two bounds
+// apart: swapped, either function would answer its floor for every input.
+describe('gain and speed', () => {
+  it('holds a gain inside the range the mixer offers', () => {
+    expect(clampGain(-100)).toBe(MIN_GAIN_DB)
+    expect(clampGain(50)).toBe(MAX_GAIN_DB)
+    expect(clampGain(0)).toBe(0)
+  })
+
+  it('holds a speed inside the range the decoder follows', () => {
+    expect(clampSpeed(0.1)).toBe(MIN_SPEED)
+    expect(clampSpeed(10)).toBe(MAX_SPEED)
+    expect(clampSpeed(1)).toBe(1)
   })
 })
 

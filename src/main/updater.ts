@@ -1,4 +1,5 @@
 import type { UpdateState } from '@shared/domain/update'
+import { clamp } from '@shared/numeric'
 import { log } from '@main/log'
 
 /**
@@ -91,7 +92,7 @@ export function createUpdates({ loadUpdater, isPackaged, onChange }: UpdaterPort
       move({
         phase: 'downloading',
         version: 'version' in state ? state.version : 'unknown',
-        progress: Math.min(1, Math.max(0, progress.percent / 100)),
+        progress: clamp(progress.percent / 100, 0, 1),
       }),
     )
     autoUpdater.on('update-downloaded', info => move({ phase: 'ready', version: info.version }))

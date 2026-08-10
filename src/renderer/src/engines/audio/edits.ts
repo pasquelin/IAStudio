@@ -75,6 +75,8 @@ export function audibleData(source: AudioData, state: AudioEditState): AudioData
 /** A region clamped to the take it belongs to, or nothing when it has collapsed. */
 export function clampRegion(region: Region, data: AudioData): Region | null {
   const total = durationOf(data)
+  // Not `clamp`: `durationOf` divides by a sample rate, so a negative total is not ruled out by
+  // the expression itself, and `clamp` would then answer that negative bound instead of zero.
   const from = Math.max(0, Math.min(total, region.from))
   const to = Math.max(from, Math.min(total, region.to))
   return to > from ? { from, to } : null

@@ -4,6 +4,8 @@
  * Building an `Intl` formatter per call costs 48 µs against 4, which a hundred-line log and a
  * hundred-and-twenty-point axis would both pay on the UI thread.
  */
+import { clamp } from '@shared/numeric'
+
 const NUMBERS = new Map<string, Intl.NumberFormat>()
 const DATES = new Map<string, Intl.DateTimeFormat>()
 
@@ -73,5 +75,5 @@ export function formatMoment(time: string, locale: string): string {
  */
 export function shareOf(value: number, largest: number): number {
   if (largest <= 0) return 0
-  return Math.max(0, Math.min(100, (value / largest) * 100))
+  return clamp((value / largest) * 100, 0, 100)
 }
