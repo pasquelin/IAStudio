@@ -1156,6 +1156,73 @@ describe('a branch, run locally', () => {
     expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
   })
 
+  /**
+   * A branch left empty in the inspector compiles to no case at all — Scenario's converter drops
+   * it. It must therefore be UNTAKEABLE, not always true: a new branch, added and not yet filled
+   * in, would otherwise swallow everything the branches under it were meant to catch.
+   */
+  it('walks past a branch with nothing readable to test', async () => {
+    const empty = graphOf(
+      [
+        textNode('text1', 'a knight'),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ operator: 'equals', value: 'a knight' }] },
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+        modelNode('m2', {}, 'model_case2'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+        wire('m2', 'prompt', 'if1', 'case2'),
+      ],
+    )
+
+    const watched = await watch(
+      empty,
+      { model_case2: ['asset_2'] },
+      {
+        transform: decides({
+          'text1_output != null && size(text1_output) > 0 && (type(text1_output) == list || trim(text1_output) != "")': true,
+        }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case2'])
+  })
+
+  /**
+   * An approval standing on a branch nobody took was never PUT to anyone, so what it guards was
+   * not refused — it was not reached. Reporting `blocked` there would paint red a node whose
+   * question was never asked.
+   */
+  it('does not read an approval on a branch nobody took as a refusal', async () => {
+    const gated = graphOf(
+      [
+        textNode('text1', 'a dragon'),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+        approvalNode('a1', 'On garde ?'),
+        modelNode('m2', {}, 'model_after'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+        guards('a1', 'm1'),
+        wire('m2', 'prompt', 'm1', DEFAULT_OUTPUT_NAME),
+      ],
+    )
+
+    const watched = await watch(gated, {}, { transform: decides({}) })
+
+    expect(statusesOf(watched, 'a1')).toEqual(['skipped'])
+    expect(statusesOf(watched, 'm2')).toEqual(['skipped'])
+    expect(failureOf(watched, 'm2')).toBeUndefined()
+  })
+
   /** An expression the evaluator refuses is the node's failure, not a silent fall to the else. */
   it('fails the branch when its condition cannot be evaluated at all', async () => {
     const watched = await watch(graph('a knight'), {}, { transform: async () => null })
