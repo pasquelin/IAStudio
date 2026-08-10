@@ -159,6 +159,8 @@
     "projectTooNew": "This project was made by a newer build of the studio; update it to open this project",
     "projectNotCreated": "The project could not be created in this folder",
     "fileNotOpened": "The system could not open this file",
+    "fileNotRenamed": "This file could not be renamed — that name may be taken already",
+    "fileNotTrashed": "This file could not be moved to the trash",
     "jobFailed": "Generation \"{{name}}\" failed",
     "jobCancelled": "Generation \"{{name}}\" cancelled",
     "generated": "{{count, number}} asset generated",
@@ -519,6 +521,9 @@
     "noDocument": "Open a scene to see its contents."
   },
   "explorer": {
+    "reveal": "Reveal in folder",
+    "rename": "Rename",
+    "trash": "Move to trash",
     "noProject": "No project open. Create or open one to see its documents.",
     "empty": "This project folder could not be read.",
     "open": "Open"

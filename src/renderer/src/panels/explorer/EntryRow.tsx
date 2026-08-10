@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
 import { cn } from '@/helpers/cn'
+import { InlineRename } from '@/panels/shared/InlineRename'
 
 export type EntryRowProps = {
   /** The name on disk, which is what a file browser shows — never the document's own title. */
@@ -8,6 +9,8 @@ export type EntryRowProps = {
   icon: string
   /** Whether a tab is showing this file right now. Only a document can be. */
   open: boolean
+  /** Fired with the new name, or with the old one when the edit was abandoned. */
+  onRename?: (name: string) => void
 }
 
 /**
@@ -20,8 +23,13 @@ export type EntryRowProps = {
  * The glyph is the workspace's for a document and a plain sheet for everything else, read off
  * the same table the rail and the asset menu read.
  */
-export function EntryRow({ name, icon, open }: EntryRowProps) {
+export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
   const { t } = useTranslation()
+
+  // The whole row becomes the field: a name edited beside its own icon is where the eye already
+  // is, and `InlineRename` owns the part that is subtle — when the edit ends.
+  if (onRename)
+    return <InlineRename value={name} label={t('explorer.rename')} onCommit={onRename} />
 
   return (
     <Row

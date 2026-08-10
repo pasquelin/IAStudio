@@ -41,11 +41,14 @@ const withProject = (): void => {
 function install(byFolder: Record<string, FolderEntry[]>, documents: DocumentDescriptor[] = []) {
   const listFolder = vi.fn((relative: string) => Promise.resolve(byFolder[relative] ?? []))
   const openFile = vi.fn(() => Promise.resolve(true))
+  const revealFile = vi.fn(() => Promise.resolve())
+  const renameFile = vi.fn(() => Promise.resolve(true))
+  const trashFile = vi.fn(() => Promise.resolve(true))
   installFakeBridge({
-    project: { listFolder, openFile },
+    project: { listFolder, openFile, revealFile, renameFile, trashFile },
     documents: { list: () => Promise.resolve(documents) },
   })
-  return { listFolder, openFile }
+  return { listFolder, openFile, revealFile, renameFile, trashFile }
 }
 
 beforeEach(() => {
@@ -367,5 +370,104 @@ describe('the project explorer', () => {
 
       await waitFor(() => expect(listFolder).toHaveBeenCalledTimes(2))
     })
+  })
+})
+
+/**
+ * Three rows, and two of them refuse in cases the panel can name. Nothing is deleted: the file
+ * goes to the system's trash, where its owner can get it back.
+ */
+describe('the explorer menu', () => {
+  const open = async (name: string): Promise<void> => {
+    await userEvent.pointer({ keys: '[MouseRight]', target: await screen.findByText(name) })
+  }
+
+  it('shows a file in the system file manager', async () => {
+    withProject()
+    const { revealFile } = install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    await open('brief.pdf')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' }))
+
+    expect(revealFile).toHaveBeenCalledWith('brief.pdf')
+  })
+
+  it('moves a file to the trash rather than deleting it', async () => {
+    withProject()
+    const { trashFile } = install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    await open('brief.pdf')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Mettre à la corbeille' }))
+
+    expect(trashFile).toHaveBeenCalledWith('brief.pdf')
+  })
+
+  /**
+   * The catalogue stores every asset by a path under `assets/`, so moving one orphans rows
+   * nobody can find again. Shown disabled rather than hidden: a menu that changes length is a
+   * menu one cannot learn.
+   */
+  it('refuses to move the studio own folders, and says so before the click', async () => {
+    withProject()
+    install({ '': [folder('assets')] })
+
+    render(<Explorer />)
+    await open('assets')
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Mettre à la corbeille' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' })).toBeEnabled()
+  })
+
+  // A document's file name IS its identifier: renaming one a tab is holding orphans that tab,
+  // and the next save writes the old name back beside the new file.
+  it('refuses to rename a document a tab is holding', async () => {
+    withProject()
+    useDocuments.setState({ documents: { a3f1: scene } })
+    install({ '': [file('a3f1.scene')] }, [scene])
+
+    render(<Explorer />)
+    await open('a3f1.scene')
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
+  })
+
+  it('renames a document no tab is holding', async () => {
+    withProject()
+    install({ '': [file('a3f1.scene')] }, [scene])
+
+    render(<Explorer />)
+    await open('a3f1.scene')
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeEnabled()
+  })
+
+  it('renames where the name is read', async () => {
+    withProject()
+    const { renameFile } = install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    await open('brief.pdf')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'note.pdf{Enter}')
+
+    expect(renameFile).toHaveBeenCalledWith('brief.pdf', 'note.pdf')
+  })
+
+  // The disk is what says the name changed, and the watch is what reads it again. Asking for a
+  // rename that is not one would be a write for nothing.
+  it('asks for nothing when the name was left as it was', async () => {
+    withProject()
+    const { renameFile } = install({ '': [file('brief.pdf')] })
+
+    render(<Explorer />)
+    await open('brief.pdf')
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+    await userEvent.keyboard('{Escape}')
+
+    expect(renameFile).not.toHaveBeenCalled()
   })
 })

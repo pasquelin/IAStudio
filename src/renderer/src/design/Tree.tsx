@@ -68,6 +68,8 @@ export type TreeProps<T extends TreeNode> = {
    * what an outliner wants: there is nothing to open, only something to select.
    */
   onActivate?: (node: T) => void
+  /** A right-click on a row, with where the pointer was. Absent leaves the browser's own menu. */
+  onContextMenu?: (node: T, at: { x: number; y: number }) => void
   /**
    * A row was dropped onto another. Absent leaves the tree undraggable — a file browser has
    * nothing to reorder, and offering the gesture there would promise something it cannot do.
@@ -93,6 +95,7 @@ export function Tree<T extends TreeNode>({
   expandable,
   onDrop,
   onActivate,
+  onContextMenu,
   renderRow,
 }: TreeProps<T>) {
   // Which row the pointer is over during a drag. Session state of the gesture itself, so it
@@ -232,6 +235,11 @@ export function Tree<T extends TreeNode>({
                 }}
                 onPointerDown={event => pick(row.node, event)}
                 onDoubleClick={() => onActivate?.(row.node)}
+                onContextMenu={event => {
+                  if (!onContextMenu) return
+                  event.preventDefault()
+                  onContextMenu(row.node, { x: event.clientX, y: event.clientY })
+                }}
                 onKeyDown={event => onRowKeyDown(row, index, event)}
               >
                 {/* The chevron keeps its column even on a leaf: rows whose content shifts by a

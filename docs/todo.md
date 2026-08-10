@@ -439,10 +439,16 @@ réponses en une règle testable — l'accueil a déjà exactement cette notion 
 `requires: ['project' | 'api']`), avec une politique inverse : « a section whose requirements are
 unmet is **dropped rather than drawn empty** ».
 
-**Et une question à trancher avant d'écrire quoi que ce soit.** L'Explorateur, l'étagère à assets et
-l'inspecteur exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans
-projet produit un job qui ne se collecte nulle part — « un job ne collecte que dans son propre
-projet » (§ 10.3). Soit il exige un projet, soit il faut dire ce que devient ce qu'il produit.
+**La question qui bloquait est tranchée le 10 août 2026, et ne se redemande pas : le Générateur
+EXIGE un projet**, et affiche sa sortie — « Ouvrir un projet » / « Créer un projet » — comme
+l'Explorateur depuis l'entrée 15. Générer sans projet produirait un job qui ne se collecte nulle
+part (« un job ne collecte que dans son propre projet », § 10.3), et rien ne doit se générer dans
+le vide.
+
+**Ce qui n'a PAS été retenu, et il faut le savoir avant de le reproposer** : porter `requires`
+dans `TOOL_PLACEMENTS` pour que les cinq panneaux répondent d'une seule règle. L'utilisateur a
+choisi le geste, pas la refonte. Le faire quand même reviendrait à décider à sa place — le
+mécanisme reste écrit ci-dessus pour le jour où un sixième panneau poserait la question.
 
 ---
 
@@ -625,35 +631,32 @@ bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
 ### 47. Ce que l'Explorateur en arbre a laissé ouvert
 
-**Le geste attendu.** Rien d'urgent : ce sont trois manques qui se voient à l'usage, écrits ici
-pour ne pas être redécouverts un par un.
+**Le geste attendu.** Déplacer un fichier d'un dossier à l'autre en le glissant, comme partout
+ailleurs.
 
-1. **Renommer, supprimer, révéler dans le système** — un explorateur les offre au clic droit, et
-   celui-ci n'offre rien. `ContextMenu` et `MenuRow` sont là, et `assets:reveal` existe déjà pour
-   un asset ; ce qui manque est un canal qui prend un chemin de projet plutôt qu'un id d'asset.
-   **Supprimer se décide avant de s'écrire** : le studio n'efface aujourd'hui un fichier de
-   l'utilisateur nulle part.
-2. **Le glisser** — `Tree` sait glisser une ligne sur une autre (`onDrop`), et le panneau ne le
-   déclare pas : déplacer un fichier d'un dossier à l'autre demanderait un `fs.rename` côté main,
-   donc la même décision que le point 1.
-3. **La surveillance récursive n'est pas vérifiée hors macOS.** `watchProjectFolder` demande
-   `{ recursive: true }` et retombe sur une surveillance plate si la plateforme refuse ; le repli
-   qui couvre le reste est la relecture au retour du focus, qui est branchée et testée. **Personne
-   ne l'a essayé sur Windows ni sur Linux** — et c'est une assurance, pas une mesure.
+**Ce qui est livré et ne se refait pas** (10 août 2026) : le **clic droit** porte les trois
+gestes tranchés avec l'utilisateur — révéler dans le dossier, renommer sur place, mettre à la
+corbeille. **Rien n'est effacé** : `shell.trashItem`, jamais `unlink`. Deux refus sont grisés
+plutôt que cachés, et le main les refuse aussi : les dossiers du studio (`PROJECT_FOLDERS` —
+l'index range chaque asset par un chemin sous `assets/`), et le renommage d'un document qu'un
+onglet tient ouvert.
 
-> **Ce que le lot a montré et qui resservira, au-delà de ce panneau :**
->
-> - **`Enter` et `Espace` n'avaient jamais rien fait dans `Tree`.** La garde
->   `event.target !== event.currentTarget` lisait `event.nativeEvent` : React dispatche depuis un
->   écouteur racine unique, donc le `currentTarget` du natif est **déjà nul** quand un gestionnaire
->   le lit, et la garde refusait tout. Défaut préexistant, trouvé en écrivant le premier test qui
->   appuyait sur ces touches. **Passer l'événement React, jamais son natif.**
-> - **Un budget de couverture qui déborde d'une seule branche vaut la peine d'être cherché** : ici
->   la branche était `iconOfDocument`, qui redérivait l'espace depuis le `kind` alors que le
->   descripteur le PORTE. Couvrir l'a fait supprimer.
-> - **Deux fichiers de même nom de base rendent un `.bak` mensonger** : `src/shared/domain/folder.ts`
->   et `src/main/project/folder.ts` ont partagé un `/tmp/folder.ts.bak`, et six mutations de suite
->   ont mesuré un dépôt cassé. **Sauvegarder sous le chemin complet, pas sous le nom.**
+**Ce qui reste :**
+
+1. **Le glisser.** `Tree` sait glisser une ligne sur une autre (`onDrop`) et le panneau ne le
+   déclare pas. Déplacer demande un `fs.rename` vers un AUTRE dossier — l'éditeur actuel renomme
+   **dans le dossier où le fichier est déjà**, délibérément : une ligne du menu qui dit
+   « Renommer » ne doit pas pouvoir déplacer. Le refus des dossiers du studio vaut des deux
+   côtés du glisser, source **et** destination.
+2. **La surveillance récursive reste non vérifiée hors macOS**, mais elle n'est plus une
+   croyance : `watchProjectFolder` prend son ouvreur en argument, et un test prouve qu'un refus
+   du `{ recursive: true }` fait bien retomber sur une surveillance plate. Ce qui n'est pas
+   vérifié est le comportement RÉEL de Linux et de Windows — donc que le repli suffise.
+
+> **Ce que le lot a montré et qui resservira** : une bascule qu'aucune plateforme de
+> développement ne peut atteindre est du code **écrit, livré et jamais exécuté**. Lui donner une
+> couture d'injection coûte un paramètre par défaut et la rend testable — c'est ce qui a fermé la
+> dernière ligne non couverte du glob `main/project/**` au lieu d'élargir son budget.
 
 ---
 

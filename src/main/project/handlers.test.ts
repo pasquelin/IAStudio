@@ -47,7 +47,11 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
       remove: vi.fn(async () => undefined),
     },
     reveal: vi.fn(),
-    folder: { list: vi.fn(async () => []) },
+    folder: {
+      list: vi.fn(async () => []),
+      rename: vi.fn(async () => true),
+      trash: vi.fn(async () => true),
+    },
     // An empty string is what `shell.openPath` answers when the system took the file.
     openInSystem: vi.fn(async () => ''),
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
@@ -131,6 +135,93 @@ describe('project handlers', () => {
 
       expect(injected.folder.list).not.toHaveBeenCalled()
     })
+  })
+
+  describe('the three gestures of the explorer menu', () => {
+    it('shows a file in the system file manager, under the project folder', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectRevealFile, 'assets/img/one.png')
+
+      expect(injected.reveal).toHaveBeenCalledWith(join(PROJECT, 'assets/img/one.png'))
+    })
+
+    it('renames, and says nothing in the journal when it worked', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', 'brief.txt')).resolves.toBe(true)
+
+      expect(injected.folder.rename).toHaveBeenCalledWith('notes.txt', 'brief.txt')
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
+    // A row of a context menu that does nothing and explains nothing is the worst outcome of
+    // the three.
+    it('says so in the journal when a rename is refused', async () => {
+      const injected = deps(catalog)
+      injected.folder.rename = vi.fn(async () => false)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', 'brief.txt')).resolves.toBe(
+        false,
+      )
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.fileNotRenamed',
+      })
+    })
+
+    // A name with a separator in it would move the file rather than rename it, which is not what
+    // the row says it does.
+    it.each(['../escape', 'sub/one.txt', ''])('refuses %s as a new name', async name => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', name)).rejects.toThrow()
+
+      expect(injected.folder.rename).not.toHaveBeenCalled()
+    })
+
+    it('trashes, and says nothing in the journal when the system took it', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectTrashFile, 'notes.txt')).resolves.toBe(true)
+
+      expect(injected.folder.trash).toHaveBeenCalledWith('notes.txt')
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
+    it('says so in the journal when the system would not take it', async () => {
+      const injected = deps(catalog)
+      injected.folder.trash = vi.fn(async () => false)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectTrashFile, 'notes.txt')).resolves.toBe(false)
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.fileNotTrashed',
+      })
+    })
+
+    it.each([CHANNELS.projectRevealFile, CHANNELS.projectTrashFile])(
+      'refuses a path that would climb out of the project on %s',
+      async channel => {
+        const injected = deps(catalog)
+        registerProjectHandlers(injected)
+
+        await expect(invoke(channel, '../../etc/passwd')).rejects.toThrow()
+
+        expect(injected.reveal).not.toHaveBeenCalled()
+        expect(injected.folder.trash).not.toHaveBeenCalled()
+      },
+    )
   })
 
   /**
