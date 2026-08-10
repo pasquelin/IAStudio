@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import i18next from 'i18next'
-import { initI18n } from './index'
+import { initI18n, PSEUDO_LOCALE_FLAG } from './index'
 
 describe('initI18n', () => {
   it('declares on the document what the interface is written in', async () => {
@@ -51,5 +51,64 @@ describe('the numbers a sentence carries', () => {
     await initI18n('fr')
 
     expect(i18next.t('texture.tilingPreviewTimes', { count: 4 })).toBe('4×')
+  })
+})
+
+/**
+ * Pseudo-localization finds the text no static check can: whatever stays unaccented on screen
+ * never came from a bundle, however it reached the pixel. It has to be reachable from a running
+ * window, and unreachable from a shipped one.
+ *
+ * Three surfaces escape it, and reading them as hardcoded text would be a mistake: the main
+ * process draws its menu and its native dialogs from `TRANSLATIONS` without passing through
+ * here; `resolveLanguage('pseudo')` falls back to English, so model text comes out in plain
+ * English; and a `t(key, defaultValue)` call renders its default untouched.
+ */
+describe('the pseudo-locale', () => {
+  afterEach(async () => {
+    vi.unstubAllEnvs()
+    localStorage.removeItem(PSEUDO_LOCALE_FLAG)
+    await initI18n('fr')
+  })
+
+  it('leaves the interface in its own language while the flag is off', async () => {
+    await initI18n('fr')
+
+    expect(i18next.t('assets.count', { count: 3 })).toBe('3 assets')
+  })
+
+  it('marks every string once the flag is on', async () => {
+    localStorage.setItem(PSEUDO_LOCALE_FLAG, 'on')
+
+    await initI18n('fr')
+
+    expect(i18next.t('assets.count', { count: 3 })).toBe('⟦3 áššétš ··⟧')
+  })
+
+  it('overrides the language the settings ask for, so a preference cannot leave it', async () => {
+    localStorage.setItem(PSEUDO_LOCALE_FLAG, 'on')
+
+    await initI18n('en')
+
+    expect(i18next.language).toBe('pseudo')
+  })
+
+  // `pseudo` is not a language tag: a screen reader handed one it does not know drops to the
+  // system voice, and the text underneath is French.
+  it('still declares the document written in the source language', async () => {
+    localStorage.setItem(PSEUDO_LOCALE_FLAG, 'on')
+
+    await initI18n('en')
+
+    expect(document.documentElement.lang).toBe('fr')
+  })
+
+  it('stays out of reach of a production build, flag or no flag', async () => {
+    vi.stubEnv('DEV', false)
+    localStorage.setItem(PSEUDO_LOCALE_FLAG, 'on')
+
+    await initI18n('fr')
+
+    expect(i18next.t('assets.count', { count: 3 })).toBe('3 assets')
   })
 })

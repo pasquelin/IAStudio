@@ -1,8 +1,23 @@
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import { DEFAULT_LANGUAGE, TRANSLATIONS, type Language } from '@shared/i18n'
+import { DEFAULT_LANGUAGE, PSEUDO_LANGUAGE, pseudoLocalize, TRANSLATIONS } from '@shared/i18n'
+import type { Bundle, Language } from '@shared/i18n'
 
 const NAMESPACE = 'studio'
+
+/**
+ * The switch that swaps the interface for the pseudo-locale, read from this window's storage
+ * so it survives a reload and can be flipped from the devtools or the debug port.
+ *
+ * Development builds only, and the guard is `import.meta.env.DEV` rather than a setting: the
+ * pseudo-locale is a detector, not a language, and a user who found it would face a studio
+ * nobody can read.
+ */
+export const PSEUDO_LOCALE_FLAG = 'scenario.pseudo-locale'
+
+function pseudoRequested(): boolean {
+  return import.meta.env.DEV && localStorage.getItem(PSEUDO_LOCALE_FLAG) === 'on'
+}
 
 /**
  * What the document says it is written in. A screen reader picks its voice from it, so an
@@ -14,22 +29,36 @@ function declareLanguage(language: Language): void {
 }
 
 export async function initI18n(language: Language = DEFAULT_LANGUAGE): Promise<void> {
-  declareLanguage(language)
+  const pseudo = pseudoRequested()
+  const spoken = pseudo ? PSEUDO_LANGUAGE : language
+
+  // The pseudo text is the source language wearing accents, so that is what the document says
+  // it is written in — `pseudo` is not a language tag, and a screen reader given one it does
+  // not know falls back to the system voice instead of the French one.
+  declareLanguage(pseudo ? DEFAULT_LANGUAGE : language)
 
   if (i18next.isInitialized) {
-    await i18next.changeLanguage(language)
+    // Built once: the settings call this again on every change, and the bundle is 1700 strings.
+    if (pseudo && !i18next.hasResourceBundle(PSEUDO_LANGUAGE, NAMESPACE))
+      i18next.addResourceBundle(PSEUDO_LANGUAGE, NAMESPACE, pseudoBundle())
+    await i18next.changeLanguage(spoken)
     return
   }
 
   await i18next.use(initReactI18next).init({
-    lng: language,
+    lng: spoken,
     fallbackLng: DEFAULT_LANGUAGE,
     defaultNS: NAMESPACE,
     ns: [NAMESPACE],
     resources: {
       fr: { [NAMESPACE]: TRANSLATIONS.fr },
       en: { [NAMESPACE]: TRANSLATIONS.en },
+      ...(pseudo ? { [PSEUDO_LANGUAGE]: { [NAMESPACE]: pseudoBundle() } } : {}),
     },
     interpolation: { escapeValue: false },
   })
+}
+
+function pseudoBundle(): Bundle {
+  return pseudoLocalize(TRANSLATIONS[DEFAULT_LANGUAGE])
 }
