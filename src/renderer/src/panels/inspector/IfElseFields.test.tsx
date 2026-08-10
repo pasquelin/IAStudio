@@ -202,13 +202,150 @@ describe('the outputs a branch carries', () => {
     expect(edges.map(edge => edge.id)).toEqual(['e1'])
   })
 
-  /** One entry, so ⌘Z never gives back the blocks without the ports that read them. */
+  /**
+   * One entry, so ⌘Z never gives back the blocks without the ports that read them — and the port
+   * count is asserted BOTH ways round: only checking the state after the undo let a `write` that
+   * never touched the ports pass, since they were already what the test expected.
+   */
   it('undoes the blocks and the ports together', async () => {
     show('ifElse1')
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une branche/ }))
+    expect(ports()).toHaveLength(3)
+
     useGraphs.getState().undo(DOCUMENT)
 
     expect(blocks()).toHaveLength(1)
     expect(ports()).toEqual(['ifElse1-target-case1', 'ifElse1-target-else'])
+  })
+
+  /**
+   * The defect two reviews found: dropping a branch that is not the last one used to REGENERATE
+   * the port list, so the wire of the dropped branch stayed on `case1` and fed whichever branch
+   * slid into its place, while the wire of that branch was cut. No error, no warning.
+   */
+  it('re-aims nothing when a middle branch is dropped: each wire follows its own branch', async () => {
+    const three: GraphNode = {
+      id: 'ifElse1',
+      type: 'ifElse',
+      position: { x: 40, y: 0 },
+      data: {
+        conditionBlocks: [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a' }] },
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'b' }] },
+        ],
+        outputHandles: [
+          { id: 'ifElse1-target-case1', name: 'case1' },
+          { id: 'ifElse1-target-case2', name: 'case2' },
+          { id: 'ifElse1-target-else', name: 'else' },
+        ],
+      },
+    }
+    const readsCase2: GraphEdge = {
+      id: 'e3',
+      source: 'model1',
+      target: 'ifElse1',
+      sourceHandle: 'model1-source-mask',
+      targetHandle: 'ifElse1-target-case2',
+    }
+    installGraph(DOCUMENT, {
+      nodes: [TEXT, three, MODEL],
+      edges: [FED, READS_CASE1, readsCase2],
+      inputKeys: [],
+    })
+    show('ifElse1')
+
+    const [first] = screen.getAllByRole('button', { name: /Supprimer cette branche/ })
+    if (!first) throw new Error('no branch to remove')
+    await userEvent.click(first)
+
+    // The surviving block is the SECOND one, and the wire that read it still reads it: its port
+    // kept its id and slid to index 0 with it.
+    expect(blocks()[0]?.conditions[0]?.value).toBe('b')
+    expect(ports()).toEqual(['ifElse1-target-case2', 'ifElse1-target-else'])
+
+    const edges = graphOf(useGraphs.getState(), DOCUMENT).edges
+    expect(edges.map(edge => edge.id).sort()).toEqual(['e1', 'e3'])
+  })
+
+  /**
+   * A node the editor never made carries ports of a file's own naming — the converter matches them
+   * by INDEX, so nothing obliges a document to our ids. Editing a VALUE used to rewrite the whole
+   * handle list, which cut every wire into the node.
+   */
+  it('leaves the ports of an imported node alone while a value is typed', async () => {
+    const theirs: GraphNode = {
+      id: 'ifElse1',
+      type: 'ifElse',
+      position: { x: 40, y: 0 },
+      data: {
+        conditionBlocks: [{ logic: 'and', conditions: [{ field: 'text1', operator: 'equals' }] }],
+        outputHandles: [
+          { id: 'ifElse1-out-0', name: 'a' },
+          { id: 'ifElse1-out-1', name: 'b' },
+        ],
+      },
+    }
+    const readsTheirs: GraphEdge = {
+      id: 'e4',
+      source: 'model1',
+      target: 'ifElse1',
+      sourceHandle: 'model1-source-prompt',
+      targetHandle: 'ifElse1-out-0',
+    }
+    installGraph(DOCUMENT, {
+      nodes: [TEXT, theirs, MODEL],
+      edges: [FED, readsTheirs],
+      inputKeys: [],
+    })
+    show('ifElse1')
+    await userEvent.type(screen.getByLabelText('Valeur comparée'), 'rock')
+
+    expect(ports()).toEqual(['ifElse1-out-0', 'ifElse1-out-1'])
+    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual(['e1', 'e4'])
+  })
+
+  /** And an added branch slots its port in among theirs rather than replacing the lot. */
+  it('inserts a new port among the ones a file wrote', async () => {
+    const theirs: GraphNode = {
+      id: 'ifElse1',
+      type: 'ifElse',
+      position: { x: 40, y: 0 },
+      data: {
+        conditionBlocks: [{ logic: 'and', conditions: [] }],
+        outputHandles: [
+          { id: 'ifElse1-out-0', name: 'a' },
+          { id: 'ifElse1-out-1', name: 'b' },
+        ],
+      },
+    }
+    installGraph(DOCUMENT, { nodes: [TEXT, theirs, MODEL], edges: [FED], inputKeys: [] })
+    show('ifElse1')
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une branche/ }))
+
+    expect(ports()).toEqual(['ifElse1-out-0', 'ifElse1-target-case2', 'ifElse1-out-1'])
+  })
+})
+
+describe('a condition whose field the wires do not offer', () => {
+  /**
+   * A `<select>` whose value matches no option has `selectedIndex === -1` and renders BLANK — the
+   * panel would read "nothing is tested" over a condition that tests something, and the next
+   * change would overwrite it unseen. `ModelFamilySettings.withStored` closes the same trap.
+   */
+  it('shows the field a condition names even when nothing feeds it', () => {
+    const orphan: GraphNode = {
+      id: 'ifElse1',
+      type: 'ifElse',
+      position: { x: 40, y: 0 },
+      data: {
+        conditionBlocks: [
+          { logic: 'and', conditions: [{ field: 'text1_output', operator: 'equals' }] },
+        ],
+      },
+    }
+    installGraph(DOCUMENT, { nodes: [TEXT, orphan], edges: [], inputKeys: [] })
+    show('ifElse1')
+
+    expect(screen.getByLabelText('Ce qui est testé')).toHaveValue('text1_output')
   })
 })

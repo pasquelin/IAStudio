@@ -68,26 +68,21 @@ export const setGraphNodeData = (
   )
 
 /**
- * A generator's model, and the ports that come with it.
+ * What a node holds AND the ports it is wired by, in one entry — then the wires those ports no
+ * longer answer for are cut.
  *
- * One command rather than two: the ports are derived from the model, so an undo that gave back
- * the model without the ports — or the reverse — would leave a node the compiler cannot read.
+ * One command for the two gestures that move both at once: swapping a generator's model, whose
+ * ports come from its schema (invariant 5), and adding or dropping a branch of an `ifElse`, whose
+ * ports ARE its blocks — the converter reads the port at index `i` as case `i + 2`. Given back
+ * apart by an undo, either would leave a node the compiler reads differently from the panel.
+ *
+ * The id is derived from the patch's own keys, as `setGraphNodeData` derives its own: two gestures
+ * touching different fields never coalesce, so a model swap and a branch never merge into one ⌘Z.
  */
-export const setGraphNodeModel = (
+export const setGraphNodePorts = (
   id: string,
   patch: Partial<GraphNode['data']>,
 ): Command<GraphState> =>
-  reversible(`graph:model:${id}`, graph => replaceNodePorts(graph, id, patch))
-
-/**
- * A branch's conditions, and the outputs they are read through.
- *
- * The same shape as a model swap and for the same reason, under an id of its own so the two never
- * coalesce: the converter finds an `ifElse` port by its INDEX among the handles, so a block and
- * its port are one fact — given back apart by an undo, the else would answer for a branch.
- */
-export const setGraphNodeBranches = (
-  id: string,
-  patch: Partial<GraphNode['data']>,
-): Command<GraphState> =>
-  reversible(`graph:branches:${id}`, graph => replaceNodePorts(graph, id, patch))
+  reversible(`graph:ports:${id}:${Object.keys(patch).sort().join(',')}`, graph =>
+    replaceNodePorts(graph, id, patch),
+  )

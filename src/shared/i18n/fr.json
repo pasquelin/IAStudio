@@ -107,7 +107,8 @@
       "lessThan": "inférieur à",
       "lessThanOrEqual": "inférieur ou égal à",
       "between": "entre"
-    }
+    },
+    "noField": "Rien"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} étape",
@@ -739,7 +740,6 @@
     "conditionOperator": "Comparaison",
     "conditionValue": "Valeur comparée",
     "combine": "Combinaison avec la condition précédente",
-    "noField": "Rien",
     "rangeFrom": "Borne basse",
     "rangeTo": "Borne haute"
   },

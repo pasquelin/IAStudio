@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest'
 import type { GraphConditionBlock, GraphNode, GraphState } from '@shared/domain/graph'
 import {
   addCondition,
-  addConditionBlock,
+  addedBranch,
   conditionBlocksOf,
   conditionFieldsOf,
-  ifElseOutputs,
   removeCondition,
-  removeConditionBlock,
+  removedBranch,
   setBlockLogic,
   setCondition,
 } from './conditions'
@@ -51,7 +50,6 @@ describe('reading the conditions off a node', () => {
    */
   it('drops what a file can hold and the converter cannot read', () => {
     expect(readBlocks('nonsense')).toEqual([])
-    expect(readBlocks([null, 3, 'block'])).toEqual([])
     expect(readBlocks([{ logic: 'maybe', conditions: 'none' }])).toEqual([
       { logic: 'and', conditions: [] },
     ])
@@ -62,6 +60,19 @@ describe('reading the conditions off a node', () => {
     expect(readBlocks([{ conditions: ['a condition', null, 7] }])).toEqual([
       { logic: 'and', conditions: [] },
     ])
+  })
+
+  /**
+   * A block is a POSITION, and that is why an unreadable one is kept rather than dropped: the
+   * converter reads `conditionBlocks` raw and calls every port past the LAST block the else.
+   * Dropped, the screen would show one branch where the converter counts two — and the port the
+   * panel labels "otherwise" would compile as case 3.
+   */
+  it('keeps an unreadable block, empty, rather than shifting the ones after it', () => {
+    const readable = { logic: 'and', conditions: [{ field: 'text1', operator: 'equals' }] }
+
+    expect(readBlocks([null, readable])).toEqual([{ logic: 'and', conditions: [] }, readable])
+    expect(readBlocks(['block', 7])).toHaveLength(2)
   })
 
   /**
@@ -93,26 +104,104 @@ describe('reading the conditions off a node', () => {
   })
 })
 
-describe('the ports a branch carries', () => {
-  /**
-   * The converter gives block `i` the case value `i + 2` and reads every handle past the last
-   * block as the else — by INDEX, never by name. One port too few and the else steals a branch.
-   */
-  it('carries one port per block, then the else', () => {
-    expect(ifElseOutputs('ifElse1', 2)).toEqual([
-      { id: 'ifElse1-target-case1', name: 'case1' },
-      { id: 'ifElse1-target-case2', name: 'case2' },
-      { id: 'ifElse1-target-else', name: 'else' },
+describe('adding and dropping a branch', () => {
+  const branch = (blocks: unknown, handles: unknown): GraphNode => {
+    const graph = parseGraph({
+      nodes: [
+        {
+          id: 'ifElse1',
+          type: 'ifElse',
+          position: { x: 0, y: 0 },
+          data: { conditionBlocks: blocks, outputHandles: handles },
+        },
+      ],
+    })
+    const node = graph.nodes[0]
+    if (!node) throw new Error('the fixture lost its node')
+    return node
+  }
+
+  const ids = (handles: readonly { id: string }[]): readonly string[] =>
+    handles.map(handle => handle.id)
+
+  const ONE = [{ logic: 'and', conditions: [] }]
+  const OURS = [
+    { id: 'ifElse1-target-case1', name: 'case1' },
+    { id: 'ifElse1-target-else', name: 'else' },
+  ]
+
+  it('adds a block, and its port where the else begins', () => {
+    const added = addedBranch(branch(ONE, OURS))
+
+    expect(added.conditionBlocks).toHaveLength(2)
+    expect(ids(added.outputHandles)).toEqual([
+      'ifElse1-target-case1',
+      'ifElse1-target-case2',
+      'ifElse1-target-else',
     ])
   })
 
-  it('carries the else alone when nothing is asked', () => {
-    expect(ifElseOutputs('ifElse1', 0)).toEqual([{ id: 'ifElse1-target-else', name: 'else' }])
+  /**
+   * The converter matches an `ifElse` port by its INDEX, never by its spelling — so a file names
+   * them as it likes, and rebuilding the list would rename every port and cut every wire into it.
+   */
+  it('keeps the ports a file wrote in its own words', () => {
+    const theirs = [
+      { id: 'ifElse1-out-0', name: 'a' },
+      { id: 'ifElse1-out-1', name: 'b' },
+    ]
+    const added = addedBranch(branch(ONE, theirs))
+
+    expect(ids(added.outputHandles)).toEqual([
+      'ifElse1-out-0',
+      'ifElse1-target-case2',
+      'ifElse1-out-1',
+    ])
   })
 
-  /** Untyped both sides: a branch passes on whatever reached it, pictures included. */
-  it('types neither end', () => {
-    for (const handle of ifElseOutputs('ifElse1', 1)) expect(handle.type).toBeUndefined()
+  /** A node that came with none still needs somewhere to wire what no branch matched. */
+  it('gives an else to a node that carries no port at all', () => {
+    const added = addedBranch(branch([], []))
+
+    expect(added.conditionBlocks).toHaveLength(1)
+    expect(added.outputHandles).toHaveLength(2)
+  })
+
+  /** Ours in spelling only: a file may already hold the id this one would have taken. */
+  it('never hands out an id a handle already carries', () => {
+    const clashing = [{ id: 'ifElse1-target-case2', name: 'mine' }, ...OURS]
+    const added = addedBranch(branch(ONE, clashing))
+
+    expect(new Set(ids(added.outputHandles)).size).toBe(added.outputHandles.length)
+  })
+
+  /**
+   * Dropping a branch that is not the last one: its port goes, the ones after it slide up KEEPING
+   * their ids, so the wires on them follow the block that slid up with them. Regenerating the list
+   * left the wire of the dropped branch on `case1` — re-routed to the branch that took its place,
+   * with no error anywhere.
+   */
+  it('takes the port of the dropped branch and leaves the others their ids', () => {
+    const three = [
+      { logic: 'and', conditions: [{ field: 'a', operator: 'equals' }] },
+      { logic: 'and', conditions: [{ field: 'b', operator: 'equals' }] },
+      { logic: 'and', conditions: [{ field: 'c', operator: 'equals' }] },
+    ]
+    const handles = [
+      { id: 'ifElse1-target-case1', name: 'case1' },
+      { id: 'ifElse1-target-case2', name: 'case2' },
+      { id: 'ifElse1-target-case3', name: 'case3' },
+      { id: 'ifElse1-target-else', name: 'else' },
+    ]
+
+    const dropped = removedBranch(branch(three, handles), 0)
+
+    expect(dropped.conditionBlocks.map(block => block.conditions[0]?.field)).toEqual(['b', 'c'])
+    expect(ids(dropped.outputHandles)).toEqual([
+      'ifElse1-target-case2',
+      'ifElse1-target-case3',
+      'ifElse1-target-else',
+    ])
   })
 })
 
@@ -142,18 +231,6 @@ describe('editing the conditions', () => {
     { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a' }] },
   ]
 
-  it('adds a block holding one blank condition', () => {
-    expect(addConditionBlock([])).toEqual([{ logic: 'and', conditions: [{ operator: 'equals' }] }])
-  })
-
-  it('removes the block that was asked for, and only it', () => {
-    const two = addConditionBlock(one)
-    expect(removeConditionBlock(two, 0)).toEqual([
-      { logic: 'and', conditions: [{ operator: 'equals' }] },
-    ])
-    expect(removeConditionBlock(two, 1)).toEqual(one)
-  })
-
   it('changes how one block combines', () => {
     expect(setBlockLogic(one, 0, 'or')[0]?.logic).toBe('or')
   })
@@ -166,7 +243,9 @@ describe('editing the conditions', () => {
 
   /** A branch just added holds no field at all, and choosing an operator must not invent one. */
   it('leaves a condition fieldless while nothing has been chosen', () => {
-    const blank = addConditionBlock([])
+    const blank: readonly GraphConditionBlock[] = [
+      { logic: 'and', conditions: [{ operator: 'equals' }] },
+    ]
 
     expect(setCondition(blank, 0, 0, { operator: 'isEmpty' })[0]?.conditions[0]).toEqual({
       operator: 'isEmpty',

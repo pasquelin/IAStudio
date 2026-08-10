@@ -10,7 +10,7 @@ import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { CONTROL } from '@/design/styles'
-import { setGraphNodeData, setGraphNodeModel } from '@/engines/graph/commands'
+import { setGraphNodeData, setGraphNodePorts } from '@/engines/graph/commands'
 import { modelDataOf } from '@/engines/graph/factory'
 import { cn } from '@/helpers/cn'
 import { usePlanAccess } from '@/helpers/plan-access'
@@ -104,7 +104,7 @@ export function ModelNodeFields({ documentId, node, edit }: ModelNodeFieldsProps
         // What the user typed survives every key the NEW model still declares — `defaultValues`
         // takes a preset for exactly this, and a prompt written into one model is a prompt.
         const kept = node.type === 'model' ? node.data.form : undefined
-        edit.run(setGraphNodeModel(node.id, modelDataOf(node.id, descriptor, kept)))
+        edit.run(setGraphNodePorts(node.id, modelDataOf(node.id, descriptor, kept)))
       })
       // As the palette's own `describeModel` does: offline, the select springs back to the old
       // value on its own, and without this nothing anywhere says why.

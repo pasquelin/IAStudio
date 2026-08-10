@@ -8,7 +8,7 @@ import type {
 } from '@shared/domain/graph'
 import { CONDITION_LOGICS, conditionArity, isGraphConditionOperator } from '@shared/domain/graph'
 import { isRecord } from '@shared/guards'
-import { handleId } from './handles'
+import { handleId, outputHandlesOf } from './handles'
 import { providersOf } from './mutations'
 
 /** What a branch with nothing chosen yet holds — a condition the converter drops rather than one it misreads. */
@@ -21,8 +21,8 @@ const EMPTY_BLOCK: GraphConditionBlock = { conditions: [EMPTY_CONDITION], logic:
  *
  * `parseGraph` validates the node and not its `data`, so everything here comes off a file: a block
  * that is not an object, an operator that is a number, a `conditions` that is a string. Anything
- * unreadable is dropped rather than repaired — the alternative is an editor showing a branch whose
- * compiled CEL says something else.
+ * Unreadable CONTENTS are dropped rather than repaired — the alternative is an editor showing a
+ * branch whose compiled CEL says something else. An unreadable BLOCK is another matter: see below.
  */
 export function conditionBlocksOf(node: GraphNode): readonly GraphConditionBlock[] {
   return node.type === 'ifElse' ? readConditionBlocks(node.data.conditionBlocks) : []
@@ -31,11 +31,18 @@ export function conditionBlocksOf(node: GraphNode): readonly GraphConditionBlock
 /**
  * The same reader, off a raw field — what the canvas has, where React Flow hands a node its `data`
  * as a free record and the type it was drawn for is gone.
+ *
+ * **An unreadable block is kept, empty, rather than dropped**, and that is the one place this
+ * reader departs from `parseGraph`'s "drop what does not hold". A block is a POSITION: the
+ * converter reads `conditionBlocks` raw, gives block `i` the case value `i + 2`, and calls every
+ * port past the last block the else. Drop the first of two and the screen shows one branch while
+ * the converter still counts two — the port the panel labels "otherwise" compiles as case 3, and
+ * the wire on it leaves by a branch nobody chose.
  */
 export function readConditionBlocks(held: unknown): readonly GraphConditionBlock[] {
   if (!Array.isArray(held)) return []
 
-  return held.flatMap(block => (isRecord(block) ? [blockOf(block)] : []))
+  return held.map(block => (isRecord(block) ? blockOf(block) : { conditions: [], logic: 'and' }))
 }
 
 function blockOf(block: Record<string, unknown>): GraphConditionBlock {
@@ -86,20 +93,90 @@ function valueOf(
 }
 
 /**
- * The output ports an `ifElse` with these blocks carries: one per branch, then the else.
+ * Adding a branch: a block at the end, and its port just before the else.
  *
- * Untyped, both sides: a branch passes on whatever reached the node, and a type here would refuse
- * the wire for a picture on a node steering text. Their ids are ours — the converter matches an
- * `ifElse` port by its index among the handles, never by its spelling, which is the one node type
- * where that is true.
+ * **The handles already there are kept as they are, never regenerated**, and that is what makes
+ * the wires survive. The converter matches an `ifElse` port by its INDEX among the handles — the
+ * one node type where the spelling of an id means nothing — so a file is free to name them its own
+ * way, and rebuilding the list would rename every port and cut every wire into it. It would also
+ * drop the `approval` handles the converter explicitly skips when it counts the cases.
  */
-export function ifElseOutputs(id: string, blocks: number): readonly GraphHandleOutput[] {
-  const cases = Array.from({ length: blocks }, (_unused, index) => ({
-    id: handleId(id, 'target', `case${index + 1}`),
-    name: `case${index + 1}`,
-  }))
+export function addedBranch(node: GraphNode): BranchPatch {
+  const blocks = conditionBlocksOf(node)
+  const handles = outputHandlesOf(node)
+  const port = freePort(node.id, handles, `case${blocks.length + 1}`)
+  // Inserted AT the count of blocks, which is where the else begins: appended instead, the new
+  // case would sit past the else and compile as a branch nothing can reach.
+  const grown = [...handles.slice(0, blocks.length), port, ...handles.slice(blocks.length)]
 
-  return [...cases, { id: handleId(id, 'target', 'else'), name: 'else' }]
+  return {
+    conditionBlocks: [...blocks, EMPTY_BLOCK],
+    // Then the else, for a node that came with no handles at all: without a port past the last
+    // block there is nowhere to wire what none of the branches matched.
+    outputHandles: grownTo(node.id, grown, blocks.length + 2),
+  }
+}
+
+/**
+ * Dropping branch `at`: its block and its port, together.
+ *
+ * The ports after it slide up on their own — they keep their ids, so the wires on them follow, and
+ * each lands on the block that slid up with it. Regenerating the list instead left the wire of the
+ * dropped branch pointing at `case1` and re-routed it to the branch that took its place.
+ */
+export function removedBranch(node: GraphNode, at: number): BranchPatch {
+  return {
+    conditionBlocks: conditionBlocksOf(node).filter((_block, index) => index !== at),
+    outputHandles: outputHandlesOf(node).filter((_handle, index) => index !== at),
+  }
+}
+
+/** What a branch is edited by: the two halves of one fact, never written apart. */
+export type BranchPatch = {
+  conditionBlocks: readonly GraphConditionBlock[]
+  outputHandles: readonly GraphHandleOutput[]
+}
+
+/**
+ * A port no handle of this node already carries.
+ *
+ * Ours in spelling only, and the numbering is cosmetic: a file may already hold a `case1` of its
+ * own, and two handles sharing an id would make `replaceNodePorts` keep a wire aimed at the wrong
+ * one.
+ */
+function freePort(
+  id: string,
+  handles: readonly GraphHandleOutput[],
+  name: string,
+): GraphHandleOutput {
+  const taken = new Set(handles.map(handle => handle.id))
+
+  for (let number = 1; ; number += 1) {
+    const field = number === 1 ? name : `${name}${number}`
+    const candidate = handleId(id, 'target', field)
+    if (!taken.has(candidate)) return { id: candidate, name: field }
+  }
+}
+
+/**
+ * The handles, padded to `wanted` — never trimmed.
+ *
+ * A file carrying MORE ports than blocks is carrying several else ports, which is its business:
+ * the converter reads every one of them as the else. Cutting them back would be this editor
+ * deciding what a document it did not write meant.
+ */
+function grownTo(
+  id: string,
+  handles: readonly GraphHandleOutput[],
+  wanted: number,
+): readonly GraphHandleOutput[] {
+  const grown = [...handles]
+
+  while (grown.length < wanted) {
+    grown.push(freePort(id, grown, 'else'))
+  }
+
+  return grown
 }
 
 /**
@@ -125,15 +202,6 @@ function replaceBlock(
 ): readonly GraphConditionBlock[] {
   return blocks.map((block, at) => (at === index ? next(block) : block))
 }
-
-export const addConditionBlock = (
-  blocks: readonly GraphConditionBlock[],
-): readonly GraphConditionBlock[] => [...blocks, EMPTY_BLOCK]
-
-export const removeConditionBlock = (
-  blocks: readonly GraphConditionBlock[],
-  index: number,
-): readonly GraphConditionBlock[] => blocks.filter((_block, at) => at !== index)
 
 export const setBlockLogic = (
   blocks: readonly GraphConditionBlock[],

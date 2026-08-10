@@ -15,17 +15,17 @@ import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { CONTROL, FIELD } from '@/design/styles'
 import { ToolButton } from '@/design/ToolButton'
-import { setGraphNodeBranches } from '@/engines/graph/commands'
+import { setGraphNodePorts, setGraphNodeData } from '@/engines/graph/commands'
 import {
   addCondition,
-  addConditionBlock,
+  addedBranch,
   conditionBlocksOf,
   conditionFieldsOf,
-  ifElseOutputs,
   removeCondition,
-  removeConditionBlock,
+  removedBranch,
   setBlockLogic,
   setCondition,
+  type BranchPatch,
 } from '@/engines/graph/conditions'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
@@ -54,20 +54,25 @@ export function IfElseFields({ documentId, node, edit }: IfElseFieldsProps) {
   const fields = useMemo(() => conditionFieldsOf(graph, node.id), [graph, node.id])
 
   /**
-   * The blocks AND the ports, always together.
+   * Editing what a branch ASKS leaves its ports strictly alone.
    *
-   * The converter reads an `ifElse` port by its INDEX — block `i` is case `i + 2`, everything past
-   * the last block is the else — so a block written without its port hands the else a branch, and
-   * an undo that gave one back without the other would leave the node compiling something nobody
-   * asked for.
+   * The node's handles may be a file's own — the converter matches an `ifElse` port by its index,
+   * never by its spelling — so rewriting them on a changed value would rename ports nobody
+   * touched and cut every wire into them.
    */
   const write = (next: readonly GraphConditionBlock[]): void => {
-    edit.run(
-      setGraphNodeBranches(node.id, {
-        conditionBlocks: next,
-        outputHandles: ifElseOutputs(node.id, next.length),
-      }),
-    )
+    edit.run(setGraphNodeData(node.id, { conditionBlocks: next }))
+  }
+
+  /**
+   * Adding or dropping a branch moves BOTH halves at once, in one command.
+   *
+   * A block is a position: the converter gives block `i` the case value `i + 2` and reads every
+   * port past the last block as the else. Given back apart by an undo, the else would answer for
+   * a branch — so the two are one entry in the history, never two.
+   */
+  const writeBranches = (patch: BranchPatch): void => {
+    edit.run(setGraphNodePorts(node.id, patch))
   }
 
   return (
@@ -80,7 +85,7 @@ export function IfElseFields({ documentId, node, edit }: IfElseFieldsProps) {
               label={t('inspector.removeBranch')}
               tooltip={TIP_LEFT}
               variant="header"
-              onClick={() => write(removeConditionBlock(blocks, index))}
+              onClick={() => writeBranches(removedBranch(node, index))}
             />
           </PropertyRow>
 
@@ -117,7 +122,7 @@ export function IfElseFields({ documentId, node, edit }: IfElseFieldsProps) {
           label={t('inspector.addBranch')}
           tooltip={TIP_LEFT}
           variant="header"
-          onClick={() => write(addConditionBlock(blocks))}
+          onClick={() => writeBranches(addedBranch(node))}
         />
       </PropertyRow>
     </PropertyGroup>
@@ -169,11 +174,12 @@ function ConditionRow({
           onChange={event => onChange({ field: event.target.value })}
           className={cn(CONTROL, 'min-w-0 flex-1 px-1')}
         >
-          {/* A branch wired to nothing, and one read off a file naming a node since deleted, both
-              land here. Without the row the browser shows the first node instead, so the panel
-              names a field the condition does not test. */}
-          <option value="">{t('inspector.noField')}</option>
-          {fields.map(field => (
+          {/* A branch wired to nothing lands here — and so does one whose condition names a node
+              since deleted, or names it in the `<id>_<handle>` form the converter also accepts.
+              `withChosen` below is what keeps that second case visible: an option list that does
+              not hold the value renders BLANK, over a condition that does test something. */}
+          <option value="">{t('graph.noField')}</option>
+          {withChosen(fields, condition.field).map(field => (
             <option key={field} value={field}>
               {field}
             </option>
@@ -234,6 +240,18 @@ function ConditionRow({
       )}
     </div>
   )
+}
+
+/**
+ * The chosen field kept among the options whatever the wires say — as `ModelFamilySettings` keeps
+ * the stored model among its own, and for the very same reason: a `<select>` whose value matches
+ * no option has `selectedIndex === -1` and renders blank, so the panel would read "nothing is
+ * tested" over a condition that tests something, and the next stray change would overwrite it
+ * unseen.
+ */
+function withChosen(fields: readonly string[], chosen: string | undefined): readonly string[] {
+  if (chosen === undefined || chosen === '' || fields.includes(chosen)) return fields
+  return [chosen, ...fields]
 }
 
 /**

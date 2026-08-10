@@ -108,8 +108,10 @@ export function replaceNodePorts(
   const node = next.nodes.find(candidate => candidate.id === id)
   if (!node) return graph
 
-  const inputs = 'inputHandles' in patch ? idsOf(inputHandlesOf(node)) : undefined
-  const outputs = 'outputHandles' in patch ? idsOf(outputHandlesOf(node)) : undefined
+  // The VALUE, not the key: a patch carrying `outputHandles: undefined` would pass an `in` test
+  // and have every wire judged against a list the node no longer has.
+  const inputs = patch.inputHandles === undefined ? undefined : idsOf(inputHandlesOf(node))
+  const outputs = patch.outputHandles === undefined ? undefined : idsOf(outputHandlesOf(node))
 
   // Both ends of every edge, never the first that answers: an edge may touch this node twice, and
   // an `if/else` would keep one whose surviving end vouched for a departed one.

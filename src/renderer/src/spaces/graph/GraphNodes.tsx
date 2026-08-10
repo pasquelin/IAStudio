@@ -252,7 +252,7 @@ function IfElseBody({ blocks }: { blocks: readonly GraphConditionBlock[] }) {
  */
 const readableCondition = (condition: GraphCondition, t: TFunction): string =>
   [
-    condition.field ?? t('inspector.noField'),
+    condition.field ?? t('graph.noField'),
     t(`graph.condition.${condition.operator}`),
     Array.isArray(condition.value) ? condition.value.join('…') : (condition.value ?? ''),
   ]

@@ -241,12 +241,19 @@ describe('swapping what a node is wired by', () => {
    * every wire into it would be cut by an edit that never mentioned them.
    */
   it('leaves the side the patch does not redeclare alone', () => {
+    // The node declares NO input handles, which is what makes the test discriminating: judged
+    // against them, both wires into it would be cut. A node that declares its own keeps them
+    // either way, so a fixture carrying handles proved nothing about the change.
+    const undeclared: GraphState = {
+      ...fed,
+      nodes: [text('text1'), { ...generator, data: { modelId: 'model_flux' } }],
+    }
     const outputsOnly: Partial<GraphNode['data']> = {
       outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
     }
 
     expect(
-      replaceNodePorts(fed, 'imageGenerator1', outputsOnly).edges.map(edge => edge.id),
+      replaceNodePorts(undeclared, 'imageGenerator1', outputsOnly).edges.map(edge => edge.id),
     ).toEqual(['a', 'b'])
   })
 

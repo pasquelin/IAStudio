@@ -107,7 +107,8 @@
       "lessThan": "less than",
       "lessThanOrEqual": "less than or equal to",
       "between": "between"
-    }
+    },
+    "noField": "Nothing"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
@@ -739,7 +740,6 @@
     "conditionOperator": "Comparison",
     "conditionValue": "Compared value",
     "combine": "How this combines with the condition above",
-    "noField": "Nothing",
     "rangeFrom": "Lower bound",
     "rangeTo": "Upper bound"
   },
