@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { validateEditorInfo } from '@scenario-labs/sdk'
 import type { GraphNode, GraphState } from './graph'
-import { WORKFLOW_FILE_VERSION, workflowFileOf, workflowInputsOf } from './workflow-file'
+import {
+  editorInfoOf,
+  WORKFLOW_FILE_VERSION,
+  workflowFileOf,
+  workflowInputsOf,
+} from './workflow-file'
 
 const assetNode = (id: string, data: GraphNode['data'] = {}): GraphNode => ({
   id,
@@ -151,6 +156,58 @@ describe('the file a graph becomes', () => {
       exportedAt: '2026-08-10T18:00:00.000Z',
       exportedBy: 'user_1',
       tagSet: [],
+    })
+  })
+})
+
+/**
+ * The half that reopens what the half above wrote. Three shapes reach the reader and only one is
+ * nested — read off the root, a `.workflow.json` answers an EMPTY graph, silently.
+ */
+describe('finding the graph inside whatever was read', () => {
+  it('reaches into a studio file, which nests it under editorInfo', () => {
+    const file = workflowFileOf(graphOf([assetNode('image2', { type: 'image' })]), ABOUT)
+
+    expect(editorInfoOf(file)).toEqual(file.editorInfo)
+  })
+
+  /** The API's own spelling: a workflow fetched rather than exported is the other half. */
+  it('reaches into a workflow of the API, which spells it editor_info', () => {
+    const workflow = { id: 'workflow_1', editor_info: { nodes: [], edges: [], inputKeys: [] } }
+
+    expect(editorInfoOf(workflow)).toEqual({ nodes: [], edges: [], inputKeys: [] })
+  })
+
+  /** A document holds the graph bare, and it must go through untouched. */
+  it('leaves a bare graph exactly as it is', () => {
+    const bare = { nodes: [], edges: [], inputKeys: [] }
+
+    expect(editorInfoOf(bare)).toBe(bare)
+  })
+
+  /** Anything else is handed on rather than turned into an empty object nothing explains. */
+  it('hands on what is not an object at all', () => {
+    expect(editorInfoOf(null)).toBeNull()
+    expect(editorInfoOf('a file')).toBe('a file')
+  })
+
+  /** A file whose `editorInfo` is a number is not a file with a graph in it. */
+  it('falls back to the root where the nested field is not an object', () => {
+    const odd = { editorInfo: 3, nodes: [] }
+
+    expect(editorInfoOf(odd)).toBe(odd)
+  })
+
+  /**
+   * The round trip the lot exists for, end to end: what `workflowFileOf` writes is what
+   * `editorInfoOf` finds, without either knowing about the other's shape.
+   */
+  it('finds the very graph the exporter wrote', () => {
+    const graph = graphOf([assetNode('image2', { type: 'image' })], ['image2'])
+
+    expect(editorInfoOf(workflowFileOf(graph, ABOUT))).toMatchObject({
+      nodes: graph.nodes,
+      inputKeys: ['image2'],
     })
   })
 })

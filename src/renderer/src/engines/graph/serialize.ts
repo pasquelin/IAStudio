@@ -9,6 +9,7 @@ import {
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
+import { editorInfoOf } from '@shared/domain/workflow-file'
 import { isRecord } from '@shared/guards'
 
 /**
@@ -19,7 +20,9 @@ import { isRecord } from '@shared/guards'
  * read — losing one node of a graph beats an editor that will not open. Its edges go with it,
  * for the same reason `removeNode` takes them.
  */
-export function parseGraph(raw: unknown): GraphState {
+export function parseGraph(source: unknown): GraphState {
+  // A studio file and a workflow of the API both nest the graph; a document holds it bare.
+  const raw = editorInfoOf(source)
   if (!isRecord(raw)) return EMPTY_GRAPH
 
   const nodes = firstOfEach(asArray(raw.nodes).map(parseNode).filter(isPresent), node => node.id)

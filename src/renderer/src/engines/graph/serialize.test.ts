@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_GRAPH, type GraphState } from '@shared/domain/graph'
+import { workflowFileOf } from '@shared/domain/workflow-file'
 import { parseGraph } from './serialize'
 
 /** Trimmed from `wflow_coloring-page-maker`, read off the API on 9 August 2026. */
@@ -206,6 +207,44 @@ describe('reading a graph back', () => {
     }
 
     expect(parseGraph(twice).edges).toHaveLength(1)
+  })
+
+  /**
+   * The aller-retour the export exists for, played whole. Read off the root, a `.workflow.json`
+   * answered an EMPTY graph — no error, no missing node, a canvas with nothing on it.
+   */
+  it('reopens a file the studio exported, nodes, wires and boxes', () => {
+    const graph: GraphState = {
+      nodes: [
+        { id: 'text1', type: 'text', position: { x: 0, y: 0 }, data: { group: 'g1' } },
+        { id: 'm1', type: 'model', position: { x: 9, y: 0 }, data: {} },
+      ],
+      edges: [{ id: 'e1', source: 'm1', sourceHandle: 'm1-source-prompt', target: 'text1' }],
+      inputKeys: ['text1'],
+      nodeGroups: { g1: { title: 'Heroes' } },
+    }
+
+    const file = workflowFileOf(graph, {
+      name: 'Heroes',
+      exportedAt: '2026-08-10T18:00:00.000Z',
+      exportedBy: 'project_1',
+    })
+
+    expect(parseGraph(file)).toEqual(graph)
+  })
+
+  /** A workflow fetched from the API rather than exported — the other half of "opens here". */
+  it('reopens a workflow of the API, which spells it editor_info', () => {
+    const workflow = {
+      id: 'workflow_1',
+      editor_info: {
+        nodes: [{ id: 'text1', type: 'text', position: { x: 0, y: 0 }, data: {} }],
+        edges: [],
+        inputKeys: [],
+      },
+    }
+
+    expect(parseGraph(workflow).nodes.map(node => node.id)).toEqual(['text1'])
   })
 
   /**
