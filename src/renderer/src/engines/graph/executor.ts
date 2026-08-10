@@ -7,7 +7,7 @@ import type {
 } from '@shared/domain/graph'
 import { CONDITIONAL_PORT } from '@shared/domain/graph'
 import { readString } from '@shared/guards'
-import { celVariableName } from './handles'
+import { celVariableName, DEFAULT_OUTPUT_NAME, outputHandlesOf } from './handles'
 import { approvalsOf } from './approvals'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
@@ -48,8 +48,25 @@ export type GraphRunResult =
   /** The cache the next run should start from — what was reused, plus what this run produced. */
   | { ok: true; cache: GraphCache }
 
-/** What a node hands to the ones reading it: the ids it produced, or nothing at all. */
-type Outcome = { values: readonly string[] } | null
+/**
+ * What a node hands to the ones reading it, **by output port**, or nothing at all.
+ *
+ * By port and no longer flat, because a node can have more than one: `ifElse` produces on the
+ * branch it chose and on none of the others, and a reader wired to a branch that was not taken
+ * must see nothing rather than see what a sibling branch produced. Every other node declares one
+ * port, so its record holds one entry — `outputName` says which.
+ */
+type Outcome = { values: Readonly<Record<string, readonly string[]>> } | null
+
+/**
+ * The name of a node's first output port, which is the only one every type but `ifElse` has.
+ *
+ * Resolved from the node rather than assumed to be `DEFAULT_OUTPUT_NAME`: a consumer names the
+ * port it reads from the handle the edge lands on, and a producer keying its result under another
+ * spelling would hand back nothing at all.
+ */
+const outputName = (node: GraphNode): string =>
+  outputHandlesOf(node)[0]?.name ?? DEFAULT_OUTPUT_NAME
 
 /** One node's incoming wires, read two ways: as a body's fields, and as a CEL expression's names. */
 type Resolved = {
@@ -97,10 +114,10 @@ export async function runGraph(
     return null
   }
 
-  const keep = (planned: GraphPlanNode, values: readonly string[]): Outcome => {
+  const keep = (planned: GraphPlanNode, node: GraphNode, values: readonly string[]): Outcome => {
     produced.set(planned.hash, values)
     report(planned.id, { status: 'done' })
-    return { values }
+    return { values: { [outputName(node)]: values } }
   }
 
   /**
@@ -130,9 +147,14 @@ export async function runGraph(
         const upstream = await settled.get(source.node)
         if (!upstream) return null
 
-        carried.push(...upstream.values)
+        // The port the edge leaves from, never the whole node: a branch that was not taken has
+        // no entry here, and reading the node flat would hand on what another branch produced.
+        const through = upstream.values[source.output]
+        if (!through) return null
+
+        carried.push(...through)
         if (port !== CONDITIONAL_PORT) {
-          variables[celVariableName(source.node, source.output)] = asVariable(upstream.values)
+          variables[celVariableName(source.node, source.output)] = asVariable(through)
         }
       }
 
@@ -177,7 +199,7 @@ export async function runGraph(
     report(node.id, { status: 'done' })
     // Nothing to hand on: whoever reads the guarded node reads it directly. An approval is a
     // gate, and the flow it compiles to carries a dependency rather than a value.
-    return { values: [] }
+    return { values: {} }
   }
 
   /**
@@ -197,7 +219,7 @@ export async function runGraph(
     // What the converter compiles an empty transform to — `''`, which produces nothing. Answered
     // here rather than sent across the boundary: a node nobody has written an expression into is
     // the state every one of them starts in.
-    if (expression === '') return keep(planned, [])
+    if (expression === '') return keep(planned, node, [])
 
     report(node.id, { status: 'running' })
 
@@ -207,7 +229,7 @@ export async function runGraph(
     // crossing the boundary must not file a result in the cache the next Run would reuse.
     if (stopped(node.id)) return null
 
-    return values ? keep(planned, values) : fail(node.id, 'invalid-expression')
+    return values ? keep(planned, node, values) : fail(node.id, 'invalid-expression')
   }
 
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
@@ -223,7 +245,7 @@ export async function runGraph(
     const held = cache.get(planned.hash)
     if (held) {
       report(node.id, { status: 'cached' })
-      return { values: held }
+      return { values: { [outputName(node)]: held } }
     }
 
     const inputs = await resolveInputs(planned)
@@ -238,14 +260,14 @@ export async function runGraph(
     // nothing used to hand on `['']` and write an empty prompt over whatever the form held — a
     // guaranteed 400 on a required field — while an emptied ASSET node left the form alone. One
     // rule for both: a wire carrying nothing does not overwrite.
-    if (node.type === 'text') return keep(planned, asList(node.data.value))
-    if (node.type === 'asset') return keep(planned, asList(node.data.value))
+    if (node.type === 'text') return keep(planned, node, asList(node.data.value))
+    if (node.type === 'asset') return keep(planned, node, asList(node.data.value))
     // A note is drawn on the canvas and compiles to nothing — it has no output to read either.
-    if (node.type === 'stickyNote') return { values: [] }
+    if (node.type === 'stickyNote') return { values: {} }
     // Asked only once what it guards has produced, which the inputs above are: an approval put to
     // the user before the picture exists is a question about nothing. One guarding nothing is a
     // question about nothing too — it passes without a word rather than stopping the graph.
-    if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: [] }
+    if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: {} }
     if (node.type === 'transformText') return evaluate(planned, node, inputs.variables)
     if (node.type !== 'model') return fail(node.id, 'unsupported')
 
@@ -263,7 +285,7 @@ export async function runGraph(
       // finished — and the next Run would then reuse what it produced.
       if (stopped(node.id)) return null
 
-      return keep(planned, values)
+      return keep(planned, node, values)
     } catch {
       // A stop cancels what is on the wire, so the throw that follows is the stop rather than a
       // refusal — painting the node red would blame the API for what the user just did.
