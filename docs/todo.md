@@ -895,10 +895,28 @@ est écrit ici parce que chacun demande une décision, pas une correction :**
 > Une App publique compte **62 nœuds** (`wflow_H1bKz78jgpinWPKJfVCM5uAp`) : le plafond de 50 n'est pas
 > opposé aux workflows publiés, **ce qui est à vérifier avant d'écrire le refus d'export de l'étape 9.**
 
+### L'ordre des lots qui restent — TRANCHÉ avec l'utilisateur le 10 août à midi
+
+1. **`typesConnect`** — le fil texte → prompt, correctif déjà décidé en tête de ce § 5.1 ;
+2. **`getModel`** — les fils qui n'arrivent pas dans le flow, ci-dessus. **Avant l'étape 8**, pour
+   ne pas empiler onze types de nœuds au-dessus d'un flow qui perd son câblage ;
+3. **Les quatre dettes de la revue du lot C3**, retenues telles quelles : le vocabulaire
+   (« workflow » → « App »), le nom accessible de l'icône de sortie, le graphe neuf qui s'annonce
+   en rouge, et les deux verrous d'altitude (budget de couverture de `spaces/**`, élargissement de
+   `property-line.test.ts` aux huit champs). Les deux constats **non retenus** sont la divergence
+   `parseGraphState`/`parseGraph` et la duplication de la conjonction `isOutput` — écrits plus haut,
+   à rouvrir seulement s'ils mordent ;
+4. **Étape 8**, puis **étape 9**.
+
+**La vérification contre la vraie API est groupée à la fin**, en une seule session : les lots C0
+(image de référence), C2 (exécution) et C3 (compilation) n'ont jamais touché l'API, et chacun
+séparément coûterait des crédits pour la même chaîne. **Ne lancer aucune génération payante avant
+cette session.**
+
 ## 5.2 La décision d'architecture : où le graphe s'exécute — TRANCHÉE, et livrée
 
 **B comme moteur, A comme export.** Le lot C2 a livré B — l'exécuteur local, le cache de hash, un
-`useJobs.submit` par nœud — et le lot C3 livrera A, la compilation vers le `flow` pour l'export.
+`useJobs.submit` par nœud — et le lot C3 a livré A, la compilation vers le `flow` pour l'export.
 Le tableau reste ici parce qu'il dit **pourquoi**, et parce que les colonnes « nodes non-Scenario »
 et « re-run partiel » sont les deux choses que déléguer aurait interdites.
 
