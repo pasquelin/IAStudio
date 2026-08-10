@@ -15,7 +15,7 @@ import { signatureOf, type Signature } from '@shared/domain/shortcut'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_BOTTOM, HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from './SettingLine'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
@@ -116,6 +116,7 @@ function CommandRow({
           type="button"
           aria-describedby={describedBy}
           aria-label={t(descriptor.titleKey)}
+          {...HINT_LEFT(t('settings.captureHint'))}
           onClick={onCapture}
           className={cn(
             'btn btn-sm w-40 font-mono',
@@ -279,13 +280,19 @@ function SearchByChord({
       <button
         type="button"
         className={cn('btn btn-sm font-mono', listening && 'btn-primary')}
+        {...HINT_BOTTOM(t('settings.findByChordHint'))}
         onClick={onListen}
       >
         {listening ? t('settings.pressAKey') : label(query) || t('settings.findByChord')}
       </button>
 
       {query !== null && (
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => onQuery(null)}>
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost"
+          {...HINT_BOTTOM(t('settings.showAllHint'))}
+          onClick={() => onQuery(null)}
+        >
           {t('settings.showAll')}
         </button>
       )}

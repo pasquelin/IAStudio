@@ -9,6 +9,7 @@ import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
+import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
@@ -48,6 +49,7 @@ function NavigationEntry({
       <button
         type="button"
         aria-current={active ? 'page' : undefined}
+        {...HINT_RIGHT(t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint'))}
         onClick={() => onSelect(section.id)}
         style={{ paddingLeft: `${0.75 + depth * 1}rem` }}
         className={cn(
@@ -110,6 +112,7 @@ function SearchResults({
         <section key={section}>
           <button
             type="button"
+            {...HINT_RIGHT(t('settings.searchSectionHint'))}
             onClick={() => onGo(section)}
             className="text-base-content/60 hover:text-base-content mb-1 text-[11px] tracking-wide uppercase"
           >
@@ -147,6 +150,7 @@ function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
   return (
     <button
       type="button"
+      {...HINT_RIGHT(t('settings.searchResultHint'))}
       onClick={onGo}
       className="border-base-300 hover:bg-base-300 flex w-full flex-col gap-2 border-b py-3 text-left last:border-b-0"
     >
@@ -313,15 +317,26 @@ function DraftBar() {
 
   return (
     <footer className="border-base-300 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2">
-      <button type="button" className="btn btn-sm btn-ghost" onClick={cancel}>
+      <button
+        type="button"
+        className="btn btn-sm btn-ghost"
+        {...HINT_TOP(t('settings.cancelHint'))}
+        onClick={cancel}
+      >
         {t('settings.cancel')}
       </button>
-      <button type="button" className="btn btn-sm" onClick={() => void apply()}>
+      <button
+        type="button"
+        className="btn btn-sm"
+        {...HINT_TOP(t('settings.applyHint'))}
+        onClick={() => void apply()}
+      >
         {t('settings.apply')}
       </button>
       <button
         type="button"
         className="btn btn-sm btn-primary"
+        {...HINT_TOP(t('settings.confirmHint'))}
         onClick={() => void apply().then(() => window.close())}
       >
         {t('settings.confirm')}

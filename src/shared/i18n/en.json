@@ -802,7 +802,13 @@
       "store-unreadable": "The keychain did not give your accounts back. Try again once it is unlocked — nothing was changed.",
       "read-only-account": "This account comes from secrets/.env: edit that file to rename or remove it.",
       "unexpected": "The account could not be saved."
-    }
+    },
+    "useHint": "Every generation will run on this key from now on",
+    "renameHint": "Changes only the name shown here — the key itself stays the same",
+    "removeHint": "Forgets the key on this machine; the Scenario account is untouched",
+    "saveHint": "Keeps the new name, provided no other account already has it",
+    "cancelHint": "Leaves the name as it was",
+    "addHint": "Stores the key, encrypted by the system keychain"
   },
   "errors": {
     "missingCredentials": "No credentials saved.",
@@ -1070,7 +1076,18 @@
     "projectsFolder": {
       "title": "Projects folder",
       "help": "The folder the application offers when you create or open a project. It moves nothing: projects already created stay where they are. Leave it empty to start from wherever you last were."
-    }
+    },
+    "cancelHint": "Drops the pending changes, without closing the window",
+    "applyHint": "Writes the changes now, and leaves the window open",
+    "confirmHint": "Writes the changes, then closes the window",
+    "browseHint": "Pick the folder in a system window",
+    "findByChordHint": "Click, then press a chord: the list keeps only what uses it",
+    "showAllHint": "Clears the filter and shows every shortcut again",
+    "captureHint": "Click, then press the chord to assign",
+    "sectionHint": "Shows the settings of this section",
+    "sectionStagedHint": "This section has changes that were not applied",
+    "searchSectionHint": "Opens the whole section, rather than the one result",
+    "searchResultHint": "Goes to the setting, in the section it belongs to"
   },
   "skybox": {
     "sun": "Sun",
