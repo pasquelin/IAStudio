@@ -64,6 +64,11 @@ export type GraphCache = ReadonlyMap<string, readonly string[]>
  * placed on one side or the other. Everything a node type adds of its own — `value`, `modelId`,
  * `form`, an asset's kind — is hashed without having to be listed, which is the safe default:
  * a new parameter counts until someone says it does not.
+ *
+ * `outputHandles` stays here even though an `ifElse` ROUTES by its port order, which is a thing it
+ * decides: hashing it would invalidate the readers of the branch still taken, and a reader
+ * invalidated is a generation repaid. The executor reads the cache after the inputs instead, so a
+ * reader off a branch nobody took is skipped before its hash is ever looked up.
  */
 const NOT_COMPUTED: Record<keyof GraphNodeData, true> = {
   inputHandles: true,

@@ -380,22 +380,14 @@ export async function runGraph(
   }
 
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
-    // Waited on BEFORE the cache is read, which is the whole point of the plan carrying them: a
-    // result kept from a run somebody approved must not come back on a run they have declined.
+    // Before the inputs, and both before the cache: a REFUSED approval outweighs a merely skipped
+    // provider, and a result kept from a run somebody approved must not come back on a run they
+    // have declined.
     const gate = await reachOf(planned)
 
     if (gate !== 'ready') {
       if (stopped(node.id)) return null
       return gate === 'skipped' ? skip(node.id) : fail(node.id, 'blocked')
-    }
-
-    // Read off the cache rather than off `planned.cached`, which says the same thing one step
-    // further from the values: two ways of asking one question is how they come to disagree.
-    // An approval never lands in it — it is `keep` that writes, and an approval never keeps.
-    const held = cache.get(planned.hash)
-    if (held) {
-      report(node.id, { status: 'cached' })
-      return { values: Object.fromEntries(outputNames(node).map(port => [port, held])) }
     }
 
     const inputs = await resolveInputs(planned, node)
@@ -406,6 +398,20 @@ export async function runGraph(
 
     if (inputs === 'skipped') return skip(node.id)
     if (inputs === 'blocked') return fail(node.id, 'blocked')
+
+    // Read AFTER the inputs, for the same reason: a branch routes by PORT ORDER, which is out of
+    // the hash, so swapping two of a branch's ports leaves every hash downstream identical while
+    // the routing changed underneath. A reader off a branch nobody took must go grey, not come
+    // back green off a run that took it.
+    //
+    // Read off the cache rather than off `planned.cached`, which says the same thing one step
+    // further from the values: two ways of asking one question is how they come to disagree.
+    // An approval never lands in it — it is `keep` that writes, and an approval never keeps.
+    const held = cache.get(planned.hash)
+    if (held) {
+      report(node.id, { status: 'cached' })
+      return { values: Object.fromEntries(outputNames(node).map(port => [port, held])) }
+    }
 
     // Both through `asList`, and that is the fix rather than a shortening: a text node holding
     // nothing used to hand on `['']` and write an empty prompt over whatever the form held — a

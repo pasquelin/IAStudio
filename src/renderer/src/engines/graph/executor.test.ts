@@ -1130,6 +1130,96 @@ describe('a branch, run locally', () => {
     expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
   })
 
+  /**
+   * A branch's PORT ORDER is its routing table — block `n` goes to port `n` — and it is out of the
+   * hash, deliberately: `outputHandles` says nothing about what any other node computes. So a file
+   * that swaps two ports without touching a block leaves every hash downstream identical, and the
+   * reader of the branch that is no longer taken would come back green off the cache.
+   *
+   * The skip has to be seen before the cache is read, which is why the cache is read after the
+   * inputs — the same rule the approvals already had.
+   */
+  it('skips a cached reader whose branch a reordered port no longer feeds', async () => {
+    const routed = graph('a knight')
+    const answers = decides({ "trim(text1_output) == 'a knight'": true })
+    const first = await watch(routed, { model_case1: ['asset_1'] }, { transform: answers })
+
+    // Read off the graph under test rather than rebuilt from `branchNode`: a reconstruction would
+    // go on swapping ports the suite no longer declares.
+    const ports = routed.nodes.filter(node => node.id === 'if1').flatMap(outputHandlesOf)
+    const swapped = updateNodeData(routed, 'if1', { outputHandles: ports.reverse() })
+
+    const kept = cacheOf(first.result)
+    const second = await watch(
+      swapped,
+      { model_else: ['asset_2'] },
+      { cache: kept, transform: answers },
+    )
+
+    // The premise, asserted rather than assumed: `m1` IS still a cache hit under the swapped
+    // ports. Without this, hashing the port order one day would empty the test in silence — `m1`
+    // would go skipped for the plain reason that nothing was held for it.
+    const planned = planGraph(swapped, kept)
+    expect(planned.ok && planned.order.find(node => node.id === 'm1')?.cached).toBe(true)
+
+    expect(statusesOf(second, 'm1')).toEqual(['skipped'])
+    expect(second.submitted.map(one => one.modelId)).toEqual(['model_else'])
+  })
+
+  /**
+   * The other half of reading the cache after the inputs: the stop is asked before it too. A run
+   * somebody stopped must not go on painting nodes green off an earlier one — the grey of `idle`
+   * is what a run that was interrupted looks like.
+   */
+  it('leaves a cached reader idle when the run was stopped, rather than painting it cached', async () => {
+    const routed = graph('a knight')
+    const first = await watch(
+      routed,
+      { model_case1: ['asset_1'] },
+      { transform: decides({ "trim(text1_output) == 'a knight'": true }) },
+    )
+
+    const controller = new AbortController()
+    const second = await watch(
+      routed,
+      { model_case1: ['asset_1'] },
+      {
+        cache: cacheOf(first.result),
+        signal: controller.signal,
+        transform: async () => {
+          controller.abort()
+          return ['true']
+        },
+      },
+    )
+
+    expect(statusesOf(second, 'm1')).toEqual(['idle'])
+    expect(second.submitted).toEqual([])
+  })
+
+  /**
+   * A branch that could not decide at all is not a branch that chose this reader: handing back what
+   * a previous run left in the cache would assert a route nobody took this time.
+   */
+  it('blocks a cached reader whose branch failed to decide', async () => {
+    const routed = graph('a knight')
+    const first = await watch(
+      routed,
+      { model_case1: ['asset_1'] },
+      { transform: decides({ "trim(text1_output) == 'a knight'": true }) },
+    )
+
+    const second = await watch(
+      routed,
+      { model_case1: ['asset_1'] },
+      { cache: cacheOf(first.result), transform: async () => null },
+    )
+
+    expect(failureOf(second, 'if1')).toBe('invalid-expression')
+    expect(failureOf(second, 'm1')).toBe('blocked')
+    expect(statusesOf(second, 'm1')).not.toContain('cached')
+  })
+
   it('takes the else when no condition holds', async () => {
     const watched = await watch(
       graph('a dragon'),
