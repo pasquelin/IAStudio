@@ -49,5 +49,9 @@ analysée : le repli est ce qui reste quand il n'y a rien à lire.
 **Portée** : `src/renderer/src/engines/`, `src/renderer/src/spaces/image/image-tools.ts`,
 `src/shared/constants.ts`, `src/shared/domain/`.
 
-**Rouvrable si** : un `.tsx` se met à porter un hexadécimal, ou si un repli cesse d'être
-accompagné de la raison qui le justifie.
+Le seul relevé qui tombe dans un `.tsx` — `ColorField.tsx:26` — est un `#ff0000` cité dans
+un commentaire qui explique pourquoi la pastille porte son propre nom accessible. Le
+catalogue le range déjà parmi ses faux positifs connus ; il ne se re-signale pas.
+
+**Rouvrable si** : un `.tsx` se met à porter un hexadécimal **ailleurs que dans un
+commentaire**, ou si un repli cesse d'être accompagné de la raison qui le justifie.
