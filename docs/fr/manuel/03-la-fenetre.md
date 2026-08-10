@@ -204,7 +204,8 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en cours*, *terminé*,
 > *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,
 > ou la raison pour laquelle il n’a rien produit : *boucle*, *sans modèle*, *non exécutable*,
-> *échec*, et **amont en échec** — celui-là ne veut pas dire « ça arrive », mais « ça n’arrivera
+> *échec*, *expression invalide*, et **amont en échec** — celui-là ne veut pas dire « ça arrive »,
+> mais « ça n’arrivera
 > pas » : ce dont il dépend a échoué, donc il ne partira jamais de cette exécution. Relancer après
 > avoir changé le prompt du dernier nœud ne relance **que** lui.
 >
@@ -218,6 +219,18 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > changé et que tout le reste est réutilisé : une approbation est un geste, pas un résultat
 > qu’on garde. Arrêter l’exécution pendant qu’une question est posée n’est pas un refus : le
 > nœud redevient simplement inactif.
+>
+> **Un nœud de transformation réécrit du texte.** On le pose comme les autres, on relie à son
+> entrée le nœud dont il doit reprendre le résultat, et l’Inspecteur donne son **expression** —
+> une expression CEL, le petit langage que Scenario emploie dans ses propres workflows. Ce que
+> les fils apportent s’y lit sous le nom que Scenario donne au fil : `<identifiant du nœud>_` suivi
+> du nom de sa sortie, `output` la plupart du temps. Écrire `'photo de ' + text1_output` fabrique
+> donc un prompt à partir de ce qu’un nœud Texte porte. **C’est l’évaluateur de Scenario qui
+> calcule**, le même que sur son site : ce qui marche ici marche à l’identique une fois l’App
+> publiée. Une expression laissée vide ne produit rien et n’écrase donc pas ce que le formulaire
+> du nœud suivant contient déjà ; une expression fautive — parenthèse manquante, variable qu’aucun
+> fil n’apporte, résultat qui n’est pas du texte — fait dire au nœud *expression invalide*, et
+> ceux qui le lisent disent *amont en échec*.
 >
 > Ce qu’il ne sait **pas encore** : les nœuds de logique et de boucle, et l’import/export d’un
 > workflow Scenario. Son chapitre viendra quand il les saura.
