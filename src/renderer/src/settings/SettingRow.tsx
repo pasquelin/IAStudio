@@ -10,7 +10,7 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { useToken } from '@/hooks/useToken'
 import { SettingLine } from './SettingLine'
 import { getBridge } from '@/services/bridge'
@@ -129,7 +129,12 @@ function PathControl({
         stored={stored}
         onCommit={onCommit}
       />
-      <button type="button" className="btn btn-sm shrink-0" onClick={() => void browse()}>
+      <button
+        type="button"
+        className="btn btn-sm shrink-0"
+        {...HINT_LEFT(t('settings.browseHint'))}
+        onClick={() => void browse()}
+      >
         {t('settings.browse')}
       </button>
     </div>

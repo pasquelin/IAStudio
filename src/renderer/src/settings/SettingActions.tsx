@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { SettingsSectionId } from '@shared/domain/settings'
 import { actionsIn, type SettingAction } from '@shared/domain/settings-registry'
 import { getBridge } from '@/services/bridge'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from './SettingLine'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
@@ -30,6 +31,9 @@ function ActionRow({ action }: { action: SettingAction }) {
     >
       <button
         type="button"
+        // The action's own help, under the pointer: the pane shows it beside the row, and a
+        // narrow window pushes it out of sight before the button goes with it.
+        {...HINT_LEFT(t(action.helpKey))}
         onClick={run}
         className={action.confirmKey ? 'btn btn-sm btn-error btn-outline' : 'btn btn-sm'}
       >

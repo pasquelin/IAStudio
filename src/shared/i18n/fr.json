@@ -802,7 +802,13 @@
       "store-unreadable": "Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été modifié.",
       "read-only-account": "Ce compte vient de secrets/.env : modifiez ce fichier pour le renommer ou le retirer.",
       "unexpected": "Le compte n’a pas pu être enregistré."
-    }
+    },
+    "useHint": "Toutes les générations partiront désormais de cette clé",
+    "renameHint": "Ne change que le nom affiché ici — la clé reste la même",
+    "removeHint": "Oublie la clé sur cette machine ; le compte Scenario n’est pas touché",
+    "saveHint": "Garde le nouveau nom, si aucun autre compte ne le porte déjà",
+    "cancelHint": "Laisse le nom tel qu’il était",
+    "addHint": "Enregistre la clé, chiffrée par le trousseau du système"
   },
   "errors": {
     "missingCredentials": "Aucun identifiant enregistré.",
@@ -1070,7 +1076,18 @@
     "projectsFolder": {
       "title": "Dossier des projets",
       "help": "Le dossier que l’application vous propose quand vous créez ou ouvrez un projet. Cela ne déplace rien : les projets déjà créés restent où ils sont. Laissez vide pour repartir à chaque fois du dernier endroit visité."
-    }
+    },
+    "cancelHint": "Abandonne les changements en attente, sans fermer la fenêtre",
+    "applyHint": "Écrit les changements maintenant, et laisse la fenêtre ouverte",
+    "confirmHint": "Écrit les changements, puis ferme la fenêtre",
+    "browseHint": "Choisir le dossier dans une fenêtre du système",
+    "findByChordHint": "Cliquez, puis appuyez sur une combinaison : la liste ne garde que ce qui l’utilise",
+    "showAllHint": "Enlève le filtre et remontre tous les raccourcis",
+    "captureHint": "Cliquez, puis appuyez sur la combinaison à affecter",
+    "sectionHint": "Affiche les réglages de cette section",
+    "sectionStagedHint": "Cette section a des changements non appliqués",
+    "searchSectionHint": "Ouvre la section entière, au lieu du seul résultat",
+    "searchResultHint": "Va au réglage, dans la section à laquelle il appartient"
   },
   "skybox": {
     "sun": "Soleil",

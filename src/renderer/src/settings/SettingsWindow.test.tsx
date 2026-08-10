@@ -151,6 +151,45 @@ describe('SettingsWindow', () => {
     expect(write).toHaveBeenCalledWith({ appearance: { density: 'compact' } })
   })
 
+  /**
+   * "Annuler", "Appliquer", "OK" — three words for three different fates of the same buffer,
+   * and only one of them closes the window. The face of the bar cannot say which.
+   */
+  it('tells its three fates apart, which the words alone do not', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Apparence' }))
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+
+    const contents = (name: string): string | null =>
+      screen.getByRole('button', { name }).getAttribute('data-tooltip-content')
+
+    expect(contents('Annuler')).toBe('Abandonne les changements en attente, sans fermer la fenêtre')
+    expect(contents('Appliquer')).toBe(
+      'Écrit les changements maintenant, et laisse la fenêtre ouverte',
+    )
+    expect(contents('OK')).toBe('Écrit les changements, puis ferme la fenêtre')
+  })
+
+  // The dot beside a section is the only sign that changes wait there; the sentence names it.
+  it('says why a section is marked, rather than only marking it', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+    const appearance = within(navigation()).getByRole('button', { name: 'Apparence' })
+    expect(appearance).toHaveAttribute(
+      'data-tooltip-content',
+      'Affiche les réglages de cette section',
+    )
+
+    await userEvent.click(appearance)
+    await userEvent.selectOptions(screen.getByLabelText(/Densité/), 'compact')
+
+    expect(within(navigation()).getByRole('button', { name: 'Apparence' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Cette section a des changements non appliqués',
+    )
+  })
+
   it('drops what was staged when the change is cancelled', async () => {
     const write = vi.fn((): Promise<Settings> => Promise.resolve(DEFAULT_SETTINGS))
     installFakeBridge({ settings: { write } })

@@ -11,7 +11,6 @@ impossible.
 
 | P | Fichier:ligne | Règle | Preuve |
 |---|---|---|---|
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:113 | P0-button-tooltip | libellé visible (le raccourci), aucune description |
 
 ## Peau recopiée
 
@@ -40,22 +39,6 @@ impossible.
 | P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:215 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:238 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/panels/view/View.tsx:54 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:107 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:114 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:140 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:148 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:155 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:242 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingActions.tsx:31 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingRow.tsx:131 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:47 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:110 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:147 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:314 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:317 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:320 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:275 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:284 | P0-button-tooltip | libellé visible, aucune description |
 
 ## Ce qui bloque une partie du lot
 
