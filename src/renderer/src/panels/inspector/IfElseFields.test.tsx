@@ -1,9 +1,15 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { GraphEdge, GraphNode } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphConditionBlock,
+  type GraphEdge,
+  type GraphHandleOutput,
+  type GraphNode,
+} from '@shared/domain/graph'
 import { conditionBlocksOf } from '@/engines/graph/conditions'
-import { modelNode, textNode } from '@/engines/graph/graph-fixtures'
+import { branchNode, modelNode, textNode, wire } from '@/engines/graph/graph-fixtures'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { GraphNodeInspector } from './GraphNodeInspector'
@@ -11,44 +17,32 @@ import { GraphNodeInspector } from './GraphNodeInspector'
 const DOCUMENT = 'graph-1'
 
 /**
- * The two nodes the branch is merely wired to, taken from the fabric rather than sketched: this
- * suite's subject is the branch, and a hand-written text node here carried no output port at all
- * while the very edge below named one.
+ * The three nodes and the wires between them, taken from the fabric rather than sketched: this
+ * suite's subject is what the panel WRITES on a branch, and a hand-written branch here carried no
+ * conditional port at all while the very edge below named one.
  */
 const TEXT = textNode('text1', 'a small grey rock')
 
 const MODEL = modelNode('model1')
 
-const BRANCH: GraphNode = {
-  id: 'ifElse1',
-  type: 'ifElse',
-  position: { x: 40, y: 0 },
-  data: {
-    conditionBlocks: [{ logic: 'and', conditions: [{ field: 'text1', operator: 'equals' }] }],
-    outputHandles: [
-      { id: 'ifElse1-target-case1', name: 'case1' },
-      { id: 'ifElse1-target-else', name: 'else' },
-    ],
-  },
+const TESTS_TEXT: GraphConditionBlock = {
+  logic: 'and',
+  conditions: [{ field: 'text1', operator: 'equals' }],
 }
+
+const BRANCH: GraphNode = branchNode('ifElse1', [TESTS_TEXT])
 
 /** Scenario's edge points from CONSUMER to PROVIDER: the branch reads the text node. */
-const FED: GraphEdge = {
-  id: 'e1',
-  source: 'ifElse1',
-  target: 'text1',
-  sourceHandle: 'ifElse1-source-conditional',
-  targetHandle: 'text1-target-prompt',
-}
+const FED: GraphEdge = wire('ifElse1', CONDITIONAL_PORT, 'text1', 'prompt')
 
 /** A model reading the FIRST branch, which is the port a removed block takes with it. */
-const READS_CASE1: GraphEdge = {
-  id: 'e2',
-  source: 'model1',
-  target: 'ifElse1',
-  sourceHandle: 'model1-source-prompt',
-  targetHandle: 'ifElse1-target-case1',
-}
+const READS_CASE1: GraphEdge = wire('model1', 'prompt', 'ifElse1', 'case1')
+
+/** The ports of a document the editor never made — named its own way, matched by index. */
+const THEIR_PORTS: readonly GraphHandleOutput[] = [
+  { id: 'ifElse1-out-0', name: 'a' },
+  { id: 'ifElse1-out-1', name: 'b' },
+]
 
 beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [TEXT, BRANCH, MODEL], edges: [FED], inputKeys: [] })
@@ -200,7 +194,7 @@ describe('the outputs a branch carries', () => {
     await userEvent.click(screen.getByRole('button', { name: /Supprimer cette branche/ }))
 
     const edges = graphOf(useGraphs.getState(), DOCUMENT).edges
-    expect(edges.map(edge => edge.id)).toEqual(['e1'])
+    expect(edges.map(edge => edge.id)).toEqual([FED.id])
   })
 
   /**
@@ -225,29 +219,11 @@ describe('the outputs a branch carries', () => {
    * slid into its place, while the wire of that branch was cut. No error, no warning.
    */
   it('re-aims nothing when a middle branch is dropped: each wire follows its own branch', async () => {
-    const three: GraphNode = {
-      id: 'ifElse1',
-      type: 'ifElse',
-      position: { x: 40, y: 0 },
-      data: {
-        conditionBlocks: [
-          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a' }] },
-          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'b' }] },
-        ],
-        outputHandles: [
-          { id: 'ifElse1-target-case1', name: 'case1' },
-          { id: 'ifElse1-target-case2', name: 'case2' },
-          { id: 'ifElse1-target-else', name: 'else' },
-        ],
-      },
-    }
-    const readsCase2: GraphEdge = {
-      id: 'e3',
-      source: 'model1',
-      target: 'ifElse1',
-      sourceHandle: 'model1-source-mask',
-      targetHandle: 'ifElse1-target-case2',
-    }
+    const three: GraphNode = branchNode('ifElse1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'b' }] },
+    ])
+    const readsCase2: GraphEdge = wire('model1', 'mask', 'ifElse1', 'case2')
     installGraph(DOCUMENT, {
       nodes: [TEXT, three, MODEL],
       edges: [FED, READS_CASE1, readsCase2],
@@ -265,7 +241,7 @@ describe('the outputs a branch carries', () => {
     expect(ports()).toEqual(['ifElse1-target-case2', 'ifElse1-target-else'])
 
     const edges = graphOf(useGraphs.getState(), DOCUMENT).edges
-    expect(edges.map(edge => edge.id).sort()).toEqual(['e1', 'e3'])
+    expect([...edges.map(edge => edge.id)].sort()).toEqual([FED.id, readsCase2.id].sort())
   })
 
   /**
@@ -274,18 +250,9 @@ describe('the outputs a branch carries', () => {
    * handle list, which cut every wire into the node.
    */
   it('leaves the ports of an imported node alone while a value is typed', async () => {
-    const theirs: GraphNode = {
-      id: 'ifElse1',
-      type: 'ifElse',
-      position: { x: 40, y: 0 },
-      data: {
-        conditionBlocks: [{ logic: 'and', conditions: [{ field: 'text1', operator: 'equals' }] }],
-        outputHandles: [
-          { id: 'ifElse1-out-0', name: 'a' },
-          { id: 'ifElse1-out-1', name: 'b' },
-        ],
-      },
-    }
+    const theirs: GraphNode = branchNode('ifElse1', [TESTS_TEXT], THEIR_PORTS)
+    // Written out rather than wired by the fabric: a document the editor never made names its own
+    // ports, and its edges are named its own way too.
     const readsTheirs: GraphEdge = {
       id: 'e4',
       source: 'model1',
@@ -302,23 +269,15 @@ describe('the outputs a branch carries', () => {
     await userEvent.type(screen.getByLabelText('Valeur comparée'), 'rock')
 
     expect(ports()).toEqual(['ifElse1-out-0', 'ifElse1-out-1'])
-    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual(['e1', 'e4'])
+    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual([
+      FED.id,
+      readsTheirs.id,
+    ])
   })
 
   /** And an added branch slots its port in among theirs rather than replacing the lot. */
   it('inserts a new port among the ones a file wrote', async () => {
-    const theirs: GraphNode = {
-      id: 'ifElse1',
-      type: 'ifElse',
-      position: { x: 40, y: 0 },
-      data: {
-        conditionBlocks: [{ logic: 'and', conditions: [] }],
-        outputHandles: [
-          { id: 'ifElse1-out-0', name: 'a' },
-          { id: 'ifElse1-out-1', name: 'b' },
-        ],
-      },
-    }
+    const theirs: GraphNode = branchNode('ifElse1', [{ logic: 'and', conditions: [] }], THEIR_PORTS)
     installGraph(DOCUMENT, { nodes: [TEXT, theirs, MODEL], edges: [FED], inputKeys: [] })
     show('ifElse1')
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une branche/ }))
@@ -334,16 +293,9 @@ describe('a condition whose field the wires do not offer', () => {
    * change would overwrite it unseen. `ModelFamilySettings.withStored` closes the same trap.
    */
   it('shows the field a condition names even when nothing feeds it', () => {
-    const orphan: GraphNode = {
-      id: 'ifElse1',
-      type: 'ifElse',
-      position: { x: 40, y: 0 },
-      data: {
-        conditionBlocks: [
-          { logic: 'and', conditions: [{ field: 'text1_output', operator: 'equals' }] },
-        ],
-      },
-    }
+    const orphan: GraphNode = branchNode('ifElse1', [
+      { logic: 'and', conditions: [{ field: 'text1_output', operator: 'equals' }] },
+    ])
     installGraph(DOCUMENT, { nodes: [TEXT, orphan], edges: [], inputKeys: [] })
     show('ifElse1')
 

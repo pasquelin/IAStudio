@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_GRAPH, type GraphHandleInput, type GraphHandleOutput } from '@shared/domain/graph'
 import type { FieldDescriptor } from '@shared/domain/model'
+import { edgeOf } from './connect'
 import { createModelNode, createNode } from './factory'
-import { approvalNode, branchNode, modelNode, textNode, transformNode } from './graph-fixtures'
-import { inputHandlesOf, outputHandlesOf } from './handles'
+import {
+  approvalNode,
+  branchNode,
+  modelNode,
+  textNode,
+  transformNode,
+  wire,
+} from './graph-fixtures'
+import { handleId, inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
  * The lock this file exists for.
@@ -99,5 +107,34 @@ describe('the fixtures say what the factory builds', () => {
     expect(portsOf('m1', outputHandlesOf(fixture))).toEqual(
       portsOf(built.id, outputHandlesOf(built)),
     )
+  })
+
+  /**
+   * The same lock, on the wire rather than on the node: `edgeOf` is what the canvas builds when a
+   * connection is dropped, so a fixture naming an edge any other way tests a graph the studio does
+   * not write.
+   */
+  it('gives a wire the edge edgeOf builds from the same two ports', () => {
+    const built = edgeOf({
+      source: 'model1',
+      target: 'text1',
+      sourceHandle: handleId('model1', 'source', 'prompt'),
+      targetHandle: handleId('text1', 'target', 'prompt'),
+    })
+
+    expect(wire('model1', 'prompt', 'text1', 'prompt')).toEqual(built)
+  })
+
+  /**
+   * An id built from the two NODES collides the moment one node reads another twice — a generator
+   * whose prompt and mask leave by two branches of one `ifElse`. Two edges sharing an id make
+   * `replaceNodePorts` keep whichever it meets first, so a suite exercising the second wire would
+   * be reasoning about an edge the store never held.
+   */
+  it('tells two wires between the same pair of nodes apart', () => {
+    const prompt = wire('model1', 'prompt', 'ifElse1', 'case1')
+    const mask = wire('model1', 'mask', 'ifElse1', 'case2')
+
+    expect(prompt.id).not.toBe(mask.id)
   })
 })
