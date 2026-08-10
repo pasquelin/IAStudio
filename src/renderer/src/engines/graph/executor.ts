@@ -6,9 +6,11 @@ import type {
   GraphTransformVariables,
 } from '@shared/domain/graph'
 import { CONDITIONAL_PORT } from '@shared/domain/graph'
+import { blockToCel } from '@shared/domain/branch'
 import { readString } from '@shared/guards'
 import { celVariableName, DEFAULT_OUTPUT_NAME, outputHandlesOf } from './handles'
 import { approvalsOf } from './approvals'
+import { conditionBlocksOf } from './conditions'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
 /** What the executor cannot do itself: submit work, say where it is, and be told to stop. */
@@ -118,6 +120,20 @@ export async function runGraph(
     produced.set(planned.hash, values)
     report(planned.id, { status: 'done' })
     return { values: { [outputName(node)]: values } }
+  }
+
+  /**
+   * A branch's answer: the values it was handed, on the one port it chose, and **nothing in the
+   * cache**.
+   *
+   * Uncached on purpose. The cache is keyed by hash and holds a flat list, so a reused entry could
+   * only ever come back on the FIRST port — a branch read from cache would route every run the
+   * same way, whatever its condition now says. A branch produces nothing anyway: it routes what it
+   * already received, and re-deciding costs one CEL evaluation.
+   */
+  const routeTo = (id: string, port: string, values: readonly string[]): Outcome => {
+    report(id, { status: 'done' })
+    return { values: { [port]: values } }
   }
 
   /**
@@ -232,6 +248,70 @@ export async function runGraph(
     return values ? keep(planned, node, values) : fail(node.id, 'invalid-expression')
   }
 
+  /**
+   * An `ifElse`: the first branch whose condition says true, else the last port.
+   *
+   * It produces nothing of its own — it hands on what its `conditional` port carries, to the one
+   * output the condition chose. Every other output stays absent from the outcome, which is how a
+   * reader wired to a branch that was not taken sees nothing rather than a sibling's value.
+   *
+   * The CEL is Scenario's own, character for character (`shared/domain/branch.ts`), and it is
+   * evaluated by the same port `transformText` goes through. Deciding a branch here differently
+   * from the published workflow is the one defect this must not have.
+   */
+  const route = async (
+    planned: GraphPlanNode,
+    node: GraphNode,
+    inputs: Resolved,
+  ): Promise<Outcome> => {
+    const ports = outputHandlesOf(node)
+    const carried = inputs.values[CONDITIONAL_PORT] ?? []
+
+    /**
+     * A condition names a PROVIDER NODE, and the studio binds that provider to a CEL variable.
+     *
+     * Built here rather than taken from `inputs.variables`, and that is the whole subtlety: the
+     * conditional port is dropped from those on purpose — for every other node it is the gate an
+     * approval or a branch holds, never a value to read. For the branch ITSELF it is the value
+     * being tested, so it has to be named after all.
+     */
+    const named = new Map<string, string>()
+    const variables: Record<string, string | readonly string[]> = { ...inputs.variables }
+
+    for (const [port, sources] of Object.entries(planned.inputs)) {
+      for (const source of sources) {
+        const name = celVariableName(source.node, source.output)
+        named.set(source.node, name)
+        if (port === CONDITIONAL_PORT) variables[name] = asVariable(carried)
+      }
+    }
+
+    report(node.id, { status: 'running' })
+
+    for (const [index, block] of conditionBlocksOf(node).entries()) {
+      const expression = blockToCel(block, field => named.get(field))
+      // Nothing readable to test is not the same as false: a branch the converter compiles to no
+      // case at all cannot be taken, and the run walks on to the next one.
+      if (expression === '') continue
+
+      const answer = await transform(expression, variables).catch(() => null)
+      if (stopped(node.id)) return null
+      if (!answer) return fail(node.id, 'invalid-expression')
+
+      // `['true']` because a boolean crosses the boundary as text — `workflow-transform.ts` calls
+      // `String` on it and wraps the result in a list.
+      const port = ports[index]?.name
+      if (answer[0] === 'true' && port !== undefined) return routeTo(node.id, port, carried)
+    }
+
+    // The else, which is the port past the last block. Absent only on a node whose ports were
+    // written by hand, and there the branch has nowhere to send what it received.
+    const fallback = ports[conditionBlocksOf(node).length]?.name
+    return fallback === undefined
+      ? fail(node.id, 'unsupported')
+      : routeTo(node.id, fallback, carried)
+  }
+
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
     // Waited on BEFORE the cache is read, which is the whole point of the plan carrying them: a
     // result kept from a run somebody approved must not come back on a run they have declined.
@@ -269,6 +349,7 @@ export async function runGraph(
     // question about nothing too — it passes without a word rather than stopping the graph.
     if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: {} }
     if (node.type === 'transformText') return evaluate(planned, node, inputs.variables)
+    if (node.type === 'ifElse') return route(planned, node, inputs)
     if (node.type !== 'model') return fail(node.id, 'unsupported')
 
     const { modelId, form } = node.data

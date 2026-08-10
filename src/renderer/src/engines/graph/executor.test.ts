@@ -1,8 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { GraphNode, GraphNodeRun, GraphState } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphNode,
+  type GraphNodeRun,
+  type GraphState,
+} from '@shared/domain/graph'
 import { runGraph, type GraphRunPorts, type GraphRunResult } from './executor'
 import {
   approvalNode,
+  branchNode,
   graphOf,
   guards,
   modelNode,
@@ -1040,5 +1046,97 @@ describe('a transform node', () => {
 
     expect(statusesOf(watched, 'transformText1')).toEqual(['running', 'idle'])
     expect(cacheOf(watched.result).size).toBe(1)
+  })
+})
+
+describe('a branch, run locally', () => {
+  /** Two branches and the else, fed by one text node the conditions test. */
+  const graph = (value: string): GraphState =>
+    graphOf(
+      [
+        textNode('text1', value),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }] },
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+        modelNode('m2', {}, 'model_else'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+        wire('m2', 'prompt', 'if1', 'else'),
+      ],
+    )
+
+  /** The evaluator, standing in for the thread: it answers what CEL would, not what a test wants. */
+  const decides =
+    (answers: Readonly<Record<string, boolean>>): GraphRunPorts['transform'] =>
+    async expression => [String(answers[expression] ?? false)]
+
+  it('sends what it received down the branch whose condition holds', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({ "trim(text1_output) == 'a knight'": true }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
+    expect(watched.submitted[0]?.body).toEqual({ prompt: 'a knight' })
+    expect(statusesOf(watched, 'if1')).toContain('done')
+  })
+
+  /**
+   * The reader of a branch that was not taken must see NOTHING — not what the branch that was
+   * taken produced. That is the whole reason an outcome is by port rather than a flat list.
+   */
+  it('leaves the readers of every other branch with nothing to run on', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({ "trim(text1_output) == 'a knight'": true }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).not.toContain('model_else')
+    expect(failureOf(watched, 'm2')).toBe('blocked')
+  })
+
+  it('takes the else when no condition holds', async () => {
+    const watched = await watch(
+      graph('a dragon'),
+      { model_else: ['asset_2'] },
+      {
+        transform: decides({}),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_else'])
+  })
+
+  it('takes the first branch that holds, never a later one', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({
+          "trim(text1_output) == 'a knight'": true,
+          'text1_output != null && size(text1_output) > 0 && (type(text1_output) == list || trim(text1_output) != "")': true,
+        }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
+  })
+
+  /** An expression the evaluator refuses is the node's failure, not a silent fall to the else. */
+  it('fails the branch when its condition cannot be evaluated at all', async () => {
+    const watched = await watch(graph('a knight'), {}, { transform: async () => null })
+
+    expect(failureOf(watched, 'if1')).toBe('invalid-expression')
+    expect(watched.submitted).toEqual([])
   })
 })

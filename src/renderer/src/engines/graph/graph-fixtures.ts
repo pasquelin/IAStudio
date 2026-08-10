@@ -1,4 +1,11 @@
-import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphConditionBlock,
+  type GraphEdge,
+  type GraphNode,
+  type GraphState,
+} from '@shared/domain/graph'
+import { addedBranch } from './conditions'
 import { DEFAULT_OUTPUT_NAME, handleId, loopInputId, loopOutputId } from './handles'
 import type { LoopListKind } from './loops'
 
@@ -67,6 +74,31 @@ export function approvalNode(id: string, message = ''): GraphNode {
     position: { x: 0, y: 0 },
     data: { message, inputHandles: [{ id: handleId(id, 'source', 'approval'), name: 'approval' }] },
   }
+}
+
+/**
+ * A branch, with one output port per block plus the else — grown through `addedBranch`, which is
+ * the editor's own path, so a fixture can never drift from what the inspector builds.
+ */
+export function branchNode(id: string, blocks: readonly GraphConditionBlock[]): GraphNode {
+  let node: GraphNode = {
+    id,
+    type: 'ifElse',
+    position: { x: 0, y: 0 },
+    data: {
+      // `name` and not only `id`: the plan keys an input by its port NAME, and a handle without
+      // one falls back to the raw handle id — a port nothing then reads.
+      inputHandles: [
+        { id: handleId(id, 'source', CONDITIONAL_PORT), name: CONDITIONAL_PORT, type: '' },
+      ],
+    },
+  }
+
+  for (let grown = 0; grown < blocks.length; grown += 1) {
+    node = { ...node, data: { ...node.data, ...addedBranch(node) } }
+  }
+
+  return { ...node, data: { ...node.data, conditionBlocks: blocks } }
 }
 
 /** A note: drawn on the canvas, compiled to nothing, and read by no port at either end. */
