@@ -1,4 +1,5 @@
 import type { AdjustmentStack } from '@shared/domain/adjustments'
+import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
 import {
   allLayers,
@@ -104,7 +105,7 @@ function moved(siblings: readonly Layer[], from: number, to: number): Layer[] {
   const layers = [...siblings]
   const [layer] = layers.splice(from, 1)
   if (!layer) return [...siblings]
-  layers.splice(Math.min(Math.max(to, 0), layers.length), 0, layer)
+  layers.splice(clamp(to, 0, layers.length), 0, layer)
   return layers
 }
 
