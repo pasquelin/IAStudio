@@ -348,13 +348,9 @@ export function compileGraph(
   graph: GraphState,
   { report, getModel }: CompileDeps,
 ): GraphCompileResult {
-  // The two cheap refusals are asked BEFORE the converter, and `refuseFlow` asks them again: this
-  // runs on every edit, and compiling a graph nothing reads is work thrown away.
-  if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
-
-  const pairing = loopPairingProblem(graph)
-  if (pairing) return { ok: false, problem: pairing }
-
+  // Asked of `refuseFlow` and not repeated here, though this runs on every edit: a second copy of
+  // the two cheap refusals would be two verdicts on one question, and the converter answers a
+  // graph nothing reads by filtering it down to nothing — the work saved was not worth the risk.
   const flow = toEditorFlow(graph, getModel)
   const problem = refuseFlow(graph, flow, report)
 
