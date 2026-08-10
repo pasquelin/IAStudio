@@ -6,7 +6,13 @@ import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import { workflowFileOf } from '@shared/domain/workflow-file'
-import { compileGraph, editorModelOf, modelIdsOf, toEditorFlow } from './workflow-compile'
+import {
+  compileGraph,
+  editorModelOf,
+  modelIdsOf,
+  refuseFlow,
+  toEditorFlow,
+} from './workflow-compile'
 import { publishGraph } from './workflow-publish'
 import { openTransformThread } from './transform-thread'
 import { reducedBy } from './client'
@@ -250,6 +256,10 @@ export function registerScenarioHandlers({
           const resolved = await resolveModels(published, models, queue)
           return toEditorFlow(published, modelId => resolved.get(modelId))
         },
+        refuse: (published, flow) =>
+          refuseFlow(published, flow, message =>
+            log.warn('scenario', `workflow publish: ${message}`),
+          ),
         report: message => log.warn('scenario', `workflow publish: ${message}`),
       },
     )

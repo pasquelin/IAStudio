@@ -9,7 +9,12 @@ import {
   type IsValidConnection,
   type NodeChange,
 } from '@xyflow/react'
-import type { GraphNodeRun, GraphPosition, GraphState } from '@shared/domain/graph'
+import type {
+  GraphNodeRun,
+  GraphPosition,
+  GraphState,
+  GraphPublishResult,
+} from '@shared/domain/graph'
 import { canDropConnection } from '@/engines/graph/connect'
 import type { PaletteEntry } from './palette'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
@@ -64,6 +69,8 @@ export type GraphCanvasProps = {
   onRun: () => void
   onExport: () => void
   onPublish: () => void
+  /** The last publication's outcome, painted over the compile line until the next attempt. */
+  published: GraphPublishResult | null
   /** The answer given to an approval node the run has stopped on. */
   onDecide: (nodeId: string, approved: boolean) => void
 }
@@ -104,6 +111,7 @@ export function GraphCanvas({
   onRun,
   onExport,
   onPublish,
+  published,
   onDecide,
 }: GraphCanvasProps) {
   /** An edge has no inspector face, so which one is picked never leaves this surface. */
@@ -242,7 +250,7 @@ export function GraphCanvas({
               }, [])}
             />
             {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
-            <GraphStatus result={compiled} />
+            <GraphStatus result={compiled} published={published} />
           </ReactFlow>
         </NodeDecisionProvider>
       </div>

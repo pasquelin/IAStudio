@@ -1,6 +1,6 @@
 import type { WorkflowEditorFlowItem } from '@scenario-labs/sdk'
-import type { GraphPublishResult, GraphState } from '@shared/domain/graph'
-import { workflowFileOf } from '@shared/domain/workflow-file'
+import type { GraphCompileProblem, GraphPublishResult, GraphState } from '@shared/domain/graph'
+import { workflowFileOf, type WorkflowInputDefinition } from '@shared/domain/workflow-file'
 import { messageOf } from '@shared/guards'
 
 /**
@@ -18,6 +18,8 @@ export type WorkflowWriter = {
     body: {
       editorInfo: Record<string, unknown>
       flow: readonly WorkflowEditorFlowItem[]
+      /** What the App asks its caller for. Derived from the nodes marked as inputs. */
+      inputs: readonly WorkflowInputDefinition[]
       status: 'ready'
     },
   ) => Promise<void>
@@ -27,6 +29,8 @@ export type PublishDeps = {
   write: WorkflowWriter
   /** The graph as Scenario's own flow — `toEditorFlow`, with the models already resolved. */
   flowOf: (graph: GraphState) => Promise<readonly WorkflowEditorFlowItem[]>
+  /** The compile's own verdict on that flow, so one question has one answer. `refuseFlow`. */
+  refuse: (graph: GraphState, flow: readonly WorkflowEditorFlowItem[]) => GraphCompileProblem | null
   report: (message: string) => void
 }
 
@@ -38,16 +42,19 @@ export type PublishDeps = {
  * is also the only place `status` can be set. A workflow left between the two is a `draft`, which
  * is inert rather than broken: it appears in the account, and it runs nothing.
  *
- * An empty flow is refused HERE rather than sent: a workflow marked `ready` with nothing in it is
- * an App that answers nothing, and the user gets the same code the compile already speaks.
+ * **The compile's refusals are rejoined here, and by the very function the editor paints from.**
+ * A graph the editor shows as `invalid` — a loop whose end names no parent, say — would otherwise
+ * be published as `ready` all the same: either the account gains an App that fails at run time, or
+ * the API says 400 and a `draft` is left behind, and neither says a word.
  */
 export async function publishGraph(
   graph: GraphState,
   about: { name: string; description: string; exportedAt: string; exportedBy: string },
-  { write, flowOf, report }: PublishDeps,
+  { write, flowOf, refuse, report }: PublishDeps,
 ): Promise<GraphPublishResult> {
   const flow = await flowOf(graph)
-  if (flow.length === 0) return { ok: false, problem: 'empty' }
+  const problem = refuse(graph, flow)
+  if (problem) return { ok: false, problem }
 
   const file = workflowFileOf(graph, about)
 
@@ -55,7 +62,14 @@ export async function publishGraph(
     const { id } = await write.create({ name: file.name, description: file.description })
     // `editorInfo` is what makes the workflow OPENABLE again — in the webapp, and here. Written
     // as the file writes it, so a graph published and a graph exported carry the same thing.
-    await write.update(id, { editorInfo: { ...file.editorInfo }, flow, status: 'ready' })
+    // `inputs` and not just the flow: the App asks its caller for what the graph marks as an
+    // input, and the converter cannot derive it — `inputKeys` only ever SORTS in that file.
+    await write.update(id, {
+      editorInfo: { ...file.editorInfo },
+      flow,
+      inputs: file.inputs,
+      status: 'ready',
+    })
 
     return { ok: true, workflowId: id }
   } catch (error) {

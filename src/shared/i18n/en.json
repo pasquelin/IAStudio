@@ -129,6 +129,10 @@
       "audio": "Generates a sound from its inputs — the model is picked in the Models panel"
     }
   },
+  "graphPublish": {
+    "done": "Published to Scenario",
+    "refused": "Scenario refused it — see the journal"
+  },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
     "steps_other": "{{count, number}} steps",

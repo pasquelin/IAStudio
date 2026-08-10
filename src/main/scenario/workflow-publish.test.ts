@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { WorkflowEditorFlowItem } from '@scenario-labs/sdk'
-import type { GraphState } from '@shared/domain/graph'
+import type { GraphCompileProblem, GraphState } from '@shared/domain/graph'
 import { publishGraph, type WorkflowWriter } from './workflow-publish'
 
 const graph: GraphState = {
@@ -31,9 +31,14 @@ const writerOf = (overrides: Partial<WorkflowWriter> = {}): WorkflowWriter => ({
   ...overrides,
 })
 
-const deps = (writer: WorkflowWriter, flow = oneStep) => ({
+const deps = (
+  writer: WorkflowWriter,
+  flow = oneStep,
+  refused: GraphCompileProblem | null = null,
+) => ({
   write: writer,
   flowOf: () => Promise.resolve(flow),
+  refuse: () => refused,
   report: vi.fn(),
 })
 
@@ -53,6 +58,7 @@ describe('publishing a graph', () => {
     expect(update).toHaveBeenCalledWith('workflow_7', {
       editorInfo: { nodes: graph.nodes, edges: [], inputKeys: [] },
       flow: oneStep,
+      inputs: [expect.objectContaining({ name: 'image2' })],
       status: 'ready',
     })
   })
@@ -76,11 +82,52 @@ describe('publishing a graph', () => {
   it('refuses an empty flow before it creates anything', async () => {
     const create = vi.fn(() => Promise.resolve({ id: 'workflow_1' }))
 
-    await expect(publishGraph(graph, ABOUT, deps(writerOf({ create }), []))).resolves.toEqual({
-      ok: false,
-      problem: 'empty',
-    })
+    await expect(
+      publishGraph(graph, ABOUT, deps(writerOf({ create }), [], 'empty')),
+    ).resolves.toEqual({ ok: false, problem: 'empty' })
     expect(create).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The compile's own verdict, and not a second one. A graph the editor paints `invalid` — a loop
+   * whose end names no parent — was published as `ready` all the same until this.
+   */
+  it('refuses what the editor already paints as invalid, without creating anything', async () => {
+    const create = vi.fn(() => Promise.resolve({ id: 'workflow_1' }))
+
+    await expect(
+      publishGraph(graph, ABOUT, deps(writerOf({ create }), oneStep, 'invalid')),
+    ).resolves.toEqual({ ok: false, problem: 'invalid' })
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  /** Nothing marked as an output is the refusal the user can act on, and it must survive here. */
+  it('passes the no-output refusal through rather than flattening it to empty', async () => {
+    await expect(
+      publishGraph(graph, ABOUT, deps(writerOf(), oneStep, 'no-output')),
+    ).resolves.toEqual({ ok: false, problem: 'no-output' })
+  })
+
+  /**
+   * The App has to ASK its caller for what the graph marks as an input. Computed and then dropped,
+   * a published workflow opened in the webapp showed an empty form and could be run with nothing.
+   */
+  it('sends the inputs the graph declares, not only its flow', async () => {
+    const update = vi.fn((_id: string, _body: { inputs: readonly unknown[] }) => Promise.resolve())
+
+    await publishGraph(graph, ABOUT, deps(writerOf({ update })))
+
+    expect(update.mock.calls[0]?.[1].inputs).toEqual([
+      {
+        name: 'image2',
+        label: 'Hero',
+        description: '',
+        type: 'file',
+        kind: 'image',
+        costImpact: false,
+        required: { always: false },
+      },
+    ])
   })
 
   /** The API's own sentence belongs to the journal; the screen gets the code. */

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { validateEditorInfo } from '@scenario-labs/sdk'
 import type { GraphNode, GraphState } from './graph'
 import { WORKFLOW_FILE_VERSION, workflowFileOf, workflowInputsOf } from './workflow-file'
 
@@ -82,6 +83,26 @@ describe('the inputs a graph declares', () => {
   })
 })
 
+/**
+ * The promise of the whole lot, checked against the very validator the webapp runs on import —
+ * `validateEditorInfo`, exported by the SDK. Nothing else can prove "a graph made in the studio
+ * opens in the webapp": the shape was read off one App, and one App is not the contract.
+ */
+describe('the file, put through the webapp’s own import validator', () => {
+  it('is accepted as it stands', () => {
+    const graph = graphOf([assetNode('image2', { isInput: true, type: 'image', title: 'Hero' })])
+
+    expect(() => validateEditorInfo(workflowFileOf(graph, ABOUT))).not.toThrow()
+  })
+
+  /** The version is what it checks first, and ours is written for that reason. */
+  it('is refused once the version is not the one it knows', () => {
+    const file = { ...workflowFileOf(graphOf([]), ABOUT), version: '2.0' }
+
+    expect(() => validateEditorInfo(file)).toThrow()
+  })
+})
+
 describe('the file a graph becomes', () => {
   it('writes the version the webapp validates', () => {
     expect(workflowFileOf(graphOf([]), ABOUT).version).toBe(WORKFLOW_FILE_VERSION)
@@ -97,6 +118,26 @@ describe('the file a graph becomes', () => {
       edges: [],
       inputKeys: ['image2'],
     })
+  })
+
+  /**
+   * The boxes a user drew around their nodes. Dropped, an export loses them while every node keeps
+   * a `data.group` naming an id nothing resolves — an aller-retour that is not idempotent.
+   */
+  it('carries the node groups too', () => {
+    const grouped: GraphState = {
+      ...graphOf([assetNode('image2', { type: 'image', group: 'g1' })]),
+      nodeGroups: { g1: { title: 'Heroes' } },
+    }
+
+    expect(workflowFileOf(grouped, ABOUT).editorInfo).toMatchObject({
+      nodeGroups: { g1: { title: 'Heroes' } },
+    })
+  })
+
+  /** A graph with no box says nothing rather than an empty one, as the reader writes it. */
+  it('leaves the groups out where the graph has none', () => {
+    expect(workflowFileOf(graphOf([]), ABOUT).editorInfo).not.toHaveProperty('nodeGroups')
   })
 
   /**

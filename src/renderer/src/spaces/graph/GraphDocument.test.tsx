@@ -172,6 +172,40 @@ describe('a graph as a document', () => {
       expect(publish).toHaveBeenCalledOnce()
     })
 
+    /**
+     * A publication is a WRITE on the user's account. Silent, it was worse than useless: a refused
+     * click looked exactly like a successful one, and clicking twice left two drafts behind.
+     */
+    it('says on the canvas that the publication went through', async () => {
+      installFakeBridge({
+        workflows: {
+          publish: (): Promise<GraphPublishResult> =>
+            Promise.resolve({ ok: true, workflowId: 'workflow_1' }),
+        },
+      })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
+
+      expect(await screen.findByText('Publié sur Scenario')).toBeInTheDocument()
+    })
+
+    it('says on the canvas that Scenario refused it', async () => {
+      installFakeBridge({
+        workflows: {
+          publish: (): Promise<GraphPublishResult> =>
+            Promise.resolve({ ok: false, problem: 'refused' }),
+        },
+      })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
+
+      expect(await screen.findByText(/Scenario l’a refusé/)).toBeInTheDocument()
+    })
+
     /** A refusal from the other side is journalled, never thrown at the window. */
     it('journals a refusal instead of letting it escape', async () => {
       installFakeBridge({ workflows: { export: () => Promise.reject(new Error('no disk')) } })

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { CommandId } from '@shared/domain/command'
+import type { GraphPublishResult } from '@shared/domain/graph'
 import { isRunnable, type GraphPosition } from '@shared/domain/graph'
 import {
   addGraphNode,
@@ -37,6 +38,9 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   // `workflow_create` refuses empty `nodes`/`edges`, so an empty graph writes a file the webapp
   // would not take back.
   const canExport = graph.nodes.length > 0
+  // Held here rather than in the bar: a write on the account must leave a mark on the screen, and
+  // the canvas already has the one line that says what the graph would export.
+  const [published, setPublished] = useState<GraphPublishResult | null>(null)
   /**
    * Held here, not in the global selection: that one carries a single kind at a time, so clicking
    * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
@@ -225,8 +229,10 @@ export function GraphDocument({ documentId }: { documentId: string }) {
    * the same question the compile already asks; the journal carries the API's sentence meanwhile.
    */
   const onPublish = useCallback(() => {
+    setPublished(null)
     void getBridge()
       ?.workflows.publish(graph, title)
+      .then(setPublished)
       .catch(error => reportFailure('graph.publish', documentId, error))
   }, [documentId, graph, title])
 
@@ -268,6 +274,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       canExport={canExport}
       onExport={onExport}
       onPublish={onPublish}
+      published={published}
       runs={runs}
       running={running}
     />

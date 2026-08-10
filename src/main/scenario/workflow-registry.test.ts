@@ -68,6 +68,7 @@ describe('publishing through the registry', () => {
     await registry.update('workflow_1', {
       editorInfo: { nodes: [], edges: [], inputKeys: [] },
       flow: [{ id: 'm1', type: 'custom-model' }],
+      inputs: [],
       status: 'ready',
     })
     await registry.search({})

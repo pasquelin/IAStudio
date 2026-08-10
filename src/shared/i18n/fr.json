@@ -129,6 +129,10 @@
       "audio": "Génère un son depuis ses entrées — le modèle se choisit dans le panneau Modèles"
     }
   },
+  "graphPublish": {
+    "done": "Publié sur Scenario",
+    "refused": "Scenario l’a refusé — voir le journal"
+  },
   "graphCompile": {
     "steps_one": "{{count, number}} étape",
     "steps_other": "{{count, number}} étapes",

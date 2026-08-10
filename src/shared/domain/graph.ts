@@ -349,7 +349,15 @@ const SILENT_NODE_TYPES: readonly GraphNodeType[] = ['text', 'asset', 'stickyNot
 export const isRunnable = (graph: GraphState): boolean =>
   graph.nodes.some(node => !SILENT_NODE_TYPES.includes(node.type))
 
-/** Scenario's own limit on a workflow, which only the export has to obey — see the plan, step 9. */
+/**
+ * Scenario's announced limit on a workflow, kept as a NUMBER NOBODY ENFORCES — deliberately.
+ *
+ * The export was written and does not obey it, and the reason is measured: no call has ever
+ * confirmed the ceiling, and the one App readable from here holds 42 editor nodes (its 62 is a
+ * count of FLOW items, which is not the same grandeur). A local refusal on an unmeasured
+ * threshold turns away graphs Scenario accepts, where the API says the truth. Left here for
+ * whoever measures it one day, not as a rule to reinstate on the prose alone.
+ */
 export const MAX_GRAPH_NODES_FOR_EXPORT = 50
 
 /**
@@ -590,13 +598,6 @@ export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
 ]
 
 /**
- * What compiling a graph answers.
- *
- * `steps` rather than the flow itself, and deliberately: nothing consumes a flow yet — the export
- * arrives with step 9 — and carrying one across the boundary on every keystroke would clone the
- * whole workflow for a number. The day it is exported this gains a field; until then it answers
- * what the editor can act on.
- */
 /**
  * What publishing a graph answers: the workflow it became, or why it did not.
  *
@@ -607,5 +608,12 @@ export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
 export type GraphPublishResult =
   { ok: true; workflowId: string } | { ok: false; problem: GraphCompileProblem | 'refused' }
 
+/**
+ * What compiling a graph answers.
+ *
+ * `steps` rather than the flow itself: carrying a whole flow across the boundary on every
+ * keystroke would clone the workflow for a number. The export builds its own — `refuseFlow` is
+ * what the two share, so one question keeps one answer.
+ */
 export type GraphCompileResult =
   { ok: true; steps: number } | { ok: false; problem: GraphCompileProblem }

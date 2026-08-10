@@ -51,6 +51,7 @@ describe('the two writes a publication is', () => {
     await workflowCatalogOf(scenario).update('workflow_7', {
       editorInfo: { nodes: [], edges: [], inputKeys: [] },
       flow,
+      inputs: [],
       status: 'ready',
     })
 

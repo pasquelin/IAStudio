@@ -583,14 +583,18 @@ describe('scenario handlers', () => {
       expect(update.mock.calls[0]?.[0]).toBe('workflow_9')
     })
 
-    /** Nothing marked as an output compiles to an empty flow, and an empty App answers nothing. */
-    it('refuses to publish a graph nothing reaches', async () => {
+    /**
+     * The refusal the user can ACT on, and the same one the editor already paints. Answered
+     * `empty` until the publication rejoined the compile's own verdict, which is the difference
+     * between "mark a node as an output" and a code that says nothing.
+     */
+    it('refuses to publish a graph nothing reaches, in the compile’s own words', async () => {
       const create = vi.fn(() => Promise.resolve({ id: 'workflow_9' }))
       register({ workflows: workflowRegistry({ create }) })
 
       await expect(invoke(CHANNELS.workflowsPublish, withInput, 'Heroes')).resolves.toEqual({
         ok: false,
-        problem: 'empty',
+        problem: 'no-output',
       })
       expect(create).not.toHaveBeenCalled()
     })

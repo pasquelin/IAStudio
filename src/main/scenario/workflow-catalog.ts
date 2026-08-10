@@ -12,6 +12,7 @@ import type { WorkflowCatalog, WorkflowListRequest } from './workflow-registry'
  * ten strings written on our side that would drift the day an eleventh arrives.
  */
 type UpdatableFlow = Parameters<Scenario['workflows']['update']>[1]['flow']
+type UpdatableInputs = Parameters<Scenario['workflows']['update']>[1]['inputs']
 
 /**
  * Binds the registry's narrow catalogue to the real SDK. The only file where the two meet, so
@@ -59,8 +60,11 @@ export function workflowCatalogOf(client: Scenario): WorkflowCatalog {
       // The one cast of this file, and the reason is above: the values come from the SDK's own
       // converter, so they are the union it asks for — only its types fail to say so.
       const flow = [...body.flow] as UpdatableFlow
+      // Same reason, same file: `WorkflowInputDefinition` is shaped on what `inputs_definition`
+      // answers, and the SDK types the parameter with its own narrower unions.
+      const inputs = [...body.inputs] as UpdatableInputs
 
-      await client.workflows.update(workflowId, { ...body, flow })
+      await client.workflows.update(workflowId, { ...body, flow, inputs })
     },
   }
 }

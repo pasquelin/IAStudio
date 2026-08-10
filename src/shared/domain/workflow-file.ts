@@ -35,7 +35,7 @@ export type WorkflowFile = {
   version: string
   name: string
   description: string
-  editorInfo: Pick<GraphState, 'nodes' | 'edges' | 'inputKeys'>
+  editorInfo: Pick<GraphState, 'nodes' | 'edges' | 'inputKeys' | 'nodeGroups'>
   inputs: readonly WorkflowInputDefinition[]
   tagSet: readonly string[]
   exportedAt: string
@@ -100,7 +100,14 @@ export function workflowFileOf(
     version: WORKFLOW_FILE_VERSION,
     name: about.name,
     description: about.description ?? '',
-    editorInfo: { nodes: graph.nodes, edges: graph.edges, inputKeys: graph.inputKeys },
+    // `nodeGroups` travels too, and its absence was not free: dropped, the boxes a user drew
+    // vanish on the round trip while every node keeps a `data.group` naming an id nothing resolves.
+    editorInfo: {
+      nodes: graph.nodes,
+      edges: graph.edges,
+      inputKeys: graph.inputKeys,
+      ...(graph.nodeGroups ? { nodeGroups: graph.nodeGroups } : {}),
+    },
     inputs: workflowInputsOf(graph),
     tagSet: [],
     exportedAt: about.exportedAt,
