@@ -1,5 +1,5 @@
 import type { Object3D } from 'three'
-import { canRotate, type SceneNodeType } from './scene-state'
+import { rotationShows, type SceneNodeType } from './scene-state'
 
 /** `select` clicks without arming a gizmo — the mode you come back to. */
 export type TransformMode = 'select' | 'translate' | 'rotate' | 'scale'
@@ -59,5 +59,5 @@ export function gizmoTargetFor(
  * around it.
  */
 function turns(object: Object3D, node: { type: SceneNodeType } | undefined): boolean {
-  return !node || canRotate(node) || object.children.length > 0
+  return !node || rotationShows(node, () => object.children.length > 0)
 }

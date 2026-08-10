@@ -69,12 +69,14 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > ouverte : ce que fait un clic sur une vignette de bibliothèque **pas encore rapatriée** (entrée
 > 12). **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
 >
-> **Le prochain chantier libre est l'entrée 36** (§ 4.3), et il est déjà repéré : `canRotate` existe
-> et `gizmoTargetFor` le consulte, mais `TransformSection` rend la ligne Rotation sans le lire, et
-> la garde `refuses` de `commands.ts` ne filtre que les drapeaux d'ombre. La condition qui compte
-> est celle des enfants — un sprite dont des nœuds descendent tourne pour de vrai.
+> **L'entrée 36 est livrée le 10 août 2026** (rotation d'un sprite) : la règle vit désormais dans
+> `rotationShows` de `scene-state.ts`, et les trois côtés la lisent — la poignée du viewport, la
+> ligne de l'inspecteur, et `setTransform`, qui laisse tomber l'angle sans refuser le reste du
+> déplacement. **Ce que ce lot a montré et qui resservira** : une garde qui dépend de la scène ne
+> peut pas être figée à la construction d'une commande — `editNode` accepte pour ça une fonction
+> `(node, state) => NodePatch`, relue à chaque `apply`, donc au redo.
 >
-> Les autres candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** (§ 5) · le reste
+> Les candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** (§ 5) · le reste
 > des retours d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par espace** (§ 4), dont
 > deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
 >
@@ -900,8 +902,7 @@ et un BVH construit en worker pour le picking.
 
 **Une dette de cet espace est rangée ailleurs, et pour la même raison : son sujet n'est pas la 3D.**
 Les branchements que la couverture certifie sans que rien ne les tienne sont au **§ 0.3** : ce qu'ils
-mettent en cause est le filet, pas l'espace. **L'entrée 36 ci-dessous, elle, est bien de la 3D**, et
-elle voisine ce que le lot sprite a laissé derrière lui.
+mettent en cause est le filet, pas l'espace.
 
 **Le canal d'échec du renderer — ce qui reste** : six avaleurs de rejets attendent (`Rail`, `peaks`,
 `prepareEdit`, `decoder-pool`, `useWaveSurfer`, `Models`). Une piste écartée volontairement :
@@ -916,28 +917,6 @@ la clé API** — il faudrait la réduire avant, et `log.ts` l'écrit en gros.
   `Ctrl` — `signatureOf` lit `event.metaKey`. C'est la convention de tout `COMMAND_REGISTRY`, `⌘Z`
   compris : la corriger touche la résolution des raccourcis de toute l'application. Documenté aux
   chapitres 15 et 18 du manuel.
-
----
-
-### 36. Un sprite refuse la poignée de rotation, mais l'inspecteur laisse encore taper l'angle
-
-**Le geste attendu.** Sur un sprite seul, la ligne Rotation de l'inspecteur ne doit pas accepter une valeur qui ne se
-voit nulle part.
-
-**Vu le 9 août 2026.** `gizmoTargetFor` refuse désormais la poignée sur un sprite seul et sans
-enfant — three ne lit jamais la rotation d'objet d'un sprite, vérifié dans `sprite.glsl.js` de three
-0.185 : le shader lit les *longueurs* des deux premières colonnes de la matrice, qu'une rotation
-laisse intactes, et prend son angle d'un `uniform` de matériau.
-
-Mais `TransformSection` rend la ligne Rotation pour tous les types sans consulter `canRotate`, et la
-garde de commande (`commands.ts`, `refuses`) ne filtre que les drapeaux d'ombre. La saisie numérique
-salit donc toujours le document et empile un undo sans effet visuel.
-
-**La condition qui rend ça délicat** : la garde de commande doit tenir compte des enfants —
-`state.nodes.some(n => n.parentId === node.id)` — sinon elle casse un cas légitime, puisque tourner
-un sprite dont d'autres nœuds descendent les fait pivoter, et ça se voit. Le précédent du dépôt est à
-trois côtés : `canCastShadow`/`canReceiveShadow` sont consultés dans le renderer, dans
-`ShadowSection` **et** dans la garde de commande.
 
 ---
 
@@ -1699,6 +1678,25 @@ dit rien n'est pas un fichier qui dit faux.
 
 **Une optimisation non mesurée est une complexité gratuite.** L'audit 3D est le cas d'école : cinq pistes
 de revue, cinq réfutées par la mesure, **zéro ligne changée**.
+
+### Ce que coûte une garde qui interroge la scène dans une commande — mesuré le 10 août 2026
+
+`setTransform` demande depuis l'entrée 36 si le nœud porte des enfants, et cette question balaie
+`state.nodes`. Mesuré sur `moveNodes(...).apply(...)`, le chemin d'une image de drag, médiane de 5,
+plancher de bruit relevé entre 4 % et 12 % selon le cas :
+
+| Scène | avant | après | écart |
+|---|---|---|---|
+| 1000 **mailles**, 30 tirées | 0,2372 ms | 0,2363 ms | **−0,4 %, sous le bruit** |
+| 1000 **mailles**, toutes tirées | 8,96 ms | 8,61 ms | **−3,9 %, sous le bruit** |
+| 1000 **sprites**, 30 tirés | 0,2532 ms | 0,3270 ms | +29 % — **0,07 ms en absolu** |
+| 1000 **sprites**, tous tirés | 9,33 ms | 11,38 ms | +22 % — 2 ms, cas non réaliste |
+
+**Ce qui a rendu le cas courant gratuit** : le second argument de `rotationShows` est une **fonction**,
+pas un booléen. Une maille répond par son type et la scène n'est jamais parcourue ; seul un sprite paie.
+La première écriture passait le booléen déjà calculé et coûtait **+30 % sur les mailles aussi** — c'est
+la mesure qui l'a montrée, pas la relecture. **Une garde posée sur un chemin par image ne prend son
+argument que si elle en a besoin.**
 
 ### Audit 1 — le chemin chaud de l'inspecteur 3D : ce n'en est pas un
 
