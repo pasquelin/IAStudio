@@ -5,11 +5,17 @@ import {
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
-import { compileGraph } from './workflow-compile'
+import { compileGraph, toEditorFlow } from './workflow-compile'
 
 const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
   `${nodeId}-${side}-${field}`
 
+/**
+ * As `createNode` builds one, handle id included — and that is not a detail. A text node's output
+ * is `<id>-target-PROMPT`, named `output`: the field is not the name. Written any other way the
+ * converter simply does not match the wire, the generator falls back to its form, and a test whose
+ * two prompts happened to be the same word would call that a resolution.
+ */
 function textNode(id: string, value: string): GraphNode {
   return {
     id,
@@ -17,7 +23,7 @@ function textNode(id: string, value: string): GraphNode {
     position: { x: 0, y: 0 },
     data: {
       value,
-      outputHandles: [{ id: handleId(id, 'target', 'output'), name: 'output', type: 'prompt' }],
+      outputHandles: [{ id: handleId(id, 'target', 'prompt'), name: 'output', type: 'text' }],
     },
   }
 }
@@ -61,26 +67,53 @@ const compile = (graph: GraphState) => {
   return { result: compileGraph(graph, { report }), report }
 }
 
+/** What the flow is made of, in order — the one assertion a step count cannot stand in for. */
+const idsOf = (graph: GraphState): readonly string[] => toEditorFlow(graph).map(step => step.id)
+
 describe('compiling a graph', () => {
   it('turns a text node feeding a generator into a flow', () => {
     const graph = graphOf(
       [textNode('text1', 'a knight'), modelNode('m1', true)],
-      [wire('m1', 'prompt', 'text1', 'output')],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
     )
 
     expect(compile(graph).result).toEqual({ ok: true, steps: expect.any(Number) })
   })
 
+  /**
+   * The figure is read off the FLOW, never off the canvas — and asserted exactly, because a loose
+   * `> 0` is what let a mutation returning the node count survive. A text node becomes a
+   * `transform` step of its own here; two nodes, two steps, and that is the converter's decision
+   * rather than ours.
+   */
   it('counts the steps the flow holds rather than the nodes on the canvas', () => {
     const graph = graphOf(
-      [textNode('text1', 'a knight'), modelNode('m1', true)],
-      [wire('m1', 'prompt', 'text1', 'output')],
+      [textNode('text1', 'a dragon'), modelNode('m1', true)],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
     )
-    const { result } = compile(graph)
 
-    // The text node folds into the generator's own input rather than becoming a step of its own,
-    // which is exactly why the figure is read off the flow and not counted here.
-    expect(result.ok && result.steps).toBeGreaterThan(0)
+    expect(idsOf(graph)).toEqual(['text1', 'm1'])
+    expect(compile(graph).result).toEqual({ ok: true, steps: 2 })
+  })
+
+  /**
+   * The generator carries its form into the flow, which is what makes a compiled workflow runnable
+   * without the editor beside it.
+   *
+   * What is NOT asserted here, deliberately: that the wire OVERRIDES that value. It does not —
+   * measured, with the node's own handle ids from `factory.ts` — and the reason is a question this
+   * lot cannot answer, written up in `docs/todo.md` § 5.1: a text node's output is typed `text`
+   * while a model's prompt port is typed `prompt`, so `typesConnect` would refuse the connection
+   * on our own canvas. Claiming a resolution here would be claiming a measurement nobody made.
+   */
+  it('carries the form of a generator into the step it becomes', () => {
+    const graph = graphOf([modelNode('m1', true)])
+    const generator = toEditorFlow(graph).find(step => step.id === 'm1')
+
+    expect(generator).toMatchObject({ type: 'custom-model', modelId: 'model_flux' })
+    expect(generator?.inputs).toContainEqual(
+      expect.objectContaining({ name: 'prompt', value: 'a knight' }),
+    )
   })
 
   /**
@@ -120,7 +153,15 @@ describe('compiling a graph', () => {
       data: {},
     }
 
-    expect(compile(graphOf([nameless, modelNode('m1', true)])).result.ok).toBe(true)
+    expect(idsOf(graphOf([nameless, modelNode('m1', true)]))).toEqual(['m1'])
+  })
+
+  /** An edge naming neither of its handles is a dependency with no port — still an edge. */
+  it('carries an edge that names no handle rather than dropping it', () => {
+    const bare: GraphEdge = { id: 'e1', source: 'm1', target: 'text1' }
+    const graph = graphOf([textNode('text1', 'a dragon'), modelNode('m1', true)], [bare])
+
+    expect(idsOf(graph)).toEqual(['text1', 'm1'])
   })
 
   /**
@@ -136,7 +177,10 @@ describe('compiling a graph', () => {
     }
     const graph = graphOf([note, modelNode('m1', true)])
 
-    expect(compile(graph).result.ok).toBe(true)
+    // Two nodes, one step — which is also what pins the figure to the FLOW rather than to the
+    // canvas: counted off `graph.nodes`, this would answer two.
+    expect(idsOf(graph)).toEqual(['m1'])
+    expect(compile(graph).result).toEqual({ ok: true, steps: 1 })
   })
 })
 
@@ -144,7 +188,7 @@ describe('what a graph is refused for', () => {
   it('refuses one where nothing is marked as an output', () => {
     const graph = graphOf(
       [textNode('text1', 'a knight'), modelNode('m1', false)],
-      [wire('m1', 'prompt', 'text1', 'output')],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
     )
 
     expect(compile(graph).result).toEqual({ ok: false, problem: 'no-output' })
@@ -189,13 +233,6 @@ describe('what a graph is refused for', () => {
     }
 
     expect(compile(graphOf([end])).result).toEqual({ ok: false, problem: 'empty' })
-  })
-
-  it('carries an edge that names no handle rather than dropping it', () => {
-    const bare: GraphEdge = { id: 'e1', source: 'm1', target: 'text1' }
-    const graph = graphOf([textNode('text1', 'a knight'), modelNode('m1', true)], [bare])
-
-    expect(compile(graph).result.ok).toBe(true)
   })
 
   it('says nothing to the journal about a graph that compiles', () => {

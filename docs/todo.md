@@ -980,6 +980,18 @@ est écrit ici parce que chacun demande une décision, pas une correction :**
 8. **`role="status"` est posé par nœud**, donc vingt régions live sur un graphe de vingt nœuds.
    Ailleurs le dépôt n'en met qu'une, et `ProgressRow` — qui peint la même information pour les
    jobs — n'en a pas.
+0. **Un nœud texte et le port prompt d'un modèle ne se relient peut-être pas** — trouvé en écrivant
+   le lot C3, par une sonde, pas par lecture. `factory.ts` type la sortie d'un nœud texte `text`
+   (`OUTPUTS.text = { field: 'prompt', type: 'text' }`) et le port prompt d'un générateur `prompt`
+   (`portTypeOf` sur `field.promptSpark`). `typesConnect` refuse : `acceptedTypes(input)` vaut
+   `['prompt']` et n'inclut pas `'text'`. **Mesuré côté compilateur** : le convertisseur ne résout
+   pas ce fil et le générateur retombe sur son formulaire. Deux lectures possibles — soit le canvas
+   refuse le geste et personne ne l'a vu, soit `typesConnect` est plus permissif que je ne le lis.
+   **Ni l'une ni l'autre n'est vérifiée à l'écran** ; c'est le premier geste du prochain lot du
+   chantier. Attention : les fixtures de `engines/graph/graph-fixtures.ts` écrivent `type: 'prompt'`
+   sur la sortie d'un nœud texte, donc **elles ne reproduisent pas ce que `createNode` fabrique** —
+   c'est ce qui a caché la question jusqu'ici.
+
 9. **`whenSettled` n'a ni signal ni échéance** : un job qui n'atteindrait jamais d'état terminal
    fige l'exécution. Le `try/finally` empêche l'application de rester bloquée, pas l'attente
    d'être infinie.

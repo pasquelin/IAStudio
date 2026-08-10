@@ -2,6 +2,7 @@ import {
   convertWorkflowEditorToFlow,
   validateWorkflowFlow,
   type WorkflowEditorEdge,
+  type WorkflowEditorFlowItem,
   type WorkflowEditorNode,
 } from '@scenario-labs/sdk'
 import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
@@ -77,11 +78,14 @@ export type CompileDeps = {
 }
 
 /**
- * Compiles a graph the way an export would, and says whether it holds together.
+ * The graph as Scenario's own flow — what an export sends, and what a test can look at.
  *
  * **No compiler is written here.** `convertWorkflowEditorToFlow` is Scenario's own, so the studio
- * cannot drift from what the webapp produces; this file is the adapter, plus the refusals the
- * converter answers with an empty array.
+ * cannot drift from what the webapp produces; this file is the adapter and nothing else.
+ *
+ * Exported rather than hidden inside `compileGraph`, for two reasons pointing the same way: the
+ * step 9 export needs this very array, and a verdict reduced to a number is a contract no test can
+ * hold to account — four mutations of the adapter survived a suite that could only assert `ok`.
  *
  * `getModel` is deliberately NOT passed. It resolves aspect-ratio presets and input-type indices,
  * it is SYNCHRONOUS, and the registry holding those answers is asynchronous — wiring it means
@@ -89,27 +93,35 @@ export type CompileDeps = {
  * that reads it is `aspectRatio`, which the editor cannot yet create. Written down in
  * `docs/todo.md` rather than left as a surprise for step 8.
  */
-export function compileGraph(graph: GraphState, { report }: CompileDeps): GraphCompileResult {
-  // Asked before the converter rather than read off its answer: an empty flow has two causes, and
-  // "nothing is marked as an output" is the one the user can do something about.
-  if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
-
+export function toEditorFlow(graph: GraphState): readonly WorkflowEditorFlowItem[] {
   const nodes: WorkflowEditorNode[] = []
   for (const node of graph.nodes) {
     const editor = asEditorNode(node)
     if (editor) nodes.push(editor)
   }
 
-  const flow = convertWorkflowEditorToFlow({
+  return convertWorkflowEditorToFlow({
     nodes,
     edges: graph.edges.map(asEditorEdge),
     inputKeys: [...graph.inputKeys],
   })
+}
+
+/** Whether that flow holds together, and the three refusals the converter answers with silence. */
+export function compileGraph(graph: GraphState, { report }: CompileDeps): GraphCompileResult {
+  // Asked before the converter rather than read off its answer: an empty flow has two causes, and
+  // "nothing is marked as an output" is the one the user can do something about.
+  if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
+
+  const flow = toEditorFlow(graph)
 
   if (flow.length === 0) return { ok: false, problem: 'empty' }
 
   try {
-    validateWorkflowFlow(flow)
+    // Copied because the validator takes a mutable array. It reads only — checked in
+    // `workflow_validator.js` — but the export's own answer must not be handed free rein over,
+    // so the copy stays on this side rather than the type being loosened.
+    validateWorkflowFlow([...flow])
   } catch (error) {
     // The sentence names a node and what is wrong with it, which is worth keeping — in the
     // journal, where a developer reads it. The screen gets the code.
