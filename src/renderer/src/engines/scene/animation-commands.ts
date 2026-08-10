@@ -1,8 +1,9 @@
 import type { AnimationTrack, Keyframe, TrackTarget } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Command } from '../core/history'
+import { moveNodes, multi } from './commands'
 import { deltaOf, withKey, withoutKey } from './animation-eval'
-import type { SceneState } from './scene-state'
+import type { NodeMove, SceneState } from './scene-state'
 
 /**
  * Edits of the timeline, on the pattern of the sequence's own track commands: what a command
@@ -208,4 +209,34 @@ export function recordMove(
   return tracks.map(track =>
     setAnimationKey(track.id, time, deltaOf(rest, pose, track.target.property)),
   )
+}
+
+/**
+ * What one gizmo drag becomes, over a whole selection: keys on the tracks that are armed, and an
+ * ordinary move for every node that has none.
+ *
+ * One command whatever the mix, so a drag over an armed cube and a plain sphere is one undo.
+ * `null` when there is nothing to write at all.
+ */
+export function movesToCommand(
+  state: SceneState,
+  moves: readonly NodeMove[],
+  at: number,
+): Command<SceneState> | null {
+  const keys: Command<SceneState>[] = []
+  const plain: NodeMove[] = []
+
+  for (const move of moves) {
+    const armed = armedTracksFor(state, move.id)
+    const rest = state.nodes.find(node => node.id === move.id)?.transform
+    if (armed.length === 0 || !rest) {
+      plain.push(move)
+      continue
+    }
+    keys.push(...recordMove(rest, move.transform, at, armed))
+  }
+
+  if (plain.length > 0) keys.push(moveNodes(plain))
+  if (keys.length === 0) return null
+  return keys.length === 1 && keys[0] ? keys[0] : multi('transform', keys)
 }

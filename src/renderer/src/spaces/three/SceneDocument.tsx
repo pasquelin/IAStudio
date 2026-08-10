@@ -5,18 +5,9 @@ import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
-import {
-  addNodes,
-  copiesOf,
-  groupNodes,
-  moveNodes,
-  multi,
-  removeNodes,
-  rootedIn,
-} from '@/engines/scene/commands'
-import { armedTracksFor, recordMove } from '@/engines/scene/animation-commands'
+import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
+import { movesToCommand } from '@/engines/scene/animation-commands'
 import { snapToFrame } from '@/engines/scene/animation-eval'
-import type { Command } from '@/engines/core/history'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { setDocumentTitle } from '@/app/dockview-api'
 import { useAddNode } from '@/hooks/useAddNode'
@@ -28,7 +19,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { selectedNodes, type NodeMove, type SceneState } from '@/engines/scene/scene-state'
+import { selectedNodes, type NodeMove } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
@@ -64,33 +55,16 @@ async function exportScene(
 }
 
 /**
- * What a gizmo drag writes. With a track armed it becomes a key on that track; with none it moves
- * the node itself, exactly as it always did.
- *
- * Without this, an armed timeline makes the gizmo useless: the drag would write the REST pose,
- * and the tracks would add themselves on top of it again on the very next frame.
+ * The two store reads a gizmo drag needs; the rule itself is `movesToCommand`, which is pure and
+ * therefore testable — a viewport is not.
  */
 function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
   const store = useScenes.getState()
   const state = sceneOf(store, documentId)
   const at = snapToFrame(viewOf(useSceneViews.getState(), documentId).playhead, state.animation.fps)
 
-  const keys: Command<SceneState>[] = []
-  const plain: NodeMove[] = []
-
-  for (const move of moves) {
-    const armed = armedTracksFor(state, move.id)
-    const rest = state.nodes.find(node => node.id === move.id)?.transform
-    if (armed.length === 0 || !rest) {
-      plain.push(move)
-      continue
-    }
-    keys.push(...recordMove(rest, move.transform, at, armed))
-  }
-
-  if (plain.length > 0) keys.push(moveNodes(plain))
-  if (keys.length === 0) return
-  store.runCommand(documentId, keys.length === 1 && keys[0] ? keys[0] : multi('transform', keys))
+  const command = movesToCommand(state, moves, at)
+  if (command) store.runCommand(documentId, command)
 }
 
 const MESHES: readonly AssetType[] = ['mesh']

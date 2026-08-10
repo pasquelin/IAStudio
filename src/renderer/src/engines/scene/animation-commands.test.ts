@@ -3,13 +3,14 @@ import type { TrackTarget } from '@shared/domain/animation'
 import {
   addAnimationTrack,
   armedTracksFor,
+  movesToCommand,
   recordMove,
   removeAnimationKey,
   removeAnimationTrack,
   setAnimationKey,
   setTimelineSettings,
 } from './animation-commands'
-import { EMPTY_SCENE, type SceneState } from './scene-state'
+import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
 
 const target = (nodeId: string, property: TrackTarget['property'] = 'position'): TrackTarget => ({
   nodeId,
@@ -211,5 +212,74 @@ describe('a command asked to revert what it never applied', () => {
 
     expect(removeAnimationTrack('nobody').apply(state)).toEqual(state)
     expect(removeAnimationKey('nobody', 1).apply(state)).toEqual(state)
+  })
+})
+
+describe('what one drag becomes over a whole selection', () => {
+  const rest = { position: vec(0), rotation: vec(0), scale: { x: 1, y: 1, z: 1 } }
+  const node = (id: string): SceneNode => ({
+    id,
+    parentId: null,
+    name: id,
+    visible: true,
+    transform: rest,
+    castShadow: false,
+    receiveShadow: false,
+    type: 'group',
+  })
+
+  const sceneWith = (armedTrack: boolean): SceneState => {
+    const state = addAnimationTrack(target('cube'), 'Cube position', 'track-1').apply({
+      ...EMPTY_SCENE,
+      nodes: [node('cube'), node('sphere')],
+    })
+    return armedTrack
+      ? {
+          ...state,
+          animation: {
+            ...state.animation,
+            tracks: state.animation.tracks.map(track => ({ ...track, armed: true })),
+          },
+        }
+      : state
+  }
+
+  const moved = (id: string, x: number) => ({ id, transform: { ...rest, position: vec(x) } })
+
+  it('moves the nodes themselves while nothing is armed', () => {
+    const state = sceneWith(false)
+    const command = movesToCommand(state, [moved('cube', 5)], 0)
+    if (!command) throw new Error('one node moved')
+
+    const after = command.apply(state)
+    expect(after.nodes[0]?.transform.position.x).toBe(5)
+    expect(after.animation.tracks[0]?.keys).toEqual([])
+  })
+
+  it('writes a key instead, on the node whose track is armed', () => {
+    const state = sceneWith(true)
+    const command = movesToCommand(state, [moved('cube', 5)], 1)
+    if (!command) throw new Error('one node moved')
+
+    const after = command.apply(state)
+    expect(after.animation.tracks[0]?.keys[0]).toMatchObject({ time: 1, value: vec(5) })
+    // The node itself never moved: that is the whole point of an armed track.
+    expect(after.nodes[0]?.transform.position.x).toBe(0)
+  })
+
+  it('is ONE command over a mixed selection, so one drag is one undo', () => {
+    const state = sceneWith(true)
+    const command = movesToCommand(state, [moved('cube', 5), moved('sphere', 9)], 0)
+    if (!command) throw new Error('two nodes moved')
+
+    const after = command.apply(state)
+    expect(after.animation.tracks[0]?.keys).toHaveLength(1)
+    expect(after.nodes[1]?.transform.position.x).toBe(9)
+    // And it reverts as one, which a pair of commands could not promise.
+    expect(command.revert(after)).toEqual(state)
+  })
+
+  it('answers nothing when there is nothing to write', () => {
+    expect(movesToCommand(sceneWith(false), [], 0)).toBeNull()
   })
 })
