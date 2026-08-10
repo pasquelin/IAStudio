@@ -1,7 +1,7 @@
 # Reprise — chantier « workflows et node editor »
 
-**À coller tel quel dans une nouvelle session.** Réécrit le 10 août 2026 au matin, après la fusion
-du **lot C0** dans `develop` (`9298e64`).
+**À coller tel quel dans une nouvelle session.** Réécrit le 10 août 2026 au petit matin, après la
+fusion du **lot C2** et de ses correctifs, avec le lot **C3** écrit et en attente de revue.
 
 > ⚠️ **Deux dossiers que le prompt nommait n'existent plus sur le disque, et les chercher fait
 > perdre un quart d'heure.** `docs/REPRISE.md` a été **fusionné dans `docs/todo.md`** par le commit
@@ -14,76 +14,100 @@ du **lot C0** dans `develop` (`9298e64`).
 
 ## Le prompt
 
-> Je reprends le chantier « workflows et node editor » de Scenario Studio, dans
-> `/Users/pasquelin/Applications/scenario`. Tu travailles en autonomie.
+> Tu finis le chantier « workflows et node editor » de Scenario Studio, dans
+> `/Users/pasquelin/Applications/scenario`. Tu travailles en boucle : **un lot par tour**, du
+> début à la fusion dans `develop`, et chaque tour se termine sur un dépôt propre.
 >
-> **Mise en place, sans la raccourcir :**
+> **Premier geste de CHAQUE tour, sans exception** — ton état vit sur le disque, jamais dans la
+> conversation :
 >
-> 1. Lis en entier, dans cet ordre : `CLAUDE.md` à la racine — il prime sur tout, y compris sur le
->    plan, et sa section « La doc dit la forme ; seul un appel dit la donnée » gouverne tout ce qui
->    touche à l'API ; **ce fichier** ; `docs/todo.md` § 6 et § 7 ; puis
->    `docs/plans/2026-08-08-workflows-node-editor.md`. **Les étapes 1 à 6 et 10 sont cochées et
->    fusionnées.** Lis leurs encadrés : ils disent où le plan s'est trompé. Lis surtout, sous
->    l'étape 10, « Le correctif du 9 août », « Le lot B1 » et « Le lot B2 ».
->    **`docs/REPRISE.md` n'existe plus** — il a été fusionné dans `docs/todo.md`. Ne le cherche pas ;
->    si tu veux sa version longue, `git show 94567bf~1:docs/REPRISE.md`.
-> 2. `git worktree list`, puis
->    `cd /Users/pasquelin/Applications/scenario/.claude/worktrees/workflows`. Le worktree existe,
->    `pnpm install` est fait, `secrets/.env` est copié.
-> 3. **Premier geste** : `git fetch origin develop`, puis `git rebase --autostash develop` (le
->    `develop` LOCAL), puis `pnpm install` si le lockfile a bougé, puis
->    `pnpm validate > /tmp/v.log 2>&1; echo "EXIT=$?"`.
->    **Jamais rebase et merge dans la même commande.**
->    Référence au 10 août au matin, sur `develop` : **456 fichiers de test, 5797 tests, EXIT=0**, et
->    **1128 fichiers `.ts`/`.tsx`** dans `src/`.
-> 4. **Vérifie le code de sortie, jamais la dernière ligne.** Si un test échoue dans un fichier que
->    tu n'as pas touché, relance-le seul avant de conclure. Vérifie `uptime` d'abord : à 300 de load
->    average la suite passe de 47 s à 230 s. **Et vérifie à qui appartient un échec** : un budget de
->    couverture qui déborde vient souvent d'un commit arrivé d'ailleurs.
-> 5. **Préfixe chaque commande du chemin absolu du worktree.** Le shell retombe dans le dépôt
->    principal entre deux appels.
-> 6. **Avant toute fusion** : `git status` dans le dépôt principal. L'index est partagé entre
->    sessions du même clone. `develop` bouge vite — il a pris **quinze commits pendant la session
->    du 10 août**, dont deux pendant une seule exécution de `pnpm validate`.
+> ```bash
+> cd /Users/pasquelin/Applications/scenario
+> git log --oneline -15 && git status --short && git worktree list
+> ```
 >
-> **Ce que tu fais, dans l'ordre : le lot C3 de l'étape 7, puis les étapes 8 et 9.** Les lots C1 et
-> C2 sont fusionnés dans `develop`.
+> puis lis, dans cet ordre : **`docs/prompt-loop.md`** — le protocole d'un tour, il prime ;
+> **`CLAUDE.md`** — les invariants ; **`docs/todo.md` § 5** — ce qui reste, à jour ; et **ce
+> fichier**, pour les pièges déjà payés.
 >
-> **Definition of Done à chaque lot, sans demander** : tests écrits avec le code, `pnpm validate`
-> vert, `/simplify`, revue de code par **deux agents adverses** (`/code-review` n'est pas invocable
-> par le modèle), corrections appliquées, commit, rebase, fusion dans `develop`, puis
-> `pnpm validate` **après** la fusion.
+> **Ce qu'il reste, dans l'ordre, et rien d'autre :**
 >
-> **Casse ton propre code pour voir si le test rougit**, une mutation par comportement, et dis
-> combien mordent. **Vérifie que la mutation s'est appliquée ET qu'un test a réellement tourné**
-> avant de conclure quoi que ce soit — voir « Le harnais de mutation » plus bas, il a menti deux
-> fois.
+> 1. **Fusionner le lot C3**, écrit et en attente sur `feat/graph-compile`. Il est rebasé, vert,
+>    vérifié à l'écran. Il n'attend qu'une revue — voir « Le verrou de revue » plus bas.
+> 2. **`typesConnect` refuse le fil pour lequel l'espace existe.** Tranché par un appel, le
+>    correctif est décidé et écrit en tête du § 5.1 de `docs/todo.md`. C'est le lot le plus
+>    important du chantier : sans lui, un nœud texte ne peut pas alimenter un générateur.
+> 3. **Étape 8** — logique, boucles, transforms, approbation.
+> 4. **Étape 9** — import, export, publication.
 >
-> **Vérifie à l'écran ce qui se voit.** `pnpm start:debug` puis MCP `electron`.
-> ⚠️ Le port 9222 est unique et le verrou d'instance est **global** :
-> `lsof -nP -iTCP:9222 -sTCP:LISTEN` avant de lancer — et si une autre session tient le verrou,
-> **demande** avant de tuer son processus.
+> **Definition of done à chaque lot, sans demander** : tests écrits avec le code, `pnpm validate`
+> vert, passe de simplification, revue, mutation (« casse ton propre code et dis combien de
+> mutations mordent »), commit, rebase, fusion, `pnpm validate` après la fusion.
 >
 > **Tu m'arrêtes** si une étape se révèle plus grosse ou plus petite que le plan, avec ta
-> recommandation.
+> recommandation — et tu prends autre chose en attendant ma réponse plutôt que de bloquer.
 
 ---
 
-## L'état exact
+## Le verrou de revue — à régler AVANT de reprendre
 
-**Dix lots livrés.** Les étapes 1 à 6, l'étape 10 (le septième espace), le lot A (la chaîne du choix
-de modèle), les lots B1 et B2 (l'inspecteur d'un nœud), et le **lot C0** (les identifiants d'assets
-traduits avant qu'un job parte).
+La definition of done exige `/code-review`, que **le modèle ne peut pas invoquer**. Le substitut
+— deux agents de revue adverse — a fonctionné sur les lots C0 et C2, où il a trouvé **trois
+défauts bloquants qu'aucun test ne voyait**. Puis il est tombé en panne : **quatre agents, deux
+générations, aucun contenu** — seulement des notifications « disponible », y compris face à des
+questions numérotées.
 
-| Ce qui marche aujourd'hui | Ce qui ne marche pas encore |
+Deux façons de sortir, et c'est **à l'humain de trancher** :
+
+- il lance `/code-review` lui-même sur la branche en attente ;
+- ou il autorise une fusion sans revue adverse, en sachant ce que ça a coûté au lot C2.
+
+**Ne pas boucler dessus** : si les agents se taisent, le dire et prendre le lot suivant, pas
+relancer une cinquième fois.
+
+**Et jamais d'accès en écriture au worktree où la session travaille** : un agent de revue a muté
+un fichier pour vérifier qu'un test rougissait, puis l'a restauré par `git checkout --`, effaçant
+un refactor en cours. Lui donner sa propre copie, ou exiger la lecture seule.
+
+---
+
+## L'état exact — au 10 août 2026, 05 h
+
+**Fusionné dans `develop`** : les étapes 1 à 6 et 10, les lots A, B1, B2, C0, **C1** (le plan
+d'exécution) et **C2** (l'exécution branchée, plus le lot de correctifs que ses revues ont
+imposé).
+
+**Écrit et EN ATTENTE sur `feat/graph-compile`** : le lot **C3**, cinq commits, rebasé sur
+`develop`, `pnpm validate` vert (463 fichiers, 5932 tests), fusion sans conflit vérifiée,
+**vérifié à l'écran de bout en bout**. Il n'attend que la revue.
+
+| Ce qui marche aujourd'hui | Ce qui ne marche pas |
 |---|---|
-| Le graphe est un espace, avec son document `.graph`, sa palette, sa barre et son `⌘Z` | Aucune compilation vers le `flow` de Scenario |
-| Un nœud se pose, se déplace, se relie, se supprime | Onze des quinze types de nœuds n'ont ni face ni comportement |
-| Un nœud s'édite dans l'inspecteur : texte, note, titre, source d'asset | Aucun import ni export de `.workflow.json` |
-| Un générateur choisit son modèle, et ses ports se reconstruisent | Aucun nœud n'est marqué comme **sortie**, et sans ça le compilateur rend un flow **vide** |
-| Les Apps de Scenario se listent et se lancent | **L'exécution n'a jamais été lancée contre l'API** — tout est prouvé sous vitest, rien à l'écran |
-| **Une image donnée en référence atteint enfin le modèle** (lot C0) | |
-| **Le graphe s'exécute** : un bouton, un état par nœud, et le cache qui ne relance que ce qui a changé (lot C2) | |
+| Le graphe est un espace : document `.graph`, palette, barre, `⌘Z`, inspecteur | 🔴 **Un nœud texte ne peut PAS être relié au port prompt d'un générateur** — `typesConnect` refuse ce que la webapp fait |
+| **Il s'exécute** : un bouton, un état par nœud, un cache qui ne relance que ce qui a changé | Onze des quinze types de nœuds n'ont ni face ni comportement |
+| Une image donnée en référence atteint le modèle (lot C0) | Aucun import ni export de `.workflow.json` |
+| *(en attente)* Un nœud se marque comme sortie, et le graphe dit s'il compilerait | L'exécution n'a **jamais** été lancée contre l'API — tout est prouvé sous vitest |
+
+---
+
+## Le défaut qui bloque le geste principal — mesuré, et tranché par un appel
+
+Poser un nœud Texte, poser un générateur, tirer un fil du premier vers l'entrée « prompt » du
+second : `refuseConnection` rend `'type-mismatch'`.
+
+`workflow_get` sur l'App publique `wflow_H1bKz78jgpinWPKJfVCM5uAp` — 62 nœuds, 94 fils — dit qui
+a tort : la webapp écrit **exactement nos deux types**, `text` sur la sortie d'un nœud texte et
+`prompt` sur le port d'un générateur, **et elle les relie**. Les seules paires câblées de toute
+l'App sont `image → image` (69) et `text → prompt` (25).
+
+Donc `factory.ts` est juste des deux côtés, et **`typesConnect` est faux** — il enfreint la règle
+que sa propre JSDoc énonce. Le correctif : une table de compatibilité dans `handles.ts`,
+verrouillée par un test qui rejoue les deux paires.
+
+**Et d'abord la fixture.** `engines/graph/graph-fixtures.ts` écrit `type: 'prompt'` sur une sortie
+que `createNode` type `'text'` : les fixtures ne reproduisent pas ce que le studio fabrique, et
+c'est ce qui a permis à trois lots de passer au-dessus du défaut. La corriger en premier, pour que
+ce qui doit rougir rougisse.
 
 ---
 
