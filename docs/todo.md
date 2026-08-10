@@ -71,7 +71,17 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > réserve de la soumettre avant installation**. Elles sont écrites dans leur entrée, et **ne se
 > redemandent pas**. **Ce qui dit « à trancher » ailleurs se demande, ne se déduit pas.**
 >
-> **Trois lots sont livrés le 10 août 2026.** Le troisième est l'accueil, entrées 42 et 12 :
+> **Quatre lots sont livrés le 10 août 2026.** Le quatrième est l'**entrée 15** : `EmptyState`
+> accepte une seconde action, et l'Explorateur sans projet offre « Ouvrir un projet » et « Créer
+> un projet » plutôt que de renvoyer à l'accueil. Les deux boutons sont des **pairs**, comme
+> l'accueil les offre déjà. **Deux choses que ce lot a montrées et qui resserviront** : les quatre
+> appelants de `openPicked` et `createPicked` font tous `void`, donc un rejet laissé passer était
+> une rejection non gérée — les deux avalent désormais, et **ce que l'utilisateur lit vient du
+> `record()` du main**, `activity.projectNotCreated` étant la ligne qui manquait à la création.
+> Et **un `git checkout --` dans son propre worktree efface le travail non commité du fichier** :
+> une mutation volontaire s'annule en réécrivant, jamais en revenant à `HEAD`.
+>
+> **Le troisième lot** est l'accueil, entrées 42 et 12 :
 > `useShelf` rend son état et son `retry`, si bien qu'une bande refusée reste à l'écran, le dit
 > et propose de réessayer au lieu de se retirer ; et cliquer une vignette l'OUVRE, « Recréer »
 > passant au coin, « Récupérer » restant l'action principale des seules vignettes pas encore
@@ -108,15 +118,18 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > **L'entrée 16 est livrée le 10 août 2026** : un projet écrit par une version future est refusé
 > plutôt qu'aplati, un dossier qui n'en est pas le dit dans le journal, et `updatedAt` bouge à
 > chaque document enregistré — **c'est la décision prise, ne pas la redemander**. Ce que le lot a
-> laissé ouvert est écrit au § 1.1, sous l'entrée 15 qui reste.
+> laissé ouvert est écrit au § 1.1.
 >
-> Les candidats, sans priorité imposée : l'**entrée 15**, qui a le bouton dont le message de 16
-> vient d'être écrit · les **étapes 7 à 9 du node editor** (§ 5) · le reste des retours
-> d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par espace** (§ 4), dont deux qui ne
-> se jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
+> Les candidats, sans priorité imposée : l'**entrée 39**, l'Explorateur en arbre, dont les trois
+> questions sont tranchées · l'**entrée 41**, la dictée · l'**entrée 32**, le clavier des menus ·
+> les **étapes 7 à 9 du node editor** (§ 5) · les **manques par espace** (§ 4), dont deux qui ne se
+> jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
 >
-> **Le lot C3 du node editor est tenu par un agent au 10 août 2026** — `feat/graph-compile`,
-> worktree `graph-compile`, cinq commits en attente de sa revue. **Ne pas l'ouvrir.**
+> **Le § 5 du node editor est tenu au 10 août 2026** — worktree `types-connect`, et l'ordre de ses
+> lots est tranché. **Ne pas l'ouvrir.** `arith-partagee`, `docs-a-jour`, `design-system`,
+> `design-coherence`, `flyout-virtual` et `workflows` ont eux aussi leur session : **`git worktree
+> list` avant d'ouvrir quoi que ce soit**, et `flyout-virtual` touche `design/Flyout.tsx`, donc le
+> sous-système de l'entrée 32.
 >
 > **Ce fichier est la seule liste qui reste.** `.claude/loop/BACKLOG.md`, qui portait le backlog
 > qualité, **n'existe plus** — ne pas l'y chercher, et ne pas conclure d'un renvoi trouvé ailleurs
@@ -337,76 +350,55 @@ propriété.
 > les dépasse : le **document neuf jamais enregistré, perdu au rechargement** (§ 4.1) et
 > l'**absence de `fsync`** (§ 6).
 
-## 1.1 La couche projet — ce qui reste après l'entrée 16
+## 1.1 La couche projet — ce qui reste après les entrées 16 et 15
 
-**L'entrée 16 est livrée le 10 août 2026** : le manifeste est défendu à la lecture et honnête à
-l'écriture. Ce qui reste du bloc est l'entrée 15 — le bouton qui manque au panneau — et la question
-des layouts.
+**Les entrées 16 et 15 sont livrées les 10 août 2026** : le manifeste est défendu à la lecture et
+honnête à l'écriture, et l'Explorateur sans projet porte enfin ses deux sorties. Ce qui reste du
+bloc est la question des prérequis de panneau — ci-dessous — et celle des layouts.
 
-> **Ce que le lot 16 a laissé derrière lui, et qu'il ne faut pas redécouvrir :**
+> **Ce que les deux lots ont laissé derrière eux, et qu'il ne faut pas redécouvrir :**
 >
 > - **`readManifest` migre l'ancien nom AVANT toute validation.** Un projet hérité (`project.json`)
 >   écrit par une version future est **refusé, mais recopié** sous `.project.json` au passage —
 >   mesuré. Inoffensif aujourd'hui (le contenu est identique et la copie sous l'ancien nom reste),
 >   mais un manifeste hérité tronqué est lui aussi promu sous le nouveau nom, et `readManifest` ne
 >   retombe sur l'ancien que si le dotté est absent. **Le remède est de valider avant de migrer.**
-> - **`openPicked` du renderer n'attrape rien** (`stores/project.ts`), alors que `open` attrape.
->   Le rejet de `project:open` y devient une rejection non gérée. C'est le chemin du bouton de
->   l'entrée 15 : à traiter avec elle.
 > - **Une écriture de manifeste qui échoue laisse `current()` en avance sur le disque** — la copie
 >   en mémoire porte le nouveau `updatedAt`, le fichier l'ancien. Cosmétique, réparé à la
 >   sauvegarde suivante ; écarté sciemment.
 > - **Coût mesuré du canal `document:write`** : +549 ns par appel (médiane de 5, 1372 → 1921 ns),
 >   soit +40 % sur un canal réduit à son squelette, pour 70 µs d'écriture disque hors chemin
 >   critique. **Ne pas remesurer** : c'est le prix de l'estampille, et il est payé.
+> - **Le journal du main est la seule voix des deux gestes de projet.** `openPicked` et
+>   `createPicked` avalent leur refus — leurs quatre appelants font tous `void`, donc un rejet
+>   laissé passer était une rejection non gérée. Ce que l'utilisateur lit vient de `record()` côté
+>   main, `openFailureKey` pour l'ouverture et `activity.projectNotCreated` pour la création. **Un
+>   nouvel échec de ces deux chemins se dit là-bas, jamais dans le store.**
 
-### 15. Un panneau ne déclare pas ce dont il a besoin — l'Explorateur sans projet
+### 44. Un panneau ne déclare toujours pas ce dont il a besoin
 
-**Le geste attendu.** Depuis l'Explorateur sans projet, ouvrir ou créer un projet **sans repasser par l'accueil**.
+**Le geste attendu.** Depuis n'importe quel panneau qui exige un projet, savoir ce qui manque et
+comment le combler — comme l'Explorateur le fait depuis le 10 août.
 
-**Demandé le 9 août 2026.** Sans projet ouvert, pas d'Explorateur : un projet est le dossier qui tient
-les documents et les assets.
+**Ce qui est livré, et qui ne se refait pas.** L'entrée 15 est fermée : `EmptyState` accepte une
+`secondary`, l'Explorateur sans projet offre « Ouvrir un projet » et « Créer un projet », et les
+deux appellent `openPicked` / `createPicked`, qui n'avalaient pas leur refus. **Le panneau reste
+plutôt que de disparaître** — c'était le choix, et il évite le piège de l'autre : retirer un panneau
+touche le **layout persisté**, et un panneau ajouté à l'API sortante est jeté par le `fromJSON` du
+suivant (§ 4.1).
 
-**Le panneau connaît déjà la règle, il l'applique juste autrement.** `Explorer.tsx:36` fait
-`if (!projectPath) return <EmptyState message={t('explorer.noProject')} />`.
+**Ce qui reste est la notion, pas le bouton.** `ToolPlacement` (`shared/domain/tool.ts`) déclare
+`id`, `zone`, `slot`, `workspaces` — **jamais de prérequis**. Ils sont **cinq** à lire `useProject`
+chacun de son côté : `Explorer`, `Generator`, `AssetBrowser`, `AssetBrowserActions`, `Apps`, et
+**un seul des cinq offre une sortie**. Porter `requires` dans `TOOL_PLACEMENTS` réunirait ces cinq
+réponses en une règle testable — l'accueil a déjà exactement cette notion (`HOME_SECTIONS` porte
+`requires: ['project' | 'api']`), avec une politique inverse : « a section whose requirements are
+unmet is **dropped rather than drawn empty** ».
 
-**Et l'accueil tranche déjà dans ce sens.** `HOME_SECTIONS` donne à chaque bande un
-`requires: ['project' | 'api']`, et `visibleHomeSections` l'écrit noir sur blanc : « a section whose
-requirements are unmet is **dropped rather than drawn empty** ». **La même question a déjà reçu sa
-réponse à trois mètres de là**, et les panneaux du dock font l'inverse.
-
-**Ce qui manque est une notion, pas un `if`.** `ToolPlacement` (`shared/domain/tool.ts`) déclare `id`,
-`zone`, `slot`, `workspaces` — **jamais de prérequis**. Ils sont **cinq** à lire `useProject` chacun de
-son côté : `Explorer`, `Generator`, `AssetBrowser`, `AssetBrowserActions`, `Apps`. Porter `requires`
-dans `TOOL_PLACEMENTS` réunit ces cinq réponses en une règle testable sans rien rendre.
-
-**Tranché le 9 août 2026 : le panneau reste, on lui donne sa sortie.** Plutôt que le retirer, lui
-mettre le bouton qui ouvre ou crée un projet — **aujourd'hui il faut retourner sur l'accueil**.
-
-Ce choix évite le piège de l'autre : retirer un panneau touche le **layout persisté** — Dockview est
-remonté par espace, et un panneau ajouté à l'API sortante est jeté par le `fromJSON` du suivant
-(§ 4.1). Un panneau qui disparaît et revient avec le projet risquait de perdre sa place.
-
-**Les deux gestes existent déjà** : `openPicked()` et `createPicked()` sont sur le store `useProject`,
-et leurs quatre appelants sont tous sur l'accueil. **Et `EmptyState` porte déjà une action** —
-`action?: { label, onClick }`, « the way out, for a panel whose emptiness the user can act on ». C'est
-**une prop à remplir**, pas un composant à écrire.
-
-**Un point à trancher, un seul.** `EmptyState` n'accepte **qu'une** action, délibérément : « every
-panel offers its way out the same way, and a node would let each one grow its own button ». Or il en
-faut deux — ouvrir, et créer :
-
-- **une action secondaire dans `EmptyState`**, ajoutée une fois pour tous les panneaux — dans l'esprit
-  du composant ;
-- **une seule action, « Ouvrir un projet… »**, la création restant sur l'accueil — mais c'est
-  précisément la moitié qui manquait.
-
-La première est la bonne si la création doit être atteignable de là, et c'est ce qui a été demandé.
-
-**Reste à décider quels panneaux déclarent quoi.** L'Explorateur, l'étagère à assets et l'inspecteur
-exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans projet produit un
-job qui ne se collecte nulle part — « un job ne collecte que dans son propre projet » (§ 10.3). Soit il
-exige un projet, soit il faut dire ce que devient ce qu'il produit.
+**Et une question à trancher avant d'écrire quoi que ce soit.** L'Explorateur, l'étagère à assets et
+l'inspecteur exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans
+projet produit un job qui ne se collecte nulle part — « un job ne collecte que dans son propre
+projet » (§ 10.3). Soit il exige un projet, soit il faut dire ce que devient ce qu'il produit.
 
 ---
 
