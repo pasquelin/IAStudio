@@ -45,9 +45,9 @@ relever coupe tous les utilisateurs dont la distribution est plus ancienne que l
 **Cause** : `macos-latest` est une machine **arm64**. Un `--mac` nu ne produit que l’architecture
 de l’hôte.
 
-**Correction** : les architectures sont déclarées dans `electron-builder.yml`
-(`arch: [arm64, x64]` sur chaque cible), pas sur la ligne de commande. Ne jamais supposer que le
-défaut couvre les Mac Intel. Vérifier :
+**Correction** : les architectures sont déclarées dans `electron-builder.yml`, pas sur la ligne
+de commande — `arch: [arm64, x64]` sur les **deux cibles macOS**, `dmg` et `zip`. Windows n'a que
+`arch: [x64]`, et c'est voulu. Ne jamais supposer que le défaut couvre les Mac Intel. Vérifier :
 
 ```bash
 lipo -archs "/Volumes/Scenario Studio/Scenario Studio.app/Contents/MacOS/Scenario Studio"
@@ -59,8 +59,11 @@ lipo -archs "/Volumes/Scenario Studio/Scenario Studio.app/Contents/MacOS/Scenari
 prebuild pour les deux architectures.
 
 **Correction** : elle n’est pas utilisée, et [ADR-03](adr/ADR-03-cibles-et-architectures.md)
-l’écarte. `scripts/before-pack.mjs` rejette d’ailleurs `arch === 'universal'` — il ne saurait pas
-quel ffmpeg télécharger.
+l’écarte. `scripts/before-pack.mjs` **passe** `arch === 'universal'` sans rien faire, et ce n’est
+pas un refus : une build universelle fusionne deux builds mono-architecture, dont chacune est
+déjà passée par ce hook — le ffmpeg de chaque architecture est donc déjà là. Ce que le hook
+**rejette**, lui, c’est un ordinal d’architecture inconnu : `throw new Error('Unknown
+architecture ordinal …')`.
 
 ### `better-sqlite3` refuse de se charger dans l’application packagée
 
