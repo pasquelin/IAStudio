@@ -1314,11 +1314,11 @@
     },
     {
       "path": "src/renderer/src/design/Row.tsx",
-      "lines": 59,
+      "lines": 60,
       "components": [
         {
           "name": "Row",
-          "line": 29,
+          "line": 30,
           "exported": false,
           "props": [
             "actions",
@@ -1336,13 +1336,7 @@
           }
         }
       ],
-      "probes": [
-        {
-          "probe": "classNameConcat",
-          "line": 49,
-          "text": "className={`"
-        }
-      ]
+      "probes": []
     },
     {
       "path": "src/renderer/src/design/ScrollHost.tsx",
@@ -5079,6 +5073,6 @@
   "totals": {
     "files": 190,
     "components": 257,
-    "probes": 63
+    "probes": 62
   }
 }
