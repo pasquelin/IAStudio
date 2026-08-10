@@ -1,3 +1,4 @@
+import { toDegrees } from '@shared/domain/angles'
 import { handleDirection, type CornerId, type HandleId } from './handles'
 
 /**
@@ -16,14 +17,12 @@ export type Facing = { rotation: number; scaleX: number; scaleY: number }
 /** A frame that was never touched — what the crop frame, which cannot turn, is shown with. */
 export const UPRIGHT: Facing = { rotation: 0, scaleX: 1, scaleY: 1 }
 
-const PER_RADIAN = 180 / Math.PI
-
 /** Degrees of a grip's direction once the layer's mirroring and rotation are applied, in [0, 360). */
 function facing(handle: HandleId, of: Facing): number {
   const direction = handleDirection(handle)
   const x = direction.x * Math.sign(of.scaleX || 1)
   const y = direction.y * Math.sign(of.scaleY || 1)
-  const degrees = (Math.atan2(y, x) + of.rotation) * PER_RADIAN
+  const degrees = toDegrees(Math.atan2(y, x) + of.rotation)
   return ((degrees % 360) + 360) % 360
 }
 

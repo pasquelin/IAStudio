@@ -1,6 +1,7 @@
 import { open, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir, platform } from 'node:os'
+import { clamp } from '@shared/numeric'
 import { createSystemFonts, fontFolders, type FontDisk, type SystemFonts } from './system-fonts'
 
 /** The real disk behind the index. Apart from it so the walk itself is testable without one. */
@@ -24,7 +25,7 @@ export const nodeFontDisk: FontDisk = {
        * already written to refuse.
        */
       read: async (at, length) => {
-        const wanted = Math.min(Math.max(length, 0), Math.max(size - at, 0))
+        const wanted = clamp(length, 0, Math.max(size - at, 0))
         if (at < 0 || wanted === 0) return new Uint8Array()
 
         const buffer = new Uint8Array(wanted)

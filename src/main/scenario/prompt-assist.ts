@@ -1,4 +1,5 @@
 import type { FieldDescriptor } from '@shared/domain/model'
+import { clamp } from '@shared/numeric'
 import {
   PROMPT_SUGGESTIONS_MAX,
   type PromptSuggestion,
@@ -124,7 +125,7 @@ export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAss
 }
 
 function clampResults(requested: number): number {
-  return Math.min(Math.max(Math.trunc(requested), 1), PROMPT_SUGGESTIONS_MAX)
+  return clamp(Math.trunc(requested), 1, PROMPT_SUGGESTIONS_MAX)
 }
 
 function suggestionOf(

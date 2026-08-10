@@ -1,4 +1,5 @@
 import type { ApiFailure, JobFailure } from '@shared/domain/failure'
+import { clamp } from '@shared/numeric'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import {
   INTERACTIVE_REQUESTS_PER_MINUTE,
@@ -203,7 +204,7 @@ export function jobProgressOf(reported: number): number {
   if (!Number.isFinite(reported)) return 0
 
   const fraction = reported > PERCENTAGE_ABOVE ? reported / 100 : reported
-  return Math.min(Math.max(fraction, 0), 1)
+  return clamp(fraction, 0, 1)
 }
 
 type Entry = {

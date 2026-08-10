@@ -98,6 +98,22 @@ describe('reorderLayer', () => {
     const back = command.revert(command.apply(withTwo))
     expect(back.layers.map(layer => layer.id)).toEqual(['layer-1', 'layer-2'])
   })
+
+  // A negative index is the case that bites: `splice` would count it from the end of the stack.
+  it('holds an index outside the stack at its edges', () => {
+    const withThree = addLayer(layerFixture({ id: 'layer-3' })).apply(withTwo)
+
+    expect(
+      reorderLayer('layer-1', -1)
+        .apply(withThree)
+        .layers.map(layer => layer.id),
+    ).toEqual(['layer-1', 'layer-2', 'layer-3'])
+    expect(
+      reorderLayer('layer-1', 99)
+        .apply(withThree)
+        .layers.map(layer => layer.id),
+    ).toEqual(['layer-2', 'layer-3', 'layer-1'])
+  })
 })
 
 describe('single-field edits', () => {
