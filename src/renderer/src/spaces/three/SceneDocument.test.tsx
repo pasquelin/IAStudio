@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SceneExportCommand } from '@shared/ipc'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { addNode } from '@/engines/scene/commands'
@@ -115,6 +116,15 @@ describe('SceneDocument', () => {
     render(<SceneDocument documentId="doc-1" />)
     expect(screen.getByRole('button', { name: /Déplacer/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Pivoter/ })).toBeInTheDocument()
+  })
+
+  /**
+   * Read from the design system rather than written here: the image space and the graph put their
+   * bar in the same corner, and a copy of the inset is a copy that goes stale on its own.
+   */
+  it('places its bar where every space places it', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    expect(screen.getByRole('toolbar')).toHaveClass(PANE_TOOLBAR)
   })
 
   /**

@@ -6,7 +6,7 @@ import { PICTURES, type Asset } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { cn } from '@/helpers/cn'
-import { CONTROL } from '@/design/styles'
+import { CONTROL, PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
@@ -388,7 +388,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
             class already sets is kept, and the engine's own constant stays the only truth about
             how thick a ruler is. */}
         <Toolbar
-          className="absolute top-2 left-2"
+          className={PANE_TOOLBAR}
           style={{ marginTop: rulerInset, marginLeft: rulerInset }}
           tools={tools}
           activeTool={tool}

@@ -6,6 +6,7 @@ import { ASSET_DRAG_TYPE, startAssetDrag } from '@/helpers/asset-drag'
 import { BRUSH_SIZE } from '@/engines/canvas/brush'
 import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { canUndo } from '@/engines/core/history'
+import { PANE_TOOLBAR } from '@/design/styles'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
@@ -67,6 +68,15 @@ describe('ImageDocument', () => {
     expect(screen.getByRole('button', { name: /^Pinceau/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Rectangle/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Texte/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The inset comes from the design system; only the ruler offset is this space's own, and it is
+   * a runtime measure no class can express.
+   */
+  it('places its bar where every space places it, rulers aside', () => {
+    render(<ImageDocument documentId="doc-1" />)
+    expect(screen.getByRole('toolbar')).toHaveClass(PANE_TOOLBAR)
   })
 
   it('opens on the pointer, so the first click cannot write on the picture', () => {
