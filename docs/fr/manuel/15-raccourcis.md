@@ -400,15 +400,19 @@ L’espace Skyboxes répond au clavier comme les autres.
 
 ## Dans le graphe
 
-Le septième contexte, et le plus court : l’espace Graphe n’écoute que l’annulation.
+Le septième contexte, et le plus court : l’espace Graphe écoute l’exécution et l’annulation.
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
+| **Exécuter / Arrêter le graphe** | `⌘⏎` | lance chaque nœud dans l’ordre de ses liens, et arrête une exécution déjà en cours — ce qui n’a pas changé depuis la dernière n’est pas relancé |
 | **Annuler** | `⌘Z` | |
 | **Rétablir** | `⇧⌘Z` | |
 
-Elles couvrent tout ce que le graphe sait faire — poser un nœud, le déplacer, le relier, le
-renommer, changer son modèle — parce que tout y passe par une commande. Poser des nœuds se fait à
+`⌘⏎` ne fait rien sur un graphe vide, comme le bouton de la barre, qui y est grisé.
+
+Ces trois-là couvrent tout ce que le graphe sait faire — poser un nœud, le déplacer, le relier, le
+renommer, changer son modèle, tout exécuter — parce que tout y passe par une commande. Poser des
+nœuds se fait à
 la souris depuis la palette : il n’y a pas encore de touche pour en armer un, comme il y en a une
 par outil dans l’espace Image.
 
@@ -507,6 +511,7 @@ figées pour l’instant. Voir [Ce qui n’existe pas encore](18-limites.md).
 | `⌃⌘F` | Plein écran |  |  |  |  |  |  |
 | `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler |
 | `⇧⌘Z` |  |  | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir |
+| `⌘⏎` |  |  |  |  |  |  | Exécuter |
 | `⌘G` |  |  | Grouper |  |  |  |  |
 | `⌘D` |  |  | Dupliquer |  | Désélectionner |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |

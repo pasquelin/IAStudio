@@ -195,11 +195,12 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > **Changer le modèle d’un nœud refait ses ports**, et les liens dont le port a disparu s’en vont
 > avec eux — en un seul geste, donc annulable d’un seul `⌘Z`.
 >
-> **Il s’exécute.** Le premier bouton de sa barre lance le graphe : chaque nœud part quand ce
+> **Il s’exécute.** Le premier bouton de sa barre lance le graphe — ou `⌘⏎`, ou **Graphe ▸
+> Exécuter** : chaque nœud part quand ce
 > qu’il lit est prêt, les branches indépendantes partent ensemble, et les générations passent par
 > la même file que le reste du studio — elles s’affichent dans la barre des tâches et se comptent
 > dans le même budget. Le bouton devient **Arrêter** pendant ce temps : plus rien n’est soumis, et
-> ce qui est en vol est annulé.
+> ce qui est en vol est annulé. Sur un graphe vide, il est **grisé** : il n’y a rien à exécuter.
 >
 > **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en cours*, *terminé*,
 > *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,
@@ -671,6 +672,7 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
 | **Affichage** | Modules (rouvrir un panneau), Réinitialiser la disposition, Plein écran, et le zoom de l’image |
 | **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l’espace 3D |
+| **Graphe** | Exécuter / Arrêter le graphe — dans l’espace Graphe |
 | **Fenêtre** | les commandes de fenêtre du système |
 | **Aide** | À propos de Scenario Studio, Consommation…, Licences |
 
