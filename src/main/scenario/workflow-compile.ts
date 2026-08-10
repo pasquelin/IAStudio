@@ -255,6 +255,10 @@ function reachedFrom(
  * - an end naming a node the graph no longer holds: the lookup answers nothing and the wire is
  *   simply dropped, which is the same as drawing no wire.
  */
+/** The ends naming that node, in node order — the converter keeps the first of them. */
+const endsNaming = (graph: GraphState, named: string): readonly string[] =>
+  graph.nodes.filter(node => namedLoopId(node) === named).map(node => node.id)
+
 function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
   const consumers = consumersByProvider(graph)
   const read: { end: string; names: string }[] = []
@@ -289,11 +293,12 @@ function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
    */
   for (const entry of read) {
     if (!loops.has(entry.names)) continue
-    const kept = firstEnd.get(entry.names)
-    // Both ends, and the kept one first: the fault is the PAIR, and a user shown only the spare
-    // one cannot see which of the two the converter is about to obey.
-    if (kept !== entry.end)
-      return { problem: 'loop-two-ends', nodes: [kept ?? entry.end, entry.end] }
+    // EVERY end naming that loop, in node order — so the kept one comes first. The fault is the
+    // PAIR: shown only the spare, a user cannot see which of the two the converter will obey.
+    // Read off the nodes rather than off `firstEnd`, whose `get` can only be `undefined` on a
+    // branch nothing can reach — and an unreachable branch is one no test can ever cover.
+    if (firstEnd.get(entry.names) !== entry.end)
+      return { problem: 'loop-two-ends', nodes: endsNaming(graph, entry.names) }
   }
 
   // An end that does not close what it names, either because that is no loop at all or because the
