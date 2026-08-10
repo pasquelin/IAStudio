@@ -379,26 +379,40 @@ describe('the values a node hands on', () => {
   })
 
   /**
-   * The symptom the edge order is hashed for: the FIRST wire on a port fills a scalar, so cutting
-   * one of two wires and drawing it again — the only way the canvas has to reorder them — changes
-   * what is submitted. Hashed without that order, the run came back off the cache with the other
-   * wire's picture, and nothing on screen said a stale result had been handed over.
+   * The symptom the edge order is hashed for. A branch hands its `conditional` port on WHOLE, so
+   * the two wires feeding it arrive concatenated in edge order and the scalar below takes the head:
+   * cutting one of the two and drawing it again — the only way the canvas has to reorder them —
+   * changes what is submitted. Hashed without that order, the run came back off the cache with the
+   * other wire's picture, and nothing on screen said a stale result had been handed over.
+   *
+   * On a branch because `takesManyWires` lets only `transformText` and `ifElse` hold several wires
+   * on one port, and only a branch passes that list on where a body can read it.
    */
   it('runs a node again when two wires onto one port changed order', async () => {
     const nodes = [
       textNode('text1', 'a knight'),
       textNode('text2', 'a dragon'),
+      branchNode('if1', [{ logic: 'and', conditions: [{ field: 'text1', operator: 'isEmpty' }] }]),
       modelNode('m1', {}, 'model_a'),
     ]
-    const wires = [wire('m1', 'prompt', 'text1', 'prompt'), wire('m1', 'prompt', 'text2', 'prompt')]
+    const fed = [
+      wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+      wire('if1', CONDITIONAL_PORT, 'text2', 'prompt'),
+    ]
+    const read = wire('m1', 'prompt', 'if1', 'else')
+    const answers: GraphRunPorts['transform'] = async () => ['false']
 
-    const first = await watch(graphOf(nodes, wires), { model_a: ['asset_1'] })
-    const second = await watch(
-      graphOf(nodes, [...wires].reverse()),
-      { model_a: ['asset_2'] },
+    const first = await watch(
+      graphOf(nodes, [...fed, read]),
+      { model_a: ['asset_1'] },
       {
-        cache: cacheOf(first.result),
+        transform: answers,
       },
+    )
+    const second = await watch(
+      graphOf(nodes, [...fed].reverse().concat(read)),
+      { model_a: ['asset_2'] },
+      { cache: cacheOf(first.result), transform: answers },
     )
 
     expect(first.submitted[0]?.body).toEqual({ prompt: 'a knight' })

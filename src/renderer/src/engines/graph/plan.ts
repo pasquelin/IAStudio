@@ -1,4 +1,10 @@
-import type { GraphEdge, GraphNode, GraphNodeData, GraphState } from '@shared/domain/graph'
+import type {
+  GraphEdge,
+  GraphHandleInput,
+  GraphNode,
+  GraphNodeData,
+  GraphState,
+} from '@shared/domain/graph'
 import { digest, stableKey } from '@shared/hash'
 import { approvalsOf } from './approvals'
 import { DEFAULT_OUTPUT_NAME, inputHandlesOf, outputHandleOf } from './handles'
@@ -92,31 +98,39 @@ function paramsOf(node: GraphNode): Record<string, unknown> {
   return params
 }
 
+/**
+ * The key a wire is grouped under — by the body and by the hash alike, and that is the point of it
+ * being one function.
+ *
+ * A port's `name` is the model's own field key (`modelPorts`), which is what fills a body; its id
+ * stands in for a handle a file names but the node no longer carries. Read off the flattened ports
+ * rather than off the edge, so a sub-handle keys like any other port.
+ */
+const portKeyOf = (ports: readonly GraphHandleInput[], edge: GraphEdge): string =>
+  ports.find(candidate => candidate.id === edge.sourceHandle)?.name ?? edge.sourceHandle ?? ''
+
+/** Whether a wire reaches a body at all: one missing either end names no port and carries no value. */
+const carries = (edge: GraphEdge): boolean =>
+  edge.sourceHandle !== undefined && edge.targetHandle !== undefined
+
 function inputsOf(
-  node: GraphNode,
   incoming: readonly GraphEdge[],
   byId: ReadonlyMap<string, GraphNode>,
+  ports: readonly GraphHandleInput[],
 ): Readonly<Record<string, readonly GraphPlanInput[]>> {
   // A `Map`: a port a file names `constructor` would otherwise be read off `Object.prototype`.
   const inputs = new Map<string, GraphPlanInput[]>()
 
-  // Flattened once rather than per edge: `inputHandlesOf` walks the sub-handles and allocates as
-  // it goes, and a node with ten wires into thirty ports paid for that ten times.
-  const ports = inputHandlesOf(node)
-
   for (const edge of incoming) {
-    if (edge.sourceHandle === undefined || edge.targetHandle === undefined) continue
+    if (!carries(edge)) continue
 
-    // A port's `name` is the model's own field key (`modelPorts`), which is what fills a body.
-    // Its id stands in for a handle a file names but the node no longer carries.
-    const port = ports.find(candidate => candidate.id === edge.sourceHandle)
     // The provider is in the index by construction: an edge missing either end was filtered out
     // before this ran, which is what makes the fallback below about a NAMELESS port, not a
     // missing node.
     const provider = byId.get(edge.target)
     const output = provider && outputHandleOf(provider, edge.targetHandle)?.name
 
-    push(inputs, port?.name ?? edge.sourceHandle, {
+    push(inputs, portKeyOf(ports, edge), {
       node: edge.target,
       output: output ?? DEFAULT_OUTPUT_NAME,
     })
@@ -132,29 +146,32 @@ function inputsOf(
  * nodes carrying the same model and the same prompt are asking for two different pictures — the
  * one thing a cache must never do here is hand them the same one.
  *
- * Built from the edges rather than from `inputs`, which is keyed by port NAME: a file may give two
- * ports one name, and two wires that land on different handles would then hash as one.
+ * Grouped by `portKeyOf` — **the key `inputs` groups by**, and the same call, so the two can never
+ * disagree about which wires land together. Keyed by the port's own id instead, two handles a file
+ * gives one name fell into two groups here and into one list there: swapping their wires changed
+ * the body and left the hash alone, which is the defect this shape exists to close.
  *
- * Grouped by the port a wire LANDS on, ordered inside a group and sorted between them. Both halves
- * are load-bearing. Inside one port the order decides: several wires concatenate in edge order and
- * a scalar takes the head (`bodyOf`), so recabling one of two wires changes what is submitted, and
- * a flat sort handed the first wire's picture back off the cache. Between two ports nothing
- * decides, and sorting is what keeps reopening a file whose edges are listed otherwise from
- * invalidating a whole graph.
+ * Ordered inside a group and sorted between them, and both halves are load-bearing. Inside one port
+ * the order decides: several wires concatenate in edge order and a scalar takes the head (`bodyOf`),
+ * so recabling one of two wires changes what is submitted. Between two ports nothing decides, and
+ * sorting is what keeps reopening a file whose edges are listed otherwise from invalidating a graph.
+ *
+ * Wires that reach no body are left out for that same reason — see `carries`.
  */
 function hashOf(
   node: GraphNode,
   incoming: readonly GraphEdge[],
   hashes: ReadonlyMap<string, string>,
+  ports: readonly GraphHandleInput[],
 ): string {
-  // Keyed by the consumer's own handle ID rather than by its name, for the reason the JSDoc gives:
-  // a file may give two ports one name, and their wires must not fall into one group.
   const landing = new Map<string, string[]>()
 
   for (const edge of incoming) {
+    if (!carries(edge)) continue
+
     // A provider is always hashed before its consumer — that is what the topological order buys.
-    const wire = stableKey([edge.targetHandle ?? '', hashes.get(edge.target) ?? ''])
-    push(landing, edge.sourceHandle ?? '', wire)
+    const landed = stableKey([edge.targetHandle, hashes.get(edge.target) ?? ''])
+    push(landing, portKeyOf(ports, edge), landed)
   }
 
   const from = [...landing].map(stableKey).sort()
@@ -212,12 +229,15 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
     if (!node) continue
 
     const feeding = incoming.get(id) ?? []
-    const hash = hashOf(node, feeding, hashes)
+    // Flattened once and handed to both: `inputHandlesOf` walks the sub-handles and allocates as it
+    // goes, and the hash and the inputs must group a wire under the same key or they disagree.
+    const ports = inputHandlesOf(node)
+    const hash = hashOf(node, feeding, hashes, ports)
     hashes.set(id, hash)
     order.push({
       id,
       hash,
-      inputs: inputsOf(node, feeding, byId),
+      inputs: inputsOf(feeding, byId, ports),
       awaits: [...(awaited.get(id) ?? [])],
       cached: cache?.has(hash) === true,
     })

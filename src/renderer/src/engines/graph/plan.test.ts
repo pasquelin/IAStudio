@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphEdge,
+  type GraphNode,
+  type GraphState,
+} from '@shared/domain/graph'
 import {
   approvalNode as approval,
+  branchNode as branch,
   graphOf,
   guards,
   modelNode as model,
@@ -9,6 +15,7 @@ import {
   transformNode as transform,
   wire,
 } from './graph-fixtures'
+import { handleId } from './handles'
 import { moveNode, updateNodeData } from './mutations'
 import { planGraph, type GraphPlan, type GraphPlanNode } from './plan'
 import { parseGraph } from './serialize'
@@ -309,16 +316,60 @@ describe('hashing a node', () => {
    * Onto ONE port, the order decides. Several wires on a port concatenate in edge order and a
    * scalar port takes the head (`bodyOf`), so the first wire is what fills the body — unlike two
    * wires on two ports, above, where the file's own order says nothing.
+   *
+   * On a branch's conditional port because that is where the shape is REACHABLE: `takesManyWires`
+   * lets only `transformText` and `ifElse` hold several, and `parseGraph` keeps a single wire per
+   * port on everything else — a generator montage would be one no canvas draws and no file keeps.
    */
   it('changes when two wires onto ONE port are written in the other order', () => {
     const feeds: readonly GraphEdge[] = [
-      wire('m1', 'prompt', 'text1', 'prompt'),
-      wire('m1', 'prompt', 'text2', 'prompt'),
+      wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+      wire('if1', CONDITIONAL_PORT, 'text2', 'prompt'),
     ]
-    const nodes = [text('text1'), text('text2'), model('m1')]
+    const nodes = [text('text1'), text('text2'), branch('if1', [])]
 
-    expect(hashOf(planGraph(graphOf(nodes, [...feeds].reverse())), 'm1')).not.toBe(
-      hashOf(planGraph(graphOf(nodes, feeds)), 'm1'),
+    expect(hashOf(planGraph(graphOf(nodes, [...feeds].reverse())), 'if1')).not.toBe(
+      hashOf(planGraph(graphOf(nodes, feeds)), 'if1'),
+    )
+  })
+
+  /**
+   * Two handles a file gives ONE name land in one list (`inputs` keys by name), so they must land
+   * in one hashed group too. Keyed by handle id, they fell into two groups the sort then made
+   * order-blind: the body changed and the hash did not.
+   */
+  it('groups two handles a file gives one name the way the body groups them', () => {
+    const twoPorts = (graph: GraphState): GraphState =>
+      updateNodeData(graph, 'if1', {
+        inputHandles: [
+          { id: handleId('if1', 'source', CONDITIONAL_PORT), name: CONDITIONAL_PORT },
+          { id: handleId('if1', 'source', 'other'), name: CONDITIONAL_PORT },
+        ],
+      })
+
+    const feeds: readonly GraphEdge[] = [
+      wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+      wire('if1', 'other', 'text2', 'prompt'),
+    ]
+    const nodes = [text('text1'), text('text2'), branch('if1', [])]
+
+    expect(hashOf(planGraph(twoPorts(graphOf(nodes, [...feeds].reverse()))), 'if1')).not.toBe(
+      hashOf(planGraph(twoPorts(graphOf(nodes, feeds))), 'if1'),
+    )
+  })
+
+  /**
+   * A wire missing either end names no port and fills no body — `inputsOf` walks past it. Counting
+   * its order would invalidate a node, and everything downstream of it, for a file whose edges are
+   * listed otherwise.
+   */
+  it('leaves a wire that reaches no body out of the key', () => {
+    const half: GraphEdge = { id: 'e1', source: 'if1', target: 'text1' }
+    const nodes = [text('text1'), text('text2'), branch('if1', [])]
+    const feeds: readonly GraphEdge[] = [half, wire('if1', CONDITIONAL_PORT, 'text2', 'prompt')]
+
+    expect(hashOf(planGraph(graphOf(nodes, [...feeds].reverse())), 'if1')).toBe(
+      hashOf(planGraph(graphOf(nodes, feeds)), 'if1'),
     )
   })
 })
