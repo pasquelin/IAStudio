@@ -64,6 +64,8 @@ export type ScenarioHandlerDeps = {
    * was closed. Injected rather than reached for: this module speaks SDK, not filesystem.
    */
   saveWorkflow: (name: string, contents: string) => Promise<string | null>
+  /** Asks which `.workflow.json` to open and answers what it holds, unparsed beyond JSON. */
+  openWorkflow: () => Promise<unknown>
   /**
    * Which project the active key belongs to, for `exportedBy`. It answers `null` until the
    * library has reported once — written as an empty string then, which is what the field means:
@@ -118,6 +120,7 @@ export function registerScenarioHandlers({
   plan,
   estimateCost,
   saveWorkflow,
+  openWorkflow,
   ownerScope,
 }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioUsageReport, (_event, period) =>
@@ -264,6 +267,13 @@ export function registerScenarioHandlers({
       },
     )
   })
+
+  /**
+   * A `.workflow.json` off the disk, handed over as it stands. Nothing is validated here: the
+   * reader on the other side drops what does not hold, and a second validator on this one would
+   * be a second verdict on the same file.
+   */
+  handle(CHANNELS.workflowsImport, () => openWorkflow())
 
   handle(CHANNELS.workflowsTransform, (_event, expression, variables) => {
     // Around the parsing as well as the evaluation: a refusal here used to reject the invoke

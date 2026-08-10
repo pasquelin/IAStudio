@@ -17,6 +17,7 @@ export type GraphToolbarProps = Omit<GraphToolbarState, 'runShortcut'> & {
   onRun: () => void
   onExport: () => void
   onPublish: () => void
+  onImport: () => void
 }
 
 /**
@@ -35,10 +36,12 @@ export function GraphToolbar({
   onRun,
   onExport,
   onPublish,
+  onImport,
   canUndo,
   canRedo,
   canRun,
   canExport,
+  canImport,
   running,
 }: GraphToolbarProps) {
   const { zoomIn, zoomOut } = useReactFlow()
@@ -63,6 +66,7 @@ export function GraphToolbar({
       if (id === 'run') return onRun()
       if (id === 'export') return onExport()
       if (id === 'publish') return onPublish()
+      if (id === 'import') return onImport()
       if (id === 'add') return onAdd(pointBesideBar())
       if (id === 'select' || id === 'pan') return onMode(id)
       if (id === 'undo') return onUndo()
@@ -70,13 +74,13 @@ export function GraphToolbar({
       if (id === 'zoomIn') return void zoomIn()
       if (id === 'zoomOut') return void zoomOut()
     },
-    [onAdd, onMode, onUndo, onRedo, onRun, onExport, onPublish, zoomIn, zoomOut],
+    [onAdd, onMode, onUndo, onRedo, onRun, onExport, onPublish, onImport, zoomIn, zoomOut],
   )
 
   return (
     <div ref={bar} className="absolute top-2 left-2 z-10">
       <Toolbar
-        tools={graphTools({ canUndo, canRedo, canRun, canExport, running, runShortcut })}
+        tools={graphTools({ canUndo, canRedo, canRun, canExport, canImport, running, runShortcut })}
         activeTool={mode}
         onTool={onTool}
       />

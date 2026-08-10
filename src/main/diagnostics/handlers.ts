@@ -44,6 +44,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'graph.compile': 'document',
   'graph.export': 'document',
   'graph.publish': 'document',
+  'graph.import': 'document',
 }
 
 /**

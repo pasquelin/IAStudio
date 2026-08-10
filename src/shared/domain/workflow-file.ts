@@ -114,3 +114,26 @@ export function workflowFileOf(
     exportedBy: about.exportedBy,
   }
 }
+
+/**
+ * The graph inside whatever was read — a studio file, a workflow's `editor_info`, or a bare graph.
+ *
+ * **Three shapes reach the reader and only one of them is nested**, which is exactly the trap this
+ * closes: `parseGraph` reads `nodes`/`edges` off the ROOT, so a `.workflow.json` handed to it
+ * straight answers an EMPTY graph — no error, no missing node, just a canvas with nothing on it.
+ *
+ * `editorInfo` wins where it is an object, because a file carrying one carries nothing else at its
+ * root that a graph could be read from. `editor_info` too, in the API's own spelling: a workflow
+ * fetched rather than exported is the other half of "opens in the studio".
+ *
+ * Here rather than in the reader for the reason `RESERVED_NODE_ID` is here: the reader lives in the
+ * opening chunk, and reaching from it into the engine drags the engine along.
+ */
+export function editorInfoOf(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+
+  const held: Record<string, unknown> = { ...raw }
+  const nested = held.editorInfo ?? held.editor_info
+
+  return typeof nested === 'object' && nested !== null ? nested : raw
+}

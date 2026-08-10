@@ -37,6 +37,17 @@ function reversible(id: string, next: (graph: GraphState) => GraphState): Comman
 export const addGraphNode = (node: GraphNode): Command<GraphState> =>
   reversible(`graph:add:${node.id}`, graph => addNode(graph, node))
 
+/**
+ * The whole graph, replaced by one read off a file — one undo entry, and the way back is the graph
+ * that was there.
+ *
+ * A command rather than a `setState`, and that is the point: an import lands on top of work
+ * somebody may not have meant to lose, and `⌘Z` is what makes that survivable. `reversible` keeps
+ * the previous state whole, which is exactly what putting it back needs.
+ */
+export const replaceGraph = (graph: GraphState): Command<GraphState> =>
+  reversible('graph:replace', () => graph)
+
 export const removeGraphNode = (id: string): Command<GraphState> =>
   reversible(`graph:remove:${id}`, graph => removeNode(graph, id))
 

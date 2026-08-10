@@ -5,6 +5,7 @@ import type { GraphPublishResult } from '@shared/domain/graph'
 import { isRunnable, type GraphPosition } from '@shared/domain/graph'
 import {
   addGraphNode,
+  replaceGraph,
   connectGraph,
   disconnectGraph,
   moveGraphNode,
@@ -12,6 +13,7 @@ import {
 } from '@/engines/graph/commands'
 import type { Asset } from '@shared/domain/asset'
 import { assetNode, createModelNode, createNode } from '@/engines/graph/factory'
+import { parseGraph } from '@/engines/graph/serialize'
 import { modelForScope } from '@/helpers/model-for-scope'
 import { offerModelsOfFamily } from '@/helpers/offer-model'
 import { getBridge } from '@/services/bridge'
@@ -236,6 +238,34 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       .catch(error => reportFailure('graph.publish', documentId, error))
   }, [documentId, graph, title])
 
+  /**
+   * A graph off a file, put in place of this one — through a COMMAND, so `⌘Z` gives back what was
+   * there. An import lands on top of work somebody may not have meant to lose.
+   *
+   * A file that holds no graph reads as an empty one, and replacing a canvas with nothing is not
+   * what anyone asked for: nothing is applied then, and the journal says why.
+   */
+  const onImport = useCallback(() => {
+    void getBridge()
+      ?.workflows.import()
+      .then(raw => {
+        if (raw === null) return
+
+        const read = parseGraph(raw)
+        if (read.nodes.length === 0) {
+          return reportFailure('graph.import', documentId, new Error('no node in that file'))
+        }
+
+        // The run state is keyed by NODE ID and outlives the graph: ids are `text1`,
+        // `imageGenerator1` — the webapp's convention and ours — so an imported node would wear
+        // the previous graph's result without ever having run. `⌘Z` cannot help: a run is not in
+        // the history.
+        useGraphRuns.getState().forget(documentId)
+        useGraphs.getState().runCommand(documentId, replaceGraph(read))
+      })
+      .catch(error => reportFailure('graph.import', documentId, error))
+  }, [documentId])
+
   const onDecide = useCallback(
     (nodeId: string, approved: boolean) =>
       useGraphRuns.getState().decide(documentId, nodeId, approved),
@@ -274,6 +304,8 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       canExport={canExport}
       onExport={onExport}
       onPublish={onPublish}
+      onImport={onImport}
+      canImport={!running}
       published={published}
       runs={runs}
       running={running}

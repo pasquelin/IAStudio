@@ -1,6 +1,7 @@
 import {
   mdiCursorDefaultOutline,
   mdiCloudUploadOutline,
+  mdiTrayArrowUp,
   mdiTrayArrowDown,
   mdiHandBackRightOutline,
   mdiMagnifyMinusOutline,
@@ -26,6 +27,9 @@ export type GraphToolbarState = {
   canRun: boolean
   /** An empty graph writes a file nothing can open, and publishes an App that answers nothing. */
   canExport: boolean
+  /** A run under way owns the nodes on the canvas: replacing them under it lands its results on
+   * a graph that never asked for them. */
+  canImport: boolean
   /** The same button, and deliberately: a run and its stop are one place to look, not two. */
   running: boolean
   /**
@@ -49,6 +53,7 @@ export function graphTools({
   canRedo,
   canRun,
   canExport,
+  canImport,
   running,
   runShortcut,
 }: GraphToolbarState): ToolbarItem[] {
@@ -75,6 +80,13 @@ export function graphTools({
       descriptionKey: 'graphTools.publishHint',
       icon: mdiCloudUploadOutline,
       disabled: !canExport,
+    },
+    {
+      id: 'import',
+      labelKey: 'graphTools.import',
+      descriptionKey: 'graphTools.importHint',
+      icon: mdiTrayArrowUp,
+      disabled: !canImport,
     },
     {
       id: 'add',

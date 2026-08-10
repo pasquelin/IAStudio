@@ -85,6 +85,7 @@ export type Channels = {
   workflowsCompile: 'workflows:compile'
   workflowsExport: 'workflows:export'
   workflowsPublish: 'workflows:publish'
+  workflowsImport: 'workflows:import'
   workflowsTransform: 'workflows:transform'
 
   projectCreate: 'project:create'
@@ -209,6 +210,7 @@ export const CHANNELS: Channels = {
   workflowsCompile: 'workflows:compile',
   workflowsExport: 'workflows:export',
   workflowsPublish: 'workflows:publish',
+  workflowsImport: 'workflows:import',
   workflowsTransform: 'workflows:transform',
 
   projectCreate: 'project:create',
@@ -408,6 +410,7 @@ export type LogScope =
   | 'graph.compile'
   | 'graph.export'
   | 'graph.publish'
+  | 'graph.import'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -436,6 +439,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'graph.compile',
   'graph.export',
   'graph.publish',
+  'graph.import',
 ]
 
 /**
@@ -648,6 +652,15 @@ export type StudioBridge = {
      * the journal, like a compile's.
      */
     publish: (graph: GraphState, name: string) => Promise<GraphPublishResult>
+    /**
+     * Opens a `.workflow.json` and hands back what it holds, or `null` where the picker was
+     * closed. The CONTENTS, not a path: the renderer has no filesystem (invariant 1), and
+     * `parseGraph` is what turns this into a graph — it takes an `unknown` for that reason.
+     *
+     * Unparsed on purpose: a file a user may have edited is untrusted, and the reader is already
+     * written to drop what does not hold rather than to fail the whole read.
+     */
+    import: () => Promise<unknown>
     /**
      * Evaluates one `transformText` node's CEL expression, and answers the text it produced.
      *

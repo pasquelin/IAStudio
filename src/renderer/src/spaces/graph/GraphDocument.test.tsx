@@ -6,9 +6,10 @@ import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
 import { FAMILY_FACET } from '@/panels/models/family-facet'
 import { publishCommand } from '@/services/command-bus'
+import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
-import { useGraphRuns } from '@/stores/graph-runs'
+import { runOf, useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -19,6 +20,8 @@ import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { GraphDocument } from './GraphDocument'
 import { canvasNode, clickNode } from './graph-canvas-fixtures'
+
+vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
 
 const DOCUMENT = 'graph_1'
 
@@ -204,6 +207,129 @@ describe('a graph as a document', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
 
       expect(await screen.findByText(/Scenario l’a refusé/)).toBeInTheDocument()
+    })
+
+    /**
+     * The gesture the import exists for, and its way back. An import lands on top of work
+     * somebody may not have meant to lose, so it goes through a command and `⌘Z` undoes it.
+     */
+    it('puts the file’s graph in place of this one, and gives it back on undo', async () => {
+      const file = {
+        version: '1.0',
+        editorInfo: {
+          nodes: [{ id: 'imported1', type: 'text', position: { x: 0, y: 0 }, data: {} }],
+          edges: [],
+          inputKeys: [],
+        },
+      }
+      installFakeBridge({ workflows: { import: () => Promise.resolve(file) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+
+      await waitFor(() => expect(state().nodes.map(node => node.id)).toEqual(['imported1']))
+
+      act(() => useGraphs.getState().undo(DOCUMENT))
+      expect(state().nodes.map(node => node.id)).toEqual([text.id])
+    })
+
+    /**
+     * A file that holds no graph reads as an EMPTY one — `parseGraph` drops what does not hold
+     * rather than failing the read. Replacing a canvas with nothing is not what anyone asked for.
+     */
+    it('leaves the canvas alone where the file holds no graph', async () => {
+      installFakeBridge({ workflows: { import: () => Promise.resolve({ nothing: true }) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+      await Promise.resolve()
+
+      expect(state().nodes.map(node => node.id)).toEqual([text.id])
+    })
+
+    /**
+     * A run under way OWNS the nodes on the canvas: replacing them under it lands its results on
+     * a graph that never asked for them, and `⌘Z` cannot help — a run is not in the history.
+     */
+    it('withdraws the import while a run is under way', () => {
+      withOneNode()
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Importer un graphe' })).toBeEnabled()
+
+      act(() =>
+        useGraphRuns.setState({
+          runs: { [DOCUMENT]: { running: true, nodes: {}, cache: new Map() } },
+        }),
+      )
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(screen.getByRole('button', { name: 'Importer un graphe' })).toBeDisabled()
+    })
+
+    /**
+     * The run cache is keyed by NODE ID and outlives the graph, and the ids collide almost always
+     * — `text1`, `imageGenerator1`, the webapp's convention and ours. Left in place, an imported
+     * node wears the previous graph's verdict without ever having run.
+     */
+    it('forgets the previous graph’s run before putting another one in place', async () => {
+      const file = {
+        editorInfo: {
+          nodes: [{ id: text.id, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+          edges: [],
+          inputKeys: [],
+        },
+      }
+      installFakeBridge({ workflows: { import: () => Promise.resolve(file) } })
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: { [text.id]: { status: 'failed', failure: 'rejected' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+
+      await waitFor(() => expect(state().nodes.map(node => node.id)).toEqual([text.id]))
+      expect(runOf(useGraphRuns.getState(), DOCUMENT).nodes).toEqual({})
+    })
+
+    /**
+     * A closed picker answers `null`, and it is NOT a failure — which is the whole difference
+     * between it and a file holding no graph. Both leave the canvas alone, so the canvas cannot
+     * tell them apart; the journal is where it shows, and journalling a closed picker would put a
+     * red line under a gesture the user simply changed their mind about.
+     */
+    it('says nothing at all where the picker was closed', async () => {
+      vi.mocked(reportFailure).mockClear()
+      installFakeBridge({ workflows: { import: () => Promise.resolve(null) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+      await Promise.resolve()
+
+      expect(state().nodes.map(node => node.id)).toEqual([text.id])
+      expect(vi.mocked(reportFailure)).not.toHaveBeenCalled()
+    })
+
+    /** A file holding no graph, on the other hand, is worth a line: the gesture did not work. */
+    it('journals a file that holds no graph', async () => {
+      vi.mocked(reportFailure).mockClear()
+      installFakeBridge({ workflows: { import: () => Promise.resolve({ nothing: true }) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+      await waitFor(() => expect(vi.mocked(reportFailure)).toHaveBeenCalled())
     })
 
     /** A refusal from the other side is journalled, never thrown at the window. */
