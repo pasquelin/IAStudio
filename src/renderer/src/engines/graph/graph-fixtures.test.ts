@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_GRAPH, type GraphHandleInput, type GraphHandleOutput } from '@shared/domain/graph'
 import type { FieldDescriptor } from '@shared/domain/model'
-import { edgeOf } from './connect'
+import { edgeBetween } from './connect'
 import { createModelNode, createNode } from './factory'
 import {
   approvalNode,
@@ -110,26 +110,24 @@ describe('the fixtures say what the factory builds', () => {
   })
 
   /**
-   * The same lock, on the wire rather than on the node: `edgeOf` is what the canvas builds when a
-   * connection is dropped, so a fixture naming an edge any other way tests a graph the studio does
-   * not write.
+   * The same lock, on the wire rather than on the node — and the reason `wire` names its ends by
+   * FIELD while `edgeBetween` names them by handle id: the shorthand has to land on the same edge.
    */
-  it('gives a wire the edge edgeOf builds from the same two ports', () => {
-    const built = edgeOf({
-      source: 'model1',
-      target: 'text1',
-      sourceHandle: handleId('model1', 'source', 'prompt'),
-      targetHandle: handleId('text1', 'target', 'prompt'),
-    })
-
-    expect(wire('model1', 'prompt', 'text1', 'prompt')).toEqual(built)
+  it('gives a wire the edge the canvas builds from the same two ports', () => {
+    expect(wire('model1', 'prompt', 'text1', 'prompt')).toEqual(
+      edgeBetween(
+        'model1',
+        handleId('model1', 'source', 'prompt'),
+        'text1',
+        handleId('text1', 'target', 'prompt'),
+      ),
+    )
   })
 
   /**
    * An id built from the two NODES collides the moment one node reads another twice — a generator
-   * whose prompt and mask leave by two branches of one `ifElse`. Two edges sharing an id make
-   * `replaceNodePorts` keep whichever it meets first, so a suite exercising the second wire would
-   * be reasoning about an edge the store never held.
+   * whose prompt and mask leave by two branches of one `ifElse`. `disconnect` then drops BOTH wires
+   * on either id, so a suite cutting one would be reasoning about a graph the store never held.
    */
   it('tells two wires between the same pair of nodes apart', () => {
     const prompt = wire('model1', 'prompt', 'ifElse1', 'case1')

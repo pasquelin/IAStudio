@@ -77,20 +77,30 @@ export const canDropConnection = (graph: GraphState, connection: Connection): bo
 }
 
 /**
- * The edge a connection becomes.
+ * The one place an edge is built.
  *
- * Built here rather than by the canvas so that its id follows Scenario's spelling and its two
- * ends keep the inverted convention — the one place where getting it backwards would be silent.
+ * Its id follows Scenario's spelling and its two ends keep the inverted convention — `source` is
+ * the CONSUMER, `target` the PROVIDER — which is the one place where getting it backwards would be
+ * silent. Ports are passed as HANDLE IDS rather than field names, so a document naming its own
+ * ports goes through here too.
  */
+export const edgeBetween = (
+  consumer: string,
+  sourceHandle: string,
+  provider: string,
+  targetHandle: string,
+): GraphEdge => ({
+  id: edgeId(targetHandle, sourceHandle),
+  source: consumer,
+  target: provider,
+  sourceHandle,
+  targetHandle,
+})
+
+/** The edge a connection becomes, or nothing where the canvas hands over an end it never drew. */
 export function edgeOf(connection: Connection): GraphEdge | null {
   const { source, target, sourceHandle, targetHandle } = connection
   if (!sourceHandle || !targetHandle) return null
 
-  return {
-    id: edgeId(targetHandle, sourceHandle),
-    source,
-    target,
-    sourceHandle,
-    targetHandle,
-  }
+  return edgeBetween(source, sourceHandle, target, targetHandle)
 }

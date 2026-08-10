@@ -5,11 +5,18 @@ import {
   CONDITIONAL_PORT,
   type GraphConditionBlock,
   type GraphEdge,
-  type GraphHandleOutput,
   type GraphNode,
 } from '@shared/domain/graph'
 import { conditionBlocksOf } from '@/engines/graph/conditions'
-import { branchNode, modelNode, textNode, wire } from '@/engines/graph/graph-fixtures'
+import { edgeBetween } from '@/engines/graph/connect'
+import {
+  branchNode,
+  graphOf as graphStateOf,
+  modelNode,
+  textNode,
+  wire,
+} from '@/engines/graph/graph-fixtures'
+import { handleId, inputHandlesOf } from '@/engines/graph/handles'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { GraphNodeInspector } from './GraphNodeInspector'
@@ -38,14 +45,27 @@ const FED: GraphEdge = wire('ifElse1', CONDITIONAL_PORT, 'text1', 'prompt')
 /** A model reading the FIRST branch, which is the port a removed block takes with it. */
 const READS_CASE1: GraphEdge = wire('model1', 'prompt', 'ifElse1', 'case1')
 
-/** The ports of a document the editor never made — named its own way, matched by index. */
-const THEIR_PORTS: readonly GraphHandleOutput[] = [
-  { id: 'ifElse1-out-0', name: 'a' },
-  { id: 'ifElse1-out-1', name: 'b' },
-]
+/**
+ * A branch off a FILE, whose ports ARE this suite's subject: named the document's own way, which
+ * the converter matches by index. Its conditional port comes from the fabric all the same — a
+ * branch carrying none is one no wire could reach, and writing it out is how this file lost it.
+ */
+const importedBranch = (blocks: readonly GraphConditionBlock[]): GraphNode => ({
+  id: 'ifElse1',
+  type: 'ifElse',
+  position: { x: 40, y: 0 },
+  data: {
+    conditionBlocks: blocks,
+    inputHandles: inputHandlesOf(BRANCH),
+    outputHandles: [
+      { id: 'ifElse1-out-0', name: 'a' },
+      { id: 'ifElse1-out-1', name: 'b' },
+    ],
+  },
+})
 
 beforeEach(() => {
-  installGraph(DOCUMENT, { nodes: [TEXT, BRANCH, MODEL], edges: [FED], inputKeys: [] })
+  installGraph(DOCUMENT, graphStateOf([TEXT, BRANCH, MODEL], [FED]))
 })
 
 const branch = (): GraphNode | undefined =>
@@ -185,11 +205,7 @@ describe('the outputs a branch carries', () => {
    * from the gesture that caused it — which is why removing a branch cuts what read it.
    */
   it('cuts the wire that left by a removed branch', async () => {
-    installGraph(DOCUMENT, {
-      nodes: [TEXT, BRANCH, MODEL],
-      edges: [FED, READS_CASE1],
-      inputKeys: [],
-    })
+    installGraph(DOCUMENT, graphStateOf([TEXT, BRANCH, MODEL], [FED, READS_CASE1]))
     show('ifElse1')
     await userEvent.click(screen.getByRole('button', { name: /Supprimer cette branche/ }))
 
@@ -224,11 +240,7 @@ describe('the outputs a branch carries', () => {
       { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'b' }] },
     ])
     const readsCase2: GraphEdge = wire('model1', 'mask', 'ifElse1', 'case2')
-    installGraph(DOCUMENT, {
-      nodes: [TEXT, three, MODEL],
-      edges: [FED, READS_CASE1, readsCase2],
-      inputKeys: [],
-    })
+    installGraph(DOCUMENT, graphStateOf([TEXT, three, MODEL], [FED, READS_CASE1, readsCase2]))
     show('ifElse1')
 
     const [first] = screen.getAllByRole('button', { name: /Supprimer cette branche/ })
@@ -250,21 +262,14 @@ describe('the outputs a branch carries', () => {
    * handle list, which cut every wire into the node.
    */
   it('leaves the ports of an imported node alone while a value is typed', async () => {
-    const theirs: GraphNode = branchNode('ifElse1', [TESTS_TEXT], THEIR_PORTS)
-    // Written out rather than wired by the fabric: a document the editor never made names its own
-    // ports, and its edges are named its own way too.
-    const readsTheirs: GraphEdge = {
-      id: 'e4',
-      source: 'model1',
-      target: 'ifElse1',
-      sourceHandle: 'model1-source-prompt',
-      targetHandle: 'ifElse1-out-0',
-    }
-    installGraph(DOCUMENT, {
-      nodes: [TEXT, theirs, MODEL],
-      edges: [FED, readsTheirs],
-      inputKeys: [],
-    })
+    const theirs: GraphNode = importedBranch([TESTS_TEXT])
+    const readsTheirs: GraphEdge = edgeBetween(
+      'model1',
+      handleId('model1', 'source', 'prompt'),
+      'ifElse1',
+      'ifElse1-out-0',
+    )
+    installGraph(DOCUMENT, graphStateOf([TEXT, theirs, MODEL], [FED, readsTheirs]))
     show('ifElse1')
     await userEvent.type(screen.getByLabelText('Valeur comparée'), 'rock')
 
@@ -277,8 +282,8 @@ describe('the outputs a branch carries', () => {
 
   /** And an added branch slots its port in among theirs rather than replacing the lot. */
   it('inserts a new port among the ones a file wrote', async () => {
-    const theirs: GraphNode = branchNode('ifElse1', [{ logic: 'and', conditions: [] }], THEIR_PORTS)
-    installGraph(DOCUMENT, { nodes: [TEXT, theirs, MODEL], edges: [FED], inputKeys: [] })
+    const theirs: GraphNode = importedBranch([{ logic: 'and', conditions: [] }])
+    installGraph(DOCUMENT, graphStateOf([TEXT, theirs, MODEL], [FED]))
     show('ifElse1')
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une branche/ }))
 
@@ -296,7 +301,7 @@ describe('a condition whose field the wires do not offer', () => {
     const orphan: GraphNode = branchNode('ifElse1', [
       { logic: 'and', conditions: [{ field: 'text1_output', operator: 'equals' }] },
     ])
-    installGraph(DOCUMENT, { nodes: [TEXT, orphan], edges: [], inputKeys: [] })
+    installGraph(DOCUMENT, graphStateOf([TEXT, orphan], []))
     show('ifElse1')
 
     expect(screen.getByLabelText('Ce qui est testé')).toHaveValue('text1_output')

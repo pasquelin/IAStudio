@@ -2,12 +2,12 @@ import {
   CONDITIONAL_PORT,
   type GraphConditionBlock,
   type GraphEdge,
-  type GraphHandleOutput,
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
 import { addedBranch } from './conditions'
-import { DEFAULT_OUTPUT_NAME, edgeId, handleId, loopInputId, loopOutputId } from './handles'
+import { edgeBetween } from './connect'
+import { DEFAULT_OUTPUT_NAME, handleId, loopInputId, loopOutputId } from './handles'
 import type { LoopListKind } from './loops'
 
 /**
@@ -80,17 +80,8 @@ export function approvalNode(id: string, message = ''): GraphNode {
 /**
  * A branch, with one output port per block plus the else — grown through `addedBranch`, which is
  * the editor's own path, so a fixture can never drift from what the inspector builds.
- *
- * `outputHandles` replaces the ports the editor would name, for the suites whose subject is a node
- * read off a FILE: the converter matches an `ifElse` port by its index, so a document is free to
- * name them its own way. The conditional port stays the editor's — a branch carrying none is one
- * no wire could reach.
  */
-export function branchNode(
-  id: string,
-  blocks: readonly GraphConditionBlock[],
-  outputHandles?: readonly GraphHandleOutput[],
-): GraphNode {
+export function branchNode(id: string, blocks: readonly GraphConditionBlock[]): GraphNode {
   let node: GraphNode = {
     id,
     type: 'ifElse',
@@ -113,14 +104,7 @@ export function branchNode(
     node = { ...node, data: { ...node.data, ...addedBranch(node) } }
   }
 
-  return {
-    ...node,
-    data: {
-      ...node.data,
-      conditionBlocks: blocks,
-      ...(outputHandles === undefined ? {} : { outputHandles }),
-    },
-  }
+  return { ...node, data: { ...node.data, conditionBlocks: blocks } }
 }
 
 /** A note: drawn on the canvas, compiled to nothing, and read by no port at either end. */
@@ -202,24 +186,19 @@ export const guards = (approvalId: string, guarded: string, from = 'image'): Gra
   wire(approvalId, 'approval', guarded, from)
 
 /**
- * `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention.
+ * A wire named by the two FIELDS its ports carry — the shorthand most suites want.
  *
- * The id comes from the two PORTS, as `edgeOf` builds it when the canvas drops a connection: named
- * after the two nodes instead, a generator reading two branches of one `ifElse` gave both wires the
- * same id, and a suite would be reasoning about an edge the store never held.
+ * Built by `edgeBetween`, the same call the canvas makes: written out here instead, the id was the
+ * two node ids, so a generator reading two branches of one `ifElse` gave both wires one id, and
+ * `disconnect` on either took them both.
  */
-export function wire(consumer: string, port: string, provider: string, from: string): GraphEdge {
-  const sourceHandle = handleId(consumer, 'source', port)
-  const targetHandle = handleId(provider, 'target', from)
-
-  return {
-    id: edgeId(targetHandle, sourceHandle),
-    source: consumer,
-    sourceHandle,
-    target: provider,
-    targetHandle,
-  }
-}
+export const wire = (consumer: string, port: string, provider: string, from: string): GraphEdge =>
+  edgeBetween(
+    consumer,
+    handleId(consumer, 'source', port),
+    provider,
+    handleId(provider, 'target', from),
+  )
 
 export const graphOf = (nodes: readonly GraphNode[], edges: readonly GraphEdge[]): GraphState => ({
   nodes,
