@@ -7,7 +7,7 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
-import type { FolderReader } from './folder'
+import type { FolderEditor, FolderReader } from './folder'
 import type { ActivityReport } from './activity-log'
 import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
 import type { DocumentFiles } from './documents'
@@ -42,8 +42,8 @@ export type ProjectHandlerDeps = {
   documents: DocumentFiles
   /** `shell.showItemInFolder`, injected rather than imported: it needs a live app. */
   reveal: (file: string) => void
-  /** The project folder, read one level at a time for the explorer. */
-  folder: FolderReader
+  /** The project folder: read one level at a time, and the two gestures that write to it. */
+  folder: FolderReader & FolderEditor
   /**
    * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
    * this is the only place the studio launches a third-party application, so it is injected
@@ -96,6 +96,24 @@ export function registerProjectHandlers({
   })
 
   handle(CHANNELS.projectCurrent, () => project.current())
+
+  handle(CHANNELS.projectRevealFile, async (_event, relative) => {
+    reveal(join(project.path(), parseFolderPath(relative)))
+  })
+
+  // Both answer whether it happened, and both say why in the journal when it did not: a row of
+  // a context menu that does nothing and explains nothing is the worst of the three outcomes.
+  handle(CHANNELS.projectRenameFile, async (_event, relative, name) => {
+    const done = await folder.rename(parseFolderPath(relative), parseProjectName(name))
+    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotRenamed' })
+    return done
+  })
+
+  handle(CHANNELS.projectTrashFile, async (_event, relative) => {
+    const done = await folder.trash(parseFolderPath(relative))
+    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotTrashed' })
+    return done
+  })
 
   // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
   // and a synchronous throw here would reach the caller as an exception rather than a rejected

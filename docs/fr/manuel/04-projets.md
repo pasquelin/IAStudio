@@ -169,6 +169,24 @@ c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste 
 | `↑` `↓` | la ligne précédente, la suivante |
 | `Entrée` | ouvre la ligne |
 
+**Le clic droit sur une ligne** offre trois gestes :
+
+| Geste | Ce qu’il fait |
+|---|---|
+| **Révéler dans le dossier** | ouvre le dossier dans le Finder ou l’Explorateur Windows, la ligne sélectionnée |
+| **Renommer** | change le nom sur le disque, là où il est lu |
+| **Mettre à la corbeille** | envoie le fichier à la corbeille de votre système |
+
+> **Rien n’est effacé.** « Mettre à la corbeille » est la corbeille du système : le fichier s’y
+> récupère. Le studio ne supprime définitivement rien dans un dossier qui vous appartient.
+
+**Deux refus, et ils sont grisés plutôt que cachés.** `assets/`, `documents/` et leurs
+sous-dossiers ne se renomment ni ne se jettent : l’index range chaque asset par son chemin sous
+`assets/`, et déplacer ce dossier laisserait des lignes que plus rien ne retrouve. Et **un
+document qu’un onglet tient ouvert ne se renomme pas** : le nom de son fichier est son
+identifiant, l’onglet perdrait le lien, et le prochain `⌘S` réécrirait l’ancien nom à côté du
+nouveau. Fermez l’onglet d’abord.
+
 - les documents déjà à l’écran sont marqués **Ouvert** ;
 - l’icône d’un document dit de quel espace il relève, la même que dans le rail ;
 - `.project.json` et `.index/` ne s’affichent pas : ce sont les fichiers de service du studio.

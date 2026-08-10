@@ -57,8 +57,10 @@ import { runnerOf } from './scenario/runner'
 import type { AskUser } from './project/document-dialogs'
 import { createDocumentFiles, type DocumentFiles } from './project/documents'
 import {
+  createFolderEditor,
   createFolderReader,
   watchProjectFolder,
+  type FolderEditor,
   type FolderReader,
   type FolderWatch,
 } from './project/folder'
@@ -165,8 +167,8 @@ export type Services = {
   pickFolder: () => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
-  /** The project folder, read one level at a time for the explorer. */
-  folder: FolderReader
+  /** The project folder: read one level at a time, and the two gestures that write to it. */
+  folder: FolderReader & FolderEditor
   /** Hands a file to the system. The one place the studio launches a third-party application. */
   openInSystem: (file: string) => Promise<string>
   /** Asks the user a question the OS puts in front of the window — see `document-dialogs`. */
@@ -824,7 +826,13 @@ export function createServices(settings: SettingsStore): Services {
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
     reveal: file => shell.showItemInFolder(file),
-    folder: createFolderReader(() => project.path()),
+    folder: {
+      ...createFolderReader(() => project.path()),
+      ...createFolderEditor(
+        () => project.path(),
+        file => shell.trashItem(file),
+      ),
+    },
     openInSystem: file => shell.openPath(file),
     askUser,
     pickMedia: () => pickMedia(language()),

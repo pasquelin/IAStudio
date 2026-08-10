@@ -1,3 +1,5 @@
+import { PROJECT_FOLDERS } from './project'
+
 /**
  * The project folder as the explorer walks it — one level at a time, never the whole tree.
  *
@@ -59,4 +61,18 @@ export function isUnder(path: string, folder: string): boolean {
 export function parentOf(path: string): string | null {
   const cut = path.lastIndexOf('/')
   return cut === -1 ? null : path.slice(0, cut)
+}
+
+/**
+ * Whether the studio owns this folder rather than the user.
+ *
+ * `assets/`, `documents/` and what they contain are the project's own layout: the catalogue
+ * stores every asset by a path under them, so renaming one orphans rows nobody can find again,
+ * and trashing one takes the work with it. They are shown — hiding them would be lying about
+ * what is on disk — and they refuse to be moved.
+ *
+ * Everything the user put there is theirs, and is renamed and trashed like any other file.
+ */
+export function isStudioFolder(path: string): boolean {
+  return path === FOLDER_ROOT || PROJECT_FOLDERS.includes(path)
 }

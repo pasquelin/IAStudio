@@ -161,6 +161,23 @@ folder, and that is what tells an explorer apart from a list of documents.
 | `↑` `↓` | the previous row, the next one |
 | `Enter` | opens the row |
 
+**Right-clicking a row** offers three gestures:
+
+| Gesture | What it does |
+|---|---|
+| **Reveal in folder** | opens the folder in Finder or Windows Explorer, with the row selected |
+| **Rename** | changes the name on disk, where it is read |
+| **Move to trash** | sends the file to your system's trash |
+
+> **Nothing is deleted.** "Move to trash" is the system's own trash: the file can be got back
+> from it. The studio never permanently removes anything in a folder that belongs to you.
+
+**Two refusals, greyed rather than hidden.** `assets/`, `documents/` and their subfolders cannot
+be renamed or trashed: the index files every asset by its path under `assets/`, and moving that
+folder would leave rows nothing can find again. And **a document a tab is holding cannot be
+renamed**: its file name is its identifier, the tab would lose the link, and the next `⌘S` would
+write the old name back beside the new file. Close the tab first.
+
 - documents already on screen are marked **Open**;
 - a document's icon says which workspace it belongs to, the same one the rail uses;
 - `.project.json` and `.index/` are not shown: they are the studio's own service files.

@@ -9,6 +9,7 @@ import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
+import { EntryMenu } from './EntryMenu'
 import { EntryRow } from './EntryRow'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
 
@@ -40,6 +41,8 @@ export function Explorer() {
   const open = useDocuments(state => state.documents)
   const { nodes, expandedIds, toggle } = useFolderTree()
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([])
+  const [menu, setMenu] = useState<{ node: FolderNode; at: { x: number; y: number } } | null>(null)
+  const [renaming, setRenaming] = useState<string | null>(null)
 
   // Opening a project already lists its documents; this is for what has been written since.
   // `relist` and not `refresh`: settling which tabs are open is the project's business.
@@ -92,10 +95,20 @@ export function Explorer() {
       />
     )
 
+  // The name the disk shows is what is renamed, so the answer settles when the folder is read
+  // again — the watch does that on its own, and this only closes the field.
+  const isOpen = (document: DocumentDescriptor | null): boolean =>
+    document !== null && open[document.id] !== undefined
+
+  const commitRename = (node: FolderNode, name: string): void => {
+    setRenaming(null)
+    if (name !== node.name) void getBridge()?.project.renameFile(node.path, name)
+  }
+
   if (nodes.length === 0)
     return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.empty')} />
 
-  return (
+  const tree = (
     <Tree
       nodes={nodes}
       selectedIds={selectedIds}
@@ -106,6 +119,7 @@ export function Explorer() {
       // only what is loaded, and a folder nobody has opened has nothing loaded by definition.
       expandable={node => node.kind === 'folder'}
       onActivate={activate}
+      onContextMenu={(node, at) => setMenu({ node, at })}
       renderRow={row => {
         const document = documentOf(row.node)
         const icon =
@@ -124,10 +138,30 @@ export function Explorer() {
           <EntryRow
             name={row.node.name}
             icon={icon}
-            open={document !== null && open[document.id] !== undefined}
+            open={isOpen(document)}
+            {...(renaming === row.node.id
+              ? { onRename: (name: string) => commitRename(row.node, name) }
+              : {})}
           />
         )
       }}
     />
+  )
+
+  return (
+    <>
+      {tree}
+      {menu && (
+        <EntryMenu
+          node={menu.node}
+          at={menu.at}
+          openInTab={
+            documentOf(menu.node) !== null && open[documentOf(menu.node)!.id] !== undefined
+          }
+          onRename={() => setRenaming(menu.node.id)}
+          onClose={() => setMenu(null)}
+        />
+      )}
+    </>
   )
 }

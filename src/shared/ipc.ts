@@ -82,6 +82,9 @@ export type Channels = {
   projectCurrent: 'project:current'
   projectListFolder: 'project:list-folder'
   projectOpenFile: 'project:open-file'
+  projectRevealFile: 'project:reveal-file'
+  projectRenameFile: 'project:rename-file'
+  projectTrashFile: 'project:trash-file'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -194,6 +197,9 @@ export const CHANNELS: Channels = {
   projectCurrent: 'project:current',
   projectListFolder: 'project:list-folder',
   projectOpenFile: 'project:open-file',
+  projectRevealFile: 'project:reveal-file',
+  projectRenameFile: 'project:rename-file',
+  projectTrashFile: 'project:trash-file',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -596,6 +602,19 @@ export type StudioBridge = {
      * folders it has open, which is cheaper than carrying a path through and never wrong.
      */
     onFolderChanged: (callback: () => void) => Unsubscribe
+    /** Shows the file in the system's own file manager, so the path never leaves the process. */
+    revealFile: (relative: string) => Promise<void>
+    /**
+     * Renames in place — the name only, never the folder it sits in. Answers whether it
+     * happened: a name already taken is refused rather than overwritten, and the studio's own
+     * folders refuse to move at all.
+     */
+    renameFile: (relative: string, name: string) => Promise<boolean>
+    /**
+     * To the system's trash, never deleted. Answers whether the system took it. The studio does
+     * not erase anything in a folder that belongs to someone else.
+     */
+    trashFile: (relative: string) => Promise<boolean>
   }
   dialog: {
     /**
