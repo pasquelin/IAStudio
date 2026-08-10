@@ -14,7 +14,12 @@ import type {
   DocumentFile,
   DocumentKind,
 } from './domain/document'
-import type { GraphCompileResult, GraphState, GraphTransformVariables } from './domain/graph'
+import type {
+  GraphCompileResult,
+  GraphPublishResult,
+  GraphState,
+  GraphTransformVariables,
+} from './domain/graph'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -79,6 +84,7 @@ export type Channels = {
   workflowsRun: 'workflows:run'
   workflowsCompile: 'workflows:compile'
   workflowsExport: 'workflows:export'
+  workflowsPublish: 'workflows:publish'
   workflowsTransform: 'workflows:transform'
 
   projectCreate: 'project:create'
@@ -202,6 +208,7 @@ export const CHANNELS: Channels = {
   workflowsRun: 'workflows:run',
   workflowsCompile: 'workflows:compile',
   workflowsExport: 'workflows:export',
+  workflowsPublish: 'workflows:publish',
   workflowsTransform: 'workflows:transform',
 
   projectCreate: 'project:create',
@@ -400,6 +407,7 @@ export type LogScope =
   | 'graph.run'
   | 'graph.compile'
   | 'graph.export'
+  | 'graph.publish'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -427,6 +435,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'graph.run',
   'graph.compile',
   'graph.export',
+  'graph.publish',
 ]
 
 /**
@@ -631,6 +640,14 @@ export type StudioBridge = {
      * only this side knows: the clock, and the account the active key belongs to.
      */
     export: (graph: GraphState, name: string) => Promise<boolean>
+    /**
+     * Publishes the graph as a workflow of the account: created, then filled and marked ready.
+     *
+     * Two calls on the other side and not one, because the API has no third — `create` takes only
+     * a name and a description. A refusal answers a code, never the API's sentence: that goes to
+     * the journal, like a compile's.
+     */
+    publish: (graph: GraphState, name: string) => Promise<GraphPublishResult>
     /**
      * Evaluates one `transformText` node's CEL expression, and answers the text it produced.
      *

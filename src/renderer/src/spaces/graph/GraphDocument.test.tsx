@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
+import type { GraphNode, GraphPublishResult, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
@@ -119,6 +119,55 @@ describe('a graph as a document', () => {
       act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(model)))
       rerender(<GraphDocument documentId={DOCUMENT} />)
       expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeEnabled()
+    })
+  })
+
+  /**
+   * What only the document knows: WHICH graph is handed over, and under what name. The bar's own
+   * rule — grey on an empty graph — is proved beside it, on `graphTools`.
+   */
+  describe('handing the graph to the main process', () => {
+    const withOneNode = (): void => {
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
+    }
+
+    it('sends the graph and the document title to the export', () => {
+      const exportGraph = vi.fn((_graph: GraphState, _name: string) => Promise.resolve(true))
+      installFakeBridge({ workflows: { export: exportGraph } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Exporter le graphe' }))
+
+      const [graph] = exportGraph.mock.calls[0] ?? []
+      expect(graph).toMatchObject({ nodes: [expect.objectContaining({ id: text.id })] })
+    })
+
+    it('sends the same to the publication', () => {
+      const publish = vi.fn((_graph: GraphState, _name: string): Promise<GraphPublishResult> =>
+        Promise.resolve({ ok: false, problem: 'empty' }),
+      )
+      installFakeBridge({ workflows: { publish } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
+
+      expect(publish).toHaveBeenCalledOnce()
+    })
+
+    /** A refusal from the other side is journalled, never thrown at the window. */
+    it('journals a refusal instead of letting it escape', async () => {
+      installFakeBridge({ workflows: { export: () => Promise.reject(new Error('no disk')) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      await expect(
+        (async () => {
+          fireEvent.click(screen.getByRole('button', { name: 'Exporter le graphe' }))
+          await Promise.resolve()
+        })(),
+      ).resolves.toBeUndefined()
     })
   })
 

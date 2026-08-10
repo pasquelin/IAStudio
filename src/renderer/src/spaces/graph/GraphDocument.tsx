@@ -219,6 +219,17 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       .catch(error => reportFailure('graph.export', documentId, error))
   }, [documentId, graph, title])
 
+  /**
+   * The graph as an App of the account. Nothing is painted on the way back yet — the code the
+   * publication answers with is the compile's own vocabulary, and where it goes on the screen is
+   * the same question the compile already asks; the journal carries the API's sentence meanwhile.
+   */
+  const onPublish = useCallback(() => {
+    void getBridge()
+      ?.workflows.publish(graph, title)
+      .catch(error => reportFailure('graph.publish', documentId, error))
+  }, [documentId, graph, title])
+
   const onDecide = useCallback(
     (nodeId: string, approved: boolean) =>
       useGraphRuns.getState().decide(documentId, nodeId, approved),
@@ -256,6 +267,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       canRun={canRun}
       canExport={canExport}
       onExport={onExport}
+      onPublish={onPublish}
       runs={runs}
       running={running}
     />

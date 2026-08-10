@@ -63,6 +63,7 @@ export type GraphCanvasProps = {
   /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
   onRun: () => void
   onExport: () => void
+  onPublish: () => void
   /** The answer given to an approval node the run has stopped on. */
   onDecide: (nodeId: string, approved: boolean) => void
 }
@@ -102,6 +103,7 @@ export function GraphCanvas({
   running,
   onRun,
   onExport,
+  onPublish,
   onDecide,
 }: GraphCanvasProps) {
   /** An edge has no inspector face, so which one is picked never leaves this surface. */
@@ -227,6 +229,7 @@ export function GraphCanvas({
               onRedo={onRedo}
               onRun={onRun}
               onExport={onExport}
+              onPublish={onPublish}
               canUndo={canUndo}
               canRedo={canRedo}
               canRun={canRun}

@@ -71,6 +71,8 @@ function workflowRegistry(overrides: Partial<WorkflowRegistry> = {}): WorkflowRe
   return {
     search: () => Promise.resolve({ items: [], cursor: null }),
     describe: () => Promise.reject(new Error('unused')),
+    create: () => Promise.resolve({ id: 'workflow_1' }),
+    update: () => Promise.resolve(),
     ...overrides,
   }
 }
@@ -562,6 +564,37 @@ describe('scenario handlers', () => {
      * 50 in the prose has never been measured, and a local refusal on it would turn away graphs
      * Scenario accepts.
      */
+    it('publishes the graph as a workflow, models resolved first', async () => {
+      const create = vi.fn((_about: { name: string; description: string }) =>
+        Promise.resolve({ id: 'workflow_9' }),
+      )
+      const update = vi.fn((_id: string, _body: unknown) => Promise.resolve())
+      // Without a schema the converter names no wire and drops the whole incoming wiring, so the
+      // publication must resolve the models before it compiles — as the compile does.
+      const inputsOf = vi.fn(() => Promise.resolve([{ name: 'prompt', type: 'string' }]))
+      register({ workflows: workflowRegistry({ create, update }), models: registry({ inputsOf }) })
+
+      await expect(
+        invoke(CHANNELS.workflowsPublish, graphWithTwoGenerators, 'Heroes'),
+      ).resolves.toEqual({ ok: true, workflowId: 'workflow_9' })
+
+      expect(inputsOf).toHaveBeenCalledWith('model_flux')
+      expect(create).toHaveBeenCalledWith({ name: 'Heroes', description: '' })
+      expect(update.mock.calls[0]?.[0]).toBe('workflow_9')
+    })
+
+    /** Nothing marked as an output compiles to an empty flow, and an empty App answers nothing. */
+    it('refuses to publish a graph nothing reaches', async () => {
+      const create = vi.fn(() => Promise.resolve({ id: 'workflow_9' }))
+      register({ workflows: workflowRegistry({ create }) })
+
+      await expect(invoke(CHANNELS.workflowsPublish, withInput, 'Heroes')).resolves.toEqual({
+        ok: false,
+        problem: 'empty',
+      })
+      expect(create).not.toHaveBeenCalled()
+    })
+
     it('exports a graph of many nodes rather than refusing it on an unmeasured ceiling', async () => {
       const saveWorkflow = vi.fn((_name: string, _contents: string) =>
         Promise.resolve('/tmp/x.json'),

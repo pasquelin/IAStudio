@@ -1,5 +1,6 @@
 import {
   mdiCursorDefaultOutline,
+  mdiCloudUploadOutline,
   mdiTrayArrowDown,
   mdiHandBackRightOutline,
   mdiMagnifyMinusOutline,
@@ -23,7 +24,7 @@ export type GraphToolbarState = {
   canRedo: boolean
   /** Whether a run would report anything: a graph of notes offers a button that does nothing. */
   canRun: boolean
-  /** An empty graph writes a file nothing can open — `workflow_create` refuses empty arrays. */
+  /** An empty graph writes a file nothing can open, and publishes an App that answers nothing. */
   canExport: boolean
   /** The same button, and deliberately: a run and its stop are one place to look, not two. */
   running: boolean
@@ -66,6 +67,13 @@ export function graphTools({
       labelKey: 'graphTools.export',
       descriptionKey: 'graphTools.exportHint',
       icon: mdiTrayArrowDown,
+      disabled: !canExport,
+    },
+    {
+      id: 'publish',
+      labelKey: 'graphTools.publish',
+      descriptionKey: 'graphTools.publishHint',
+      icon: mdiCloudUploadOutline,
       disabled: !canExport,
     },
     {

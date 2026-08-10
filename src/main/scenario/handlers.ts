@@ -6,7 +6,8 @@ import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import { workflowFileOf } from '@shared/domain/workflow-file'
-import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
+import { compileGraph, editorModelOf, modelIdsOf, toEditorFlow } from './workflow-compile'
+import { publishGraph } from './workflow-publish'
 import { openTransformThread } from './transform-thread'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
@@ -224,6 +225,34 @@ export function registerScenarioHandlers({
     })
 
     return (await saveWorkflow(file.name, `${JSON.stringify(file, null, 2)}\n`)) !== null
+  })
+
+  /**
+   * The graph as a workflow of the account. The models are resolved FIRST, for the reason the
+   * compile resolves them: the converter drops every wire whose input it cannot name, so a
+   * publication with no models would put a generator on Scenario with its whole wiring gone —
+   * a workflow that validates, exports, and generates from nothing.
+   */
+  handle(CHANNELS.workflowsPublish, async (_event, graph, name) => {
+    const state = parseGraphState(graph)
+
+    return publishGraph(
+      state,
+      {
+        name: parseAssetName(name),
+        description: '',
+        exportedAt: new Date().toISOString(),
+        exportedBy: ownerScope.current() ?? '',
+      },
+      {
+        write: workflows,
+        flowOf: async published => {
+          const resolved = await resolveModels(published, models, queue)
+          return toEditorFlow(published, modelId => resolved.get(modelId))
+        },
+        report: message => log.warn('scenario', `workflow publish: ${message}`),
+      },
+    )
   })
 
   handle(CHANNELS.workflowsTransform, (_event, expression, variables) => {

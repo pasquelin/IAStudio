@@ -32,6 +32,7 @@ describe('the export button', () => {
     expect(graphTools(bar()).map(item => item.id)).toEqual([
       'run',
       'export',
+      'publish',
       'add',
       'select',
       'pan',
@@ -40,6 +41,14 @@ describe('the export button', () => {
       'zoomIn',
       'zoomOut',
     ])
+  })
+})
+
+describe('the publish button', () => {
+  /** Same guard as the export: an empty graph publishes an App that answers nothing. */
+  it('follows the export, and goes grey with it', () => {
+    expect(tool(bar({ canExport: false }), 'publish')).toBe(true)
+    expect(tool(bar({ canExport: true }), 'publish')).toBe(false)
   })
 })
 
