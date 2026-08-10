@@ -269,6 +269,19 @@ describe('hashing a node', () => {
     expect(hashOf(planGraph(other), 'm1')).not.toBe(hashOf(planGraph(one), 'm1'))
   })
 
+  /**
+   * The other end of the same wire. A branch publishes on the port its condition chose, so two
+   * consumers reading two ports of one `ifElse` are not asking for the same thing — and the
+   * provider hashes the same either way, since its own ports say nothing about what it computes.
+   */
+  it('counts which output of a provider a wire leaves from', () => {
+    const nodes = [text('text1'), model('m1')]
+    const one = graphOf(nodes, [wire('m1', 'prompt', 'text1', 'prompt')])
+    const other = graphOf(nodes, [wire('m1', 'prompt', 'text1', 'second')])
+
+    expect(hashOf(planGraph(other), 'm1')).not.toBe(hashOf(planGraph(one), 'm1'))
+  })
+
   it('counts a field a file names after a member of Object.prototype', () => {
     // `parseGraph` validates the node, not its `data`, so a file decides what lands there. Read
     // with `in` rather than `hasOwn`, such a field reads as excluded and leaves the key silently.
