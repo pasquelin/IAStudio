@@ -1410,9 +1410,7 @@ describe('a branch, run locally', () => {
       { outputHandles: [] },
     )
 
-    expect(failureOf(await watch(noElse, {}, { transform: decides({}) }), 'if1')).toBe(
-      'unsupported',
-    )
+    expect(failureOf(await watch(noElse, {}, { transform: decides({}) }), 'if1')).toBe('unwired')
   })
 
   /**
@@ -1510,7 +1508,7 @@ describe('a branch, run locally', () => {
 
     const watched = await watch(short, {}, { transform: async () => ['true'] })
 
-    expect(failureOf(watched, 'if1')).toBe('unsupported')
+    expect(failureOf(watched, 'if1')).toBe('unwired')
   })
 
   /** A stop pressed while a condition was crossing to the thread leaves the branch idle. */

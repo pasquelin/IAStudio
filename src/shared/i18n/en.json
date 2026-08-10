@@ -153,6 +153,7 @@
     "failure": {
       "cycle": "loop",
       "unsupported": "not runnable",
+      "unwired": "unwired branch",
       "no-model": "no model",
       "blocked": "upstream failed",
       "rejected": "failed",
