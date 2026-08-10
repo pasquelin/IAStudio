@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_GRAPH, type GraphHandleInput, type GraphHandleOutput } from '@shared/domain/graph'
 import type { FieldDescriptor } from '@shared/domain/model'
+import { edgeBetween } from './connect'
 import { createModelNode, createNode } from './factory'
-import { approvalNode, branchNode, modelNode, textNode, transformNode } from './graph-fixtures'
-import { inputHandlesOf, outputHandlesOf } from './handles'
+import {
+  approvalNode,
+  branchNode,
+  modelNode,
+  textNode,
+  transformNode,
+  wire,
+} from './graph-fixtures'
+import { handleId, inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
  * The lock this file exists for.
@@ -99,5 +107,34 @@ describe('the fixtures say what the factory builds', () => {
     expect(portsOf('m1', outputHandlesOf(fixture))).toEqual(
       portsOf(built.id, outputHandlesOf(built)),
     )
+  })
+
+  /**
+   * What `wire` adds to `edgeBetween`, and the only thing this holds: the SIDE each end is spelt
+   * by. A consumer's port is a `source` and a provider's a `target`, and swapping them here would
+   * aim every fixture's wire at a port no node carries. The spelling of the id itself is held by
+   * `connect.test.ts`, which writes the edge out in full.
+   */
+  it('spells the consumer end source and the provider end target', () => {
+    expect(wire('model1', 'prompt', 'text1', 'prompt')).toEqual(
+      edgeBetween(
+        'model1',
+        handleId('model1', 'source', 'prompt'),
+        'text1',
+        handleId('text1', 'target', 'prompt'),
+      ),
+    )
+  })
+
+  /**
+   * An id built from the two NODES collides the moment one node reads another twice — a generator
+   * whose prompt and mask leave by two branches of one `ifElse`. `disconnect` then drops BOTH wires
+   * on either id, so a suite cutting one would be reasoning about a graph the store never held.
+   */
+  it('tells two wires between the same pair of nodes apart', () => {
+    const prompt = wire('model1', 'prompt', 'ifElse1', 'case1')
+    const mask = wire('model1', 'mask', 'ifElse1', 'case2')
+
+    expect(prompt.id).not.toBe(mask.id)
   })
 })

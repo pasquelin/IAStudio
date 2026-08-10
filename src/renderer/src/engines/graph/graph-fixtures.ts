@@ -6,6 +6,7 @@ import {
   type GraphState,
 } from '@shared/domain/graph'
 import { addedBranch } from './conditions'
+import { edgeBetween } from './connect'
 import { DEFAULT_OUTPUT_NAME, handleId, loopInputId, loopOutputId } from './handles'
 import type { LoopListKind } from './loops'
 
@@ -184,16 +185,20 @@ export function forEachEndNode(id: string, parentNodeId?: string): GraphNode {
 export const guards = (approvalId: string, guarded: string, from = 'image'): GraphEdge =>
   wire(approvalId, 'approval', guarded, from)
 
-/** `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention. */
-export function wire(consumer: string, port: string, provider: string, from: string): GraphEdge {
-  return {
-    id: `${provider}--TO--${consumer}`,
-    source: consumer,
-    sourceHandle: handleId(consumer, 'source', port),
-    target: provider,
-    targetHandle: handleId(provider, 'target', from),
-  }
-}
+/**
+ * A wire named by the two FIELDS its ports carry — the shorthand most suites want.
+ *
+ * Built by `edgeBetween`, the same call the canvas makes: written out here instead, the id was the
+ * two node ids, so a generator reading two branches of one `ifElse` gave both wires one id, and
+ * `disconnect` on either took them both.
+ */
+export const wire = (consumer: string, port: string, provider: string, from: string): GraphEdge =>
+  edgeBetween(
+    consumer,
+    handleId(consumer, 'source', port),
+    provider,
+    handleId(provider, 'target', from),
+  )
 
 export const graphOf = (nodes: readonly GraphNode[], edges: readonly GraphEdge[]): GraphState => ({
   nodes,
