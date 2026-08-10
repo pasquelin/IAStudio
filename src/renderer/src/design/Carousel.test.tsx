@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Carousel } from './Carousel'
+import { SHELF_OVERLAY } from './styles'
 
 type Card = { id: string; name: string }
 
@@ -88,6 +89,13 @@ describe('the arrows', () => {
     // A page of the 640 px viewport, less the overlap — never a single card.
     expect(asked).toBeGreaterThan(160)
     expect(asked).toBeLessThan(640)
+  })
+
+  it('reads the shelf overlay skin rather than carrying its own copy', async () => {
+    renderCarousel(cards(500))
+
+    const arrow = await screen.findByRole('button', { name: 'Faire défiler' })
+    expect(arrow.className).toContain(SHELF_OVERLAY)
   })
 })
 

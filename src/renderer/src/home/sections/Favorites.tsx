@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { favoriteThumbnailUrl, type FavoriteRecipe } from '@shared/domain/favorite'
 import { Carousel } from '@/design/Carousel'
 import { UiIcon } from '@/design/UiIcon'
-import { FOCUS_RING } from '@/design/styles'
+import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
 import { useFavorites } from '@/stores/favorites'
@@ -73,9 +73,8 @@ function Unpin({ recipe }: { recipe: FavoriteRecipe }) {
       onClick={() => void useFavorites.getState().unpin(recipe.id)}
       aria-label={t('home.favorites.unpin', { name: recipe.label })}
       className={cn(
-        'border-border bg-panel/90 text-muted hover:text-text absolute top-1 right-1 z-10',
-        'flex size-6 cursor-pointer items-center justify-center rounded-full border',
-        'opacity-0 transition-opacity group-hover/carousel:opacity-100 focus-visible:opacity-100',
+        SHELF_OVERLAY,
+        'text-muted hover:text-text top-1 right-1 size-6 focus-visible:opacity-100',
         FOCUS_RING,
       )}
     >

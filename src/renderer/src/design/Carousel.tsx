@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
-import { FOCUS_RING } from './styles'
+import { FOCUS_RING, SHELF_OVERLAY } from './styles'
 import { UiIcon } from './UiIcon'
 import { GAP } from './virtual'
 
@@ -248,9 +248,8 @@ function Arrow({ side, hidden, onClick }: ArrowProps) {
       aria-label={t(side === 'left' ? 'carousel.previous' : 'carousel.next')}
       onClick={onClick}
       className={cn(
-        'absolute top-1/2 z-10 flex size-7 -translate-y-1/2 cursor-pointer items-center',
-        'border-border bg-panel/90 text-text justify-center rounded-full border',
-        'opacity-0 transition-opacity group-hover/carousel:opacity-100',
+        SHELF_OVERLAY,
+        'text-text top-1/2 size-7 -translate-y-1/2',
         'hover:bg-elevated shadow-(--sc-shadow-floating)',
         side === 'left' ? 'left-1' : 'right-1',
       )}

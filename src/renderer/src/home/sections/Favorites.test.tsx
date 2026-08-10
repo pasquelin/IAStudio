@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
+import { SHELF_OVERLAY } from '@/design/styles'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { settleHome } from '../home-fixtures'
 import { useFavorites } from '@/stores/favorites'
@@ -78,6 +79,14 @@ describe('the recipes shelf', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Retirer/ }))
 
     expect(unpin).toHaveBeenCalledWith('favorite_1')
+  })
+
+  it('reveals its corner button on the same skin as the shelf arrows', async () => {
+    install([recipe()])
+    render(<Favorites />)
+
+    const corner = await screen.findByRole('button', { name: /Retirer/ })
+    expect(corner.className).toContain(SHELF_OVERLAY)
   })
 
   it('takes itself off when nothing has been pinned', async () => {
