@@ -12,3 +12,4 @@ export type Translations = typeof fr
 
 export * from './languages'
 export * from './model-text'
+export * from './pseudo'
