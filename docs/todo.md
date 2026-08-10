@@ -314,11 +314,16 @@ Plus 18 tours d'une version instrumentée, et 70 d'un scénario isolé réécrit
    défaut faute d'échec à observer.
 
 **Ce qu'il faudrait pour aller plus loin, et ce que ça coûte** : reproduire demande de saturer la
-machine comme quatre sessions le font, ce qu'une session seule ne peut pas simuler honnêtement.
-**Le geste rentable est donc l'inverse** : rendre le test insensible au démontage plutôt que de
-chasser la fenêtre — chercher le bouton **au moment du clic** (`screen.getByRole` juste avant, ou
-`userEvent.click(screen.getByRole(…))` en un seul temps) au lieu de tenir un nœud trouvé plus tôt.
-Ça ne prouve pas la cause ; ça retire du filet un test qui ne mesure pas ce qu'il croit.
+machine comme trois ou quatre sessions le font, ce qu'une session seule ne sait pas fabriquer
+honnêtement.
+
+**Et une fausse bonne idée, écartée sur relecture du test — ne pas la reproposer.** « Chercher le
+bouton au moment du clic plutôt que de tenir un nœud trouvé plus tôt » ne change **rien** : le
+test écrit déjà `await userEvent.click(await screen.findByRole(…))`, en une seule expression. La
+fenêtre n'est pas entre deux lignes du test, elle est entre la résolution de `findByRole` et la
+séquence de pointeur d'`userEvent` — et aucune écriture du test ne la referme. **Il n'y a donc pas
+de correctif côté test tant que la cause n'est pas connue**, et c'est pour ça que la piste du
+Carousel virtualisé reste la seule porte.
 
 **Le premier groupe est un dépassement de délai sous charge.** Le pire des trois est traité
 (`55ddf63`, `ShortcutsSettings.test.tsx` de 26 s à 3 s). Restent :
