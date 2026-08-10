@@ -15,6 +15,7 @@ import { signatureOf, type Signature } from '@shared/domain/shortcut'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from './SettingLine'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
@@ -127,8 +128,11 @@ function CommandRow({
 
         <button
           type="button"
-          title={t('settings.restoreDefault')}
-          aria-label={`${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`}
+          {...TIP_LEFT(
+            `${t('settings.restoreDefault')} — ${t(descriptor.titleKey)}`,
+            false,
+            t('settings.restoreDefaultHint'),
+          )}
           className="btn btn-ghost btn-xs btn-square"
           disabled={!remapped}
           onClick={() => onBind(null)}

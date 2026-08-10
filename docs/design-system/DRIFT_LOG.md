@@ -21,9 +21,7 @@ impossible.
 | P0 | src/renderer/src/home/sections/Favorites.tsx:71 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
 | P0 | src/renderer/src/home/sections/Spark.tsx:84 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
 | P0 | src/renderer/src/panels/channels/ChannelTile.tsx:103 | P0-button-tooltip | `aria-label`, aucun `data-tooltip-id` |
-| P0 | src/renderer/src/settings/SettingRow.tsx:349 | P0-button-tooltip | fenêtre Préférences — et son arbre ne monte aucun `TooltipHost` |
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:113 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:128 | P0-button-tooltip | idem |
+| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:113 | P0-button-tooltip | libellé visible (le raccourci), aucune description |
 
 ## Boutons à libellé visible — l'infobulle doit expliquer, pas répéter
 
@@ -72,10 +70,14 @@ impossible.
 
 ## Ce qui bloque une partie du lot
 
-Les fenêtres **Préférences**, **Usage** et **Licences** rendent leur propre arbre React et
-**ne montent aucun `TooltipHost`** — il n'est monté que dans `app/Shell.tsx`. Vingt-trois des
-lignes ci-dessus y vivent : leur poser des attributs d'infobulle avant de monter l'hôte
-écrirait du texte que personne ne verrait jamais. C'est le prochain lot.
+Les fenêtres **Usage** et **Licences** rendent leur propre arbre React et **ne montent aucun
+`TooltipHost`** — leur poser des attributs d'infobulle avant l'hôte écrirait du texte que
+personne ne verrait jamais. Les Préférences, elles, le montent depuis le 2026-08-10 : leurs
+lignes restantes sont traitables.
+
+Un `<Tooltip>` fermé **ne rend rien du tout** — vérifié. Le seul test qui prouve qu'un hôte
+est monté est donc un survol de bout en bout, ce qui interdit de monter l'hôte d'une fenêtre
+avant qu'un de ses boutons ne porte une infobulle. C'est pourquoi chaque fenêtre est un lot.
 
 `design/Button.tsx` n'accepte aujourd'hui aucune infobulle : le composant des boutons à
 libellé des docks doit d'abord en porter une, comme `ToolButton`.

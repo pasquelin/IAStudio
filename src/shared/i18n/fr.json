@@ -861,6 +861,7 @@
     "results": "Résultats",
     "noResult": "Aucun réglage ne correspond à cette recherche.",
     "restoreDefault": "Restaurer la valeur par défaut",
+    "restoreDefaultHint": "Remet la valeur d’origine, celle d’avant toute modification",
     "account": "Compte",
     "appearance": "Apparence",
     "generation": "Génération",
