@@ -195,7 +195,7 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > **Changer le modèle d’un nœud refait ses ports**, et les liens dont le port a disparu s’en vont
 > avec eux — en un seul geste, donc annulable d’un seul `⌘Z`.
 >
-> **Il s’exécute.** Le premier bouton de sa barre lance le graphe — ou `⌘⏎`, ou **Graphe ▸
+> **Il s’exécute.** Le premier bouton de sa barre lance le graphe — ou `⌘Entrée`, ou **Graphe ▸
 > Exécuter** : chaque nœud part quand ce
 > qu’il lit est prêt, les branches indépendantes partent ensemble, et les générations passent par
 > la même file que le reste du studio — elles s’affichent dans la barre des tâches et se comptent

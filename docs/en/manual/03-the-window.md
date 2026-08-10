@@ -189,7 +189,7 @@ It does not carry the file name. It carries the **seven workspaces**:
 > **Changing a node's model rebuilds its ports**, and the links whose port is gone leave with
 > them — in one gesture, so one `⌘Z` takes it all back.
 >
-> **It runs.** The first button of its bar runs the graph — or `⌘⏎`, or **Graph ▸ Run**: each
+> **It runs.** The first button of its bar runs the graph — or `⌘Enter`, or **Graph ▸ Run**: each
 > node starts once what it reads is
 > ready, independent branches start together, and the generations go through the same queue as the
 > rest of the studio — they show in the jobs bar and count against the same budget. The button

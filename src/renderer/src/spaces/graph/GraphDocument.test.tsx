@@ -5,6 +5,7 @@ import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
 import { FAMILY_FACET } from '@/panels/models/family-facet'
+import { publishCommand } from '@/services/command-bus'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useGraphRuns } from '@/stores/graph-runs'
@@ -102,6 +103,26 @@ describe('a graph as a document', () => {
   })
 
   /**
+   * The bar's own rule is proved beside it, on `graphTools`; what only the document knows is WHICH
+   * graph it is being asked about, and what counts as something to run.
+   */
+  describe('offering the run at all', () => {
+    it('greys the button while nothing on the canvas would report anything', () => {
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
+
+      // A text node is read, never run: on its own it leaves the button exactly as it was.
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
+
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(model)))
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeEnabled()
+    })
+  })
+
+  /**
    * The gesture the space exists for, reached by the keyboard for the first time. The bar is
    * tested on its own; what no other suite can prove is that the key gets there at all.
    */
@@ -135,17 +156,21 @@ describe('a graph as a document', () => {
     })
 
     /**
-     * The bar's own rule is proved beside it; what only the document knows is WHICH graph it is
-     * being asked about, and a bar wired to a constant would grey nothing and gate nothing.
+     * The menu row does not press a key: it publishes the command. Two suites prove each side of
+     * that frontier — the row fires `runCommand` in the main process, a keydown reaches `start`
+     * here — and neither would redden if `graph.run` were refiled under another scope, which
+     * would leave the row inert with the whole suite green.
      */
-    it('greys the button while the canvas holds no node, and lights it when one lands', () => {
-      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
-      expect(screen.getByRole('button', { name: 'Exécuter le graphe' })).toBeDisabled()
+    it('starts the run when the native menu publishes the command', () => {
+      const start = vi.fn(async () => {})
+      useGraphRuns.setState({ start })
+      useDocuments.setState({ activeId: DOCUMENT })
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(model))
 
-      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
-      rerender(<GraphDocument documentId={DOCUMENT} />)
+      render(<GraphDocument documentId={DOCUMENT} />)
+      act(() => publishCommand('graph.run'))
 
-      expect(screen.getByRole('button', { name: 'Exécuter le graphe' })).toBeEnabled()
+      expect(start).toHaveBeenCalledWith(DOCUMENT)
     })
 
     /** A tab in the background keeps its own run to itself, as ⌘Z already does. */

@@ -6,6 +6,7 @@ import {
   graphOf,
   guards,
   modelNode,
+  noteNode,
   textNode,
   transformNode,
   wire,
@@ -139,13 +140,31 @@ describe('running a graph document', () => {
     const seen: boolean[] = []
     const unsubscribe = useGraphRuns.subscribe(state => seen.push(runOf(state, DOC).running))
 
-    await useGraphRuns.getState().start(DOC)
-    unsubscribe()
+    try {
+      await useGraphRuns.getState().start(DOC)
+    } finally {
+      // A listener left attached would go on filling `seen` for every test after this one.
+      unsubscribe()
+    }
 
     expect(jobs.submitted).toEqual([])
     // Not merely false once it is over: the button must never have turned to Stop and back, which
     // is what a run of nothing looks like on screen. Ending false is true either way.
     expect(seen).toEqual([])
+  })
+
+  /**
+   * The scenario the harness found: a canvas covered in notes is not empty, and greying on node
+   * count alone would offer a run that flips the button to Stop and back for nothing.
+   */
+  it('refuses a graph whose nodes a run would all pass over', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, graphOf([noteNode('note1', 'à faire'), textNode('text1')], []))
+
+    await useGraphRuns.getState().start(DOC)
+
+    expect(jobs.submitted).toEqual([])
+    expect(useGraphRuns.getState().runs[DOC]).toBeUndefined()
   })
 
   it('refuses a second run of the same document while the first is going', async () => {
@@ -425,7 +444,9 @@ describe('stopping and forgetting a run', () => {
       DOC,
       parseGraph({
         nodes: [
-          { id: 'text1', type: 'text', position: { x: 0, y: 0 }, data: { inputHandles: 'x' } },
+          // A model rather than a text node: the plan has to be reached for it to throw, and a
+          // graph of nothing but values is one `start` now declines before planning anything.
+          { id: 'model1', type: 'model', position: { x: 0, y: 0 }, data: { inputHandles: 'x' } },
         ],
       }),
     )

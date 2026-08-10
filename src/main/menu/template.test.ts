@@ -139,8 +139,9 @@ describe('the Graph menu', () => {
   })
 
   /**
-   * Shown but not reserved, exactly as undo is: a reserved accelerator is served to the menu by
-   * the system and never reaches the window, and the run is a command the focused document owns.
+   * Shown but not reserved. Not for undo's reason — no text field competes for this chord — but
+   * for the mechanism undo taught: a reserved accelerator is served to the menu by the system and
+   * never reaches the window, and this command belongs to whichever document is in front.
    */
   it('shows the key without taking it from the window', () => {
     const entries = submenuOf(menuTemplate(options({ workspace: 'graph' })), 'Graphe')

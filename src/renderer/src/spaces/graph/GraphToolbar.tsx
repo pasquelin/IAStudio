@@ -1,9 +1,12 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { Toolbar } from '@/design/Toolbar'
+import { useBinding } from '@/stores/bindings'
+import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { graphTools, type GraphMode, type GraphToolbarState } from './graph-tools'
 
-export type GraphToolbarProps = GraphToolbarState & {
+/** `runShortcut` is absent on purpose: the bar reads the binding itself, just below. */
+export type GraphToolbarProps = Omit<GraphToolbarState, 'runShortcut'> & {
   mode: GraphMode
   onMode: (mode: GraphMode) => void
   /** Called with the point the menu should open at — viewport coordinates, as a click reports. */
@@ -34,6 +37,9 @@ export function GraphToolbar({
   running,
 }: GraphToolbarProps) {
   const { zoomIn, zoomOut } = useReactFlow()
+  // Read here rather than passed from the document: the bar is the only thing that draws it, and
+  // a remap in the settings has to reach the button without the document knowing about keys.
+  const runShortcut = useShortcutLabel()(useBinding('graph.run'))
   const bar = useRef<HTMLDivElement | null>(null)
 
   /**
@@ -63,7 +69,7 @@ export function GraphToolbar({
   return (
     <div ref={bar} className="absolute top-2 left-2 z-10">
       <Toolbar
-        tools={graphTools({ canUndo, canRedo, canRun, running })}
+        tools={graphTools({ canUndo, canRedo, canRun, running, runShortcut })}
         activeTool={mode}
         onTool={onTool}
       />

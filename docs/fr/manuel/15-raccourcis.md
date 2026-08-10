@@ -404,11 +404,11 @@ Le septième contexte, et le plus court : l’espace Graphe écoute l’exécuti
 
 | Action | Touche | Ce qu’elle fait |
 |---|---|---|
-| **Exécuter / Arrêter le graphe** | `⌘⏎` | lance chaque nœud dans l’ordre de ses liens, et arrête une exécution déjà en cours — ce qui n’a pas changé depuis la dernière n’est pas relancé |
+| **Exécuter / Arrêter le graphe** | `⌘Entrée` | lance chaque nœud dans l’ordre de ses liens, et arrête une exécution déjà en cours — ce qui n’a pas changé depuis la dernière n’est pas relancé |
 | **Annuler** | `⌘Z` | |
 | **Rétablir** | `⇧⌘Z` | |
 
-`⌘⏎` ne fait rien sur un graphe vide, comme le bouton de la barre, qui y est grisé.
+`⌘Entrée` ne fait rien sur un graphe vide, comme le bouton de la barre, qui y est grisé.
 
 Ces trois-là couvrent tout ce que le graphe sait faire — poser un nœud, le déplacer, le relier, le
 renommer, changer son modèle, tout exécuter — parce que tout y passe par une commande. Poser des
@@ -511,7 +511,7 @@ figées pour l’instant. Voir [Ce qui n’existe pas encore](18-limites.md).
 | `⌃⌘F` | Plein écran |  |  |  |  |  |  |
 | `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler |
 | `⇧⌘Z` |  |  | Rétablir | Rétablir | Rétablir | Rétablir | Rétablir |
-| `⌘⏎` |  |  |  |  |  |  | Exécuter |
+| `⌘Entrée` |  |  |  |  |  |  | Exécuter |
 | `⌘G` |  |  | Grouper |  |  |  |  |
 | `⌘D` |  |  | Dupliquer |  | Désélectionner |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |

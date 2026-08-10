@@ -397,11 +397,11 @@ The seventh context, and the shortest: the Graph workspace listens for the run a
 
 | Action | Key | What it does |
 |---|---|---|
-| **Run / Stop the graph** | `⌘⏎` | runs every node in the order its wires allow, and stops a run already under way — what has not changed since the last run is not run again |
+| **Run / Stop the graph** | `⌘Enter` | runs every node in the order its wires allow, and stops a run already under way — what has not changed since the last run is not run again |
 | **Undo** | `⌘Z` | |
 | **Redo** | `⇧⌘Z` | |
 
-`⌘⏎` does nothing on an empty graph, just as the bar's button is greyed out there.
+`⌘Enter` does nothing on an empty graph, just as the bar's button is greyed out there.
 
 The three of them cover everything the graph can do — placing a node, moving it, wiring it,
 renaming it, changing its model, running all of it — because all of it goes through a command.
@@ -501,7 +501,7 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌃⌘F` | Full screen |  |  |  |  |  |  |
 | `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo |
 | `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo |
-| `⌘⏎` |  |  |  |  |  |  | Run |
+| `⌘Enter` |  |  |  |  |  |  | Run |
 | `⌘G` |  |  | Group |  |  |  |  |
 | `⌘D` |  |  | Duplicate |  | Deselect |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |

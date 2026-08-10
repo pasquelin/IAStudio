@@ -6,6 +6,7 @@ const bar = (given: Partial<GraphToolbarState> = {}): GraphToolbarState => ({
   canRedo: false,
   canRun: true,
   running: false,
+  runShortcut: '⌘Entrée',
   ...given,
 })
 
