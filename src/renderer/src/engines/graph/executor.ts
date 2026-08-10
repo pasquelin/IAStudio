@@ -58,7 +58,7 @@ export type GraphRunResult =
  * must see nothing rather than see what a sibling branch produced. Every other node declares one
  * port, so its record holds one entry — `outputName` says which.
  */
-type Outcome = { values: Readonly<Record<string, readonly string[]>> } | null
+type Outcome = { values: Readonly<Record<string, readonly string[]>> } | 'skipped' | null
 
 /**
  * The name of a node's first output port, which is the only one every type but `ifElse` has.
@@ -69,6 +69,9 @@ type Outcome = { values: Readonly<Record<string, readonly string[]>> } | null
  */
 const outputName = (node: GraphNode): string =>
   outputHandlesOf(node)[0]?.name ?? DEFAULT_OUTPUT_NAME
+
+/** Why a node is not going to run: something it reads failed, or no branch ever reached it. */
+type Reach = 'ready' | 'skipped' | 'blocked'
 
 /** One node's incoming wires, read two ways: as a body's fields, and as a CEL expression's names. */
 type Resolved = {
@@ -116,6 +119,19 @@ export async function runGraph(
     return null
   }
 
+  /**
+   * A node no branch reached, and everything downstream of it.
+   *
+   * Apart from `blocked`, and the distinction is the whole point of this: `blocked` says something
+   * it reads FAILED, and paints red. A node on the branch a condition did not choose has nothing
+   * wrong with it — painting it red would report a fault where the graph did exactly what it was
+   * wired to do. It hands on `'skipped'` so its own readers say the same rather than blame it.
+   */
+  const skip = (id: string): Outcome => {
+    report(id, { status: 'skipped' })
+    return 'skipped'
+  }
+
   const keep = (planned: GraphPlanNode, node: GraphNode, values: readonly string[]): Outcome => {
     produced.set(planned.hash, values)
     report(planned.id, { status: 'done' })
@@ -150,7 +166,9 @@ export async function runGraph(
    * Several wires onto one port concatenate in edge order, each still naming a variable of its
    * own; a scalar port then takes the head, which is the `inputEdges[0]` the converter takes.
    */
-  const resolveInputs = async (planned: GraphPlanNode): Promise<Resolved | null> => {
+  const resolveInputs = async (
+    planned: GraphPlanNode,
+  ): Promise<Resolved | Exclude<Reach, 'ready'>> => {
     const values: Record<string, readonly string[]> = {}
     const variables: Record<string, string | readonly string[]> = {}
 
@@ -161,12 +179,15 @@ export async function runGraph(
         // Present by construction: a provider comes before its consumer in a topological order, so
         // its promise was made on an earlier turn of the loop below.
         const upstream = await settled.get(source.node)
-        if (!upstream) return null
+        if (upstream === 'skipped') return 'skipped'
+        if (!upstream) return 'blocked'
 
         // The port the edge leaves from, never the whole node: a branch that was not taken has
         // no entry here, and reading the node flat would hand on what another branch produced.
+        // Absent, not empty: the provider produced on another of its ports, so this wire was
+        // never going to carry anything — a branch the condition did not choose.
         const through = upstream.values[source.output]
-        if (!through) return null
+        if (!through) return 'skipped'
 
         carried.push(...through)
         if (port !== CONDITIONAL_PORT) {
@@ -181,14 +202,18 @@ export async function runGraph(
   }
 
   /** Whether every approval standing between this node and its providers was given. */
-  const cleared = async (planned: GraphPlanNode): Promise<boolean> => {
+  const cleared = async (planned: GraphPlanNode): Promise<Reach> => {
     for (const id of planned.awaits) {
       // Present for the same reason an input's provider is: the plan puts an approval before
       // everything it guards, which is why it works out the dependency rather than the executor.
-      if (!(await settled.get(id))) return false
+      const answer = await settled.get(id)
+      // An approval on a branch nobody took was never asked, so what it guards was not refused —
+      // it was not reached either.
+      if (answer === 'skipped') return 'skipped'
+      if (!answer) return 'blocked'
     }
 
-    return true
+    return 'ready'
   }
 
   const stopped = (id: string): boolean => {
@@ -315,8 +340,11 @@ export async function runGraph(
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
     // Waited on BEFORE the cache is read, which is the whole point of the plan carrying them: a
     // result kept from a run somebody approved must not come back on a run they have declined.
-    if (!(await cleared(planned))) {
-      return stopped(node.id) ? null : fail(node.id, 'blocked')
+    const gate = await cleared(planned)
+
+    if (gate !== 'ready') {
+      if (stopped(node.id)) return null
+      return gate === 'skipped' ? skip(node.id) : fail(node.id, 'blocked')
     }
 
     // Read off the cache rather than off `planned.cached`, which says the same thing one step
@@ -334,7 +362,8 @@ export async function runGraph(
     // on the wire leaves what it feeds idle, rather than reporting a failure nothing caused.
     if (stopped(node.id)) return null
 
-    if (!inputs) return fail(node.id, 'blocked')
+    if (inputs === 'skipped') return skip(node.id)
+    if (inputs === 'blocked') return fail(node.id, 'blocked')
 
     // Both through `asList`, and that is the fix rather than a shortening: a text node holding
     // nothing used to hand on `['']` and write an empty prompt over whatever the form held — a

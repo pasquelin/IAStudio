@@ -34,6 +34,8 @@ const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
   awaiting: 'warning',
   cached: 'muted',
   done: 'success',
+  // Muted, never danger: a branch nobody took is the graph working, not a node at fault.
+  skipped: 'muted',
   failed: 'danger',
 }
 

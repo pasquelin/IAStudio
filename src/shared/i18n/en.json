@@ -149,6 +149,7 @@
     "awaiting": "to approve",
     "cached": "unchanged",
     "done": "done",
+    "skipped": "not taken",
     "failure": {
       "cycle": "loop",
       "unsupported": "not runnable",

@@ -16,7 +16,7 @@ import {
   transformNode,
   wire,
 } from './graph-fixtures'
-import { handleId } from './handles'
+import { DEFAULT_OUTPUT_NAME, handleId } from './handles'
 import { updateNodeData } from './mutations'
 import { planGraph, type GraphCache } from './plan'
 
@@ -1091,8 +1091,12 @@ describe('a branch, run locally', () => {
   /**
    * The reader of a branch that was not taken must see NOTHING — not what the branch that was
    * taken produced. That is the whole reason an outcome is by port rather than a flat list.
+   *
+   * And it must not be painted as a FAILURE either: `blocked` says something it reads went wrong,
+   * in the red that goes with it. Nothing went wrong here — a condition chose elsewhere, which is
+   * a branch doing its job.
    */
-  it('leaves the readers of every other branch with nothing to run on', async () => {
+  it('leaves the readers of every other branch skipped, never failed', async () => {
     const watched = await watch(
       graph('a knight'),
       { model_case1: ['asset_1'] },
@@ -1102,7 +1106,27 @@ describe('a branch, run locally', () => {
     )
 
     expect(watched.submitted.map(one => one.modelId)).not.toContain('model_else')
-    expect(failureOf(watched, 'm2')).toBe('blocked')
+    expect(statusesOf(watched, 'm2')).toEqual(['skipped'])
+    expect(failureOf(watched, 'm2')).toBeUndefined()
+  })
+
+  /** The skip travels: a node reading a skipped one was not reached either, and says so. */
+  it('carries the skip on to whatever reads the branch that was not taken', async () => {
+    const chained = graph('a knight')
+    const watched = await watch(
+      {
+        ...chained,
+        nodes: [...chained.nodes, modelNode('m3', {}, 'model_after')],
+        edges: [...chained.edges, wire('m3', 'prompt', 'm2', DEFAULT_OUTPUT_NAME)],
+      },
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({ "trim(text1_output) == 'a knight'": true }),
+      },
+    )
+
+    expect(statusesOf(watched, 'm3')).toEqual(['skipped'])
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
   })
 
   it('takes the else when no condition holds', async () => {
