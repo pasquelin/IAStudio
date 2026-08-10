@@ -156,6 +156,7 @@
     "projectUnreadable": "This project's manifest cannot be read: it was truncated or edited by hand",
     "projectTooNew": "This project was made by a newer build of the studio; update it to open this project",
     "projectNotCreated": "The project could not be created in this folder",
+    "fileNotOpened": "The system could not open this file",
     "jobFailed": "Generation \"{{name}}\" failed",
     "jobCancelled": "Generation \"{{name}}\" cancelled",
     "generated": "{{count, number}} asset generated",
@@ -512,7 +513,7 @@
   },
   "explorer": {
     "noProject": "No project open. Create or open one to see its documents.",
-    "noDocuments": "This project holds no saved document yet.",
+    "empty": "This project folder could not be read.",
     "open": "Open"
   },
   "objects": {

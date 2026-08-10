@@ -2,6 +2,7 @@ import type { AccountSummary, AccountsResult } from './domain/account'
 import type { ActivityEntry, ActivityQuery } from './domain/activity'
 import type { Asset, AssetChanges, AssetCounts, AssetQuery } from './domain/asset'
 import type { FavoriteRecipe } from './domain/favorite'
+import type { FolderEntry } from './domain/folder'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
 import type { CommandId } from './domain/command'
@@ -79,6 +80,8 @@ export type Channels = {
   projectCreate: 'project:create'
   projectOpen: 'project:open'
   projectCurrent: 'project:current'
+  projectListFolder: 'project:list-folder'
+  projectOpenFile: 'project:open-file'
 
   dialogPickPath: 'dialog:pick-path'
   dialogExportPicture: 'dialog:export-picture'
@@ -189,6 +192,8 @@ export const CHANNELS: Channels = {
   projectCreate: 'project:create',
   projectOpen: 'project:open',
   projectCurrent: 'project:current',
+  projectListFolder: 'project:list-folder',
+  projectOpenFile: 'project:open-file',
 
   dialogPickPath: 'dialog:pick-path',
   dialogExportPicture: 'dialog:export-picture',
@@ -412,6 +417,7 @@ export const EVENTS = {
   dictation: 'evt:dictation',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
+  projectFolderChanged: 'evt:project-folder-changed',
   settingsChanged: 'evt:settings-changed',
   accountsChanged: 'evt:accounts-changed',
   openTool: 'evt:open-tool',
@@ -573,6 +579,23 @@ export type StudioBridge = {
     open: (path: string) => Promise<Project>
     current: () => Promise<Project | null>
     onChange: (callback: (project: Project | null) => void) => Unsubscribe
+    /**
+     * One level of the project folder, `''` being the root. The explorer walks it a folder at a
+     * time: `assets/img` holds thousands of files in an ordinary project, and a reader who never
+     * opens it must not pay for them.
+     */
+    listFolder: (relative: string) => Promise<FolderEntry[]>
+    /**
+     * Hands a file the studio cannot open to the system — a `.pdf` to its viewer. Answers
+     * whether it was taken; a refusal is already in the journal, since a folder someone chose
+     * is not a place to throw an exception from.
+     */
+    openFile: (relative: string) => Promise<boolean>
+    /**
+     * Something moved in the project folder. It does not say what: the panel re-reads the
+     * folders it has open, which is cheaper than carrying a path through and never wrong.
+     */
+    onFolderChanged: (callback: () => void) => Unsubscribe
   }
   dialog: {
     /**

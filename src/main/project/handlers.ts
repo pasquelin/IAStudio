@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { CHANNELS } from '@shared/ipc'
 import { withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
@@ -6,6 +7,7 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
+import type { FolderReader } from './folder'
 import type { ActivityReport } from './activity-log'
 import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
 import type { DocumentFiles } from './documents'
@@ -17,6 +19,7 @@ import {
   parseDocumentId,
   parseDocumentKind,
   parseDocumentTitle,
+  parseFolderPath,
   parseProjectName,
   parseProjectPath,
   parseSaveAudio,
@@ -39,6 +42,14 @@ export type ProjectHandlerDeps = {
   documents: DocumentFiles
   /** `shell.showItemInFolder`, injected rather than imported: it needs a live app. */
   reveal: (file: string) => void
+  /** The project folder, read one level at a time for the explorer. */
+  folder: FolderReader
+  /**
+   * `shell.openPath`, which answers an empty string on success and a sentence on failure — and
+   * this is the only place the studio launches a third-party application, so it is injected
+   * like every other thing that leaves the process.
+   */
+  openInSystem: (file: string) => Promise<string>
   /** `dialog.showMessageBox`, injected for the same reason — see `document-dialogs`. */
   askUser: AskUser
 }
@@ -50,16 +61,18 @@ export function registerProjectHandlers({
   newAssetId,
   documents,
   reveal,
+  folder,
+  openInSystem,
   askUser,
 }: ProjectHandlerDeps): void {
   handle(CHANNELS.projectCreate, async (_event, path, name) => {
     // Parsed outside the try on purpose: an argument this channel refuses is not a sentence
     // about the folder, and `projectOpen` below draws the same line through `openFailureKey`.
-    const folder = parseProjectPath(path)
+    const parent = parseProjectPath(path)
     const named = parseProjectName(name)
 
     try {
-      return await project.create(folder, named)
+      return await project.create(parent, named)
     } catch (error) {
       // Same silence as opening: `createPicked` watches nothing either, so a folder that could
       // not be written said nothing at all. The path is left out — the user picked it from a
@@ -83,6 +96,22 @@ export function registerProjectHandlers({
   })
 
   handle(CHANNELS.projectCurrent, () => project.current())
+
+  // `async`, though it awaits nothing of its own: a refused path throws from `parseFolderPath`,
+  // and a synchronous throw here would reach the caller as an exception rather than a rejected
+  // invoke — which is not what the other side is written to catch.
+  handle(CHANNELS.projectListFolder, async (_event, relative) =>
+    folder.list(parseFolderPath(relative)),
+  )
+
+  handle(CHANNELS.projectOpenFile, async (_event, relative) => {
+    const failure = await openInSystem(join(project.path(), parseFolderPath(relative)))
+    // `shell.openPath` answers with a sentence rather than throwing, and that sentence is the
+    // system's, in the system's language. What reaches the journal is ours; what it says is
+    // written on the console, where a support question can find it.
+    if (failure) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotOpened' })
+    return failure === ''
+  })
 
   handle(CHANNELS.assetsSearch, async (_event, query) => {
     const found = await project.catalog().search(parseAssetQuery(query))

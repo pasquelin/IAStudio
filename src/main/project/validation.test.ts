@@ -7,6 +7,7 @@ import {
   parseDocumentEnvelope,
   parseDocumentId,
   parseDocumentKind,
+  parseFolderPath,
   parseManifest,
 } from './validation'
 
@@ -182,5 +183,38 @@ describe('parseAssetQuery', () => {
 
   it('asks for everything when asked for nothing', () => {
     expect(parseAssetQuery({})).toEqual({})
+  })
+})
+
+/**
+ * The one channel where a window names a path of its own. Everything here is about the refusal:
+ * `join(root, '../../..')` walks out of the project on every platform, and the renderer has no
+ * business reaching a folder nobody opened.
+ */
+describe('parseFolderPath', () => {
+  it('takes the project root, which is the empty path', () => {
+    expect(parseFolderPath('')).toBe('')
+  })
+
+  it('takes a folder inside the project', () => {
+    expect(parseFolderPath('assets/img')).toBe('assets/img')
+  })
+
+  it.each(['..', '../secrets', 'assets/../..', 'assets/./img'])('refuses %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
+  // Windows takes a backslash as a separator, so a check that only looked at `/` would let
+  // `..\..` walk straight out.
+  it.each(['..\\secrets', 'assets\\img'])('refuses the backslash in %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
+  it.each(['/etc', 'C:\\Windows'])('refuses the absolute path %s', path => {
+    expect(() => parseFolderPath(path)).toThrow()
+  })
+
+  it('refuses what is not a string at all', () => {
+    expect(() => parseFolderPath(null)).toThrow()
   })
 })

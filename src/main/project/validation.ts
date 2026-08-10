@@ -47,6 +47,25 @@ export function parseProjectName(value: unknown): string {
   return pathSegment.parse(value)
 }
 
+/**
+ * A path inside the project, as the explorer asks for it: `''` for the root, then segments
+ * joined by `/`. Never absolute, never a `.` or `..` segment, never a backslash.
+ *
+ * The refusal is the point, not the shape. This is the one channel where the renderer names a
+ * path of its own, and `join(root, '../../..')` escapes the project on every platform — the
+ * whole folder is otherwise reachable from a window that is not supposed to touch the disk.
+ * Backslashes are refused rather than translated: Windows accepts them as separators, so
+ * `..\..` would walk out through a check that only looked at `/`.
+ */
+const folderPath = z
+  .string()
+  .refine(value => !isAbsolute(value) && !value.startsWith('/') && !value.includes('\\'))
+  .refine(value => value.split('/').every(segment => segment !== '.' && segment !== '..'))
+
+export function parseFolderPath(value: unknown): string {
+  return folderPath.parse(value)
+}
+
 // `z.custom` rather than `z.enum`: the values live in `shared/domain/asset.ts`, and zod's enum
 // wants a literal tuple, which the project's ban on `as const` rules out.
 const assetQuery = z.object({

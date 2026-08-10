@@ -576,9 +576,9 @@ flèches.
 > **Le clavier et `aria-checked` sont livrés** (`feat/menu-clavier`, 10 août 2026), pour
 > `ContextMenu` et pour `MenuRow`. **Ne pas les réécrire.** Ce qui reste de ce lot est
 > `Flyout`, et **il tient dans une ligne** : `useMenuKeys(surface, onClose)` existe et est le
-> même hook. Voir l'entrée 46.
+> même hook. Voir l'entrée 48.
 
-### 46. `Flyout` n'a toujours pas les manières d'un menu au clavier
+### 48. `Flyout` n'a toujours pas les manières d'un menu au clavier
 
 **Le geste attendu.** Ouvrir un flyout de la barre d'outils au clavier, le parcourir aux flèches,
 en sortir par `Échap`, et retrouver le focus là où on l'avait laissé — ce que le menu contextuel
@@ -616,49 +616,44 @@ tests le tiennent.
 Deux entrées où le studio sait quelque chose et ne le montre pas. Elles ne perdent rien et ne
 bloquent personne — elles font douter, ce qui coûte à chaque usage.
 
-## 3.1 L'Explorateur n'explore rien
+## 3.1 L'Explorateur — ce qui reste après l'arbre
 
-### 39. Le panneau s'appelle « Explorateur » et liste six documents à plat
+> **L'entrée 39 est livrée le 10 août 2026** : l'Explorateur montre le dossier du projet en
+> arborescence, un dossier n'est lu qu'à son ouverture, l'arbre suit le disque, et un fichier que
+> le studio ne sait pas ouvrir part au système. **Ne pas la refaire.** Ce que le lot a laissé
+> derrière lui est l'entrée 47.
 
-**Le geste attendu.** Parcourir le dossier du projet comme un **arbre** — dossiers dépliables, fichiers dedans — au
-lieu d'une liste plate de documents.
+### 47. Ce que l'Explorateur en arbre a laissé ouvert
 
-**Vu le 9 août 2026** — « pourquoi l'Explorateur ne ressemble pas à un explorateur ? ». La référence
-donnée est l'arbre de projet d'un IDE : le dossier racine, ses sous-dossiers, dépliables, avec les
-fichiers dedans.
+**Le geste attendu.** Rien d'urgent : ce sont trois manques qui se voient à l'usage, écrits ici
+pour ne pas être redécouverts un par un.
 
-**Ce que le panneau fait aujourd'hui** : `Explorer.tsx` rend un `Collection` sur `stored`, c'est-à-dire
-**les documents du projet**, sans hiérarchie, sans dossier, sans dépliage. Une ligne, un titre, une
-icône d'espace, et « Ouvert » en sous-titre. C'est une **liste de documents récents**, et elle porte
-le nom d'un explorateur de fichiers.
+1. **Renommer, supprimer, révéler dans le système** — un explorateur les offre au clic droit, et
+   celui-ci n'offre rien. `ContextMenu` et `MenuRow` sont là, et `assets:reveal` existe déjà pour
+   un asset ; ce qui manque est un canal qui prend un chemin de projet plutôt qu'un id d'asset.
+   **Supprimer se décide avant de s'écrire** : le studio n'efface aujourd'hui un fichier de
+   l'utilisateur nulle part.
+2. **Le glisser** — `Tree` sait glisser une ligne sur une autre (`onDrop`), et le panneau ne le
+   déclare pas : déplacer un fichier d'un dossier à l'autre demanderait un `fs.rename` côté main,
+   donc la même décision que le point 1.
+3. **La surveillance récursive n'est pas vérifiée hors macOS.** `watchProjectFolder` demande
+   `{ recursive: true }` et retombe sur une surveillance plate si la plateforme refuse ; le repli
+   qui couvre le reste est la relecture au retour du focus, qui est branchée et testée. **Personne
+   ne l'a essayé sur Windows ni sur Linux** — et c'est une assurance, pas une mesure.
 
-**Et le studio a déjà l'arbre.** `design/Tree.tsx` existe : `flattenTree`, dépliage par nœud,
-virtualisation, glisser de ligne, sélection multiple par `pickFrom`, et il peint par le **même**
-`rowSkin` que `Collection` — précisément pour qu'une ligne d'arbre et une ligne de liste soient
-identiques. **Il n'a qu'un seul appelant : `SceneTree`**, l'outliner 3D.
-
-**Ce n'est donc pas qu'un changement de composant** : un arbre de fichiers montre **le dossier du
-projet** — `assets/`, `documents/`, et ce que l'utilisateur y a déposé lui-même — là où le panneau ne
-montre aujourd'hui que les documents que le studio sait ouvrir.
-
-**Les trois questions sont tranchées, le 10 août 2026.** Elles conditionnaient l'écriture de la
-première ligne ; elles ne se redemandent pas.
-
-1. **La racine est le dossier du projet, `.index/` masqué.** Ce que l'entrée 17 a caché reste caché —
-   sur les trois plateformes. Tout le reste se montre, y compris ce que le studio ne sait pas ouvrir,
-   puisque c'est précisément ce qui distingue un explorateur d'une liste de documents.
-2. **Un double-clic sur un fichier inconnu le confie au système** (`shell.openPath`) : un `.pdf`
-   s'ouvre dans le visualiseur de l'OS. Conséquence à porter : le studio lance alors une application
-   tierce, ce qui n'arrivait nulle part ailleurs — le canal est dans le main, et son échec est un
-   message à écrire, pas une exception à laisser remonter.
-3. **L'arbre suit le disque**, par surveillance du dossier dans le main (`fs.watch` récursif,
-   débouncé), et non par un bouton. Deux choses à prévoir : `fs.watch` **n'est pas récursif sur
-   Linux**, et un événement y arrive par dossier surveillé ; et un projet posé sur un volume réseau
-   peut n'émettre aucun événement — le repli est une relecture au retour du focus.
-
-> **Ce que le panneau a de juste et qu'un arbre ne doit pas perdre** : il rend un document fermé
-> atteignable de nouveau, et c'est sa raison d'être — sa JSDoc le dit. Un document fermé alors
-> qu'aucun layout ne le tenait n'était trouvable que sur le disque.
+> **Ce que le lot a montré et qui resservira, au-delà de ce panneau :**
+>
+> - **`Enter` et `Espace` n'avaient jamais rien fait dans `Tree`.** La garde
+>   `event.target !== event.currentTarget` lisait `event.nativeEvent` : React dispatche depuis un
+>   écouteur racine unique, donc le `currentTarget` du natif est **déjà nul** quand un gestionnaire
+>   le lit, et la garde refusait tout. Défaut préexistant, trouvé en écrivant le premier test qui
+>   appuyait sur ces touches. **Passer l'événement React, jamais son natif.**
+> - **Un budget de couverture qui déborde d'une seule branche vaut la peine d'être cherché** : ici
+>   la branche était `iconOfDocument`, qui redérivait l'espace depuis le `kind` alors que le
+>   descripteur le PORTE. Couvrir l'a fait supprimer.
+> - **Deux fichiers de même nom de base rendent un `.bak` mensonger** : `src/shared/domain/folder.ts`
+>   et `src/main/project/folder.ts` ont partagé un `/tmp/folder.ts.bak`, et six mutations de suite
+>   ont mesuré un dépôt cassé. **Sauvegarder sous le chemin complet, pas sous le nom.**
 
 ---
 
