@@ -122,6 +122,16 @@ la recevoir.
    Contrôler que les tailles sont cohérentes (170–240 Mo par installeur) et que les manifestes
    portent bien `version: 0.2.0`.
 
+   > **Ce que la machine a déjà vérifié, et que vos yeux n'ont donc pas à refaire** : le job de
+   > publication refuse de créer la draft si l'un des trois manifestes manque, **ou si un seul
+   > fichier qu'ils listent n'a pas son `.blockmap`**. Un blockmap absent ne casse pas le
+   > téléchargement : il fige le client sur « Download block maps » au lieu de le faire retomber
+   > sur un téléchargement complet — d'où le contrôle, et d'où le fait qu'une draft existante en
+   > porte forcément un par installeur.
+   >
+   > **Ce qui reste à vos yeux** : les tailles, le numéro de version, et que les sept installeurs
+   > soient là. Le reste est mécanique.
+
 8. **Publier**, depuis l’interface GitHub ou :
 
    ```bash
