@@ -55,8 +55,9 @@ part.
 
 > **Le septième espace, le Graphe, n’a pas encore son chapitre.** Il s’ouvre, on y pose des
 > nœuds, on les relie, on les enregistre, et **il les exécute** — chaque nœud part quand ce qu’il
-> lit est prêt, et ce qui n’a pas changé n’est pas relancé. Ce qui lui manque encore : les nœuds
-> de logique, de boucle et d’approbation, et l’import/export d’un workflow. Son chapitre viendra
+> lit est prêt, ce qui n’a pas changé n’est pas relancé, et **un nœud d’approbation l’arrête
+> pour demander votre avis**. Ce qui lui manque encore : les nœuds de logique et de boucle, et
+> l’import/export d’un workflow. Son chapitre viendra
 > quand il les saura. Ce qu’il fait aujourd’hui est au
 > [chapitre 3](manuel/03-la-fenetre.md) et ses limites au [chapitre 18](manuel/18-limites.md).
 

@@ -33,12 +33,13 @@ du lot C3, du correctif `typesConnect`, du lot `getModel` et des quatre dettes d
 >
 > **Ce qu'il reste, et rien d'autre :**
 >
-> 1. **Étape 8** — les onze types de nœuds qui n'ont ni face ni comportement. **Elle a été
->    dimensionnée : c'est au moins quatre lots**, dans cet ordre recommandé — `approval` d'abord
->    (le plus petit, mais il ajoute `awaiting-approval` à `JobStatus`, donc il change `isFinished`
->    et tout le reste se pose dessus), puis `transform` (du CEL, `@scenario-labs/sdk/tools/cel` est
->    déjà installé), puis `ifElse` (un query builder, format `WorkflowEditorConditionBlock`), puis
->    la paire `forEach`/`forEachEnd` (deux nœuds à l'écran, un seul `for-each` à la compilation).
+> 1. **Étape 8** — les types de nœuds qui n'ont ni face ni comportement. **`approval` est
+>    LIVRÉ** (10 août, `feat/node-approval`) ; restent, dans cet ordre — `transform` (du CEL,
+>    `@scenario-labs/sdk/tools/cel` est déjà installé), puis `ifElse` (un query builder, format
+>    `WorkflowEditorConditionBlock`), puis la paire `forEach`/`forEachEnd` (deux nœuds à l'écran,
+>    un seul `for-each` à la compilation). **Ne pas rouvrir `JobStatus` en passant** : le plan
+>    annonçait qu'`approval` y ajouterait `awaiting-approval`, et c'est faux — voir le § 5.1 de
+>    `docs/todo.md`.
 > 2. **Étape 9** — import, export, publication.
 > 3. **Les neuf dettes courtes** des revues du lot C2, listées au § 5.1 de `docs/todo.md` : à
 >    prendre entre deux lots, jamais à la place d'un.
@@ -89,7 +90,7 @@ fusion : **470 fichiers, 6073 tests, exit 0**.
 
 | Ce qui marche aujourd'hui | Ce qui ne marche pas |
 |---|---|
-| Le graphe est un espace : document `.graph`, palette, barre, `⌘Z`, inspecteur | Onze des quinze types de nœuds n'ont ni face ni comportement — c'est l'étape 8 |
+| Le graphe est un espace : document `.graph`, palette, barre, `⌘Z`, inspecteur | Dix des quinze types de nœuds n'ont ni face ni comportement — c'est ce qui reste de l'étape 8 |
 | **Un nœud texte alimente le port prompt d'un générateur** — table de compatibilité dans `handles.ts` | Aucun import ni export de `.workflow.json` — c'est l'étape 9 |
 | **Il s'exécute** : un bouton, un état par nœud, un cache qui ne relance que ce qui a changé | L'exécution n'a **jamais** été lancée contre l'API — vérification groupée à la fin, décidée avec l'utilisateur |
 | Un nœud se marque comme résultat de l'App, et le graphe dit s'il compilerait et en combien d'étapes | Neuf dettes courtes des revues du lot C2, listées au § 5.1 |
@@ -220,11 +221,16 @@ plan (« Le lot C2 »). Les trois choses à ne pas redécouvrir :
 
 ### Étape 8 — logique, boucles, transforms, approbation
 
-Les onze types restants. `ifElse` est un query builder dont le format existe
+**`approval` est livré** : le nœud, sa face, sa question, l'attente dans le plan et le refus qui
+bloque l'aval. Ce qu'il a démenti du plan, et les cinq choses à ne pas redécouvrir, sont au § 5.1
+de `docs/todo.md` — dont celle-ci, qui vaut pour les trois lots restants : **il n'a PAS touché à
+`JobStatus` ni à `isFinished`**, parce que l'API n'a pas de statut d'approbation et qu'un nœud
+d'approbation ne soumet rien.
+
+Restent trois lots. `ifElse` est un query builder dont le format existe
 (`WorkflowEditorConditionBlock`) ; `transform` évalue du **CEL**, et `@scenario-labs/sdk/tools/cel`
 est **déjà installé** — l'aperçu en direct ne coûte aucune dépendance ; `forEach`/`forEachEnd` est
-une **paire visuelle** qui se compile en un seul nœud `for-each`. `approval` ajoute
-`awaiting-approval` à `JobStatus`, **ce qui change `isFinished`**.
+une **paire visuelle** qui se compile en un seul nœud `for-each`.
 
 ### Étape 9 — import, export, publication
 

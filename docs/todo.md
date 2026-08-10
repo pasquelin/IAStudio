@@ -921,8 +921,9 @@ ne relance que lui. Le manuel le décrit dans les deux langues.
 
 ## 5.1 Ce qui reste — étapes 7 à 9
 
-**L'étape 7 est terminée** : le graphe se compile vers le `flow` et se valide (lot C3). Restent la
-logique, les boucles, les transforms, l'approbation, puis l'import/export et la publication.
+**L'étape 7 est terminée** : le graphe se compile vers le `flow` et se valide (lot C3). **Et
+l'approbation est livrée** — premier des quatre lots de l'étape 8. Restent la logique, les
+boucles, les transforms, puis l'import/export et la publication.
 
 > **Le convertisseur ne compile QUE les branches menant à un nœud portant `data.isOutput`** — le
 > lot C3 a livré le geste qui l'écrit (la case « Sortie du workflow »), et sans lui le flow compilé
@@ -1029,6 +1030,48 @@ est écrit ici parce que chacun demande une décision, pas une correction :**
 > Une App publique compte **62 nœuds** (`wflow_H1bKz78jgpinWPKJfVCM5uAp`) : le plafond de 50 n'est pas
 > opposé aux workflows publiés, **ce qui est à vérifier avant d'écrire le refus d'export de l'étape 9.**
 
+### L'approbation — LIVRÉE le 10 août 2026, et ce que le plan annonçait de travers
+
+**Le geste marche** : un nœud « Approbation » se pose, se relie au nœud dont il fait valider le
+résultat, et porte sa question dans l'Inspecteur. À l'exécution le graphe s'arrête sur lui —
+*à approuver*, deux boutons — et un refus arrête tout ce qui lit le nœud gardé.
+
+> ⚠️ **Le plan disait que ce lot ajouterait `awaiting-approval` à `JobStatus`, donc qu'il
+> changerait `isFinished`. C'est faux, vérifié dans le SDK** : l'union des statuts d'un job
+> Scenario a huit valeurs (`canceled`, `failure`, `finalizing`, `in-progress`, `pending`,
+> `queued`, `success`, `warming-up`) et **aucune ne parle d'approbation**. L'attente se lit sur
+> le NŒUD d'un flow de workflow job (`pending` | `processing` | `rejected` | `skipped`…), pas
+> sur le job. Et de toute façon un nœud d'approbation ne soumet rien : l'exécuteur du studio est
+> local, donc l'attente est un état de graphe. Elle a été ajoutée à **`GraphRunStatus`**
+> (`awaiting`) et à **`GraphRunFailure`** (`declined`) — `JobStatus` et `isFinished` sont
+> intacts, et les trois lots qui restent n'ont donc rien à se poser dessus.
+
+Cinq choses à ne pas redécouvrir :
+
+1. **La garde d'approbation vit dans le PLAN, pas dans l'exécuteur.** Le convertisseur du SDK
+   fait dépendre de l'approbation tout ce qui lit le nœud gardé ; transcrire cela dans
+   l'exécuteur seul serait une course — deux consommateurs d'un même nœud gardé sont frères dans
+   l'ordre topologique, et l'un pourrait recevoir ses entrées avant que la question soit posée.
+   `GraphPlanNode.awaits` porte la dépendance, et Kahn la compte.
+2. **L'attente se fait AVANT la lecture du cache.** Sans quoi un résultat approuvé lors d'une
+   exécution reviendrait tel quel à la suivante sans que la question soit reposée. Conséquence
+   voulue : la question est reposée à chaque exécution, même sur un graphe entièrement en cache.
+3. **Un nœud `approval` n'a ni port de sortie ni port `conditional`** — le convertisseur ne lit
+   qu'un seul fil sortant de lui, `` `${id}-source-approval` ``, et ignore le reste : tout autre
+   port dessinerait une arête qui ne compile pas. Son port d'entrée est **sans type**, parce
+   qu'une approbation approuve n'importe quoi.
+4. **Aucune App du compte ne porte de nœud `approval`** : `workflows_list` rend zéro workflow, et
+   `wflow_H1bKz78jgpinWPKJfVCM5uAp` n'a que `text`, `asset`, `model` et `stickyNote`. La forme
+   vient donc de `workflow_converter.mjs` — du code généré, pas de la prose — et **pas d'un
+   appel**. C'est écrit comme tel plutôt que maquillé en mesure.
+5. **`workflows.userApproval(workflowId, { nodeId, workflowJobId, action })` existe dans le
+   SDK** et ne sert à rien tant que l'exécution est locale : elle répond à un nœud d'un workflow
+   PUBLIÉ tournant chez Scenario. À rebrancher à l'étape 9, pas avant.
+
+**Une mutation survit sur vingt et une, et elle est inobservable** : retirer le `delete` de la
+question répondue dans `graph-runs.ts`. Résoudre deux fois une promesse déjà résolue ne fait
+rien — c'est de l'hygiène, dit comme telle dans le fichier. Les vingt autres mordent.
+
 ### L'ordre des lots qui restent — TRANCHÉ avec l'utilisateur le 10 août à midi
 
 1. **`typesConnect`** — le fil texte → prompt, correctif déjà décidé en tête de ce § 5.1 ;
@@ -1040,7 +1083,8 @@ est écrit ici parce que chacun demande une décision, pas une correction :**
    `property-line.test.ts` aux huit champs). Les deux constats **non retenus** sont la divergence
    `parseGraphState`/`parseGraph` et la duplication de la conjonction `isOutput` — écrits plus haut,
    à rouvrir seulement s'ils mordent ;
-4. **Étape 8**, puis **étape 9**.
+4. **Étape 8** — `approval` **LIVRÉ**, restent `transform` (CEL), `ifElse` (query builder) et
+   la paire `forEach`/`forEachEnd` ; puis **étape 9**.
 
 **La vérification contre la vraie API est groupée à la fin**, en une seule session : les lots C0
 (image de référence), C2 (exécution) et C3 (compilation) n'ont jamais touché l'API, et chacun

@@ -53,8 +53,8 @@ machine, without sending them anywhere.
 
 > **The seventh workspace, the Graph, has no chapter yet.** It opens, holds nodes, wires them,
 > saves them, and **runs them** — each node leaves when what it reads is ready, and what has not
-> changed is not rerun. What it still lacks: the logic, loop and approval nodes, and importing or
-> exporting a workflow. Its chapter comes when it has them. What it does today is in
+> changed is not rerun, and **an approval node stops it to ask you**. What it still lacks: the
+> logic and loop nodes, and importing or exporting a workflow. Its chapter comes when it has them. What it does today is in
 > [chapter 3](manual/03-the-window.md), and its limits in [chapter 18](manual/18-limits.md).
 
 ### Appendices

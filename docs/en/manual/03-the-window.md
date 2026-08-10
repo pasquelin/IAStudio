@@ -201,8 +201,18 @@ It does not carry the file name. It carries the **seven workspaces**:
 > leave in this run. Running it again after changing the last node's prompt runs **only** that
 > node.
 >
-> What it cannot do **yet**: the logic, loop and approval nodes, and importing or exporting a
-> Scenario workflow. Its chapter comes when it can.
+> **An approval node stops the run to ask you.** You put one down like any other, wire it to the
+> node whose result it should hold, and the Inspector gives it its **question asked** — left
+> empty, the node simply asks "Approve this result?". When the graph runs, the node it guards
+> produces first, then the graph stops: the node reads *to approve* and shows its two answers,
+> **Approve** and **Decline**. Approving lets everything reading the guarded node go; declining
+> holds them back — the node reads *declined*, and whatever reads it reads *upstream failed*.
+> **The question is asked again on every run**, even where nothing has changed and everything
+> else is reused: an approval is a gesture, not a result to keep. Stopping the run while a
+> question is open is not a refusal — the node simply goes idle.
+>
+> What it cannot do **yet**: the logic and loop nodes, and importing or exporting a Scenario
+> workflow. Its chapter comes when it can.
 
 One click switches workspace. The active one is the button lighter than the others.
 

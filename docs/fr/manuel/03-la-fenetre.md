@@ -208,8 +208,19 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > pas » : ce dont il dépend a échoué, donc il ne partira jamais de cette exécution. Relancer après
 > avoir changé le prompt du dernier nœud ne relance **que** lui.
 >
-> Ce qu’il ne sait **pas encore** : les nœuds de logique, de boucle et d’approbation, et
-> l’import/export d’un workflow Scenario. Son chapitre viendra quand il les saura.
+> **Un nœud d’approbation arrête l’exécution pour demander votre avis.** On le pose comme les
+> autres, on le relie au nœud dont il doit faire valider le résultat, et l’Inspecteur donne la
+> **question posée** — laissée vide, le nœud demande simplement « Approuver ce résultat ? ».
+> À l’exécution, le nœud qu’il garde produit d’abord, puis le graphe s’arrête : le nœud affiche
+> *à approuver* et ses deux boutons, **Approuver** et **Rejeter**. Approuver laisse repartir tout
+> ce qui lit le nœud gardé ; rejeter les arrête — le nœud dit *rejeté*, et ceux qui le lisent
+> disent *amont en échec*. **La question est reposée à chaque exécution**, même quand rien n’a
+> changé et que tout le reste est réutilisé : une approbation est un geste, pas un résultat
+> qu’on garde. Arrêter l’exécution pendant qu’une question est posée n’est pas un refus : le
+> nœud redevient simplement inactif.
+>
+> Ce qu’il ne sait **pas encore** : les nœuds de logique et de boucle, et l’import/export d’un
+> workflow Scenario. Son chapitre viendra quand il les saura.
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 
