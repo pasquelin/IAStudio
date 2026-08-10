@@ -14,12 +14,15 @@ import { DEFAULT_OUTPUT_NAME, handleId } from './handles'
  * The tests that DO make ports their subject — polymorphic inputs, mismatched types — keep
  * writing their own: there, the handles are what is being read.
  */
-export function textNode(id: string): GraphNode {
+export function textNode(id: string, value?: string): GraphNode {
   return {
     id,
     type: 'text',
     position: { x: 0, y: 0 },
     data: {
+      // Left out entirely where none is given, rather than defaulted to `''`: `value` is a
+      // parameter, so writing one would change what every suite here hashes.
+      ...(value === undefined ? {} : { value }),
       outputHandles: [
         { id: handleId(id, 'target', 'prompt'), name: DEFAULT_OUTPUT_NAME, type: 'text' },
       ],

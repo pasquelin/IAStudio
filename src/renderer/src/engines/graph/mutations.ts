@@ -1,7 +1,7 @@
 import type { GraphEdge, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
 import type { Connection } from './connect'
 import { edgeOf } from './connect'
-import { inputHandlesOf, outputHandlesOf } from './handles'
+import { inputHandlesOf, outputHandlesOf, takesManyWires } from './handles'
 
 /**
  * The id the webapp gives a node: its type in camel case, then the smallest free number.
@@ -46,18 +46,26 @@ export function removeNode(graph: GraphState, id: string): GraphState {
 }
 
 /**
- * Connecting an input that already has a producer REPLACES it.
+ * Connecting an input that already has a producer REPLACES it — unless the port takes several.
  *
  * The refusal in `refuseConnection` is what the canvas paints while the wire is being dragged;
- * this is what happens when the user drops it anyway. One producer per input either way — the
- * compiler would otherwise pick the first and drop the rest without a word.
+ * this is what happens when the user drops it anyway. One producer per input where the compiler
+ * would otherwise pick the first and drop the rest without a word, and as many as the user draws
+ * where each one compiles to a variable of its own (`takesManyWires`).
+ *
+ * The edge is dropped and re-added rather than left alone where it is already there: an id is a
+ * pair of handles, so re-drawing a wire that exists rewrites the same edge instead of doubling it.
  */
 export function connect(graph: GraphState, connection: Connection): GraphState {
   const edge = edgeOf(connection)
   if (!edge) return graph
 
-  const kept = graph.edges.filter(
-    existing => existing.source !== edge.source || existing.sourceHandle !== edge.sourceHandle,
+  const consumer = graph.nodes.find(node => node.id === edge.source)
+  const replaces = (existing: GraphEdge): boolean =>
+    existing.source === edge.source && existing.sourceHandle === edge.sourceHandle
+
+  const kept = graph.edges.filter(existing =>
+    consumer && takesManyWires(consumer) ? existing.id !== edge.id : !replaces(existing),
   )
 
   return { ...graph, edges: [...kept, edge] }

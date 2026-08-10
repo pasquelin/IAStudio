@@ -324,6 +324,53 @@ describe('the values a node hands on', () => {
     expect(watched.submitted[0]?.body).toEqual({ prompt: 'asset_one' })
   })
 
+  /**
+   * Two wires onto one port of a GENERATOR, which the editor does not offer to draw and a file may
+   * well carry. Both halves of what the converter makes of them: a `file_array` gets the
+   * concatenation, and a scalar gets the head of the list — `inputEdges[0]` there, `values[0]`
+   * here. Where the plan kept only the last, the studio submitted the wrong asset without a word.
+   */
+  it('concatenates several wires onto one port, and reads the first for a scalar', async () => {
+    const held = (id: string, value: string): GraphNode => ({
+      id,
+      type: 'asset',
+      position: { x: 0, y: 0 },
+      data: {
+        value,
+        outputHandles: [{ id: handleId(id, 'target', 'image'), name: 'output' }],
+      },
+    })
+
+    const consumer = (form: Readonly<Record<string, unknown>>): GraphNode => ({
+      id: 'm1',
+      type: 'model',
+      position: { x: 0, y: 0 },
+      data: {
+        modelId: 'model_a',
+        form,
+        inputHandles: [
+          { id: handleId('m1', 'source', 'referenceImages'), name: 'referenceImages' },
+        ],
+      },
+    })
+
+    const wires = [
+      wire('m1', 'referenceImages', 'asset1', 'image'),
+      wire('m1', 'referenceImages', 'asset2', 'image'),
+    ]
+    const nodes = [held('asset1', 'asset_one'), held('asset2', 'asset_two')]
+
+    const asList = await watch(graphOf([...nodes, consumer({ referenceImages: [] })], wires), {
+      model_a: ['asset_out'],
+    })
+    const asOne = await watch(graphOf([...nodes, consumer({ referenceImages: '' })], wires), {
+      model_a: ['asset_out'],
+    })
+
+    expect(asList.submitted[0]?.body).toEqual({ referenceImages: ['asset_one', 'asset_two'] })
+    expect(asOne.submitted[0]?.body).toEqual({ referenceImages: 'asset_one' })
+  })
+
   /** An asset node whose asset was cleared holds `''`, which is not an id the API would take. */
   it('reads no asset out of an emptied asset node', async () => {
     const asset: GraphNode = {
@@ -900,6 +947,36 @@ describe('a transform node', () => {
     await watch(updateNodeData(graph, 'text1', { value: 'a cat' }), {}, { transform })
 
     expect(transform).toHaveBeenCalledWith('text1_output', { text1_output: 'a cat' })
+  })
+
+  /**
+   * The sentence this lot exists for. Two text nodes onto ONE port of a transform: the converter
+   * names one variable per wire, so both must reach the evaluator — where only the last of them
+   * used to, the plan having keyed its inputs by port name.
+   */
+  it('hands over one variable per wire where several land on one port', async () => {
+    const transform = vi.fn(() => Promise.resolve(['a cat in a hat']))
+    const graph = graphOf(
+      [
+        textNode('text1'),
+        textNode('text2'),
+        transformNode('transformText1', 'text1_output + text2_output'),
+      ],
+      [
+        wire('transformText1', 'text', 'text1', 'prompt'),
+        wire('transformText1', 'text', 'text2', 'prompt'),
+      ],
+    )
+    const filled = updateNodeData(updateNodeData(graph, 'text1', { value: 'a cat' }), 'text2', {
+      value: ' in a hat',
+    })
+
+    await watch(filled, {}, { transform })
+
+    expect(transform).toHaveBeenCalledWith('text1_output + text2_output', {
+      text1_output: 'a cat',
+      text2_output: ' in a hat',
+    })
   })
 
   /** A generator asked for four pictures produced four: the variable is the list, not the first. */

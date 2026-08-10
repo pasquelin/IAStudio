@@ -18,8 +18,15 @@ export type GraphPlanNode = {
   id: string
   /** The cache key: the same hash means the same result, so the node need not run again. */
   hash: string
-  /** What feeds each input port, keyed by the port's name — a model's own field key. */
-  inputs: Readonly<Record<string, GraphPlanInput>>
+  /**
+   * What feeds each input port, keyed by the port's name — a model's own field key.
+   *
+   * A LIST per port, in the graph's own edge order, because a port may take several wires
+   * (`takesManyWires`) and because a file may spell two edges onto one name whatever the editor
+   * allows. Ordered rather than a set: what reads a scalar port takes the first, which is the
+   * edge the converter takes too.
+   */
+  inputs: Readonly<Record<string, readonly GraphPlanInput[]>>
   /**
    * The nodes whose outcome this one waits on without reading a value from them: today, the
    * approvals standing between it and what feeds it.
@@ -86,8 +93,10 @@ function inputsOf(
   node: GraphNode,
   incoming: readonly GraphEdge[],
   byId: ReadonlyMap<string, GraphNode>,
-): Readonly<Record<string, GraphPlanInput>> {
-  const inputs: Record<string, GraphPlanInput> = {}
+): Readonly<Record<string, readonly GraphPlanInput[]>> {
+  // A `Map` rather than the object it becomes: a port a file names `constructor` would otherwise
+  // be read off `Object.prototype` and the list appended to a function.
+  const inputs = new Map<string, GraphPlanInput[]>()
 
   // Flattened once rather than per edge: `inputHandlesOf` walks the sub-handles and allocates as
   // it goes, and a node with ten wires into thirty ports paid for that ten times.
@@ -105,13 +114,15 @@ function inputsOf(
     const provider = byId.get(edge.target)
     const output = provider && outputHandleOf(provider, edge.targetHandle)?.name
 
-    inputs[port?.name ?? edge.sourceHandle] = {
-      node: edge.target,
-      output: output ?? DEFAULT_OUTPUT_NAME,
-    }
+    const key = port?.name ?? edge.sourceHandle
+    const source = { node: edge.target, output: output ?? DEFAULT_OUTPUT_NAME }
+    const held = inputs.get(key)
+
+    if (held) held.push(source)
+    else inputs.set(key, [source])
   }
 
-  return inputs
+  return Object.fromEntries(inputs)
 }
 
 /**
@@ -121,8 +132,8 @@ function inputsOf(
  * nodes carrying the same model and the same prompt are asking for two different pictures — the
  * one thing a cache must never do here is hand them the same one.
  *
- * Built from the edges rather than from `inputs`, which is keyed by port name: a file may spell
- * two edges onto one name, and the map keeps only the last of them.
+ * Built from the edges rather than from `inputs`, which is keyed by port NAME: a file may give two
+ * ports one name, and two wires that land on different handles would then hash as one.
  */
 function hashOf(
   node: GraphNode,

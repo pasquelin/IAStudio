@@ -9,6 +9,7 @@ import {
   inputHandlesOf,
   loopOutputId,
   outputHandleOf,
+  takesManyWires,
   typesConnect,
 } from './handles'
 
@@ -136,5 +137,28 @@ describe('the ports of a node', () => {
 
   it('reads a node with no ports at all as having none', () => {
     expect(inputHandlesOf(node({}))).toEqual([])
+  })
+})
+
+/**
+ * The two node types whose wires are named after the node they come from, and therefore the two
+ * whose ports hold more than one. Asked of the type rather than of the port because that is how
+ * the converter asks it: `workflow_converter.js` has one arm per node type, and only these two
+ * push one flow input per incoming edge.
+ */
+describe('a port that takes several wires', () => {
+  const typed = (type: GraphNode['type']): GraphNode => ({
+    id: 'n1',
+    type,
+    position: { x: 0, y: 0 },
+    data: {},
+  })
+
+  it('is one of a transform or a branch, and of nothing else', () => {
+    expect(takesManyWires(typed('transformText'))).toBe(true)
+    expect(takesManyWires(typed('ifElse'))).toBe(true)
+    expect(takesManyWires(typed('model'))).toBe(false)
+    expect(takesManyWires(typed('text'))).toBe(false)
+    expect(takesManyWires(typed('approval'))).toBe(false)
   })
 })

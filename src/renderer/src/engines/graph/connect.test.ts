@@ -3,6 +3,7 @@ import { EMPTY_GRAPH, type GraphNode, type GraphState } from '@shared/domain/gra
 import type { FieldDescriptor } from '@shared/domain/model'
 import { canConnect, canDropConnection, edgeOf, refuseConnection } from './connect'
 import { createModelNode, createNode } from './factory'
+import { transformNode } from './graph-fixtures'
 import { outputHandlesOf } from './handles'
 
 const asset = (id: string, type: string): GraphNode => ({
@@ -106,6 +107,28 @@ describe('what the canvas may connect', () => {
     }
 
     expect(refuseConnection(wired, feeding)).toBe('input-taken')
+  })
+
+  /**
+   * The refusal above, and the node it must not be answered for. A transform compiles one CEL
+   * variable per incoming wire — `text1_output + text2_output` — so the second wire is the whole
+   * point of the port, and refusing it made a sentence the webapp writes impossible here.
+   */
+  it('lets a second wire onto a port whose node names its wires by their provider', () => {
+    const first = {
+      source: 'transformText1',
+      sourceHandle: 'transformText1-source-text',
+      target: 'image1',
+      targetHandle: 'image1-target-image',
+    }
+    const wired: GraphState = {
+      ...graph,
+      nodes: [...graph.nodes, transformNode('transformText1')],
+      edges: [edgeOf({ ...first, target: 'sound1', targetHandle: 'sound1-target-image' })!],
+    }
+
+    expect(refuseConnection(wired, first)).toBeNull()
+    expect(canConnect(wired, first)).toBe(true)
   })
 
   it('names an edge that already exists rather than doubling it', () => {

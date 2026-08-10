@@ -3,18 +3,21 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@shared/domain/graph'
 import { conditionBlocksOf } from '@/engines/graph/conditions'
+import { modelNode, textNode } from '@/engines/graph/graph-fixtures'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { GraphNodeInspector } from './GraphNodeInspector'
 
 const DOCUMENT = 'graph-1'
 
-const TEXT: GraphNode = {
-  id: 'text1',
-  type: 'text',
-  position: { x: 0, y: 0 },
-  data: { value: 'a small grey rock' },
-}
+/**
+ * The two nodes the branch is merely wired to, taken from the fabric rather than sketched: this
+ * suite's subject is the branch, and a hand-written text node here carried no output port at all
+ * while the very edge below named one.
+ */
+const TEXT: GraphNode = textNode('text1', 'a small grey rock')
+
+const MODEL: GraphNode = modelNode('model1')
 
 const BRANCH: GraphNode = {
   id: 'ifElse1',
@@ -46,8 +49,6 @@ const READS_CASE1: GraphEdge = {
   sourceHandle: 'model1-source-prompt',
   targetHandle: 'ifElse1-target-case1',
 }
-
-const MODEL: GraphNode = { id: 'model1', type: 'model', position: { x: 90, y: 0 }, data: {} }
 
 beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [TEXT, BRANCH, MODEL], edges: [FED], inputKeys: [] })

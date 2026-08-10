@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { GraphEdge, GraphState } from '@shared/domain/graph'
+import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import {
   approvalNode as approval,
   graphOf,
   guards,
   modelNode as model,
   textNode as text,
+  transformNode as transform,
   wire,
 } from './graph-fixtures'
 import { moveNode, updateNodeData } from './mutations'
@@ -119,7 +120,51 @@ describe('refusing a cycle', () => {
 describe('resolving what feeds a node', () => {
   it('keys an input by the port name, which is the model field it fills', () => {
     expect(ordered(planGraph(chain()))[1]?.inputs).toEqual({
-      prompt: { node: 'text1', output: 'output' },
+      prompt: [{ node: 'text1', output: 'output' }],
+    })
+  })
+
+  /**
+   * The lot this list exists for: a transform reading two nodes writes `text1_output +
+   * text2_output`, which the converter compiles and the studio used to make unwireable.
+   */
+  it('keeps every wire that lands on one port, in the graph’s own edge order', () => {
+    const joined = graphOf(
+      [text('text1'), text('text2'), transform('transformText1')],
+      [
+        wire('transformText1', 'text', 'text1', 'prompt'),
+        wire('transformText1', 'text', 'text2', 'prompt'),
+      ],
+    )
+
+    expect(ordered(planGraph(joined))[2]?.inputs).toEqual({
+      text: [
+        { node: 'text1', output: 'output' },
+        { node: 'text2', output: 'output' },
+      ],
+    })
+  })
+
+  /**
+   * A port a file NAMES after a field of `Object.prototype` is a port like any other — the ports
+   * are the subject here, so this one writes its own rather than taking the fixture.
+   */
+  it('collects a port named like a field of the prototype', () => {
+    const consumer: GraphNode = {
+      id: 'transformText1',
+      type: 'transformText',
+      position: { x: 0, y: 0 },
+      data: {
+        inputHandles: [{ id: 'transformText1-source-constructor', name: 'constructor' }],
+      },
+    }
+    const graph = graphOf(
+      [text('text1'), consumer],
+      [wire('transformText1', 'constructor', 'text1', 'prompt')],
+    )
+
+    expect(ordered(planGraph(graph))[1]?.inputs).toEqual({
+      constructor: [{ node: 'text1', output: 'output' }],
     })
   })
 
@@ -144,7 +189,7 @@ describe('resolving what feeds a node', () => {
     const graph = graphOf([text('text1'), model('m1')], [wire('m1', 'gone', 'text1', 'prompt')])
 
     expect(ordered(planGraph(graph))[1]?.inputs).toEqual({
-      'm1-source-gone': { node: 'text1', output: 'output' },
+      'm1-source-gone': [{ node: 'text1', output: 'output' }],
     })
   })
 })
@@ -303,7 +348,7 @@ describe('waiting on an approval', () => {
     const plan = planGraph(guarded())
 
     expect(ordered(plan).find(node => node.id === 'm2')?.inputs).toEqual({
-      prompt: { node: 'm1', output: 'output' },
+      prompt: [{ node: 'm1', output: 'output' }],
     })
   })
 

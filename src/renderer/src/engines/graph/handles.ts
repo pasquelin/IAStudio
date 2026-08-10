@@ -26,6 +26,24 @@ export const DEFAULT_OUTPUT_NAME = 'output'
 export const celVariableName = (nodeId: string, output: string): string => `${nodeId}_${output}`
 
 /**
+ * Whether one input port of this node takes SEVERAL wires.
+ *
+ * It follows from the naming just above, and that is why it lives here: a node whose wires are
+ * named after the node they come from can hold any number of them at one port, because two wires
+ * are two variables and not a contest. `workflow_converter.js` walks every incoming edge of a
+ * `transformText` and pushes one input per edge; `ifElse` does the same, one per field its
+ * conditions name. `'a photo of ' + text1_output + text2_output` is a sentence they can both
+ * write, and the studio refusing the second wire was the one thing keeping it from being written.
+ *
+ * Everywhere else one input is one value: a generator's scalar port compiles to the FIRST edge
+ * and drops the rest without a word, so offering to draw the second would be a promise nothing
+ * keeps. The list of an array-typed port is the exception the converter concatenates, but its
+ * arity lives in the model's schema, which an engine may not reach for (invariant 4).
+ */
+export const takesManyWires = (node: GraphNode): boolean =>
+  node.type === 'transformText' || node.type === 'ifElse'
+
+/**
  * The id the webapp gives an edge: the output handle, then the input handle.
  *
  * The converter never reads it — it walks `source`/`target` — so this is for the eye and for the
