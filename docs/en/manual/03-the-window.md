@@ -223,6 +223,12 @@ It does not carry the file name. It carries the **seven workspaces**:
 > leave in this run. Running it again after changing the last node's prompt runs **only** that
 > node.
 >
+> **An *If / Else* node picks one branch, and only one.** Its condition is evaluated over what its
+> incoming wire carries, and what it received leaves by the branch that was chosen — the others get
+> nothing. The nodes reading them then show **not taken**: that is not a failure, it is the branch
+> doing its job, and the state carries on to everything downstream. A branch left empty in the
+> inspector cannot be taken; the **Else** gets it.
+>
 > **An approval node stops the run to ask you.** You put one down like any other, wire it to the
 > node whose result it should hold, and the Inspector gives it its **question asked** — left
 > empty, the node simply asks "Approve this result?". When the graph runs, the node it guards
