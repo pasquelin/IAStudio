@@ -73,11 +73,15 @@ describe('what the converter refuses outright', () => {
    * come through `conditionBlocksOf`, which is the only thing that folds an unknown operator back
    * to `equals`, would otherwise write `undefined && …` into the CEL sent to the thread.
    */
+  /**
+   * Through `JSON.parse`, the way a document reaches this and the way `conditions.test.ts` and
+   * `workflow-compile.test.ts` both write it: `parseGraph` validates a node and never its `data`,
+   * so the value the type forbids is exactly the value a file can hold. Typing the test into
+   * agreement would prove nothing about the door it guards.
+   */
   it('answers false for an operator it does not know', () => {
     const block: GraphConditionBlock = {
       logic: 'and',
-      // Through JSON, as a document read off a file reaches it: `parseGraph` validates the node
-      // and never its `data`.
       conditions: JSON.parse('[{"field":"text1","operator":"soundsLike","value":"a"}]'),
     }
 

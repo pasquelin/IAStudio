@@ -501,10 +501,17 @@ describe('the branch node', () => {
     expect(screen.getByText('Aucune condition')).toBeInTheDocument()
   })
 
-  /** `parseGraph` keeps `data` as it found it: everything here reaches the face off a file. */
-  it('survives conditions a file made up', () => {
+  /**
+   * `parseGraph` keeps `data` as it found it: everything here reaches the face off a file. An
+   * operator the studio cannot read is DROPPED, not shown as the `equals` it once became — the
+   * face would otherwise draw a comparison the run does not make and the converter refuses.
+   */
+  it('drops a condition a file made up rather than drawing one it does not make', () => {
     canvas(withBranch(JSON.parse('{"conditionBlocks":[{"conditions":[{"operator":7}]}]}')))
 
-    expect(screen.getByText('Rien égale')).toBeInTheDocument()
+    // The branch still draws — a block with nothing readable left in it is still a branch — but
+    // the comparison the file invented is nowhere on it.
+    expect(screen.queryByText('Rien égale')).not.toBeInTheDocument()
+    expect(screen.queryByText(/égale/)).not.toBeInTheDocument()
   })
 })

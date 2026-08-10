@@ -53,10 +53,13 @@ describe('reading the conditions off a node', () => {
     expect(readBlocks([{ logic: 'maybe', conditions: 'none' }])).toEqual([
       { logic: 'and', conditions: [] },
     ])
-    expect(first([{ conditions: [{ operator: 'startsWith', field: 'text1' }] }])).toEqual({
-      field: 'text1',
-      operator: 'equals',
-    })
+    // Dropped, not folded to `equals`, and the difference is a branch: the converter answers
+    // `'false'` for an operator it does not know and filters the condition out, while `equals`
+    // is a comparison that can be TRUE. Repaired, the same document took one branch in the
+    // studio and another once published — which is what running a branch locally revealed.
+    expect(readBlocks([{ conditions: [{ operator: 'startsWith', field: 'text1' }] }])).toEqual([
+      { logic: 'and', conditions: [] },
+    ])
     expect(readBlocks([{ conditions: ['a condition', null, 7] }])).toEqual([
       { logic: 'and', conditions: [] },
     ])

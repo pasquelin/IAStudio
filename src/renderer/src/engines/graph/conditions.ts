@@ -52,21 +52,32 @@ function blockOf(block: Record<string, unknown>): GraphConditionBlock {
   return {
     logic,
     conditions: Array.isArray(conditions)
-      ? conditions.flatMap(condition => (isRecord(condition) ? [conditionOf(condition)] : []))
+      ? conditions.flatMap(condition => (isRecord(condition) ? conditionOf(condition) : []))
       : [],
   }
 }
 
-function conditionOf(condition: Record<string, unknown>): GraphCondition {
-  const operator: GraphConditionOperator = isGraphConditionOperator(condition.operator)
-    ? condition.operator
-    : 'equals'
+/**
+ * One condition, or nothing where its operator is not one the studio knows.
+ *
+ * DROPPED rather than folded to `equals`, which is what this did until the branch began to run
+ * locally. The converter answers `'false'` for an operator it does not know and filters the
+ * condition out; repairing it to `equals` gave the studio a comparison that can be TRUE, so the
+ * same document took one branch here and another once published. That is the rule this file's own
+ * header states — unreadable contents are dropped, never repaired — applied to the operator too.
+ */
+function conditionOf(condition: Record<string, unknown>): readonly GraphCondition[] {
+  if (!isGraphConditionOperator(condition.operator)) return []
 
-  return {
-    operator,
-    ...(typeof condition.field === 'string' ? { field: condition.field } : {}),
-    ...valueOf(condition.value, operator),
-  }
+  const operator: GraphConditionOperator = condition.operator
+
+  return [
+    {
+      operator,
+      ...(typeof condition.field === 'string' ? { field: condition.field } : {}),
+      ...valueOf(condition.value, operator),
+    },
+  ]
 }
 
 /**
