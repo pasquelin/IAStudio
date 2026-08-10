@@ -23,9 +23,17 @@ complète — aucun code à changer.
 
 ## Comment ils sont utilisés
 
-`secrets/.env` est lu **à l'exécution** par le process main, en développement seulement
-(`app.isPackaged === false`). Il n'est jamais passé au bundler : injecter un secret à la
-compilation le graverait dans `out/`, et un `.asar` se lit avec un éditeur de texte.
+`secrets/.env` est lu **à l'exécution** par le process main, en développement seulement. Il
+n'est jamais passé au bundler : injecter un secret à la compilation le graverait dans `out/`,
+et un `.asar` se lit avec un éditeur de texte.
+
+Le drapeau qui décide est `isDevelopment` (`src/main/environment.ts`) — `__DEV__`, injecté par
+`define` à la compilation — et **jamais `app.isPackaged`**. Electron dérive ce dernier du nom de
+l'exécutable, or `scripts/dev-app-identity.mjs` renomme le bundle pour que le studio apparaisse
+sous son nom plutôt que celui d'Electron : `app.isPackaged` annonce alors une application
+empaquetée en plein dev run. Ce fallback est l'un des six comportements que la confusion avait
+fait basculer du mauvais côté. Le passage se lit à `services.ts` :
+`createFileSystemFallback(app.getAppPath(), !isDevelopment)`.
 
 Ils forment un **compte à part entière** — celui d'un dépôt fraîchement cloné. Il apparaît
 dans la liste des comptes et dans le sélecteur du header, en tête, et il est actif tant
