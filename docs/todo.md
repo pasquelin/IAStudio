@@ -1640,6 +1640,10 @@ dit rien n'est pas un fichier qui dit faux.
   collision RESSEMBLE À DES TESTS ROUGES.** `coverage.reportsDirectory` est un chemin unique du dépôt.
   **Devant un rouge sous couverture, relancer `pnpm test` sans elle avant de chercher une cause dans le
   code.**
+- **Un budget de couverture non plus.** `src/main/project/**` a rendu « 61 dépassent 60 » puis
+  rien du tout, sans un seul changement, **trois fois le 10 août** — dont deux sur un lot qui ne
+  touchait pas au main. Relancer avant de chercher quelle branche est en trop ; le compte exact
+  se prend par `vitest run --coverage --coverage.reporter=json src/main` et se lit par fichier.
 - **Un rouge ne se croit pas sur parole.** Le 9 août, une passe a rendu 26 échecs d'assertion sur 5
   fichiers ; la passe suivante, sans un seul changement, est repassée verte de bout en bout. **Relancer
   une fois avant d'ouvrir une enquête**, et ne conclure à une régression que si le second passage rougit
