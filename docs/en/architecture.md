@@ -843,7 +843,7 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 | `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, **a breaking space before `; : ! ?` or inside French quotation marks**, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
 | `renderer/src/no-hardcoded-text.test.ts` | in a `.tsx`: text between tags, a literal in braces, one behind a ternary or an `&&`, and any attribute a human reads |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
-| `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key belongs |
+| `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key belongs — **except in a `*-fixtures.ts`**, stepped over like the `*.test.ts`: a fixture builds the data a suite asserts on, none is imported by production code, and the label it carries is the one the API returns. Coverage draws the same line (`vitest.config.ts`) |
 
 **A guard that reads data can go blind without turning red**, which is what the *what the guards
 would catch* block of `bundles.test.ts` is for. Its eight checks run through four local helpers: a

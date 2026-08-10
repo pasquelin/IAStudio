@@ -314,4 +314,16 @@ describe('the registries', () => {
     expect(stores.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
     expect(stores.some(path => path.endsWith('jobs.ts'))).toBe(true)
   })
+
+  /**
+   * `sourceFiles` feeds the dialog and menu guards too, and the main tree has fixtures of its
+   * own — the exemption reaches them, so it is measured where it reaches rather than where it
+   * was written for.
+   */
+  it('steps over the fixtures of the main tree as well, and keeps the rest', () => {
+    const main = sourceFiles(MAIN)
+
+    expect(main.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
+    expect(main.some(path => path.endsWith('job-manager.ts'))).toBe(true)
+  })
 })

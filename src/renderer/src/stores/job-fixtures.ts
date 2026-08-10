@@ -12,14 +12,15 @@ const RUNNING: Job = {
 }
 
 /**
- * A job as the main process announces it, settled ones included.
- *
- * The four suites that each built their own invented a job the manager never announces: a
+ * A job as the main process announces it — the list it publishes, not the progress events it
+ * sends. The suites that each built their own invented a third thing the studio never holds: a
  * terminal status with no `finishedAt`, and a succeeded one short of full progress. `settle` in
- * `job-manager.ts` writes both, so this writes both.
+ * `job-manager.ts` writes both, and `job-manager.test.ts` holds it to that.
  *
- * Naming a key is what opts out, `undefined` included — `apply` merges a progress event without
- * a date, so a job settled that way is a real shape of the store and has to stay sayable.
+ * Naming a key is what opts out, `undefined` included — `apply` (`jobs.ts`) merges a progress
+ * event without ever dating it, so a job settled that way is the store's other real shape and
+ * has to stay sayable. Spreading a whole job in names every key at once and so opts out of both:
+ * settle it with `job({ id: previous.id, status: 'succeeded' })` rather than from its spread.
  */
 export function job(overrides: Partial<Job> = {}): Job {
   const built: Job = { ...RUNNING, ...overrides }
