@@ -145,6 +145,19 @@ remplace l’autre. Ce qui ne revient dans aucun des deux : l’historique d’a
 
 ## Espace 3D
 
+### L’animation va en ligne droite, et une séquence se joue seule
+
+La timeline de l’espace 3D — voir [l’espace 3D](09-espace-3d.md) — interpole **linéairement**
+entre deux clés : pas de courbe d’accélération, donc un mouvement démarre et s’arrête net. Poser
+plus de clés est le seul moyen d’adoucir une trajectoire pour l’instant.
+
+**Une séquence d’un modèle se joue seule.** On choisit laquelle, on la lance, on l’arrête — mais
+rien ne fond `marche` vers `course` : passer de l’une à l’autre est une coupe.
+
+**Le rendu écrit une seule taille**, 1920 × 1080, et il rend ce que voit une caméra de la scène.
+Il n’y a pas encore de réglage de résolution, ni de choix entre plusieurs caméras : c’est la
+première de la scène qui rend.
+
 ### Le texte 3D n’offre qu’une graisse par famille
 
 **Ajouter ▸ Objet ▸ Texte** fonctionne — voir [l’espace 3D](09-espace-3d.md). Deux réserves.
