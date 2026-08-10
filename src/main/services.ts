@@ -170,6 +170,8 @@ export type Services = {
   language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
+  /** Asks where an exported workflow goes and writes it there. `null` where the picker closed. */
+  saveWorkflow: (name: string, contents: string) => Promise<string | null>
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
@@ -251,6 +253,19 @@ async function savePicture(name: string, bytes: Uint8Array): Promise<string | nu
   if (!path) return null
 
   await writeFile(path, bytes)
+  return path
+}
+
+/**
+ * The `.workflow.json` of a graph, written where the user says. Beside `savePicture` and for the
+ * same reason: the renderer has no filesystem, so the contents come across and only the path the
+ * user chose stays on this side.
+ */
+async function saveWorkflow(name: string, contents: string): Promise<string | null> {
+  const path = await pickSavePath(`${name}.workflow`, '.json')
+  if (!path) return null
+
+  await writeFile(path, contents, 'utf8')
   return path
 }
 
@@ -835,6 +850,7 @@ export function createServices(settings: SettingsStore): Services {
     language,
     pickPath,
     savePicture,
+    saveWorkflow,
     pickSavePath,
     encodeVideo: async args => {
       const binary = ffmpeg.path()

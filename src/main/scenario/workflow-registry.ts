@@ -11,6 +11,7 @@ import {
 } from '@shared/domain/workflow'
 import type { WatchCredentials } from './credentials-watch'
 import { translateSchema, type ScenarioInput } from './schema'
+import type { WorkflowWriter } from './workflow-publish'
 
 /**
  * A workflow as the API returns it, reduced to what the studio reads. Narrower than the SDK
@@ -46,11 +47,21 @@ export type WorkflowCatalogPage = {
 export type WorkflowCatalog = {
   list: (request: WorkflowListRequest) => Promise<WorkflowCatalogPage>
   retrieve: (workflowId: string) => Promise<{ workflow: RemoteWorkflow }>
+  /** The two writes a publication is. See `workflow-publish.ts` for why there are two. */
+  create: WorkflowWriter['create']
+  update: WorkflowWriter['update']
 }
 
 export type WorkflowRegistry = {
   search: (query: WorkflowQuery) => Promise<WorkflowPage>
   describe: (workflowId: string) => Promise<WorkflowDescriptor>
+  /**
+   * The two writes a publication is, passed through — and passed through HERE rather than around
+   * this file, because a publication changes the very listing the cache above holds: answered
+   * from a page cached a minute earlier, the App the user just published would not be in it.
+   */
+  create: WorkflowWriter['create']
+  update: WorkflowWriter['update']
 }
 
 export type WorkflowRegistryOptions = {
@@ -125,12 +136,25 @@ export function createWorkflowRegistry({
   const fresh = <T>(entry: Cached<T> | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
 
-  watch(() => {
+  const forget = (): void => {
     pages.clear()
     descriptors.clear()
-  })
+  }
+
+  watch(forget)
 
   return {
+    create: async about => {
+      const created = await catalog().create(about)
+      forget()
+      return created
+    },
+
+    update: async (workflowId, body) => {
+      await catalog().update(workflowId, body)
+      forget()
+    },
+
     search: async query => {
       const key = JSON.stringify(query)
       const cached = fresh(pages.get(key))

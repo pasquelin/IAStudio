@@ -5,7 +5,13 @@ import {
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
-import { compileGraph, editorModelOf, modelIdsOf, toEditorFlow } from './workflow-compile'
+import {
+  compileGraph,
+  editorModelOf,
+  modelIdsOf,
+  refuseFlow,
+  toEditorFlow,
+} from './workflow-compile'
 
 const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
   `${nodeId}-${side}-${field}`
@@ -69,6 +75,38 @@ const compile = (graph: GraphState) => {
 
 /** What the flow is made of, in order — the one assertion a step count cannot stand in for. */
 const idsOf = (graph: GraphState): readonly string[] => toEditorFlow(graph).map(step => step.id)
+
+/**
+ * The refusal shared with the PUBLICATION, asked on a flow its caller already holds. Reached from
+ * `compileGraph` its first two answers can never fire — that path asks them first, to avoid
+ * converting a graph nothing reads — so they are asked here, where the publication asks them.
+ */
+describe('the refusal a compile and a publication share', () => {
+  const output = modelNode('m1', true)
+  // A real flow rather than one written by hand: the validator refuses an item it does not know,
+  // so a hand-made step would prove `invalid` and nothing else.
+  const oneStep = toEditorFlow(graphOf([output]))
+
+  it('names the output nobody marked, whatever the flow holds', () => {
+    expect(refuseFlow(graphOf([modelNode('m1', false)]), oneStep, vi.fn())).toBe('no-output')
+  })
+
+  it('names an empty flow on a graph that does have an output', () => {
+    expect(refuseFlow(graphOf([output]), [], vi.fn())).toBe('empty')
+  })
+
+  it('accepts a flow the validator does not refuse', () => {
+    expect(refuseFlow(graphOf([output]), oneStep, vi.fn())).toBeNull()
+  })
+
+  /** The validator's own sentence goes to the journal; the screen gets the code. */
+  it('journals the validator’s sentence and answers a code', () => {
+    const report = vi.fn()
+
+    expect(refuseFlow(graphOf([output]), [{ id: 'm1', type: 'nonsense' }], report)).toBe('invalid')
+    expect(report).toHaveBeenCalled()
+  })
+})
 
 describe('compiling a graph', () => {
   it('turns a text node feeding a generator into a flow', () => {

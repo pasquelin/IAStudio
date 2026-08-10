@@ -7,7 +7,12 @@ import {
   type WorkflowEditorNode,
 } from '@scenario-labs/sdk'
 import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
-import { namedLoopId, outputNodesOf, type GraphCompileResult } from '@shared/domain/graph'
+import {
+  namedLoopId,
+  outputNodesOf,
+  type GraphCompileProblem,
+  type GraphCompileResult,
+} from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
 import type { ScenarioInput } from './schema'
 
@@ -298,24 +303,30 @@ function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-e
   return undefined
 }
 
-/** Whether that flow holds together, and the refusals the converter answers with silence. */
-export function compileGraph(
+/**
+ * Why that flow would not be accepted, or `null` when it would.
+ *
+ * Apart from `compileGraph` because the PUBLICATION needs the very same answers and already holds
+ * the flow: asked of the compile it would compile twice, and written a second time it would be two
+ * verdicts on one question — which is how a graph the editor paints red gets published as `ready`
+ * anyway. The loop pairing is in here for that very reason: it is the refusal `validateWorkflowFlow`
+ * does NOT make, so a publication that skipped it would send the one flow nothing else catches.
+ */
+export function refuseFlow(
   graph: GraphState,
-  { report, getModel }: CompileDeps,
-): GraphCompileResult {
-  // Asked before the converter rather than read off its answer: an empty flow has two causes, and
-  // "nothing is marked as an output" is the one the user can do something about.
-  if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
+  flow: readonly WorkflowEditorFlowItem[],
+  report: (message: string) => void,
+): GraphCompileProblem | null {
+  // "Nothing is marked as an output" is the one cause of an empty flow the user can act on.
+  if (outputNodesOf(graph).length === 0) return 'no-output'
 
-  // Before the conversion, because the conversion is exactly what hides it: these two graphs
-  // convert and validate without a word, and the flow that comes out has a wire the graph does
-  // not. Nothing downstream can tell them from a graph that is right.
+  // Before anything read off the flow, because the conversion is exactly what hides it: these
+  // graphs convert and validate without a word, and the flow that comes out has a wire the graph
+  // does not.
   const pairing = loopPairingProblem(graph)
-  if (pairing) return { ok: false, problem: pairing }
+  if (pairing) return pairing
 
-  const flow = toEditorFlow(graph, getModel)
-
-  if (flow.length === 0) return { ok: false, problem: 'empty' }
+  if (flow.length === 0) return 'empty'
 
   try {
     // Copied because the validator takes a mutable array. It reads only — checked in
@@ -326,8 +337,22 @@ export function compileGraph(
     // The sentence names a node and what is wrong with it, which is worth keeping — in the
     // journal, where a developer reads it. The screen gets the code.
     report(messageOf(error))
-    return { ok: false, problem: 'invalid' }
+    return 'invalid'
   }
 
-  return { ok: true, steps: flow.length }
+  return null
+}
+
+/** Whether that flow holds together, and the refusals the converter answers with silence. */
+export function compileGraph(
+  graph: GraphState,
+  { report, getModel }: CompileDeps,
+): GraphCompileResult {
+  // Asked of `refuseFlow` and not repeated here, though this runs on every edit: a second copy of
+  // the two cheap refusals would be two verdicts on one question, and the converter answers a
+  // graph nothing reads by filtering it down to nothing — the work saved was not worth the risk.
+  const flow = toEditorFlow(graph, getModel)
+  const problem = refuseFlow(graph, flow, report)
+
+  return problem ? { ok: false, problem } : { ok: true, steps: flow.length }
 }

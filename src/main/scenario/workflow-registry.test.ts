@@ -28,6 +28,8 @@ function catalogOf(page: { workflows: readonly RemoteWorkflow[]; token: string |
       requests.push(request)
       return Promise.resolve(page)
     },
+    create: () => Promise.resolve({ id: 'workflow_1' }),
+    update: () => Promise.resolve(),
     retrieve: () => Promise.resolve({ workflow: APP }),
   }
 
@@ -38,6 +40,50 @@ const noWatch = (): (() => void) => () => {}
 
 const registryOn = (catalog: WorkflowCatalog) =>
   createWorkflowRegistry({ catalog: () => catalog, watch: noWatch })
+
+describe('publishing through the registry', () => {
+  /**
+   * The listing it caches is the one a publication changes. Answered from a page cached a minute
+   * earlier, the App the user just published would simply not be in it.
+   */
+  it('forgets the pages it had cached once a workflow is created', async () => {
+    const { catalog, requests } = catalogOf({ workflows: [], token: null })
+    const registry = registryOn(catalog)
+
+    await registry.search({})
+    await registry.search({})
+    expect(requests).toHaveLength(1)
+
+    await registry.create({ name: 'Heroes', description: '' })
+    await registry.search({})
+
+    expect(requests).toHaveLength(2)
+  })
+
+  it('forgets them again once the workflow is filled', async () => {
+    const { catalog, requests } = catalogOf({ workflows: [], token: null })
+    const registry = registryOn(catalog)
+
+    await registry.search({})
+    await registry.update('workflow_1', {
+      editorInfo: { nodes: [], edges: [], inputKeys: [] },
+      flow: [{ id: 'm1', type: 'custom-model' }],
+      inputs: [],
+      status: 'ready',
+    })
+    await registry.search({})
+
+    expect(requests).toHaveLength(2)
+  })
+
+  it('answers the id the catalogue gave it', async () => {
+    const { catalog } = catalogOf({ workflows: [], token: null })
+
+    await expect(registryOn(catalog).create({ name: 'Heroes', description: '' })).resolves.toEqual({
+      id: 'workflow_1',
+    })
+  })
+})
 
 describe('the workflow registry', () => {
   it('lists the public workflows — the Apps — unless asked otherwise', async () => {
@@ -166,6 +212,8 @@ describe('the workflow registry', () => {
     )
     const registry = registryOn({
       list: () => Promise.resolve({ workflows: [], token: null }),
+      create: () => Promise.resolve({ id: 'workflow_1' }),
+      update: () => Promise.resolve(),
       retrieve,
     })
 

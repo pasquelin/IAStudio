@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { GraphCompileResult, GraphState } from '@shared/domain/graph'
+import type { GraphCompileResult, GraphPublishResult, GraphState } from '@shared/domain/graph'
 import { TONE_TEXT } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useDebounced } from '@/hooks/useDebounced'
@@ -66,8 +66,40 @@ export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
  * is marked as an output", and the two about a loop and its end, which no other source can emit
  * at all. `validateWorkflowFlow` accepts those two graphs, and this line is their only channel.
  */
-export function GraphStatus({ result }: { result: GraphCompileResult | null }) {
+/**
+ * `published` takes the line over when there is one, and it is deliberate: a publication is a
+ * WRITE on the user's account, and the one thing it must never be is silent. It stays until the
+ * next attempt rather than fading, so a refusal cannot be missed by looking away.
+ */
+export function GraphStatus({
+  result,
+  published,
+}: {
+  result: GraphCompileResult | null
+  published?: GraphPublishResult | null
+}) {
   const { t } = useTranslation()
+
+  if (published) {
+    const said = published.ok
+      ? t('graphPublish.done')
+      : published.problem === 'refused'
+        ? t('graphPublish.refused')
+        : t(`graphCompile.problem.${published.problem}`)
+
+    return (
+      <p
+        role="status"
+        className={cn(
+          'absolute bottom-2 left-2 z-10 text-[11px]',
+          published.ok ? TONE_TEXT.muted : TONE_TEXT.danger,
+        )}
+      >
+        {said}
+      </p>
+    )
+  }
+
   if (!result) return null
 
   // The studio's own tones rather than a colour of this file's: a graph that would not export is

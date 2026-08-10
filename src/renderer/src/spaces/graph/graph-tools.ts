@@ -1,5 +1,7 @@
 import {
   mdiCursorDefaultOutline,
+  mdiCloudUploadOutline,
+  mdiTrayArrowDown,
   mdiHandBackRightOutline,
   mdiMagnifyMinusOutline,
   mdiMagnifyPlusOutline,
@@ -14,13 +16,16 @@ import type { ToolbarItem } from '@/design/Toolbar'
 /** What the pointer does on the pane: pick things, or push the view around. */
 export type GraphMode = 'select' | 'pan'
 
-export type GraphToolId = 'run' | 'add' | GraphMode | 'undo' | 'redo' | 'zoomIn' | 'zoomOut'
+export type GraphToolId =
+  'run' | 'export' | 'add' | GraphMode | 'undo' | 'redo' | 'zoomIn' | 'zoomOut'
 
 export type GraphToolbarState = {
   canUndo: boolean
   canRedo: boolean
   /** Whether a run would report anything: a graph of notes offers a button that does nothing. */
   canRun: boolean
+  /** An empty graph writes a file nothing can open, and publishes an App that answers nothing. */
+  canExport: boolean
   /** The same button, and deliberately: a run and its stop are one place to look, not two. */
   running: boolean
   /**
@@ -43,6 +48,7 @@ export function graphTools({
   canUndo,
   canRedo,
   canRun,
+  canExport,
   running,
   runShortcut,
 }: GraphToolbarState): ToolbarItem[] {
@@ -55,6 +61,20 @@ export function graphTools({
       // A run under way is always stoppable, whatever the graph holds by then.
       disabled: !running && !canRun,
       shortcut: runShortcut,
+    },
+    {
+      id: 'export',
+      labelKey: 'graphTools.export',
+      descriptionKey: 'graphTools.exportHint',
+      icon: mdiTrayArrowDown,
+      disabled: !canExport,
+    },
+    {
+      id: 'publish',
+      labelKey: 'graphTools.publish',
+      descriptionKey: 'graphTools.publishHint',
+      icon: mdiCloudUploadOutline,
+      disabled: !canExport,
     },
     {
       id: 'add',

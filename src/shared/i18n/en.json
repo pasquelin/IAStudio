@@ -129,6 +129,10 @@
       "audio": "Generates a sound from its inputs — the model is picked in the Models panel"
     }
   },
+  "graphPublish": {
+    "done": "Published to Scenario",
+    "refused": "Scenario refused it — see the journal"
+  },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
     "steps_other": "{{count, number}} steps",
@@ -160,6 +164,10 @@
     "runHint": "Run every node in the order its wires allow — what has not changed is not run again",
     "stop": "Stop the run",
     "stopHint": "Submit nothing more and cancel what is under way",
+    "export": "Export the graph",
+    "exportHint": "Write it as a .workflow.json the Scenario webapp can open",
+    "publish": "Publish to Scenario",
+    "publishHint": "Create it as an App of your account, ready to run",
     "add": "Add a node",
     "addHint": "Drop a node on the canvas — right-click does the same",
     "select": "Select",
@@ -264,6 +272,8 @@
       "graph.node": "A node could not be created",
       "graph.run": "The graph could not be run",
       "graph.compile": "The graph could not be checked",
+      "graph.export": "The graph could not be exported",
+      "graph.publish": "The graph could not be published",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened",

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { CommandId } from '@shared/domain/command'
+import type { GraphPublishResult } from '@shared/domain/graph'
 import { isRunnable, type GraphPosition } from '@shared/domain/graph'
 import {
   addGraphNode,
@@ -33,6 +34,13 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const canUndo = useGraphs(state => historyOf(state, documentId).past.length > 0)
   const canRedo = useGraphs(state => historyOf(state, documentId).future.length > 0)
   const canRun = useGraphs(state => isRunnable(graphOf(state, documentId)))
+  const title = useDocuments(state => state.documents[documentId]?.title ?? '')
+  // `workflow_create` refuses empty `nodes`/`edges`, so an empty graph writes a file the webapp
+  // would not take back.
+  const canExport = graph.nodes.length > 0
+  // Held here rather than in the bar: a write on the account must leave a mark on the screen, and
+  // the canvas already has the one line that says what the graph would export.
+  const [published, setPublished] = useState<GraphPublishResult | null>(null)
   /**
    * Held here, not in the global selection: that one carries a single kind at a time, so clicking
    * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
@@ -204,6 +212,30 @@ export function GraphDocument({ documentId }: { documentId: string }) {
     void store.start(documentId).catch(error => reportFailure('graph.run', documentId, error))
   }, [documentId])
 
+  /**
+   * The graph as a file, which the main process writes: the renderer has no filesystem, and the
+   * picker it opens is a native one. Nothing is painted on the way back — a closed picker is not
+   * a failure, and a written file is a file the user just named.
+   */
+  const onExport = useCallback(() => {
+    void getBridge()
+      ?.workflows.export(graph, title)
+      .catch(error => reportFailure('graph.export', documentId, error))
+  }, [documentId, graph, title])
+
+  /**
+   * The graph as an App of the account. Nothing is painted on the way back yet — the code the
+   * publication answers with is the compile's own vocabulary, and where it goes on the screen is
+   * the same question the compile already asks; the journal carries the API's sentence meanwhile.
+   */
+  const onPublish = useCallback(() => {
+    setPublished(null)
+    void getBridge()
+      ?.workflows.publish(graph, title)
+      .then(setPublished)
+      .catch(error => reportFailure('graph.publish', documentId, error))
+  }, [documentId, graph, title])
+
   const onDecide = useCallback(
     (nodeId: string, approved: boolean) =>
       useGraphRuns.getState().decide(documentId, nodeId, approved),
@@ -239,6 +271,10 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       canUndo={canUndo}
       canRedo={canRedo}
       canRun={canRun}
+      canExport={canExport}
+      onExport={onExport}
+      onPublish={onPublish}
+      published={published}
       runs={runs}
       running={running}
     />

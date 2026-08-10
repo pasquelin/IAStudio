@@ -71,6 +71,8 @@ function workflowRegistry(overrides: Partial<WorkflowRegistry> = {}): WorkflowRe
   return {
     search: () => Promise.resolve({ items: [], cursor: null }),
     describe: () => Promise.reject(new Error('unused')),
+    create: () => Promise.resolve({ id: 'workflow_1' }),
+    update: () => Promise.resolve(),
     ...overrides,
   }
 }
@@ -111,6 +113,8 @@ function register(overrides: Partial<ScenarioHandlerDeps> = {}): void {
     usage,
     plan: { access: () => Promise.resolve(null) },
     estimateCost,
+    saveWorkflow: () => Promise.resolve('/tmp/graph.workflow.json'),
+    ownerScope: { current: () => 'project_1', observe: () => {} },
     ...overrides,
   })
 }
@@ -487,6 +491,129 @@ describe('scenario handlers', () => {
         invoke(CHANNELS.scenarioEstimateCost, target, { image: 'asset_1' }),
       ).resolves.toEqual({ creativeUnits: 12 })
       expect(estimate).toHaveBeenCalledWith(target, { image: 'asset_1' })
+    })
+  })
+
+  describe('exporting a graph to a file', () => {
+    const withInput = {
+      nodes: [
+        {
+          id: 'image2',
+          type: 'asset',
+          position: { x: 0, y: 0 },
+          data: { isInput: true, type: 'image', title: 'Hero' },
+        },
+      ],
+      edges: [],
+      inputKeys: [],
+    }
+
+    it('writes the graph under the name it was given, as a workflow file', async () => {
+      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
+        Promise.resolve('/tmp/Heroes.workflow.json'),
+      )
+      register({ saveWorkflow })
+
+      await expect(invoke(CHANNELS.workflowsExport, withInput, 'Heroes')).resolves.toBe(true)
+
+      const [name, contents] = saveWorkflow.mock.calls[0] ?? []
+      expect(name).toBe('Heroes')
+      expect(JSON.parse(String(contents))).toMatchObject({
+        version: '1.0',
+        name: 'Heroes',
+        editorInfo: { nodes: withInput.nodes, edges: [], inputKeys: [] },
+        inputs: [{ name: 'image2', label: 'Hero', type: 'file', kind: 'image' }],
+      })
+    })
+
+    /** Closing the picker is not a failure — nothing was written, and the screen says nothing. */
+    it('answers false where the picker was closed', async () => {
+      register({ saveWorkflow: () => Promise.resolve(null) })
+
+      await expect(invoke(CHANNELS.workflowsExport, withInput, 'Heroes')).resolves.toBe(false)
+    })
+
+    /** `exportedBy` is the project the active key opens onto, and it is only known here. */
+    it('stamps the file with the account the key belongs to', async () => {
+      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
+        Promise.resolve('/tmp/x.json'),
+      )
+      register({ saveWorkflow, ownerScope: { current: () => 'project_7', observe: () => {} } })
+
+      await invoke(CHANNELS.workflowsExport, withInput, 'Heroes')
+
+      const [, contents] = saveWorkflow.mock.calls[0] ?? []
+      expect(JSON.parse(String(contents)).exportedBy).toBe('project_7')
+    })
+
+    /** Before the library has answered once there is no owner, and a blank says exactly that. */
+    it('leaves the account blank rather than inventing one', async () => {
+      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
+        Promise.resolve('/tmp/x.json'),
+      )
+      register({ saveWorkflow, ownerScope: { current: () => null, observe: () => {} } })
+
+      await invoke(CHANNELS.workflowsExport, withInput, 'Heroes')
+
+      const [, contents] = saveWorkflow.mock.calls[0] ?? []
+      expect(JSON.parse(String(contents)).exportedBy).toBe('')
+    })
+
+    /**
+     * No node count is checked, and that is the decision rather than an omission: the ceiling of
+     * 50 in the prose has never been measured, and a local refusal on it would turn away graphs
+     * Scenario accepts.
+     */
+    it('publishes the graph as a workflow, models resolved first', async () => {
+      const create = vi.fn((_about: { name: string; description: string }) =>
+        Promise.resolve({ id: 'workflow_9' }),
+      )
+      const update = vi.fn((_id: string, _body: unknown) => Promise.resolve())
+      // Without a schema the converter names no wire and drops the whole incoming wiring, so the
+      // publication must resolve the models before it compiles — as the compile does.
+      const inputsOf = vi.fn(() => Promise.resolve([{ name: 'prompt', type: 'string' }]))
+      register({ workflows: workflowRegistry({ create, update }), models: registry({ inputsOf }) })
+
+      await expect(
+        invoke(CHANNELS.workflowsPublish, graphWithTwoGenerators, 'Heroes'),
+      ).resolves.toEqual({ ok: true, workflowId: 'workflow_9' })
+
+      expect(inputsOf).toHaveBeenCalledWith('model_flux')
+      expect(create).toHaveBeenCalledWith({ name: 'Heroes', description: '' })
+      expect(update.mock.calls[0]?.[0]).toBe('workflow_9')
+    })
+
+    /**
+     * The refusal the user can ACT on, and the same one the editor already paints. Answered
+     * `empty` until the publication rejoined the compile's own verdict, which is the difference
+     * between "mark a node as an output" and a code that says nothing.
+     */
+    it('refuses to publish a graph nothing reaches, in the compile’s own words', async () => {
+      const create = vi.fn(() => Promise.resolve({ id: 'workflow_9' }))
+      register({ workflows: workflowRegistry({ create }) })
+
+      await expect(invoke(CHANNELS.workflowsPublish, withInput, 'Heroes')).resolves.toEqual({
+        ok: false,
+        problem: 'no-output',
+      })
+      expect(create).not.toHaveBeenCalled()
+    })
+
+    it('exports a graph of many nodes rather than refusing it on an unmeasured ceiling', async () => {
+      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
+        Promise.resolve('/tmp/x.json'),
+      )
+      const nodes = Array.from({ length: 80 }, (_unused, index) => ({
+        id: `text${index}`,
+        type: 'text',
+        position: { x: index, y: 0 },
+        data: {},
+      }))
+      register({ saveWorkflow })
+
+      await expect(
+        invoke(CHANNELS.workflowsExport, { nodes, edges: [], inputKeys: [] }, 'Big'),
+      ).resolves.toBe(true)
     })
   })
 })

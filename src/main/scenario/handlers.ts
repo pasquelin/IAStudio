@@ -5,7 +5,15 @@ import { messageOf } from '@shared/guards'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
-import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
+import { workflowFileOf } from '@shared/domain/workflow-file'
+import {
+  compileGraph,
+  editorModelOf,
+  modelIdsOf,
+  refuseFlow,
+  toEditorFlow,
+} from './workflow-compile'
+import { publishGraph } from './workflow-publish'
 import { openTransformThread } from './transform-thread'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
@@ -15,6 +23,7 @@ import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
+import type { OwnerScope } from './owner-scope'
 import type { WorkflowRegistry } from './workflow-registry'
 import {
   parseAssetName,
@@ -50,6 +59,17 @@ export type ScenarioHandlerDeps = {
   plan: PlanReader
   /** What a run would cost, asked before it is run — of a model or of a workflow. */
   estimateCost: CostEstimator
+  /**
+   * Asks where an exported workflow goes and writes it there, or answers `null` where the picker
+   * was closed. Injected rather than reached for: this module speaks SDK, not filesystem.
+   */
+  saveWorkflow: (name: string, contents: string) => Promise<string | null>
+  /**
+   * Which project the active key belongs to, for `exportedBy`. It answers `null` until the
+   * library has reported once — written as an empty string then, which is what the field means:
+   * nobody has said.
+   */
+  ownerScope: OwnerScope
 }
 
 const reduced = reducedBy('scenario')
@@ -97,6 +117,8 @@ export function registerScenarioHandlers({
   usage,
   plan,
   estimateCost,
+  saveWorkflow,
+  ownerScope,
 }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioUsageReport, (_event, period) =>
     reduced(() => usage.report(parseUsagePeriod(period))),
@@ -191,6 +213,57 @@ export function registerScenarioHandlers({
   const transforms = openTransformThread(message =>
     log.warn('scenario', `workflow transform: ${message}`),
   )
+
+  /**
+   * The graph as a file the webapp opens. Two of its fields are only knowable here — the clock,
+   * and the account the key belongs to — and the renderer has no filesystem besides (invariant 1).
+   *
+   * **No node count is checked.** A ceiling of 50 is written in the prose and no call has ever
+   * measured it: the one App readable from here holds 42 editor nodes, so nothing contradicts it
+   * and nothing confirms it either. A local refusal on an unmeasured threshold would turn away
+   * graphs Scenario accepts, where the API says the truth.
+   */
+  handle(CHANNELS.workflowsExport, async (_event, graph, name) => {
+    const file = workflowFileOf(parseGraphState(graph), {
+      name: parseAssetName(name),
+      exportedAt: new Date().toISOString(),
+      exportedBy: ownerScope.current() ?? '',
+    })
+
+    return (await saveWorkflow(file.name, `${JSON.stringify(file, null, 2)}\n`)) !== null
+  })
+
+  /**
+   * The graph as a workflow of the account. The models are resolved FIRST, for the reason the
+   * compile resolves them: the converter drops every wire whose input it cannot name, so a
+   * publication with no models would put a generator on Scenario with its whole wiring gone —
+   * a workflow that validates, exports, and generates from nothing.
+   */
+  handle(CHANNELS.workflowsPublish, async (_event, graph, name) => {
+    const state = parseGraphState(graph)
+
+    return publishGraph(
+      state,
+      {
+        name: parseAssetName(name),
+        description: '',
+        exportedAt: new Date().toISOString(),
+        exportedBy: ownerScope.current() ?? '',
+      },
+      {
+        write: workflows,
+        flowOf: async published => {
+          const resolved = await resolveModels(published, models, queue)
+          return toEditorFlow(published, modelId => resolved.get(modelId))
+        },
+        refuse: (published, flow) =>
+          refuseFlow(published, flow, message =>
+            log.warn('scenario', `workflow publish: ${message}`),
+          ),
+        report: message => log.warn('scenario', `workflow publish: ${message}`),
+      },
+    )
+  })
 
   handle(CHANNELS.workflowsTransform, (_event, expression, variables) => {
     // Around the parsing as well as the evaluation: a refusal here used to reject the invoke

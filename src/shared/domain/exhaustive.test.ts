@@ -127,6 +127,8 @@ describe('the lists that stand for a union', () => {
       'graph.node': true,
       'graph.run': true,
       'graph.compile': true,
+      'graph.export': true,
+      'graph.publish': true,
     }
 
     expect(sorted(LOG_SCOPES)).toEqual(sorted(Object.keys(all)))

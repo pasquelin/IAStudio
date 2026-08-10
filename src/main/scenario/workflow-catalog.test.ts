@@ -17,6 +17,51 @@ function client(page: { workflows: unknown[]; nextPaginationToken?: string }): {
   return { scenario: stub as unknown as Scenario, list }
 }
 
+/** The write half: `create` then `update`, which is all the API offers — there is no `publish`. */
+function writer(): {
+  scenario: Scenario
+  create: ReturnType<typeof vi.fn>
+  update: ReturnType<typeof vi.fn>
+} {
+  const create = vi.fn(() => Promise.resolve({ workflow: { id: 'workflow_7' } }))
+  const update = vi.fn(() => Promise.resolve({}))
+  const stub = { workflows: { create, update } }
+
+  return { scenario: stub as unknown as Scenario, create, update }
+}
+
+describe('the two writes a publication is', () => {
+  it('creates with a name and a description, and answers the id', async () => {
+    const { scenario, create } = writer()
+
+    await expect(
+      workflowCatalogOf(scenario).create({ name: 'Heroes', description: 'A roster' }),
+    ).resolves.toEqual({ id: 'workflow_7' })
+    expect(create).toHaveBeenCalledWith({ name: 'Heroes', description: 'A roster' })
+  })
+
+  /**
+   * The SDK takes a mutable array, and reads it only — but what the caller holds must not be
+   * handed free rein over, the same care `compileGraph` takes with the validator.
+   */
+  it('hands the flow over as a copy', async () => {
+    const { scenario, update } = writer()
+    const flow = [{ id: 'm1', type: 'custom-model' }]
+
+    await workflowCatalogOf(scenario).update('workflow_7', {
+      editorInfo: { nodes: [], edges: [], inputKeys: [] },
+      flow,
+      inputs: [],
+      status: 'ready',
+    })
+
+    const sent = update.mock.calls[0]?.[1]
+    expect(sent).toMatchObject({ status: 'ready' })
+    expect(sent.flow).toEqual(flow)
+    expect(sent.flow).not.toBe(flow)
+  })
+})
+
 describe('the catalogue that binds the workflow registry to the SDK', () => {
   it('asks for the page the registry described', async () => {
     const { scenario, list } = client({ workflows: [APP], nextPaginationToken: 'next' })
