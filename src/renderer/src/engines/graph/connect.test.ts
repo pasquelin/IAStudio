@@ -130,6 +130,36 @@ describe('what the canvas may connect', () => {
     expect(refuseConnection(wired, first)).toBeNull()
   })
 
+  /**
+   * And the port that stays at one on EVERY type. The conditional steers whether the node runs at
+   * all; the converter drops that edge before it names anything, so a second wire into it would
+   * be a fil the studio draws and no published run has.
+   */
+  it('still holds the conditional port of such a node to one wire', () => {
+    // A branch, which is what steers a conditional port. Its outputs carry no type, so nothing
+    // but the refusal under test can stand in the way of the second wire.
+    const branch = (id: string): GraphNode => ({
+      id,
+      type: 'ifElse',
+      position: { x: 0, y: 0 },
+      data: { outputHandles: [{ id: `${id}-target-case1`, name: 'case1' }] },
+    })
+
+    const feeding = {
+      source: 'transformText1',
+      sourceHandle: 'transformText1-source-conditional',
+      target: 'ifElse1',
+      targetHandle: 'ifElse1-target-case1',
+    }
+    const wired: GraphState = {
+      ...graph,
+      nodes: [transformNode('transformText1'), branch('ifElse1'), branch('ifElse2')],
+      edges: [edgeOf({ ...feeding, target: 'ifElse2', targetHandle: 'ifElse2-target-case1' })!],
+    }
+
+    expect(refuseConnection(wired, feeding)).toBe('input-taken')
+  })
+
   it('names an edge that already exists rather than doubling it', () => {
     const wired: GraphState = { ...graph, edges: [edgeOf(feeding)!] }
 

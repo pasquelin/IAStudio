@@ -26,16 +26,6 @@ export const DEFAULT_OUTPUT_NAME = 'output'
 export const celVariableName = (nodeId: string, output: string): string => `${nodeId}_${output}`
 
 /**
- * Whether one input port of this node takes SEVERAL wires.
- *
- * Here because it follows from the naming just above: `workflow_converter.js` pushes one flow
- * input — one `celVariableName` — per incoming edge for these two types, so two wires are two
- * variables. A scalar port elsewhere compiles to the first edge and drops the rest without a word.
- */
-export const takesManyWires = (node: GraphNode): boolean =>
-  node.type === 'transformText' || node.type === 'ifElse'
-
-/**
  * The id the webapp gives an edge: the output handle, then the input handle.
  *
  * The converter never reads it — it walks `source`/`target` — so this is for the eye and for the
@@ -90,8 +80,11 @@ export function inputHandlesOf(node: GraphNode): readonly GraphHandleInput[] {
 export const outputHandlesOf = (node: GraphNode): readonly GraphHandleOutput[] =>
   node.data.outputHandles ?? []
 
-export const inputHandleOf = (node: GraphNode, id: string): GraphHandleInput | undefined =>
-  inputHandlesOf(node).find(handle => handle.id === id)
+/** `id` may be missing: an edge read off a file names no handle, and that is no port either. */
+export const inputHandleOf = (
+  node: GraphNode,
+  id: string | undefined,
+): GraphHandleInput | undefined => inputHandlesOf(node).find(handle => handle.id === id)
 
 export const outputHandleOf = (node: GraphNode, id: string): GraphHandleOutput | undefined =>
   outputHandlesOf(node).find(handle => handle.id === id)

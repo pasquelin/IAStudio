@@ -1,5 +1,6 @@
 import type { GraphEdge, GraphState } from '@shared/domain/graph'
-import { edgeId, inputHandleOf, outputHandleOf, takesManyWires, typesConnect } from './handles'
+import { takesManyWires } from '@shared/domain/graph'
+import { edgeId, inputHandleOf, outputHandleOf, typesConnect } from './handles'
 
 /**
  * A connection as the canvas hands it over, before the studio has decided anything about it.
@@ -55,7 +56,7 @@ export function refuseConnection(graph: GraphState, connection: Connection): Ref
   // One producer per input, unless the node names its wires after their provider: there a second
   // one is a second CEL variable. Elsewhere the compiler would pick the first and drop the rest,
   // so replacing the edge is the editor's job — refusing here is what makes that visible.
-  return feeding.length > 0 && !takesManyWires(consumer) ? 'input-taken' : null
+  return feeding.length > 0 && !takesManyWires(consumer.type, input.name) ? 'input-taken' : null
 }
 
 export const canConnect = (graph: GraphState, connection: Connection): boolean =>

@@ -460,6 +460,25 @@ export const OUTPUT_NODE_TYPES: readonly GraphNodeType[] = ['model', 'llm', 'for
 
 export const canBeOutput = (type: GraphNodeType): boolean => OUTPUT_NODE_TYPES.includes(type)
 
+/**
+ * The node types whose wires are NAMED after the node they come from, so one input port holds
+ * several of them.
+ *
+ * Read off `workflow_converter.js` like the list above: these two push one flow input per
+ * incoming edge — one `celVariableName` each — where every other type compiles a port to its
+ * first edge and drops the rest without a word.
+ */
+export const MULTI_WIRE_NODE_TYPES: readonly GraphNodeType[] = ['transformText', 'ifElse']
+
+/**
+ * Whether ONE input port takes several wires.
+ *
+ * The conditional port never does, whatever the type carrying it: it steers whether the node runs
+ * at all, and the converter skips that edge before it names anything.
+ */
+export const takesManyWires = (type: GraphNodeType, port: string | undefined): boolean =>
+  port !== CONDITIONAL_PORT && MULTI_WIRE_NODE_TYPES.includes(type)
+
 /** The nodes the converter would compile a branch for, in the order the graph holds them. */
 export const outputNodesOf = (graph: GraphState): readonly GraphNode[] =>
   graph.nodes.filter(node => node.data.isOutput === true && canBeOutput(node.type))

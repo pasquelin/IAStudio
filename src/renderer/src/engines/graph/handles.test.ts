@@ -9,7 +9,6 @@ import {
   inputHandlesOf,
   loopOutputId,
   outputHandleOf,
-  takesManyWires,
   typesConnect,
 } from './handles'
 
@@ -137,23 +136,5 @@ describe('the ports of a node', () => {
 
   it('reads a node with no ports at all as having none', () => {
     expect(inputHandlesOf(node({}))).toEqual([])
-  })
-})
-
-/** Asked of the TYPE because the converter asks it that way: one arm per node type. */
-describe('a port that takes several wires', () => {
-  const typed = (type: GraphNode['type']): GraphNode => ({
-    id: 'n1',
-    type,
-    position: { x: 0, y: 0 },
-    data: {},
-  })
-
-  it('is one of a transform or a branch, and of nothing else', () => {
-    expect(takesManyWires(typed('transformText'))).toBe(true)
-    expect(takesManyWires(typed('ifElse'))).toBe(true)
-    expect(takesManyWires(typed('model'))).toBe(false)
-    expect(takesManyWires(typed('text'))).toBe(false)
-    expect(takesManyWires(typed('approval'))).toBe(false)
   })
 })

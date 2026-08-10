@@ -1,7 +1,8 @@
 import type { GraphEdge, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
 import type { Connection } from './connect'
 import { edgeOf } from './connect'
-import { inputHandlesOf, outputHandlesOf, takesManyWires } from './handles'
+import { takesManyWires } from '@shared/domain/graph'
+import { inputHandleOf, inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
  * The id the webapp gives a node: its type in camel case, then the smallest free number.
@@ -58,7 +59,11 @@ export function connect(graph: GraphState, connection: Connection): GraphState {
   if (!edge) return graph
 
   const consumer = graph.nodes.find(node => node.id === edge.source)
-  const joins = consumer !== undefined && takesManyWires(consumer)
+  // By the port's NAME, not by its handle id: only `edgeOf` spells an id the convention's way, and
+  // `conditional` has to be recognised wherever a file put it.
+  const joins =
+    consumer !== undefined &&
+    takesManyWires(consumer.type, inputHandleOf(consumer, edge.sourceHandle)?.name)
 
   const kept = graph.edges.filter(existing =>
     joins

@@ -148,6 +148,16 @@ describe('wiring', () => {
     expect(connect(connect(withTransform, joining), joining).edges).toHaveLength(1)
   })
 
+  /**
+   * A wire whose CONSUMER is not in the graph — which a file read off disk carries, `planGraph`
+   * filtering those very edges out. With no node to ask, the port is held to one wire.
+   */
+  it('adds a wire whose consumer no node answers for', () => {
+    const orphaned = connect(graph, { ...wired, source: 'nowhere1' })
+
+    expect(orphaned.edges.map(edge => edge.source)).toEqual(['nowhere1'])
+  })
+
   it('removes an edge by its id', () => {
     const one = connect(graph, wired)
 
