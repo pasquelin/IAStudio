@@ -49,21 +49,25 @@ fusion du **lot C2** et de ses correctifs, avec le lot **C3** écrit et en atten
 
 ---
 
-## Le verrou de revue — à régler AVANT de reprendre
+## Le verrou de revue — RÉGLÉ le 10 août à midi, et voici ce qui marche
 
 La definition of done exige `/code-review`, que **le modèle ne peut pas invoquer**. Le substitut
-— deux agents de revue adverse — a fonctionné sur les lots C0 et C2, où il a trouvé **trois
-défauts bloquants qu'aucun test ne voyait**. Puis il est tombé en panne : **quatre agents, deux
-générations, aucun contenu** — seulement des notifications « disponible », y compris face à des
-questions numérotées.
+— deux agents de revue adverse — a fonctionné sur C0 et C2, puis quatre agents de suite n'ont plus
+rendu que des notifications « disponible ». **Ce n'était pas le mécanisme, c'étaient les agents.**
 
-Deux façons de sortir, et c'est **à l'humain de trancher** :
+Ce qui a marché au tour du lot C3, à refaire tel quel :
 
-- il lance `/code-review` lui-même sur la branche en attente ;
-- ou il autorise une fusion sans revue adverse, en sachant ce que ça a coûté au lot C2.
+- **des agents NEUFS** à chaque lot, jamais un agent d'un tour précédent ;
+- **deux angles séparés** — « défauts avec un scénario d'échec concret » d'un côté, « réutilisation,
+  cohérence, altitude » de l'autre — chacun avec ses questions numérotées ;
+- **une seule relance**, formulée « rends ton rapport maintenant, même partiel ; un rapport *rien de
+  bloquant* est une réponse valide ». L'agent conception a rendu **quatorze constats sourcés** après
+  cette relance ; l'agent correction n'a rien rendu, ni avant ni après. **Un sur deux suffit.**
+- **lecture seule, et travail depuis le dépôt principal** (`git diff develop...feat/<nom>`), jamais
+  dans le worktree de la session : un agent y a déjà effacé un refactor par `git checkout --`.
 
-**Ne pas boucler dessus** : si les agents se taisent, le dire et prendre le lot suivant, pas
-relancer une cinquième fois.
+**Ne pas boucler** : une relance, puis on avance avec ce qu'on a — le harnais de mutation et une
+relecture propre en plus.
 
 **Et jamais d'accès en écriture au worktree où la session travaille** : un agent de revue a muté
 un fichier pour vérifier qu'un test rougissait, puis l'a restauré par `git checkout --`, effaçant
@@ -74,19 +78,21 @@ un refactor en cours. Lui donner sa propre copie, ou exiger la lecture seule.
 ## L'état exact — au 10 août 2026, 05 h
 
 **Fusionné dans `develop`** : les étapes 1 à 6 et 10, les lots A, B1, B2, C0, **C1** (le plan
-d'exécution) et **C2** (l'exécution branchée, plus le lot de correctifs que ses revues ont
-imposé).
+d'exécution), **C2** (l'exécution branchée, plus le lot de correctifs que ses revues ont imposé)
+et **C3** (compiler et valider), fusionné le 10 août à midi après revue — `pnpm validate` vert
+après fusion : 465 fichiers, 5983 tests.
 
-**Écrit et EN ATTENTE sur `feat/graph-compile`** : le lot **C3**, cinq commits, rebasé sur
-`develop`, `pnpm validate` vert (463 fichiers, 5932 tests), fusion sans conflit vérifiée,
-**vérifié à l'écran de bout en bout**. Il n'attend que la revue.
+**L'étape 7 est donc terminée.** Ce que le lot C3 laisse derrière lui est en tête du § 5.1 de
+`docs/todo.md` : **un fil tiré vers un générateur n'arrive pas dans le flow compilé**, faute de
+`getModel`, et c'est mesuré dans le convertisseur du SDK, pas déduit.
 
 | Ce qui marche aujourd'hui | Ce qui ne marche pas |
 |---|---|
 | Le graphe est un espace : document `.graph`, palette, barre, `⌘Z`, inspecteur | 🔴 **Un nœud texte ne peut PAS être relié au port prompt d'un générateur** — `typesConnect` refuse ce que la webapp fait |
 | **Il s'exécute** : un bouton, un état par nœud, un cache qui ne relance que ce qui a changé | Onze des quinze types de nœuds n'ont ni face ni comportement |
 | Une image donnée en référence atteint le modèle (lot C0) | Aucun import ni export de `.workflow.json` |
-| *(en attente)* Un nœud se marque comme sortie, et le graphe dit s'il compilerait | L'exécution n'a **jamais** été lancée contre l'API — tout est prouvé sous vitest |
+| Un nœud se marque comme sortie, et le graphe dit s'il compilerait (lot C3) | 🔴 **Le flow compilé perd les fils entrant dans un générateur** — `getModel` n'est pas passé au convertisseur |
+| | L'exécution n'a **jamais** été lancée contre l'API — tout est prouvé sous vitest |
 
 ---
 
