@@ -18,6 +18,7 @@ import { isDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingActions } from './SettingActions'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */
 function sectionIsStaged(touched: ReadonlySet<SettingPath>, section: SettingsSection): boolean {
@@ -103,7 +104,7 @@ function SearchResults({
   const { t } = useTranslation()
 
   if (found.length === 0) {
-    return <p className="text-base-content/60 text-xs">{t('settings.noResult')}</p>
+    return <p className={WINDOW_CAPTION}>{t('settings.noResult')}</p>
   }
 
   return (
@@ -158,7 +159,7 @@ function ResultRow({ hit, onGo }: { hit: SearchHit; onGo: () => void }) {
         <span className="text-xs font-medium">{t(entry.titleKey)}</span>
         {key && <span className="shrink-0 font-mono text-xs">{key}</span>}
       </span>
-      <span className="text-base-content/60 max-w-lg text-xs">{t(entry.helpKey)}</span>
+      <span className={WINDOW_HELP}>{t(entry.helpKey)}</span>
     </button>
   )
 }
@@ -281,7 +282,7 @@ export function SettingsWindow() {
               <>
                 <h2 className="mb-1 text-base font-semibold">{t(section.labelKey)}</h2>
                 {section.descriptionKey && (
-                  <p className="text-base-content/60 mb-4 text-xs">{t(section.descriptionKey)}</p>
+                  <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(section.descriptionKey)}</p>
                 )}
                 <SettingList descriptors={descriptorsIn(section.id)} />
                 <SettingActions section={section.id} />

@@ -6,6 +6,7 @@ import { HINT_LEFT, HINT_TOP } from '@/helpers/tooltip'
 import { failureMessageKey } from '@/services/failure-message'
 import { useAccounts, type AccountSaveFailure } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 // A table rather than a template: a member added to the union stops the build here instead of
 // rendering a missing key on screen. Same reason `failureMessageKey` gives.
@@ -40,7 +41,7 @@ export function AccountSettings() {
   return (
     <div className="flex max-w-lg flex-col gap-4">
       {accounts.length === 0 ? (
-        <p className="text-base-content/60 text-xs">{t('accounts.none')}</p>
+        <p className={WINDOW_CAPTION}>{t('accounts.none')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {accounts.map(account => (
@@ -57,8 +58,8 @@ export function AccountSettings() {
 
       <AddAccountForm />
 
-      <p className="text-base-content/60 text-xs">{t('accounts.explanation')}</p>
-      <p className="text-base-content/60 text-xs">{t('auth.explanation')}</p>
+      <p className={WINDOW_CAPTION}>{t('accounts.explanation')}</p>
+      <p className={WINDOW_CAPTION}>{t('auth.explanation')}</p>
     </div>
   )
 }

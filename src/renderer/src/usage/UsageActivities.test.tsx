@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { UsageReport } from '@shared/domain/usage'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 import { UsageActivities } from './UsageActivities'
 
 function report(overrides: Partial<UsageReport>): UsageReport {
@@ -26,6 +27,18 @@ function report(overrides: Partial<UsageReport>): UsageReport {
  * The table showed the names the API uses — `images-generation` in a French window, and `video`
  * a few pixels under a `Vidéo` the bundle had known all along.
  */
+/**
+ * The Usage window and the Preferences say a secondary line the same way, and neither imports
+ * the other: the classes live in one module, read here rather than copied.
+ */
+describe('the sentence a window says beside its figures', () => {
+  it('dresses an empty period as every other window caption', () => {
+    render(<UsageActivities report={report({})} />)
+
+    expect(screen.getByText('Aucune activité sur cette période.')).toHaveClass(WINDOW_CAPTION)
+  })
+})
+
 describe('the names the usage report counts under', () => {
   it('says an action in the language of the window', () => {
     render(

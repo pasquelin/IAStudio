@@ -15,6 +15,8 @@ import { useToken } from '@/hooks/useToken'
 import { SettingLine } from './SettingLine'
 import { getBridge } from '@/services/bridge'
 import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
+import { cn } from '@/helpers/cn'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /**
  * What a numeric field may hand over. An emptied field is mid-edit, and a value zod would
@@ -246,7 +248,7 @@ function Control({
               if (writableNumber(descriptor, next)) onChange(next)
             }}
           />
-          <span className="text-base-content/60 w-10 text-right text-xs tabular-nums">
+          <span className={cn(WINDOW_CAPTION, 'w-10 text-right tabular-nums')}>
             {typeof value === 'number' ? value.toFixed(decimalsOf(descriptor.step)) : ''}
           </span>
         </div>
@@ -331,7 +333,7 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
       stagedLabel={t('settings.modified')}
       disabled={!enabled}
       help={
-        <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
+        <p id={describedBy} className={WINDOW_HELP}>
           {t(descriptor.helpKey)}
           {/* A greyed control that does not say why is a dead end. */}
           {!enabled && requirement && (

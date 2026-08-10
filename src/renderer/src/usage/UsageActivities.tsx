@@ -2,13 +2,14 @@ import { useTranslation } from 'react-i18next'
 import type { UsageReport, UsageTally } from '@shared/domain/usage'
 import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatUnits } from './format'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /** What was done, rather than which model did it: the same spend read from the other side. */
 export function UsageActivities({ report }: { report: UsageReport }) {
   const { t } = useTranslation()
 
   if (report.actions.length === 0 && report.assets.length === 0) {
-    return <p className="text-base-content/60 text-xs">{t('usage.empty')}</p>
+    return <p className={WINDOW_CAPTION}>{t('usage.empty')}</p>
   }
 
   return (

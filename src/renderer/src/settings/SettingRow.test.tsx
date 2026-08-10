@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SettingPath, SettingValue } from '@shared/domain/settings-path'
 import { descriptorAt } from '@shared/domain/settings-registry'
+import { WINDOW_HELP } from '@/design/window-styles'
 import { TOOLTIP_ID } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
@@ -55,6 +56,18 @@ describe('SettingRow', () => {
     const control = screen.getByLabelText(/Thème/)
     const description = document.getElementById(control.getAttribute('aria-describedby') ?? '')
     expect(description?.textContent).toMatch(/repose les yeux/)
+  })
+
+  /**
+   * Read from the shared module rather than written here: the same sentence style runs through
+   * both windows outside the docks, and a copy of the classes is a copy that drifts.
+   */
+  it('dresses its help line as every other window sentence', () => {
+    render(rowFor('appearance.theme'))
+
+    const control = screen.getByLabelText(/Thème/)
+    const description = document.getElementById(control.getAttribute('aria-describedby') ?? '')
+    expect(description).toHaveClass(WINDOW_HELP)
   })
 
   it('offers a choice as its declared options, translated', async () => {
