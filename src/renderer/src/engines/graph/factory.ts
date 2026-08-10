@@ -14,13 +14,14 @@ import { nextNodeId } from './mutations'
  * the registry is wired would put a node on the canvas that nothing can be wired to. It arrives
  * with the rest of the vocabulary; the editor already draws one read back from a workflow.
  */
-export type CreatableNodeType = 'text' | 'asset' | 'stickyNote' | 'approval'
+export type CreatableNodeType = 'text' | 'asset' | 'stickyNote' | 'approval' | 'transformText'
 
 export const CREATABLE_NODE_TYPES: readonly CreatableNodeType[] = [
   'text',
   'asset',
   'stickyNote',
   'approval',
+  'transformText',
 ]
 
 /**
@@ -85,6 +86,24 @@ export function createNode(
       data: {
         message: '',
         inputHandles: [{ id: handleId(id, 'source', APPROVAL_PORT), name: APPROVAL_PORT }],
+      },
+    }
+  }
+
+  // A transform reads whatever its wires carry and answers text. Its input port is UNTYPED for
+  // the reason the approval's is: the converter matches no handle on this type — it walks every
+  // incoming edge but the conditional one — so a type here would refuse a wire the webapp allows.
+  if (type === 'transformText') {
+    return {
+      id,
+      type,
+      position,
+      data: {
+        value: '',
+        inputHandles: [...inputHandles, { id: handleId(id, 'source', 'text'), name: 'text' }],
+        outputHandles: [
+          { id: handleId(id, 'target', 'text'), name: DEFAULT_OUTPUT_NAME, type: 'text' },
+        ],
       },
     }
   }

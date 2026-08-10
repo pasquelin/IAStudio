@@ -5,6 +5,7 @@ import { PropertyRow } from '@/design/PropertyRow'
 import { TextField } from '@/design/TextField'
 import { ToggleField } from '@/design/ToggleField'
 import { setGraphNodeData } from '@/engines/graph/commands'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { NODE_LABEL_KEYS } from '@/spaces/graph/node-labels'
 import { useGraphs } from '@/stores/graphs'
 import { IfElseFields } from './IfElseFields'
@@ -67,6 +68,19 @@ export function GraphNodeInspector({ documentId, node }: GraphNodeInspectorProps
           label={t('inspector.message')}
           value={node.data.message ?? ''}
           onChange={message => edit.run(setGraphNodeData(node.id, { message }))}
+          {...edit.gesture}
+        />
+      )}
+
+      {/* Under the same `value` the text node writes — Scenario's own naming, not a shape of ours.
+          The hint carries what no label can: a wire is named after the node it comes from, and a
+          field whose only documentation is a code comment is a field filled blind. */}
+      {node.type === 'transformText' && (
+        <TextField
+          label={t('inspector.expression')}
+          value={node.data.value ?? ''}
+          onChange={value => edit.run(setGraphNodeData(node.id, { value }))}
+          hint={HINT_LEFT(t('inspector.expressionHint'))}
           {...edit.gesture}
         />
       )}

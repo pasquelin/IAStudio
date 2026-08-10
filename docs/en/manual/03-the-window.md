@@ -196,7 +196,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 >
 > **Every node says where it stands**, in the corner of its header: *running*, *done*,
 > *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
-> produced nothing: *loop*, *no model*, *not runnable*, *failed*, and **upstream failed** — which
+> produced nothing: *loop*, *no model*, *not runnable*, *failed*, *invalid expression*, and
+> **upstream failed** — which
 > does not mean "it is coming", but "it is not": something it depends on failed, so it will never
 > leave in this run. Running it again after changing the last node's prompt runs **only** that
 > node.
@@ -210,6 +211,18 @@ It does not carry the file name. It carries the **seven workspaces**:
 > **The question is asked again on every run**, even where nothing has changed and everything
 > else is reused: an approval is a gesture, not a result to keep. Stopping the run while a
 > question is open is not a refusal — the node simply goes idle.
+>
+> **A transform node rewrites text.** You put one down like any other, wire the node whose result
+> it should take into its input, and the Inspector gives it its **expression** — a CEL expression,
+> the small language Scenario uses in its own workflows. What the wires bring reads under the name
+> Scenario gives the wire: the provider's id, then `_` and the name of its output, `output` most of
+> the time. So `'a photo of ' + text1_output` builds a prompt out of what a Text node holds.
+> **Scenario's own evaluator does the computing**, the very one its site runs: what works here
+> works identically once the App is published. An expression left empty produces nothing, so it
+> overwrites nothing the next node's form already holds; one that will not evaluate — a missing
+> bracket, a variable no wire feeds, a result that is not text — makes the node read *invalid
+> expression*, and whatever reads it reads *upstream failed*. **It takes one wire for now**:
+> assembling two texts in one expression comes with the logic nodes.
 >
 > What it cannot do **yet**: the logic and loop nodes, and importing or exporting a Scenario
 > workflow. Its chapter comes when it can.

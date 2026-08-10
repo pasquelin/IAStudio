@@ -7,8 +7,10 @@ import {
   guards,
   modelNode,
   textNode,
+  transformNode,
   wire,
 } from '@/engines/graph/graph-fixtures'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { updateNodeData } from '@/engines/graph/mutations'
 import { parseGraph } from '@/engines/graph/serialize'
 import { runOf, useGraphRuns } from './graph-runs'
@@ -524,5 +526,55 @@ describe('answering an approval', () => {
     await run
 
     expect(runOf(useGraphRuns.getState(), DOC).nodes.approval1).toEqual({ status: 'done' })
+  })
+})
+
+/**
+ * The one place the executor's transform port meets the boundary. Worth its own suite because the
+ * port is the ONLY thing standing between a CEL expression and the SDK, and a store handing the
+ * bridge the wrong arguments would still run a graph — it would just never rewrite anything.
+ */
+describe('the transform port', () => {
+  const rewriting = (expression: string): GraphState =>
+    graphOf(
+      [textNode('text1'), transformNode('transformText1', expression), modelNode('m1')],
+      [
+        wire('transformText1', 'text', 'text1', 'prompt'),
+        wire('m1', 'prompt', 'transformText1', 'text'),
+      ],
+    )
+
+  it('hands the expression and its variables to the main process, and the answer to the graph', async () => {
+    const jobs = installJobs()
+    const transform = vi.fn(() => Promise.resolve(['a photo of a cat']))
+    installFakeBridge({ workflows: { transform } })
+    installGraph(DOC, updateNodeData(rewriting('text1_output'), 'text1', { value: 'a cat' }))
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    expect(transform).toHaveBeenCalledWith('text1_output', { text1_output: 'a cat' })
+    expect(jobs.submit.mock.calls[0]?.[1]).toEqual({ prompt: 'a photo of a cat' })
+  })
+
+  /**
+   * No bridge is no evaluation. Said on the node rather than thrown: a window with no preload is
+   * every renderer test, and a run must fail on the node that needed it, not as a whole.
+   */
+  it('fails the node when there is no bridge to evaluate with', async () => {
+    installJobs()
+    // Taken back down rather than never put up: `installFakeBridge` stubs a global that outlives
+    // the test that asked for it, so a suite where any other test installs one has a bridge here.
+    vi.unstubAllGlobals()
+    installGraph(DOC, rewriting('text1_output'))
+
+    await useGraphRuns.getState().start(DOC)
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.transformText1).toEqual({
+      status: 'failed',
+      failure: 'invalid-expression',
+    })
   })
 })

@@ -53,7 +53,14 @@ export default defineConfig({
         // Raised by five for `assetBackendOf`, the asset half of the SDK adapter: like
         // `model-catalog` and `runner` beside it, it is pure delegation that no test can reach
         // without standing up a whole `Scenario`. Everything with logic in it took a port instead.
-        'src/main/scenario/**': { statements: -85, branches: -70 },
+        //
+        // Raised again for the CEL evaluator's two plumbing files, which is the allowance
+        // `dictation` already grants `stt-worker` for the same reason: `transform-worker` reads
+        // `parentPort` and `transform-thread` calls `new Worker`, so neither runs without a real
+        // thread. What DECIDES anything sits beside them and is covered whole — `runTransform`
+        // is pure and has its own suite, and `transform-client` holds the deadline that kills a
+        // runaway evaluation, tested against a port the suite drives by hand.
+        'src/main/scenario/**': { statements: -112, branches: -82 },
         'src/main/project/**': { statements: -115, branches: -60 },
         'src/main/media/**': { statements: -70, branches: -32 },
         // The recognition engine and what feeds it. Three files here cannot be reached by a

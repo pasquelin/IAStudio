@@ -74,6 +74,8 @@ const bridge: StudioBridge = {
     describe: workflowId => ipcRenderer.invoke(CHANNELS.workflowsDescribe, workflowId),
     run: (workflowId, body) => ipcRenderer.invoke(CHANNELS.workflowsRun, workflowId, body),
     compile: graph => ipcRenderer.invoke(CHANNELS.workflowsCompile, graph),
+    transform: (expression, variables) =>
+      ipcRenderer.invoke(CHANNELS.workflowsTransform, expression, variables),
   },
   project: {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),

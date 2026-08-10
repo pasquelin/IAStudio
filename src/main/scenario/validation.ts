@@ -2,10 +2,15 @@ import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
 import {
   GRAPH_EDGES_MAX,
+  GRAPH_EXPRESSION_MAX,
   GRAPH_ID_MAX,
   GRAPH_NODES_MAX,
   GRAPH_NODE_TYPES,
+  GRAPH_VARIABLE_MAX,
+  GRAPH_VARIABLE_NAME_MAX,
+  GRAPH_VARIABLES_MAX,
   type GraphState,
+  type GraphTransformVariables,
 } from '@shared/domain/graph'
 import { JOB_KINDS, type JobTarget } from '@shared/domain/job'
 import type { PersistedJob } from './job-store'
@@ -143,6 +148,36 @@ const graphState = z.object({
 
 export function parseGraphState(value: unknown): GraphState {
   return graphState.parse(value)
+}
+
+/**
+ * One CEL expression, and what it reads. Bounded like the graph above, and for its reason: the
+ * renderer is sandboxed and trusted for nothing, and this one goes to an evaluator.
+ *
+ * Blank is refused rather than defaulted: a node holding no expression is one the executor never
+ * submits, so an empty string arriving here is a caller doing something else.
+ */
+const transformExpression = z.string().min(1).max(GRAPH_EXPRESSION_MAX)
+
+export function parseTransformExpression(value: unknown): string {
+  return transformExpression.parse(value)
+}
+
+// What a WIRE carries, never what someone typed: a text node holding a long prompt must travel,
+// or its own expression is refused for a length that is not the expression's.
+const transformValue = z.string().max(GRAPH_VARIABLE_MAX)
+
+const transformVariables = z
+  .record(
+    z.string().min(1).max(GRAPH_VARIABLE_NAME_MAX),
+    z.union([transformValue, z.array(transformValue).max(GRAPH_VARIABLES_MAX)]),
+  )
+  // Zod has no cap on a record's key count, and one variable per wire into a node is the shape
+  // this channel is for — a thousand of them is not a graph anyone drew.
+  .refine(held => Object.keys(held).length <= GRAPH_VARIABLES_MAX, 'too many variables')
+
+export function parseTransformVariables(value: unknown): GraphTransformVariables {
+  return transformVariables.parse(value)
 }
 
 /** Bounded like the model query: `limit` is the page the API is asked for, never a walk. */

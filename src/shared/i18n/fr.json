@@ -83,7 +83,8 @@
       "model": "Modèle",
       "stickyNote": "Note",
       "approval": "Approbation",
-      "ifElse": "Condition"
+      "ifElse": "Condition",
+      "transformText": "Transformation"
     },
     "approve": "Approuver",
     "approveHint": "Laisser la suite du graphe se servir de ce résultat",
@@ -130,7 +131,8 @@
       "no-model": "sans modèle",
       "blocked": "amont en échec",
       "rejected": "échec",
-      "declined": "rejeté"
+      "declined": "rejeté",
+      "invalid-expression": "expression invalide"
     }
   },
   "graphTools": {
@@ -718,6 +720,8 @@
     "title": "Titre",
     "isOutput": "Résultat de l’App",
     "message": "Question posée",
+    "expression": "Expression",
+    "expressionHint": "Écrivez du CEL : un fil se lit par l’identifiant du nœud d’où il vient, suivi de _output",
     "nodeId": "Identifiant",
     "noModel": "Aucun",
     "sectionFoldHint": "Replie ce groupe de propriétés",

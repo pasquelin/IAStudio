@@ -1,10 +1,18 @@
 import type { GraphEdge, GraphNode, GraphNodeData, GraphState } from '@shared/domain/graph'
 import { digest, stableKey } from '@shared/hash'
 import { approvalsOf } from './approvals'
-import { inputHandlesOf } from './handles'
+import { DEFAULT_OUTPUT_NAME, inputHandlesOf, outputHandleOf } from './handles'
 
-/** Which node, and through which of its output ports, feeds one input port. */
-export type GraphPlanInput = { node: string; handle: string }
+/**
+ * Which node, and through which of its output ports, feeds one input port.
+ *
+ * `output` is the port's NAME, not its handle id — `?? 'output'` where it declares none, which is
+ * the converter's own fallback. A name because that is what a reader of the plan needs: it is
+ * half of what Scenario calls the wire (`` `${node}_${output}` ``), and nothing anywhere reads a
+ * provider's handle id. Resolved here rather than by every reader, beside the input ports the
+ * plan already resolves.
+ */
+export type GraphPlanInput = { node: string; output: string }
 
 export type GraphPlanNode = {
   id: string
@@ -77,6 +85,7 @@ function paramsOf(node: GraphNode): Record<string, unknown> {
 function inputsOf(
   node: GraphNode,
   incoming: readonly GraphEdge[],
+  byId: ReadonlyMap<string, GraphNode>,
 ): Readonly<Record<string, GraphPlanInput>> {
   const inputs: Record<string, GraphPlanInput> = {}
 
@@ -90,7 +99,16 @@ function inputsOf(
     // A port's `name` is the model's own field key (`modelPorts`), which is what fills a body.
     // Its id stands in for a handle a file names but the node no longer carries.
     const port = ports.find(candidate => candidate.id === edge.sourceHandle)
-    inputs[port?.name ?? edge.sourceHandle] = { node: edge.target, handle: edge.targetHandle }
+    // The provider is in the index by construction: an edge missing either end was filtered out
+    // before this ran, which is what makes the fallback below about a NAMELESS port, not a
+    // missing node.
+    const provider = byId.get(edge.target)
+    const output = provider && outputHandleOf(provider, edge.targetHandle)?.name
+
+    inputs[port?.name ?? edge.sourceHandle] = {
+      node: edge.target,
+      output: output ?? DEFAULT_OUTPUT_NAME,
+    }
   }
 
   return inputs
@@ -175,7 +193,7 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
     order.push({
       id,
       hash,
-      inputs: inputsOf(node, feeding),
+      inputs: inputsOf(node, feeding, byId),
       awaits: [...(awaited.get(id) ?? [])],
       cached: cache?.has(hash) === true,
     })

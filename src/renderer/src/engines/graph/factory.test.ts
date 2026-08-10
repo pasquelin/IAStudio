@@ -77,11 +77,38 @@ describe('creating a node', () => {
       if (type === 'approval') continue
 
       const node = createNode(EMPTY_GRAPH, type, at)
+      const conditional = {
+        id: `${node.id}-source-conditional`,
+        name: 'conditional',
+        type: 'conditional',
+      }
 
-      expect(node.data.inputHandles).toEqual([
-        { id: `${node.id}-source-conditional`, name: 'conditional', type: 'conditional' },
-      ])
+      // A transform declares a port of its own beside it, and is checked exactly below. Every
+      // other type is still held to carrying the conditional port and NOTHING else: loosening
+      // that for all of them would let a stray port onto a text node without a word.
+      if (type === 'transformText') expect(node.data.inputHandles).toContainEqual(conditional)
+      else expect(node.data.inputHandles).toEqual([conditional])
     }
+  })
+
+  /**
+   * Untyped, and it is the same reason the approval's port is: the converter matches no handle on
+   * a transform — it walks every incoming edge but the conditional one — so a type here would
+   * refuse in the studio a wire the webapp draws without complaint.
+   */
+  it('gives a transform an untyped input beside the conditional port, and a text output', () => {
+    const node = createNode(EMPTY_GRAPH, 'transformText', at)
+
+    expect(node.data.inputHandles).toEqual([
+      { id: `${node.id}-source-conditional`, name: 'conditional', type: 'conditional' },
+      { id: `${node.id}-source-text`, name: 'text' },
+    ])
+    expect(node.data.outputHandles).toEqual([
+      { id: `${node.id}-target-text`, name: 'output', type: 'text' },
+    ])
+    // The field a CEL expression is written into — Scenario's own naming, shared with the text
+    // node, rather than a shape of ours.
+    expect(node.data).toMatchObject({ value: '' })
   })
 
   /**
