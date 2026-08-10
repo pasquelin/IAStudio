@@ -267,8 +267,9 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > ceux qui le lisent disent *amont en échec*. **Il ne prend qu’un seul fil pour l’instant** :
 > assembler deux textes en une expression viendra avec les nœuds de logique.
 >
-> Ce qu’il ne sait **pas encore** : les nœuds de logique et de boucle, et l’import/export d’un
-> workflow Scenario. Son chapitre viendra quand il les saura.
+> Ce qu’il ne sait **pas encore** : *créer* un nœud de logique ou de boucle. Un branchement
+> n’arrive que par l’import, et une boucle ne s’exécute pas du tout. Son chapitre viendra quand
+> il les saura.
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 

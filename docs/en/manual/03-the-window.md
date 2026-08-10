@@ -256,8 +256,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 > expression*, and whatever reads it reads *upstream failed*. **It takes one wire for now**:
 > assembling two texts in one expression comes with the logic nodes.
 >
-> What it cannot do **yet**: the logic and loop nodes, and importing or exporting a Scenario
-> workflow. Its chapter comes when it can.
+> What it cannot do **yet**: *create* a logic or loop node. A branch only arrives by import, and
+> a loop does not run at all. Its chapter comes when it can.
 
 One click switches workspace. The active one is the button lighter than the others.
 

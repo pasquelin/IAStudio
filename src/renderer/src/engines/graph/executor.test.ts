@@ -1464,6 +1464,34 @@ describe('a branch, run locally', () => {
     expect(watched.submitted.map(one => one.modelId)).toEqual(['model_else'])
   })
 
+  /**
+   * And the same for the port of a case, which is the half that fix left behind: a file is as free
+   * to leave a CASE port unnamed as an else one, and the converter pairs both by index. The absent
+   * NAME was read as an absent PORT, so a graph Scenario routes came back red — under a message
+   * that now names the branch unwired, which claims more than the vague one it replaced.
+   */
+  it('sends a matched condition to a port a file left unnamed', async () => {
+    const branch = branchNode('if1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+    ])
+    const nameless = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), branch, modelNode('m1', {}, 'model_case')],
+        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'), wire('m1', 'prompt', 'if1', 'case1')],
+      ),
+      'if1',
+      { outputHandles: [{ id: 'if1-target-case1' }, ...outputHandlesOf(branch).slice(1)] },
+    )
+
+    const watched = await watch(
+      nameless,
+      { model_case: ['a'] },
+      { transform: async () => ['true'] },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case'])
+  })
+
   /** A thread that dies is not the same as an expression that is false, but the node says the same. */
   it('fails the branch when the evaluator throws rather than answers', async () => {
     const watched = await watch(
