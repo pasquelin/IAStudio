@@ -23,7 +23,8 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ExportFormat, ShadowQuality, Transform } from '@shared/domain/scene'
+import type { ExportFormat, Transform } from '@shared/domain/scene'
+import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
@@ -122,23 +123,13 @@ export type SceneRendererOptions = {
  * What the viewport is set to. Held by the engine and pushed in by React, like every other
  * piece of state it reflects: these were three constants, and therefore three settings nobody
  * could reach.
+ *
+ * The settings themselves, not a copy of their shape. Spelled out here, the two drifted in
+ * silence: a field added to the preferences would have compiled on both sides and simply never
+ * reached the viewport. Whether snapping is ON stays out — that is `setSnapping`, per document,
+ * not a preference.
  */
-export type ViewportOptions = {
-  showGrid: boolean
-  gridSize: number
-  flySpeed: number
-  boostFactor: number
-  fieldOfView: number
-  /** How coarse snapping is when it is on. Whether it is on is `setSnapping`, not a setting. */
-  snapTranslate: number
-  /** In degrees; converted on the way to the gizmo, which turns in radians. */
-  snapRotate: number
-  snapScale: number
-  /** How soft a shadow edge is. Read by the renderer, once for the whole viewport. */
-  shadowQuality: ShadowQuality
-  /** Side of the square map each casting light allocates. Doubling it costs four times as much. */
-  shadowMapSize: number
-}
+export type ViewportOptions = Settings['three']
 
 /**
  * How strongly the environment lights the scene. Below one because a scene has lights of its own
@@ -198,19 +189,13 @@ export class SceneRenderer {
     shadows: true,
   })
 
-  /** Replaced by `configure` before the first frame; these keep the engine usable without it. */
-  private view: ViewportOptions = {
-    showGrid: true,
-    gridSize: 20,
-    flySpeed: 4,
-    boostFactor: 3,
-    fieldOfView: 60,
-    snapTranslate: 0.5,
-    snapRotate: 15,
-    snapScale: 0.1,
-    shadowQuality: 'soft',
-    shadowMapSize: 2048,
-  }
+  /**
+   * Replaced by `configure` before the first frame; these keep the engine usable without it.
+   *
+   * Copied rather than referenced: `configure` swaps the whole object today, but a field written
+   * in place would otherwise reach through into what every window opens on.
+   */
+  private view: ViewportOptions = { ...DEFAULT_SETTINGS.three }
 
   private readonly raycaster = new Raycaster()
   private readonly pointer = new Vector2()
