@@ -13,6 +13,8 @@ import { meshNode } from '@/engines/scene/scene-fixtures'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { showPanels } from '@/stores/layout-fixtures'
+import { useTextures } from '@/stores/textures'
+import { newTexture } from '@/engines/texture/texture-state'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
@@ -853,6 +855,9 @@ describe('closing a document', () => {
     if (!left || !kept) throw new Error('expected two documents')
     useTextureViews.getState().inspect(left.id, 'normal')
     useTextureViews.getState().inspect(kept.id, 'roughness')
+    // The state a `DocumentIo` holds only exists once something has opened the document.
+    useTextures.getState().ensure(left.id, newTexture)
+    useTextures.getState().ensure(kept.id, newTexture)
 
     // The folder of the project being opened holds one of the two, and the layout says it is
     // open — which is what makes the other one a tab the refresh drops.
@@ -863,6 +868,10 @@ describe('closing a document', () => {
 
     expect(inspectedChannel(useTextureViews.getState(), left.id)).toBeNull()
     expect(inspectedChannel(useTextureViews.getState(), kept.id)).toBe('roughness')
+    // The heavy half: `ioOf` reads the kind from the map the refresh has just emptied, so the
+    // engine state was the one thing a project change could not drop.
+    expect(useTextures.getState().states[left.id]).toBeUndefined()
+    expect(useTextures.getState().states[kept.id]).toBeDefined()
   })
 
   it('leaves the flat view of a document it did not close alone', async () => {
