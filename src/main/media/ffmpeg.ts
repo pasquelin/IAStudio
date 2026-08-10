@@ -82,6 +82,46 @@ export function proxyArgs(source: string, destination: string): string[] {
   ]
 }
 
+/** How the frames of a render are named on disk. Zero-padded, since ffmpeg counts in order. */
+export const FRAME_PATTERN = 'frame_%06d.png'
+
+export function frameName(index: number): string {
+  return `frame_${String(index).padStart(6, '0')}.png`
+}
+
+/**
+ * A folder of numbered stills into one H.264 file.
+ *
+ * `-framerate` BEFORE `-i` and not after: placed after, it is read as an output rate and ffmpeg
+ * duplicates or drops frames to reach it rather than declaring what the stills already are.
+ *
+ * `yuv420p` because a render arrives in RGBA and libx264 would otherwise pick a format most
+ * players refuse — a file that plays everywhere is the point of encoding it at all.
+ */
+export function sequenceArgs(pattern: string, destination: string, fps: number): string[] {
+  return [
+    '-y',
+    '-v',
+    'error',
+    '-nostats',
+    '-framerate',
+    String(fps),
+    '-i',
+    pattern,
+    '-c:v',
+    'libx264',
+    '-preset',
+    'veryfast',
+    '-crf',
+    '18',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    destination,
+  ]
+}
+
 /**
  * What the waveform is reduced from. Exported because the reducer needs it to know how many
  * samples one peak covers: read from two places that could drift, the waveform would be the

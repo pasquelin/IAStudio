@@ -136,6 +136,18 @@ two gestures do different jobs and neither replaces the other.
 
 ## 3D workspace
 
+### Animation runs straight, and a clip plays on its own
+
+The 3D timeline — see [the 3D workspace](09-3d-workspace.md) — interpolates **linearly** between
+two keys: no easing curves, so a move starts and stops abruptly. Laying down more keys is the only
+way to soften a path for now.
+
+**A model's clip plays on its own.** You pick one, start it, stop it — but nothing blends `walk`
+into `run`: going from one to the other is a cut.
+
+**A render writes one size**, 1920 × 1080, of what a scene camera sees. There is no resolution
+setting yet, and no choice between several cameras: the first one in the scene renders.
+
 ### The 3D text offers one weight per family
 
 **Add ▸ Object ▸ Text** works — see [the 3D workspace](09-3d-workspace.md). Two reservations.

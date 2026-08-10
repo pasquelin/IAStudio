@@ -141,6 +141,10 @@ export type Channels = {
   dictationOpenPrivacy: 'dictation:open-privacy'
 
   sceneExport: 'scene:export'
+  renderStart: 'render:start'
+  renderFrame: 'render:frame'
+  renderFinish: 'render:finish'
+  renderCancel: 'render:cancel'
 
   textureExport: 'texture:export'
   skyboxExport: 'skybox:export'
@@ -258,6 +262,10 @@ export const CHANNELS: Channels = {
   dictationOpenPrivacy: 'dictation:open-privacy',
 
   sceneExport: 'scene:export',
+  renderStart: 'render:start',
+  renderFrame: 'render:frame',
+  renderFinish: 'render:finish',
+  renderCancel: 'render:cancel',
 
   textureExport: 'texture:export',
   skyboxExport: 'skybox:export',
@@ -304,6 +312,24 @@ export type SaveTextureRequest = {
 }
 
 /** A scene on its way to a file the studio will never look at again. */
+/** What a render is asked for, before a single frame is computed. */
+export type RenderStartRequest = {
+  /** Suggested file name, without its extension. */
+  name: string
+  /** Frames per second of the film, which is also the rate the stills are declared at. */
+  fps: number
+}
+
+/** One computed frame, on its way to the staging folder. */
+export type RenderFrameRequest = {
+  /** The session it belongs to, as `render.start` answered it. */
+  id: string
+  /** Its place in the film. The order of the calls decides nothing. */
+  index: number
+  /** Already encoded by the renderer: the GPU lives where the scene does. */
+  png: Uint8Array
+}
+
 export type SceneExportRequest = {
   /** Suggested file name, without its extension — the format decides that. */
   name: string
@@ -349,6 +375,7 @@ export type LogScope =
   | 'scene.bvh'
   | 'scene.texture'
   | 'scene.export'
+  | 'scene.render'
   | 'texture.map'
   | 'texture.channel'
   | 'texture.seam'
@@ -374,6 +401,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'scene.bvh',
   'scene.texture',
   'scene.export',
+  'scene.render',
   'texture.map',
   'texture.channel',
   'texture.seam',
@@ -786,6 +814,21 @@ export type StudioBridge = {
      * a file sits is the main process's business, exactly as for an asset.
      */
     export: (request: SceneExportRequest) => Promise<string | null>
+  }
+  /**
+   * Rendering a scene to a film, in three steps: a session is opened once the save dialog has
+   * answered, frames are staged one by one, and the encode happens at the end.
+   *
+   * Staged rather than piped, and asked for BEFORE anything is computed: a render is minutes of
+   * work, and neither a broken pipe nor a dismissed dialog should throw all of it away.
+   */
+  render: {
+    /** Answers the session id, or `null` when the save dialog was dismissed. */
+    start: (request: RenderStartRequest) => Promise<string | null>
+    frame: (request: RenderFrameRequest) => Promise<void>
+    /** Encodes what was staged. Answers the file name, never the path. */
+    finish: (id: string) => Promise<string | null>
+    cancel: (id: string) => Promise<void>
   }
   texture: {
     /**

@@ -15,13 +15,13 @@ It is the equivalent of a content browser — the library of raw material you dr
 
 | Workspace | Where the shelf is |
 |---|---|
-| Image, 3D, Textures, Skyboxes | in the **bottom strip** |
-| Video, Audio | in the **right column**, upper half |
+| Image, Textures, Skyboxes | in the **bottom strip** |
+| Video, Audio, 3D | in the **right column**, upper half |
 
-This is not a whim: in the Video and Audio workspaces the bottom strip belongs to the edit, which
-needs the full width. Yet the shelf and the edit have to hold the screen **together** so you can
-drag a take from one to the other — so the shelf takes the upper half of the right column, the one
-holding the panels that serve the open document.
+This is not a whim: in the Video, Audio and 3D workspaces the bottom strip belongs to the timeline,
+which needs the full width. Yet the shelf and the timeline have to hold the screen **together** so
+you can drag a take or a model from one to the other — so the shelf takes the upper half of the
+right column, the one holding the panels that serve the open document.
 
 ---
 
@@ -47,7 +47,7 @@ Six asset types:
 | Zone | Where they are |
 |---|---|
 | **Bottom strip** | on the **title line**, beside the panel's name |
-| **Right column** (Video and Audio workspaces) | on their **own line**, below the title |
+| **Right column** (Video, Audio and 3D workspaces) | on their **own line**, below the title |
 
 In a strip the row is wide and mostly empty: putting the bar there saves a whole row, and the
 shelf is there to show assets, not buttons. In a narrow column, the same bar would push the close

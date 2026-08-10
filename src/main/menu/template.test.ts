@@ -323,10 +323,10 @@ describe('menuTemplate', () => {
     expect(submenuOf(add, 'Lumière')).toHaveLength(LIGHT_ENTRIES.length)
   })
 
-  it('offers both objects, both of them reachable', () => {
+  it('offers the three objects, each of them reachable', () => {
     const objects = submenuOf(submenuOf(menuTemplate(options()), 'Ajouter'), 'Objet')
 
-    expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte'])
+    expect(objects.map(item => item.label)).toEqual(['Sprite', 'Texte', 'Caméra'])
     expect(objects.filter(item => item.enabled === false)).toEqual([])
   })
 

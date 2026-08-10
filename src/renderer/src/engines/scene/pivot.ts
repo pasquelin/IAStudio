@@ -78,3 +78,11 @@ export function transformOf(object: Object3D): Transform {
     scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
   }
 }
+
+/** The other way round: a transform written into an object. Three sites had it copied out. */
+export function applyTransform(object: Object3D, transform: Transform): void {
+  const { position, rotation, scale } = transform
+  object.position.set(position.x, position.y, position.z)
+  object.rotation.set(rotation.x, rotation.y, rotation.z)
+  object.scale.set(scale.x, scale.y, scale.z)
+}

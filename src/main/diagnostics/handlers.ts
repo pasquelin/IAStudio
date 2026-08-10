@@ -14,6 +14,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.bvh': 'document',
   'scene.texture': 'document',
   'scene.export': 'document',
+  'scene.render': 'document',
   'texture.map': 'document',
   'texture.channel': 'document',
   'texture.seam': 'document',

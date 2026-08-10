@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
@@ -89,5 +89,61 @@ describe('TrackHeaders', () => {
     expect(screen.getByTestId('track-header-V1').parentElement).toHaveStyle({
       transform: 'translateY(-30px)',
     })
+  })
+  it('adds a track of each kind from the foot of the column', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste vidéo/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste audio/ }))
+
+    const ids = sequenceOf(useSequences.getState(), 'doc-1').tracks.map(track => track.id)
+    expect(ids).toEqual(['V1', 'A1', 'V2', 'A2'])
+  })
+
+  it('makes an added track undoable, unlike a mute', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste vidéo/ }))
+
+    expect(canUndo(historyOf(useSequences.getState(), 'doc-1'))).toBe(true)
+  })
+
+  it('removes a track from its own menu', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Actions de la piste V1/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Supprimer la piste' }))
+
+    expect(trackOf('V1')).toBeUndefined()
+  })
+
+  it('moves a track down its stack from the same menu', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Actions de la piste V1/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Descendre la piste' }))
+
+    const ids = sequenceOf(useSequences.getState(), 'doc-1').tracks.map(track => track.id)
+    expect(ids).toEqual(['A1', 'V1'])
+  })
+
+  it('offers no way up on the first row, and none down on the last', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Actions de la piste V1/ }))
+
+    expect(screen.getByRole('menuitem', { name: 'Monter la piste' })).toBeDisabled()
+    expect(screen.getByRole('menuitem', { name: 'Descendre la piste' })).toBeEnabled()
+  })
+  it('moves a track up its stack from the same menu', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.click(screen.getByRole('button', { name: /Actions de la piste A1/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Monter la piste' }))
+
+    const ids = sequenceOf(useSequences.getState(), 'doc-1').tracks.map(track => track.id)
+    expect(ids).toEqual(['A1', 'V1'])
+  })
+
+  it('opens the same three rows on a right-click', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    fireEvent.contextMenu(screen.getByTestId('track-header-V1'))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Supprimer la piste' }))
+
+    expect(trackOf('V1')).toBeUndefined()
   })
 })

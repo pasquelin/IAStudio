@@ -2,10 +2,18 @@ import {
   mdiHeadphones,
   mdiLockOpenVariantOutline,
   mdiLockOutline,
+  mdiMusicNotePlus,
+  mdiVideoPlus,
   mdiVolumeHigh,
   mdiVolumeOff,
 } from '@mdi/js'
-import type { Track } from '@/engines/timeline/timeline-state'
+import type { Track, TrackKind } from '@/engines/timeline/timeline-state'
+
+/** What the add buttons wear. Keyed by kind so a third kind cannot be added without a glyph. */
+export const TRACK_KIND_ICONS: Record<TrackKind, string> = {
+  video: mdiVideoPlus,
+  audio: mdiMusicNotePlus,
+}
 
 /** The three switches a track carries. `on` is what the icon and the pressed state both read. */
 export type TrackFlag = {

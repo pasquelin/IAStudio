@@ -1,3 +1,4 @@
+import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOCUMENT_KINDS, DOCUMENT_VERSION, workspaceForKind } from '@shared/domain/document'
 import type {
@@ -86,7 +87,11 @@ describe('saveDocument', () => {
 
     expect(write).toHaveBeenCalledWith(documentId, 'scene', {
       title: expect.any(String),
-      content: JSON.stringify({ nodes: [box], environment: { kind: 'studio' } }),
+      content: JSON.stringify({
+        nodes: [box],
+        environment: { kind: 'studio' },
+        animation: EMPTY_TIMELINE,
+      }),
     })
   })
 

@@ -7,6 +7,7 @@
  */
 import {
   STUDIO_ENVIRONMENT,
+  type CameraDescriptor,
   type EnvironmentRef,
   type GeometryDescriptor,
   type LightDescriptor,
@@ -16,6 +17,7 @@ import {
   type TextDescriptor,
   type Transform,
 } from '@shared/domain/scene'
+import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { DEFAULT_FONT } from '@shared/domain/font'
 
 export type SceneNodeBase = {
@@ -42,6 +44,9 @@ export type SceneNode = SceneNodeBase &
     | { type: 'text'; text: TextDescriptor; material: MaterialDescriptor }
     // Nothing of its own: a group is a transform others hang from, and a name to find it by.
     | { type: 'group' }
+    // What a render looks through. Not the viewport's camera: that one is how the scene is being
+    // WATCHED, and this one is part of what the scene IS.
+    | { type: 'camera'; camera: CameraDescriptor }
   )
 
 /** Derived, never restated: a member added to the union above is a member here on the spot. */
@@ -61,6 +66,8 @@ export type SceneState = {
   selectedIds: readonly string[]
   /** What lights the scene, and what its materials reflect. Part of the document. */
   environment: EnvironmentRef
+  /** The tracks that move it through time. Where the head STANDS is session state, not this. */
+  animation: AnimationTimeline
 }
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
@@ -96,12 +103,13 @@ export function shadowDefaults(node: ShadowSubject): {
  */
 export function canCastShadow(node: ShadowSubject): boolean {
   if (node.type === 'light') return SHADOW_CASTING_LIGHTS.includes(node.light.kind)
-  return node.type !== 'sprite'
+  // A camera draws nothing at all, so it can neither throw a shadow nor be drawn into a map.
+  return node.type !== 'sprite' && node.type !== 'camera'
 }
 
 /** Whether a node catches the shadows of others. A light catches none, and a sprite is unlit. */
 export function canReceiveShadow(node: ShadowSubject): boolean {
-  return node.type !== 'light' && node.type !== 'sprite'
+  return node.type !== 'light' && node.type !== 'sprite' && node.type !== 'camera'
 }
 
 /**
@@ -168,6 +176,7 @@ export const EMPTY_SCENE: SceneState = {
   nodes: [],
   selectedIds: [],
   environment: STUDIO_ENVIRONMENT,
+  animation: EMPTY_TIMELINE,
 }
 
 export type MeshNode = Extract<SceneNode, { type: 'mesh' }>

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { addClip, moveClip, removeClip, splitClip, trimClip } from './commands'
+import {
+  addClip,
+  addTrack,
+  moveClip,
+  moveTrack,
+  removeClip,
+  removeTrack,
+  splitClip,
+  trimClip,
+} from './commands'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import type { Clip, SequenceState } from './timeline-state'
 
@@ -230,5 +239,94 @@ describe('sequence commands', () => {
 
     expect(back.tracks[1]?.clips).toEqual(seeded.tracks[1]?.clips)
     expect(back.tracks[0]?.clips).toEqual(seeded.tracks[0]?.clips)
+  })
+})
+
+describe('track commands', () => {
+  const twoTracks = (): SequenceState =>
+    sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
+
+  it('adds a track at the bottom, named after the first free number of its kind', () => {
+    const next = addTrack('video').apply(twoTracks())
+    expect(next.tracks.map(track => track.id)).toEqual(['V1', 'A1', 'V2'])
+  })
+
+  it('gives two adds two names, since the second sees what the first took', () => {
+    const state = addTrack('audio').apply(twoTracks())
+    const next = addTrack('audio').apply(state)
+    expect(next.tracks.map(track => track.id)).toEqual(['V1', 'A1', 'A2', 'A3'])
+  })
+
+  it('reverts an add by taking the track back out', () => {
+    const command = addTrack('video')
+    const state = twoTracks()
+    expect(command.revert(command.apply(state))).toEqual(state)
+  })
+
+  it('reads depth back from position, so the top row is the one drawn on top', () => {
+    const next = addTrack('video').apply(twoTracks())
+    expect(next.tracks.map(track => track.index)).toEqual([2, 1, 0])
+  })
+
+  it('removes a track with the clips it carried', () => {
+    const state = sequenceWith([
+      trackFixture('V1', 'video', [clipFixture('a', 0, 1_000)]),
+      trackFixture('A1', 'audio'),
+    ])
+    const next = removeTrack('V1').apply(state)
+    expect(next.tracks.map(track => track.id)).toEqual(['A1'])
+  })
+
+  it('puts a removed track back on the row it was on, clips and all', () => {
+    const state = sequenceWith([
+      trackFixture('V1', 'video'),
+      trackFixture('V2', 'video', [clipFixture('a', 0, 1_000)], { index: 2 }),
+      trackFixture('A1', 'audio'),
+    ])
+    const command = removeTrack('V2')
+    const back = command.revert(command.apply(state))
+    expect(back.tracks.map(track => track.id)).toEqual(['V1', 'V2', 'A1'])
+    expect(back.tracks[1]?.clips).toHaveLength(1)
+  })
+
+  it('drops the selection when the removed track was carrying it', () => {
+    const state = {
+      ...sequenceWith([
+        trackFixture('V1', 'video', [clipFixture('a', 0, 1_000)]),
+        trackFixture('A1', 'audio'),
+      ]),
+      selectedId: 'a',
+    }
+    expect(removeTrack('V1').apply(state).selectedId).toBeNull()
+  })
+
+  it('leaves a locked track where it is', () => {
+    const state = sequenceWith([trackFixture('V1', 'video', [], { locked: true })])
+    expect(removeTrack('V1').apply(state)).toEqual(state)
+  })
+
+  it('moves a track one row down', () => {
+    const next = moveTrack('V1', 1).apply(twoTracks())
+    expect(next.tracks.map(track => track.id)).toEqual(['A1', 'V1'])
+  })
+
+  it('refuses to move a track off either end', () => {
+    const state = twoTracks()
+    expect(moveTrack('V1', -1).apply(state)).toEqual(state)
+    expect(moveTrack('A1', 1).apply(state)).toEqual(state)
+  })
+
+  it('reverts a move by putting the track back on its row', () => {
+    const command = moveTrack('V1', 1)
+    const state = twoTracks()
+    expect(command.revert(command.apply(state))).toEqual(state)
+  })
+
+  it('re-reads depth after a move, so what is drawn follows what is shown', () => {
+    const next = moveTrack('V1', 1).apply(twoTracks())
+    expect(next.tracks.map(track => [track.id, track.index])).toEqual([
+      ['A1', 1],
+      ['V1', 0],
+    ])
   })
 })

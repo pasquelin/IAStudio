@@ -10,13 +10,23 @@
  * allowed to hold a value today's bounds would refuse.
  */
 import {
+  DEFAULT_CAMERA,
   readEnvironment,
   TEXTURE_SLOTS,
   type EnvironmentRef,
   type Transform,
 } from '@shared/domain/scene'
+import {
+  DEFAULT_DURATION,
+  DEFAULT_FPS,
+  EMPTY_TIMELINE,
+  TRACK_PROPERTIES,
+  type AnimationTimeline,
+  type AnimationTrack,
+  type Keyframe,
+} from '@shared/domain/animation'
 import { readFontRef } from '@shared/domain/font'
-import { isRecord } from '@shared/guards'
+import { isRecord, readNumber } from '@shared/guards'
 import {
   GEOMETRY_SPECS,
   LIGHT_SPECS,
@@ -37,10 +47,14 @@ import {
 } from './scene-state'
 
 /** What a saved scene holds. The selection is session state, and is deliberately left out. */
-export type ScenePayload = { nodes: readonly SceneNode[]; environment: EnvironmentRef }
+export type ScenePayload = {
+  nodes: readonly SceneNode[]
+  environment: EnvironmentRef
+  animation: AnimationTimeline
+}
 
 export function scenePayload(state: SceneState): ScenePayload {
-  return { nodes: state.nodes, environment: state.environment }
+  return { nodes: state.nodes, environment: state.environment, animation: state.animation }
 }
 
 /**
@@ -65,6 +79,7 @@ export function sceneFromPayload(payload: unknown): SceneState {
     nodes: nodes.filter(isSceneNode).map(revived),
     selectedIds: [],
     environment: readEnvironment(payload.environment),
+    animation: readTimeline(payload.animation),
   }
 }
 
@@ -87,6 +102,9 @@ function revived(node: SceneNode): SceneNode {
   }
   if (filled.type === 'sprite') {
     return { ...filled, sprite: { ...DEFAULT_SPRITE, ...filled.sprite } }
+  }
+  if (filled.type === 'camera') {
+    return { ...filled, camera: { ...DEFAULT_CAMERA, ...filled.camera } }
   }
   if (filled.type !== 'text') return filled
 
@@ -132,7 +150,11 @@ function isSceneNode(value: unknown): value is SceneNode {
   // never the file. What it points at is resolved when the scene is built, not here — a project
   // whose assets moved still opens, with a hole where the model was.
   if (value.type === 'model')
-    return isRecord(value.model) && typeof value.model.assetId === 'string'
+    return (
+      isRecord(value.model) &&
+      typeof value.model.assetId === 'string' &&
+      isOptionalAnimation(value.model.animation)
+    )
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
   // checked against the same table.
   if (value.type === 'sprite') return isSprite(value.sprite)
@@ -140,12 +162,72 @@ function isSceneNode(value: unknown): value is SceneNode {
   if (value.type === 'text') return isText(value.text) && isMaterial(value.material)
   // A group carries nothing of its own: everything it is has already been checked above.
   if (value.type === 'group') return true
+  // Three numbers, and a file that holds none of them keeps its node: the defaults are what a
+  // camera is without them, and `revived` lays them under whatever the file did say.
+  if (value.type === 'camera') return value.camera === undefined || isRecord(value.camera)
 
   return value.type === 'light' && describes(value.light, LIGHT_SPECS)
 }
 
 function isOptionalFlag(value: unknown): boolean {
   return value == null || typeof value === 'boolean'
+}
+
+/**
+ * Absent is legal and means "still": every document written before animation existed says
+ * nothing here. A record that is there but malformed costs the node, like every other field —
+ * a file that says nothing is not a file that says wrong.
+ */
+function isOptionalAnimation(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  return (
+    typeof value.clip === 'string' &&
+    typeof value.playing === 'boolean' &&
+    typeof value.loop === 'boolean' &&
+    Number.isFinite(value.time) &&
+    Number.isFinite(value.speed)
+  )
+}
+
+/**
+ * The timeline a file holds, or an empty one. Read track by track rather than refused whole, on
+ * the rule the nodes already follow: a project folder is user territory, and one malformed track
+ * must not cost the animation around it.
+ */
+function readTimeline(value: unknown): AnimationTimeline {
+  if (!isRecord(value)) return EMPTY_TIMELINE
+
+  const tracks = Array.isArray(value.tracks) ? value.tracks.filter(isTrack) : []
+  // `readNumber` gives the fallback for anything that is not a finite number; zero and below are
+  // finite and still meaningless here, so the positive test stays.
+  const duration = readNumber(value, 'duration', DEFAULT_DURATION)
+  const fps = readNumber(value, 'fps', DEFAULT_FPS)
+
+  return {
+    duration: duration > 0 ? duration : DEFAULT_DURATION,
+    fps: fps > 0 ? fps : DEFAULT_FPS,
+    tracks,
+  }
+}
+
+function isTrack(value: unknown): value is AnimationTrack {
+  if (!isRecord(value)) return false
+  if (typeof value.id !== 'string' || value.id === '') return false
+  if (typeof value.name !== 'string') return false
+  if (!Number.isFinite(value.index)) return false
+  const target = value.target
+  if (!isRecord(target)) return false
+  if (typeof target.nodeId !== 'string') return false
+  if (target.bone !== undefined && typeof target.bone !== 'string') return false
+  if (!TRACK_PROPERTIES.some(property => property === target.property)) return false
+
+  return Array.isArray(value.keys) && value.keys.every(isKeyframe)
+}
+
+function isKeyframe(value: unknown): value is Keyframe {
+  return isRecord(value) && Number.isFinite(value.time) && isVector3(value.value)
 }
 
 function isTransform(value: unknown): value is Transform {

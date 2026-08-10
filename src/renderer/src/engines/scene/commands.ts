@@ -1,9 +1,11 @@
 import type { Command } from '../core/history'
 import type {
+  AnimationRef,
   EnvironmentRef,
   GeometryDescriptor,
   LightDescriptor,
   MaterialDescriptor,
+  ModelRef,
   SpriteDescriptor,
   TextDescriptor,
   Transform,
@@ -348,6 +350,29 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
       return patchPart(state, id, 'sprite', { sprite })
     },
     revert: state => (previous ? patchPart(state, id, 'sprite', { sprite: previous }) : state),
+  }
+}
+
+/**
+ * Which clip of an imported model plays, and how. `null` puts it back to its rest pose.
+ *
+ * The whole reference is written rather than the field touched: the head position is part of it,
+ * and a play that kept the old time would start over from wherever the last pause happened to be.
+ */
+export function setModelAnimation(id: string, animation: AnimationRef | null): Command<SceneState> {
+  let previous: ModelRef | null = null
+
+  return {
+    id: `animation:${id}`,
+    apply: state => {
+      const node = nodeById(state, id)
+      if (node?.type !== 'model') return state
+      previous = node.model
+      return patchPart(state, id, 'model', {
+        model: { assetId: node.model.assetId, ...(animation && { animation }) },
+      })
+    },
+    revert: state => (previous ? patchPart(state, id, 'model', { model: previous }) : state),
   }
 }
 

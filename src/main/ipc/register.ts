@@ -17,6 +17,7 @@ import { registerWindowControls } from '@main/window/controls'
 import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
+import { registerRenderHandlers } from '@main/render/handlers'
 import { registerUpdateHandlers } from '@main/update/handlers'
 import { markSettingsPending, openSettingsWindow } from '@main/window/windows'
 import type { Services } from '@main/services'
@@ -65,6 +66,11 @@ export function registerIpc(services: Services): void {
   registerDialogHandlers(services)
   registerSceneHandlers(services)
   registerExportHandlers(services)
+  registerRenderHandlers({
+    ...services,
+    newId: () => `render_${randomUUID()}`,
+    encode: services.encodeVideo,
+  })
   registerUpdateHandlers(services)
   // Built here rather than held by `Services`: the index reads nothing until a picker asks, so
   // it costs a closure at startup and a folder walk the first time someone opens the list.

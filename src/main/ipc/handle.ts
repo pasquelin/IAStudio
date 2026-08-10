@@ -89,6 +89,11 @@ type ChannelMethod = {
 
   [CHANNELS.sceneExport]: StudioBridge['scene']['export']
 
+  [CHANNELS.renderStart]: StudioBridge['render']['start']
+  [CHANNELS.renderFrame]: StudioBridge['render']['frame']
+  [CHANNELS.renderFinish]: StudioBridge['render']['finish']
+  [CHANNELS.renderCancel]: StudioBridge['render']['cancel']
+
   [CHANNELS.textureExport]: StudioBridge['texture']['export']
   [CHANNELS.skyboxExport]: StudioBridge['skybox']['export']
 

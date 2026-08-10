@@ -224,7 +224,10 @@
       "graph.compile": "Le graphe n’a pas pu être vérifié",
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
-      "document.load": "Le document n’a pas pu être ouvert"
+      "document.load": "Le document n’a pas pu être ouvert",
+      "scene": {
+        "render": "Rendu vidéo"
+      }
     },
     "allHint": "Enlève ce filtre : le journal remontre tout",
     "filterHint": "N’affiche que les entrées de ce genre — plusieurs peuvent être cochées"
@@ -555,7 +558,8 @@
   },
   "objects": {
     "sprite": "Sprite",
-    "text": "Texte"
+    "text": "Texte",
+    "camera": "Caméra"
   },
   "inspector": {
     "noDocument": "Ouvrez une scène pour inspecter ce qu’elle contient.",
@@ -636,7 +640,7 @@
     "regenerate": "Régénérer",
     "regenerateHint": "Ouvrir le générateur avec ces paramètres",
     "file": "Fichier",
-    "clip": "Clip",
+    "clip": "Séquence",
     "source": "Source",
     "track": "Piste",
     "clips": "Clips",
@@ -694,7 +698,13 @@
     "nodeId": "Identifiant",
     "noModel": "Aucun",
     "sectionFoldHint": "Replie ce groupe de propriétés",
-    "sectionUnfoldHint": "Déplie ce groupe de propriétés"
+    "sectionUnfoldHint": "Déplie ce groupe de propriétés",
+    "animation": "Animation",
+    "noClip": "Aucune",
+    "playClip": "Jouer la séquence",
+    "pauseClip": "Mettre en pause",
+    "clipSpeed": "Vitesse",
+    "clipLoop": "En boucle"
   },
   "transport": {
     "play": "Lire",
@@ -733,7 +743,16 @@
     "solo": "Écouter seule la piste {{name}}",
     "lock": "Verrouiller la piste {{name}}",
     "rename": "Nom de la piste",
-    "renameHint": "Double-cliquer pour renommer"
+    "renameHint": "Double-cliquer pour renommer",
+    "addTrack": {
+      "video": "Ajouter une piste vidéo",
+      "audio": "Ajouter une piste audio"
+    },
+    "trackActions": "Actions de la piste {{name}}",
+    "trackActionsHint": "Déplacer la piste dans la pile, ou la retirer avec ce qu’elle porte",
+    "moveTrackUp": "Monter la piste",
+    "moveTrackDown": "Descendre la piste",
+    "removeTrack": "Supprimer la piste"
   },
   "videoTools": {
     "select": "Sélection",
@@ -777,7 +796,9 @@
     "paste": "Coller",
     "pasteHint": "Poser dans cette scène ce qui a été copié",
     "delete": "Supprimer",
-    "deleteHint": "Retirer de la scène ce qui est sélectionné"
+    "deleteHint": "Retirer de la scène ce qui est sélectionné",
+    "skeletons": "Squelettes",
+    "skeletonsHint": "Montre les os des modèles rigués, sans rien changer à la scène"
   },
   "exportFormats": {
     "glb": "glTF binaire (.glb)",
@@ -1498,6 +1519,10 @@
     "canvasBrushLarger": {
       "title": "Agrandir le pinceau",
       "help": "Élargit d’un cran le diamètre du pinceau, de la gomme et du trait des formes."
+    },
+    "sceneSkeletons": {
+      "title": "Afficher les squelettes",
+      "help": "Dessine les os de chaque modèle rigué par-dessus la scène"
     }
   },
   "styles": {
@@ -1959,5 +1984,24 @@
     "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit",
     "showCountHint_one": "Ne garde que {{count, number}} élément dans cette section",
     "showCountHint_other": "Ne garde que {{count, number}} éléments dans cette section"
+  },
+  "animation": {
+    "play": "Lire",
+    "pause": "Mettre en pause",
+    "toStart": "Revenir au début",
+    "position": "Position",
+    "rotation": "Rotation",
+    "scale": "Échelle",
+    "addTrack": "Ajouter une piste {{property}}",
+    "removeTrack": "Supprimer la piste {{name}}",
+    "arm": "Armer la piste {{name}} en écriture",
+    "addKey": "Poser une clé ici",
+    "removeKey": "Retirer la clé posée ici",
+    "noTrack": "Aucune piste. Sélectionnez un objet, puis ajoutez la piste à animer.",
+    "render": "Rendre en vidéo",
+    "renderHint": "Écrit un fichier vidéo de ce que voit la caméra de la scène",
+    "renderNeedsCamera": "Ajoutez une caméra à la scène pour pouvoir la rendre",
+    "bone": "Os",
+    "wholeModel": "Le modèle entier"
   }
 }

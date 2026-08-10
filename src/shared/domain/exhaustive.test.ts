@@ -106,6 +106,7 @@ describe('the lists that stand for a union', () => {
       'scene.bvh': true,
       'scene.texture': true,
       'scene.export': true,
+      'scene.render': true,
       'texture.map': true,
       'texture.channel': true,
       'texture.seam': true,

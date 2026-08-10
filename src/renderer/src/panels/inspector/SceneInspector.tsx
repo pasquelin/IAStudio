@@ -14,6 +14,7 @@ import { changedFields } from '@/helpers/objects'
 import { useToken } from '@/hooks/useToken'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { DescriptorSection } from './DescriptorSection'
+import { AnimationSection } from './AnimationSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
 import { ShadowSection } from './ShadowSection'
@@ -53,6 +54,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
   const light = node?.type === 'light' ? node : null
   const sprite = node?.type === 'sprite' ? node : null
   const text = node?.type === 'text' ? node : null
+  const model = node?.type === 'model' ? node : null
   // The descriptors keep their identity across every edit that does not touch them, so the
   // fields of a material survive a whole drag of the position.
   const geometry = useMemo(() => (mesh ? geometryFields(mesh.geometry) : []), [mesh])
@@ -114,6 +116,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           />
         </>
       )}
+
+      {model && <AnimationSection documentId={documentId} node={model} edit={edit} />}
 
       {sprite && (
         <SpriteSection

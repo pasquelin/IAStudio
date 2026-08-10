@@ -16,13 +16,14 @@ laquelle vous piochez.
 
 | Espace | Où se trouve l’étagère |
 |---|---|
-| Image, 3D, Textures, Skyboxes | dans la **bande basse** |
-| Vidéo, Audio | dans la **colonne de droite**, moitié haute |
+| Image, Textures, Skyboxes | dans la **bande basse** |
+| Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
 
-Ce n’est pas un caprice : dans les espaces Vidéo et Audio, la bande basse appartient au montage,
-qui a besoin de toute la largeur. Il faut pourtant que l’étagère et le montage tiennent l’écran
-**ensemble** pour qu’on puisse glisser une prise de l’une vers l’autre — l’étagère prend donc la
-moitié haute de la colonne de droite, celle des panneaux qui servent le document ouvert.
+Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
+timeline, qui a besoin de toute la largeur. Il faut pourtant que l’étagère et la timeline tiennent
+l’écran **ensemble** pour qu’on puisse glisser une prise ou un modèle de l’une vers l’autre —
+l’étagère prend donc la moitié haute de la colonne de droite, celle des panneaux qui servent le
+document ouvert.
 
 ---
 
@@ -48,7 +49,7 @@ Six types d’assets :
 | Zone | Où ils sont |
 |---|---|
 | **Bande basse** | sur la **ligne de titre**, à côté du nom du panneau |
-| **Colonne de droite** (espaces Vidéo et Audio) | sur leur **propre ligne**, sous le titre |
+| **Colonne de droite** (espaces Vidéo, Audio et 3D) | sur leur **propre ligne**, sous le titre |
 
 Dans une bande, la ligne est large et presque vide : y loger la barre épargne une rangée
 entière, et l’étagère est là pour montrer des assets, pas des boutons. Dans une colonne étroite,

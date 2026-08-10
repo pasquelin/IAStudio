@@ -13,6 +13,9 @@ import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
+import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
+import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
+import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
 import { SceneDocument } from './SceneDocument'
 
 const setDocumentTitle = vi.fn()
@@ -30,6 +33,10 @@ const setSnapping = vi.fn()
 const setSpace = vi.fn()
 const setProjection = vi.fn()
 const setDisplayMode = vi.fn()
+const setSkeletons = vi.fn()
+const setPlayhead = vi.fn()
+/** Every engine built, so a test can fire the callbacks the real one would. */
+const built = vi.hoisted((): SceneRendererOptions[] => [])
 const viewFrom = vi.fn()
 // At module scope like the others, so a test can make the encoding itself refuse: the exporters
 // throw on a texture they cannot write, and that is the half no bridge failure stands in for.
@@ -39,6 +46,10 @@ const exportTo = vi.fn(() => Promise.resolve(new Uint8Array([103, 108, 84, 70]))
 // covers is that the document wires the toolbar and the keyboard to the right calls.
 vi.mock('@/engines/scene/SceneRenderer', () => ({
   SceneRenderer: class {
+    constructor(options: unknown) {
+      built.push(options as SceneRendererOptions)
+    }
+
     mount = vi.fn()
     unmount = vi.fn()
     apply = vi.fn()
@@ -50,6 +61,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSpace = setSpace
     setProjection = setProjection
     setDisplayMode = setDisplayMode
+    setSkeletons = setSkeletons
+    setPlayhead = setPlayhead
     viewFrom = viewFrom
     frameSelection = frameSelection
     exportTo = exportTo
@@ -57,6 +70,11 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
 }))
 
 const box = meshNode('box-1')
+
+const moved = (x: number) => ({
+  ...IDENTITY_TRANSFORM,
+  position: { x, y: 0, z: 0 },
+})
 
 /** A new document is born with three lights; only the meshes are what most of these tests count. */
 function meshesOf(documentId: string): SceneNode[] {
@@ -72,6 +90,8 @@ function nodesOf(documentId: string): SceneNode[] {
 // things it leaked.
 beforeEach(() => {
   vi.clearAllMocks()
+  built.length = 0
+  useModelClips.setState({ clips: {}, bones: {} })
   // The export tests install a bridge; without this it would answer for the ones that follow.
   vi.unstubAllGlobals()
   // A report is said once per subject and the set lives at module scope: a second test on the
@@ -433,5 +453,52 @@ describe('exporting the scene', () => {
         message: expect.stringContaining('setTextureUtils'),
       }),
     )
+  })
+  it('shows the bones of a rigged model on the bound key, and hides them again', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{b}')
+    expect(setSkeletons).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{b}')
+    expect(setSkeletons).toHaveBeenLastCalledWith(false)
+  })
+})
+
+describe('SceneDocument and the timeline over the scene', () => {
+  it('tells the engine where the head stands, and never the other way round', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    // Inside `act`: the effect that pushes it runs on the render the store change causes.
+    act(() => useSceneViews.getState().setPlayhead('doc-1', 1.5))
+
+    expect(setPlayhead).toHaveBeenLastCalledWith(1.5)
+  })
+
+  it('reports the bones a model brought, so a track can name one', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    const options = built.at(-1)
+    options?.onBones?.('perso', ['spine', 'arm.L'])
+
+    expect(bonesOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['spine', 'arm.L'])
+  })
+
+  it('reports the clips too, and forgets both when the viewport goes', () => {
+    const { unmount } = render(<SceneDocument documentId="doc-1" />)
+    const options = built.at(-1)
+    options?.onClips?.('perso', ['walk'])
+    expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['walk'])
+
+    // The names came out of files that viewport parsed; nothing outside it can answer for them.
+    unmount()
+    expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual([])
+  })
+
+  it('writes a plain move while no track is armed', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onTransform([{ id: 'box-1', transform: moved(3) }])
+
+    expect(nodesOf('doc-1').find(node => node.id === 'box-1')?.transform.position.x).toBe(3)
   })
 })

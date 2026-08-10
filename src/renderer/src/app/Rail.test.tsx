@@ -182,14 +182,23 @@ describe('Rail', () => {
       'separator',
       'Explorateur',
       'Apps',
-      'Assets',
+      'Timeline',
     ])
   })
 
+  // The shelf comes last of the upper half, and it is what keeps the outliner in front when the
+  // space is entered: a half with nothing chosen opens on the first tool it declares.
   it('cuts the right rail where the column is cut: the document above, the selection below', () => {
     const { container } = render(<Rail side="right" />)
 
-    expect(marksOf(container)).toEqual(['Scène', 'Lumières', 'Mailles', 'separator', 'Inspecteur'])
+    expect(marksOf(container)).toEqual([
+      'Scène',
+      'Lumières',
+      'Mailles',
+      'Assets',
+      'separator',
+      'Inspecteur',
+    ])
   })
 
   // On the default layout no half names a panel, so the icon that reads as up is the first one

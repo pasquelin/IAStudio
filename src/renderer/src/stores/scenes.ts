@@ -1,4 +1,6 @@
+import type { AnimationTrack } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
+import { updateAnimationTrack } from '@/engines/scene/animation-commands'
 import { addNode, setSelection } from '@/engines/scene/commands'
 import { modelNode } from '@/engines/scene/node-factory'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
@@ -19,6 +21,22 @@ export const isDirty = store.isDirty
  * be read at call time, not from the render that drew the row: a copy taken before whatever
  * command ran in between would undo it.
  */
+/**
+ * A flag of an animation track, written without an entry in the history — how one works, not what
+ * one made. The pendant of `sequences.writeTrack`, and for the same reason.
+ */
+export function writeAnimationTrack(
+  documentId: string,
+  trackId: string,
+  change: (track: AnimationTrack) => AnimationTrack,
+): void {
+  const current = store.use.getState()
+  current.replace(
+    documentId,
+    updateAnimationTrack(store.stateOf(current, documentId), trackId, change),
+  )
+}
+
 export function selectIn(
   documentId: string,
   ids: readonly string[],

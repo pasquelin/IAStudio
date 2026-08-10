@@ -5,14 +5,9 @@ import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
-import {
-  addNodes,
-  copiesOf,
-  groupNodes,
-  moveNodes,
-  removeNodes,
-  rootedIn,
-} from '@/engines/scene/commands'
+import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
+import { movesToCommand } from '@/engines/scene/animation-commands'
+import { snapToFrame } from '@/engines/scene/animation-eval'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { setDocumentTitle } from '@/app/dockview-api'
 import { useAddNode } from '@/hooks/useAddNode'
@@ -24,7 +19,9 @@ import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import { selectedNodes, type NodeMove } from '@/engines/scene/scene-state'
+import { useModelClips } from '@/stores/model-clips'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSceneViews, viewOf } from '@/stores/scene-views'
@@ -55,6 +52,19 @@ async function exportScene(
   } catch (error) {
     reportFailure('scene.export', format, error)
   }
+}
+
+/**
+ * The two store reads a gizmo drag needs; the rule itself is `movesToCommand`, which is pure and
+ * therefore testable — a viewport is not.
+ */
+function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
+  const store = useScenes.getState()
+  const state = sceneOf(store, documentId)
+  const at = snapToFrame(viewOf(useSceneViews.getState(), documentId).playhead, state.animation.fps)
+
+  const command = movesToCommand(state, moves, at)
+  if (command) store.runCommand(documentId, command)
 }
 
 const MESHES: readonly AssetType[] = ['mesh']
@@ -98,14 +108,22 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // A click in the void with a modifier held keeps the selection: `toggle` of nothing is
       // nothing, which is what stops a near miss from undoing the picking that came before it.
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
-      onTransform: moves => useScenes.getState().runCommand(documentId, moveNodes(moves)),
+      onTransform: moves => recordTransform(documentId, moves),
+      onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
+      onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
     })
 
     renderer.mount(element)
     engine.current = renderer
+    // Registered so a panel that is not the viewport can ask it to draw a film — and forgotten
+    // below, or an engine whose canvas is gone would still be handed out.
+    registerSceneEngine(documentId, renderer)
     return () => {
       renderer.dispose()
       engine.current = null
+      forgetSceneEngine(documentId)
+      // The names came out of files this viewport parsed; nothing outside it can answer for them.
+      useModelClips.getState().forget(documentId)
     }
   }, [documentId])
 
@@ -141,6 +159,15 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setDisplayMode(view.display)
   }, [view.display])
+
+  useEffect(() => {
+    engine.current?.setSkeletons(view.skeletons)
+  }, [view.skeletons])
+
+  // The head is session state React owns; the engine is told where it stands, never the reverse.
+  useEffect(() => {
+    engine.current?.setPlayhead(view.playhead)
+  }, [view.playhead])
 
   // Subscribed here rather than in `useNativeMenu`: an export reads the three.js objects, and
   // this component is the only thing that holds them. Only while this tab is in front, or two
@@ -179,6 +206,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setLocalFrame(current => !current)
         case 'scene.display':
           return useSceneViews.getState().setDisplay(documentId, nextDisplayMode(view.display))
+        case 'scene.skeletons':
+          return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
         case 'scene.projection':
           return useSceneViews
             .getState()
@@ -254,6 +283,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.snap': snapping,
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
+      'scene.skeletons': view.skeletons,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,

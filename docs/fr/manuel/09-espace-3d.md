@@ -539,11 +539,80 @@ rien n’avait été écrit pour lui.
 
 ---
 
+## Animer la scène
+
+La bande du bas de l’espace 3D porte une **timeline**, comme en Vidéo et en Audio — et l’étagère
+à assets monte dans la colonne de droite pour lui laisser toute la largeur.
+
+### Ce qu’un modèle apporte déjà
+
+Un personnage généré par Scenario — par un modèle *texte vers mouvement*, ou une capture depuis une
+vidéo — arrive avec ses **séquences d’animation** dans le fichier. Sélectionnez-le, et l’Inspecteur
+offre la section **Animation** :
+
+| Contrôle | Ce qu’il fait |
+|---|---|
+| **Séquence** | choisit laquelle jouer, parmi celles que le fichier porte |
+| **▶ / ⏸** | lance ou arrête la lecture |
+| **Vitesse** | un multiplicateur, de 0,1 à 4 |
+| **En boucle** | recommence à la fin, ou s’arrête sur la dernière pose |
+
+**La pose est enregistrée avec le document.** Rouvrir la scène la retrouve là où vous l’avez
+laissée, pas au début.
+
+**Un modèle sans séquence n’affiche pas la section** — plutôt qu’un menu vide.
+
+### Voir le squelette
+
+Un modèle rigué porte des **os**. La touche **B**, ou le bouton en forme d’os de la barre d’outils,
+les dessine par-dessus la scène. Ils ne se cliquent pas : les os d’un rig traversent chaque maille
+qu’ils pilotent, et un clic tomberait sur un trait plutôt que sur le modèle.
+
+### Poser vos propres mouvements
+
+Sélectionnez un objet, puis ajoutez une piste depuis la barre de la timeline : **Position**,
+**Rotation** ou **Échelle**. Si l’objet est un modèle rigué, le menu **Os** apparaît à côté : la
+piste porte alors sur cet os-là, ce qui est la façon de corriger un bras sans déplacer tout le
+personnage.
+
+| Geste | Effet |
+|---|---|
+| **+ Position / Rotation / Échelle** | ajoute une piste sur l’objet sélectionné |
+| **◆** | pose une clé là où est la tête de lecture, ou retire celle qui s’y trouve |
+| **●** | **arme** la piste : le gizmo écrit dedans au lieu de déplacer l’objet |
+| **🔇 / 🎧 / 🔒** | rend la piste muette, l’écoute seule, la verrouille |
+| **🗑** | supprime la piste, avec ses clés |
+
+**Les pistes s’additionnent.** Deux pistes de position sur un même objet ajoutent leurs
+déplacements ; deux pistes d’échelle **multiplient** les leurs — deux fois deux font quatre, ce qui
+est ce qu’on veut en les empilant. C’est différent d’un montage vidéo, où le clip du dessus cache
+celui du dessous.
+
+> **Pourquoi armer une piste.** Comme les pistes s’ajoutent à la pose de l’objet, déplacer un objet
+> au gizmo sans piste armée écrit sa **pose de repos** — et les pistes se rajoutent par-dessus à
+> l’image suivante, si bien que l’objet revient sous la main. Armez la piste, et le geste devient
+> une clé sur elle.
+
+### Sortir une vidéo
+
+Ajoutez une **caméra** à la scène (menu Ajouter → Objet → Caméra). C’est un objet comme un autre :
+elle se déplace au gizmo, elle s’anime par une piste, et un export glTF l’emporte avec lui.
+
+Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` de ce que voit cette caméra,
+sur toute la durée de la timeline. Le studio demande **où enregistrer avant de calculer quoi que ce
+soit** : un rendu prend des minutes, et une boîte de dialogue à la fin serait le meilleur moyen de
+le jeter d’un appui sur Échap.
+
+**Sans caméra dans la scène, le bouton est grisé** : il n’y a rien à travers quoi regarder.
+
+---
+
 ## Ce qui manque encore
 
-L’espace 3D a désormais tout ce que ce manuel décrit. Ce qui reste tient en une phrase : les
+L’espace 3D a désormais tout ce que ce manuel décrit. Ce qui reste tient en deux phrases : les
 polices s’offrent en une seule graisse par famille, et un texte ne se plie pas le long d’une
-courbe.
+courbe. Côté animation, les clés s’enchaînent en ligne droite — il n’y a pas encore de courbes
+d’accélération —, et une séquence d’un modèle se joue seule, sans fondu vers une autre.
 
 Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
 

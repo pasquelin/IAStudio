@@ -20,6 +20,7 @@ import {
   mdiCursorDefaultOutline,
   mdiDelete,
   mdiFolderPlusOutline,
+  mdiBone,
   mdiHexagonOutline,
   mdiMagnet,
   mdiPlus,
@@ -152,6 +153,13 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.displayHint',
     icon: mdiHexagonOutline,
     modes: DISPLAY_TOOL_MODES,
+  },
+  {
+    id: 'skeletons',
+    command: 'scene.skeletons',
+    labelKey: 'sceneTools.skeletons',
+    descriptionKey: 'sceneTools.skeletonsHint',
+    icon: mdiBone,
   },
   {
     id: 'frame',

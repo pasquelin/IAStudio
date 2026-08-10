@@ -54,6 +54,20 @@ export type GeometryDescriptor =
 export type TextureRef = { assetId: string }
 
 /**
+ * A camera the scene holds, as opposed to the one the viewport looks through. It is a node like
+ * any other — pickable, movable, animatable by a track — and glTF carries one, so it survives an
+ * export where a viewport setting never could.
+ */
+export type CameraDescriptor = {
+  /** Vertical field of view, in degrees, as every other angle a person types. */
+  fov: number
+  near: number
+  far: number
+}
+
+export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0.1, far: 1000 })
+
+/**
  * An imported model, for the same reason and in the same shape as a texture: what a document
  * stores is what a reload can resolve again.
  *
@@ -63,7 +77,33 @@ export type TextureRef = { assetId: string }
  * that is the right trade for a generation studio, and an explicit "explode" command is what
  * would lift it the day it matters.
  */
-export type ModelRef = { assetId: string }
+export type ModelRef = { assetId: string; animation?: AnimationRef }
+
+/**
+ * Which clip of a model plays, and how. Absent on a model carrying none, and on every document
+ * written before animation existed — the reader fills it in rather than refusing the node.
+ *
+ * The head position is part of it on purpose: an engine is rebuilt from its state, and a scene
+ * reopened on frame one would lose the pose its author saved it on.
+ */
+export type AnimationRef = {
+  /** The clip's name as the file spells it. A name the file no longer holds simply plays nothing. */
+  clip: string
+  playing: boolean
+  /** Where the head stands inside the clip, in seconds. */
+  time: number
+  /** A multiplier, never a frame rate: the clip carries its own timing. */
+  speed: number
+  loop: boolean
+}
+
+/** What a model animates like when nothing has been chosen: its first clip, stopped at the start. */
+export const DEFAULT_ANIMATION: Omit<AnimationRef, 'clip'> = Object.freeze({
+  playing: false,
+  time: 0,
+  speed: 1,
+  loop: true,
+})
 
 /**
  * What lights a viewport. `studio` is procedural — three builds a small lit room and prefilters
@@ -230,11 +270,12 @@ export const EXPORT_EXTENSIONS: Record<ExportFormat, string> = {
 }
 
 /** What is picked from the Add menu without being a mesh or a light. */
-export type ObjectKind = 'sprite' | 'text'
+export type ObjectKind = 'sprite' | 'text' | 'camera'
 
 export const OBJECT_ENTRIES: readonly SceneEntry<ObjectKind>[] = [
   { kind: 'sprite' },
   { kind: 'text' },
+  { kind: 'camera' },
 ]
 
 export const LIGHT_ENTRIES: readonly SceneEntry<LightKind>[] = [

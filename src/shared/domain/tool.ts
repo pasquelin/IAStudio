@@ -143,14 +143,19 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // inspector keeps the lower one: a style is saved FROM the inspector, and a panel that took
   // its place would hide the settings one is capturing at the moment of capturing them.
   { id: 'styles', zone: 'right', slot: 'primary', surfaces: ['textures'] },
-  // Where a take is dragged onto a track, the shelf and the montage have to be on screen
-  // together — and the montage owns the band, so the shelf takes the column.
-  { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio'] },
   // The outliner of the scene, which the Explorer used to hold in this one workspace — it now
   // lists the documents of the project in every space, which is a different question.
   { id: 'scene', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'lights', zone: 'right', slot: 'primary', surfaces: ['3d'] },
   { id: 'meshes', zone: 'right', slot: 'primary', surfaces: ['3d'] },
+  // Where a take is dragged onto a track, the shelf and the montage have to be on screen
+  // together — and the montage owns the band, so the shelf takes the column. 3D joined them
+  // when its own timeline did: the rule is the band's, not the montage's.
+  //
+  // Declared AFTER the three 3D panels, and it matters: a half with nothing chosen shows the
+  // first tool it declares, so a shelf listed above them would open in front of the outliner
+  // every time the space is entered.
+  { id: 'assets', zone: 'right', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
   // The other half of the right column, and always up: what is selected is read WHILE a
   // model is chosen and a prompt written, and in an editor the inspector is never the panel
@@ -163,11 +168,11 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     id: 'assets',
     zone: 'bottom',
     slot: 'primary',
-    surfaces: ['image', '3d', 'textures', 'skyboxes', 'graph'],
+    surfaces: ['image', 'textures', 'skyboxes', 'graph'],
   },
-  // The band is the montage's, across the whole width — that is how a montage is read, in Audio
-  // as in Video.
-  { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio'] },
+  // The band is the timeline's, across the whole width — that is how time is read, in Audio and
+  // Video as in 3D, where an animation runs along the same line a montage does.
+  { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
   // The home's own six, and they serve it ALONE. It is a surface like the others now — two
   // columns and a centre — rather than the one page in the studio that scrolls: what one opens
