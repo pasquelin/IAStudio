@@ -1,5 +1,12 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
+import {
+  GRAPH_EDGES_MAX,
+  GRAPH_ID_MAX,
+  GRAPH_NODES_MAX,
+  GRAPH_NODE_TYPES,
+  type GraphState,
+} from '@shared/domain/graph'
 import { JOB_KINDS, type JobTarget } from '@shared/domain/job'
 import type { PersistedJob } from './job-store'
 import {
@@ -103,6 +110,39 @@ const workflowId = z.string().trim().min(1)
 
 export function parseWorkflowId(value: unknown): string {
   return workflowId.parse(value)
+}
+
+/**
+ * A graph, on its way in to be compiled.
+ *
+ * Bounded like every other body that crosses: the renderer is sandboxed and trusted for nothing,
+ * and a graph is the largest thing the studio sends this way. `data` is kept as it stands and
+ * NOT validated — the same contract `parseGraph` holds on the other side, and the one the
+ * converter is written against.
+ */
+const graphNode = z.object({
+  id: z.string().min(1).max(GRAPH_ID_MAX),
+  type: z.literal(GRAPH_NODE_TYPES),
+  position: z.object({ x: z.number(), y: z.number() }),
+  data: z.record(z.string(), z.unknown()),
+})
+
+const graphEdge = z.object({
+  id: z.string().min(1).max(GRAPH_ID_MAX),
+  source: z.string().min(1).max(GRAPH_ID_MAX),
+  target: z.string().min(1).max(GRAPH_ID_MAX),
+  sourceHandle: z.string().max(GRAPH_ID_MAX).optional(),
+  targetHandle: z.string().max(GRAPH_ID_MAX).optional(),
+})
+
+const graphState = z.object({
+  nodes: z.array(graphNode).max(GRAPH_NODES_MAX),
+  edges: z.array(graphEdge).max(GRAPH_EDGES_MAX),
+  inputKeys: z.array(z.string().max(GRAPH_ID_MAX)).max(GRAPH_NODES_MAX),
+})
+
+export function parseGraphState(value: unknown): GraphState {
+  return graphState.parse(value)
 }
 
 /** Bounded like the model query: `limit` is the page the API is asked for, never a walk. */

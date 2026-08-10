@@ -150,7 +150,17 @@ export type GraphNodeBody =
         type?: string
       }
     }
-  | { type: Exclude<GraphNodeType, 'text' | 'stickyNote' | 'asset' | 'model'>; data: GraphNodeData }
+  /**
+   * A workflow input, and the only type whose `data` the converter REQUIRES something of: without
+   * `inputName` it is an input nothing can be asked for, and the flow's inputs get keyed on
+   * `undefined`. The editor cannot create one yet — it arrives with the import of step 9 — but a
+   * graph read off a published App carries them.
+   */
+  | { type: 'modelInput'; data: GraphNodeData & { inputName?: string } }
+  | {
+      type: Exclude<GraphNodeType, 'text' | 'stickyNote' | 'asset' | 'model' | 'modelInput'>
+      data: GraphNodeData
+    }
 
 export type GraphNode = GraphNodeBody & {
   id: string
@@ -198,6 +208,17 @@ export const EMPTY_GRAPH: GraphState = { nodes: [], edges: [], inputKeys: [] }
 
 /** Scenario's own limit on a workflow, which only the export has to obey — see the plan, step 9. */
 export const MAX_GRAPH_NODES_FOR_EXPORT = 50
+
+/**
+ * What the main process accepts of a graph crossing the boundary.
+ *
+ * Far above anything a hand would draw, and far below what would take the process down: the
+ * renderer is sandboxed and trusted for nothing, and a published App already counts 62 nodes —
+ * so these are a ceiling on a message, not the limit `MAX_GRAPH_NODES_FOR_EXPORT` names.
+ */
+export const GRAPH_NODES_MAX = 2000
+export const GRAPH_EDGES_MAX = 8000
+export const GRAPH_ID_MAX = 200
 
 /**
  * What a node is doing in a run, as the canvas paints it.
@@ -249,3 +270,48 @@ export const SILENT_RUN_STATUSES: readonly GraphRunStatus[] = ['idle', 'failed']
 
 export type GraphNodeRun =
   { status: Exclude<GraphRunStatus, 'failed'> } | { status: 'failed'; failure: GraphRunFailure }
+
+/**
+ * The node types Scenario's own converter will take as an OUTPUT of the workflow.
+ *
+ * Read off `workflow_converter.js` rather than off the prose, and it is narrower than the field
+ * suggests: `isOutput` is declared on every node, and the converter looks at it on these three
+ * only. Marked anywhere else it is silently ignored — so the studio must not offer the gesture
+ * where it would do nothing.
+ */
+export const OUTPUT_NODE_TYPES: readonly GraphNodeType[] = ['model', 'llm', 'forEachEnd']
+
+export const canBeOutput = (type: GraphNodeType): boolean => OUTPUT_NODE_TYPES.includes(type)
+
+/** The nodes the converter would compile a branch for, in the order the graph holds them. */
+export const outputNodesOf = (graph: GraphState): readonly GraphNode[] =>
+  graph.nodes.filter(node => node.data.isOutput === true && canBeOutput(node.type))
+
+/**
+ * Why a graph would not compile. A code, never a message: the validator's own sentences are
+ * English prose written for whoever calls the SDK, and the studio speaks the user's language.
+ */
+export type GraphCompileProblem =
+  /** Nothing is marked as an output, so the converter hands back an empty flow. */
+  | 'no-output'
+  /** An output is marked and the flow still came back empty — nothing reaches it. */
+  | 'empty'
+  /** `validateWorkflowFlow` refused it. Its sentence goes to the journal, not to the screen. */
+  | 'invalid'
+
+export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
+  'no-output',
+  'empty',
+  'invalid',
+]
+
+/**
+ * What compiling a graph answers.
+ *
+ * `steps` rather than the flow itself, and deliberately: nothing consumes a flow yet — the export
+ * arrives with step 9 — and carrying one across the boundary on every keystroke would clone the
+ * whole workflow for a number. The day it is exported this gains a field; until then it answers
+ * what the editor can act on.
+ */
+export type GraphCompileResult =
+  { ok: true; steps: number } | { ok: false; problem: GraphCompileProblem }

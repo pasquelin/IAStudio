@@ -14,7 +14,13 @@ export type ToggleFieldProps = {
 export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      {/* Titled because the column truncates at four rems, exactly as `PropertyRow` learned to
+          be: seen on screen, « Sortie du workflow » read « Sortie du … », which on a canvas whose
+          nodes already carry a port labelled « Sortie » says the wrong thing rather than half of
+          the right one. */}
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <input
         type="checkbox"
