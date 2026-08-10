@@ -1038,10 +1038,21 @@ publication.
 > `convertWorkflowEditorToFlow` du SDK et appelle `validateWorkflowFlow`, le canal
 > `workflows:compile`, et la ligne d'état en bas du canvas.
 >
-> **Le prochain tour** : relancer les deux revues sur `git show 32f2579b` et `4b647d54`,
-> appliquer ce qui est retenu, puis fusionner. **Ne pas donner d'accès en écriture au worktree à
-> un agent de revue** — l'un d'eux a muté un fichier puis l'a restauré par `git checkout --`, ce
-> qui a effacé une modification en cours.
+> **Le prochain tour** : ouvrir **deux agents NEUFS** sur `git show 4b647d54 32f2579b 52de4228`,
+> appliquer ce qui est retenu, puis fusionner.
+>
+> **Ne pas essayer de reprendre `revue-c3-correction` ni `revue-c3-conception`** : ils ont rendu
+> des rapports complets au tour du lot C2, puis se sont mis à ne plus émettre que des
+> notifications « disponible ». Six relances, dont trois avec des questions numérotées : aucun
+> contenu. Leur écrire à nouveau est du temps perdu.
+>
+> **Ne pas donner d'accès en écriture au worktree à un agent de revue** — l'un d'eux a muté un
+> fichier puis l'a restauré par `git checkout --`, ce qui a effacé une modification en cours.
+> Lecture seule, et les mutations se font depuis la session, où le harnais est gardé.
+>
+> **Si les agents ne rendent toujours rien**, le dire à l'utilisateur plutôt que de fusionner :
+> le harnais de mutation et une relecture seule sont plus faibles qu'une revue adverse, et le
+> lot C2 l'a démontré au prix de trois défauts bloquants.
 >
 > **Six mutations sur dix mordent.** Les trois survivantes le sont parce qu'elles sont
 > inobservables à travers le flow, et c'est écrit dans le message de `32f2579b` ; la quatrième a
