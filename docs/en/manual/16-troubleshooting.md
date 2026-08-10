@@ -313,8 +313,9 @@ appear on a normally installed application. If it does anyway:
 
 1. **you ran the studio from its source code** — run `pnpm ffmpeg:fetch`, which downloads the
    missing binaries;
-2. **you pointed at one of your own** in Settings → **Media** → **Path to ffmpeg**, and it does not
-   answer — empty the field to fall back on the application's;
+2. **the shipped binary is there but does not start** — it is the one being kept, and a path you
+   set in Settings → **Media** → **Path to ffmpeg** does not replace it: that field only matters
+   when the shipped binary is absent. Repair or replace that one;
 3. **otherwise**, doing without stays perfectly viable on short or light files.
 
 #### The puzzling case: ffmpeg is there, and the studio says it is not
@@ -322,10 +323,14 @@ appear on a normally installed application. If it does anyway:
 You type `which ffmpeg` in a terminal, it answers a path. The file exists. And the studio keeps
 saying video preparation is unavailable.
 
-**This is not a contradiction.** The studio does not merely *find* the program: it **runs** it, with
-`ffmpeg -version`, and accepts only the one that answers. An ffmpeg installed by Homebrew whose
-library has gone missing — after a macOS update, or a slightly over-eager `brew cleanup` — still
-exists as a file, but no longer starts.
+**This is not a contradiction.** The studio does not merely *find* the program: it **runs** the one
+it has kept, with `ffmpeg -version`, and announces video preparation only if it answers. An ffmpeg
+installed by Homebrew whose library has gone missing — after a macOS update, or a slightly
+over-eager `brew cleanup` — still exists as a file, but no longer starts.
+
+**Mind what "kept" means**: the studio takes the **first candidate present** — shipped, then the
+settings one, then the `PATH` — and does not walk back down the list. The `which ffmpeg` you just
+typed is therefore only consulted when the other two are missing.
 
 A program you can find but cannot run would be worse than a missing one: the studio would promise
 proxies it could not make.
