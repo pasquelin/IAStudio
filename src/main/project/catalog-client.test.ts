@@ -66,6 +66,22 @@ function manualPort(): CatalogPort & {
   }
 }
 
+/**
+ * The abort listeners a signal is actually holding. Counting them is what makes "nothing was
+ * left behind" a measurement rather than an assurance — three cases read it.
+ */
+function trackedListeners(signal: AbortSignal): { signal: AbortSignal; held: AbortListener[] } {
+  const held: AbortListener[] = []
+  vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
+    held.push(listener)
+  })
+  vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
+    const index = held.indexOf(listener)
+    if (index >= 0) held.splice(index, 1)
+  })
+  return { signal, held }
+}
+
 describe('createCatalogClient', () => {
   it('resolves add with the asset the worker answered', async () => {
     const catalog = createCatalogClient(loopbackPort())
@@ -143,46 +159,82 @@ describe('createCatalogClient', () => {
   it('drops its abort listener once the search has answered', async () => {
     const port = manualPort()
     const catalog = createCatalogClient(port)
-    const controller = new AbortController()
-    const listeners: AbortListener[] = []
-    const signal = controller.signal
-    vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
-      listeners.push(listener)
-    })
-    vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
-      const index = listeners.indexOf(listener)
-      if (index >= 0) listeners.splice(index, 1)
-    })
+    const listeners = trackedListeners(new AbortController().signal)
 
-    const search = catalog.search({ text: 'mos' }, signal)
-    expect(listeners).toHaveLength(1)
+    const search = catalog.search({ text: 'mos' }, listeners.signal)
+    expect(listeners.held).toHaveLength(1)
 
     port.answer({ id: 1, ok: true, value: [] })
     await search
 
-    expect(listeners).toEqual([])
+    expect(listeners.held).toEqual([])
   })
 
   /** The same, for the other way a request settles: the thread died, or the project closed. */
   it('drops its abort listener when the catalogue closes under it', async () => {
     const port = manualPort()
     const catalog = createCatalogClient(port)
-    const controller = new AbortController()
-    const signal = controller.signal
-    const listeners: AbortListener[] = []
-    vi.spyOn(signal, 'addEventListener').mockImplementation((_type, listener) => {
-      listeners.push(listener)
-    })
-    vi.spyOn(signal, 'removeEventListener').mockImplementation((_type, listener) => {
-      const index = listeners.indexOf(listener)
-      if (index >= 0) listeners.splice(index, 1)
-    })
+    const listeners = trackedListeners(new AbortController().signal)
 
-    const search = catalog.search({ text: 'mos' }, signal)
+    const search = catalog.search({ text: 'mos' }, listeners.signal)
     await catalog.close()
     await expect(search).rejects.toThrow(/closed/)
 
-    expect(listeners).toEqual([])
+    expect(listeners.held).toEqual([])
+  })
+
+  /**
+   * A port whose thread is gone throws instead of answering. The request is sent BEFORE it is
+   * recorded so nothing survives that throw — no entry, and no listener on a signal the caller
+   * still owns. Recorded first, the promise would never settle at all.
+   */
+  describe('a port that refuses the message', () => {
+    const refusingPort = (): CatalogPort => ({
+      postMessage: () => {
+        throw new Error('port is closed')
+      },
+      onMessage: () => {},
+      onFailure: () => {},
+      terminate: () => Promise.resolve(),
+    })
+
+    it('rejects the caller rather than leaving it waiting for an answer', async () => {
+      const catalog = createCatalogClient(refusingPort())
+
+      await expect(catalog.find('a')).rejects.toThrow(/port is closed/)
+    })
+
+    it('leaves no abort listener on the signal the caller handed it', async () => {
+      const catalog = createCatalogClient(refusingPort())
+      const listeners = trackedListeners(new AbortController().signal)
+
+      await expect(catalog.search({ text: 'mos' }, listeners.signal)).rejects.toThrow()
+
+      expect(listeners.held).toEqual([])
+    })
+
+    /**
+     * The other side of the same story: the port dies while a search is still out, and the
+     * caller gives up. A throw from inside an `abort` listener surfaces nowhere useful.
+     */
+    it('still says a search was abandoned when the abandon cannot be sent', async () => {
+      const port = manualPort()
+      let refuses = false
+      const catalog = createCatalogClient({
+        ...port,
+        postMessage: message => {
+          if (refuses) throw new Error('port is closed')
+          port.postMessage(message)
+        },
+      })
+      const controller = new AbortController()
+
+      const search = catalog.search({ text: 'mos' }, controller.signal)
+      refuses = true
+      expect(() => controller.abort()).not.toThrow()
+
+      await expect(search).rejects.toThrow(ABANDONED)
+    })
   })
 
   it('gives every request its own id, so two in flight do not collide', async () => {

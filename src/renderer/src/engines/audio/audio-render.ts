@@ -107,8 +107,23 @@ export function createAudioRenderer(open: () => WorkerPort): AudioRenderer {
       new Promise(resolve => {
         const id = nextId++
         latest = id
+
+        // Sent before it is recorded, so a worker that will not take the take leaves no entry
+        // behind — and the caller is answered rather than left on a promise nothing settles.
+        // Safe in this order because a worker cannot answer during `postMessage`: its message
+        // event is always a turn later.
+        try {
+          ensure().postMessage({ kind: 'render', id, edits }, [])
+        } catch {
+          // `null`, not a rejection: that is what `render` already answers when a worker dies
+          // mid-take, and no caller of it catches. The port goes with it, so the next take
+          // builds a fresh one.
+          port = null
+          resolve(null)
+          return
+        }
+
         waiting.set(id, resolve)
-        ensure().postMessage({ kind: 'render', id, edits }, [])
       }),
 
     dispose: () => {
