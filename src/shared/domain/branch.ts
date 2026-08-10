@@ -1,4 +1,4 @@
-import type { GraphCondition, GraphConditionBlock } from './graph'
+import { isGraphConditionOperator, type GraphCondition, type GraphConditionBlock } from './graph'
 
 /**
  * One `ifElse` branch, as the CEL its condition compiles to.
@@ -51,6 +51,11 @@ function asValue(value: string | readonly string[] | undefined): string {
 export function conditionToCel(condition: GraphCondition, field: string): string {
   const { operator, value } = condition
 
+  // The converter's `default: return 'false'`, asked at the door rather than at the bottom of the
+  // switch: `blockToCel` is exported from `shared/` and nothing obliges a caller to come through
+  // `conditionBlocksOf`, which is the only thing that folds an unknown operator back to `equals`.
+  if (!isGraphConditionOperator(operator)) return 'false'
+
   switch (operator) {
     case 'isEmpty':
       return `${field} == null || size(${field}) == 0 || (type(${field}) != list && trim(${field}) == "")`
@@ -91,7 +96,7 @@ function betweenToCel(field: string, value: GraphCondition['value']): string {
  *
  * **Empty means the branch has nothing readable to test**, which is not the same as false: the
  * converter returns `''` there, and what the studio does with that is the caller's to decide —
- * `runBranch` treats it as a branch that cannot be taken rather than one that always is.
+ * the executor's `route` treats it as a branch that cannot be taken rather than one that always is.
  *
  * `nameOf` is what turns a condition's field — a PROVIDER NODE ID, which is what the inspector
  * writes — into the CEL name that provider's value is bound to. A field naming a node that feeds
@@ -105,7 +110,11 @@ export function blockToCel(
   const parts: string[] = []
 
   for (const condition of block.conditions) {
-    if (condition.field === undefined) continue
+    // FALSY, not merely absent: the inspector's own "no field" option writes `''`, and the
+    // converter answers `'false'` for it — which `conditionBlockToCEL` then drops. Testing for
+    // `undefined` alone compiled `trim() == 'a'`, which the evaluator throws on: the branch went
+    // red and blocked everything downstream, on a graph Scenario runs without blinking.
+    if (!condition.field) continue
 
     const compiled = conditionToCel(condition, nameOf(condition.field) ?? condition.field)
     // Dropped rather than joined, which is the converter's own filter: one unreadable condition
@@ -113,8 +122,7 @@ export function blockToCel(
     if (compiled !== 'false') parts.push(compiled)
   }
 
-  if (parts.length === 0) return ''
-  if (parts.length === 1) return parts[0] ?? ''
-
+  // `join` on one part IS that part, so no special case: the converter writes the single form
+  // for one condition and the joined form for several, and this answers both.
   return parts.join(block.logic === 'or' ? ' || ' : ' && ')
 }

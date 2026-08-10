@@ -30,6 +30,64 @@ describe('a value as CEL reads it', () => {
   it('answers empty text where no value was given at all', () => {
     expect(conditionToCel({ operator: 'equals' }, 'f')).toBe("trim(f) == ''")
   })
+
+  /** A list value writes a CEL list — what `in` and the multi-value comparisons read. */
+  it('writes a list where the value is one', () => {
+    expect(conditionToCel({ operator: 'equals', value: ['a', "d'or"] }, 'f')).toBe(
+      "trim(f) == ['a', 'd''or']",
+    )
+  })
+})
+
+describe('a field the inspector emptied', () => {
+  /**
+   * The inspector's "no field" option writes `''`, not `undefined` (`IfElseFields.tsx`). The
+   * converter answers `'false'` for a falsy field and then drops it; testing only for `undefined`
+   * compiled `trim() == 'a'`, which the evaluator throws on — the branch went red and blocked
+   * everything downstream, on a graph Scenario runs without blinking.
+   */
+  it('drops a condition whose field was emptied, as the converter drops it', () => {
+    expect(
+      blockToCel({ logic: 'and', conditions: [{ field: '', operator: 'equals' }] }, f => f),
+    ).toBe('')
+  })
+
+  it('keeps the readable conditions of a block one emptied field sits in', () => {
+    const block: GraphConditionBlock = {
+      logic: 'or',
+      conditions: [
+        { field: '', operator: 'equals', value: 'a' },
+        { field: 'text1', operator: 'isEmpty' },
+      ],
+    }
+
+    expect(blockToCel(block, f => f)).toBe(
+      'text1 == null || size(text1) == 0 || (type(text1) != list && trim(text1) == "")',
+    )
+  })
+})
+
+describe('what the converter refuses outright', () => {
+  /**
+   * `blockToCel` is exported from `shared/` and takes a `GraphCondition` — a caller that did not
+   * come through `conditionBlocksOf`, which is the only thing that folds an unknown operator back
+   * to `equals`, would otherwise write `undefined && …` into the CEL sent to the thread.
+   */
+  it('answers false for an operator it does not know', () => {
+    const block: GraphConditionBlock = {
+      logic: 'and',
+      // Through JSON, as a document read off a file reaches it: `parseGraph` validates the node
+      // and never its `data`.
+      conditions: JSON.parse('[{"field":"text1","operator":"soundsLike","value":"a"}]'),
+    }
+
+    expect(blockToCel(block, f => f)).toBe('')
+  })
+
+  it('reads a contains with no value as a match on nothing, as the converter does', () => {
+    expect(conditionToCel({ operator: 'contains' }, 'f')).toBe("f.matches('.*.*')")
+    expect(conditionToCel({ operator: 'notContains' }, 'f')).toBe("!f.matches('.*.*')")
+  })
 })
 
 describe('a between', () => {
@@ -67,6 +125,18 @@ describe('a whole branch', () => {
     }
 
     expect(blockToCel(block, () => undefined)).toBe("trim(nobody) == ''")
+  })
+
+  it('joins with && where the block says and', () => {
+    const block: GraphConditionBlock = {
+      logic: 'and',
+      conditions: [
+        { field: 'text1', operator: 'isNotEmpty' },
+        { field: 'text1', operator: 'equals', value: 'a knight' },
+      ],
+    }
+
+    expect(blockToCel(block, f => f)).toContain(' && ')
   })
 
   it('drops an unreadable condition rather than letting it decide the branch', () => {

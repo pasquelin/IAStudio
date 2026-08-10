@@ -86,10 +86,15 @@ export function branchNode(id: string, blocks: readonly GraphConditionBlock[]): 
     type: 'ifElse',
     position: { x: 0, y: 0 },
     data: {
-      // `name` and not only `id`: the plan keys an input by its port NAME, and a handle without
-      // one falls back to the raw handle id — a port nothing then reads.
+      // Spelt as `conditionalInput` spells it, `type` included: `name` is what the plan keys the
+      // port by, and `type` is what `typesConnect` reads — a fixture typed `''` would run a graph
+      // the editor itself refuses to wire.
       inputHandles: [
-        { id: handleId(id, 'source', CONDITIONAL_PORT), name: CONDITIONAL_PORT, type: '' },
+        {
+          id: handleId(id, 'source', CONDITIONAL_PORT),
+          name: CONDITIONAL_PORT,
+          type: CONDITIONAL_PORT,
+        },
       ],
     },
   }

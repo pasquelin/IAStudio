@@ -6,6 +6,7 @@ import {
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
+import { evaluateCel } from '@scenario-labs/sdk/tools/cel'
 import { blockToCel } from '@shared/domain/branch'
 import {
   compileGraph,
@@ -400,6 +401,44 @@ describe('a branch as the converter compiles one', () => {
     const ours = blocks.map(block => blockToCel(block, field => field))
 
     expect(ours).toEqual(scenario)
+  })
+
+  /**
+   * The string being right is not the same as the DECISION being right, and that gap is where two
+   * defects hid: a condition compiled exactly as Scenario compiles it can still be evaluated over
+   * the wrong bindings, or fail to evaluate at all. So this one runs the real evaluator — the same
+   * one the studio's thread uses — over what `blockToCel` writes.
+   */
+  it('decides what Scenario decides, evaluated and not merely spelled', () => {
+    const bound = { text1_output: 'a knight', text2_output: 'green' }
+    const decide = (block: GraphConditionBlock): unknown =>
+      evaluateCel(
+        blockToCel(block, field => `${field}_output`),
+        bound,
+      )
+
+    // Each provider reads as ITSELF: a condition over one must not see what the other carries.
+    expect(
+      decide({
+        logic: 'and',
+        conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }],
+      }),
+    ).toBe(true)
+    expect(
+      decide({
+        logic: 'and',
+        conditions: [{ field: 'text2', operator: 'equals', value: 'a knight' }],
+      }),
+    ).toBe(false)
+    expect(
+      decide({
+        logic: 'or',
+        conditions: [
+          { field: 'text2', operator: 'equals', value: 'a knight' },
+          { field: 'text1', operator: 'isNotEmpty' },
+        ],
+      }),
+    ).toBe(true)
   })
 
   /** Joining is the converter's too, and an `or` that joined with `&&` would decide backwards. */

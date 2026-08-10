@@ -61,14 +61,20 @@ export type GraphRunResult =
 type Outcome = { values: Readonly<Record<string, readonly string[]>> } | 'skipped' | null
 
 /**
- * The name of a node's first output port, which is the only one every type but `ifElse` has.
+ * Every port a node publishes its one result on.
  *
- * Resolved from the node rather than assumed to be `DEFAULT_OUTPUT_NAME`: a consumer names the
- * port it reads from the handle the edge lands on, and a producer keying its result under another
- * spelling would hand back nothing at all.
+ * ALL of them, not the first: a node that is not a branch produces one value and offers it to
+ * whoever reads any of its outputs — which is what a flat outcome did before it was keyed by port.
+ * Keying under the first alone made a reader of a second declared output — `firstOutput` beside
+ * `output`, a shape the converter knows — read as a branch nobody took: grey, silent, and wrong.
+ *
+ * `DEFAULT_OUTPUT_NAME` where a node declares no port at all, which is the fallback the plan
+ * resolves an edge to on the other side.
  */
-const outputName = (node: GraphNode): string =>
-  outputHandlesOf(node)[0]?.name ?? DEFAULT_OUTPUT_NAME
+const outputNames = (node: GraphNode): readonly string[] => {
+  const named = outputHandlesOf(node).flatMap(handle => handle.name ?? [])
+  return named.length > 0 ? named : [DEFAULT_OUTPUT_NAME]
+}
 
 /** Why a node is not going to run: something it reads failed, or no branch ever reached it. */
 type Reach = 'ready' | 'skipped' | 'blocked'
@@ -135,7 +141,7 @@ export async function runGraph(
   const keep = (planned: GraphPlanNode, node: GraphNode, values: readonly string[]): Outcome => {
     produced.set(planned.hash, values)
     report(planned.id, { status: 'done' })
-    return { values: { [outputName(node)]: values } }
+    return { values: Object.fromEntries(outputNames(node).map(port => [port, values])) }
   }
 
   /**
@@ -147,9 +153,9 @@ export async function runGraph(
    * same way, whatever its condition now says. A branch produces nothing anyway: it routes what it
    * already received, and re-deciding costs one CEL evaluation.
    */
-  const routeTo = (id: string, port: string, values: readonly string[]): Outcome => {
+  const routeTo = (id: string, ports: readonly string[], values: readonly string[]): Outcome => {
     report(id, { status: 'done' })
-    return { values: { [port]: values } }
+    return { values: Object.fromEntries(ports.map(port => [port, values])) }
   }
 
   /**
@@ -168,6 +174,7 @@ export async function runGraph(
    */
   const resolveInputs = async (
     planned: GraphPlanNode,
+    node: GraphNode,
   ): Promise<Resolved | Exclude<Reach, 'ready'>> => {
     const values: Record<string, readonly string[]> = {}
     const variables: Record<string, string | readonly string[]> = {}
@@ -184,13 +191,23 @@ export async function runGraph(
 
         // The port the edge leaves from, never the whole node: a branch that was not taken has
         // no entry here, and reading the node flat would hand on what another branch produced.
-        // Absent, not empty: the provider produced on another of its ports, so this wire was
-        // never going to carry anything — a branch the condition did not choose.
         const through = upstream.values[source.output]
-        if (!through) return 'skipped'
+
+        if (!through) {
+          // Absent because the provider produced on ANOTHER of its ports: a branch the condition
+          // did not choose, and nothing went wrong. Absent because it produced on none at all:
+          // the wire names a port that does not exist, which is a graph read off a file rather
+          // than a branch — red, not a quiet grey.
+          return Object.keys(upstream.values).length > 0 ? 'skipped' : 'blocked'
+        }
 
         carried.push(...through)
-        if (port !== CONDITIONAL_PORT) {
+        // The conditional port is named for a branch and only for a branch: everywhere else it is
+        // the gate an approval or a branch holds, and the converter skips that edge before it
+        // names anything. On the branch ITSELF it is the value being tested. Named HERE rather
+        // than rebuilt later, so each provider keeps ITS OWN values — rebuilt from the port's
+        // concatenation, two providers in one condition would both read both.
+        if (port !== CONDITIONAL_PORT || node.type === 'ifElse') {
           variables[celVariableName(source.node, source.output)] = asVariable(through)
         }
       }
@@ -201,8 +218,11 @@ export async function runGraph(
     return { values, variables }
   }
 
-  /** Whether every approval standing between this node and its providers was given. */
-  const cleared = async (planned: GraphPlanNode): Promise<Reach> => {
+  /**
+   * How far the approvals standing between this node and its providers let it get: given, never
+   * asked because no branch reached them, or refused.
+   */
+  const reachOf = async (planned: GraphPlanNode): Promise<Reach> => {
     for (const id of planned.awaits) {
       // Present for the same reason an input's provider is: the plan puts an approval before
       // everything it guards, which is why it works out the dependency rather than the executor.
@@ -289,58 +309,72 @@ export async function runGraph(
     node: GraphNode,
     inputs: Resolved,
   ): Promise<Outcome> => {
-    const ports = outputHandlesOf(node)
+    /**
+     * Approval handles are dropped before anything is counted, because the converter drops them:
+     * `// Approval handles are UI-only and must not shift case/else indices.` A node carrying one
+     * would otherwise pair block 1 with the approval's port, and every branch would route one
+     * place off — silently, since both ends are well-formed ports.
+     */
+    const ports = outputHandlesOf(node).filter(port => port.type !== 'approval')
+    const blocks = conditionBlocksOf(node)
     const carried = inputs.values[CONDITIONAL_PORT] ?? []
 
     /**
-     * A condition names a PROVIDER NODE, and the studio binds that provider to a CEL variable.
+     * A condition names a PROVIDER NODE; the studio binds that provider to a CEL variable.
      *
-     * Built here rather than taken from `inputs.variables`, and that is the whole subtlety: the
-     * conditional port is dropped from those on purpose — for every other node it is the gate an
-     * approval or a branch holds, never a value to read. For the branch ITSELF it is the value
-     * being tested, so it has to be named after all.
+     * Only the mapping is built here — the VALUES come from `resolveInputs`, which already holds
+     * one entry per provider. Rebuilding them from the port's own list would hand every provider
+     * the concatenation of them all, and a condition over two of them would read both twice.
      */
     const named = new Map<string, string>()
-    const variables: Record<string, string | readonly string[]> = { ...inputs.variables }
 
-    for (const [port, sources] of Object.entries(planned.inputs)) {
+    for (const sources of Object.values(planned.inputs)) {
       for (const source of sources) {
-        const name = celVariableName(source.node, source.output)
-        named.set(source.node, name)
-        if (port === CONDITIONAL_PORT) variables[name] = asVariable(carried)
+        named.set(source.node, celVariableName(source.node, source.output))
       }
     }
 
     report(node.id, { status: 'running' })
 
-    for (const [index, block] of conditionBlocksOf(node).entries()) {
+    for (const [index, block] of blocks.entries()) {
       const expression = blockToCel(block, field => named.get(field))
       // Nothing readable to test is not the same as false: a branch the converter compiles to no
       // case at all cannot be taken, and the run walks on to the next one.
       if (expression === '') continue
 
-      const answer = await transform(expression, variables).catch(() => null)
+      const answer = await transform(expression, inputs.variables).catch(() => null)
       if (stopped(node.id)) return null
       if (!answer) return fail(node.id, 'invalid-expression')
 
       // `['true']` because a boolean crosses the boundary as text — `workflow-transform.ts` calls
       // `String` on it and wraps the result in a list.
+      if (answer[0] !== 'true') continue
+
+      // A file may carry fewer ports than blocks. A condition that held with nowhere to send what
+      // it matched is not a branch to walk past in silence — it is a graph that cannot be run.
       const port = ports[index]?.name
-      if (answer[0] === 'true' && port !== undefined) return routeTo(node.id, port, carried)
+      if (port === undefined) return fail(node.id, 'unsupported')
+
+      return routeTo(node.id, [port], carried)
     }
 
-    // The else, which is the port past the last block. Absent only on a node whose ports were
-    // written by hand, and there the branch has nowhere to send what it received.
-    const fallback = ports[conditionBlocksOf(node).length]?.name
-    return fallback === undefined
-      ? fail(node.id, 'unsupported')
-      : routeTo(node.id, fallback, carried)
+    /**
+     * EVERY port past the last block is the else, not just the first of them: the converter reads
+     * `handleIndex >= blocks.length` as the default, and `grownTo` says in as many words that a
+     * file carrying more ports than blocks is carrying several else ports and that trimming them
+     * would be this editor deciding what a document it did not write meant.
+     */
+    const fallbacks = ports.slice(blocks.length).flatMap(port => port.name ?? [])
+
+    if (fallbacks.length === 0) return fail(node.id, 'unsupported')
+
+    return routeTo(node.id, fallbacks, carried)
   }
 
   const execute = async (planned: GraphPlanNode, node: GraphNode): Promise<Outcome> => {
     // Waited on BEFORE the cache is read, which is the whole point of the plan carrying them: a
     // result kept from a run somebody approved must not come back on a run they have declined.
-    const gate = await cleared(planned)
+    const gate = await reachOf(planned)
 
     if (gate !== 'ready') {
       if (stopped(node.id)) return null
@@ -353,10 +387,10 @@ export async function runGraph(
     const held = cache.get(planned.hash)
     if (held) {
       report(node.id, { status: 'cached' })
-      return { values: { [outputName(node)]: held } }
+      return { values: Object.fromEntries(outputNames(node).map(port => [port, held])) }
     }
 
-    const inputs = await resolveInputs(planned)
+    const inputs = await resolveInputs(planned, node)
 
     // Asked after the inputs, and BEFORE the blocked branch: a stop pressed while a provider was
     // on the wire leaves what it feeds idle, rather than reporting a failure nothing caused.
