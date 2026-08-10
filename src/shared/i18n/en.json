@@ -31,7 +31,13 @@
     "channels": "Channels",
     "styles": "Styles",
     "view": "View",
-    "apps": "Apps"
+    "apps": "Apps",
+    "projects": "Your projects",
+    "creations": "What you have made",
+    "counts": "By kind",
+    "library": "Your library",
+    "documents": "Your documents",
+    "activity": "Recent activity"
   },
   "view": {
     "empty": "Open a skybox to change how it is being displayed.",
@@ -1827,14 +1833,8 @@
     "sections": {
       "spotlight": "Where you were",
       "tools": "Tools",
-      "projects": "Your projects",
-      "creations": "What you have made",
-      "byMode": "By kind",
       "favorites": "Your recipes",
-      "library": "Your library",
-      "documents": "Your documents",
       "jobs": "Running now",
-      "activity": "Recent activity",
       "spark": "An idea to start from",
       "similar": "In the same vein",
       "usage": "What you have spent",
@@ -1861,14 +1861,13 @@
     "projects": {
       "none": "Create your first project"
     },
-    "documents": {
-      "none": "This project holds no document yet. Pick a tool above to make one."
-    },
     "creations": {
-      "recreate": "Make another one with {{model}}"
+      "recreate": "Make another one with {{model}}",
+      "none": "Whatever you generate in this project will show up here."
     },
     "library": {
-      "fetch": "Fetch “{{name}}” into the project"
+      "fetch": "Fetch “{{name}}” into the project",
+      "none": "Your Scenario account library is empty, or no API key has been entered yet."
     },
     "favorites": {
       "unpin": "Take “{{name}}” off your recipes"

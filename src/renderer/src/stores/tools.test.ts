@@ -142,17 +142,17 @@ describe('tools store', () => {
 })
 
 /**
- * The home and the six spaces both use the left column — for the Explorer and for generation.
- * They never share the screen, so they must not share the column: every one of these was a real
- * defect before the arrangement was split per family, and each is a gesture on one surface
- * silently rewriting the other.
+ * The home and the six spaces use the same two columns — the projects and the journal on one
+ * side, the Explorer and generation on the other. They never share the screen, so they must not
+ * share an arrangement: every one of these was a real defect before it was split per family, and
+ * each is a gesture on one surface silently rewriting the other.
  */
 describe('the home and the workspaces arrange their zones apart', () => {
   beforeEach(() => {
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS, focusedZone: null })
   })
 
-  it('does not close the generation column when the Explorer is closed on the home', () => {
+  it('does not close the generation column when the projects are closed on the home', () => {
     useTools.getState().close(HOME_SURFACE, 'left', 'secondary')
 
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left?.secondary).toBeUndefined()
@@ -162,18 +162,18 @@ describe('the home and the workspaces arrange their zones apart', () => {
     })
   })
 
-  // The one that lost a setting: the space kept `generator`, the home wrote `explorer` over it,
-  // and `shownTool` then fell back to the Models panel for good.
+  // The one that lost a setting: the space kept `generator`, the home wrote its own panel over
+  // it, and `shownTool` then fell back to the Models panel for good.
   it('does not overwrite the panel a space named in the same column', () => {
     useTools.getState().show('image', 'left', 'generator')
-    useTools.getState().show(HOME_SURFACE, 'left', 'explorer')
+    useTools.getState().show(HOME_SURFACE, 'left', 'projects')
 
     expect(arrangementOf(useTools.getState(), 'image').open.left).toEqual({
       primary: 'generator',
       secondary: null,
     })
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
-      secondary: 'explorer',
+      secondary: 'projects',
     })
   })
 
@@ -187,18 +187,17 @@ describe('the home and the workspaces arrange their zones apart', () => {
   })
 
   /**
-   * The home draws no right column, so nothing on the right may bound the left one's drag —
-   * while in a space the same drag still has to leave the right column and the document room.
+   * The home draws a right column now, so its left one is bounded exactly as a space's is: both
+   * have to leave the opposite column and the centre room. It was the one surface where a drag
+   * could take the whole window, and that stopped being true when it gained its second column.
    */
-  it('does not bound the home column against a right column it never draws', () => {
+  it('bounds each column against the other, on the home as in a space', () => {
     useTools.getState().resize(HOME_SURFACE, 'left', 700, 1000)
     useTools.getState().resize('image', 'left', 700, 1000)
 
-    const home = arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left ?? 0
-    const workspaces = arrangementOf(useTools.getState(), 'image').sizes.left ?? 0
-
-    expect(home).toBe(700)
-    expect(workspaces).toBe(1000 - DEFAULT_SIZES.right - MIN_CENTER)
+    const bounded = 1000 - DEFAULT_SIZES.right - MIN_CENTER
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(bounded)
+    expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(bounded)
   })
 
   it('re-clamps both families when the window shrinks', () => {
@@ -207,17 +206,19 @@ describe('the home and the workspaces arrange their zones apart', () => {
 
     useTools.getState().fit(600, 600)
 
-    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(600 - MIN_CENTER)
+    expect(arrangementOf(useTools.getState(), HOME_SURFACE).sizes.left).toBe(MIN_SIZE)
     expect(arrangementOf(useTools.getState(), 'image').sizes.left).toBe(MIN_SIZE)
   })
 })
 
 describe('migrating to the split arrangement', () => {
   // Everything version 8 stored was the workspaces': the home had no zones of its own to arrange.
-  it('reads a version 8 layout as the workspaces, and starts the home on its default', () => {
+  // Version 9 gave it one column; the default is two now, which is why the home is rebuilt rather
+  // than read back at either version.
+  it.each([8, 9])('reads a version %i layout as the workspaces, and defaults the home', version => {
     const migrated = migrateTools(
       { open: { right: { primary: 'layers' } }, sizes: { left: 400 } },
-      8,
+      version,
     )
 
     expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })

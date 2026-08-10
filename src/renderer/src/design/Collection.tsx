@@ -19,7 +19,12 @@ export type CollectionProps<T extends { id: string }> = {
    * thumbnails has no card to draw, and inventing one so it is never called is noise.
    */
   renderCard?: (item: T) => ReactNode
-  renderRow: (item: T) => ReactNode
+  /**
+   * Absent for a collection that is only ever a grid — the home's shelves of pictures, whose
+   * state is a module constant with no bar to change it. A row written for a view nobody can
+   * reach is a second rendering of the item that no eye ever checks.
+   */
+  renderRow?: (item: T) => ReactNode
   /**
    * What the list is called. A `listbox` is a widget, and an unnamed widget is announced as the
    * bare word "listbox" — the same word in all six panels that draw one.
@@ -303,7 +308,7 @@ export function Collection<T extends { id: string }>({
                       onActivate={onActivate ? () => onActivate(item) : undefined}
                       onArrow={event => onCellKeyDown(index, event)}
                     >
-                      {card ? card(item) : renderRow(item)}
+                      {card ? card(item) : renderRow?.(item)}
                     </CollectionCell>
                   )
                 })}

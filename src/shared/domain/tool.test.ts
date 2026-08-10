@@ -115,29 +115,48 @@ describe('every workspace', () => {
 })
 
 describe('the home', () => {
-  it('stands the Explorer in its left column, where a panel is reached from the rail', () => {
-    expect(placementIn('explorer', HOME_SURFACE)).toMatchObject({ zone: 'left', slot: 'secondary' })
+  /**
+   * Two columns and no band, which is what makes it a surface like the others: what one opens on
+   * the left, what the open project holds on the right, and the centre kept for the page.
+   *
+   * The order is the order of the rail, and the first of a half is what an unchosen half draws —
+   * so this holds both the icon stack and what the screen opens on.
+   */
+  it('stands its panels in two columns, in the order their icons stack', () => {
+    const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
+
+    expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
+      ['projects', 'left', 'secondary'],
+      ['creations', 'right', 'primary'],
+      ['counts', 'right', 'primary'],
+      ['library', 'right', 'primary'],
+      ['documents', 'right', 'primary'],
+      ['activity', 'right', 'secondary'],
+    ])
   })
 
   /**
-   * One placement, not two, and that is the point: the panel keeps the same half and the same
-   * rail row on the home as in the spaces. The home has no generation for it to sit under, and
-   * `Edge` gives a lone half the whole zone — so it fills the column there, as it always did.
+   * They read the studio rather than a document, which is what a workspace's columns are not
+   * for: a panel of recent projects beside an editor is a panel about somewhere else.
    */
-  it('reaches the Explorer through the same placement the spaces use', () => {
-    expect(placementsOf('explorer')).toHaveLength(1)
-    for (const workspace of WORKSPACE_IDS) {
-      expect(placementIn('explorer', workspace)).toMatchObject({ zone: 'left', slot: 'secondary' })
+  it('keeps its panels to itself, and takes none of the workspaces', () => {
+    for (const id of ['projects', 'creations', 'counts', 'library', 'documents', 'activity']) {
+      expect(placementsOf(id)).toHaveLength(1)
+      for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
     }
   })
 
   /**
-   * The rest act on an open document, and the home has none — the shell draws it no right rail
-   * and no bottom strip, so a placement reaching them would be an icon nothing can show.
+   * The Explorer left this surface for the projects on 10 August. Its list did not: the home's
+   * right column draws it under `documents`, which is the name that screen gives it — one
+   * folder read once, rather than a shelf and a tree that had drifted apart.
    */
-  it('offers the Explorer and nothing else', () => {
-    const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
-    expect(served.map(placement => placement.id)).toEqual(['explorer'])
+  it('leaves the Explorer to the spaces, where it keeps one placement for all seven', () => {
+    expect(placementIn('explorer', HOME_SURFACE)).toBeNull()
+    expect(placementsOf('explorer')).toHaveLength(1)
+    for (const workspace of WORKSPACE_IDS) {
+      expect(placementIn('explorer', workspace)).toMatchObject({ zone: 'left', slot: 'secondary' })
+    }
   })
 
   it('is not a workspace: no document kind or workspace menu can name it', () => {
@@ -181,8 +200,13 @@ describe('the left column', () => {
    * generator visible WHILE the Explorer is read, which taking turns forbids by construction.
    */
   it('holds what one produces with in its lower half, and nothing else', () => {
+    // The spaces' own half. The home's left column is the same zone and the same slot, and it
+    // holds the projects — a surface that generates nothing, so the rule above is not about it.
     const lower = TOOL_PLACEMENTS.filter(
-      placement => placement.zone === 'left' && placement.slot === 'secondary',
+      placement =>
+        placement.zone === 'left' &&
+        placement.slot === 'secondary' &&
+        WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
     )
 
     expect(lower.map(placement => placement.id)).toEqual(['explorer', 'apps'])

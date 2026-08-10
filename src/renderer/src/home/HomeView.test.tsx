@@ -56,7 +56,6 @@ describe('the home', () => {
     // not among them: the rail's + and the tools band already offer it, three times over.
     expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
     expect(screen.getByText('Outils')).toBeInTheDocument()
-    expect(screen.getByText('Vos projets')).toBeInTheDocument()
   })
 
   it('still fills the page when the user hid everything they are allowed to', () => {
@@ -64,7 +63,6 @@ describe('the home', () => {
     render(<HomeView />)
 
     expect(screen.getByText('Outils')).toBeInTheDocument()
-    expect(screen.getByText('Vos projets')).toBeInTheDocument()
   })
 
   it('drops what needs a key rather than drawing it empty', () => {
@@ -73,7 +71,7 @@ describe('the home', () => {
     expect(screen.queryByText('En cours')).not.toBeInTheDocument()
   })
 
-  it('offers the documents of the project once one is open', () => {
+  it('points back at what was open, which is the one thing it still lists itself', () => {
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({
       documents: { a: POSTER_DOCUMENT },
@@ -82,8 +80,6 @@ describe('the home', () => {
     })
     render(<HomeView />)
 
-    expect(screen.getByText('Vos documents')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Poster/ })).toBeInTheDocument()
     expect(screen.getByText('Reprendre où vous en étiez')).toBeInTheDocument()
   })
 
@@ -102,17 +98,26 @@ describe('the home', () => {
   })
 
   /**
-   * The Explorer is a panel, not a band of the page: the shell stands it in the left column
-   * under a rail icon, like every other panel. Listed here too, it would be the same folder
-   * read twice on one screen, with two behaviours to keep in step.
+   * Six bands became panels on 10 August: the shell stands them in the home's two columns, under
+   * rail icons like every other panel. Drawn here too, each would be the same store read twice on
+   * one screen, with two behaviours to keep in step — which is what they were.
    */
-  it('does not draw the tree of documents: that is a panel, and the shell places it', () => {
+  it('draws none of the bands that became panels: the shell places those', () => {
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
-    const { container } = render(<HomeView />)
+    render(<HomeView />)
 
-    expect(container.querySelector('aside')).toBeNull()
-    expect(screen.queryByRole('heading', { name: 'Explorateur' })).not.toBeInTheDocument()
+    for (const title of [
+      'Vos projets',
+      'Ce que vous avez produit',
+      'Par type',
+      'Votre bibliothèque',
+      'Vos documents',
+      'Activité récente',
+      'Explorateur',
+    ]) {
+      expect(screen.queryByText(title)).not.toBeInTheDocument()
+    }
   })
 
   /**
@@ -167,18 +172,18 @@ describe('customising the home', () => {
     // Every band but one shown, rather than the defaults: the count is what is under test, and a
     // section hidden on a fresh install would make it read two.
     setSettings(
-      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'documents' })),
+      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'usage' })),
     )
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />)
 
-    expect(screen.queryByText('Vos documents')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ce que vous avez consommé')).not.toBeInTheDocument()
     expect(screen.getByText('1 section masquée')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Les réafficher' }))
 
     const written = useSettings.getState().settings.home.sections
-    expect(written.find(section => section.id === 'documents')?.visible).toBe(true)
+    expect(written.find(section => section.id === 'usage')?.visible).toBe(true)
   })
 })

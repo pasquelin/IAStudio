@@ -10,7 +10,7 @@ import { RefusedSection } from '../RefusedSection'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { ShelfCard, SHELF_CARD_HEIGHT } from '../ShelfCard'
-import { useDeferredShelf } from '../use-shelf'
+import { useDeferredShelf } from '@/hooks/use-shelf'
 
 /** Wide enough for a model name and two figures under it, without wrapping either. */
 const CARD_WIDTH = 220

@@ -100,7 +100,9 @@ export function ShelfTile({
   const tile = <MediaTile url={url} caption={caption} fallbackIcon={fallbackIcon} />
 
   return (
-    <div className="relative size-full">
+    // Its own hover group, which `SHELF_OVERLAY` reads: in a panel's grid there is no carousel
+    // around the tile to hover, and the corner action would never appear.
+    <div className="group/tile relative size-full">
       {onClick ? (
         <button
           type="button"

@@ -4,19 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { settleHome } from '../home-fixtures'
+import { settleHome } from '@/home/home-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { openFromHome } from '../open'
-import type * as HomeOpenModule from '../open'
+import { openFromHome } from '@/home/open'
+import type * as HomeOpenModule from '@/home/open'
 import { Library } from './Library'
 
 // Where the asset lands is `ASSET_INTENTS`' business, and it needs open documents to have one.
-// What this band answers for is which of the two gestures it calls. Mocked at `home/open` rather
-// than at the helper: the band loads the cascade on the click, to keep it out of the opening chunk.
-vi.mock('../open', async importOriginal => ({
+// What this panel answers for is which of the two gestures it calls. Mocked at `home/open` rather
+// than at the helper: it loads the cascade on the click, to keep it out of the opening chunk.
+vi.mock('@/home/open', async importOriginal => ({
   ...(await importOriginal<typeof HomeOpenModule>()),
   openFromHome: vi.fn(),
 }))
@@ -82,7 +82,20 @@ beforeEach(() => {
   useAssets.setState({ items: [] })
 })
 
-describe('the library shelf', () => {
+describe('the library panel', () => {
+  /**
+   * A cloud asset the account holds no preview and no generation for. The tile falls back to the
+   * kind's glyph and to the file name — a square with nothing in it and no caption would be a
+   * picture nobody can identify.
+   */
+  it('falls back to the kind and the file name when there is neither preview nor model', async () => {
+    install([cloudAsset({ thumbnailUrl: undefined, generation: undefined })])
+    const { container } = render(<Library />)
+
+    expect(await screen.findByText('boulder.png')).toBeInTheDocument()
+    expect(container.querySelector('img')).toBeNull()
+  })
+
   /**
    * The thumbnail, not the asset: its URL is public and stable, while the asset's own carries a
    * signature that appending anything to would invalidate — the CDN answers 403.
@@ -97,6 +110,19 @@ describe('the library shelf', () => {
     )
   })
 
+  /**
+   * No key yet, so no account to read a library from. The panel is in the rail all the same, and
+   * its emptiness has to name the two silences it can mean.
+   */
+  it('says why it is empty when no key has been entered', async () => {
+    useSettings.setState({ auth: { authenticated: false, reason: 'missing' } })
+    const { browse } = install([])
+    render(<Library />)
+
+    await vi.waitFor(() => expect(browse).toHaveBeenCalled())
+    expect(screen.getByText(/aucune clé API n’est renseignée/)).toBeInTheDocument()
+  })
+
   it('fetches into the project when one is open', async () => {
     const { pull } = install([cloudAsset()])
     render(<Library />)
@@ -107,8 +133,8 @@ describe('the library shelf', () => {
   })
 
   /**
-   * The section only needs a key, not a folder — what the account holds is worth showing before
-   * a project is open. But nothing here may act without one to write into.
+   * The panel only needs a key, not a folder — what the account holds is worth showing before a
+   * project is open. But nothing here may act without one to write into.
    */
   it('shows what the account holds without a project, and offers no way to fetch it', async () => {
     useProject.setState({ project: null, known: true })
@@ -119,12 +145,17 @@ describe('the library shelf', () => {
     expect(screen.queryByRole('button', { name: /boulder\.png/ })).not.toBeInTheDocument()
   })
 
-  it('takes itself off when the library answers nothing', async () => {
+  /**
+   * A band could take itself off the page; a column standing under a rail icon cannot — an empty
+   * panel reads as a bug. It says which of the two silences this is: an empty account, or no key
+   * entered yet.
+   */
+  it('says why it is empty rather than standing blank', async () => {
     const { browse } = install([])
-    const { container } = render(<Library />)
+    render(<Library />)
 
     await vi.waitFor(() => expect(browse).toHaveBeenCalled())
-    expect(container).toBeEmptyDOMElement()
+    expect(screen.getByText(/bibliothèque de votre compte Scenario est vide/)).toBeInTheDocument()
   })
 
   /**
@@ -135,8 +166,11 @@ describe('the library shelf', () => {
   describe('what a click on the picture does', () => {
     it('opens an asset the project has already fetched', async () => {
       const fetched: Asset = { ...localAsset(), remoteAssetId: 'cloud_1' }
-      install([cloudAsset()], [fetched])
-      useAssets.setState({ items: [fetched] })
+      // An imported asset alongside it: the catalogue holds plenty that came from no library at
+      // all, and pairing by `remoteAssetId` has to step over them rather than trip on one.
+      const imported: Asset = { ...localAsset(), id: 'asset_0' }
+      install([cloudAsset()], [imported, fetched])
+      useAssets.setState({ items: [imported, fetched] })
       render(<Library />)
 
       await userEvent.click(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ }))

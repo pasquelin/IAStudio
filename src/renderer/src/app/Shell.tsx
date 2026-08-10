@@ -58,10 +58,10 @@ export function Shell() {
         actions={<AccountSelect />}
       />
 
-      {/* One frame for both surfaces. The zones the home does not have take themselves off: no
-          placement serves them there, so every `Edge` but the left column renders nothing. Only
-          the right rail has to be told — it is a strip of chassis whether or not it holds an
-          icon. The home swaps the centre for the page; no Dockview, which takes documents only. */}
+      {/* One frame for both surfaces, and now the same shape on each: two columns of panels
+          around a centre. The zones a surface does not have take themselves off on their own —
+          no placement serves them there, so the home's bands render nothing without being told.
+          It swaps the centre for the page; no Dockview, which takes documents only. */}
       <div className="flex min-h-0 flex-1">
         <Rail side="left" />
 
@@ -79,7 +79,7 @@ export function Shell() {
           <Edge zone="bottom" />
         </div>
 
-        {!home && <Rail side="right" />}
+        <Rail side="right" />
       </div>
 
       <Footer

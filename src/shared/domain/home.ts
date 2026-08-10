@@ -8,24 +8,24 @@ import { reconcileOrder } from './order'
  * The renderer enriches these ids with icons and components; nothing here knows about React.
  */
 
-/** What a section cannot be drawn without. A section with none is drawable at all times. */
-export type HomeRequirement = 'api' | 'project'
+/**
+ * What a section cannot be drawn without. A section with none is drawable at all times.
+ *
+ * A key, and nothing else. There was a `'project'` requirement too, worn by the four bands that
+ * listed what a folder held — and all four are panels now, where an open folder is an empty
+ * state rather than a reason to disappear. A requirement no section declares is a branch nobody
+ * can reach, so it went with them.
+ */
+export type HomeRequirement = 'api'
 
+/**
+ * A band of the page, and only that. Six ids left this union on 10 August for
+ * `domain/tool.ts` — the projects, what was made, the counts, the library, the documents and
+ * the journal became panels of the home's two columns. A section is what the CENTRE stacks;
+ * anything the rails hold is a placement, and the two registries never name the same thing.
+ */
 export type HomeSectionId =
-  | 'spotlight'
-  | 'tools'
-  | 'projects'
-  | 'creations'
-  | 'byMode'
-  | 'favorites'
-  | 'library'
-  | 'documents'
-  | 'jobs'
-  | 'activity'
-  | 'usage'
-  | 'similar'
-  | 'spark'
-  | 'explore'
+  'spotlight' | 'tools' | 'favorites' | 'jobs' | 'usage' | 'similar' | 'spark' | 'explore'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -45,13 +45,6 @@ export type HomeSectionEntry = {
    * the menu should be able to express.
    */
   anchored?: boolean
-  /**
-   * Off on a fresh install, and offered back by the section menu like any hidden band.
-   *
-   * For a section whose content is already on screen elsewhere: the activity feed is the same
-   * `useActivity` entries the bottom panel draws, so a default install showed them twice.
-   */
-  hiddenByDefault?: boolean
 }
 
 /**
@@ -61,17 +54,10 @@ export type HomeSectionEntry = {
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'spotlight', requires: [], pinned: true },
   { id: 'tools', requires: [], pinned: true },
-  { id: 'projects', requires: [], pinned: true, defaultLimit: 12 },
-  { id: 'creations', requires: ['project'], defaultLimit: 12 },
-  // No limit: the band is one counter per kind, and there are exactly six kinds.
-  { id: 'byMode', requires: ['project'] },
   // Requires nothing: a recipe is kept outside every project, and the shelf is the one place
   // that still has something to show when no folder is open.
   { id: 'favorites', requires: [], defaultLimit: 12 },
-  { id: 'library', requires: ['api'], defaultLimit: 12 },
-  { id: 'documents', requires: ['project'], defaultLimit: 12 },
   { id: 'jobs', requires: ['api'], defaultLimit: 8 },
-  { id: 'activity', requires: ['project'], defaultLimit: 6, hiddenByDefault: true },
   { id: 'similar', requires: ['api'] },
   { id: 'spark', requires: ['api'] },
   { id: 'usage', requires: ['api'], defaultLimit: 6 },
@@ -102,21 +88,18 @@ export function homeSectionOf(id: unknown): HomeSectionEntry | null {
 }
 
 function settingOf(entry: HomeSectionEntry): HomeSectionSetting {
-  return { id: entry.id, visible: entry.hiddenByDefault !== true }
+  return { id: entry.id, visible: true }
 }
 
 export const DEFAULT_HOME_SECTIONS: readonly HomeSectionSetting[] = HOME_SECTIONS.map(settingOf)
 
-/** What the studio can currently draw from. Both answers come from stores, never from here. */
+/** What the studio can currently draw from. The answer comes from a store, never from here. */
 export type HomeContext = {
   authenticated: boolean
-  hasProject: boolean
 }
 
 function satisfies(entry: HomeSectionEntry, context: HomeContext): boolean {
-  return entry.requires.every(requirement =>
-    requirement === 'api' ? context.authenticated : context.hasProject,
-  )
+  return entry.requires.every(() => context.authenticated)
 }
 
 /**

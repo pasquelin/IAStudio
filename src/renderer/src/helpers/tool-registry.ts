@@ -1,13 +1,19 @@
 import {
   mdiApplicationBracesOutline,
+  mdiCloudOutline,
   mdiCreationOutline,
   mdiCubeScan,
+  mdiFileDocumentMultipleOutline,
   mdiFileTreeOutline,
+  mdiFolderMultipleOutline,
   mdiFolderOutline,
   mdiGridLarge,
+  mdiHistory,
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiPaletteSwatchOutline,
+  mdiShapeOutline,
+  mdiShimmer,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
@@ -54,6 +60,16 @@ const ICONS: Record<ToolId, string> = {
   channels: mdiGridLarge,
   styles: mdiPaletteSwatchOutline,
   apps: mdiApplicationBracesOutline,
+  // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
+  // generator's: a rail where two glyphs mean two things is a rail one reads twice.
+  projects: mdiFolderMultipleOutline,
+  creations: mdiShimmer,
+  counts: mdiShapeOutline,
+  library: mdiCloudOutline,
+  documents: mdiFileDocumentMultipleOutline,
+  // The glyph the status bar already puts on the journal (`app/ActivityList.tsx`), which is the
+  // same list: two ways into one thing must not wear two icons.
+  activity: mdiHistory,
 }
 
 /**
