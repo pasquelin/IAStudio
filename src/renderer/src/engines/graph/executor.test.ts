@@ -1353,23 +1353,38 @@ describe('a branch, run locally', () => {
     expect(failureOf(watched, 'if1')).toBe('invalid-expression')
   })
 
-  /** A port with no name is a port nothing can be wired to: it is not an else the branch can use. */
-  it('does not count a nameless port as somewhere to send the else', async () => {
+  /**
+   * A nameless else port IS somewhere to send the else: the plan wires a nameless handle under
+   * `output` (`plan.ts`), and a file is free to leave the name off — the converter pairs its
+   * ports by INDEX, not by name. Failing the node there turned a graph Scenario routes into red.
+   */
+  it('sends the else to a port a file left unnamed', async () => {
     const branch = branchNode('if1', [
-      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isEmpty' }] },
     ])
     const nameless = updateNodeData(
       graphOf(
-        [textNode('text1', 'a knight'), branch],
-        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt')],
+        [textNode('text1', 'a knight'), branch, modelNode('m1', {}, 'model_else')],
+        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'), wire('m1', 'prompt', 'if1', 'else')],
       ),
       'if1',
       { outputHandles: [...outputHandlesOf(branch).slice(0, 1), { id: 'if1-target-else' }] },
     )
 
-    expect(failureOf(await watch(nameless, {}, { transform: decides({}) }), 'if1')).toBe(
-      'unsupported',
+    const watched = await watch(nameless, { model_else: ['a'] }, { transform: decides({}) })
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_else'])
+  })
+
+  /** A thread that dies is not the same as an expression that is false, but the node says the same. */
+  it('fails the branch when the evaluator throws rather than answers', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      {},
+      { transform: () => Promise.reject(new Error('the thread is gone')) },
     )
+
+    expect(failureOf(watched, 'if1')).toBe('invalid-expression')
   })
 
   /** Nothing wired into the condition: there is nothing to test and nothing to hand on either. */
@@ -1425,6 +1440,96 @@ describe('a branch, run locally', () => {
 
     expect(statusesOf(watched, 'if1')).toContain('idle')
     expect(watched.submitted).toEqual([])
+  })
+
+  /**
+   * The converter drops approval handles before it counts anything — `// Approval handles are
+   * UI-only and must not shift case/else indices.` Left in, block 1 would pair with the approval's
+   * port and every branch would route one place off, silently, both ends being well-formed ports.
+   */
+  it('does not let an approval handle shift which port a branch routes to', async () => {
+    const branch = branchNode('if1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+    ])
+    const shifted = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), branch, modelNode('m1', {}, 'model_case1')],
+        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'), wire('m1', 'prompt', 'if1', 'case1')],
+      ),
+      'if1',
+      {
+        outputHandles: [
+          { id: 'if1-target-approval', name: 'approval', type: 'approval' },
+          ...outputHandlesOf(branch),
+        ],
+      },
+    )
+
+    const watched = await watch(
+      shifted,
+      { model_case1: ['asset_1'] },
+      { transform: async () => ['true'] },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
+  })
+
+  /**
+   * A node that is not a branch produces ONE value and offers it on every port it declares — which
+   * is what a flat outcome did before outcomes were keyed. Publishing on the first alone made a
+   * reader of a second declared output read as a branch nobody took: grey, silent, and wrong.
+   */
+  it('offers a producer value on every output it declares, not only the first', async () => {
+    const twoOut = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), modelNode('m1', {}, 'model_a')],
+        [wire('m1', 'prompt', 'text1', 'second')],
+      ),
+      'text1',
+      {
+        outputHandles: [
+          { id: 'text1-target-prompt', name: 'output', type: 'text' },
+          { id: 'text1-target-second', name: 'second', type: 'text' },
+        ],
+      },
+    )
+
+    const watched = await watch(twoOut, { model_a: ['asset_1'] })
+
+    expect(watched.submitted[0]?.body).toEqual({ prompt: 'a knight' })
+  })
+
+  /** A file may leave a port unnamed; the plan wires it under `output`, and so must the producer. */
+  it('reads a nameless output the way the plan resolves one', async () => {
+    const nameless = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), modelNode('m1', {}, 'model_a')],
+        [wire('m1', 'prompt', 'text1', 'prompt')],
+      ),
+      'text1',
+      { outputHandles: [{ id: 'text1-target-prompt' }] },
+    )
+
+    const watched = await watch(nameless, { model_a: ['asset_1'] })
+
+    expect(watched.submitted[0]?.body).toEqual({ prompt: 'a knight' })
+  })
+
+  /** A file is free to name a port `toString`; reading it off the prototype killed the whole run. */
+  it('survives a port named after something Object.prototype carries', async () => {
+    const inherited = updateNodeData(
+      graphOf(
+        [noteNode('note1'), modelNode('m1', {}, 'model_a')],
+        [wire('m1', 'prompt', 'note1', 'toString')],
+      ),
+      'note1',
+      { outputHandles: [{ id: 'note1-target-toString', name: 'toString', type: 'text' }] },
+    )
+
+    const watched = await watch(inherited, { model_a: ['asset_1'] })
+
+    expect(failureOf(watched, 'm1')).toBe('blocked')
+    expect(watched.result.ok).toBe(true)
   })
 
   /** An expression the evaluator refuses is the node's failure, not a silent fall to the else. */

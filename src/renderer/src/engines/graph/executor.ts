@@ -72,8 +72,8 @@ type Outcome = { values: Readonly<Record<string, readonly string[]>> } | 'skippe
  * resolves an edge to on the other side.
  */
 const outputNames = (node: GraphNode): readonly string[] => {
-  const named = outputHandlesOf(node).flatMap(handle => handle.name ?? [])
-  return named.length > 0 ? named : [DEFAULT_OUTPUT_NAME]
+  const declared = outputHandlesOf(node).map(handle => handle.name ?? DEFAULT_OUTPUT_NAME)
+  return declared.length > 0 ? declared : [DEFAULT_OUTPUT_NAME]
 }
 
 /** Why a node is not going to run: something it reads failed, or no branch ever reached it. */
@@ -191,7 +191,13 @@ export async function runGraph(
 
         // The port the edge leaves from, never the whole node: a branch that was not taken has
         // no entry here, and reading the node flat would hand on what another branch produced.
-        const through = upstream.values[source.output]
+        // `hasOwn` and not a bare lookup: a file is free to name a port `toString`, and reading
+        // it off the prototype would hand back a FUNCTION — the spread below then throws, the
+        // whole run dies, and nothing on screen says why. `plan.ts` guards the same class on the
+        // way in with a `Map`; this is the way out.
+        const through = Object.hasOwn(upstream.values, source.output)
+          ? upstream.values[source.output]
+          : undefined
 
         if (!through) {
           // Absent because the provider produced on ANOTHER of its ports: a branch the condition
@@ -364,7 +370,9 @@ export async function runGraph(
      * file carrying more ports than blocks is carrying several else ports and that trimming them
      * would be this editor deciding what a document it did not write meant.
      */
-    const fallbacks = ports.slice(blocks.length).flatMap(port => port.name ?? [])
+    // A nameless port is a port all the same — the plan wires one under `output`, and a file is
+    // free to leave the name off. Dropping it turned a graph Scenario routes into a red node.
+    const fallbacks = ports.slice(blocks.length).map(port => port.name ?? DEFAULT_OUTPUT_NAME)
 
     if (fallbacks.length === 0) return fail(node.id, 'unsupported')
 
