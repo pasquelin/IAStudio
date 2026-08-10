@@ -515,8 +515,11 @@ picture enters a sky.
 *description* of a node separate from its three.js instantiation — so a scene serialises without
 dragging the renderer along, and rebuilds from that serialisation alone.
 
-Playback goes through a single token held by the `PlaybackManager`: two active players is how
-scrubbing starts stuttering for no visible reason.
+Playback goes through a **single token**, `playbackToken` — a module value in
+`engines/timeline/playback.ts`, not a manager: whoever wants to play acquires it and hands over
+the means to stop, and the next acquisition cuts the previous one off. Two active players is how
+scrubbing starts stuttering for no visible reason. The timeline and the Audio workspace's waveform
+both take it from the same place.
 
 ---
 
