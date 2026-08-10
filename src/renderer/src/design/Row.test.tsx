@@ -31,6 +31,15 @@ describe('Row', () => {
     render(<Row icon={mdiCube} title="Cube" muted />)
 
     expect(screen.getByText('Cube').className).toContain('line-through')
+    expect(screen.getByText('Cube').className).toContain('text-muted')
+  })
+
+  it('leaves a row that is not muted in the reading colour', () => {
+    render(<Row icon={mdiCube} title="Cube" />)
+
+    const title = screen.getByText('Cube')
+    expect(title.className).toContain('text-text')
+    expect(title.className).not.toContain('line-through')
   })
 
   it('renders what is handed to leading and to actions', () => {
