@@ -346,6 +346,9 @@ describe('stopping and forgetting a run', () => {
     await run
 
     expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
+    // Idle, not failed: the wait was abandoned on the user's word, and painting the node red
+    // would blame the API for what the user just did.
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.m1).toEqual({ status: 'idle' })
   })
 
   it('leaves a job that already landed alone', async () => {

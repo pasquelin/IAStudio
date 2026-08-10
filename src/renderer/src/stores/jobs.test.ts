@@ -122,11 +122,11 @@ describe('waiting on a job', () => {
   it('answers straight away for one that has already stopped', async () => {
     useJobs.setState({ jobs: [job({ id: 'job_1', status: 'succeeded', assetIds: ['asset_1'] })] })
 
-    await expect(whenSettled('job_1')).resolves.toMatchObject({ assetIds: ['asset_1'] })
+    await expect(whenSettled('job_1', null)).resolves.toMatchObject({ assetIds: ['asset_1'] })
   })
 
   it('waits for the progress that stops it, and ignores the ones that do not', async () => {
-    const settled = whenSettled('job_1')
+    const settled = whenSettled('job_1', null)
 
     useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.5 })
     useJobs.getState().apply({ id: 'job_1', status: 'failed', progress: 0.5, error: 'server' })
@@ -186,7 +186,7 @@ describe('waiting on a job', () => {
   })
 
   it('answers nothing for a job the replica no longer holds, rather than waiting for ever', async () => {
-    const settled = whenSettled('job_1')
+    const settled = whenSettled('job_1', null)
     // What a project closed under a running job leaves behind: the main process drops the entry
     // and announces the list without it. Waited on, this one would never come back.
     useJobs.setState({ jobs: [] })

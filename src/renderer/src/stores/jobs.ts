@@ -116,8 +116,12 @@ export const useJobs = create<JobsState>()((set, get) => ({
  * rest of the session, holding its whole frame: the main process polls an unfinished job with no
  * ceiling, deliberately, so nothing else was ever going to resolve it. Aborted, it answers `null`,
  * which every caller already reads as "no result to use".
+ *
+ * Required rather than optional, and `null` spelled out where there is genuinely nothing to give
+ * up on: optional, the next caller reproduces the parked frame this exists to remove, and nothing
+ * mechanical refuses it. The same lock `ToolButton` puts on its tooltip, for the same reason.
  */
-export function whenSettled(jobId: string, signal?: AbortSignal): Promise<Job | null> {
+export function whenSettled(jobId: string, signal: AbortSignal | null): Promise<Job | null> {
   const answer = (jobs: readonly Job[]): Job | null | undefined => {
     const job = jobs.find(candidate => candidate.id === jobId)
     if (!job) return null
