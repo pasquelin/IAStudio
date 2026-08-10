@@ -647,7 +647,7 @@ describe('the kinds a string holds', () => {
         source: 'text2',
         target: 'text1',
         sourceHandle: 'text2-source-prompt',
-        targetHandle: 'text1-target-output',
+        targetHandle: 'text1-target-prompt',
       }),
     )
     const before = useGraphs.getState().states[documentId]

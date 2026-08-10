@@ -17,7 +17,7 @@ const graph: GraphState = {
       position: { x: 0, y: 0 },
       data: {
         value: 'a small grey rock',
-        outputHandles: [{ id: 'text1-target-output', name: 'output', type: 'prompt' }],
+        outputHandles: [{ id: 'text1-target-prompt', name: 'output', type: 'text' }],
       },
     },
     {

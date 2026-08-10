@@ -9,7 +9,7 @@ import { parseGraph } from './serialize'
 function chain(prompt = 'a knight', last: Readonly<Record<string, unknown>> = {}): GraphState {
   const graph = graphOf(
     [text('text1'), model('m1'), model('m2', last)],
-    [wire('m1', 'prompt', 'text1', 'output'), wire('m2', 'prompt', 'm1', 'image')],
+    [wire('m1', 'prompt', 'text1', 'prompt'), wire('m2', 'prompt', 'm1', 'image')],
   )
 
   return updateNodeData(graph, 'text1', { value: prompt })
@@ -35,7 +35,7 @@ describe('ordering a graph', () => {
 
   it('reads the edge the way Scenario points it, from consumer to provider', () => {
     // Wired the intuitive way round, this graph would order `m1` first and run backwards.
-    const graph = graphOf([model('m1'), text('text1')], [wire('m1', 'prompt', 'text1', 'output')])
+    const graph = graphOf([model('m1'), text('text1')], [wire('m1', 'prompt', 'text1', 'prompt')])
 
     expect(idsOf(planGraph(graph))).toEqual(['text1', 'm1'])
   })
@@ -49,7 +49,7 @@ describe('ordering a graph', () => {
   it('holds a node back until every one of its providers has run', () => {
     const joined = graphOf(
       [text('text1'), text('text2'), model('m1')],
-      [wire('m1', 'prompt', 'text1', 'output'), wire('m1', 'style', 'text2', 'output')],
+      [wire('m1', 'prompt', 'text1', 'prompt'), wire('m1', 'style', 'text2', 'prompt')],
     )
 
     expect(idsOf(planGraph(joined))).toEqual(['text1', 'text2', 'm1'])
@@ -62,7 +62,7 @@ describe('ordering a graph', () => {
 
   it('ignores an edge whose provider is no longer in the graph', () => {
     // Left counted, its consumer would wait for ever and a straight graph would read as a cycle.
-    const orphaned = graphOf([model('m1')], [wire('m1', 'prompt', 'text1', 'output')])
+    const orphaned = graphOf([model('m1')], [wire('m1', 'prompt', 'text1', 'prompt')])
 
     expect(idsOf(planGraph(orphaned))).toEqual(['m1'])
   })
@@ -112,7 +112,7 @@ describe('refusing a cycle', () => {
 describe('resolving what feeds a node', () => {
   it('keys an input by the port name, which is the model field it fills', () => {
     expect(ordered(planGraph(chain()))[1]?.inputs).toEqual({
-      prompt: { node: 'text1', handle: 'text1-target-output' },
+      prompt: { node: 'text1', handle: 'text1-target-prompt' },
     })
   })
 
@@ -134,10 +134,10 @@ describe('resolving what feeds a node', () => {
   })
 
   it('falls back to the handle id when the node no longer carries that port', () => {
-    const graph = graphOf([text('text1'), model('m1')], [wire('m1', 'gone', 'text1', 'output')])
+    const graph = graphOf([text('text1'), model('m1')], [wire('m1', 'gone', 'text1', 'prompt')])
 
     expect(ordered(planGraph(graph))[1]?.inputs).toEqual({
-      'm1-source-gone': { node: 'text1', handle: 'text1-target-output' },
+      'm1-source-gone': { node: 'text1', handle: 'text1-target-prompt' },
     })
   })
 })
@@ -211,8 +211,8 @@ describe('hashing a node', () => {
   })
 
   it('counts which port a wire lands on', () => {
-    const one = graphOf([text('text1'), model('m1')], [wire('m1', 'prompt', 'text1', 'output')])
-    const other = graphOf([text('text1'), model('m1')], [wire('m1', 'style', 'text1', 'output')])
+    const one = graphOf([text('text1'), model('m1')], [wire('m1', 'prompt', 'text1', 'prompt')])
+    const other = graphOf([text('text1'), model('m1')], [wire('m1', 'style', 'text1', 'prompt')])
 
     expect(hashOf(planGraph(other), 'm1')).not.toBe(hashOf(planGraph(one), 'm1'))
   })
@@ -230,8 +230,8 @@ describe('hashing a node', () => {
 
   it('does not change when two wires into one node are written in the other order', () => {
     const feeds: readonly GraphEdge[] = [
-      wire('m1', 'prompt', 'text1', 'output'),
-      wire('m1', 'style', 'text2', 'output'),
+      wire('m1', 'prompt', 'text1', 'prompt'),
+      wire('m1', 'style', 'text2', 'prompt'),
     ]
     const nodes = [text('text1'), text('text2'), model('m1')]
 

@@ -32,6 +32,19 @@ export function acceptedTypes(handle: GraphHandleInput): readonly string[] {
 }
 
 /**
+ * What an input port takes BESIDES the type it names — read off a published App, not reasoned.
+ *
+ * `workflow_get` on `wflow_H1bKz78jgpinWPKJfVCM5uAp` (62 nodes, 94 edges) holds exactly two wired
+ * pairs, and they are the whole table: `image` → `image` 69 times, and **`text` → `prompt` 25
+ * times**. The webapp types a text node's output `text` and a generator's prompt port `prompt` —
+ * the same two types the studio writes — and it wires them anyway.
+ *
+ * A table rather than a special case: the day another pair turns up in an App, it is a line here
+ * and a line in the test, not a second `if` somewhere in the middle of a predicate.
+ */
+const ALSO_ACCEPTED: Readonly<Record<string, readonly string[]>> = { prompt: ['text'] }
+
+/**
  * Whether an output can feed an input.
  *
  * An untyped port on either side accepts anything: the studio must not refuse a connection the
@@ -40,9 +53,10 @@ export function acceptedTypes(handle: GraphHandleInput): readonly string[] {
  */
 export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput): boolean {
   const accepted = acceptedTypes(input)
-  if (accepted.length === 0 || output.type === undefined) return true
+  const offered = output.type
+  if (accepted.length === 0 || offered === undefined) return true
 
-  return accepted.includes(output.type)
+  return accepted.some(type => type === offered || (ALSO_ACCEPTED[type] ?? []).includes(offered))
 }
 
 /** Input ports, nested ones included: a sub-handle is a port that can be wired like any other. */

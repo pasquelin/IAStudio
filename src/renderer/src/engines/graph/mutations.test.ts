@@ -31,7 +31,7 @@ const wired = {
   source: 'model1',
   sourceHandle: 'model1-source-prompt',
   target: 'text1',
-  targetHandle: 'text1-target-output',
+  targetHandle: 'text1-target-prompt',
 }
 
 const graph: GraphState = { nodes: [text('text1'), model], edges: [], inputKeys: [] }
@@ -168,14 +168,14 @@ describe('swapping what a node is wired by', () => {
         source: 'imageGenerator1',
         sourceHandle: 'imageGenerator1-source-prompt',
         target: 'text1',
-        targetHandle: 'text1-target-output',
+        targetHandle: 'text1-target-prompt',
       },
       {
         id: 'b',
         source: 'imageGenerator1',
         sourceHandle: 'imageGenerator1-source-mask',
         target: 'text1',
-        targetHandle: 'text1-target-output',
+        targetHandle: 'text1-target-prompt',
       },
     ],
     inputKeys: [],

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
+import { EMPTY_GRAPH, type GraphNode, type GraphState } from '@shared/domain/graph'
+import type { FieldDescriptor } from '@shared/domain/model'
 import { canConnect, canDropConnection, edgeOf, refuseConnection } from './connect'
+import { createModelNode, createNode } from './factory'
+import { outputHandlesOf } from './handles'
 
 const asset = (id: string, type: string): GraphNode => ({
   id,
@@ -16,7 +19,10 @@ const generator: GraphNode = {
   data: {
     inputHandles: [
       { id: 'imageGenerator1-source-referenceImages', name: 'referenceImages', type: 'image' },
-      { id: 'imageGenerator1-source-prompt', name: 'prompt', type: ['prompt', 'text'] },
+      // `prompt` alone, as `modelPorts` writes it. Spelled `['prompt', 'text']` here until this
+      // lot, which is a port no model produces — and which made this very suite blind to the
+      // refusal it was meant to be watching.
+      { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' },
     ],
   },
 }
@@ -139,6 +145,67 @@ describe('what the canvas may drop', () => {
     expect(canDropConnection(graph, mismatched)).toBe(false)
     expect(canDropConnection(graph, { ...feeding, target: 'imageGenerator1' })).toBe(false)
     expect(canDropConnection(graph, { ...feeding, target: 'nowhere1' })).toBe(false)
+  })
+})
+
+/**
+ * The gesture the graph space exists for, played on the nodes the studio REALLY builds.
+ *
+ * Every other suite here writes its own handles — the generator above even gives its prompt port
+ * `['prompt', 'text']`, which `modelPorts` never produces. That is how a refusal survived three
+ * lots: nothing was ever asked of `createNode` and `createModelNode` themselves. Asking them is
+ * the whole point of this one, and it is why it does not take a shortcut through a fixture.
+ */
+describe('the connection the studio is for, made of what the studio builds', () => {
+  const promptField: FieldDescriptor = {
+    key: 'prompt',
+    kind: 'text',
+    label: 'Prompt',
+    required: true,
+    promptSpark: true,
+  }
+
+  const drawn = (): { graph: GraphState; text: GraphNode; generator: GraphNode } => {
+    const text = createNode(EMPTY_GRAPH, 'text', { x: 0, y: 0 })
+    const withText: GraphState = { ...EMPTY_GRAPH, nodes: [text] }
+    const generator = createModelNode(withText, 'image', 'model_flux', [promptField], {
+      x: 400,
+      y: 0,
+    })
+
+    return { graph: { ...EMPTY_GRAPH, nodes: [text, generator] }, text, generator }
+  }
+
+  it('lets a text node feed the prompt port of a generator', () => {
+    const { graph, text, generator } = drawn()
+    const output = outputHandlesOf(text)[0]
+
+    expect(
+      refuseConnection(graph, {
+        source: generator.id,
+        sourceHandle: `${generator.id}-source-prompt`,
+        target: text.id,
+        targetHandle: output?.id,
+      }),
+    ).toBeNull()
+  })
+
+  /**
+   * The two spellings that made the refusal invisible, pinned: the field of the id is `prompt`
+   * while the type is `text`, and a fixture writing either the other way round tests a node
+   * nobody can draw.
+   */
+  it('types that output text and names its port prompt, which are not the same thing', () => {
+    const { text, generator } = drawn()
+
+    expect(outputHandlesOf(text)[0]).toMatchObject({
+      id: `${text.id}-target-prompt`,
+      name: 'output',
+      type: 'text',
+    })
+    expect(generator.data.inputHandles).toContainEqual(
+      expect.objectContaining({ id: `${generator.id}-source-prompt`, type: 'prompt' }),
+    )
   })
 })
 

@@ -67,7 +67,7 @@ const cacheOf = (result: GraphRunResult): GraphCache => {
 function chain(prompt = 'a knight', last: Readonly<Record<string, unknown>> = {}): GraphState {
   const graph = graphOf(
     [textNode('text1'), modelNode('m1', {}, 'model_a'), modelNode('m2', last, 'model_b')],
-    [wire('m1', 'prompt', 'text1', 'output'), wire('m2', 'prompt', 'm1', 'image')],
+    [wire('m1', 'prompt', 'text1', 'prompt'), wire('m2', 'prompt', 'm1', 'image')],
   )
 
   return updateNodeData(graph, 'text1', { value: prompt })
@@ -139,7 +139,7 @@ describe('running a graph', () => {
   it('writes nothing for a text node nobody has typed into', async () => {
     const graph = graphOf(
       [textNode('text1'), modelNode('m1', {}, 'model_a')],
-      [wire('m1', 'prompt', 'text1', 'output')],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
     )
     const watched = await watch(graph, { model_a: ['asset_1'] })
 
@@ -238,7 +238,7 @@ describe('the values a node hands on', () => {
   it('leaves a port alone when what feeds it produced nothing', async () => {
     const graph = graphOf(
       [textNode('text1'), modelNode('m1', { prompt: 'typed by hand' }, 'model_a')],
-      [wire('m1', 'prompt', 'text1', 'output')],
+      [wire('m1', 'prompt', 'text1', 'prompt')],
     )
     const watched = await watch(updateNodeData(graph, 'text1', { value: '' }), {
       model_a: ['asset_1'],

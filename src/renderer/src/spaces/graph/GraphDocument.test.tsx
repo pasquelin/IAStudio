@@ -25,7 +25,7 @@ const text: GraphNode = {
   position: { x: 0, y: 0 },
   data: {
     value: 'a small grey rock',
-    outputHandles: [{ id: 'text1-target-output', name: 'output', type: 'prompt' }],
+    outputHandles: [{ id: 'text1-target-prompt', name: 'output', type: 'text' }],
   },
 }
 
@@ -43,7 +43,7 @@ const wire = {
   source: 'model1',
   sourceHandle: 'model1-source-prompt',
   target: 'text1',
-  targetHandle: 'text1-target-output',
+  targetHandle: 'text1-target-prompt',
 }
 
 const state = (): GraphState => graphOf(useGraphs.getState(), DOCUMENT)
