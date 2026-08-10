@@ -12,6 +12,9 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
+import { showPanels } from '@/stores/layout-fixtures'
+import { useTextures } from '@/stores/textures'
+import { newTexture } from '@/engines/texture/texture-state'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
@@ -31,7 +34,13 @@ import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
-import { closeDocument, deleteDocument, restoreDocument, saveDocument } from './document-io'
+import {
+  closeDocument,
+  deleteDocument,
+  refreshDocuments,
+  restoreDocument,
+  saveDocument,
+} from './document-io'
 
 // The real one needs a live Dockview; what this file checks is that closing reaches it.
 const closePanel = vi.fn()
@@ -832,6 +841,37 @@ describe('closing a document', () => {
     await expect(closeDocument(created.id)).resolves.toBe(true)
 
     expect(useGraphRuns.getState().runs[created.id]).toBeUndefined()
+  })
+
+  /**
+   * A project change does not close tab by tab: `refresh` rewrites the store's map in one write,
+   * so the documents it drops never pass through `forgetDocument` — and their session views
+   * outlived the project they belonged to.
+   */
+  it('forgets the session views of documents a project change dropped', async () => {
+    installFakeBridge({})
+    const left = await useDocuments.getState().create('textures')
+    const kept = await useDocuments.getState().create('textures')
+    if (!left || !kept) throw new Error('expected two documents')
+    useTextureViews.getState().inspect(left.id, 'normal')
+    useTextureViews.getState().inspect(kept.id, 'roughness')
+    // The state a `DocumentIo` holds only exists once something has opened the document.
+    useTextures.getState().ensure(left.id, newTexture)
+    useTextures.getState().ensure(kept.id, newTexture)
+
+    // The folder of the project being opened holds one of the two, and the layout says it is
+    // open — which is what makes the other one a tab the refresh drops.
+    installFakeBridge({ documents: { list: () => Promise.resolve([kept]) } })
+    showPanels('textures', kept.id)
+
+    await expect(refreshDocuments()).resolves.toBe(true)
+
+    expect(inspectedChannel(useTextureViews.getState(), left.id)).toBeNull()
+    expect(inspectedChannel(useTextureViews.getState(), kept.id)).toBe('roughness')
+    // The heavy half: `ioOf` reads the kind from the map the refresh has just emptied, so the
+    // engine state was the one thing a project change could not drop.
+    expect(useTextures.getState().states[left.id]).toBeUndefined()
+    expect(useTextures.getState().states[kept.id]).toBeDefined()
   })
 
   it('leaves the flat view of a document it did not close alone', async () => {

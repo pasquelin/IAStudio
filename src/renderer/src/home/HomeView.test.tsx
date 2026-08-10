@@ -164,10 +164,10 @@ describe('customising the home', () => {
   })
 
   it('says how many sections are hidden, and takes them back', async () => {
+    // Every band but one shown, rather than the defaults: the count is what is under test, and a
+    // section hidden on a fresh install would make it read two.
     setSettings(
-      DEFAULT_HOME_SECTIONS.map(section =>
-        section.id === 'documents' ? { ...section, visible: false } : section,
-      ),
+      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'documents' })),
     )
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })

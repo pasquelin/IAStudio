@@ -262,10 +262,11 @@ Trois choses le décrivent mieux qu’une phrase de présentation :
 
 Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
 
-> **Il n’y a pas encore de bouton pour rapatrier**, ni d’écran pour parcourir la bibliothèque
-> depuis le studio. Le studio sait le faire — le mécanisme est écrit et testé — mais aucune porte
-> ne le déclenche pour l’instant. Le sens du transfert est donc unique : de chez vous vers la
-> bibliothèque.
+> **L’étagère n’a pas de bouton pour rapatrier ; l’accueil en a un.** La bande **Votre
+> bibliothèque**, sur la page d’accueil, liste ce que votre compte détient, et cliquer une
+> vignette la fait descendre dans le projet ouvert. Le transfert va donc dans les deux sens —
+> mais chaque sens a sa porte, et ce n’est pas la même : l’envoi part de l’étagère, le
+> rapatriement de l’accueil.
 
 ### Nommer par ce que l’API voit
 

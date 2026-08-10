@@ -355,13 +355,42 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
 }
 
 /**
+ * Reconciles the open tabs with the folder, and drops what that leaves behind.
+ *
+ * `refresh` settles which tabs survive by rewriting the store's map in one write — deliberately,
+ * since closing them one by one would paint and unpaint every tab. Nothing it drops therefore
+ * passes through `forgetDocument`, and the session views of a project being left outlived it.
+ *
+ * The two halves are one call so they cannot be dissociated: after the write nothing names the
+ * documents that went, so whoever refreshes has to have read them first. Descriptors, not ids —
+ * the kind is what says which `DocumentIo` holds a document's state, and it is read from the
+ * very map the refresh has already emptied.
+ */
+export async function refreshDocuments(): Promise<boolean> {
+  const wereOpen = Object.values(useDocuments.getState().documents)
+  const answered = await useDocuments.getState().refresh()
+
+  const { documents } = useDocuments.getState()
+  for (const document of wereOpen) {
+    if (!documents[document.id]) forgetDocument(document.id, document.kind)
+  }
+
+  return answered
+}
+
+/**
  * Drops everything a document was holding, in the window and in the layout.
  *
  * Its refusal to save is dropped too: the id is the project folder's to hand out again, and a
  * document reopened later must not inherit the verdict passed on the one before it.
+ *
+ * `kind` is for the one caller whose document is already out of the store — without it `ioOf`
+ * finds no descriptor, and the engine state of every document a project change closed would be
+ * kept for the rest of the session.
  */
-function forgetDocument(documentId: string): void {
-  ioOf(documentId)?.forget(documentId)
+function forgetDocument(documentId: string, kind?: DocumentKind): void {
+  const io = kind ? IO_BY_KIND[kind] : ioOf(documentId)
+  io?.forget(documentId)
   unreadable.delete(documentId)
   // Session views are not the document's state, so no `DocumentIo` drops them. `useCanvasViews`
   // and `useSceneViews` still keep their entry for the session — they hold a viewport, which is

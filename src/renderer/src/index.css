@@ -90,7 +90,8 @@
   --radius-sc-md: 6px;
   --radius-sc-lg: 10px;
 
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* No webfont ships with the studio: naming one it never loads only made the stack lie. */
+  --font-sans: system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 }
 

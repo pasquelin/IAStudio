@@ -151,6 +151,18 @@ describe('familyOf', () => {
     expect(familyOf(['txt2txt'], [])).toBe('other')
   })
 
+  /**
+   * The real capabilities of `model_scenario-llm`, read from the account on 10 August 2026: it is
+   * the one public model that produces text, and it declares `img2txt` alongside. `img` matches
+   * the image pattern, so without a rule on the output the Image workspace listed a model that
+   * writes prose. Checked against a listing of the first 100 public models — no image model
+   * declares `img2txt`, so keying on the output cannot misfile one.
+   */
+  it('files a model that produces text under "other", whatever it reads', () => {
+    expect(familyOf(['txt2txt', 'img2txt'], [])).toBe('other')
+    expect(familyOf(['img2txt'], [])).toBe('other')
+  })
+
   // The three public skybox models answer `txt2img`/`img2img` like any image model, so the
   // capabilities alone put them in the wrong workspace. Only the tag tells them apart.
   it('classifies a tagged panorama model as skybox, not image', () => {

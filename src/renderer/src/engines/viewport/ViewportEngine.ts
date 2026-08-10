@@ -346,6 +346,14 @@ export class ViewportEngine {
     // Read per frame, never cached: a context restore replaces `info` and its two counter objects.
     recordFrame(renderer.info, this.stats)
 
-    if (moving || settling) this.requestRender()
+    if (moving || settling) {
+      this.requestRender()
+      return
+    }
+
+    // The loop stops here, so the clock goes back to rest: without this every caller that starts
+    // an animation would have to call `resetClock` itself, and the one that forgot would open its
+    // motion on a `MAX_DELTA` jump.
+    this.lastTime = null
   }
 }

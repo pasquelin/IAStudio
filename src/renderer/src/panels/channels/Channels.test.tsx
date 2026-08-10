@@ -127,6 +127,28 @@ describe('Channels', () => {
     ).toBeInTheDocument()
   })
 
+  /**
+   * The inspect button is laid over the whole tile, so anything drawn before it in the DOM sits
+   * underneath: the badge could be seen and never hovered, and its `title` never opened. Same
+   * arrangement as the menu, which was already on the right side of it.
+   */
+  it('leaves the origin badge reachable rather than under the button covering the tile', () => {
+    useTextures
+      .getState()
+      .runCommand(
+        'doc-1',
+        setChannel('height', { assetId: 'img-1', origin: 'generated', width: 8, height: 8 }),
+      )
+    render(<Channels />)
+
+    const badge = screen.getByRole('img', {
+      name: 'Généré par un modèle — figé tel qu’il est arrivé',
+    })
+    const covering = badge.parentElement?.querySelector('button[aria-pressed]')
+    expect(covering).not.toBeNull()
+    expect(covering?.compareDocumentPosition(badge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
   it('badges nothing on an empty channel', () => {
     render(<Channels />)
 

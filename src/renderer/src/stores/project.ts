@@ -1,13 +1,13 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
 import { withoutRecentProject, type Project } from '@shared/domain/project'
+import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
 import { useAssets } from './assets'
-import { useDocuments } from './documents'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './scene-clipboard'
 
@@ -51,7 +51,7 @@ async function followProject(project: Project | null): Promise<void> {
   useActivity.getState().dismissAll()
   const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
-    useDocuments.getState().refresh(),
+    refreshDocuments(),
     useActivity.getState().reload(),
   ])
 

@@ -30,6 +30,16 @@ const ALL_HIDDEN: HomeSectionSetting[] = HOME_SECTIONS.map(entry => ({
   visible: false,
 }))
 
+/**
+ * Every band shown, which the defaults are not: one of them is off on a fresh install because
+ * it duplicates a surface that is always on screen. A test about ordering or about hiding says
+ * nothing about that choice, and reading the defaults would make it depend on it.
+ */
+const ALL_SHOWN: HomeSectionSetting[] = HOME_SECTIONS.map(entry => ({
+  id: entry.id,
+  visible: true,
+}))
+
 describe('the pinned sections', () => {
   it('require nothing, which is what makes an empty home impossible', () => {
     for (const entry of HOME_SECTIONS.filter(candidate => candidate.pinned === true)) {
@@ -54,7 +64,22 @@ describe('the sections a home draws', () => {
     })
 
     expect(sections).not.toContain('jobs')
-    expect(sections).toContain('activity')
+    expect(sections).toContain('documents')
+  })
+
+  /**
+   * The activity band draws the same `useActivity` entries as the bottom panel, which is always
+   * on screen: a default install showed the same lines twice. Hidden, not removed — the section
+   * menu offers it back like any other.
+   */
+  it('leaves a band that duplicates another surface off a fresh install', () => {
+    const sections = visibleHomeSections(DEFAULT_HOME_SECTIONS, {
+      authenticated: true,
+      hasProject: true,
+    })
+
+    expect(sections).not.toContain('activity')
+    expect(hiddenHomeSections(DEFAULT_HOME_SECTIONS)).toContain('activity')
   })
 
   it('drops what needs a project when none is open', () => {
@@ -69,7 +94,7 @@ describe('the sections a home draws', () => {
   })
 
   it('honours the stored order rather than the registry one', () => {
-    const reversed = [...DEFAULT_HOME_SECTIONS].reverse()
+    const reversed = [...ALL_SHOWN].reverse()
     const sections = visibleHomeSections(reversed, { authenticated: true, hasProject: true })
 
     // Every band but the anchored one, which is held at the foot however it was stored.
@@ -155,14 +180,14 @@ describe('rearranging the home', () => {
   })
 
   it('hides and shows a section, and offers the hidden ones back', () => {
-    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'documents', false)
+    const hidden = shownHomeSection(ALL_SHOWN, 'documents', false)
 
     expect(hiddenHomeSections(hidden)).toEqual(['documents'])
     expect(hiddenHomeSections(shownHomeSection(hidden, 'documents', true))).toEqual([])
   })
 
   it('never offers a pinned section back, since it was never taken away', () => {
-    const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'tools', false)
+    const hidden = shownHomeSection(ALL_SHOWN, 'tools', false)
 
     expect(hiddenHomeSections(hidden)).toEqual([])
   })
