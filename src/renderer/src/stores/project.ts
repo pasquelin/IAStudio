@@ -1,6 +1,7 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
 import { withoutRecentProject, type Project } from '@shared/domain/project'
+import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
 import { getBridge } from '@/services/bridge'
@@ -58,6 +59,32 @@ async function followProject(project: Project | null): Promise<void> {
   // Last, and only on a folder that answered: the reconciliation above is what says which tabs
   // have a document, and a listing that failed says nothing about any of them.
   if (folderAnswered) closeOrphanTabs()
+}
+
+/**
+ * A folder chosen in the dialog, turned into a project — or `null` for each of the three ways
+ * that does not happen: no bridge, a cancelled dialog, a folder the main process refused.
+ *
+ * The refusal is swallowed rather than raised: every caller of the two gestures below does
+ * `void openPicked()`, so a rejection left to travel was an unhandled one, and the main
+ * process has already written the reason in the journal on its way past. Nothing to undo
+ * either — the project that was open is still the one that is open.
+ */
+async function pickedProject(
+  from: (bridge: StudioBridge, folder: string) => Promise<Project>,
+): Promise<Project | null> {
+  const bridge = getBridge()
+  const folder = await bridge?.dialog.pickPath(
+    'folder',
+    useSettings.getState().settings.storage.projectsFolder,
+  )
+  if (!bridge || !folder) return null
+
+  try {
+    return await from(bridge, folder)
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -121,38 +148,16 @@ export const useProject = create<ProjectState>()(set => ({
   },
 
   openPicked: async () => {
-    const bridge = getBridge()
-    const folder = await bridge?.dialog.pickPath(
-      'folder',
-      useSettings.getState().settings.storage.projectsFolder,
-    )
-    if (!bridge || !folder) return
-
-    // Swallowed, not ignored: every caller does `void openPicked()`, so a refusal left to
-    // throw was an unhandled rejection, and the main process has already put the reason in
-    // the journal on its way past.
-    try {
-      set({ project: await bridge.project.open(folder), known: true })
-    } catch {
-      // Nothing to undo — the project that was open is still the one that is open.
-    }
+    const picked = await pickedProject((bridge, folder) => bridge.project.open(folder))
+    if (picked) set({ project: picked, known: true })
   },
 
   createPicked: async () => {
-    const bridge = getBridge()
-    const folder = await bridge?.dialog.pickPath(
-      'folder',
-      useSettings.getState().settings.storage.projectsFolder,
+    const picked = await pickedProject((bridge, folder) =>
+      // The dialog picks where, not what to call it; renaming a project folder is the file
+      // manager's job until the studio has a proper new-project sheet.
+      bridge.project.create(folder, i18next.t('project.defaultName')),
     )
-    if (!bridge || !folder) return
-
-    // The dialog picks where, not what to call it; renaming a project folder is the file
-    // manager's job until the studio has a proper new-project sheet.
-    const name = i18next.t('project.defaultName')
-    try {
-      set({ project: await bridge.project.create(folder, name), known: true })
-    } catch {
-      // Same as `openPicked`, and the journal says why the folder could not be written.
-    }
+    if (picked) set({ project: picked, known: true })
   },
 }))

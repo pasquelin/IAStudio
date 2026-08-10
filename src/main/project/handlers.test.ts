@@ -84,6 +84,18 @@ describe('project handlers', () => {
       })
     })
 
+    // An argument this channel refuses is not a sentence about the folder — the same line
+    // `openFailureKey` draws for opening.
+    it('says nothing about a folder when it is the argument that was refused', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectCreate, '', 'Reel')).rejects.toThrow()
+
+      expect(injected.project.create).not.toHaveBeenCalled()
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
     it('says nothing when the folder takes one', async () => {
       const injected = deps(catalog)
       injected.project.create = vi.fn(() => Promise.resolve({ path: PROJECT, manifest: MANIFEST }))
