@@ -78,3 +78,16 @@ export const setGraphNodeModel = (
   patch: Partial<GraphNode['data']>,
 ): Command<GraphState> =>
   reversible(`graph:model:${id}`, graph => replaceNodePorts(graph, id, patch))
+
+/**
+ * A branch's conditions, and the outputs they are read through.
+ *
+ * The same shape as a model swap and for the same reason, under an id of its own so the two never
+ * coalesce: the converter finds an `ifElse` port by its INDEX among the handles, so a block and
+ * its port are one fact — given back apart by an undo, the else would answer for a branch.
+ */
+export const setGraphNodeBranches = (
+  id: string,
+  patch: Partial<GraphNode['data']>,
+): Command<GraphState> =>
+  reversible(`graph:branches:${id}`, graph => replaceNodePorts(graph, id, patch))

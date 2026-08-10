@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { GraphState } from '@shared/domain/graph'
+import type { GraphNode, GraphState } from '@shared/domain/graph'
 import { GraphCanvas, type GraphCanvasProps } from './GraphCanvas'
 import { canvasNode, clickNode } from './graph-canvas-fixtures'
 
@@ -388,5 +388,54 @@ describe('the approval node', () => {
     canvas(withApproval, { runs: { approval1: { status: 'awaiting' } } })
 
     expect(screen.getByText('à approuver')).toHaveClass('text-warning')
+  })
+})
+
+/**
+ * Which way a graph forks is the one thing about it the wires cannot say: two edges leave a
+ * branch and nothing on them tells which is the case and which the else. So the face reads out
+ * what each branch asks, in the order its output ports carry them.
+ */
+describe('the branch node', () => {
+  const withBranch = (data: GraphNode['data']): GraphState => ({
+    ...graph,
+    nodes: [...graph.nodes, { id: 'ifElse1', type: 'ifElse', position: { x: 700, y: 0 }, data }],
+  })
+
+  it('reads out what each branch asks, in the order the ports carry them', () => {
+    canvas(
+      withBranch({
+        conditionBlocks: [
+          {
+            logic: 'or',
+            conditions: [
+              { field: 'text1', operator: 'contains', value: 'knight' },
+              { field: 'text1', operator: 'isEmpty' },
+            ],
+          },
+          {
+            logic: 'and',
+            conditions: [{ field: 'text1', operator: 'between', value: ['1', '9'] }],
+          },
+        ],
+      }),
+    )
+
+    expect(screen.getByText('text1 contient knight ou text1 est vide')).toBeInTheDocument()
+    expect(screen.getByText('text1 entre 1…9')).toBeInTheDocument()
+  })
+
+  /** A branch read off a file may hold nothing at all, and it must not read as an empty node. */
+  it('says so when nothing is asked', () => {
+    canvas(withBranch({}))
+
+    expect(screen.getByText('Aucune condition')).toBeInTheDocument()
+  })
+
+  /** `parseGraph` keeps `data` as it found it: everything here reaches the face off a file. */
+  it('survives conditions a file made up', () => {
+    canvas(withBranch(JSON.parse('{"conditionBlocks":[{"conditions":[{"operator":7}]}]}')))
+
+    expect(screen.getByText('Rien égale')).toBeInTheDocument()
   })
 })

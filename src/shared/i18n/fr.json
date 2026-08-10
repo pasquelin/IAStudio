@@ -82,13 +82,32 @@
       "asset": "Asset",
       "model": "Modèle",
       "stickyNote": "Note",
-      "approval": "Approbation"
+      "approval": "Approbation",
+      "ifElse": "Condition"
     },
     "approve": "Approuver",
     "approveHint": "Laisser la suite du graphe se servir de ce résultat",
     "decline": "Rejeter",
     "declineHint": "Arrêter l’exécution de tout ce qui lit ce nœud",
-    "askApproval": "Approuver ce résultat ?"
+    "askApproval": "Approuver ce résultat ?",
+    "noConditions": "Aucune condition",
+    "logic": {
+      "and": "et",
+      "or": "ou"
+    },
+    "condition": {
+      "isEmpty": "est vide",
+      "isNotEmpty": "n’est pas vide",
+      "equals": "égale",
+      "notEquals": "diffère de",
+      "contains": "contient",
+      "notContains": "ne contient pas",
+      "greaterThan": "supérieur à",
+      "greaterThanOrEqual": "supérieur ou égal à",
+      "lessThan": "inférieur à",
+      "lessThanOrEqual": "inférieur ou égal à",
+      "between": "entre"
+    }
   },
   "graphCompile": {
     "steps_one": "{{count, number}} étape",
@@ -708,7 +727,21 @@
     "pauseClip": "Mettre en pause",
     "clipSpeed": "Vitesse",
     "clipLoop": "En boucle",
-    "revealHint": "Ouvre le dossier du système de fichiers, l’asset sélectionné"
+    "revealHint": "Ouvre le dossier du système de fichiers, l’asset sélectionné",
+    "conditions": "Conditions",
+    "branch": "Branche {{number}}",
+    "otherwise": "Sinon",
+    "addBranch": "Ajouter une branche, avec sa sortie",
+    "removeBranch": "Supprimer cette branche et sa sortie",
+    "addCondition": "Ajouter une condition à cette branche",
+    "removeCondition": "Supprimer cette condition",
+    "conditionField": "Ce qui est testé",
+    "conditionOperator": "Comparaison",
+    "conditionValue": "Valeur comparée",
+    "combine": "Combinaison avec la condition précédente",
+    "noField": "Rien",
+    "rangeFrom": "Borne basse",
+    "rangeTo": "Borne haute"
   },
   "transport": {
     "play": "Lire",

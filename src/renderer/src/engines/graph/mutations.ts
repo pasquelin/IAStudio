@@ -94,6 +94,10 @@ export function updateNodeData(
  *
  * Only edges touching THIS node are examined: the rest of the graph is not the caller's business,
  * and walking it would make a model swap cost the whole edge list.
+ *
+ * And only the SIDE the patch redeclares. A branch gaining or losing a case rewrites its outputs
+ * and says nothing about what feeds it — judged against input handles a file left undeclared, its
+ * every incoming wire would be cut by an edit that never mentioned them.
  */
 export function replaceNodePorts(
   graph: GraphState,
@@ -104,8 +108,8 @@ export function replaceNodePorts(
   const node = next.nodes.find(candidate => candidate.id === id)
   if (!node) return graph
 
-  const inputs = new Set(inputHandlesOf(node).map(handle => handle.id))
-  const outputs = new Set(outputHandlesOf(node).map(handle => handle.id))
+  const inputs = 'inputHandles' in patch ? idsOf(inputHandlesOf(node)) : undefined
+  const outputs = 'outputHandles' in patch ? idsOf(outputHandlesOf(node)) : undefined
 
   // Both ends of every edge, never the first that answers: an edge may touch this node twice, and
   // an `if/else` would keep one whose surviving end vouched for a departed one.
@@ -115,13 +119,16 @@ export function replaceNodePorts(
     const reads = edge.target !== id || edge.targetHandle === undefined
 
     return (
-      (feeds || inputs.has(edge.sourceHandle ?? '')) &&
-      (reads || outputs.has(edge.targetHandle ?? ''))
+      (feeds || inputs === undefined || inputs.has(edge.sourceHandle ?? '')) &&
+      (reads || outputs === undefined || outputs.has(edge.targetHandle ?? ''))
     )
   })
 
   return kept.length === next.edges.length ? next : { ...next, edges: kept }
 }
+
+const idsOf = (handles: readonly { id: string }[]): ReadonlySet<string> =>
+  new Set(handles.map(handle => handle.id))
 
 /** The edges that feed a node, and the ones it feeds — the inverted convention, read both ways. */
 export const providersOf = (graph: GraphState, id: string): readonly GraphEdge[] =>
