@@ -30,23 +30,26 @@ export type PlanAccess = {
  * other three are the SDK's own documentation of `accessRestrictions`, which is the only source
  * for them — no account here holds those plans, so nothing here measured them.
  */
-const PLAN_LEVELS: readonly { segment: string; level: number }[] = [
-  { segment: 'free', level: 0 },
-  { segment: 'basic', level: 25 },
-  { segment: 'creator', level: 25 },
-  { segment: 'pro', level: 50 },
-  { segment: 'team', level: 75 },
-  { segment: 'enterprise', level: 100 },
-]
+const PLAN_LEVELS: Record<string, number> = {
+  free: 0,
+  basic: 25,
+  creator: 25,
+  pro: 50,
+  team: 75,
+  enterprise: 100,
+}
 
 /** What a plan name is worth, or `null` when no segment of it is known. */
 export function levelOfPlan(name: string): number | null {
-  const segments = name.toLowerCase().split('-')
-  const matched = PLAN_LEVELS.filter(entry => segments.includes(entry.segment))
+  const levels = name
+    .toLowerCase()
+    .split('-')
+    .map(segment => PLAN_LEVELS[segment])
+    .filter(level => level !== undefined)
 
   // The highest match, not the first: under-reading a plan greys out models the user is paying
   // for, which is the one failure worth avoiding here. Over-reading only lets the 403 through.
-  return matched.length > 0 ? Math.max(...matched.map(entry => entry.level)) : null
+  return levels.length > 0 ? Math.max(...levels) : null
 }
 
 /**

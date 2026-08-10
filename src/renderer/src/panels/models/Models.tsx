@@ -1,7 +1,7 @@
 import { mdiCubeScan } from '@mdi/js'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
@@ -109,18 +109,27 @@ export function Models() {
   const selectedId = useModelForScope(scope)
   const select = useModels(state => state.select)
   const authenticated = useSettings(state => state.auth.authenticated)
-  const plan = usePlanAccess(authenticated)
+  const plan = usePlanAccess()
 
   /**
-   * Why a model is refused, or `undefined` when it is not. One function answers both questions,
-   * so the row that is greyed out and the sentence explaining it can never disagree.
+   * The sentence is the same for every refused model — it names the plan, not the model — so it
+   * is translated once per plan rather than once per row. The panel re-renders on each keystroke
+   * and on each scroll frame, with up to 36 cells mounted: interpolating it per row put it in
+   * the same bracket as `facetsFor` above, which is memoised for exactly that reason.
+   */
+  const planRefusal = useMemo(
+    () => (plan ? t('models.planLockedHint', { plan: plan.name }) : undefined),
+    [plan, t],
+  )
+
+  /**
+   * Why a model is refused, or `undefined` when it is not. The greying and the sentence read the
+   * same predicate, so a row cannot end up dimmed with nothing to explain it.
    */
   const refusalOf = useCallback(
     (model: ModelSummary): string | undefined =>
-      isBeyondPlan(model.requiredPlanLevel, plan) && plan
-        ? t('models.planLockedHint', { plan: plan.name })
-        : undefined,
-    [plan, t],
+      isBeyondPlan(model.requiredPlanLevel, plan) ? planRefusal : undefined,
+    [plan, planRefusal],
   )
 
   const search = useDebounced(collection.search, SEARCH_DELAY_MS)
@@ -238,7 +247,9 @@ export function Models() {
           onSelect={model => select(scope, model.id, model.family)}
           onReachEnd={loadMore}
           onVisible={onVisible}
-          isDisabled={model => refusalOf(model) !== undefined}
+          // The predicate directly, not `refusalOf`: this runs for every mounted cell and has no
+          // use for the sentence it would build.
+          isDisabled={model => isBeyondPlan(model.requiredPlanLevel, plan)}
           rowHeight={ROW_HEIGHT}
           renderCard={model => (
             <ModelCard model={model} picture={pictureOf(model)} refusal={refusalOf(model)} />
@@ -316,6 +327,31 @@ const BADGE = cn(
   'truncate rounded-(--radius-sc-sm) px-1 py-px text-[9px] leading-tight',
 )
 
+/**
+ * The tile's corner label. The refusal outranks "featured": a highlighted model the plan will
+ * not run is first of all one that cannot be picked, and the tile has room for one label.
+ */
+function badgeFor(model: ModelSummary, refusal: string | undefined, t: TFunction): ReactNode {
+  // Left, not right: the badge already sits against the tile's right edge, and this panel is
+  // docked to a side — a tooltip opening outward would leave the window. HINT and not TIP:
+  // the badge's own words are on screen, so this explains them instead of repeating them.
+  if (refusal) {
+    return (
+      <span {...HINT_LEFT(refusal)} className={BADGE}>
+        {t('models.planLocked')}
+      </span>
+    )
+  }
+
+  if (!model.featured) return null
+
+  return (
+    <span title={t('models.featured')} className={BADGE}>
+      {t('models.featured')}
+    </span>
+  )
+}
+
 const ModelCard = memo(function ModelCard({
   model,
   picture,
@@ -327,30 +363,7 @@ const ModelCard = memo(function ModelCard({
 }) {
   const { t } = useTranslation()
 
-  return (
-    <MediaTile
-      url={picture}
-      caption={model.name}
-      badge={
-        // The refusal outranks "featured": a highlighted model the plan will not run is first
-        // of all one that cannot be picked, and the tile has room for one label.
-        refusal ? (
-          // Left, not right: the badge already sits against the tile's right edge, and this
-          // panel is docked to a side — a tooltip opening outward would leave the window.
-          // HINT and not TIP: the badge's own words are on screen, so this explains them.
-          <span {...HINT_LEFT(refusal)} className={BADGE}>
-            {t('models.planLocked')}
-          </span>
-        ) : (
-          model.featured && (
-            <span title={t('models.featured')} className={BADGE}>
-              {t('models.featured')}
-            </span>
-          )
-        )
-      }
-    />
-  )
+  return <MediaTile url={picture} caption={model.name} badge={badgeFor(model, refusal, t)} />
 })
 
 /** Memoized like the card: a scroll re-renders every mounted row on each frame. */

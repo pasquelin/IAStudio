@@ -292,7 +292,7 @@ describe('Models panel', () => {
    */
   describe('a model the plan does not cover', () => {
     /** Graded 50 against a plan worth 25, beside one graded 25 that the plan does cover. */
-    function installRestricted() {
+    beforeEach(() => {
       installFakeBridge({
         scenario: {
           searchModels: () =>
@@ -306,13 +306,12 @@ describe('Models panel', () => {
           plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
         },
       })
-    }
+    })
 
     const cellOf = (name: string): HTMLElement | null =>
       screen.getByText(name).closest('[role="option"]')
 
     it('announces the row as disabled while leaving it listed', async () => {
-      installRestricted()
       renderPanel()
 
       await screen.findByText('Model pro')
@@ -321,7 +320,6 @@ describe('Models panel', () => {
     })
 
     it('does not choose it when it is clicked', async () => {
-      installRestricted()
       renderPanel()
 
       await userEvent.click(await screen.findByText('Model pro'))
@@ -330,7 +328,6 @@ describe('Models panel', () => {
     })
 
     it('still chooses a model the plan does cover', async () => {
-      installRestricted()
       renderPanel()
 
       await userEvent.click(await screen.findByText('Model mine'))
@@ -344,7 +341,6 @@ describe('Models panel', () => {
      * tested because a user meets whichever view the panel was left in.
      */
     it('says why on a card, naming the plan that refuses it', async () => {
-      installRestricted()
       renderPanel()
 
       const badge = await screen.findByText('Hors abonnement')
@@ -352,7 +348,6 @@ describe('Models panel', () => {
     })
 
     it('says why on a row too, where the badge has nowhere to sit', async () => {
-      installRestricted()
       useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
       renderPanel()
 

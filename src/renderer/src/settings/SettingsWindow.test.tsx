@@ -362,6 +362,9 @@ describe('SettingsWindow', () => {
    */
   it('refuses a default model the plan does not cover, and says so in its label', async () => {
     installFakeBridge({
+      // Without a key there is no plan to read, and nothing is greyed out — which is the whole
+      // point of the fallback, and would make this case pass on the wrong reason.
+      settings: { authState: () => Promise.resolve({ authenticated: true }) },
       scenario: {
         searchModels: () =>
           Promise.resolve({
@@ -390,6 +393,50 @@ describe('SettingsWindow', () => {
     const option = await screen.findByRole('option', { name: /Seedance 2\.0/ })
     expect(option).toBeDisabled()
     expect(option).toHaveTextContent('Hors abonnement')
+  })
+
+  /**
+   * The default ALREADY stored, which nobody is choosing right now — a downgrade or an account
+   * switch puts it out of plan on its own. A browser still shows a disabled `<option>` as the
+   * selected one, and the suffix lives only in the option labels, so without this the screen
+   * says nothing and the generator opens armed on a model that fails on every submission.
+   */
+  it('warns when the default already stored has fallen out of the plan', async () => {
+    installFakeBridge({
+      settings: {
+        read: () =>
+          Promise.resolve({
+            ...DEFAULT_SETTINGS,
+            generation: { ...DEFAULT_SETTINGS.generation, defaultModels: { image: 'model_pro' } },
+          }),
+        authState: () => Promise.resolve({ authenticated: true }),
+      },
+      scenario: {
+        searchModels: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'model_pro',
+                name: 'Seedance 2.0',
+                family: 'image',
+                source: 'scenario',
+                origin: 'official',
+                featured: false,
+                capabilities: ['txt2img'],
+                tags: [],
+                requiredPlanLevel: 50,
+              },
+            ],
+            cursor: null,
+          }),
+        plan: () => Promise.resolve({ name: 'cu-basic', level: 25 }),
+      },
+    })
+
+    render(<SettingsWindow />)
+    await userEvent.click(within(navigation()).getByRole('button', { name: 'Image' }))
+
+    expect(await screen.findByText(/cu-basic/)).toBeInTheDocument()
   })
 
   /**

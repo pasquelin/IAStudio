@@ -58,6 +58,16 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const defaultModels = staged ?? stored
   const selected = defaultModels[family] ?? ''
 
+  /**
+   * The default that is ALREADY stored, which nobody is choosing right now. A downgrade or an
+   * account switch can put it out of plan, and a browser still shows a disabled `<option>` as
+   * the selected one — silently, since the suffix only lives in the option labels. The
+   * generator would then open armed on it and fail on every submission.
+   */
+  const selectedModel = models.find(model => model.id === selected)
+  const selectedRefused =
+    plan !== null && isBeyondPlan(selectedModel?.requiredPlanLevel, plan) ? plan : null
+
   return (
     <div className="flex max-w-md flex-col gap-3">
       <label className="flex flex-col gap-2 text-xs">
@@ -88,6 +98,12 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
           })}
         </select>
       </label>
+
+      {selectedRefused && (
+        <p className="text-warning text-xs">
+          {t('models.planLockedHint', { plan: selectedRefused.name })}
+        </p>
+      )}
     </div>
   )
 }

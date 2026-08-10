@@ -6,22 +6,11 @@ vi.mock('@main/log', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
-/** Counts the round trips, which is half of what this module is for. */
-function catalogOf(answer: () => Promise<RemoteTeams>): {
-  catalog: TeamsCatalog
-  calls: () => number
-} {
-  let calls = 0
-  return {
-    catalog: {
-      teams: () => {
-        calls += 1
-        return answer()
-      },
-    },
-    calls: () => calls,
-  }
-}
+/** What `GET /teams` answers, spelled as the plans it carries. */
+const teams =
+  (...plans: readonly string[]) =>
+  (): Promise<RemoteTeams> =>
+    Promise.resolve({ teams: plans.map(plan => ({ plan })) })
 
 describe('plan reader', () => {
   let clock = 0
@@ -30,21 +19,31 @@ describe('plan reader', () => {
     clock = 0
   })
 
-  const readerOf = (catalog: TeamsCatalog, watch = createCredentialsWatch()) => ({
-    reader: createPlanReader({ catalog: () => catalog, watch: watch.watch, now: () => clock }),
-    watch,
-  })
+  /** Counts the round trips, which is half of what this module is for. */
+  function readerOf(answer: () => Promise<RemoteTeams>, watch = createCredentialsWatch()) {
+    let calls = 0
+    const catalog: TeamsCatalog = {
+      teams: () => {
+        calls += 1
+        return answer()
+      },
+    }
+
+    return {
+      reader: createPlanReader({ catalog: () => catalog, watch: watch.watch, now: () => clock }),
+      calls: () => calls,
+      watch,
+    }
+  }
 
   it('reads the plan the account answers', async () => {
-    const { catalog } = catalogOf(() => Promise.resolve({ teams: [{ plan: 'cu-basic' }] }))
-    const { reader } = readerOf(catalog)
+    const { reader } = readerOf(teams('cu-basic'))
 
     expect(await reader.access()).toEqual({ name: 'cu-basic', level: 25 })
   })
 
   it('asks once and serves the rest from its cache', async () => {
-    const { catalog, calls } = catalogOf(() => Promise.resolve({ teams: [{ plan: 'cu-basic' }] }))
-    const { reader } = readerOf(catalog)
+    const { reader, calls } = readerOf(teams('cu-basic'))
 
     await reader.access()
     await reader.access()
@@ -54,8 +53,7 @@ describe('plan reader', () => {
   })
 
   it('asks again once its entry has aged out', async () => {
-    const { catalog, calls } = catalogOf(() => Promise.resolve({ teams: [{ plan: 'cu-basic' }] }))
-    const { reader } = readerOf(catalog)
+    const { reader, calls } = readerOf(teams('cu-basic'))
 
     await reader.access()
     clock = 11 * 60 * 1000
@@ -66,8 +64,7 @@ describe('plan reader', () => {
 
   // The cache holds one account's answer and nothing in it says which.
   it('drops what it holds when the account changes', async () => {
-    const { catalog, calls } = catalogOf(() => Promise.resolve({ teams: [{ plan: 'cu-basic' }] }))
-    const { reader, watch } = readerOf(catalog)
+    const { reader, calls, watch } = readerOf(teams('cu-basic'))
 
     await reader.access()
     watch.changed()
@@ -78,15 +75,13 @@ describe('plan reader', () => {
 
   // A refused or unreachable `/teams` must leave the picker exactly as it was.
   it('answers nothing rather than throwing when the call is refused', async () => {
-    const { catalog } = catalogOf(() => Promise.reject(new Error('nope')))
-    const { reader } = readerOf(catalog)
+    const { reader } = readerOf(() => Promise.reject(new Error('nope')))
 
     expect(await reader.access()).toBeNull()
   })
 
   it('answers nothing when the account holds no team at all', async () => {
-    const { catalog } = catalogOf(() => Promise.resolve({}))
-    const { reader } = readerOf(catalog)
+    const { reader } = readerOf(() => Promise.resolve({}))
 
     expect(await reader.access()).toBeNull()
   })
@@ -97,8 +92,7 @@ describe('plan reader', () => {
     ['rising', ['cu-basic', 'cu-pro-q3-25']],
     ['falling', ['cu-pro-q3-25', 'cu-basic']],
   ])('keeps the strongest plan of an account holding several, listed %s', async (_order, plans) => {
-    const { catalog } = catalogOf(() => Promise.resolve({ teams: plans.map(plan => ({ plan })) }))
-    const { reader } = readerOf(catalog)
+    const { reader } = readerOf(teams(...plans))
 
     expect(await reader.access()).toEqual({ name: 'cu-pro-q3-25', level: 50 })
   })
@@ -106,8 +100,7 @@ describe('plan reader', () => {
   // An ungradable name still travels: the panel shows the plan it could not read rather than
   // claiming the account has none.
   it('carries a name it cannot grade, with no level', async () => {
-    const { catalog } = catalogOf(() => Promise.resolve({ teams: [{ plan: 'cu-something-new' }] }))
-    const { reader } = readerOf(catalog)
+    const { reader } = readerOf(teams('cu-something-new'))
 
     expect(await reader.access()).toEqual({ name: 'cu-something-new', level: null })
   })
@@ -118,8 +111,7 @@ describe('plan reader', () => {
     ['before', ['cu-something-new', 'cu-basic']],
     ['after', ['cu-basic', 'cu-something-new']],
   ])('prefers a plan it can grade over one it cannot, listed %s it', async (_where, plans) => {
-    const { catalog } = catalogOf(() => Promise.resolve({ teams: plans.map(plan => ({ plan })) }))
-    const { reader } = readerOf(catalog)
+    const { reader } = readerOf(teams(...plans))
 
     expect(await reader.access()).toEqual({ name: 'cu-basic', level: 25 })
   })

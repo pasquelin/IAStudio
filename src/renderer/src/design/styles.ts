@@ -46,11 +46,15 @@ export const STATUS_BUTTON = cn(
  * Hover, selection and keyboard focus of one line in a list. The same line must not light up
  * differently depending on whether a `Tree` or a `Collection` is holding it.
  */
-export function rowSkin(selected: boolean): string {
+export function rowSkin(selected: boolean, disabled = false): string {
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
     selected ? 'bg-accent-soft' : 'hover:bg-elevated',
+    // After the hover, which it undoes: a refused line that still lights up under the pointer
+    // reads as pickable right until the click that does nothing. `MenuRow` reached the same
+    // triplet on its own — this is where a list row gets it, so `Tree` inherits it too.
+    disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
     FOCUS_RING,
   )
 }

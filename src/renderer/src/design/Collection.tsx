@@ -365,14 +365,7 @@ function CollectionCell({
    * from `rowSkin`, which the tree draws its own rows with — the same line must not light up
    * differently depending on which panel it is listed in.
    */
-  const skin = cn(
-    'min-w-0',
-    rowSkin(selected),
-    // `hover:bg-transparent` after `rowSkin`, which lit the row up: a refused row that still
-    // highlights under the pointer reads as pickable right up to the click that does nothing.
-    disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
-    className,
-  )
+  const skin = cn('min-w-0', rowSkin(selected, disabled), className)
 
   // What the cell answers to is not what puts it in reach: a row that only opens is walked to
   // and pressed like one that only selects.

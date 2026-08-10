@@ -71,21 +71,20 @@ export function createPlanReader({
       let value: PlanAccess | null = null
       try {
         const { teams } = await catalog().teams()
-        const names = (teams ?? []).map(team => team.plan).filter(name => name !== undefined)
+        const plans = (teams ?? [])
+          .map(team => team.plan)
+          .filter(name => name !== undefined)
+          .map(name => ({ name, level: levelOfPlan(name) }))
 
-        // The highest of them, on an account holding several: reading the weakest would grey out
-        // models one of the teams can run. `levelOfPlan` makes the same choice for the same reason.
-        for (const name of names) {
-          const level = levelOfPlan(name)
-
-          // An ungradable name still travels, with a null level, so the panel can show the plan
-          // it could not read rather than claim the account has none — but it never outranks a
-          // graded one, since a level is what deciding anything takes.
-          if (level === null) value ??= { name, level }
-          else if (value === null || value.level === null || level > value.level) {
-            value = { name, level }
-          }
-        }
+        // The strongest of them, on an account holding several: reading the weakest would grey
+        // out models one of the teams can run. `-1` ranks an ungradable name below every graded
+        // one, so such a name only travels when nothing else did — the panel then shows the plan
+        // it could not read rather than denying the account has one.
+        const rank = (plan: PlanAccess): number => plan.level ?? -1
+        value = plans.reduce<PlanAccess | null>(
+          (best, plan) => (best === null || rank(plan) > rank(best) ? plan : best),
+          null,
+        )
       } catch (error) {
         // Swallowed, not reduced: an unreadable plan must leave the picker exactly as it was
         // before this feature existed. Letting it throw would empty the panel over a nicety.
