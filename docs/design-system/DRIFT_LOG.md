@@ -37,7 +37,6 @@ impossible.
 | P0 | src/renderer/src/home/sections/Explore.tsx:89 | P0-button-tooltip | onglet, aucune description |
 | P0 | src/renderer/src/home/sections/Projects.tsx:65 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/home/sections/Tools.tsx:93 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/licences/LicencesWindow.tsx:33 | P0-button-tooltip | fenêtre Licences — aucun `TooltipHost` dans son arbre |
 | P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:215 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:238 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/panels/view/View.tsx:54 | P0-button-tooltip | libellé visible, aucune description |
@@ -60,14 +59,12 @@ impossible.
 
 ## Ce qui bloque une partie du lot
 
-La fenêtre **Licences** rend son propre arbre React et **ne monte aucun `TooltipHost`** — lui
-poser des attributs d'infobulle avant l'hôte écrirait du texte que personne ne verrait jamais.
-Les Préférences et l'Usage le montent depuis le 2026-08-10 : leurs lignes restantes sont
-traitables.
+Les quatre fenêtres montent leur `TooltipHost` : la principale depuis toujours, les
+Préférences, l'Usage et les Licences depuis le 2026-08-10. Plus rien n'est bloqué.
 
 Un `<Tooltip>` fermé **ne rend rien du tout** — vérifié. Le seul test qui prouve qu'un hôte
-est monté est donc un survol de bout en bout, ce qui interdit de monter l'hôte d'une fenêtre
-avant qu'un de ses boutons ne porte une infobulle. C'est pourquoi chaque fenêtre est un lot.
+est monté est donc un survol de bout en bout, ce qui a imposé de monter l'hôte d'une fenêtre
+dans le même lot qu'au moins un de ses boutons.
 
 `design/Button.tsx` n'accepte aujourd'hui aucune infobulle : le composant des boutons à
 libellé des docks doit d'abord en porter une, comme `ToolButton`.

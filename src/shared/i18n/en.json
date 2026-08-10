@@ -1519,7 +1519,9 @@
   "licences": {
     "title": "Licences",
     "intro": "Scenario Studio ships with the software below. Each keeps its own licence, reproduced here in full.",
-    "sources": "Corresponding sources:"
+    "sources": "Corresponding sources:",
+    "unfold": "Unfolds the full text of this licence, right here",
+    "fold": "Folds this text back — only one licence stays open at a time"
   },
   "usage": {
     "title": "Usage",
