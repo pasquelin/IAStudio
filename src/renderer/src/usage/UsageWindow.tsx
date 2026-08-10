@@ -19,6 +19,7 @@ import { UsageModels } from './UsageModels'
 import { UsageNotes } from './UsageNotes'
 import { UsageOverview } from './UsageOverview'
 import { useUsageReport } from './useUsageReport'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 export type UsageSectionId = 'overview' | 'models' | 'activities' | 'journal'
 
@@ -118,7 +119,7 @@ export function UsageWindow() {
 
         <main className="min-w-0 flex-1 overflow-auto px-6 py-4">
           <h2 className="mb-1 text-base font-semibold">{t(`usage.sections.${section}`)}</h2>
-          <p className="text-base-content/60 mb-4 text-xs">{t(`usage.descriptions.${section}`)}</p>
+          <p className={cn(WINDOW_CAPTION, 'mb-4')}>{t(`usage.descriptions.${section}`)}</p>
 
           <Body id={section} period={period} report={report} failure={failure} onRetry={reload} />
         </main>
@@ -156,12 +157,12 @@ function Body({ id, period, report, failure, onRetry }: BodyProps) {
     )
   }
 
-  if (!report) return <p className="text-base-content/60 text-xs">{t('usage.loading')}</p>
+  if (!report) return <p className={WINDOW_CAPTION}>{t('usage.loading')}</p>
 
   // Zeros across the board because nothing was spent, or because there is no key to ask? Only
   // this tells them apart, and a table of zeros reads as the first when it is the second.
   if (report.accounts.length === 0 && report.silent.length === 0) {
-    return <p className="text-base-content/60 text-xs">{t('usage.noAccount')}</p>
+    return <p className={WINDOW_CAPTION}>{t('usage.noAccount')}</p>
   }
 
   return (

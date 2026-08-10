@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft, useSettingValue } from '@/stores/settings-draft'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /**
  * The microphone to record from — the one setting no registry descriptor can express, because
@@ -52,9 +53,7 @@ export function DictationSettings() {
         ))}
       </select>
 
-      {devices.length === 0 && (
-        <span className="text-base-content/60 text-xs">{t('dictation.noDevice')}</span>
-      )}
+      {devices.length === 0 && <span className={WINDOW_CAPTION}>{t('dictation.noDevice')}</span>}
     </label>
   )
 }

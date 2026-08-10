@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import type { UsageReport } from '@shared/domain/usage'
 import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatUnits, shareOf } from './format'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /** What each model cost, which is the one question a spend table exists to answer. */
 export function UsageModels({ report }: { report: UsageReport }) {
@@ -9,7 +10,7 @@ export function UsageModels({ report }: { report: UsageReport }) {
   const locale = i18n.language
 
   if (report.models.length === 0) {
-    return <p className="text-base-content/60 text-xs">{t('usage.empty')}</p>
+    return <p className={WINDOW_CAPTION}>{t('usage.empty')}</p>
   }
 
   const largest = report.models[0]?.units ?? 0

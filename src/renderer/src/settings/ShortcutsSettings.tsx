@@ -19,6 +19,7 @@ import { HINT_BOTTOM, HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from './SettingLine'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
+import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
 /** Modifiers on their own are not a shortcut; they are what is held while one is pressed. */
 const MODIFIER_CODES = new Set([
@@ -99,7 +100,7 @@ function CommandRow({
     <SettingLine
       title={t(descriptor.titleKey)}
       help={
-        <p id={describedBy} className="text-base-content/60 max-w-lg text-xs">
+        <p id={describedBy} className={WINDOW_HELP}>
           {t(descriptor.helpKey)}
         </p>
       }
@@ -210,7 +211,7 @@ export function ShortcutsSettings() {
       ))}
 
       {query !== null && !COMMAND_SCOPES.some(scope => commandsIn(scope).some(matches)) && (
-        <p className="text-base-content/60 text-xs">{t('settings.chordFree')}</p>
+        <p className={WINDOW_CAPTION}>{t('settings.chordFree')}</p>
       )}
     </div>
   )

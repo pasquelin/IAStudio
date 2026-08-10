@@ -4,6 +4,7 @@ import { HINT_RIGHT } from '@/helpers/tooltip'
 import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatMoment, formatUnits } from './format'
 import { useUsageEvents } from './useUsageReport'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 /**
  * The raw billable log, event by event.
@@ -17,9 +18,9 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
   const { page, loading, failure, more } = useUsageEvents(period)
 
   if (failure) return <p className="text-xs">{t('usage.failure')}</p>
-  if (!page && loading) return <p className="text-base-content/60 text-xs">{t('usage.loading')}</p>
+  if (!page && loading) return <p className={WINDOW_CAPTION}>{t('usage.loading')}</p>
   if (!page || page.events.length === 0) {
-    return <p className="text-base-content/60 text-xs">{t('usage.empty')}</p>
+    return <p className={WINDOW_CAPTION}>{t('usage.empty')}</p>
   }
 
   return (

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import type { UsageReport } from '@shared/domain/usage'
 import { formatDay, formatMoney, formatUnits } from './format'
+import { WINDOW_CAPTION } from '@/design/window-styles'
 
 export function UsageOverview({ report }: { report: UsageReport }) {
   const { t, i18n } = useTranslation()
@@ -17,7 +18,7 @@ export function UsageOverview({ report }: { report: UsageReport }) {
           label={t('usage.total')}
           value={`${formatUnits(report.units, locale)} ${t('usage.units')}`}
         >
-          {money && <span className="text-base-content/60 text-xs">≈ {money}</span>}
+          {money && <span className={WINDOW_CAPTION}>≈ {money}</span>}
         </Figure>
         <Figure
           label={t('usage.discount')}
@@ -26,7 +27,7 @@ export function UsageOverview({ report }: { report: UsageReport }) {
         <Figure label={t('usage.jobs')} value={formatUnits(report.jobs, locale)} />
       </section>
 
-      {money && <p className="text-base-content/60 text-xs">{t('usage.indicative')}</p>}
+      {money && <p className={WINDOW_CAPTION}>{t('usage.indicative')}</p>}
 
       {report.daily.length > 0 && (
         <section className="flex flex-col gap-2">

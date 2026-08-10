@@ -5,6 +5,7 @@ import { getBridge } from '@/services/bridge'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { SettingLine } from './SettingLine'
 import { useSettingsDraft } from '@/stores/settings-draft'
+import { WINDOW_HELP } from '@/design/window-styles'
 
 /**
  * A button that acts, rather than a setting that holds a value — which is why these live in a
@@ -27,7 +28,7 @@ function ActionRow({ action }: { action: SettingAction }) {
   return (
     <SettingLine
       title={t(action.titleKey)}
-      help={<p className="text-base-content/60 max-w-lg text-xs">{t(action.helpKey)}</p>}
+      help={<p className={WINDOW_HELP}>{t(action.helpKey)}</p>}
     >
       <button
         type="button"
