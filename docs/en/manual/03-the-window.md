@@ -227,7 +227,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 > incoming wire carries, and what it received leaves by the branch that was chosen — the others get
 > nothing. The nodes reading them then show **not taken**: that is not a failure, it is the branch
 > doing its job, and the state carries on to everything downstream. A branch left empty in the
-> inspector cannot be taken; the **Else** gets it.
+> inspector cannot be taken: the run moves on to the next branch, and to the **Else** if there is
+> none left.
 >
 > **An approval node stops the run to ask you.** You put one down like any other, wire it to the
 > node whose result it should hold, and the Inspector gives it its **question asked** — left

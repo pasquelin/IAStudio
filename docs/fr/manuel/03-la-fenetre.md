@@ -234,7 +234,8 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > son fil d’entrée lui apporte, et ce qu’il a reçu part par la branche choisie — les autres ne
 > reçoivent rien. Les nœuds qui les lisent affichent alors **non prise** : ce n’est pas un échec,
 > c’est le branchement qui a fait son travail, et l’état se propage à tout ce qui suit. Une branche
-> laissée vide dans l’inspecteur ne peut pas être prise ; c’est le **Sinon** qui reçoit.
+> laissée vide dans l’inspecteur ne peut pas être prise : l’exécution passe à la branche
+> suivante, et au **Sinon** s’il n’en reste aucune.
 >
 > **Un nœud d’approbation arrête l’exécution pour demander votre avis.** On le pose comme les
 > autres, on le relie au nœud dont il doit faire valider le résultat, et l’Inspecteur donne la
