@@ -77,12 +77,11 @@ export const canDropConnection = (graph: GraphState, connection: Connection): bo
 }
 
 /**
- * The one place an edge is built.
+ * The edge every gesture of the editor builds — the canvas through `edgeOf`, a fixture through
+ * `wire`. Only `parseEdge` builds one elsewhere, off a file, where the ends are already written.
  *
- * Its id follows Scenario's spelling and its two ends keep the inverted convention — `source` is
- * the CONSUMER, `target` the PROVIDER — which is the one place where getting it backwards would be
- * silent. Ports are passed as HANDLE IDS rather than field names, so a document naming its own
- * ports goes through here too.
+ * Ports come in as HANDLE IDS rather than field names, so a document naming its own ports goes
+ * through here too. See `GraphEdge` for why `source` is the CONSUMER.
  */
 export const edgeBetween = (
   consumer: string,

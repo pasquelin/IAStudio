@@ -53,10 +53,10 @@ const READS_CASE1: GraphEdge = wire('model1', 'prompt', 'ifElse1', 'case1')
 const importedBranch = (blocks: readonly GraphConditionBlock[]): GraphNode => ({
   id: 'ifElse1',
   type: 'ifElse',
-  position: { x: 40, y: 0 },
+  position: { x: 0, y: 0 },
   data: {
     conditionBlocks: blocks,
-    inputHandles: inputHandlesOf(BRANCH),
+    inputHandles: inputHandlesOf(branchNode('ifElse1', [])),
     outputHandles: [
       { id: 'ifElse1-out-0', name: 'a' },
       { id: 'ifElse1-out-1', name: 'b' },
@@ -253,7 +253,7 @@ describe('the outputs a branch carries', () => {
     expect(ports()).toEqual(['ifElse1-target-case2', 'ifElse1-target-else'])
 
     const edges = graphOf(useGraphs.getState(), DOCUMENT).edges
-    expect([...edges.map(edge => edge.id)].sort()).toEqual([FED.id, readsCase2.id].sort())
+    expect(edges.map(edge => edge.id).sort()).toEqual([FED.id, readsCase2.id].sort())
   })
 
   /**

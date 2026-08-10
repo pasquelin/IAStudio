@@ -110,10 +110,12 @@ describe('the fixtures say what the factory builds', () => {
   })
 
   /**
-   * The same lock, on the wire rather than on the node — and the reason `wire` names its ends by
-   * FIELD while `edgeBetween` names them by handle id: the shorthand has to land on the same edge.
+   * What `wire` adds to `edgeBetween`, and the only thing this holds: the SIDE each end is spelt
+   * by. A consumer's port is a `source` and a provider's a `target`, and swapping them here would
+   * aim every fixture's wire at a port no node carries. The spelling of the id itself is held by
+   * `connect.test.ts`, which writes the edge out in full.
    */
-  it('gives a wire the edge the canvas builds from the same two ports', () => {
+  it('spells the consumer end source and the provider end target', () => {
     expect(wire('model1', 'prompt', 'text1', 'prompt')).toEqual(
       edgeBetween(
         'model1',
