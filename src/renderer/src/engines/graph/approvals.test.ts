@@ -41,6 +41,17 @@ describe('reading the approvals of a graph', () => {
     expect(approvalsOf(graph).size).toBe(0)
   })
 
+  /**
+   * `parseGraph` keeps an edge whose ends a file names and the graph no longer holds — the plan
+   * filters those, and the converter checks the guarded node exists before recording anything.
+   * Left in, the map would claim a guard on a node nobody can see.
+   */
+  it('ignores a guard on a node the graph no longer holds', () => {
+    const graph = graphOf([approvalNode('approval1')], [guards('approval1', 'm1')])
+
+    expect(approvalsOf(graph).size).toBe(0)
+  })
+
   it('takes the first wire when an approval names two nodes', () => {
     const graph = graphOf(
       [modelNode('m1'), modelNode('m2'), approvalNode('approval1')],

@@ -333,6 +333,25 @@ describe('waiting on an approval', () => {
     expect(idsOf(planGraph(reversed))).toEqual(['m1', 'approval1', 'm2'])
   })
 
+  /**
+   * The converter never makes one approval depend on another — it pushes their flow items after
+   * it has finished walking the flow, with `dependsOn: [approvedFlowId]` and nothing else. Here,
+   * `approval1` reads `m1` through its own guard wire, and `m1` is guarded by `approval2`.
+   */
+  it('never makes one approval wait on another', () => {
+    const rivals = graphOf(
+      [model('m1'), approval('approval1'), approval('approval2')],
+      [guards('approval1', 'm1'), guards('approval2', 'm1')],
+    )
+    const plan = planGraph(rivals)
+
+    expect(ordered(plan).map(node => [node.id, node.awaits])).toEqual([
+      ['m1', []],
+      ['approval1', []],
+      ['approval2', []],
+    ])
+  })
+
   it('waits once where two wires join the same guarded node', () => {
     const twice = graphOf(
       [model('m1'), model('m2'), approval('approval1')],

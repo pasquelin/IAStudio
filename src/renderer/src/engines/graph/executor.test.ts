@@ -617,6 +617,58 @@ describe('stopping on an approval', () => {
     expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'idle'])
   })
 
+  /**
+   * An approval guarding nothing compiles to no flow item at all — the converter drops it before
+   * it ever reaches the flow. Asked anyway, the studio would stop a run on a question the App it
+   * exports would never put, and the user would answer for nothing.
+   */
+  it('asks nothing of an approval left unwired', async () => {
+    const loose = graphOf([modelNode('m1', {}, 'model_a'), approvalNode('approval1')], [])
+    const asked: string[] = []
+    const watched = await watch(loose, outputs, {
+      approve: async nodeId => {
+        asked.push(nodeId)
+        return true
+      },
+    })
+
+    expect(asked).toEqual([])
+    expect(statusesOf(watched, 'approval1')).toEqual([])
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_a'])
+  })
+
+  /**
+   * Two approvals on one node: the converter keeps the LAST and gives the other no flow item, so
+   * one question is asked once. Asking both would queue them, and declining the winner painted
+   * the loser "upstream failed" — for a node nothing had failed on and nobody had asked.
+   */
+  describe('two approvals guarding one node', () => {
+    const rivals = (): GraphState =>
+      graphOf(
+        [modelNode('m1', {}, 'model_a'), approvalNode('approval1'), approvalNode('approval2')],
+        [guards('approval1', 'm1'), guards('approval2', 'm1')],
+      )
+
+    it('asks only the one the converter would keep', async () => {
+      const asked: string[] = []
+      await watch(rivals(), outputs, {
+        approve: async nodeId => {
+          asked.push(nodeId)
+          return true
+        },
+      })
+
+      expect(asked).toEqual(['approval2'])
+    })
+
+    it('says nothing at all of the one it does not ask', async () => {
+      const watched = await watch(rivals(), outputs, { approve: () => Promise.resolve(false) })
+
+      expect(failureOf(watched, 'approval2')).toBe('declined')
+      expect(statusesOf(watched, 'approval1')).toEqual([])
+    })
+  })
+
   it('never asks about a node that failed to produce', async () => {
     const asked: string[] = []
     await watch(

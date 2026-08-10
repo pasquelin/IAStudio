@@ -1,5 +1,6 @@
 import type { GraphNode, GraphNodeRun, GraphRunFailure, GraphState } from '@shared/domain/graph'
 import { CONDITIONAL_PORT } from '@shared/domain/graph'
+import { approvalsOf } from './approvals'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
 /** What the executor cannot do itself: submit work, say where it is, and be told to stop. */
@@ -60,6 +61,10 @@ export async function runGraph(
   }
 
   const byId = new Map(graph.nodes.map(node => [node.id, node]))
+  // The approvals that actually guard something. One dropped on the canvas and left unwired, or
+  // beaten to its node by a second one, compiles to no flow item at all — so it must not stop a
+  // local run either, and above all must not put a question the export would never ask.
+  const guarding = new Set(approvalsOf(graph).values())
   const produced = new Map(cache)
   const settled = new Map<string, Promise<Outcome>>()
 
@@ -161,8 +166,9 @@ export async function runGraph(
     // A note is drawn on the canvas and compiles to nothing — it has no output to read either.
     if (node.type === 'stickyNote') return { values: [] }
     // Asked only once what it guards has produced, which the inputs above are: an approval put to
-    // the user before the picture exists is a question about nothing.
-    if (node.type === 'approval') return decide(node)
+    // the user before the picture exists is a question about nothing. One guarding nothing is a
+    // question about nothing too — it passes without a word rather than stopping the graph.
+    if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: [] }
     if (node.type !== 'model') return fail(node.id, 'unsupported')
 
     const { modelId, form } = node.data

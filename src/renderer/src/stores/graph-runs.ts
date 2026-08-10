@@ -170,6 +170,11 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
         // of the session: the button stays on Stop, and `start` refuses every press after it. A
         // graph read off a file is enough to get there — `parseGraph` does not validate `data`,
         // so `inputHandles` holding a string makes the plan throw.
+        // Hygiene, and invisible — said plainly rather than dressed up as a fix. A throw in one
+        // branch rejects `Promise.all` while another sits on an open question, and dropping the
+        // map below would leave that `execute` frame suspended for the session. Answering first
+        // lets it end. Nothing on screen differs either way, so no test can see this line go.
+        abandon(documentId)
         patch(documentId, controller, held => ({ ...held, running: false }))
         if (stopping.get(documentId) === controller) stopping.delete(documentId)
         if (inFlight.get(documentId) === jobs) inFlight.delete(documentId)
