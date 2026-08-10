@@ -46,7 +46,9 @@ export function TextureField({
 
   return (
     <div className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <Thumbnail url={chosen?.url} className={THUMBNAIL} />
 

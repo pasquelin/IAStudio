@@ -31,6 +31,11 @@ export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
   const [result, setResult] = useState<GraphCompileResult | null>(null)
 
   useEffect(() => {
+    // Nothing drawn, nothing to ask. A new document would otherwise open on "no output marked",
+    // in the red of a failure, about a canvas the user has not touched yet: a refusal is only
+    // useful once there is something to refuse.
+    if (settled.nodes.length === 0) return
+
     // An answer that comes back after the graph moved on would paint a verdict on a graph that
     // no longer exists — the very race `useDebounced` is written against, one layer down.
     let live = true
@@ -47,7 +52,9 @@ export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
     }
   }, [settled])
 
-  return result
+  // Derived rather than cleared: emptying the canvas must drop the verdict with it, and writing
+  // that from the effect is a `setState` in an effect body — which the lint refuses, rightly.
+  return settled.nodes.length === 0 ? null : result
 }
 
 /**

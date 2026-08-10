@@ -73,7 +73,9 @@ export function RangeField({
 
   return (
     <div className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <div
         className="relative h-(--sc-control) min-w-0 flex-1"

@@ -651,7 +651,7 @@
     "fontMissing": "{{family}} (missing)",
     "node": "Node",
     "title": "Title",
-    "isOutput": "Workflow output",
+    "isOutput": "App result",
     "nodeId": "Identifier",
     "noModel": "None"
   },

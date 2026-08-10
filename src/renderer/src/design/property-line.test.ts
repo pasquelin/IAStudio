@@ -18,6 +18,20 @@ const SOURCES: Record<string, string> = import.meta.glob('./PropertyRow.tsx', {
 
 const propertyRow = Object.values(SOURCES)[0] ?? ''
 
+/**
+ * Every field of the family, read the same way. The rule below was once fixed on ONE of them —
+ * `ToggleField`, where « Sortie du workflow » had been seen truncated to « Sortie du … » — and
+ * the eight others went on truncating in silence. A rule repaired on one exemplar is a rule
+ * nothing holds.
+ */
+const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
+const named = (source: string): boolean => source.includes('title={label}')
+
 describe('the label column of a property line', () => {
   it('finds the row at all, so the rules below cannot pass on an empty file', () => {
     expect(propertyRow).toContain('export function PropertyRow')
@@ -49,5 +63,28 @@ describe('the label column of a property line', () => {
   it('gives both families the height of a control', () => {
     expect(FIELD_ROW).toContain('min-h-(--sc-control)')
     expect(propertyRow).toContain('min-h-(--sc-control)')
+  })
+})
+
+describe('a label the column is too narrow for', () => {
+  it('finds the fields at all, so the rule below cannot pass on an empty glob', () => {
+    expect(Object.keys(FIELDS).length).toBeGreaterThan(5)
+  })
+
+  /**
+   * The column truncates, so the whole label has to be reachable somewhere. `PropertyRow` learned
+   * this first and the fields did not follow: « Sortie du … » read as an instruction of its own
+   * on a canvas whose every node already carries a port called « Sortie ».
+   */
+  it('is reachable on hover from every field that draws one', () => {
+    const silent = Object.entries(FIELDS)
+      .filter(([, source]) => source.includes('FIELD_LABEL') && !named(source))
+      .map(([path]) => path)
+
+    expect(silent, `these draw a truncating label with no title: ${silent.join(', ')}`).toEqual([])
+  })
+
+  it('is reachable on the row family too, which is where the rule started', () => {
+    expect(named(propertyRow)).toBe(true)
   })
 })

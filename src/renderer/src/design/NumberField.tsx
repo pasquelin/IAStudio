@@ -105,6 +105,7 @@ export function NumberField({
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        title={label}
         className={cn(
           'text-muted shrink-0 cursor-ew-resize touch-none select-none',
           layout === 'row' && FIELD_LABEL,

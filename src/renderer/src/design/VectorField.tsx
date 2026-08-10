@@ -36,7 +36,9 @@ export function VectorField<V extends AxisValue>({
 
   return (
     <div className={FIELD_ROW}>
-      <span className={FIELD_LABEL}>{label}</span>
+      <span title={label} className={FIELD_LABEL}>
+        {label}
+      </span>
 
       <div
         className="grid min-w-0 flex-1 gap-2"

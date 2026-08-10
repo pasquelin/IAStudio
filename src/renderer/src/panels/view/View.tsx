@@ -47,7 +47,9 @@ export function View() {
     <div className={PANEL_SCROLL}>
       <PropertySection title={t('view.projection')}>
         <div className={FIELD_ROW}>
-          <span className={FIELD_LABEL}>{t('view.mode')}</span>
+          <span title={t('view.mode')} className={FIELD_LABEL}>
+            {t('view.mode')}
+          </span>
 
           <div className="flex min-w-0 flex-wrap gap-2">
             {SKYBOX_VIEWS.map(candidate => (

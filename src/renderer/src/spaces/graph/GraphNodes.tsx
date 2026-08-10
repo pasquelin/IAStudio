@@ -69,6 +69,8 @@ function NodeShell({
   outputs: readonly GraphHandleOutput[]
   children?: ReactNode
 }) {
+  const { t } = useTranslation()
+
   return (
     <div
       className={cn(
@@ -78,11 +80,23 @@ function NodeShell({
     >
       <header className="border-border flex items-baseline justify-between gap-2 border-b px-2 py-1">
         {/* The one node the compiler starts from. Marked on the face rather than in the inspector
-            alone: which node a workflow ends on is read at a glance on the canvas, or not at all. */}
+            alone: which node an App ends on is read at a glance on the canvas, or not at all.
+            Named as `AssetBadge` names its own marks — a glyph carries the meaning, so it needs
+            the words a colour cannot give, and `UiIcon` is `aria-hidden` on every site. */}
         {output && (
-          <UiIcon path={mdiExportVariant} size={12} className="text-accent shrink-0 self-center" />
+          <span
+            title={t('inspector.isOutput')}
+            aria-label={t('inspector.isOutput')}
+            role="img"
+            className="text-accent shrink-0 self-center"
+          >
+            <UiIcon path={mdiExportVariant} size={12} />
+          </span>
         )}
-        <span className="truncate text-[11px]">{title}</span>
+        {/* `mr-auto` rather than the row's `justify-between`, which sent the title to the middle
+            of the header the moment a third child appeared: two nodes side by side, one marked
+            and one not, stopped lining their titles up. */}
+        <span className="mr-auto truncate text-[11px]">{title}</span>
         {/* The run takes the corner while there is one to report: the header holds a title that
             truncates and one thing beside it, and what a node is DOING outranks what it is. */}
         {run && run.status !== 'idle' ? (
