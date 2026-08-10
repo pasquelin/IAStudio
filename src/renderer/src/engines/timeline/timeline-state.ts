@@ -3,6 +3,7 @@
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
 import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
+import { clamp } from '@shared/numeric'
 
 /** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
 export type Us = number
@@ -79,7 +80,7 @@ export const MIN_TRACK_HEIGHT = 28
 export const MAX_TRACK_HEIGHT = 200
 
 export function clampTrackHeight(height: number): number {
-  return Math.min(MAX_TRACK_HEIGHT, Math.max(MIN_TRACK_HEIGHT, Math.round(height)))
+  return clamp(Math.round(height), MIN_TRACK_HEIGHT, MAX_TRACK_HEIGHT)
 }
 
 /** Below -60 dB nothing is audible, and above +12 dB generated audio only clips. */
@@ -87,7 +88,7 @@ export const MIN_GAIN_DB = -60
 export const MAX_GAIN_DB = 12
 
 export function clampGain(gain: number): number {
-  return Math.min(MAX_GAIN_DB, Math.max(MIN_GAIN_DB, gain))
+  return clamp(gain, MIN_GAIN_DB, MAX_GAIN_DB)
 }
 
 /** The range every media element agrees to resample without dropping to silence. */
@@ -95,7 +96,7 @@ export const MIN_SPEED = 0.25
 export const MAX_SPEED = 4
 
 export function clampSpeed(speed: number): number {
-  return Math.min(MAX_SPEED, Math.max(MIN_SPEED, speed))
+  return clamp(speed, MIN_SPEED, MAX_SPEED)
 }
 
 export type ClipInit = Pick<Clip, 'id' | 'assetId' | 'start' | 'duration'> & Partial<Clip>

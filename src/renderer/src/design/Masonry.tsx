@@ -1,4 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { clamp } from '@shared/numeric'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { scrollOffsetWithin, scrollParentOf } from '@/helpers/scroll-parent'
 import { useScrollHost } from './ScrollHost'
@@ -128,7 +129,7 @@ export function Masonry<T extends { id: string }>({
       const stated = item ? (ratioOf(item) ?? FALLBACK_RATIO) : FALLBACK_RATIO
       // A ratio of zero or worse would collapse the cell and stack every item at one offset.
       const ratio = stated > 0 ? stated : FALLBACK_RATIO
-      return laneWidth / Math.min(RATIO_MAX, Math.max(RATIO_MIN, ratio))
+      return laneWidth / clamp(ratio, RATIO_MIN, RATIO_MAX)
     },
     lanes,
     gap: GAP,

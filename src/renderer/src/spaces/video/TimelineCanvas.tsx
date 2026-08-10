@@ -1,4 +1,5 @@
 import type { CommandId } from '@shared/domain/command'
+import { clamp } from '@shared/numeric'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { mediaDuration, posterUrl } from '@shared/domain/asset'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
@@ -195,7 +196,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     (time: number): void => {
       const store = useSequences.getState()
       const state = sequenceOf(store, documentId)
-      const playhead = Math.max(0, Math.min(sequenceDuration(state), time))
+      const playhead = clamp(time, 0, sequenceDuration(state))
       store.replace(documentId, { ...state, playhead })
       setViewport(revealTime(latest.current.viewport, playhead, size.current.width))
     },

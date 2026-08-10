@@ -2,6 +2,7 @@
  * Offline dictation: what the renderer, the main process and the recognition worker all have to
  * agree on. The engine itself runs in a `utilityProcess` and never appears here.
  */
+import { clamp } from '../numeric'
 
 /**
  * Where a dictation session stands. Flat strings rather than a discriminated union: what a
@@ -120,7 +121,7 @@ export function toInt16(samples: Float32Array): Int16Array {
   for (const sample of samples) {
     // Scaled by 32767 on the way up and by 32768 on the way down: it is the pair that keeps a
     // full-scale sample inside the range in both directions.
-    pcm[index] = Math.round(Math.max(-1, Math.min(1, sample)) * 32_767)
+    pcm[index] = Math.round(clamp(sample, -1, 1) * 32_767)
     index += 1
   }
 

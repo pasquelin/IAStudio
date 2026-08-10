@@ -1,3 +1,4 @@
+import { clamp } from '../numeric'
 import { reconcileOrder } from './order'
 
 /**
@@ -247,7 +248,7 @@ export function limitedHomeSection(
   id: HomeSectionId,
   limit: number,
 ): HomeSectionSetting[] {
-  const bounded = Math.min(HOME_LIMIT_MAX, Math.max(HOME_LIMIT_MIN, Math.round(limit)))
+  const bounded = clamp(Math.round(limit), HOME_LIMIT_MIN, HOME_LIMIT_MAX)
   return patchedHomeSection(stored, id, { limit: bounded })
 }
 
