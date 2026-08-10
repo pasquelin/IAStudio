@@ -156,6 +156,10 @@ export function Tree<T extends TreeNode>({
     rows.findIndex(row => row.node.id === anchor),
   )
 
+  // A row that a selection may not hold is not a node either: it has nothing to move.
+  const canDrag = (node: T): boolean =>
+    onDrop !== undefined && (selectable?.(node) ?? true) && (draggable?.(node) ?? true)
+
   // A row never receives itself, whatever the caller answers: that one belongs to the tree.
   const accepts = (node: T): boolean =>
     dragged !== null && node.id !== dragged.id && (droppable?.(node, dragged) ?? true)
@@ -231,22 +235,16 @@ export function Tree<T extends TreeNode>({
                   // The row a drop would land in, told apart from the row that is selected.
                   over === row.node.id && 'outline-accent outline -outline-offset-1',
                 )}
-                // A row that a selection may not hold is not a node either: it has nothing to
-                // move. And the handle is the row itself — a `draggable` makes every control
-                // inside it draggable too, so the eye would reparent instead of toggling.
-                draggable={
-                  onDrop !== undefined &&
-                  (selectable?.(row.node) ?? true) &&
-                  (draggable?.(row.node) ?? true)
-                }
+                // The handle is the row itself — a `draggable` makes every control inside it
+                // draggable too, so the eye would reparent instead of toggling.
+                draggable={canDrag(row.node)}
                 onDragStart={event => {
                   if (event.target !== event.currentTarget) return event.preventDefault()
                   ROWS.start(event, row.node.id)
                   setDragged(row.node)
                 }}
                 onDragOver={event => {
-                  if (!onDrop || !dragged || !ROWS.carries(event)) return
-                  if (!accepts(row.node)) return
+                  if (!onDrop || !ROWS.carries(event) || !accepts(row.node)) return
                   // Without this the browser refuses the drop, and `onDrop` never fires.
                   event.preventDefault()
                   event.dataTransfer.dropEffect = 'move'

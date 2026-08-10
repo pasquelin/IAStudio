@@ -1,6 +1,6 @@
 import { watch, type FSWatcher } from 'node:fs'
 import { access, readdir, rename } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import {
   canMoveInto,
   compareEntries,
@@ -173,7 +173,7 @@ export function createFolderEditor(
 
       // A destination that is not a folder at all needs no check of its own: renaming into it
       // fails with ENOTDIR, and the catch is already the answer.
-      return moveTo(relative, `${folder}/${relative.slice(relative.lastIndexOf('/') + 1)}`)
+      return moveTo(relative, `${folder}/${basename(relative)}`)
     },
 
     trash: async relative => {
