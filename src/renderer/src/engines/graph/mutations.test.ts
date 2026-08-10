@@ -277,6 +277,55 @@ describe('swapping what a node is wired by', () => {
   })
 
   /**
+   * A port that SURVIVES with another type is judged too, by the very rule the canvas refuses a
+   * connection with. Checked on the id alone, a model swap that keeps a port's name while
+   * changing what it takes left a wire the editor would no longer draw.
+   */
+  it('cuts the edge whose port the new model kept but retyped', () => {
+    const retyped: Partial<GraphNode['data']> = {
+      inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'image' }],
+      outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
+    }
+
+    expect(replaceNodePorts(fed, 'imageGenerator1', retyped).edges).toEqual([])
+  })
+
+  /**
+   * And only on a port the patch redeclared. A `.graph` read off disk may hold a wire whose types
+   * this editor would refuse — `ALSO_ACCEPTED` is two lines read off one App — and an edit
+   * elsewhere must not take it away on nodes nobody touched.
+   */
+  it('leaves a mismatched edge between two other nodes alone', () => {
+    const elsewhere: GraphState = {
+      ...fed,
+      nodes: [
+        ...fed.nodes,
+        {
+          id: 'other1',
+          type: 'model',
+          position: { x: 0, y: 0 },
+          data: {
+            inputHandles: [{ id: 'other1-source-mask', name: 'mask', type: 'image' }],
+          },
+        },
+      ],
+      edges: [
+        {
+          id: 'c',
+          source: 'other1',
+          sourceHandle: 'other1-source-mask',
+          target: 'text1',
+          targetHandle: 'text1-target-prompt',
+        },
+      ],
+    }
+
+    expect(
+      replaceNodePorts(elsewhere, 'imageGenerator1', withoutMask).edges.map(edge => edge.id),
+    ).toEqual(['c'])
+  })
+
+  /**
    * A branch gaining or losing a case rewrites its OUTPUTS and says nothing about what feeds it.
    * Judged against input handles the node never declared — which a file is free not to write —
    * every wire into it would be cut by an edit that never mentioned them.

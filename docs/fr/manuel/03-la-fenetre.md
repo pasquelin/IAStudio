@@ -192,8 +192,14 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > choisi s’ouvre dessous, exactement celui du panneau Génération. Ce qu’on y tape passe par le
 > même ⌘Z que le nœud qu’on déplace.
 >
-> **Changer le modèle d’un nœud refait ses ports**, et les liens dont le port a disparu s’en vont
-> avec eux — en un seul geste, donc annulable d’un seul `⌘Z`.
+> **Changer le modèle d’un nœud refait ses ports**, et les liens que ces ports ne portent plus s’en
+> vont avec eux — celui dont le port a disparu, comme celui dont le port a changé de nature et
+> n’accepte plus ce qui est au bout. En un seul geste, donc annulable d’un seul `⌘Z`.
+>
+> **Une boucle dit ce qu’elle parcourt.** Sélectionner un nœud de boucle ouvre la liste de ce
+> qu’elle traverse — des images ou des textes, au choix, chacune avec le port qui en donne
+> l’élément à chaque tour. Sa **fin de boucle** ne porte qu’un champ, et c’est le plus important :
+> quelle boucle elle referme.
 >
 > **Il s’exécute.** Le premier bouton de sa barre lance le graphe — ou `⌘Entrée`, ou **Graphe ▸
 > Exécuter** : chaque nœud part quand ce qu’il lit est prêt, les branches indépendantes partent

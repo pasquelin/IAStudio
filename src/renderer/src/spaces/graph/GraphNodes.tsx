@@ -167,12 +167,13 @@ const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
  * frame of a pan, and a graph is the one surface of the studio holding dozens of them at once.
  */
 function nodeOf(
-  name: string,
   drawn: GraphNodeType,
   body: (data: NodeData, id: string) => ReactNode,
 ): (props: NodeProps) => ReactNode {
-  // Named per type rather than once for all three: without it React DevTools shows the same
-  // component three times over, on the one surface where telling them apart is the point.
+  // Named per type rather than once for all of them: without it React DevTools shows the same
+  // component over and over, on the one surface where telling them apart is the point. Derived
+  // from the type rather than passed beside it, so no node can be drawn under another's name.
+  const name = `${drawn.charAt(0).toUpperCase()}${drawn.slice(1)}Node`
   const Node = ({ data, id, selected, type }: NodeProps): ReactNode => {
     const { t } = useTranslation()
     const fields: NodeData = data
@@ -196,15 +197,15 @@ function nodeOf(
   return memo(Node)
 }
 
-const TextNode = nodeOf('TextNode', 'text', data => (
+const TextNode = nodeOf('text', data => (
   <p className="text-muted line-clamp-3 text-[11px] whitespace-pre-wrap">{asText(data.value)}</p>
 ))
 
-const AssetNode = nodeOf('AssetNode', 'asset', data => (
+const AssetNode = nodeOf('asset', data => (
   <p className="text-muted truncate text-[11px]">{asText(data.value)}</p>
 ))
 
-const ModelNode = nodeOf('ModelNode', 'model', data => (
+const ModelNode = nodeOf('model', data => (
   <p className="text-muted truncate text-[11px]">{asText(data.modelId)}</p>
 ))
 
@@ -212,15 +213,15 @@ const ModelNode = nodeOf('ModelNode', 'model', data => (
  * Its expression, in the type it is written in: a CEL expression is code, and reading one back in
  * the panel's own face makes a quoted string indistinguishable from a variable name.
  */
-const TransformTextNode = nodeOf('TransformTextNode', 'transformText', data => (
+const TransformTextNode = nodeOf('transformText', data => (
   <p className="text-muted line-clamp-3 font-mono text-[11px] break-all">{asText(data.value)}</p>
 ))
 
-const ApprovalNode = nodeOf('ApprovalNode', 'approval', (data, id) => (
+const ApprovalNode = nodeOf('approval', (data, id) => (
   <ApprovalBody id={id} message={asText(data.message)} run={asRun(data[RUN_STATE_KEY])} />
 ))
 
-const IfElseNode = nodeOf('IfElseNode', 'ifElse', data => (
+const IfElseNode = nodeOf('ifElse', data => (
   <IfElseBody blocks={readConditionBlocks(data.conditionBlocks)} />
 ))
 
@@ -351,7 +352,7 @@ const StickyNoteNode = memo(function StickyNoteNode({ data, selected }: NodeProp
  * differently.
  */
 const plainNode = (drawn: GraphNodeType): ((props: NodeProps) => ReactNode) =>
-  nodeOf(`${drawn.charAt(0).toUpperCase()}${drawn.slice(1)}Node`, drawn, () => null)
+  nodeOf(drawn, () => null)
 
 /**
  * Declared once, outside any component: React Flow remounts every node when this object changes

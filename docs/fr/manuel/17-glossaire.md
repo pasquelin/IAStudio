@@ -408,7 +408,8 @@ Réglable par *famille*, dans Réglages → **Génération**.
 **Nœud** *(node)*
 Une boîte de la toile du *graphe*. Chacune fait une chose — tenir un texte, lancer un *modèle*,
 porter une note — et expose des **ports** par lesquels elle reçoit et rend. Changer le modèle d’un
-nœud refait ses ports, et les liens dont le port a disparu s’en vont avec eux.
+nœud refait ses ports, et les liens que ces ports ne portent plus s’en vont avec eux : celui dont
+le port a disparu, comme celui dont le port n’accepte plus ce qui est au bout.
 
 **Normales** *(canal de texture)*
 Une image aux couleurs étranges — des bleus, des violets — qui encode les **micro-reliefs** d’une

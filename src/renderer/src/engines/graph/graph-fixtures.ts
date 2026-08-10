@@ -110,9 +110,17 @@ export function forEachNode(id: string, kinds: readonly LoopListKind[] = ['image
     data: {
       inputHandles: [
         { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
-        ...kinds.map((kind, index) => ({ id: loopInputId(id, index), type: kind })),
+        ...kinds.map((kind, index) => ({
+          id: loopInputId(id, index),
+          name: `list${index}`,
+          type: kind,
+        })),
       ],
-      outputHandles: kinds.map((kind, index) => ({ id: loopOutputId(id, index), type: kind })),
+      outputHandles: kinds.map((kind, index) => ({
+        id: loopOutputId(id, index),
+        name: `item${index}`,
+        type: kind,
+      })),
     },
   }
 }

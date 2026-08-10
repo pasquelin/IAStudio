@@ -141,11 +141,16 @@ export function replaceNodePorts(
     // `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention.
     const feeds = edge.source !== id || edge.sourceHandle === undefined
     const reads = edge.target !== id || edge.targetHandle === undefined
+    // A type is judged only on a port THIS patch redeclared, for the reason the ids are. A graph
+    // read off a file may hold a wire whose types this editor would refuse — `ALSO_ACCEPTED` is
+    // two lines read off one App — and adding a list to a loop must not cut a wire between two
+    // nodes the edit never mentioned.
+    const redeclared = (!feeds && inputs !== undefined) || (!reads && outputs !== undefined)
 
     return (
       (feeds || inputs === undefined || inputs.has(edge.sourceHandle ?? '')) &&
       (reads || outputs === undefined || outputs.has(edge.targetHandle ?? '')) &&
-      stillConnects(next, edge)
+      (!redeclared || stillConnects(next, edge))
     )
   })
 

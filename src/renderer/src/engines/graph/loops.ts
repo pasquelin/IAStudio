@@ -75,10 +75,17 @@ export function addedList(node: GraphNode, kind: LoopListKind): LoopPatch {
   const lists = loopListsOf(node)
   const index = lists.reduce((highest, list) => Math.max(highest, list.index + 1), 0)
 
-  // Named, as `freePort` names the ports of a branch: a port with no name is drawn on the canvas
-  // under its TYPE, so a loop walking two picture lists would show four ports all reading `image`
-  // while the panel numbers them. The name is document data, so it is written in Scenario's
-  // language and never translated — the same reason `createNode` leaves `label` off.
+  /**
+   * Named, as `freePort` names the ports of a branch — and for two readers, not one.
+   *
+   * The canvas draws a NAMELESS port under its TYPE, so a loop walking two picture lists would
+   * show four ports all reading `image` while the panel numbers them. And `plan.ts` reads the same
+   * name into a CEL variable (`celVariableName`), where nameless is worse than unreadable: both
+   * lists would fall back to `output` and land on `forEach1_output`, one overwriting the other.
+   *
+   * The name is document data, so it is written in Scenario's language and never translated — the
+   * same reason `createNode` leaves `label` off.
+   */
   return {
     inputHandles: [
       ...ownInputHandles(node),

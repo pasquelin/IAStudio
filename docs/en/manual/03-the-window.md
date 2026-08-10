@@ -186,8 +186,13 @@ It does not carry the file name. It carries the **seven workspaces**:
 > model is **chosen** from a list, and the chosen model's form opens below it, exactly the one the
 > Generation panel shows. What you type there goes through the same ⌘Z as the node you drag.
 >
-> **Changing a node's model rebuilds its ports**, and the links whose port is gone leave with
-> them — in one gesture, so one `⌘Z` takes it all back.
+> **Changing a node's model rebuilds its ports**, and the links those ports no longer answer for
+> leave with them — the one whose port is gone, and the one whose port changed what it takes and
+> no longer accepts what is at the other end. In one gesture, so one `⌘Z` takes it all back.
+>
+> **A loop says what it walks.** Selecting a loop node opens the lists it goes through — pictures
+> or texts, your choice, each with the port handing out its item on every turn. Its **end of loop**
+> carries one field, and it is the one that matters: which loop it closes.
 >
 > **It runs.** The first button of its bar runs the graph — or `⌘Enter`, or **Graph ▸ Run**: each
 > node starts once what it reads is
