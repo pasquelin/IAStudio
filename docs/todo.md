@@ -1024,6 +1024,29 @@ publication.
 > `data.isOutput`, et le convertisseur ne compile QUE les branches menant à un nœud qui le porte —
 > sans ce geste, le flow compilé est **vide**.
 
+> ### ⏳ Le lot C3 est écrit et **attend sa revue** — ne pas le refaire
+>
+> **Branche `feat/graph-compile`, worktree `.claude/worktrees/graph-compile`**, deux commits
+> (`4b647d54` et `32f2579b`), `pnpm validate` vert : 462 fichiers, 5922 tests. Il n'est **pas
+> fusionné** parce que les deux agents de revue adverse n'avaient pas rendu leur rapport quand le
+> contexte du tour s'est rempli — et fusionner sans les attendre a coûté trois défauts bloquants
+> au lot C2, le tour d'avant.
+>
+> **Ce qu'il contient** : la case « Sortie du workflow » dans l'inspecteur (rien n'écrivait
+> `data.isOutput`, sans quoi le flow compilé est vide), l'icône sur la face du nœud,
+> `src/main/scenario/workflow-compile.ts` qui adapte notre domaine vers
+> `convertWorkflowEditorToFlow` du SDK et appelle `validateWorkflowFlow`, le canal
+> `workflows:compile`, et la ligne d'état en bas du canvas.
+>
+> **Le prochain tour** : relancer les deux revues sur `git show 32f2579b` et `4b647d54`,
+> appliquer ce qui est retenu, puis fusionner. **Ne pas donner d'accès en écriture au worktree à
+> un agent de revue** — l'un d'eux a muté un fichier puis l'a restauré par `git checkout --`, ce
+> qui a effacé une modification en cours.
+>
+> **Six mutations sur dix mordent.** Les trois survivantes le sont parce qu'elles sont
+> inobservables à travers le flow, et c'est écrit dans le message de `32f2579b` ; la quatrième a
+> été refusée, son motif ne s'appliquant plus après un refactor.
+
 ### Ce que les revues du lot C2 ont laissé ouvert, et qu'il ne faut pas redécouvrir
 
 Trois défauts bloquants et six correctifs sont partis avec `feat/graph-run-fix`. **Ce qui reste
