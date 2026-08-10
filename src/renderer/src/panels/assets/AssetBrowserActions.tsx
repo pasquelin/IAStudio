@@ -82,6 +82,7 @@ export function AssetBrowserActions() {
         icon={mdiFileImportOutline}
         label={t('assets.import')}
         description={t('assets.importHint')}
+        tooltip={TIP_BOTTOM}
         variant="header"
         disabled={!project}
         onClick={() => void importMedia()}
@@ -90,6 +91,7 @@ export function AssetBrowserActions() {
         icon={mdiTextBoxOutline}
         label={t('assets.describe', { count: selected.length })}
         description={t('assets.describeHint')}
+        tooltip={TIP_BOTTOM}
         variant="header"
         disabled={!project || selected.length === 0}
         // The names land in the catalogue, which the panel only re-reads when asked.
@@ -99,6 +101,7 @@ export function AssetBrowserActions() {
         icon={mdiCloudUploadOutline}
         label={t('assets.push', { count: selected.length })}
         description={t('assets.pushHint')}
+        tooltip={TIP_BOTTOM}
         variant="header"
         disabled={!project || busy || selected.length === 0}
         onClick={() => void push(selected)}

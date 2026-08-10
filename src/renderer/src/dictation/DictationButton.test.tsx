@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SttState } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDictation } from '@/stores/dictation'
 import { useSettings } from '@/stores/settings'
@@ -10,7 +11,7 @@ import { DictationButton } from './DictationButton'
 
 function show(state: SttState = 'idle', level = 0) {
   useDictation.setState({ state, partial: '', level, failure: null, download: null })
-  render(<DictationButton />)
+  render(<DictationButton tooltip={TIP_BOTTOM} />)
 }
 
 beforeEach(() => {
@@ -68,7 +69,7 @@ describe('the microphone button', () => {
   // one field: a form with two long text fields would offer the same 640 MB twice.
   it('never carries what belongs to the status line', () => {
     for (const state of ['modelMissing', 'downloadingModel', 'permissionRequired'] as SttState[]) {
-      const { unmount } = render(<DictationButton />)
+      const { unmount } = render(<DictationButton tooltip={TIP_BOTTOM} />)
       useDictation.setState({ state })
 
       expect(screen.queryByText(/Télécharger|réglages du système/)).not.toBeInTheDocument()

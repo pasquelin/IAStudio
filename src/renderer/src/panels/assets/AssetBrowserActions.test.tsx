@@ -62,6 +62,22 @@ describe('AssetBrowserActions', () => {
   })
 
   /**
+   * The three hints were written and passed as `description`, but the row handed `ToolButton` no
+   * tooltip factory — so the component fell back to naming the button and dropped every one of
+   * them. Read the content, never the name: the name was right the whole time.
+   */
+  it('explains each action rather than repeating its name', () => {
+    render(<AssetBrowserActions />)
+
+    const button = screen.getByRole('button', { name: 'Importer un média' })
+    expect(button).toHaveAttribute('data-tooltip-id', TOOLTIP_ID)
+    expect(button).toHaveAttribute(
+      'data-tooltip-content',
+      'Lier un fichier vidéo, audio ou image — il reste où il est',
+    )
+  })
+
+  /**
    * The sentence left the band for a tooltip, so these attributes ARE the change: a test that
    * only reads the accessible name stays green through the very regression it guards. And the
    * row is a panel's top edge — a tooltip opening upward leaves the panel, as the close button

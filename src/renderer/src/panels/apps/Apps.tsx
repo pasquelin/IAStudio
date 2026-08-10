@@ -26,6 +26,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 
 /** Deferred for the reason the generator defers it: the form drags zod and its resolver along. */
 const DynamicForm = lazy(async () => ({
@@ -170,7 +171,14 @@ function AppRunner({ workflowId, onBack }: { workflowId: string; onBack: () => v
     <div className="flex h-full min-h-0 flex-col overflow-auto">
       <FormHeader
         title={app?.name ?? t('collection.loading')}
-        leading={<ToolButton icon={mdiArrowLeft} label={t('apps.back')} onClick={onBack} />}
+        leading={
+          <ToolButton
+            icon={mdiArrowLeft}
+            label={t('apps.back')}
+            tooltip={TIP_BOTTOM}
+            onClick={onBack}
+          />
+        }
       />
 
       {!project && <p className="text-muted px-2 pt-2 text-xs">{t('generation.noProject')}</p>}

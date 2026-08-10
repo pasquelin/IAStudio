@@ -6,6 +6,7 @@ import { MENU_SURFACE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { useActivity } from '@/stores/activity'
 import { ActivityMessage, GLYPHS } from './ActivityList'
+import { TIP_LEFT } from '@/helpers/tooltip'
 
 /**
  * Failures, said out loud once.
@@ -45,6 +46,7 @@ export function ActivityToasts() {
           <ToolButton
             icon={mdiClose}
             label={t('activity.dismiss')}
+            tooltip={TIP_LEFT}
             variant="header"
             onClick={() => useActivity.getState().dismiss(entry.id)}
           />

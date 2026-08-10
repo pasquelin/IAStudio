@@ -4,6 +4,7 @@ import { cn } from '@/helpers/cn'
 import { ProgressBar } from './ProgressBar'
 import { TONE_TEXT, type StatusTone } from './styles'
 import { ToolButton } from './ToolButton'
+import { TIP_LEFT } from '@/helpers/tooltip'
 
 export type ProgressRowProps = {
   /** What the row is about — a job's label, an asset's name. Truncated, never wrapped. */
@@ -44,6 +45,7 @@ export function ProgressRow({
           <ToolButton
             icon={mdiCloseCircleOutline}
             label={cancel.label}
+            tooltip={TIP_LEFT}
             variant="header"
             onClick={cancel.onClick}
           />

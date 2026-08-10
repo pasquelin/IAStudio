@@ -21,6 +21,7 @@ import { Button } from './Button'
 import { AssetDropField } from './AssetDropField'
 import { FIELD } from './styles'
 import { ToolButton } from './ToolButton'
+import { TIP_LEFT } from '@/helpers/tooltip'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
@@ -113,6 +114,7 @@ function Control({
           <ToolButton
             icon={mdiDiceMultipleOutline}
             label={t('generation.randomSeed')}
+            tooltip={TIP_LEFT}
             onClick={onRoll}
           />
         </div>

@@ -5,6 +5,7 @@ import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/d
 import { cn } from '@/helpers/cn'
 import { Button } from './Button'
 import { ToolButton } from './ToolButton'
+import { TIP_BOTTOM } from '@/helpers/tooltip'
 
 export type PromptAssistantProps = {
   /** Reads the draft at the moment it is asked for — never during a render. */
@@ -101,6 +102,7 @@ export function PromptAssistant({
         <ToolButton
           icon={mdiEyedropperVariant}
           label={t('prompt.describeStyle')}
+          tooltip={TIP_BOTTOM}
           variant="header"
           disabled={pending}
           onClick={readStyle}
@@ -108,6 +110,7 @@ export function PromptAssistant({
         <ToolButton
           icon={mdiTranslate}
           label={t('prompt.translate')}
+          tooltip={TIP_BOTTOM}
           variant="header"
           disabled={pending}
           onClick={carryOver}
@@ -115,6 +118,7 @@ export function PromptAssistant({
         <ToolButton
           icon={mdiCreationOutline}
           label={t('prompt.suggest')}
+          tooltip={TIP_BOTTOM}
           variant="header"
           disabled={pending}
           onClick={ask}
