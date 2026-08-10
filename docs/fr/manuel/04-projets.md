@@ -168,6 +168,12 @@ c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste 
 | `→` `←` | déplie, replie |
 | `↑` `↓` | la ligne précédente, la suivante |
 | `Entrée` | ouvre la ligne |
+| **Glisser** une ligne sur un dossier | y déplace le fichier ou le dossier, sous le même nom |
+
+**Le glisser déplace, le clic droit renomme** — et les deux ne se recouvrent pas : « Renommer »
+change le nom **là où le fichier est déjà**, et ne peut pas le sortir de son dossier. Un dossier
+qui n’accepterait pas le dépôt ne s’allume pas : vous voyez avant de lâcher, pas après. Un nom
+déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et le journal le dit.
 
 **Le clic droit sur une ligne** offre trois gestes :
 
@@ -182,7 +188,10 @@ c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste 
 
 **Deux refus, et ils sont grisés plutôt que cachés.** `assets/`, `documents/` et leurs
 sous-dossiers ne se renomment ni ne se jettent : l’index range chaque asset par son chemin sous
-`assets/`, et déplacer ce dossier laisserait des lignes que plus rien ne retrouve. Et **un
+`assets/`, et déplacer ce dossier laisserait des lignes que plus rien ne retrouve. **Le même
+refus vaut des deux côtés du glisser** : ces dossiers ne se prennent pas, et rien ne s’y dépose
+non plus — un fichier qui y atterrirait serait un fichier dont aucune ligne d’index ne parle. Et
+**un
 document qu’un onglet tient ouvert ne se renomme pas** : le nom de son fichier est son
 identifiant, l’onglet perdrait le lien, et le prochain `⌘S` réécrirait l’ancien nom à côté du
 nouveau. Fermez l’onglet d’abord.

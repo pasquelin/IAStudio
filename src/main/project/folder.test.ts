@@ -149,8 +149,8 @@ describe('following the project folder', () => {
 })
 
 /**
- * The two gestures that write to someone else's folder. Both refuse the studio's own layout,
- * and neither erases anything: `trashItem` puts the file where it can be got back.
+ * The three gestures that write to someone else's folder. All refuse the studio's own layout,
+ * and none erases anything: `trashItem` puts the file where it can be got back.
  */
 describe('writing to the project folder', () => {
   it('renames in place, inside the folder it already sits in', async () => {
@@ -234,5 +234,128 @@ describe('writing to the project folder', () => {
     )
 
     expect(await editor.trash('notes.txt')).toBe(false)
+  })
+})
+
+/**
+ * The drag in the tree. Kept apart from `rename` on purpose: a menu row reading "Rename" must
+ * not be able to displace a file, so the two gestures cannot be one call.
+ */
+describe('moving inside the project folder', () => {
+  async function withFolder(): Promise<string> {
+    const root = await project()
+    await mkdir(join(root, 'notes'))
+    return root
+  }
+
+  it('carries the file into the folder it was dropped on, under the same name', async () => {
+    const root = await withFolder()
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes.txt', 'notes')).toBe(true)
+
+    const reader = createFolderReader(() => root)
+    expect((await reader.list('notes')).map(entry => entry.path)).toEqual(['notes/notes.txt'])
+    expect((await reader.list('')).map(entry => entry.name)).not.toContain('notes.txt')
+  })
+
+  it('carries it back out of a folder as readily as in', async () => {
+    const root = await withFolder()
+    await mkdir(join(root, 'refs'))
+    await writeFile(join(root, 'notes', 'brief.txt'), 'hello')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes/brief.txt', 'refs')).toBe(true)
+
+    expect((await createFolderReader(() => root).list('refs')).map(entry => entry.path)).toEqual([
+      'refs/brief.txt',
+    ])
+  })
+
+  it('carries a folder and everything under it', async () => {
+    const root = await withFolder()
+    await mkdir(join(root, 'refs'))
+    await writeFile(join(root, 'notes', 'brief.txt'), 'hello')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes', 'refs')).toBe(true)
+
+    const entries = await createFolderReader(() => root).list('refs/notes')
+    expect(entries.map(entry => entry.path)).toEqual(['refs/notes/brief.txt'])
+  })
+
+  // Same reason as the rename: `rename` overwrites without a word on POSIX, and what it would
+  // overwrite is the user's own file.
+  it('refuses a name already taken in the folder it lands in', async () => {
+    const root = await withFolder()
+    await writeFile(join(root, 'notes', 'notes.txt'), 'keep me')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes.txt', 'notes')).toBe(false)
+
+    const kept = await createFolderReader(() => root).list('notes')
+    expect(kept.map(entry => entry.path)).toEqual(['notes/notes.txt'])
+  })
+
+  it('says yes and writes nothing when it is dropped on the folder it is already in', async () => {
+    const root = await withFolder()
+    await writeFile(join(root, 'notes', 'brief.txt'), 'hello')
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes/brief.txt', 'notes')).toBe(true)
+
+    expect((await createFolderReader(() => root).list('notes')).map(one => one.path)).toEqual([
+      'notes/brief.txt',
+    ])
+  })
+
+  it.each(['assets', 'documents', 'assets/img', ''])(
+    'refuses the studio folder %s as what moves',
+    async path => {
+      const root = await withFolder()
+
+      expect(await createFolderEditor(() => root, vi.fn()).move(path, 'notes')).toBe(false)
+    },
+  )
+
+  // The half a drag adds over the menu: the menu can only name what moves, a drag names both.
+  it.each(['assets', 'documents', 'assets/img', ''])(
+    'refuses the studio folder %s as what receives',
+    async folder => {
+      const root = await withFolder()
+
+      expect(await createFolderEditor(() => root, vi.fn()).move('notes.txt', folder)).toBe(false)
+    },
+  )
+
+  it('refuses a folder dropped inside itself, which would take its destination with it', async () => {
+    const root = await withFolder()
+    await mkdir(join(root, 'notes', 'drafts'))
+    const editor = createFolderEditor(() => root, vi.fn())
+
+    expect(await editor.move('notes', 'notes/drafts')).toBe(false)
+    expect(await editor.move('notes', 'notes')).toBe(false)
+  })
+
+  // No check of its own guards this: renaming into a file fails with ENOTDIR, and the catch is
+  // already the answer. Which is exactly why it is tested — the guard that is missing on
+  // purpose is the one a later reader adds back.
+  it('refuses a destination that is a file rather than a folder', async () => {
+    const root = await withFolder()
+    await writeFile(join(root, 'brief.txt'), 'hello')
+
+    expect(await createFolderEditor(() => root, vi.fn()).move('notes.txt', 'brief.txt')).toBe(false)
+  })
+
+  it('refuses a destination folder that is not there', async () => {
+    const root = await withFolder()
+
+    expect(await createFolderEditor(() => root, vi.fn()).move('notes.txt', 'gone')).toBe(false)
+  })
+
+  it('refuses a file that is not there', async () => {
+    const root = await withFolder()
+
+    expect(await createFolderEditor(() => root, vi.fn()).move('gone.txt', 'notes')).toBe(false)
   })
 })

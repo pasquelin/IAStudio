@@ -76,3 +76,29 @@ export function parentOf(path: string): string | null {
 export function isStudioFolder(path: string): boolean {
   return path === FOLDER_ROOT || PROJECT_FOLDERS.includes(path)
 }
+
+/**
+ * Whether `path` may be dragged into `folder`.
+ *
+ * Both sides ask it, and that is the point of it living here: the panel refuses the gesture on
+ * screen so nothing is dropped that will not move, and the main process refuses it again
+ * because a window is not what decides what may be written. Two spellings of one rule would be
+ * two rules the day one of them is edited.
+ *
+ * The studio's own folders refuse on BOTH sides — `assets/` cannot be moved, and nothing can be
+ * moved into it, since the catalogue stores every asset by a path under it and a file that
+ * lands there is a file no row knows about. The root refuses with them, and that is the shape
+ * of `isStudioFolder` rather than a decision: no row stands for the root today, so no drop can
+ * name it. **The day dropping on the blank below the tree means "to the root", this is the line
+ * to revisit.**
+ *
+ * What it cannot answer is whether `folder` IS a folder — it only has paths. The panel reads
+ * the node's kind, the main process asks the disk.
+ */
+export function canMoveInto(path: string, folder: string): boolean {
+  if (isStudioFolder(path) || isStudioFolder(folder)) return false
+
+  // A folder dropped inside itself would take its own destination with it, and the rename that
+  // carries it out would leave the whole subtree unreachable.
+  return folder !== path && !isUnder(folder, path)
+}

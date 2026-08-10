@@ -101,11 +101,17 @@ export function registerProjectHandlers({
     reveal(join(project.path(), parseFolderPath(relative)))
   })
 
-  // Both answer whether it happened, and both say why in the journal when it did not: a row of
-  // a context menu that does nothing and explains nothing is the worst of the three outcomes.
+  // All three answer whether it happened, and all three say why in the journal when it did not:
+  // a gesture that does nothing and explains nothing is the worst of the three outcomes.
   handle(CHANNELS.projectRenameFile, async (_event, relative, name) => {
     const done = await folder.rename(parseFolderPath(relative), parseProjectName(name))
     if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotRenamed' })
+    return done
+  })
+
+  handle(CHANNELS.projectMoveFile, async (_event, relative, folderPath) => {
+    const done = await folder.move(parseFolderPath(relative), parseFolderPath(folderPath))
+    if (!done) record({ level: 'error', topic: 'project', messageKey: 'activity.fileNotMoved' })
     return done
   })
 

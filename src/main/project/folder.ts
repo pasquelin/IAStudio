@@ -2,6 +2,7 @@ import { watch, type FSWatcher } from 'node:fs'
 import { access, readdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  canMoveInto,
   compareEntries,
   isHiddenEntry,
   isStudioFolder,
@@ -117,17 +118,24 @@ export function watchProjectFolder(
 export type FolderEditor = {
   /** Renames in place, inside the folder it already sits in. Answers whether it happened. */
   rename: (relative: string, name: string) => Promise<boolean>
+  /** Into ANOTHER folder, keeping its name. Answers whether it happened. */
+  move: (relative: string, folder: string) => Promise<boolean>
   /** To the system's trash, never `unlink`. Answers whether the system took it. */
   trash: (relative: string) => Promise<boolean>
 }
 
 /**
- * The two gestures that write to the project folder from the explorer.
+ * The three gestures that write to the project folder from the explorer.
  *
- * Both answer `false` rather than throwing, and both refuse the studio's own folders — the
- * catalogue stores every asset by a path under `assets/`, so moving one orphans rows nobody can
- * find again. The refusal lives here rather than in the panel: a window is not what decides
- * what may be written.
+ * All three answer `false` rather than throwing, and all three refuse the studio's own folders
+ * — the catalogue stores every asset by a path under `assets/`, so moving one orphans rows
+ * nobody can find again. The refusal lives here rather than in the panel: a window is not what
+ * decides what may be written.
+ *
+ * **Rename and move are kept apart on purpose.** A menu row reading "Rename" must not be able
+ * to displace a file, so `rename` builds its target in the folder the file already sits in and
+ * cannot leave it. `move` keeps the name and changes the folder. One call taking both would be
+ * one call two gestures could get wrong.
  *
  * **Trash, never delete.** `shell.trashItem` puts the file where the user can get it back;
  * `unlink` is a gesture the studio does not take on someone else's folder at all.
@@ -136,25 +144,36 @@ export function createFolderEditor(
   rootOf: () => string,
   toTrash: (file: string) => Promise<void>,
 ): FolderEditor {
+  const moveTo = async (relative: string, target: string): Promise<boolean> => {
+    if (target === relative) return true
+
+    const root = rootOf()
+    // Checked rather than caught: `rename` overwrites an existing file without a word on
+    // POSIX, and the file it would overwrite is the user's own.
+    if (await exists(join(root, target))) return false
+
+    try {
+      await rename(join(root, relative), join(root, target))
+      return true
+    } catch {
+      return false
+    }
+  }
+
   return {
     rename: async (relative, name) => {
       if (isStudioFolder(relative)) return false
 
       const parent = parentOf(relative)
-      const target = parent === null ? name : `${parent}/${name}`
-      if (target === relative) return true
+      return moveTo(relative, parent === null ? name : `${parent}/${name}`)
+    },
 
-      const root = rootOf()
-      // Checked rather than caught: `rename` overwrites an existing file without a word on
-      // POSIX, and the file it would overwrite is the user's own.
-      if (await exists(join(root, target))) return false
+    move: async (relative, folder) => {
+      if (!canMoveInto(relative, folder)) return false
 
-      try {
-        await rename(join(root, relative), join(root, target))
-        return true
-      } catch {
-        return false
-      }
+      // A destination that is not a folder at all needs no check of its own: renaming into it
+      // fails with ENOTDIR, and the catch is already the answer.
+      return moveTo(relative, `${folder}/${relative.slice(relative.lastIndexOf('/') + 1)}`)
     },
 
     trash: async relative => {

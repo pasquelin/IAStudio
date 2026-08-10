@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { compareEntries, isHiddenEntry, isUnder, parentOf, type FolderEntry } from './folder'
+import {
+  canMoveInto,
+  compareEntries,
+  isHiddenEntry,
+  isUnder,
+  parentOf,
+  type FolderEntry,
+} from './folder'
 
 const entry = (name: string, kind: 'folder' | 'file'): FolderEntry => ({ path: name, name, kind })
 
@@ -52,6 +59,56 @@ describe('what a folder holds', () => {
   it('holds everything, at the root', () => {
     expect(isUnder('assets', '')).toBe(true)
     expect(isUnder('assets/img/one.png', '')).toBe(true)
+  })
+})
+
+/**
+ * One rule, asked by the panel to refuse the gesture on screen and by the main process to
+ * refuse it again. What it cannot answer is whether the destination IS a folder: it has paths
+ * and nothing else.
+ */
+describe('what may be dragged where', () => {
+  it('moves a file the user owns into a folder the user owns', () => {
+    expect(canMoveInto('brief.pdf', 'notes')).toBe(true)
+    expect(canMoveInto('notes/brief.pdf', 'refs')).toBe(true)
+  })
+
+  it('moves a folder the user owns into another', () => {
+    expect(canMoveInto('notes', 'refs')).toBe(true)
+  })
+
+  // The catalogue stores every asset by a path under `assets/`: moving one orphans rows nobody
+  // can find again, and a file landing there is a file no row knows about.
+  it('refuses a studio folder as what moves', () => {
+    expect(canMoveInto('assets', 'notes')).toBe(false)
+    expect(canMoveInto('assets/img', 'notes')).toBe(false)
+    expect(canMoveInto('documents', 'notes')).toBe(false)
+  })
+
+  it('refuses a studio folder as what receives, which is the half a drag adds', () => {
+    expect(canMoveInto('brief.pdf', 'assets')).toBe(false)
+    expect(canMoveInto('brief.pdf', 'assets/img')).toBe(false)
+    expect(canMoveInto('brief.pdf', 'documents')).toBe(false)
+  })
+
+  // No row stands for the root, so no drop can name it — the day one does, this expectation is
+  // the decision to revisit rather than a rule to keep.
+  it('refuses the project root, which no row names today', () => {
+    expect(canMoveInto('notes/brief.pdf', '')).toBe(false)
+  })
+
+  it('refuses a folder dropped on itself', () => {
+    expect(canMoveInto('notes', 'notes')).toBe(false)
+  })
+
+  // It would take its own destination with it, and the whole subtree would go unreachable.
+  it('refuses a folder dropped inside itself, however deep', () => {
+    expect(canMoveInto('notes', 'notes/drafts')).toBe(false)
+    expect(canMoveInto('notes', 'notes/drafts/old')).toBe(false)
+  })
+
+  it('allows a folder whose name merely starts the same', () => {
+    expect(canMoveInto('notes', 'notes-old')).toBe(true)
   })
 })
 

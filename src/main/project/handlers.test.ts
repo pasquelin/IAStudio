@@ -50,6 +50,7 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
     folder: {
       list: vi.fn(async () => []),
       rename: vi.fn(async () => true),
+      move: vi.fn(async () => true),
       trash: vi.fn(async () => true),
     },
     // An empty string is what `shell.openPath` answers when the system took the file.
@@ -184,6 +185,41 @@ describe('project handlers', () => {
       await expect(invoke(CHANNELS.projectRenameFile, 'notes.txt', name)).rejects.toThrow()
 
       expect(injected.folder.rename).not.toHaveBeenCalled()
+    })
+
+    it('moves, and says nothing in the journal when it happened', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectMoveFile, 'notes.txt', 'refs')).resolves.toBe(true)
+
+      expect(injected.folder.move).toHaveBeenCalledWith('notes.txt', 'refs')
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
+    it('says so in the journal when a move is refused', async () => {
+      const injected = deps(catalog)
+      injected.folder.move = vi.fn(async () => false)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectMoveFile, 'notes.txt', 'assets')).resolves.toBe(false)
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.fileNotMoved',
+      })
+    })
+
+    // The destination is the second path this channel takes from a window, and it escapes the
+    // project exactly as easily as the first.
+    it.each(['../escape', '/etc', 'sub\\..\\out'])('refuses %s as a destination', async folder => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectMoveFile, 'notes.txt', folder)).rejects.toThrow()
+
+      expect(injected.folder.move).not.toHaveBeenCalled()
     })
 
     it('trashes, and says nothing in the journal when the system took it', async () => {

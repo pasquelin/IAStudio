@@ -176,6 +176,7 @@
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
     "fileNotOpened": "Ce fichier n’a pas pu être ouvert par le système",
+    "fileNotMoved": "Ce fichier n’a pas pu être déplacé — ce nom est peut-être déjà pris dans le dossier d’arrivée",
     "fileNotRenamed": "Ce fichier n’a pas pu être renommé — ce nom est peut-être déjà pris",
     "fileNotTrashed": "Ce fichier n’a pas pu être mis à la corbeille",
     "jobFailed": "La génération « {{name}} » a échoué",

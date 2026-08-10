@@ -86,6 +86,7 @@ export type Channels = {
   projectOpenFile: 'project:open-file'
   projectRevealFile: 'project:reveal-file'
   projectRenameFile: 'project:rename-file'
+  projectMoveFile: 'project:move-file'
   projectTrashFile: 'project:trash-file'
 
   dialogPickPath: 'dialog:pick-path'
@@ -202,6 +203,7 @@ export const CHANNELS: Channels = {
   projectOpenFile: 'project:open-file',
   projectRevealFile: 'project:reveal-file',
   projectRenameFile: 'project:rename-file',
+  projectMoveFile: 'project:move-file',
   projectTrashFile: 'project:trash-file',
 
   dialogPickPath: 'dialog:pick-path',
@@ -618,6 +620,12 @@ export type StudioBridge = {
      * folders refuse to move at all.
      */
     renameFile: (relative: string, name: string) => Promise<boolean>
+    /**
+     * Into another folder, keeping its name — the drag in the tree. Answers whether it
+     * happened: a name already taken there is refused rather than overwritten, and the studio's
+     * own folders refuse on both sides, as neither what moves nor what receives.
+     */
+    moveFile: (relative: string, folder: string) => Promise<boolean>
     /**
      * To the system's trash, never deleted. Answers whether the system took it. The studio does
      * not erase anything in a folder that belongs to someone else.

@@ -160,6 +160,12 @@ folder, and that is what tells an explorer apart from a list of documents.
 | `→` `←` | unfolds, folds |
 | `↑` `↓` | the previous row, the next one |
 | `Enter` | opens the row |
+| **Drag** a row onto a folder | moves the file or folder into it, under the same name |
+
+**Dragging moves, right-clicking renames** — and the two do not overlap: "Rename" changes the
+name **where the file already is**, and cannot take it out of its folder. A folder that would
+not accept the drop never lights up, so you see before you let go rather than after. A name
+already taken in the destination is refused rather than overwritten, and the journal says so.
 
 **Right-clicking a row** offers three gestures:
 
@@ -174,7 +180,9 @@ folder, and that is what tells an explorer apart from a list of documents.
 
 **Two refusals, greyed rather than hidden.** `assets/`, `documents/` and their subfolders cannot
 be renamed or trashed: the index files every asset by its path under `assets/`, and moving that
-folder would leave rows nothing can find again. And **a document a tab is holding cannot be
+folder would leave rows nothing can find again. **The same refusal holds on both sides of a
+drag**: those folders cannot be picked up, and nothing can be dropped into them either — a file
+landing there would be a file no index row speaks of. And **a document a tab is holding cannot be
 renamed**: its file name is its identifier, the tab would lose the link, and the next `⌘S` would
 write the old name back beside the new file. Close the tab first.
 
