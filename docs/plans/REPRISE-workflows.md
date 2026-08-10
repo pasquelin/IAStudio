@@ -1,7 +1,8 @@
 # Reprise — chantier « workflows et node editor »
 
-**À coller tel quel dans une nouvelle session.** Réécrit le 10 août 2026 au petit matin, après la
-fusion du **lot C2** et de ses correctifs, avec le lot **C3** écrit et en attente de revue.
+**À coller tel quel dans une nouvelle session.** Réécrit le 10 août 2026 à 15 h, après la fusion
+du lot C3, du correctif `typesConnect`, du lot `getModel` et des quatre dettes de la revue C3.
+**Les étapes 1 à 7 sont terminées ; restent l'étape 8 et l'étape 9.**
 
 > ⚠️ **Deux dossiers que le prompt nommait n'existent plus sur le disque, et les chercher fait
 > perdre un quart d'heure.** `docs/REPRISE.md` a été **fusionné dans `docs/todo.md`** par le commit
@@ -30,15 +31,17 @@ fusion du **lot C2** et de ses correctifs, avec le lot **C3** écrit et en atten
 > **`CLAUDE.md`** — les invariants ; **`docs/todo.md` § 5** — ce qui reste, à jour ; et **ce
 > fichier**, pour les pièges déjà payés.
 >
-> **Ce qu'il reste, dans l'ordre, et rien d'autre :**
+> **Ce qu'il reste, et rien d'autre :**
 >
-> 1. **Fusionner le lot C3**, écrit et en attente sur `feat/graph-compile`. Il est rebasé, vert,
->    vérifié à l'écran. Il n'attend qu'une revue — voir « Le verrou de revue » plus bas.
-> 2. **`typesConnect` refuse le fil pour lequel l'espace existe.** Tranché par un appel, le
->    correctif est décidé et écrit en tête du § 5.1 de `docs/todo.md`. C'est le lot le plus
->    important du chantier : sans lui, un nœud texte ne peut pas alimenter un générateur.
-> 3. **Étape 8** — logique, boucles, transforms, approbation.
-> 4. **Étape 9** — import, export, publication.
+> 1. **Étape 8** — les onze types de nœuds qui n'ont ni face ni comportement. **Elle a été
+>    dimensionnée : c'est au moins quatre lots**, dans cet ordre recommandé — `approval` d'abord
+>    (le plus petit, mais il ajoute `awaiting-approval` à `JobStatus`, donc il change `isFinished`
+>    et tout le reste se pose dessus), puis `transform` (du CEL, `@scenario-labs/sdk/tools/cel` est
+>    déjà installé), puis `ifElse` (un query builder, format `WorkflowEditorConditionBlock`), puis
+>    la paire `forEach`/`forEachEnd` (deux nœuds à l'écran, un seul `for-each` à la compilation).
+> 2. **Étape 9** — import, export, publication.
+> 3. **Les neuf dettes courtes** des revues du lot C2, listées au § 5.1 de `docs/todo.md` : à
+>    prendre entre deux lots, jamais à la place d'un.
 >
 > **Definition of done à chaque lot, sans demander** : tests écrits avec le code, `pnpm validate`
 > vert, passe de simplification, revue, mutation (« casse ton propre code et dis combien de
@@ -75,47 +78,45 @@ un refactor en cours. Lui donner sa propre copie, ou exiger la lecture seule.
 
 ---
 
-## L'état exact — au 10 août 2026, 05 h
+## L'état exact — au 10 août 2026, 15 h
 
-**Fusionné dans `develop`** : les étapes 1 à 6 et 10, les lots A, B1, B2, C0, **C1** (le plan
-d'exécution), **C2** (l'exécution branchée, plus le lot de correctifs que ses revues ont imposé)
-et **C3** (compiler et valider), fusionné le 10 août à midi après revue — `pnpm validate` vert
-après fusion : 465 fichiers, 5983 tests.
+**Fusionné dans `develop`** : les étapes 1 à 6 et 10, les lots A, B1, B2, C0, C1, C2, **C3**
+(compiler et valider), **`typesConnect`** (le fil texte → prompt), **`getModel`** (les fils qui
+arrivent dans le flow) et **les quatre dettes de la revue C3**. `pnpm validate` après la dernière
+fusion : **470 fichiers, 6073 tests, exit 0**.
 
-**L'étape 7 est donc terminée.** Ce que le lot C3 laisse derrière lui est en tête du § 5.1 de
-`docs/todo.md` : **un fil tiré vers un générateur n'arrive pas dans le flow compilé**, faute de
-`getModel`, et c'est mesuré dans le convertisseur du SDK, pas déduit.
+**Les étapes 1 à 7 sont terminées.** Il reste l'étape 8 et l'étape 9, et rien d'autre.
 
 | Ce qui marche aujourd'hui | Ce qui ne marche pas |
 |---|---|
-| Le graphe est un espace : document `.graph`, palette, barre, `⌘Z`, inspecteur | 🔴 **Un nœud texte ne peut PAS être relié au port prompt d'un générateur** — `typesConnect` refuse ce que la webapp fait |
-| **Il s'exécute** : un bouton, un état par nœud, un cache qui ne relance que ce qui a changé | Onze des quinze types de nœuds n'ont ni face ni comportement |
-| Une image donnée en référence atteint le modèle (lot C0) | Aucun import ni export de `.workflow.json` |
-| Un nœud se marque comme sortie, et le graphe dit s'il compilerait (lot C3) | 🔴 **Le flow compilé perd les fils entrant dans un générateur** — `getModel` n'est pas passé au convertisseur |
-| | L'exécution n'a **jamais** été lancée contre l'API — tout est prouvé sous vitest |
+| Le graphe est un espace : document `.graph`, palette, barre, `⌘Z`, inspecteur | Onze des quinze types de nœuds n'ont ni face ni comportement — c'est l'étape 8 |
+| **Un nœud texte alimente le port prompt d'un générateur** — table de compatibilité dans `handles.ts` | Aucun import ni export de `.workflow.json` — c'est l'étape 9 |
+| **Il s'exécute** : un bouton, un état par nœud, un cache qui ne relance que ce qui a changé | L'exécution n'a **jamais** été lancée contre l'API — vérification groupée à la fin, décidée avec l'utilisateur |
+| Un nœud se marque comme résultat de l'App, et le graphe dit s'il compilerait et en combien d'étapes | Neuf dettes courtes des revues du lot C2, listées au § 5.1 |
+| **Les fils entrant dans un générateur arrivent dans le flow compilé** (`getModel`, résolu avant le convertisseur) | `develop` porte un rouge intermittent qui n'est pas du chantier : `Library.test.tsx` |
 
----
+> ⚠️ **`develop` est rouge par intermittence** sur
+> `home/sections/Library.test.tsx > opens an asset the project has already fetched` — vérifié sur
+> `develop` SEUL, sans aucun lot de ce chantier. Une autre session le chasse (commit `f2eec12a`).
+> **Conséquence découverte le 10 août : quand la suite rougit, vitest n'évalue pas les seuils de
+> couverture du tout** — la porte de couverture est donc désarmée tant que ce rouge dure.
 
-## Le défaut qui bloque le geste principal — mesuré, et tranché par un appel
+## Les deux défauts que ce chantier a payés — corrigés, et la leçon qui reste
 
-Poser un nœud Texte, poser un générateur, tirer un fil du premier vers l'entrée « prompt » du
-second : `refuseConnection` rend `'type-mismatch'`.
+**`typesConnect` refusait le fil pour lequel l'espace existe.** Corrigé par une table de
+compatibilité dans `handles.ts`, portant les deux seules paires qu'une App publique câble
+(`image` → `image` 69 fois, `text` → `prompt` 25 fois, sur `wflow_H1bKz78jgpinWPKJfVCM5uAp`).
 
-`workflow_get` sur l'App publique `wflow_H1bKz78jgpinWPKJfVCM5uAp` — 62 nœuds, 94 fils — dit qui
-a tort : la webapp écrit **exactement nos deux types**, `text` sur la sortie d'un nœud texte et
-`prompt` sur le port d'un générateur, **et elle les relie**. Les seules paires câblées de toute
-l'App sont `image → image` (69) et `text → prompt` (25).
+**La leçon coûte plus cher que le correctif** : le défaut a survécu à trois lots parce que
+`graph-fixtures.ts` fabriquait un nœud texte que `createNode` ne fabrique pas — champ `output` au
+lieu de `prompt`, type `prompt` au lieu de `text`. **Une fixture qui diverge de la fabrique rend
+une suite entière aveugle.** `graph-fixtures.test.ts` le verrouille désormais : une fixture peut
+en dire moins que la fabrique, jamais autre chose.
 
-Donc `factory.ts` est juste des deux côtés, et **`typesConnect` est faux** — il enfreint la règle
-que sa propre JSDoc énonce. Le correctif : une table de compatibilité dans `handles.ts`,
-verrouillée par un test qui rejoue les deux paires.
-
-**Et d'abord la fixture.** `engines/graph/graph-fixtures.ts` écrit `type: 'prompt'` sur une sortie
-que `createNode` type `'text'` : les fixtures ne reproduisent pas ce que le studio fabrique, et
-c'est ce qui a permis à trois lots de passer au-dessus du défaut. La corriger en premier, pour que
-ce qui doit rougir rougisse.
-
----
+**Le flow compilé perdait les fils entrant dans un générateur**, faute de `getModel`. Corrigé :
+`ModelRegistry.inputsOf` sert les entrées brutes de l'API depuis la même requête que `describe`,
+et le handler résout les modèles du graphe — à travers la file bornée — avant d'appeler le
+convertisseur, qui est synchrone.
 
 ## Le lot C0 — livré le 10 août, et ce qu'il a appris
 
