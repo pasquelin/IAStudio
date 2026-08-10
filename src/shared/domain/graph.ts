@@ -446,6 +446,16 @@ export type GraphRunFailure =
    * do the eight types that arrive with the rest of step 8.
    */
   | 'unsupported'
+  /**
+   * A branch chose, and no port carries what it chose — a matching condition past the last
+   * output, or no else port at all. Apart from `unsupported`: the type runs, this graph is wired
+   * short of what it asks for.
+   *
+   * One code for the two, and deliberately, as `invalid-expression` below: the remedy is the same
+   * port either way, and a node that cannot say where its choice goes is unrunnable for one
+   * reason, not two. Which of the two it was goes to the journal.
+   */
+  | 'unwired'
   /** A generator with no model chosen. */
   | 'no-model'
   /** Something it reads failed, so it was never asked to run. */
@@ -466,6 +476,7 @@ export type GraphRunFailure =
 export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
   'cycle',
   'unsupported',
+  'unwired',
   'no-model',
   'blocked',
   'rejected',

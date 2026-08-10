@@ -220,7 +220,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 >
 > **Every node says where it stands**, in the corner of its header: *running*, *done*,
 > *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
-> produced nothing: *loop*, *no model*, *not runnable*, *failed*, *invalid expression*, and
+> produced nothing: *loop*, *no model*, *not runnable*, *branch with no output* — the branch it
+> chose has no port to leave by —, *failed*, *invalid expression*, and
 > **upstream failed** — which
 > does not mean "it is coming", but "it is not": something it depends on failed, so it will never
 > leave in this run. Running it again after changing the last node's prompt runs **only** that
@@ -255,8 +256,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 > expression*, and whatever reads it reads *upstream failed*. **It takes one wire for now**:
 > assembling two texts in one expression comes with the logic nodes.
 >
-> What it cannot do **yet**: the logic and loop nodes, and importing or exporting a Scenario
-> workflow. Its chapter comes when it can.
+> What it cannot do **yet**: *create* a logic or loop node. A branch only arrives by import, and
+> a loop does not run at all. Its chapter comes when it can.
 
 One click switches workspace. The active one is the button lighter than the others.
 

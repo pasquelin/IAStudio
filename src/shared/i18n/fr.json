@@ -153,6 +153,7 @@
     "failure": {
       "cycle": "boucle",
       "unsupported": "non exécutable",
+      "unwired": "branche sans sortie",
       "no-model": "sans modèle",
       "blocked": "amont en échec",
       "rejected": "échec",

@@ -7,7 +7,14 @@ import {
   type ActivityTopic,
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
-import { GRAPH_COMPILE_PROBLEMS, type GraphCompileProblem } from './graph'
+import {
+  GRAPH_COMPILE_PROBLEMS,
+  GRAPH_RUN_FAILURES,
+  GRAPH_RUN_STATUSES,
+  type GraphCompileProblem,
+  type GraphRunFailure,
+  type GraphRunStatus,
+} from './graph'
 import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
@@ -178,5 +185,41 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(GRAPH_COMPILE_PROBLEMS)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /**
+   * Same hazard one surface further in, and this one drops the state instead of misnaming it:
+   * `asRun` in `GraphNodes.tsx` reads a failure back through this list, so a code dropped from it
+   * paints a node that failed with no mention at all — while `bundles.test.ts`, which walks the
+   * list to demand its sentences, stops demanding the one it can no longer see.
+   */
+  it('names every reason a node produced nothing', () => {
+    const all: Record<GraphRunFailure, true> = {
+      cycle: true,
+      unsupported: true,
+      unwired: true,
+      'no-model': true,
+      blocked: true,
+      rejected: true,
+      declined: true,
+      'invalid-expression': true,
+    }
+
+    expect(sorted(GRAPH_RUN_FAILURES)).toEqual(sorted(Object.keys(all)))
+  })
+
+  /** `asRun` reads this one four lines above the other, and it had no guard of its own. */
+  it('names every state a running node reports', () => {
+    const all: Record<GraphRunStatus, true> = {
+      idle: true,
+      running: true,
+      awaiting: true,
+      cached: true,
+      done: true,
+      skipped: true,
+      failed: true,
+    }
+
+    expect(sorted(GRAPH_RUN_STATUSES)).toEqual(sorted(Object.keys(all)))
   })
 })

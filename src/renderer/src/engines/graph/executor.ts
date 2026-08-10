@@ -358,10 +358,11 @@ export async function runGraph(
 
       // A file may carry fewer ports than blocks. A condition that held with nowhere to send what
       // it matched is not a branch to walk past in silence — it is a graph that cannot be run.
-      const port = ports[index]?.name
-      if (port === undefined) return fail(node.id, 'unsupported')
+      const port = ports[index]
+      if (port === undefined) return fail(node.id, 'unwired')
 
-      return routeTo(node.id, [port], carried)
+      // Read as the else below reads its own: an absent NAME is not an absent PORT.
+      return routeTo(node.id, [port.name ?? DEFAULT_OUTPUT_NAME], carried)
     }
 
     /**
@@ -374,7 +375,7 @@ export async function runGraph(
     // free to leave the name off. Dropping it turned a graph Scenario routes into a red node.
     const fallbacks = ports.slice(blocks.length).map(port => port.name ?? DEFAULT_OUTPUT_NAME)
 
-    if (fallbacks.length === 0) return fail(node.id, 'unsupported')
+    if (fallbacks.length === 0) return fail(node.id, 'unwired')
 
     return routeTo(node.id, fallbacks, carried)
   }
