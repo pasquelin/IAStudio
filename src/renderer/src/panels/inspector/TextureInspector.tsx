@@ -329,7 +329,7 @@ function SeamReading({ documentId }: { documentId: string }) {
         <Button
           // Said rather than hidden: an empty base colour is something to go and fill.
           disabled={!source || measuring}
-          title={source ? undefined : t('texture.seamNoSource')}
+          {...HINT_LEFT(source ? t('texture.measureSeamHint') : t('texture.seamNoSource'))}
           onClick={() => void measure()}
         >
           {t(measuring ? 'texture.measuringSeam' : 'texture.measureSeam')}

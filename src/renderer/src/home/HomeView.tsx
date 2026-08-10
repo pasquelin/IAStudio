@@ -65,7 +65,12 @@ function Closing() {
   return (
     <div className="flex flex-col items-center gap-3 py-8">
       <SectionNote standalone>{t('home.closing.title')}</SectionNote>
-      <Button onClick={() => enterWorkspace(DEFAULT_WORKSPACE)}>{t('home.closing.action')}</Button>
+      <Button
+        {...HINT_TOP(t('home.closingActionHint'))}
+        onClick={() => enterWorkspace(DEFAULT_WORKSPACE)}
+      >
+        {t('home.closing.action')}
+      </Button>
       <Hidden />
     </div>
   )

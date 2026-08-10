@@ -21,7 +21,7 @@ import { Button } from './Button'
 import { AssetDropField } from './AssetDropField'
 import { FIELD } from './styles'
 import { ToolButton } from './ToolButton'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
 
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
@@ -31,6 +31,9 @@ export type DynamicFormProps = {
    */
   onSubmit?: (body: FormValues) => void
   submitLabel?: string
+  /** What the submit label does not say. Required with it: a form's one action is the one
+   * nobody should have to press to find out about. */
+  submitHint?: string
   /** Beside the label on the button, for what the form costs. Absent draws nothing. */
   submitNote?: string
   /**
@@ -157,6 +160,7 @@ export function DynamicForm({
   fields,
   onSubmit,
   submitLabel,
+  submitHint,
   submitNote,
   onValuesChange,
   busy = false,
@@ -253,7 +257,12 @@ export function DynamicForm({
       ))}
 
       {submitLabel !== undefined && (
-        <Button type="submit" variant="primary" disabled={busy}>
+        <Button
+          type="submit"
+          variant="primary"
+          {...(submitHint ? HINT_TOP(submitHint) : {})}
+          disabled={busy}
+        >
           {submitLabel}
           {/* Spaced here rather than by a gap on the button: every tool button in the studio is
               built on the same base, and most of them are an icon beside a word. */}

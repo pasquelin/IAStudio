@@ -54,7 +54,9 @@
     "generate": "Générer",
     "close": "Fermer",
     "removeTool": "Retirer le module",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "retryHint": "Retente le rendu de cette zone, sans redémarrer le studio",
+    "generateHint": "Lance la génération avec les réglages ci-dessus ; elle se suit dans la barre des générations"
   },
   "generation": {
     "noParameter": "Ce modèle n’attend aucun paramètre.",
@@ -69,7 +71,8 @@
     "none": "Aucune App publiée pour l’instant.",
     "back": "Toutes les Apps",
     "run": "Lancer",
-    "draft": "Cette App est un brouillon : elle ne peut pas être lancée."
+    "draft": "Cette App est un brouillon : elle ne peut pas être lancée.",
+    "runHint": "Lance l’App avec les valeurs saisies ; le résultat arrive comme une génération"
   },
   "graph": {
     "nodes": {
@@ -800,13 +803,16 @@
     "none": "Aucun projet ouvert",
     "create": "Créer un projet",
     "open": "Ouvrir un projet",
-    "defaultName": "Nouveau projet"
+    "defaultName": "Nouveau projet",
+    "openHint": "Ouvre un dossier de projet déjà créé, avec ce qu’il contient",
+    "createHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit"
   },
   "auth": {
     "key": "Clé API",
     "secret": "Secret API",
     "configure": "Configurer les identifiants",
-    "explanation": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine."
+    "explanation": "Vos identifiants sont chiffrés par le trousseau du système et ne quittent jamais votre machine.",
+    "configureHint": "Ouvre les préférences, à la section du compte"
   },
   "accounts": {
     "name": "Nom",
@@ -1566,7 +1572,8 @@
     "showMaterial": "Revenir au matériau éclairé",
     "noPicture": "Aucune image dans ce projet",
     "tilingPreviewHint": "Ne change que l’aperçu — la texture exportée n’est pas répétée pour autant",
-    "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture"
+    "previewShapeHint": "Change la forme sur laquelle l’aperçu est plaqué, pas la texture",
+    "measureSeamHint": "Compare les bords opposés de la texture pour dire si la couture se voit"
   },
   "licences": {
     "title": "Licences",
@@ -1785,7 +1792,9 @@
     "translate": "Traduire en anglais",
     "alreadyEnglish": "Ce texte est déjà en anglais.",
     "describeStyle": "Décrire le style des références",
-    "noReference": "Déposez une image de référence pour en décrire le style."
+    "noReference": "Déposez une image de référence pour en décrire le style.",
+    "useTextHint": "Ne reprend que la phrase, et laisse vos réglages tels quels",
+    "useTextAndSettingsHint": "Reprend la phrase ET les réglages listés au-dessus"
   },
   "dictation": {
     "start": "Dicter",
@@ -1927,12 +1936,16 @@
     },
     "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
     "exploreTabHint": "Ne montre que cette catégorie dans la bande",
-    "createProjectHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit",
     "documents": {
       "none": "Ce projet ne contient encore aucun document. Choisissez un outil au centre pour en créer un."
     },
     "counts": {
       "reveal": "Ouvrir la bibliothèque d’assets du projet, filtrée sur ce type"
-    }
+    },
+    "closingActionHint": "Ouvre l’espace de création, celui où l’on génère",
+    "sparkAskHint": "Demande trois départs à l’API, écrits pour le modèle du générateur",
+    "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
+    "spotlightConnectHint": "Ouvre les préférences, à la section du compte",
+    "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère"
   }
 }

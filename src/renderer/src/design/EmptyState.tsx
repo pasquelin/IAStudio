@@ -1,8 +1,14 @@
 import { Button } from './Button'
 import { UiIcon } from './UiIcon'
+import { HINT_TOP } from '@/helpers/tooltip'
 
 /** A way out of an empty panel: what it says, and what it does. */
-export type EmptyStateAction = { label: string; onClick: () => void }
+export type EmptyStateAction = {
+  label: string
+  /** What the label does not say — required, so a way out is never a word on its own. */
+  hint: string
+  onClick: () => void
+}
 
 export type EmptyStateProps = {
   icon: string
@@ -31,8 +37,16 @@ export function EmptyState({ icon, message, action, secondary }: EmptyStateProps
 
       {(action || secondary) && (
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {action && <Button onClick={action.onClick}>{action.label}</Button>}
-          {secondary && <Button onClick={secondary.onClick}>{secondary.label}</Button>}
+          {action && (
+            <Button {...HINT_TOP(action.hint)} onClick={action.onClick}>
+              {action.label}
+            </Button>
+          )}
+          {secondary && (
+            <Button {...HINT_TOP(secondary.hint)} onClick={secondary.onClick}>
+              {secondary.label}
+            </Button>
+          )}
         </div>
       )}
     </div>

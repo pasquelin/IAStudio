@@ -15,7 +15,11 @@ export function MissingCredentials({ icon }: { icon: string }) {
     <EmptyState
       icon={icon}
       message={t('generation.noCredentials')}
-      action={{ label: t('auth.configure'), onClick: () => openSection('account') }}
+      action={{
+        label: t('auth.configure'),
+        hint: t('auth.configureHint'),
+        onClick: () => openSection('account'),
+      }}
     />
   )
 }

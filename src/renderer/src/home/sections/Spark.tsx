@@ -6,7 +6,7 @@ import { Button } from '@/design/Button'
 import { UiIcon } from '@/design/UiIcon'
 import { BUTTON_BASE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 import { openGeneratorOn } from '@/helpers/generation'
 import { getBridge } from '@/services/bridge'
 import { useModels } from '@/stores/models'
@@ -55,7 +55,7 @@ export function Spark() {
       id="spark"
       title={t('home.sections.spark')}
       actions={
-        <Button onClick={ask} disabled={asking}>
+        <Button {...HINT_BOTTOM(t('home.sparkAskHint'))} onClick={ask} disabled={asking}>
           {t(asking ? 'home.spark.asking' : 'home.spark.ask')}
         </Button>
       }

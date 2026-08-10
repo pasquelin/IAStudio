@@ -17,7 +17,7 @@ export function Failure({ scope, onRetry }: FailureProps) {
     <EmptyState
       icon={mdiAlertCircleOutline}
       message={t(scope === 'panel' ? 'errors.panelCrashed' : 'errors.windowCrashed')}
-      action={{ label: t('actions.retry'), onClick: onRetry }}
+      action={{ label: t('actions.retry'), hint: t('actions.retryHint'), onClick: onRetry }}
     />
   )
 }

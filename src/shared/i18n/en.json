@@ -54,7 +54,9 @@
     "generate": "Generate",
     "close": "Close",
     "removeTool": "Remove tool",
-    "retry": "Try again"
+    "retry": "Try again",
+    "retryHint": "Renders this area again, without restarting the studio",
+    "generateHint": "Starts the generation with the settings above; it is followed in the generations bar"
   },
   "generation": {
     "noParameter": "This model takes no parameters.",
@@ -69,7 +71,8 @@
     "none": "No App published yet.",
     "back": "All Apps",
     "run": "Run",
-    "draft": "This App is a draft: it cannot be run."
+    "draft": "This App is a draft: it cannot be run.",
+    "runHint": "Runs the App with the values entered; the result comes back as a generation"
   },
   "graph": {
     "nodes": {
@@ -800,13 +803,16 @@
     "none": "No project open",
     "create": "New project",
     "open": "Open project",
-    "defaultName": "New project"
+    "defaultName": "New project",
+    "openHint": "Opens a project folder already made, with what it holds",
+    "createHint": "Pick a folder on disk: everything the studio produces is written there"
   },
   "auth": {
     "key": "API key",
     "secret": "API secret",
     "configure": "Set up credentials",
-    "explanation": "Your credentials are encrypted by the system keychain and never leave your machine."
+    "explanation": "Your credentials are encrypted by the system keychain and never leave your machine.",
+    "configureHint": "Opens the preferences, at the account section"
   },
   "accounts": {
     "name": "Name",
@@ -1566,7 +1572,8 @@
     "showMaterial": "Back to the lit material",
     "noPicture": "No picture in this project",
     "tilingPreviewHint": "Changes the preview only — the exported texture is not repeated for it",
-    "previewShapeHint": "Changes the shape the preview is laid on, not the texture"
+    "previewShapeHint": "Changes the shape the preview is laid on, not the texture",
+    "measureSeamHint": "Compares the opposite edges of the texture to say whether the seam shows"
   },
   "licences": {
     "title": "Licences",
@@ -1785,7 +1792,9 @@
     "translate": "Translate to English",
     "alreadyEnglish": "This text is already in English.",
     "describeStyle": "Describe the style of the references",
-    "noReference": "Drop a reference picture to describe its style."
+    "noReference": "Drop a reference picture to describe its style.",
+    "useTextHint": "Takes the sentence only, and leaves your settings as they are",
+    "useTextAndSettingsHint": "Takes the sentence AND the settings listed above"
   },
   "dictation": {
     "start": "Dictate",
@@ -1927,12 +1936,16 @@
     },
     "restoreHint": "Puts every hidden section back on the home, at once",
     "exploreTabHint": "Shows only this category in the shelf",
-    "createProjectHint": "Pick a folder on disk: everything the studio produces is written there",
     "documents": {
       "none": "This project holds no document yet. Pick a tool in the centre to make one."
     },
     "counts": {
       "reveal": "Open the project's asset shelf, narrowed to this kind"
-    }
+    },
+    "closingActionHint": "Opens the creation space, the one where generating happens",
+    "sparkAskHint": "Asks the API for three starting points, written for the generator's model",
+    "spotlightResumeHint": "Reopens the document as it was when it was closed",
+    "spotlightConnectHint": "Opens the preferences, at the account section",
+    "spotlightReadyHint": "Opens the creation space, the one where generating happens"
   }
 }

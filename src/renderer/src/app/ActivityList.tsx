@@ -226,6 +226,7 @@ export function ActivityList() {
           {...(entries.length > 0 && {
             action: {
               label: t('activity.clearFilters'),
+              hint: t('activity.allHint'),
               onClick: () => setFilters({ levels: [], topics: [] }),
             },
           })}
