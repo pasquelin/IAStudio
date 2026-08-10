@@ -28,7 +28,8 @@ C’est le cas le plus simple. Double-cliquez et suivez ce que votre système pr
 
 ### Vous partez du code source
 
-Il vous faut **Node 22 ou plus récent** et **[pnpm](https://pnpm.io)**. Ensuite, dans un
+Il vous faut **Node 24** — la version que porte `.nvmrc`, et celle que la CI utilise — et
+**[pnpm](https://pnpm.io)**. Ensuite, dans un
 terminal, à la racine du dossier :
 
 ```bash

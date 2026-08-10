@@ -64,7 +64,7 @@ to come.
 
 ## Getting started
 
-**Requirements** — Node 22 or later, [pnpm](https://pnpm.io), macOS / Windows / Linux, and a
+**Requirements** — Node **24** (the version in `.nvmrc`, which is also what CI runs), [pnpm](https://pnpm.io), macOS / Windows / Linux, and a
 Scenario API key and secret from [app.scenario.com](https://app.scenario.com).
 
 ```bash
