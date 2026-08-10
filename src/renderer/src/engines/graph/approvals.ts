@@ -16,6 +16,7 @@ import { handleId } from './handles'
  */
 export function approvalsOf(graph: GraphState): ReadonlyMap<string, string> {
   const guards = new Map<string, string>()
+  const held = new Set(graph.nodes.map(node => node.id))
 
   for (const node of graph.nodes) {
     if (node.type !== 'approval') continue
@@ -25,9 +26,10 @@ export function approvalsOf(graph: GraphState): ReadonlyMap<string, string> {
         edge.source === node.id && edge.sourceHandle === handleId(node.id, 'source', APPROVAL_PORT),
     )
 
-    // An approval wired to nothing guards nothing: it compiles away, and a run must not stop on
-    // a question about a node the user never named.
-    if (wire) guards.set(wire.target, node.id)
+    // An approval wired to nothing — or to a node a file names and the graph no longer holds —
+    // guards nothing: the converter drops it, so the studio must not stop on it either. That it
+    // asks nothing is the executor's half, which reads this very map.
+    if (wire && held.has(wire.target)) guards.set(wire.target, node.id)
   }
 
   return guards

@@ -1037,6 +1037,46 @@ Cinq choses à ne pas redécouvrir :
    SDK** et ne sert à rien tant que l'exécution est locale : elle répond à un nœud d'un workflow
    PUBLIÉ tournant chez Scenario. À rebrancher à l'étape 9, pas avant.
 
+**Ce que la revue adverse a trouvé, et ce qui en a été fait** (11 constats, aucun bloquant) :
+
+Cinq corrigés dans `feat/approval-suites`, et trois d'entre eux tenaient à **une seule règle** —
+*une approbation qui ne garde rien ne demande rien et n'attend rien* :
+
+1. Une approbation **non câblée** arrêtait le graphe et posait une question qui ne gardait rien.
+2. **Deux approbations sur un même nœud** posaient deux questions en séquence, là où le
+   convertisseur n'en compile qu'une (« la dernière gagne », les autres n'ont aucun flow item).
+3. La perdante était alors peinte **« amont en échec »** quand la gagnante était rejetée — rien
+   n'avait échoué, et personne ne lui avait rien demandé.
+4. `approvalsOf` retenait une garde vers un **nœud que le graphe ne tient plus** (le convertisseur
+   vérifie, lui : `if (!approvedNode) continue`).
+5. Le `finally` du store **lâchait la carte des questions sans y répondre**. Corrigé, mais dit
+   franchement : c'est de l'hygiène, rien à l'écran n'en dépend, et **le test qui prétendait le
+   prouver a été retiré plutôt que gardé décoratif** — il ne mordait pas.
+
+**Six constats non retenus, écrits ici pour ne pas être redécouverts :**
+
+1. **Supprimer un nœud d'approbation pendant qu'il attend fige l'exécution.** L'exécuteur
+   travaille sur l'instantané pris au démarrage, le canvas reste éditable, et la seule interface
+   capable de répondre disparaît — `Promise.all` n'aboutit jamais et le bouton reste sur Arrêter,
+   qui est la seule sortie. Le fermer veut dire ou bien verrouiller l'édition pendant un run, ou
+   bien abandonner les questions dont le nœud a disparu : **c'est un lot, pas une ligne**, et il
+   touche le couplage entre le store des graphes et celui des exécutions.
+2. **Rien hors du nœud ne dit que le graphe attend quelqu'un.** Pas d'échéance, rien dans la barre
+   des tâches : un nœud hors du cadre visible, et plus rien n'explique pourquoi l'exécution
+   n'avance plus. Cousine des dettes 7 et 8 du lot C2 ci-dessous.
+3. **Un refus n'invalide rien** : le nœud gardé garde son entrée de cache et sa peinture verte.
+   Cohérent — la question est reposée à chaque exécution — mais qui rejette voit rester vert ce
+   qu'il vient de refuser.
+4. **`approvalsOf` ne retient que le PREMIER fil d'une approbation**, fidèlement au convertisseur.
+   Une approbation câblée vers deux nœuds (impossible à la souris, `connect` remplace le fil du
+   port ; possible dans un fichier) laisse donc les lecteurs du second sans garde.
+5. **Le filtre `nodesInSelectedBranches` du convertisseur n'a pas d'équivalent ici** : il abandonne
+   toute approbation dont le nœud gardé ne mène pas à une sortie marquée. Le studio exécute tout le
+   graphe de toute façon ; **à trancher à l'étape 9**, quand l'export commencera à compter.
+6. **Deux nœuds portant le même id** écrasent le `resolve` de l'un par l'autre. Préexistant —
+   `settled` a exactement le même défaut depuis le lot C2 — et impossible autrement que par un
+   fichier écrit à la main.
+
 **Une mutation survit sur vingt et une, et elle est inobservable** : retirer le `delete` de la
 question répondue dans `graph-runs.ts`. Résoudre deux fois une promesse déjà résolue ne fait
 rien — c'est de l'hygiène, dit comme telle dans le fichier. Les vingt autres mordent.

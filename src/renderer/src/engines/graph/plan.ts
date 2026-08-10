@@ -201,8 +201,11 @@ export function planGraph(graph: GraphState, cache?: GraphCache): GraphPlan {
  * one guarded node are siblings in the topological order, and one of them could be handed its
  * inputs before the question had been asked.
  *
- * An approval never waits on itself: the wire it uses to name the node it guards would otherwise
- * read as a dependency on its own answer, and the graph would report a loop.
+ * No approval waits on another, its own answer included. The converter never does: the flow items
+ * it pushes for them carry `dependsOn: [approvedFlowId]` and nothing else. Without this, the wire
+ * an approval names its node by reads as a dependency on its own answer — a loop — and two
+ * approvals on one node would queue one behind the other, the second painted "upstream failed"
+ * when the first was declined, though nothing failed and nobody asked it anything.
  */
 function awaitedApprovals(
   graph: GraphState,
@@ -211,11 +214,14 @@ function awaitedApprovals(
   const guards = approvalsOf(graph)
   if (guards.size === 0) return new Map()
 
+  const approvals = new Set(
+    graph.nodes.filter(node => node.type === 'approval').map(node => node.id),
+  )
   const awaited = new Map<string, Set<string>>()
 
   for (const edge of edges) {
     const approval = guards.get(edge.target)
-    if (approval === undefined || approval === edge.source) continue
+    if (approval === undefined || approvals.has(edge.source)) continue
 
     const held = awaited.get(edge.source)
     if (held) held.add(approval)
