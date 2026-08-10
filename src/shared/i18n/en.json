@@ -70,8 +70,14 @@
       "text": "Text",
       "asset": "Asset",
       "model": "Model",
-      "stickyNote": "Note"
-    }
+      "stickyNote": "Note",
+      "approval": "Approval"
+    },
+    "approve": "Approve",
+    "approveHint": "Let the rest of the graph use this result",
+    "decline": "Decline",
+    "declineHint": "Stop everything that reads this node",
+    "askApproval": "Approve this result?"
   },
   "graphCompile": {
     "steps_one": "{{count, number}} step",
@@ -84,6 +90,7 @@
   },
   "graphRun": {
     "running": "running",
+    "awaiting": "to approve",
     "cached": "unchanged",
     "done": "done",
     "failure": {
@@ -91,7 +98,8 @@
       "unsupported": "not runnable",
       "no-model": "no model",
       "blocked": "upstream failed",
-      "rejected": "failed"
+      "rejected": "failed",
+      "declined": "declined"
     }
   },
   "graphTools": {
@@ -665,6 +673,7 @@
     "node": "Node",
     "title": "Title",
     "isOutput": "App result",
+    "message": "Question asked",
     "nodeId": "Identifier",
     "noModel": "None",
     "sectionFoldHint": "Folds this group of properties",

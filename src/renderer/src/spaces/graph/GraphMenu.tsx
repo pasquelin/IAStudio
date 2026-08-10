@@ -1,4 +1,10 @@
-import { mdiFormatText, mdiImageOutline, mdiLayersTripleOutline, mdiNoteOutline } from '@mdi/js'
+import {
+  mdiAccountCheckOutline,
+  mdiFormatText,
+  mdiImageOutline,
+  mdiLayersTripleOutline,
+  mdiNoteOutline,
+} from '@mdi/js'
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useReactFlow } from '@xyflow/react'
@@ -6,12 +12,19 @@ import type { GraphPosition } from '@shared/domain/graph'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
+import type { CreatableNodeType } from '@/engines/graph/factory'
 import { PALETTE, paletteLabelKey, type PaletteEntry } from './palette'
 
-const INPUT_ICONS: Record<string, string> = {
+/**
+ * A `Record` over the creatable types rather than a lookup with a fallback, and the fallback is
+ * what asks for it: an entry added without its glyph took the text one in silence, so an
+ * approval offered itself under the icon of a prompt.
+ */
+const INPUT_ICONS: Record<CreatableNodeType, string> = {
   text: mdiFormatText,
   asset: mdiImageOutline,
   stickyNote: mdiNoteOutline,
+  approval: mdiAccountCheckOutline,
 }
 
 /** One glyph for every generator: what differs between them is the family, and the label says it. */
@@ -49,9 +62,7 @@ export function GraphMenu({ at, onClose, onAdd }: GraphMenuProps) {
           )}
           <MenuRow
             label={t(paletteLabelKey(entry))}
-            icon={
-              entry.group === 'input' ? (INPUT_ICONS[entry.node] ?? mdiFormatText) : GENERATOR_ICON
-            }
+            icon={entry.group === 'input' ? INPUT_ICONS[entry.node] : GENERATOR_ICON}
             onSelect={() => {
               onAdd(entry, screenToFlowPosition(at))
               onClose()

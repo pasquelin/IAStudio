@@ -71,12 +71,31 @@ describe('creating a node', () => {
    */
   it('gives every node the conditional port they all carry', () => {
     for (const type of CREATABLE_NODE_TYPES) {
+      // The one exception, and it is the converter's: it reads a single wire into an approval
+      // and ignores the rest, so a conditional port there would draw an edge compiling to
+      // nothing. Its own ports are checked below.
+      if (type === 'approval') continue
+
       const node = createNode(EMPTY_GRAPH, type, at)
 
       expect(node.data.inputHandles).toEqual([
         { id: `${node.id}-source-conditional`, name: 'conditional', type: 'conditional' },
       ])
     }
+  })
+
+  /**
+   * The handle id is the one thing the converter matches literally — it looks the guarded node up
+   * by `` `${id}-source-approval` `` — so a port spelled any other way is an approval that
+   * compiles away in silence.
+   */
+  it('gives an approval one untyped port and nothing else', () => {
+    const node = createNode(EMPTY_GRAPH, 'approval', at)
+
+    expect(node.data.inputHandles).toEqual([{ id: `${node.id}-source-approval`, name: 'approval' }])
+    // Nothing reads an approval: the flow it compiles to carries a dependency, never a value.
+    expect(node.data.outputHandles).toBeUndefined()
+    expect(node.data).toMatchObject({ message: '' })
   })
 
   it('never hands back the reserved id, whatever the graph already holds', () => {

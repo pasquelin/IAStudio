@@ -58,6 +58,7 @@ const canvas = (state: GraphState = graph, overrides: Overrides = {}) =>
       onUndo={noop}
       onRedo={noop}
       onRun={noop}
+      onDecide={noop}
       canUndo={false}
       canRedo={false}
       runs={{}}
@@ -190,6 +191,7 @@ describe('the graph canvas', () => {
       expect(screen.getByRole('menuitem', { name: 'Texte' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Asset' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Note' })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: 'Approbation' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Image' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: 'Vidéo' })).toBeInTheDocument()
       expect(screen.getByRole('menuitem', { name: '3D' })).toBeInTheDocument()
@@ -258,6 +260,7 @@ describe('the graph canvas', () => {
           onUndo={noop}
           onRedo={noop}
           onRun={noop}
+          onDecide={noop}
           canUndo={false}
           canRedo={false}
           runs={{}}
@@ -308,5 +311,82 @@ describe('the graph canvas', () => {
 
       expect(screen.getByText('model')).toBeInTheDocument()
     })
+  })
+})
+
+/**
+ * The one node that asks something of the user rather than telling them something. Its two
+ * answers are drawn only while a run is stopped on it — an approval on an idle canvas is a gate
+ * someone will pass through later, not a decision to take now.
+ */
+describe('the approval node', () => {
+  const withApproval: GraphState = {
+    ...graph,
+    nodes: [
+      ...graph.nodes,
+      {
+        id: 'approval1',
+        type: 'approval',
+        position: { x: 700, y: 0 },
+        data: { message: 'Garde-t-on cette image ?', inputHandles: [] },
+      },
+    ],
+  }
+
+  it('shows the question its own data carries', () => {
+    canvas(withApproval)
+
+    expect(screen.getByText('Garde-t-on cette image ?')).toBeInTheDocument()
+  })
+
+  it('asks a sentence of its own where the node carries no question', () => {
+    canvas({
+      nodes: [{ id: 'approval1', type: 'approval', position: { x: 0, y: 0 }, data: {} }],
+      edges: [],
+      inputKeys: [],
+    })
+
+    expect(screen.getByText('Approuver ce résultat ?')).toBeInTheDocument()
+  })
+
+  /**
+   * By its text and not by its role, and jsdom is the reason: React Flow leaves a node
+   * `visibility: hidden` until it has measured one, jsdom measures nothing, and a hidden button
+   * computes an EMPTY accessible name — so `getByRole('button', { name })` finds nothing however
+   * `hidden` is set. What it is is checked below instead. The file's own header says the rest.
+   */
+  const answer = (label: string): HTMLElement => screen.getByText(label)
+
+  it('offers no answer while nothing is being asked', () => {
+    canvas(withApproval)
+
+    expect(screen.queryByText('Approuver')).not.toBeInTheDocument()
+    expect(screen.queryByText('Rejeter')).not.toBeInTheDocument()
+  })
+
+  it('offers both answers once the run has stopped on it', () => {
+    const onDecide = vi.fn()
+    canvas(withApproval, { runs: { approval1: { status: 'awaiting' } }, onDecide })
+
+    fireEvent.click(answer('Approuver'))
+    expect(onDecide).toHaveBeenCalledWith('approval1', true)
+
+    fireEvent.click(answer('Rejeter'))
+    expect(onDecide).toHaveBeenCalledWith('approval1', false)
+  })
+
+  /** React Flow starts dragging on a press inside a node unless the control opts out. */
+  it('keeps its buttons out of the drag React Flow would start', () => {
+    canvas(withApproval, { runs: { approval1: { status: 'awaiting' } } })
+
+    expect(answer('Approuver').tagName).toBe('BUTTON')
+    expect(answer('Approuver').closest('.nodrag')).not.toBeNull()
+  })
+
+  /** Its own tone, or a node waiting on a hand reads exactly like one waiting on the API. */
+  it('says it is waiting in a tone of its own', () => {
+    canvas(withApproval, { runs: { approval1: { status: 'awaiting' } } })
+
+    expect(screen.getByText('à approuver')).toHaveClass('text-warning')
   })
 })

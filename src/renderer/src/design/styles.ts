@@ -159,11 +159,14 @@ export const SHELF_OVERLAY = cn(
  * colour stays here: the jobs bar, the media import and a node of the graph all say "this one
  * went wrong", and they must say it in the same red.
  */
-export type StatusTone = 'muted' | 'accent' | 'success' | 'danger'
+export type StatusTone = 'muted' | 'accent' | 'success' | 'warning' | 'danger'
 
 export const TONE_TEXT: Record<StatusTone, string> = {
   muted: 'text-muted',
   accent: 'text-accent',
   success: 'text-success',
+  // What is waiting on the user, which is neither in flight nor wrong: an approval painted with
+  // `accent` read as "running" beside the nodes that really were.
+  warning: 'text-warning',
   danger: 'text-danger',
 }

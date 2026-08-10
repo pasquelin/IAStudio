@@ -6,6 +6,7 @@ import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
 import { FAMILY_FACET } from '@/panels/models/family-facet'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -76,7 +77,13 @@ beforeEach(() => {
   useTools.setState({ arrangements: arrangedFor('graph', { open: {} }), focusedZone: null })
   useLayouts.setState({ activeWorkspace: 'graph', home: false })
   useSelection.getState().clear()
+  // Restored by hand, and named: one test below swaps `decide` for a spy, and a store action
+  // left replaced would silently follow the suite into every file that shares this module.
+  useGraphRuns.setState({ runs: {}, decide: REAL_DECIDE })
 })
+
+/** The store's own answer, kept before any test can replace it. */
+const REAL_DECIDE = useGraphRuns.getState().decide
 
 describe('a graph as a document', () => {
   it('draws what the store holds', () => {
@@ -249,6 +256,40 @@ describe('a graph as a document', () => {
       act(() => store.undo(DOCUMENT))
 
       expect(useSelection.getState().selection).toEqual({ kind: 'none' })
+    })
+  })
+
+  /**
+   * The whole chain of the gate, end to end: the store holds a question, the node draws it, and
+   * the click reaches `decide`. Each half has its own suite — this is the wire between them, and
+   * it is the one thing neither of them can prove.
+   */
+  describe('answering an approval on the canvas', () => {
+    const approval: GraphNode = {
+      id: 'approval1',
+      type: 'approval',
+      position: { x: 800, y: 0 },
+      data: { message: 'On garde ?' },
+    }
+
+    it('hands the answer to the run of this very document', () => {
+      const decide = vi.fn()
+      useGraphRuns.setState({
+        runs: {
+          [DOCUMENT]: {
+            running: true,
+            nodes: { approval1: { status: 'awaiting' } },
+            cache: new Map(),
+          },
+        },
+        decide,
+      })
+      useGraphs.getState().runCommand(DOCUMENT, addGraphNode(approval))
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByText('Approuver'))
+
+      expect(decide).toHaveBeenCalledWith(DOCUMENT, 'approval1', true)
     })
   })
 })

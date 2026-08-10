@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphNodeRun, GraphState } from '@shared/domain/graph'
 import { runGraph, type GraphRunPorts, type GraphRunResult } from './executor'
-import { graphOf, modelNode, textNode, wire } from './graph-fixtures'
+import { approvalNode, graphOf, guards, modelNode, textNode, wire } from './graph-fixtures'
 import { handleId } from './handles'
 import { updateNodeData } from './mutations'
-import type { GraphCache } from './plan'
+import { planGraph, type GraphCache } from './plan'
 
 type Submitted = { modelId: string; body: Record<string, unknown> }
 
@@ -25,7 +25,12 @@ type Watched = {
 async function watch(
   graph: GraphState,
   outputs: Readonly<Record<string, readonly string[]>> = {},
-  options: { cache?: GraphCache; signal?: AbortSignal } = {},
+  options: {
+    cache?: GraphCache
+    signal?: AbortSignal
+    /** What the person answers, per approval node. A graph with none never reaches it. */
+    approve?: (nodeId: string) => Promise<boolean>
+  } = {},
 ): Promise<Watched> {
   const submitted: Submitted[] = []
   const reported = new Map<string, GraphNodeRun[]>()
@@ -39,6 +44,10 @@ async function watch(
 
   const result = await runGraph(graph, options.cache, {
     generate,
+    // Refuses to answer rather than saying yes: a graph whose approvals a test did not think
+    // about would otherwise sail through one, and the test would prove the opposite of that.
+    approve:
+      options.approve ?? (nodeId => Promise.reject(new Error(`no answer declared for ${nodeId}`))),
     report: (nodeId, run) => {
       const held = reported.get(nodeId)
       if (held) held.push(run)
@@ -197,6 +206,7 @@ describe('running a graph', () => {
         running -= 1
         return ['asset_1']
       },
+      approve: () => Promise.resolve(true),
       report: () => {},
     })
 
@@ -452,6 +462,7 @@ describe('stopping a run', () => {
         controller.abort()
         return ['asset_1']
       },
+      approve: () => Promise.resolve(true),
       report: (nodeId, run) => {
         const held = reported.get(nodeId)
         if (held) held.push(run)
@@ -485,6 +496,7 @@ describe('stopping a run', () => {
         controller.abort()
         throw new Error('cancelled')
       },
+      approve: () => Promise.resolve(true),
       report: (nodeId, run) => {
         const held = reported.get(nodeId)
         if (held) held.push(run)
@@ -494,5 +506,130 @@ describe('stopping a run', () => {
     })
 
     expect(reported.get('m1')?.map(run => run.status)).toEqual(['running', 'idle'])
+  })
+})
+
+/**
+ * The gate: `m1` produces, `approval1` guards it, and `m2` reads `m1`. The run stops between the
+ * two generators — which is where a published workflow would stop, since the converter makes
+ * everything reading a guarded node depend on its approval.
+ */
+describe('stopping on an approval', () => {
+  const gated = (message = ''): GraphState =>
+    graphOf(
+      [
+        modelNode('m1', {}, 'model_a'),
+        modelNode('m2', {}, 'model_b'),
+        approvalNode('approval1', message),
+      ],
+      [wire('m2', 'prompt', 'm1', 'image'), guards('approval1', 'm1')],
+    )
+
+  const outputs = { model_a: ['asset_1'], model_b: ['asset_2'] }
+
+  it('asks between the node it guards and whatever reads it', async () => {
+    // One log for the two ports rather than two counters: the ORDER is the whole claim, and two
+    // lists compared after the fact cannot say which came first.
+    const events: string[] = []
+
+    await runGraph(gated(), undefined, {
+      generate: async modelId => {
+        events.push(`generate:${modelId}`)
+        return [`asset_${modelId}`]
+      },
+      approve: async nodeId => {
+        events.push(`approve:${nodeId}`)
+        return true
+      },
+      report: () => {},
+    })
+
+    expect(events).toEqual(['generate:model_a', 'approve:approval1', 'generate:model_b'])
+  })
+
+  it('says it is waiting, then done, when the answer is yes', async () => {
+    const watched = await watch(gated(), outputs, { approve: () => Promise.resolve(true) })
+
+    expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'done'])
+    expect(statusesOf(watched, 'm2')).toEqual(['running', 'done'])
+  })
+
+  it('holds back everything reading the guarded node when the answer is no', async () => {
+    const watched = await watch(gated(), outputs, { approve: () => Promise.resolve(false) })
+
+    expect(failureOf(watched, 'approval1')).toBe('declined')
+    expect(failureOf(watched, 'm2')).toBe('blocked')
+    // The guarded node itself already ran: an approval is asked ABOUT something, so it is asked
+    // once that something exists.
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_a'])
+  })
+
+  it('never files an approval in the cache', async () => {
+    const watched = await watch(gated(), outputs, { approve: () => Promise.resolve(true) })
+    const plan = planGraph(gated())
+    const approval = plan.ok ? plan.order.find(node => node.id === 'approval1') : undefined
+
+    expect(approval).toBeDefined()
+    expect(cacheOf(watched.result).has(approval?.hash ?? '')).toBe(false)
+  })
+
+  /**
+   * The point of the gate being in the plan rather than in the executor: a result approved on one
+   * run must not come back on the next through the cache, without the question being put again.
+   */
+  it('asks again on a second run, even where every node is cached', async () => {
+    const first = await watch(gated(), outputs, { approve: () => Promise.resolve(true) })
+
+    const asked: string[] = []
+    const second = await watch(gated(), outputs, {
+      cache: cacheOf(first.result),
+      approve: async nodeId => {
+        asked.push(nodeId)
+        return false
+      },
+    })
+
+    expect(asked).toEqual(['approval1'])
+    expect(statusesOf(second, 'm1')).toEqual(['cached'])
+    // Declined this time, so what reads the guarded node is held back — cache or no cache.
+    expect(failureOf(second, 'm2')).toBe('blocked')
+    expect(statusesOf(second, 'm2')).not.toContain('cached')
+  })
+
+  it('treats a question that cannot be answered as a no', async () => {
+    const watched = await watch(gated(), outputs, {
+      approve: () => Promise.reject(new Error('the window went away')),
+    })
+
+    expect(failureOf(watched, 'approval1')).toBe('declined')
+  })
+
+  it('leaves an approval idle rather than declined when the run was stopped', async () => {
+    const controller = new AbortController()
+    const watched = await watch(gated(), outputs, {
+      signal: controller.signal,
+      approve: async () => {
+        controller.abort()
+        return false
+      },
+    })
+
+    expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'idle'])
+  })
+
+  it('never asks about a node that failed to produce', async () => {
+    const asked: string[] = []
+    await watch(
+      gated(),
+      { model_b: ['asset_2'] },
+      {
+        approve: async nodeId => {
+          asked.push(nodeId)
+          return true
+        },
+      },
+    )
+
+    expect(asked).toEqual([])
   })
 })

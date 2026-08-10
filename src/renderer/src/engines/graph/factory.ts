@@ -1,4 +1,5 @@
 import type { GraphHandleInput, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
+import { APPROVAL_PORT } from '@shared/domain/graph'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { defaultValues } from '@/helpers/dynamic-form'
@@ -13,9 +14,14 @@ import { nextNodeId } from './mutations'
  * the registry is wired would put a node on the canvas that nothing can be wired to. It arrives
  * with the rest of the vocabulary; the editor already draws one read back from a workflow.
  */
-export type CreatableNodeType = 'text' | 'asset' | 'stickyNote'
+export type CreatableNodeType = 'text' | 'asset' | 'stickyNote' | 'approval'
 
-export const CREATABLE_NODE_TYPES: readonly CreatableNodeType[] = ['text', 'asset', 'stickyNote']
+export const CREATABLE_NODE_TYPES: readonly CreatableNodeType[] = [
+  'text',
+  'asset',
+  'stickyNote',
+  'approval',
+]
 
 /**
  * The port every node carries, sticky notes included — read off `wflow_coloring-page-maker` on
@@ -64,6 +70,24 @@ export function createNode(
   // A note is drawn on the canvas and compiles to nothing, so it has no output at all. Its text
   // lives under `content`, not `value` — the field the other two use.
   if (type === 'stickyNote') return { id, type, position, data: { content: '', inputHandles } }
+
+  // An approval carries ONE port and neither of the two every other node has. It has no output
+  // because nothing reads it — the converter turns it into a dependency, never into a value — and
+  // no `conditional` because the converter ignores every wire into an approval but this one, so
+  // offering the port would draw an edge that compiles to nothing.
+  if (type === 'approval') {
+    return {
+      id,
+      type,
+      position,
+      // Untyped on purpose: an approval approves whatever the node it guards produced, and a type
+      // here would refuse the wire for a picture, a sound, or anything added later.
+      data: {
+        message: '',
+        inputHandles: [{ id: handleId(id, 'source', APPROVAL_PORT), name: APPROVAL_PORT }],
+      },
+    }
+  }
 
   const { field, type: portType } = OUTPUTS[type]
   const outputHandles = [

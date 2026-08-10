@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphState } from '@shared/domain/graph'
-import { graphOf, modelNode as model, textNode as text, wire } from './graph-fixtures'
+import {
+  approvalNode as approval,
+  graphOf,
+  guards,
+  modelNode as model,
+  textNode as text,
+  wire,
+} from './graph-fixtures'
 import { moveNode, updateNodeData } from './mutations'
 import { planGraph, type GraphPlan, type GraphPlanNode } from './plan'
 import { parseGraph } from './serialize'
@@ -256,5 +263,106 @@ describe('reading the cache', () => {
 
   it('holds nothing cached without a cache', () => {
     expect(ordered(planGraph(chain())).every(node => !node.cached)).toBe(true)
+  })
+})
+
+/**
+ * What the SDK's converter writes into a flow, brought forward into the plan: everything reading
+ * a guarded node depends on its approval. Here rather than in the executor because it decides the
+ * ORDER — two consumers of one guarded node are siblings, and one of them could otherwise be
+ * handed its inputs before the question had been asked.
+ */
+describe('waiting on an approval', () => {
+  /** `m1` feeds `m2`, and `approval1` stands on `m1`. */
+  const guarded = (): GraphState =>
+    graphOf(
+      [model('m1'), model('m2'), approval('approval1')],
+      [wire('m2', 'prompt', 'm1', 'image'), guards('approval1', 'm1')],
+    )
+
+  it('puts the approval before what reads the node it guards', () => {
+    expect(idsOf(planGraph(guarded()))).toEqual(['m1', 'approval1', 'm2'])
+  })
+
+  it('tells the consumer which approval it waits on', () => {
+    const plan = planGraph(guarded())
+
+    expect(ordered(plan).map(node => [node.id, node.awaits])).toEqual([
+      ['m1', []],
+      ['approval1', []],
+      ['m2', ['approval1']],
+    ])
+  })
+
+  /** The wire naming what it guards is not a wait on its own answer — that would be a loop. */
+  it('never makes an approval wait on itself', () => {
+    expect(idsOf(planGraph(guarded()))).toContain('approval1')
+  })
+
+  it('leaves the guarded node reading nothing of the approval', () => {
+    const plan = planGraph(guarded())
+
+    expect(ordered(plan).find(node => node.id === 'm2')?.inputs).toEqual({
+      prompt: { node: 'm1', handle: 'm1-target-image' },
+    })
+  })
+
+  /**
+   * A question put to a person says nothing about what a node computes, so it must not change the
+   * key a result is filed under — or approving one would invalidate every cached node below it.
+   */
+  it('hashes a consumer the same with the approval and without it', () => {
+    const plain = graphOf([model('m1'), model('m2')], [wire('m2', 'prompt', 'm1', 'image')])
+
+    expect(hashOf(planGraph(guarded()), 'm2')).toBe(hashOf(planGraph(plain), 'm2'))
+  })
+
+  /**
+   * The order of `graph.nodes` is what seeds Kahn's queue, so a graph holding the consumer FIRST
+   * and the approval LAST is the case where a missing dependency would show: the executor awaits
+   * `settled.get(approval)`, and an approval planned after its consumer would hand it
+   * `undefined` — read as a refusal, and the branch would go `blocked` on a question nobody was
+   * ever asked.
+   */
+  it('puts the approval first even where the graph holds it last', () => {
+    const reversed = graphOf(
+      [model('m2'), model('m1'), approval('approval1')],
+      [wire('m2', 'prompt', 'm1', 'image'), guards('approval1', 'm1')],
+    )
+
+    expect(idsOf(planGraph(reversed))).toEqual(['m1', 'approval1', 'm2'])
+  })
+
+  it('waits once where two wires join the same guarded node', () => {
+    const twice = graphOf(
+      [model('m1'), model('m2'), approval('approval1')],
+      [
+        wire('m2', 'prompt', 'm1', 'image'),
+        wire('m2', 'style', 'm1', 'image'),
+        guards('approval1', 'm1'),
+      ],
+    )
+
+    expect(ordered(planGraph(twice)).find(node => node.id === 'm2')?.awaits).toEqual(['approval1'])
+  })
+
+  /**
+   * The approval is IN the loop, not a bystander of one: `m2` waits on it, it waits on `m1`, and
+   * `m1` reads `m2`. Naming only the two generators would send the user to a pair of nodes that
+   * are wired perfectly well on their own.
+   */
+  it('names the approval among the nodes caught in the loop it closes', () => {
+    const looped = graphOf(
+      [model('m1'), model('m2'), approval('approval1')],
+      [
+        wire('m1', 'prompt', 'm2', 'image'),
+        wire('m2', 'prompt', 'm1', 'image'),
+        guards('approval1', 'm1'),
+      ],
+    )
+    const plan = planGraph(looped)
+
+    expect(plan.ok).toBe(false)
+    if (!plan.ok) expect(plan.cycle).toEqual(['m1', 'm2', 'approval1'])
   })
 })
