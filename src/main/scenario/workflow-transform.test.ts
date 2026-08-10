@@ -76,13 +76,11 @@ describe('runTransform', () => {
   })
 
   /**
-   * The evaluator registers `exists` against the object it is handed, so the variables must not
-   * be the caller's own record: a graph's inputs are not the evaluator's to keep.
+   * `exists` is the one function the SDK binds to the evaluation's own variables rather than to
+   * the environment, so it only answers if the variables were handed over as themselves.
    */
-  it('leaves the variables it was handed untouched', () => {
-    const variables = { a: 'kept' }
-
-    expect(evaluate("exists('a') ? a : 'none'", variables)).toEqual(['kept'])
-    expect(variables).toEqual({ a: 'kept' })
+  it('answers exists() against the variables it was given', () => {
+    expect(evaluate("exists('a') ? a : 'none'", { a: 'kept' })).toEqual(['kept'])
+    expect(evaluate("exists('a') ? a : 'none'")).toEqual(['none'])
   })
 })

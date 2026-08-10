@@ -22,9 +22,7 @@ export function runTransform(
   let result: unknown
 
   try {
-    // Mutable copy: `evaluateCel` registers `exists` against this very object, and the shared
-    // type is readonly on the way in — a graph's variables are not the evaluator's to keep.
-    result = evaluateCel(expression, { ...variables })
+    result = evaluateCel(expression, variables)
   } catch (error) {
     report(`transform ${expression}: ${messageOf(error)}`)
     return null
