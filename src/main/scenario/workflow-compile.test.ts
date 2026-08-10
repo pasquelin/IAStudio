@@ -462,3 +462,159 @@ describe('what a graph is refused for', () => {
     expect(report).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * The two the SDK's validator accepts without a word — and the reason this check is ours.
+ *
+ * Both were measured by running the converter rather than read off it: each produces a flow that
+ * `validateWorkflowFlow` passes, carrying a wire the graph never drew. Reported here, before the
+ * conversion, because the conversion is what hides them.
+ */
+describe('a loop and its end, paired so the converter reads them otherwise', () => {
+  const loop = (id: string): GraphNode => ({
+    id,
+    type: 'forEach',
+    position: { x: 0, y: 0 },
+    data: {
+      inputHandles: [{ id: `${id}-input-0`, name: 'list0', type: 'text' }],
+      outputHandles: [{ id: `${id}-output-0`, name: 'item0', type: 'text' }],
+    },
+  })
+
+  const end = (id: string, parentNodeId?: string): GraphNode => ({
+    id,
+    type: 'forEachEnd',
+    position: { x: 0, y: 0 },
+    data: {
+      ...(parentNodeId === undefined ? {} : { parentNodeId }),
+      isOutput: true,
+      inputHandles: [{ id: `${id}-source-results`, name: 'results' }],
+    },
+  })
+
+  /** `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention. */
+  const reads = (consumer: string, provider: string): GraphEdge => ({
+    id: `${provider}--TO--${consumer}`,
+    source: consumer,
+    sourceHandle: `${consumer}-source-results`,
+    target: provider,
+    targetHandle: `${provider}-target-image`,
+  })
+
+  /** The pair as it should be: the end reads what the loop feeds, so it is downstream of it. */
+  const inside = (): readonly [readonly GraphNode[], readonly GraphEdge[]] => [
+    [loop('forEach1'), modelNode('m1', false), end('end1', 'forEach1')],
+    [
+      {
+        id: 'forEach1--TO--m1',
+        source: 'm1',
+        sourceHandle: 'm1-source-prompt',
+        target: 'forEach1',
+        targetHandle: 'forEach1-output-0',
+      },
+      reads('end1', 'm1'),
+    ],
+  ]
+
+  it('accepts an end that reads what its loop feeds', () => {
+    const [nodes, edges] = inside()
+
+    expect(compile(graphOf(nodes, edges)).result).toMatchObject({ ok: true })
+  })
+
+  /**
+   * Measured: the node really feeding the stray end is compiled, and then nothing reads it, while
+   * whatever read the end reads `{ node: forEach1 }` — the loop's own result. One wire changed
+   * where it comes from, and `validateWorkflowFlow` answered OK.
+   */
+  it('refuses an end that names a loop it is not inside of', () => {
+    // ONE end, and it reads a node the loop does not feed — so the loop has an end on paper and
+    // none in the flow. A second end here would be the other problem, which is reported first.
+    const graph = graphOf(
+      [
+        loop('forEach1'),
+        modelNode('m1', false),
+        modelNode('outside', false),
+        end('end1', 'forEach1'),
+      ],
+      [
+        {
+          id: 'forEach1--TO--m1',
+          source: 'm1',
+          sourceHandle: 'm1-source-prompt',
+          target: 'forEach1',
+          targetHandle: 'forEach1-output-0',
+        },
+        reads('end1', 'outside'),
+      ],
+    )
+
+    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-end-outside' })
+  })
+
+  /**
+   * Measured: the converter keeps the FIRST end and resolves the second's wires to the loop all
+   * the same, which pulls whatever read the second INTO the loop's body — a node outside the loop
+   * running once per item instead of once.
+   */
+  it('refuses two ends naming the same loop', () => {
+    const [nodes, edges] = inside()
+    const graph = graphOf([...nodes, end('end2', 'forEach1')], [...edges, reads('end2', 'm1')])
+
+    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-two-ends' })
+  })
+
+  /** Two loops, an end each: what makes the check about the PAIR rather than about a count. */
+  it('accepts two loops closed by one end each', () => {
+    const [nodes, edges] = inside()
+    const graph = graphOf(
+      [...nodes, loop('forEach2'), modelNode('m2', false), end('end2', 'forEach2')],
+      [
+        ...edges,
+        {
+          id: 'forEach2--TO--m2',
+          source: 'm2',
+          sourceHandle: 'm2-source-prompt',
+          target: 'forEach2',
+          targetHandle: 'forEach2-output-0',
+        },
+        reads('end2', 'm2'),
+      ],
+    )
+
+    expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+
+  /** An end naming nothing is not this problem: the converter leaves it out, and says so its way. */
+  it('says nothing about an end that names no loop', () => {
+    const [nodes, edges] = inside()
+    const graph = graphOf([...nodes, end('end2')], edges)
+
+    expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+
+  /**
+   * `parseGraph` validates the node and not its `data`, so a file can put a number under
+   * `parentNodeId`. Read as a pairing, it would key the map on `"12"` and refuse a graph nobody
+   * mispaired.
+   */
+  it('says nothing about a parent a file wrote as a number', () => {
+    const [nodes, edges] = inside()
+    const theirs: GraphNode = {
+      id: 'end2',
+      type: 'forEachEnd',
+      position: { x: 0, y: 0 },
+      ...JSON.parse('{"data":{"parentNodeId":12}}'),
+    }
+
+    expect(compile(graphOf([...nodes, theirs], edges)).result).toMatchObject({ ok: true })
+  })
+
+  /** And an end naming a node that is no loop at all: nothing is claimed, so nothing is refused. */
+  it('says nothing about an end naming a node that is not a loop', () => {
+    const [nodes, edges] = inside()
+    const graph = graphOf([...nodes, end('end2', 'm1')], edges)
+
+    expect(compile(graph).result).toMatchObject({ ok: true })
+  })
+})

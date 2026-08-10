@@ -135,7 +135,9 @@
     "problem": {
       "no-output": "Aucune sortie marquée",
       "empty": "Rien ne mène à la sortie",
-      "invalid": "Le graphe ne compile pas"
+      "invalid": "Le graphe ne compile pas",
+      "loop-end-outside": "Une fin de boucle ferme une boucle dont elle ne fait pas partie",
+      "loop-two-ends": "Deux fins de boucle ferment la même boucle"
     }
   },
   "graphRun": {

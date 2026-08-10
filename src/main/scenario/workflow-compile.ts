@@ -7,7 +7,12 @@ import {
   type WorkflowEditorNode,
 } from '@scenario-labs/sdk'
 import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
-import { outputNodesOf, type GraphCompileResult } from '@shared/domain/graph'
+import {
+  namedLoopId,
+  outputNodesOf,
+  type GraphCompileProblem,
+  type GraphCompileResult,
+} from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
 import type { ScenarioInput } from './schema'
 
@@ -181,7 +186,67 @@ export function toEditorFlow(
   })
 }
 
-/** Whether that flow holds together, and the three refusals the converter answers with silence. */
+/**
+ * Every node that reads this one, however far down — data flows provider to consumer, while the
+ * EDGE points the other way, so a walk downstream follows `target` back to `source`.
+ *
+ * Indexed rather than iterated, as `plan.ts` walks its own queue: the list grows while it is being
+ * read, and `shift` on it would recopy the rest on every turn.
+ */
+function downstreamOf(graph: GraphState, id: string): ReadonlySet<string> {
+  const reached = new Set<string>()
+  const queue = [id]
+
+  for (let at = 0; at < queue.length; at += 1) {
+    for (const edge of graph.edges) {
+      if (edge.target !== queue[at] || reached.has(edge.source)) continue
+      reached.add(edge.source)
+      queue.push(edge.source)
+    }
+  }
+
+  return reached
+}
+
+/**
+ * How a loop and its end can be paired so the converter reads them differently from the screen.
+ *
+ * **Neither of the two is refused by `validateWorkflowFlow`**, which is the whole reason this
+ * exists: both were measured by running the converter, and both compile to a flow that passes
+ * validation while carrying a wire the graph never drew.
+ *
+ * A loop with NO end naming it is not here: the converter leaves its body empty, and the validator
+ * does refuse that — it already arrives as `invalid`, which says less than it could but does not
+ * lie.
+ */
+function loopPairingProblem(graph: GraphState): GraphCompileProblem | undefined {
+  const endsByLoop = new Map<string, string[]>()
+
+  for (const node of graph.nodes) {
+    // The inspector's own reader, not a second one: it guards what a file may have written under
+    // `parentNodeId`, and two readings of one field are two chances to disagree about it.
+    const named = namedLoopId(node)
+    if (named === undefined || named === '') continue
+    endsByLoop.set(named, [...(endsByLoop.get(named) ?? []), node.id])
+  }
+
+  for (const [loopId, ends] of endsByLoop) {
+    // An end naming something that is no loop resolves to nothing at all — no wire moves, and no
+    // measurement says otherwise, so nothing is claimed about it here.
+    if (!graph.nodes.some(node => node.id === loopId && node.type === 'forEach')) continue
+
+    // The converter keeps the FIRST end it finds and resolves the other's wires to the loop just
+    // the same, which pulls whatever read that other end into the loop's body.
+    if (ends.length > 1) return 'loop-two-ends'
+
+    const inside = downstreamOf(graph, loopId)
+    if (ends.some(end => !inside.has(end))) return 'loop-end-outside'
+  }
+
+  return undefined
+}
+
+/** Whether that flow holds together, and the refusals the converter answers with silence. */
 export function compileGraph(
   graph: GraphState,
   { report, getModel }: CompileDeps,
@@ -189,6 +254,12 @@ export function compileGraph(
   // Asked before the converter rather than read off its answer: an empty flow has two causes, and
   // "nothing is marked as an output" is the one the user can do something about.
   if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
+
+  // Before the conversion, because the conversion is exactly what hides it: these two graphs
+  // convert and validate without a word, and the flow that comes out has a wire the graph does
+  // not. Nothing downstream can tell them from a graph that is right.
+  const pairing = loopPairingProblem(graph)
+  if (pairing) return { ok: false, problem: pairing }
 
   const flow = toEditorFlow(graph, getModel)
 
