@@ -12,6 +12,7 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
+import { showPanels } from '@/stores/layout-fixtures'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
@@ -34,7 +35,7 @@ import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import {
   closeDocument,
   deleteDocument,
-  forgetClosedDocuments,
+  refreshDocuments,
   restoreDocument,
   saveDocument,
 } from './document-io'
@@ -853,10 +854,12 @@ describe('closing a document', () => {
     useTextureViews.getState().inspect(left.id, 'normal')
     useTextureViews.getState().inspect(kept.id, 'roughness')
 
-    // What `refresh` does to the map, without the listing: the tab of the project being left goes.
-    const wereOpen = Object.keys(useDocuments.getState().documents)
-    useDocuments.setState({ documents: { [kept.id]: kept } })
-    forgetClosedDocuments(wereOpen)
+    // The folder of the project being opened holds one of the two, and the layout says it is
+    // open — which is what makes the other one a tab the refresh drops.
+    installFakeBridge({ documents: { list: () => Promise.resolve([kept]) } })
+    showPanels('textures', kept.id)
+
+    await expect(refreshDocuments()).resolves.toBe(true)
 
     expect(inspectedChannel(useTextureViews.getState(), left.id)).toBeNull()
     expect(inspectedChannel(useTextureViews.getState(), kept.id)).toBe('roughness')

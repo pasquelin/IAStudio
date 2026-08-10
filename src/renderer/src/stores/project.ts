@@ -1,14 +1,13 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
 import { withoutRecentProject, type Project } from '@shared/domain/project'
-import { forgetClosedDocuments } from '@/app/document-io'
+import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
 import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
 import { useAssets } from './assets'
-import { useDocuments } from './documents'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './scene-clipboard'
 
@@ -50,16 +49,11 @@ async function followProject(project: Project | null): Promise<void> {
   // toasts too — they never expire, so one raised by the project being left would hang over
   // the one being opened, naming an asset that is no longer anywhere.
   useActivity.getState().dismissAll()
-  // Read before the refresh, which rewrites the map rather than closing tab by tab: afterwards
-  // nothing names the documents it dropped, and their session views would outlive their project.
-  const wereOpen = Object.keys(useDocuments.getState().documents)
   const [, folderAnswered] = await Promise.all([
     useAssets.getState().refresh(),
-    useDocuments.getState().refresh(),
+    refreshDocuments(),
     useActivity.getState().reload(),
   ])
-
-  forgetClosedDocuments(wereOpen)
 
   // Last, and only on a folder that answered: the reconciliation above is what says which tabs
   // have a document, and a listing that failed says nothing about any of them.

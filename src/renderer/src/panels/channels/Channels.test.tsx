@@ -141,7 +141,9 @@ describe('Channels', () => {
       )
     render(<Channels />)
 
-    const badge = screen.getByRole('img', { name: 'Généré par un modèle — figé tel qu’il est arrivé' })
+    const badge = screen.getByRole('img', {
+      name: 'Généré par un modèle — figé tel qu’il est arrivé',
+    })
     const covering = badge.parentElement?.querySelector('button[aria-pressed]')
     expect(covering).not.toBeNull()
     expect(covering?.compareDocumentPosition(badge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)

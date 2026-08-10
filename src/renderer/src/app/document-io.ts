@@ -361,17 +361,25 @@ export async function deleteDocument(documentId: string): Promise<boolean> {
  * document reopened later must not inherit the verdict passed on the one before it.
  */
 /**
- * Drops what `refresh` closed without going through `forgetDocument`.
+ * Reconciles the open tabs with the folder, and drops what that leaves behind.
  *
- * `refresh` settles which tabs survive by rewriting the store's map, so a document left behind
- * by a project change never passes through the one function that empties the session views. The
- * caller hands in the ids that were open before, since after the write nothing names them.
+ * `refresh` settles which tabs survive by rewriting the store's map in one write — deliberately,
+ * since closing them one by one would paint and unpaint every tab. Nothing it drops therefore
+ * passes through `forgetDocument`, and the session views of a project being left outlived it.
+ *
+ * The two halves are one call so they cannot be dissociated: after the write nothing names the
+ * documents that went, so whoever refreshes has to have read them first.
  */
-export function forgetClosedDocuments(before: readonly string[]): void {
+export async function refreshDocuments(): Promise<boolean> {
+  const wereOpen = Object.keys(useDocuments.getState().documents)
+  const answered = await useDocuments.getState().refresh()
+
   const { documents } = useDocuments.getState()
-  for (const documentId of before) {
+  for (const documentId of wereOpen) {
     if (!documents[documentId]) forgetDocument(documentId)
   }
+
+  return answered
 }
 
 function forgetDocument(documentId: string): void {
