@@ -129,6 +129,14 @@ une rafale bornée à un fil garde le reste de la fenêtre réactif. Les trois n
 tuyauterie : le catalogue, le dispatch, l’arithmétique audio et la construction du BVH se testent
 seuls, sans worker.
 
+**Ce qui attend une réponse est un module, pas une carte privée.** `bvh-inflight.ts` tient les
+requêtes parties vers le worker et les promesses qui les attendent, et il expose son décompte.
+La raison n’est pas l’élégance : tant que cette carte vivait dans le constructeur du builder,
+la ligne qui la nettoyait après un envoi refusé était une assurance qu’aucun test ne pouvait
+atteindre — vidée, la porte restait verte. **Un registre que rien ne peut lire est un registre
+que rien ne mesure**, et c’est le même remède que `framingPlacement`, sorti de `frameSelection`
+pour la même raison.
+
 **Et deux processus, pour ce qui ne doit pas partager un heap.**
 `main/media/peaks-worker.ts` réduit une forme d’onde dans un `utilityProcess` : une heure de PCM
 mesurée à 129 ms sur le thread principal, et toutes les fenêtres du studio attendaient.

@@ -61,8 +61,9 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 >
 > **Le § 0 reste la porte, mais sa première marche est franchie** : les budgets de couverture sont
 > mesurés et les trous comblés (10 août 2026) — **ne pas les remesurer pour le plaisir**, le § 0.1
-> dit ce que chacun porte. Ce qui reste ouvert y est le rouge intermittent (§ 0.2) et les deux
-> branchements que seule la mutation trouve (§ 0.3).
+> dit ce que chacun porte. Ce qui reste ouvert y est le rouge intermittent (§ 0.2) et le dernier
+> branchement que seule la mutation trouve (§ 0.3) — celui d'`isSprite`, qui attend un second
+> champ mesuré dans `SPRITE_SPECS` pour être tenable.
 >
 > **Les quatre décisions qui attendaient sont prises le 10 août 2026** — 39, 12, 40, 29. Elles sont
 > écrites dans leur entrée, et **ne se redemandent pas**. Une seule question en est née et reste
@@ -122,8 +123,8 @@ Si la demande touche l'API Scenario : `docs/scenario-api/README.md`, 209 pages a
 # 0. La porte — rien n'est prouvable tant qu'elle n'est pas verte
 
 Deux choses rendent encore le filet du projet peu fiable : une suite qui rougit ailleurs à
-chaque exécution (§ 0.2), et deux branchements que la couverture certifie alors que rien ne
-les tient (§ 0.3). **Tant qu'elles tiennent, une livraison verte ne prouve rien** — et c'est ce
+chaque exécution (§ 0.2), et un branchement que la couverture certifie alors que rien ne le
+tient (§ 0.3). **Tant qu'elles tiennent, une livraison verte ne prouve rien** — et c'est ce
 qui les met avant tout le reste, y compris avant ce qui perd des données : sans porte, un
 correctif ne se prouve pas non plus.
 
@@ -243,33 +244,43 @@ trace fraîche. Deux ou trois exécutions de dix minutes, machine libre.
 
 ---
 
-## 0.3 Deux trous que seule la mutation trouve
+## 0.3 Le trou que seule la mutation trouve
 
-**Regroupée ici plutôt qu'avec l'espace 3D dont elle parle** : le sujet n'est pas la 3D, c'est
-le filet. Les deux vivent dans des fichiers sans rapport et n'ont en commun que d'être verts
-sous la porte.
+**Rangé ici plutôt qu'avec l'espace 3D dont il parle** : le sujet n'est pas la 3D, c'est le
+filet.
 
-### 35. Deux branchements que la couverture certifie et qu'aucun test ne tient
+### 35. Un branchement que la couverture certifie et qu'aucun test ne tient
 
-**Le geste attendu.** Casser une ligne du builder BVH ou du quantificateur d'`isSprite` doit faire
-rougir un test. Aujourd'hui les deux passent, et la porte est verte.
+**Le geste attendu.** Casser le quantificateur d'`isSprite` doit faire rougir un test. Aujourd'hui
+il passe, et la porte est verte.
 
 **Vu le 9 août 2026**, par relecture par mutation — la couverture était verte sur les trois.
 
-> **Le troisième est fermé** : `frameSelection` avait été vidé entièrement en laissant **1786 tests
-> verts**, la méthode sortant tôt sans `orbit`. La composition est **sortie de la méthode** et
-> mesurée pour elle-même (`framingPlacement`, `scene-view.test.ts`), ce que le test dit dans sa
-> propre JSDoc : « which no test could reach while it lived inside a method that returns early ».
-> **C'est le remède que l'entrée réclamait — la décision sort, ou elle n'est pas mesurée.**
+> **Deux des trois sont fermés.** `frameSelection` avait été vidé entièrement en laissant **1786
+> tests verts**, la méthode sortant tôt sans `orbit` : la composition est **sortie de la méthode**
+> et mesurée pour elle-même (`framingPlacement`, `scene-view.test.ts`). Le second était le créneau
+> qu'une requête refusée laissait dans le `pending` du builder BVH : la carte est **sortie du
+> constructeur** (`bvh-inflight.ts`), expose son décompte, et une mutation de l'ordre d'envoi fait
+> rougir. **Deux fois le même remède, et c'est celui que l'entrée réclame : ce qui n'est pas
+> atteignable du dehors sort, ou n'est pas mesuré.**
 
-- **`bvh-builder.ts` — l'entrée que laisse dans `pending` une requête dont le `spawn` a été refusé.**
-  Rien hors du module ne lit cette carte ; le `finally` qui la vide est une assurance, pas une
-  mesure. Le test le dit lui-même — « What this cannot see is the slot such a request leaves in
-  `pending` » — ce qui vaut mieux qu'un silence, mais ne le tient toujours pas.
 - **`scene-document.ts` — le quantificateur de `isSprite`.** Remesuré : `SPRITE_SPECS` porte
   toujours **deux** champs, `color` et `opacity`, et `MEASURED_SPRITE` en retire la couleur — donc
   toujours un singleton, sur lequel `every` et `some` sont indiscernables. Remplacer l'un par l'autre
   ne fait rougir personne. Le test se réparera seul le jour où un second champ mesuré arrivera.
+
+**Trois registres jumeaux, trouvés en fermant celui du BVH — à ne pas redécouvrir.** Le studio tient
+quatre cartes `Map<number, {resolve, reject}>` de la même forme : `main/project/catalog-client.ts`,
+`main/media/peaks-client.ts`, `main/dictation/stt-client.ts` et désormais `bvh-inflight.ts`.
+**Elles ne peuvent pas fusionner** : les trois premières vivent dans le main, que le renderer
+n'importe pas, et l'invariant 2 interdit du code runtime dans `shared/` — la recherche est faite, ne
+pas la refaire. Mais deux d'entre elles portent le trou que ce lot vient de fermer :
+
+| Où | Ce qui a été vu |
+|---|---|
+| `catalog-client.ts` | `pending.set` **avant** `port.postMessage`, et l'écouteur `abort` posé avant l'envoi : un `postMessage` qui lève laisse l'entrée **et** l'écouteur sur l'`AbortSignal` de l'appelant. Aucun test n'a de port qui lève |
+| `audio-render.ts` | `waiting.set` avant `postMessage`, résolution seule — la fuite est une promesse qui ne se règle jamais |
+| `peaks-client.ts` | le trou est bouché (`try`/`catch` + `delete`), mais son test ne peut affirmer que le rejet, pas qu'il ne reste rien : c'est encore une assurance, pas une mesure |
 
 **Ce que la session a appris et qu'il ne faut pas réapprendre** : le budget de couverture ne voit pas
 ce genre de trou — les lignes nues de `frameSelection` tenaient dans les 700 statements alloués au
@@ -901,8 +912,8 @@ et un BVH construit en worker pour le picking.
 | three livré deux fois | le chunk du worker BVH pèse 490 ko parce qu'il embarque three, déjà dans le bundle principal. Chargé à la demande et en local, donc supportable — mais c'est du poids d'installation en double |
 
 **Une dette de cet espace est rangée ailleurs, et pour la même raison : son sujet n'est pas la 3D.**
-Les branchements que la couverture certifie sans que rien ne les tienne sont au **§ 0.3** : ce qu'ils
-mettent en cause est le filet, pas l'espace.
+Le branchement que la couverture certifie sans que rien ne le tienne est au **§ 0.3** : ce qu'il met
+en cause est le filet, pas l'espace.
 
 **Le canal d'échec du renderer — ce qui reste** : six avaleurs de rejets attendent (`Rail`, `peaks`,
 `prepareEdit`, `decoder-pool`, `useWaveSurfer`, `Models`). Une piste écartée volontairement :
