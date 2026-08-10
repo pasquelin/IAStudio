@@ -46,34 +46,29 @@ impossible.
 | P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:215 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:238 | P0-button-tooltip | libellé visible, aucune description |
 | P0 | src/renderer/src/panels/view/View.tsx:54 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:107 | P0-button-tooltip | fenêtre Préférences — aucun `TooltipHost` |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:114 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:140 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:148 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:155 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/AccountSettings.tsx:242 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingActions.tsx:31 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingRow.tsx:131 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:47 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:110 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:147 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:314 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:317 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/SettingsWindow.tsx:320 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:275 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:284 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/usage/UsageJournal.tsx:60 | P0-button-tooltip | fenêtre Usage — aucun `TooltipHost` dans son arbre |
-| P0 | src/renderer/src/usage/UsageWindow.tsx:66 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/usage/UsageWindow.tsx:87 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/usage/UsageWindow.tsx:99 | P0-button-tooltip | idem |
-| P0 | src/renderer/src/usage/UsageWindow.tsx:139 | P0-button-tooltip | idem |
+| P0 | src/renderer/src/settings/AccountSettings.tsx:107 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/AccountSettings.tsx:114 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/AccountSettings.tsx:140 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/AccountSettings.tsx:148 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/AccountSettings.tsx:155 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/AccountSettings.tsx:242 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingActions.tsx:31 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingRow.tsx:131 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingsWindow.tsx:47 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingsWindow.tsx:110 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingsWindow.tsx:147 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingsWindow.tsx:314 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingsWindow.tsx:317 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/SettingsWindow.tsx:320 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:275 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/settings/ShortcutsSettings.tsx:284 | P0-button-tooltip | libellé visible, aucune description |
 
 ## Ce qui bloque une partie du lot
 
-Les fenêtres **Usage** et **Licences** rendent leur propre arbre React et **ne montent aucun
-`TooltipHost`** — leur poser des attributs d'infobulle avant l'hôte écrirait du texte que
-personne ne verrait jamais. Les Préférences, elles, le montent depuis le 2026-08-10 : leurs
-lignes restantes sont traitables.
+La fenêtre **Licences** rend son propre arbre React et **ne monte aucun `TooltipHost`** — lui
+poser des attributs d'infobulle avant l'hôte écrirait du texte que personne ne verrait jamais.
+Les Préférences et l'Usage le montent depuis le 2026-08-10 : leurs lignes restantes sont
+traitables.
 
 Un `<Tooltip>` fermé **ne rend rien du tout** — vérifié. Le seul test qui prouve qu'un hôte
 est monté est donc un survol de bout en bout, ce qui interdit de monter l'hôte d'une fenêtre
@@ -81,3 +76,6 @@ avant qu'un de ses boutons ne porte une infobulle. C'est pourquoi chaque fenêtr
 
 `design/Button.tsx` n'accepte aujourd'hui aucune infobulle : le composant des boutons à
 libellé des docks doit d'abord en porter une, comme `ToolButton`.
+
+Les boutons à libellé visible se câblent par `HINT_*` (`helpers/tooltip.ts`), jamais par
+`TIP_*` : ce dernier pose un `aria-label`, qui remplacerait le nom visible.

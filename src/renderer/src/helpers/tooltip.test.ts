@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { tipFor, TIP_BOTTOM, TIP_RIGHT, TIP_TOP, TOOLTIP_ID, withShortcut } from './tooltip'
+import {
+  tipFor,
+  HINT_LEFT,
+  HINT_TOP,
+  TIP_BOTTOM,
+  TIP_RIGHT,
+  TIP_TOP,
+  TOOLTIP_ID,
+  withShortcut,
+} from './tooltip'
 
 // The fixtures below are invented, not taken from the i18n bundle: this module never translates
 // anything, so they stay English like the rest of `src/`.
@@ -32,6 +41,25 @@ describe('tooltip attributes', () => {
     const attributes = TIP_TOP('Brush', 'B', 'Paint with the current colour')
 
     expect(attributes['data-tooltip-content']).toBe('Paint with the current colour (B)')
+  })
+})
+
+/**
+ * The counterpart of `TIP_*`, for a control whose name is already on screen. The whole point is
+ * the attribute it does NOT set: an `aria-label` over a visible label replaces it for a screen
+ * reader (WCAG SC 2.5.3), so the button would answer to a name nobody can see.
+ */
+describe('hint attributes', () => {
+  it('never renames the control it explains', () => {
+    const attributes = HINT_TOP('Asks the account for the figures again')
+
+    expect(attributes['aria-label']).toBeUndefined()
+    expect(attributes['data-tooltip-content']).toBe('Asks the account for the figures again')
+  })
+
+  it('reaches the same shared host, at the placement it was built for', () => {
+    expect(HINT_LEFT('Anything')['data-tooltip-id']).toBe(TOOLTIP_ID)
+    expect(HINT_LEFT('Anything')['data-tooltip-place']).toBe('left')
   })
 })
 

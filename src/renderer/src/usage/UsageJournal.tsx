@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsagePeriod } from '@shared/domain/usage'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { HeadCell, Row, UsageTable } from './UsageTable'
 import { formatMoment, formatUnits } from './format'
 import { useUsageEvents } from './useUsageReport'
@@ -57,7 +58,13 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
       </UsageTable>
 
       {page.more && (
-        <button type="button" className="btn btn-xs self-start" onClick={more} disabled={loading}>
+        <button
+          type="button"
+          className="btn btn-xs self-start"
+          {...HINT_RIGHT(t('usage.loadMoreHint'))}
+          onClick={more}
+          disabled={loading}
+        >
           {t('usage.loadMore')}
         </button>
       )}
