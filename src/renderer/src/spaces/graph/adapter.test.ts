@@ -21,11 +21,11 @@ const graph: GraphState = {
   ],
   edges: [
     {
-      id: 'text1-target-output--TO--model1-source-prompt',
+      id: 'text1-target-prompt--TO--model1-source-prompt',
       source: 'model1',
       target: 'text1',
       sourceHandle: 'model1-source-prompt',
-      targetHandle: 'text1-target-output',
+      targetHandle: 'text1-target-prompt',
     },
   ],
   inputKeys: [],
@@ -169,7 +169,7 @@ describe('what stays selected', () => {
 
   /** Edges go through the very same set: unselected, one cannot be deleted from the keyboard. */
   it('carries the selection of an edge as well as of a node', () => {
-    const edgeId = 'text1-target-output--TO--model1-source-prompt'
+    const edgeId = 'text1-target-prompt--TO--model1-source-prompt'
     const selected = selectionAfter(new Set(), [{ type: 'select', id: edgeId, selected: true }])
 
     expect(toCanvasEdges(graph, selected)[0]?.selected).toBe(true)

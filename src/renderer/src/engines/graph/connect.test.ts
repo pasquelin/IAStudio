@@ -19,7 +19,10 @@ const generator: GraphNode = {
   data: {
     inputHandles: [
       { id: 'imageGenerator1-source-referenceImages', name: 'referenceImages', type: 'image' },
-      { id: 'imageGenerator1-source-prompt', name: 'prompt', type: ['prompt', 'text'] },
+      // `prompt` alone, as `modelPorts` writes it. Spelled `['prompt', 'text']` here until this
+      // lot, which is a port no model produces — and which made this very suite blind to the
+      // refusal it was meant to be watching.
+      { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' },
     ],
   },
 }
