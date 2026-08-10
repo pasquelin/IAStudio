@@ -2,7 +2,7 @@
 
 **Le document de travail unique du projet.** Il remplace `docs/REPRISE.md` et `docs/INTERFACE.md`,
 fusionnés ici le 9 août 2026 : ce qui était livré en est parti, ce qui reste ouvert y est entier, et
-les savoirs qui coûteraient une seconde fois sont regroupés au § 11.
+les savoirs qui coûteraient une seconde fois sont regroupés au § 10.
 
 Deux fichiers se partagent le travail, et aucun ne redit ce qu'un autre porte :
 
@@ -23,11 +23,12 @@ Pour *comprendre* le logiciel plutôt que reprendre son développement :
 
 **Les sections descendent par gravité, et l'ordre est la recommandation.** Ce qui empêche de prouver
 une livraison (§ 0), puis ce qui perd du travail sans le dire (§ 1), puis ce qui bloque un geste
-(§ 2), ce qui fait douter (§ 3), ce qui manque (§ 4 à § 6), et enfin ce qui coûtera plus tard
-(§ 7, § 8).
+(§ 2), ce qui fait douter (§ 3), ce qui manque (§ 4 à § 6), et enfin ce qui ne bouge pas sans une
+mesure sur l'application lancée (§ 7).
 
 > **Les sections se renumérotent quand l'une d'elles se vide ; les entrées, jamais.** La disposition
-> de la colonne gauche occupait une section à elle, livrée le 9 août — celles qui suivaient ont
+> de la colonne gauche occupait une section à elle, livrée le 9 août ; la cohérence en occupait une
+> autre, vidée le 10 par le départ d'`Inter` — celles qui suivaient ont
 > repris son rang. Les numéros d'entrée, eux, sont cités par des commits et des plans : ils restent
 > troués.
 
@@ -55,7 +56,7 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 
 > Je reprends le développement de **Scenario Studio**, dans `/Users/pasquelin/Applications/scenario`.
 >
-> Lis `docs/todo.md` en entier, puis `CLAUDE.md`. **Ne refais pas les mesures du § 11.4** : leurs
+> Lis `docs/todo.md` en entier, puis `CLAUDE.md`. **Ne refais pas les mesures du § 10.4** : leurs
 > conclusions sont acquises. Puis `git log --oneline -15`, `git worktree list` et `pnpm validate`
 > pour partir d'une base verte.
 >
@@ -159,7 +160,7 @@ raconter pendant deux jours.
 
 **Le dépassement annoncé de `renderer/src/stores/**` n'existe pas.** Le glob porte **84 / 90**
 statements et **80 / 82** branches : tendu, jamais franchi. Le message de `d73635c` rapportait un
-dépassement que personne n'avait mesuré. **La leçon est celle que le § 11.3 dit déjà d'un rouge : un
+dépassement que personne n'avait mesuré. **La leçon est celle que le § 10.3 dit déjà d'un rouge : un
 chiffre rapporté n'est pas un chiffre mesuré**, et celui-ci a coûté deux jours de doute.
 
 Les seuils sont des **budgets d'éléments non couverts** par glob (`vitest.config.ts`), et non des
@@ -386,7 +387,7 @@ La première est la bonne si la création doit être atteignable de là, et c'es
 
 **Reste à décider quels panneaux déclarent quoi.** L'Explorateur, l'étagère à assets et l'inspecteur
 exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans projet produit un
-job qui ne se collecte nulle part — « un job ne collecte que dans son propre projet » (§ 11.3). Soit il
+job qui ne se collecte nulle part — « un job ne collecte que dans son propre projet » (§ 10.3). Soit il
 exige un projet, soit il faut dire ce que devient ce qu'il produit.
 
 ---
@@ -819,14 +820,14 @@ un geste : ce sont des fonctions annoncées et pas finies.
 ## 4.2 Espace Image
 
 > **La dureté du pinceau et la garde des signatures sont livrées** (`feat/pinceau-durete`, 9 août
-> 2026). Ce que les deux ont appris est au § 11.3.
+> 2026). Ce que les deux ont appris est au § 10.3.
 
 - **Le curseur de dureté reste vivant sous le crayon**, et ne déplace rien. Le défaut est **déplacé
   d'un cran, pas refermé** : un contrôle sans effet ne s'affiche pas — c'est la règle que le studio
   applique déjà à la case d'ombre d'un sprite. `BRUSH_FIELDS` est déjà une table : de quoi griser une
   ligne selon l'outil armé y tiendrait.
 - **L'adoucissement est réservé au pinceau, et la gomme attend le sien.** Sous filtre, un stamp en
-  `erase` gomme contre du vide (§ 11.3) : le rendre à la gomme demande de porter le blend sur le
+  `erase` gomme contre du vide (§ 10.3) : le rendre à la gomme demande de porter le blend sur le
   filtre, **et une vérification GPU** — se tromper là veut dire une gomme qui cesse de servir sans
   rien dire.
 
@@ -916,7 +917,7 @@ d'abord (verrou d'instance unique).
 ## 4.5 Espace Skyboxes
 
 > **L'export en six faces est livré** (`feat/skybox-export`, 9 août 2026). Ce qu'il a appris est au
-> § 11.3.
+> § 10.3.
 
 **Ce qu'il reste : le HDRI, et rien d'autre.** Les six faces sortent en PNG, donc en **8 bits par
 canal** — ce qui dépasse le blanc est écrêté, et un éclairage à forte dynamique n'a pas de sortie. Un
@@ -1166,7 +1167,7 @@ Pour qu'une prochaine session ne reparte pas chercher.
 
 **Le décodage du clone IPC** — **73 % du coût d'un ⌘S, intouché**. `⌘S` gèle toutes les fenêtres
 au-delà de **~5 500 nœuds**, et c'est le décodage qui l'y amène, deux fois et demie la sérialisation
-(§ 11.4).
+(§ 10.4).
 
 L'import glTF aurait dû faire franchir ce plafond. Il ne le fait pas, parce que **le modèle importé est
 un seul nœud portant une référence**, jamais un sous-arbre : le document grossit d'une ligne quel que
@@ -1210,7 +1211,7 @@ trois plateformes.**
 `app` / `BrowserWindow` / `Menu`.
 
 **Aucun test ne s'exécute sur l'application lancée** — le poste de vérification le plus cher du projet,
-et le seul qu'aucune porte ne tient. Le protocole de vérification manuelle est au § 9 ; **Playwright
+et le seul qu'aucune porte ne tient. Le protocole de vérification manuelle est au § 8 ; **Playwright
 est reporté le 8 août 2026, pas abandonné**. Son suivi vivait sous `L7` dans
 `.claude/loop/BACKLOG.md`, **qui n'existe plus** : la décision n'a donc plus d'autre trace que cette
 ligne, et c'est pour ça qu'elle y est écrite en entier plutôt qu'en renvoi.
@@ -1233,7 +1234,7 @@ devra donc distinguer `ABANDONED` d'un échec avant de tenir un `AbortController
 
 ---
 
-# 8. Bloqué
+# 7. Bloqué
 
 Une entrée, et elle ne bouge pas sans une mesure sur l'application lancée.
 
@@ -1262,7 +1263,7 @@ correction.**
 
 ---
 
-# 9. Vérifier à l'écran
+# 8. Vérifier à l'écran
 
 **Un jalon visuel validé uniquement par des tests unitaires n'est validé qu'à moitié.** Règles,
 repères, zoom, compositing, pointillés, viewport éclairé : rien de tout cela ne se prouve dans vitest.
@@ -1306,7 +1307,7 @@ lisible** ; la section Compte se capture avec des champs remplis mais masqués.
 
 ---
 
-# 10. Méthode — ce qui a marché
+# 9. Méthode — ce qui a marché
 
 **Les revues qui exécutent le code trouvent beaucoup plus que celles qui le lisent.** Trois points de
 comparaison, tous sur le mode Image :
@@ -1355,12 +1356,12 @@ fusions à envoyer le lecteur chercher chaque panneau du mauvais côté, 24 pass
 
 ---
 
-# 11. Ne pas repayer, ne pas rouvrir
+# 10. Ne pas repayer, ne pas rouvrir
 
 Ce qui suit n'est pas une liste de tâches : ce sont les réponses déjà données, et c'est à elles qu'un
 nouveau constat se compare.
 
-## 11.1 Les règles de disposition — tranchées
+## 10.1 Les règles de disposition — tranchées
 
 **La colonne de gauche est celle de ce qui produit** : la génération en **moitié haute** dans les
 six espaces, l'Explorateur et les Apps en **moitié basse**, partout, accueil compris. La droite
@@ -1397,7 +1398,7 @@ posé »** — cocher les trois niveaux un par un laisse « Tout » éteint, et 
 est conservé **à l'intérieur** de chaque rangée : la largeur des puces suit la langue, aucune largeur
 de volet ne garantit une ligne.
 
-## 11.2 Les corrections déjà faites — ne pas les re-signaler
+## 10.2 Les corrections déjà faites — ne pas les re-signaler
 
 - **Les documents n'appartenaient à aucun projet.** Le store `useDocuments` **n'est plus persisté du
   tout** : le dossier du projet dit quels documents existent, le layout persisté dit lesquels sont
@@ -1429,7 +1430,7 @@ de volet ne garantit une ligne.
   dépôt, et refusé. Un bouton `aria-hidden` deviendrait trouvable par `getByRole` dans les quatre cents
   fichiers — un angle mort permanent.
 
-## 11.3 Les pièges déjà payés
+## 10.3 Les pièges déjà payés
 
 ### three.js
 
@@ -1683,7 +1684,7 @@ dit rien n'est pas un fichier qui dit faux.
   événements souris, dont Chromium ne démarre aucun glisser. C'est le CDP direct qui tranche. Aucun clic
   du MCP ne porte de modificateur non plus.
 
-## 11.4 Performance — les mesures acquises
+## 10.4 Performance — les mesures acquises
 
 **Trois audits, tous menés le 7 août 2026** sur Apple M2 Max / macOS 26.5.2, en **build de production**.
 **Ne pas refaire ces mesures.**
