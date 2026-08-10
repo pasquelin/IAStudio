@@ -134,6 +134,20 @@ describe('a graph as a document', () => {
       expect(stop).toHaveBeenCalledWith(DOCUMENT)
     })
 
+    /**
+     * The bar's own rule is proved beside it; what only the document knows is WHICH graph it is
+     * being asked about, and a bar wired to a constant would grey nothing and gate nothing.
+     */
+    it('greys the button while the canvas holds no node, and lights it when one lands', () => {
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe' })).toBeDisabled()
+
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe' })).toBeEnabled()
+    })
+
     /** A tab in the background keeps its own run to itself, as ⌘Z already does. */
     it('says nothing when the document is not the one in front', () => {
       const start = vi.fn(async () => {})

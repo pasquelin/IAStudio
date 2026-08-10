@@ -136,11 +136,16 @@ describe('running a graph document', () => {
   it('refuses to run a graph that holds no node at all', async () => {
     const jobs = installJobs()
     installGraph(DOC)
+    const seen: boolean[] = []
+    const unsubscribe = useGraphRuns.subscribe(state => seen.push(runOf(state, DOC).running))
 
     await useGraphRuns.getState().start(DOC)
+    unsubscribe()
 
     expect(jobs.submitted).toEqual([])
-    expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
+    // Not merely false once it is over: the button must never have turned to Stop and back, which
+    // is what a run of nothing looks like on screen. Ending false is true either way.
+    expect(seen).toEqual([])
   })
 
   it('refuses a second run of the same document while the first is going', async () => {
