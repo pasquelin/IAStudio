@@ -88,6 +88,7 @@ export function SectionMenu({ id }: { id: HomeSectionId }) {
                   icon={mdiCounter}
                   label={t('home.showCount', { count: value })}
                   checked={limit === value}
+                  tick="one-of"
                   onSelect={() => {
                     write(limitedHomeSection(stored, id, value))
                     close()

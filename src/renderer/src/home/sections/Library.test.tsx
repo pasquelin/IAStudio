@@ -52,10 +52,23 @@ function cloudAsset(overrides: Partial<CloudAsset> = {}): CloudAsset {
   }
 }
 
-function install(assets: readonly CloudAsset[]) {
+/**
+ * `held` is what the project's catalogue answers, and it has to agree with `useAssets`.
+ *
+ * A case that seeds the store and leaves the bridge saying the project holds nothing is a case
+ * that any refresh contradicts — and one is always in flight: `pull` ends with `invalidate()`,
+ * which is a 200 ms debounce at module scope, so the timer a case leaves behind fires inside a
+ * LATER one and empties its shelf under it. That is the whole of § 0.2's third group: the band
+ * flipped from "open" to "fetch" between the query and the click, and how often depended on how
+ * busy the machine was.
+ */
+function install(assets: readonly CloudAsset[], held: readonly Asset[] = []) {
   const browse = vi.fn(() => Promise.resolve({ assets: [...assets], cursor: null }))
   const pull = vi.fn(() => Promise.resolve([]))
-  installFakeBridge({ cloud: { browse, pull } })
+  installFakeBridge({
+    cloud: { browse, pull },
+    assets: { search: () => Promise.resolve([...held]) },
+  })
   return { browse, pull }
 }
 
@@ -121,10 +134,9 @@ describe('the library shelf', () => {
    */
   describe('what a click on the picture does', () => {
     it('opens an asset the project has already fetched', async () => {
-      install([cloudAsset()])
-      useAssets.setState({
-        items: [{ ...localAsset(), remoteAssetId: 'cloud_1' }],
-      })
+      const fetched: Asset = { ...localAsset(), remoteAssetId: 'cloud_1' }
+      install([cloudAsset()], [fetched])
+      useAssets.setState({ items: [fetched] })
       render(<Library />)
 
       await userEvent.click(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ }))

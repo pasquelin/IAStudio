@@ -106,6 +106,27 @@ one, the first visible cell otherwise.
 **In the shelf, the selection can also be plural** — `⌘` picks, `Shift` extends. See
 [Picking several assets](07-assets.md#picking-several-assets).
 
+### Walking a menu with the keyboard
+
+Menus are crossed like lists, with one difference: **they take the focus as they open**, on their
+first row. There is nothing to do to step in.
+
+| Key | Effect |
+|---|---|
+| `↑` `↓` | the previous row, the next one — wrapping at both ends |
+| `Home` `End` | the first row, the last |
+| `Enter` | chooses the row |
+| `Escape` | closes, and hands focus back where it was |
+| `Tab` | closes too — a menu is not somewhere you tab through |
+
+**Greyed rows are stepped over.** A row the mouse cannot choose cannot be taken from the keyboard
+either, and stopping on one would make the walk look stuck.
+
+**A ticked row says what its tick means.** Some are alternatives — a tool's mode, the active
+account, the size of a home band: ticking one unticks the rest. Others answer for themselves,
+like a layer's two padlocks. A screen reader announces the first kind as radio buttons and the
+second as checkboxes.
+
 ### Arranging the workspace bar
 
 | Key | Effect |

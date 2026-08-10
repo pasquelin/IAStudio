@@ -119,6 +119,7 @@ export const LayerRow = memo(function LayerRow({
                       label={t(padlock.labelKey)}
                       icon={padlock.iconFor(layer.locked[padlock.key])}
                       checked={layer.locked[padlock.key]}
+                      tick="on-off"
                       onSelect={() =>
                         run(
                           setLayerLocks(layer.id, {

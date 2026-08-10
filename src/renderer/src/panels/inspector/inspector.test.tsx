@@ -103,7 +103,7 @@ describe('inspector panel', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
 
-    expect(await screen.findByRole('menuitem', { name: /Coucher/ })).toBeInTheDocument()
+    expect(await screen.findByRole('menuitemradio', { name: /Coucher/ })).toBeInTheDocument()
   })
 
   it('writes the chosen sky into the document, through the history', async () => {
@@ -123,7 +123,7 @@ describe('inspector panel', () => {
     render(<Content />)
 
     await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Coucher/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Coucher/ }))
 
     expect(sceneOf(useScenes.getState(), 'doc-1').environment).toEqual({
       kind: 'skybox',
@@ -418,17 +418,17 @@ describe('inspector panel', () => {
 
       await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
 
-      expect(await screen.findByRole('menuitem', { name: /Brique/ })).toBeInTheDocument()
-      expect(screen.getByRole('menuitem', { name: /Rendu/ })).toBeInTheDocument()
+      expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
+      expect(screen.getByRole('menuitemradio', { name: /Rendu/ })).toBeInTheDocument()
     })
 
     it('leaves out what could never be loaded as a texture', async () => {
       render(<Content />)
 
       await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
-      await screen.findByRole('menuitem', { name: /Brique/ })
+      await screen.findByRole('menuitemradio', { name: /Brique/ })
 
-      expect(screen.queryByRole('menuitem', { name: /Rush/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('menuitemradio', { name: /Rush/ })).not.toBeInTheDocument()
     })
 
     // A texture is a reference to an asset, never an image: that is what a reopened scene can
@@ -437,7 +437,7 @@ describe('inspector panel', () => {
       render(<Content />)
 
       await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
-      await userEvent.click(await screen.findByRole('menuitem', { name: /Brique/ }))
+      await userEvent.click(await screen.findByRole('menuitemradio', { name: /Brique/ }))
 
       const node = nodeInStore('box-1')
       expect(node?.type === 'mesh' && node.material.map).toEqual({ assetId: 'tex-1' })

@@ -3,7 +3,7 @@ import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
 import { MenuButton } from './MenuButton'
-import { MenuRow } from './MenuRow'
+import { MenuRow, type MenuRowChoice } from './MenuRow'
 import { Separator } from './Separator'
 import { tipFor, type TooltipFactory } from '@/helpers/tooltip'
 import { ToolButton } from './ToolButton'
@@ -220,25 +220,36 @@ function ToolItem({ tool, active, tip, modeTip, onTool, onMode }: ToolItemProps)
       opensOnClick={tool.modes !== undefined && tool.activeMode === undefined}
       onClick={() => onTool(tool.id)}
       rows={close =>
-        tool.modes?.map(mode => (
-          <MenuRow
-            key={mode.id}
-            label={t(mode.labelKey)}
-            icon={mode.icon}
-            shortcut={mode.shortcut}
-            disabled={mode.disabled}
-            checked={tool.activeMode === mode.id}
-            tip={modeTip(
-              t(mode.labelKey),
-              mode.shortcut,
-              mode.descriptionKey ? t(mode.descriptionKey) : undefined,
-            )}
-            onSelect={() => {
-              onMode?.(tool.id, mode.id)
-              close()
-            }}
-          />
-        ))
+        tool.modes?.map(mode => {
+          // The same distinction the `opensOnClick` line above makes: a group with no armed mode
+          // is a menu of ACTIONS — Add a cube, add a light — and its rows answer no question.
+          // Ticked as alternatives they would all announce "radio, not selected", which says one
+          // of them is armed when none of them can be.
+          const choice: MenuRowChoice =
+            tool.activeMode === undefined
+              ? {}
+              : { checked: tool.activeMode === mode.id, tick: 'one-of' }
+
+          return (
+            <MenuRow
+              key={mode.id}
+              label={t(mode.labelKey)}
+              icon={mode.icon}
+              shortcut={mode.shortcut}
+              disabled={mode.disabled}
+              {...choice}
+              tip={modeTip(
+                t(mode.labelKey),
+                mode.shortcut,
+                mode.descriptionKey ? t(mode.descriptionKey) : undefined,
+              )}
+              onSelect={() => {
+                onMode?.(tool.id, mode.id)
+                close()
+              }}
+            />
+          )
+        })
       }
     />
   )

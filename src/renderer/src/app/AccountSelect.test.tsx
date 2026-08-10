@@ -48,8 +48,13 @@ describe('AccountSelect', () => {
     render(<AccountSelect />)
     await openMenu()
 
-    const rows = screen.getAllByRole('menuitem')
-    expect(rows.map(row => row.textContent)).toEqual(['Studio', 'Client X', 'Gérer les comptes…'])
+    // The accounts are alternatives and the row that manages them is not, so they no longer
+    // share a role — which is the point: only one of the three can be ticked.
+    const accounts = screen.getAllByRole('menuitemradio')
+    expect(accounts.map(row => row.textContent)).toEqual(['Studio', 'Client X'])
+    expect(accounts[0]).toHaveAttribute('aria-checked', 'true')
+    expect(accounts[1]).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toBeInTheDocument()
   })
 
   it('switches to the account that was picked', async () => {
@@ -59,7 +64,7 @@ describe('AccountSelect', () => {
 
     render(<AccountSelect />)
     await openMenu()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Client X' }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Client X' }))
 
     expect(activate).toHaveBeenCalledWith('b')
   })
@@ -73,7 +78,7 @@ describe('AccountSelect', () => {
 
     render(<AccountSelect />)
     await openMenu()
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Studio' }))
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Studio' }))
 
     expect(activate).not.toHaveBeenCalled()
   })

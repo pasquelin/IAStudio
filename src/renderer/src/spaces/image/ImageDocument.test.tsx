@@ -88,7 +88,9 @@ describe('ImageDocument', () => {
 
     // The accessible name carries the shortcut, so `Line` reads `Line (L)`.
     for (const name of ['Trait', 'Flèche', 'Ellipse', 'Polygone', 'Étoile']) {
-      expect(await screen.findByRole('menuitem', { name: new RegExp(`^${name}`) })).toBeVisible()
+      expect(
+        await screen.findByRole('menuitemradio', { name: new RegExp(`^${name}`) }),
+      ).toBeVisible()
     }
   })
 
@@ -96,7 +98,7 @@ describe('ImageDocument', () => {
     render(<ImageDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /^Déplacement/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /^Main/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Main/ }))
 
     expect(setTool).toHaveBeenLastCalledWith('hand')
     expect(screen.getByRole('button', { name: /^Main/ })).toBeInTheDocument()
@@ -248,7 +250,9 @@ describe('ImageDocument', () => {
   it('opens the eraser modes on hover', async () => {
     render(<ImageDocument documentId="doc-1" />)
     await userEvent.hover(screen.getByRole('button', { name: /^Gomme ponctuelle/ }))
-    expect(await screen.findByRole('menuitem', { name: 'Gomme sélective' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('menuitemradio', { name: 'Gomme sélective' }),
+    ).toBeInTheDocument()
   })
 
   it('disables undo when there is nothing to undo', () => {
@@ -318,7 +322,7 @@ describe('ImageDocument', () => {
     render(<ImageDocument documentId="doc-1" />)
 
     await userEvent.hover(screen.getByRole('button', { name: /^Rectangle/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /^Image/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Image/ }))
 
     expect(useTools.getState().focusedZone).toBe('bottom')
     expect(setTool).not.toHaveBeenCalledWith('shape')

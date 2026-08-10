@@ -2,29 +2,68 @@ import { mdiCheck } from '@mdi/js'
 import { cn } from '@/helpers/cn'
 import { UiIcon } from './UiIcon'
 
-export type MenuRowProps = {
+/**
+ * What a tick means, which is not the same question twice.
+ *
+ * `one-of` is a row among alternatives — a tool's mode, an account, the size of a shelf — and
+ * ticking one unticks the rest. `on-off` is a row that answers for itself, like a layer's two
+ * padlocks, where any number can be on at once.
+ */
+export type MenuTick = 'one-of' | 'on-off'
+
+const ROLE: Record<MenuTick, 'menuitemradio' | 'menuitemcheckbox'> = {
+  'one-of': 'menuitemradio',
+  'on-off': 'menuitemcheckbox',
+}
+
+type MenuRowBase = {
   /** Already translated: the row draws what it is handed and looks nothing up. */
   label: string
   icon: string
   shortcut?: string
   disabled?: boolean
-  /** Ticked when this row is the one currently armed. */
-  checked?: boolean
   /** Tooltip attributes from the host's factory, already resolved. */
   tip?: Record<string, string>
   onSelect: () => void
 }
 
 /**
+ * A row either has no tick at all, or has one AND says what it means. There is no default: a
+ * guess would be wrong for exactly one caller — the padlocks — and wrong in silence, since a
+ * reader hears "radio button" and takes the other rows for alternatives it does not have.
+ */
+export type MenuRowChoice =
+  { checked?: undefined; tick?: undefined } | { checked: boolean; tick: MenuTick }
+
+export type MenuRowProps = MenuRowBase & MenuRowChoice
+
+/**
  * One row of a flyout menu, wherever the flyout hangs from — the toolbar's mode groups, a panel
  * title bar's add button. Written once so a row keeps one height, one tick column and one
  * disabled look across all of them.
+ *
+ * The role follows the tick, and it has to: `aria-checked` is not allowed on a plain `menuitem`,
+ * so a row that drew the tick and kept the role announced nothing at all — which is what every
+ * menu of the studio did.
+ *
+ * No `tabIndex` here on purpose. A menu is one stop in the tab sequence and `useMenuKeys` drives
+ * which row holds it; written here as well, React would put it back on every render.
  */
-export function MenuRow({ label, icon, shortcut, disabled, checked, tip, onSelect }: MenuRowProps) {
+export function MenuRow({
+  label,
+  icon,
+  shortcut,
+  disabled,
+  checked,
+  tick,
+  tip,
+  onSelect,
+}: MenuRowProps) {
   return (
     <button
       type="button"
-      role="menuitem"
+      role={tick ? ROLE[tick] : 'menuitem'}
+      {...(tick ? { 'aria-checked': checked } : {})}
       disabled={disabled}
       {...tip}
       className={cn(
@@ -35,6 +74,9 @@ export function MenuRow({ label, icon, shortcut, disabled, checked, tip, onSelec
         'text-left text-[11px] transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
         'disabled:hover:text-text',
+        // The keyboard walks these rows without the pointer being anywhere near them, so the
+        // focused row has to light up on its own — `hover:` alone left the walk invisible.
+        'focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none',
       )}
       onClick={onSelect}
     >

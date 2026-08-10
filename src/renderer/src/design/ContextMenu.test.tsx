@@ -1,6 +1,10 @@
+import { mdiContentCopy, mdiContentCut } from '@mdi/js'
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { ContextMenu } from './ContextMenu'
+import { MenuRow } from './MenuRow'
 
 const AT = { x: 40, y: 60 }
 
@@ -79,6 +83,61 @@ describe('a menu at the pointer', () => {
     fireEvent.pointerDown(document.body)
 
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The menu portals to the end of `body`, so before this the only way to reach it from the
+   * keyboard was to tab through the whole document. The walk itself belongs to `useMenuKeys`
+   * and is measured there; what this proves is that the menu asks for it.
+   */
+  describe('taken from the keyboard', () => {
+    function Host({ onClose }: { onClose: () => void }) {
+      return (
+        <ContextMenu at={AT} onClose={onClose}>
+          <MenuRow label="Cut" icon={mdiContentCut} onSelect={() => undefined} />
+          <MenuRow label="Copy" icon={mdiContentCopy} onSelect={() => undefined} />
+        </ContextMenu>
+      )
+    }
+
+    it('puts focus on its first row as it opens', () => {
+      render(<Host onClose={vi.fn()} />)
+
+      expect(screen.getByRole('menuitem', { name: 'Cut' })).toHaveFocus()
+    })
+
+    it('walks its rows with the arrows', async () => {
+      render(<Host onClose={vi.fn()} />)
+
+      await userEvent.keyboard('{ArrowDown}')
+
+      expect(screen.getByRole('menuitem', { name: 'Copy' })).toHaveFocus()
+    })
+
+    // Closed from the keyboard, focus must not be left on `body`: the next `Tab` would then
+    // start again from the top of the document.
+    it('hands focus back to what opened it', async () => {
+      function Opened() {
+        const [open, setOpen] = useState(false)
+        return (
+          <>
+            <button type="button" onClick={() => setOpen(true)}>
+              Open
+            </button>
+            {open && <Host onClose={() => setOpen(false)} />}
+          </>
+        )
+      }
+
+      render(<Opened />)
+      const opener = screen.getByRole('button', { name: 'Open' })
+      await userEvent.click(opener)
+      expect(screen.getByRole('menuitem', { name: 'Cut' })).toHaveFocus()
+
+      await userEvent.keyboard('{Escape}')
+
+      expect(opener).toHaveFocus()
+    })
   })
 
   // Drawn into the document root: a menu rendered inside a panel is clipped by that panel's

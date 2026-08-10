@@ -67,6 +67,7 @@ export function TextureField({
             label={emptyLabel}
             icon={mdiCheckboxBlankOutline}
             checked={value === null}
+            tick="one-of"
             onSelect={() => {
               onChange(null)
               close()
@@ -78,6 +79,7 @@ export function TextureField({
               label={option.name}
               icon={mdiTextureBox}
               checked={option.id === value}
+              tick="one-of"
               onSelect={() => {
                 onChange(option.id)
                 close()
