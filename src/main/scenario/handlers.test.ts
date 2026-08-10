@@ -114,6 +114,7 @@ function register(overrides: Partial<ScenarioHandlerDeps> = {}): void {
     plan: { access: () => Promise.resolve(null) },
     estimateCost,
     saveWorkflow: () => Promise.resolve('/tmp/graph.workflow.json'),
+    openWorkflow: () => Promise.resolve(null),
     ownerScope: { current: () => 'project_1', observe: () => {} },
     ...overrides,
   })

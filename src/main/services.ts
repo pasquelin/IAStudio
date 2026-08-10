@@ -172,6 +172,8 @@ export type Services = {
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
   /** Asks where an exported workflow goes and writes it there. `null` where the picker closed. */
   saveWorkflow: (name: string, contents: string) => Promise<string | null>
+  /** Asks which `.workflow.json` to open and answers what it holds. `null` where nothing was. */
+  openWorkflow: () => Promise<unknown>
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
@@ -267,6 +269,32 @@ async function saveWorkflow(name: string, contents: string): Promise<string | nu
 
   await writeFile(path, contents, 'utf8')
   return path
+}
+
+/**
+ * The symmetric of `saveWorkflow`: asks which `.workflow.json` to open and answers what is IN it.
+ *
+ * The contents and not the path, for the reason the export sends contents rather than a path: the
+ * renderer has no filesystem. Unparsed beyond `JSON.parse` — a file a user may have edited is
+ * untrusted, and `parseGraph` is already written to drop what does not hold rather than to fail
+ * the whole read.
+ *
+ * `null` for a picker that was closed AND for a file that is not JSON at all, and the two are the
+ * same answer on purpose: neither is a failure the user needs a stack trace for, and the reader
+ * downstream answers an empty graph either way.
+ */
+async function openWorkflow(): Promise<unknown> {
+  const [path] = await openDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (!path) return null
+
+  try {
+    return JSON.parse(await readFile(path, 'utf8'))
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -851,6 +879,7 @@ export function createServices(settings: SettingsStore): Services {
     pickPath,
     savePicture,
     saveWorkflow,
+    openWorkflow,
     pickSavePath,
     encodeVideo: async args => {
       const binary = ffmpeg.path()

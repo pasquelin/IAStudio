@@ -206,6 +206,58 @@ describe('a graph as a document', () => {
       expect(await screen.findByText(/Scenario l’a refusé/)).toBeInTheDocument()
     })
 
+    /**
+     * The gesture the import exists for, and its way back. An import lands on top of work
+     * somebody may not have meant to lose, so it goes through a command and `⌘Z` undoes it.
+     */
+    it('puts the file’s graph in place of this one, and gives it back on undo', async () => {
+      const file = {
+        version: '1.0',
+        editorInfo: {
+          nodes: [{ id: 'imported1', type: 'text', position: { x: 0, y: 0 }, data: {} }],
+          edges: [],
+          inputKeys: [],
+        },
+      }
+      installFakeBridge({ workflows: { import: () => Promise.resolve(file) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+
+      await waitFor(() => expect(state().nodes.map(node => node.id)).toEqual(['imported1']))
+
+      act(() => useGraphs.getState().undo(DOCUMENT))
+      expect(state().nodes.map(node => node.id)).toEqual([text.id])
+    })
+
+    /**
+     * A file that holds no graph reads as an EMPTY one — `parseGraph` drops what does not hold
+     * rather than failing the read. Replacing a canvas with nothing is not what anyone asked for.
+     */
+    it('leaves the canvas alone where the file holds no graph', async () => {
+      installFakeBridge({ workflows: { import: () => Promise.resolve({ nothing: true }) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+      await Promise.resolve()
+
+      expect(state().nodes.map(node => node.id)).toEqual([text.id])
+    })
+
+    /** A closed picker answers `null`, and it is not a failure: nothing happens, nothing is said. */
+    it('leaves the canvas alone where the picker was closed', async () => {
+      installFakeBridge({ workflows: { import: () => Promise.resolve(null) } })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+      await Promise.resolve()
+
+      expect(state().nodes.map(node => node.id)).toEqual([text.id])
+    })
+
     /** A refusal from the other side is journalled, never thrown at the window. */
     it('journals a refusal instead of letting it escape', async () => {
       installFakeBridge({ workflows: { export: () => Promise.reject(new Error('no disk')) } })

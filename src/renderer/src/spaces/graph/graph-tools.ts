@@ -1,6 +1,7 @@
 import {
   mdiCursorDefaultOutline,
   mdiCloudUploadOutline,
+  mdiTrayArrowUp,
   mdiTrayArrowDown,
   mdiHandBackRightOutline,
   mdiMagnifyMinusOutline,
@@ -75,6 +76,12 @@ export function graphTools({
       descriptionKey: 'graphTools.publishHint',
       icon: mdiCloudUploadOutline,
       disabled: !canExport,
+    },
+    {
+      id: 'import',
+      labelKey: 'graphTools.import',
+      descriptionKey: 'graphTools.importHint',
+      icon: mdiTrayArrowUp,
     },
     {
       id: 'add',

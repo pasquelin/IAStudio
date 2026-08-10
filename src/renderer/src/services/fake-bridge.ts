@@ -63,6 +63,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       compile: () => Promise.resolve({ ok: false, problem: 'no-output' }),
       export: () => Promise.resolve(false),
       publish: () => Promise.resolve({ ok: false, problem: 'empty' }),
+      import: () => Promise.resolve(null),
       transform: () => Promise.resolve(null),
       ...overrides.workflows,
     },

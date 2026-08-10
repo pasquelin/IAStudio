@@ -17,6 +17,7 @@ export type GraphToolbarProps = Omit<GraphToolbarState, 'runShortcut'> & {
   onRun: () => void
   onExport: () => void
   onPublish: () => void
+  onImport: () => void
 }
 
 /**
@@ -35,6 +36,7 @@ export function GraphToolbar({
   onRun,
   onExport,
   onPublish,
+  onImport,
   canUndo,
   canRedo,
   canRun,
@@ -63,6 +65,7 @@ export function GraphToolbar({
       if (id === 'run') return onRun()
       if (id === 'export') return onExport()
       if (id === 'publish') return onPublish()
+      if (id === 'import') return onImport()
       if (id === 'add') return onAdd(pointBesideBar())
       if (id === 'select' || id === 'pan') return onMode(id)
       if (id === 'undo') return onUndo()
@@ -70,7 +73,7 @@ export function GraphToolbar({
       if (id === 'zoomIn') return void zoomIn()
       if (id === 'zoomOut') return void zoomOut()
     },
-    [onAdd, onMode, onUndo, onRedo, onRun, onExport, onPublish, zoomIn, zoomOut],
+    [onAdd, onMode, onUndo, onRedo, onRun, onExport, onPublish, onImport, zoomIn, zoomOut],
   )
 
   return (

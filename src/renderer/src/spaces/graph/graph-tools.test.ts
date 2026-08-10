@@ -33,6 +33,7 @@ describe('the export button', () => {
       'run',
       'export',
       'publish',
+      'import',
       'add',
       'select',
       'pan',

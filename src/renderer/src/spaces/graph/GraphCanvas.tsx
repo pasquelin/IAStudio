@@ -69,6 +69,7 @@ export type GraphCanvasProps = {
   onRun: () => void
   onExport: () => void
   onPublish: () => void
+  onImport: () => void
   /** The last publication's outcome, painted over the compile line until the next attempt. */
   published: GraphPublishResult | null
   /** The answer given to an approval node the run has stopped on. */
@@ -111,6 +112,7 @@ export function GraphCanvas({
   onRun,
   onExport,
   onPublish,
+  onImport,
   published,
   onDecide,
 }: GraphCanvasProps) {
@@ -238,6 +240,7 @@ export function GraphCanvas({
               onRun={onRun}
               onExport={onExport}
               onPublish={onPublish}
+              onImport={onImport}
               canUndo={canUndo}
               canRedo={canRedo}
               canRun={canRun}

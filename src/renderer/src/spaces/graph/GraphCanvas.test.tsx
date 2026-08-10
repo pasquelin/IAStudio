@@ -65,6 +65,7 @@ const canvas = (state: GraphState = graph, overrides: Overrides = {}) =>
       canExport={true}
       onExport={vi.fn()}
       onPublish={vi.fn()}
+      onImport={vi.fn()}
       published={null}
       runs={{}}
       running={false}
@@ -297,6 +298,7 @@ describe('the graph canvas', () => {
           canExport={true}
           onExport={vi.fn()}
           onPublish={vi.fn()}
+          onImport={vi.fn()}
           published={null}
           runs={{}}
           running

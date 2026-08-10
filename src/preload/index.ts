@@ -76,6 +76,7 @@ const bridge: StudioBridge = {
     compile: graph => ipcRenderer.invoke(CHANNELS.workflowsCompile, graph),
     export: (graph, name) => ipcRenderer.invoke(CHANNELS.workflowsExport, graph, name),
     publish: (graph, name) => ipcRenderer.invoke(CHANNELS.workflowsPublish, graph, name),
+    import: () => ipcRenderer.invoke(CHANNELS.workflowsImport),
     transform: (expression, variables) =>
       ipcRenderer.invoke(CHANNELS.workflowsTransform, expression, variables),
   },
