@@ -40,6 +40,7 @@ type ChannelMethod = {
   [CHANNELS.workflowsDescribe]: StudioBridge['workflows']['describe']
   [CHANNELS.workflowsRun]: StudioBridge['workflows']['run']
   [CHANNELS.workflowsCompile]: StudioBridge['workflows']['compile']
+  [CHANNELS.workflowsExport]: StudioBridge['workflows']['export']
   [CHANNELS.workflowsTransform]: StudioBridge['workflows']['transform']
 
   [CHANNELS.projectCreate]: StudioBridge['project']['create']

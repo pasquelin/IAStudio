@@ -5,6 +5,7 @@ import { messageOf } from '@shared/guards'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
+import { workflowFileOf } from '@shared/domain/workflow-file'
 import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
 import { openTransformThread } from './transform-thread'
 import { reducedBy } from './client'
@@ -15,6 +16,7 @@ import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
 import type { CostEstimator } from './cost'
 import type { UsageReader } from './usage'
+import type { OwnerScope } from './owner-scope'
 import type { WorkflowRegistry } from './workflow-registry'
 import {
   parseAssetName,
@@ -50,6 +52,17 @@ export type ScenarioHandlerDeps = {
   plan: PlanReader
   /** What a run would cost, asked before it is run — of a model or of a workflow. */
   estimateCost: CostEstimator
+  /**
+   * Asks where an exported workflow goes and writes it there, or answers `null` where the picker
+   * was closed. Injected rather than reached for: this module speaks SDK, not filesystem.
+   */
+  saveWorkflow: (name: string, contents: string) => Promise<string | null>
+  /**
+   * Which project the active key belongs to, for `exportedBy`. It answers `null` until the
+   * library has reported once — written as an empty string then, which is what the field means:
+   * nobody has said.
+   */
+  ownerScope: OwnerScope
 }
 
 const reduced = reducedBy('scenario')
@@ -97,6 +110,8 @@ export function registerScenarioHandlers({
   usage,
   plan,
   estimateCost,
+  saveWorkflow,
+  ownerScope,
 }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioUsageReport, (_event, period) =>
     reduced(() => usage.report(parseUsagePeriod(period))),
@@ -191,6 +206,25 @@ export function registerScenarioHandlers({
   const transforms = openTransformThread(message =>
     log.warn('scenario', `workflow transform: ${message}`),
   )
+
+  /**
+   * The graph as a file the webapp opens. Two of its fields are only knowable here — the clock,
+   * and the account the key belongs to — and the renderer has no filesystem besides (invariant 1).
+   *
+   * **No node count is checked.** A ceiling of 50 is written in the prose and no call has ever
+   * measured it: the one App readable from here holds 42 editor nodes, so nothing contradicts it
+   * and nothing confirms it either. A local refusal on an unmeasured threshold would turn away
+   * graphs Scenario accepts, where the API says the truth.
+   */
+  handle(CHANNELS.workflowsExport, async (_event, graph, name) => {
+    const file = workflowFileOf(parseGraphState(graph), {
+      name: parseAssetName(name),
+      exportedAt: new Date().toISOString(),
+      exportedBy: ownerScope.current() ?? '',
+    })
+
+    return (await saveWorkflow(file.name, `${JSON.stringify(file, null, 2)}\n`)) !== null
+  })
 
   handle(CHANNELS.workflowsTransform, (_event, expression, variables) => {
     // Around the parsing as well as the evaluation: a refusal here used to reject the invoke

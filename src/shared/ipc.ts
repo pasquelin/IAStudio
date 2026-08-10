@@ -78,6 +78,7 @@ export type Channels = {
   workflowsDescribe: 'workflows:describe'
   workflowsRun: 'workflows:run'
   workflowsCompile: 'workflows:compile'
+  workflowsExport: 'workflows:export'
   workflowsTransform: 'workflows:transform'
 
   projectCreate: 'project:create'
@@ -200,6 +201,7 @@ export const CHANNELS: Channels = {
   workflowsDescribe: 'workflows:describe',
   workflowsRun: 'workflows:run',
   workflowsCompile: 'workflows:compile',
+  workflowsExport: 'workflows:export',
   workflowsTransform: 'workflows:transform',
 
   projectCreate: 'project:create',
@@ -619,6 +621,14 @@ export type StudioBridge = {
      * this side would drift from what the webapp produces on the first node type they add.
      */
     compile: (graph: GraphState) => Promise<GraphCompileResult>
+    /**
+     * Writes the graph to a `.workflow.json` the webapp can open, and answers whether it was
+     * written — `false` where the user closed the picker, which is not a failure.
+     *
+     * Here because the renderer has no filesystem (invariant 1), and because two of the fields
+     * only this side knows: the clock, and the account the active key belongs to.
+     */
+    export: (graph: GraphState, name: string) => Promise<boolean>
     /**
      * Evaluates one `transformText` node's CEL expression, and answers the text it produced.
      *
