@@ -811,20 +811,21 @@
     },
     {
       "path": "src/renderer/src/design/EmptyState.tsx",
-      "lines": 27,
+      "lines": 41,
       "components": [
         {
           "name": "EmptyState",
-          "line": 17,
+          "line": 26,
           "exported": false,
           "props": [
             "action",
             "icon",
-            "message"
+            "message",
+            "secondary"
           ],
           "signature": {
-            "tags": 4,
-            "shape": "div>UiIcon>p>Button"
+            "tags": 6,
+            "shape": "div>UiIcon>p>div>Button>Button"
           }
         }
       ],
@@ -1846,9 +1847,19 @@
     },
     {
       "path": "src/renderer/src/engines/canvas/cursors.ts",
-      "lines": 84,
+      "lines": 83,
       "components": [],
       "probes": [
+        {
+          "probe": "hexColour",
+          "line": 74,
+          "text": "#000"
+        },
+        {
+          "probe": "hexColour",
+          "line": 75,
+          "text": "#000"
+        },
         {
           "probe": "hexColour",
           "line": 75,
@@ -1857,21 +1868,11 @@
         {
           "probe": "hexColour",
           "line": 76,
-          "text": "#000"
-        },
-        {
-          "probe": "hexColour",
-          "line": 76,
-          "text": "#000"
-        },
-        {
-          "probe": "hexColour",
-          "line": 77,
           "text": "#fff"
         },
         {
           "probe": "hexColour",
-          "line": 78,
+          "line": 77,
           "text": "#fff"
         }
       ]
@@ -2838,7 +2839,7 @@
     },
     {
       "path": "src/renderer/src/panels/explorer/Explorer.tsx",
-      "lines": 54,
+      "lines": 69,
       "components": [
         {
           "name": "Explorer",
@@ -3101,11 +3102,11 @@
     },
     {
       "path": "src/renderer/src/panels/inspector/LayerInspector.tsx",
-      "lines": 226,
+      "lines": 224,
       "components": [
         {
           "name": "LayerInspector",
-          "line": 52,
+          "line": 50,
           "exported": false,
           "props": [
             "documentId",
@@ -4180,11 +4181,11 @@
     },
     {
       "path": "src/renderer/src/settings/SettingRow.tsx",
-      "lines": 364,
+      "lines": 366,
       "components": [
         {
           "name": "TextControl",
-          "line": 40,
+          "line": 41,
           "exported": false,
           "props": [
             "describedBy",
@@ -4200,7 +4201,7 @@
         },
         {
           "name": "PathControl",
-          "line": 101,
+          "line": 102,
           "exported": false,
           "props": [
             "describedBy",
@@ -4216,7 +4217,7 @@
         },
         {
           "name": "ColorControl",
-          "line": 143,
+          "line": 144,
           "exported": false,
           "props": [
             "describedBy",
@@ -4231,7 +4232,7 @@
         },
         {
           "name": "Control",
-          "line": 168,
+          "line": 169,
           "exported": false,
           "props": [
             "describedBy",
@@ -4247,7 +4248,7 @@
         },
         {
           "name": "SettingRow",
-          "line": 297,
+          "line": 298,
           "exported": false,
           "props": [
             "descriptor"
@@ -4261,18 +4262,18 @@
       "probes": [
         {
           "probe": "anyCast",
-          "line": 305,
+          "line": 306,
           "text": "as any"
         }
       ]
     },
     {
       "path": "src/renderer/src/settings/SettingsWindow.tsx",
-      "lines": 330,
+      "lines": 332,
       "components": [
         {
           "name": "NavigationEntry",
-          "line": 28,
+          "line": 29,
           "exported": false,
           "props": [
             "depth",
@@ -4287,7 +4288,7 @@
         },
         {
           "name": "SearchResults",
-          "line": 93,
+          "line": 94,
           "exported": false,
           "props": [
             "found",
@@ -4300,7 +4301,7 @@
         },
         {
           "name": "ResultRow",
-          "line": 136,
+          "line": 137,
           "exported": false,
           "props": [
             "hit",
@@ -4313,17 +4314,17 @@
         },
         {
           "name": "SettingsWindow",
-          "line": 171,
+          "line": 172,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 16,
+            "tags": 17,
             "shape": "div>header>div>nav>input>ul>NavigationEntry>main>h2>SearchResults>h2>p"
           }
         },
         {
           "name": "DraftBar",
-          "line": 304,
+          "line": 306,
           "exported": false,
           "props": [],
           "signature": {
@@ -4335,18 +4336,18 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 51,
+          "line": 52,
           "text": "style={{"
         }
       ]
     },
     {
       "path": "src/renderer/src/settings/ShortcutsSettings.tsx",
-      "lines": 291,
+      "lines": 295,
       "components": [
         {
           "name": "CommandRow",
-          "line": 72,
+          "line": 73,
           "exported": false,
           "props": [
             "capturing",
@@ -4363,7 +4364,7 @@
         },
         {
           "name": "ShortcutsSettings",
-          "line": 150,
+          "line": 154,
           "exported": false,
           "props": [],
           "signature": {
@@ -4373,7 +4374,7 @@
         },
         {
           "name": "Scope",
-          "line": 214,
+          "line": 218,
           "exported": false,
           "props": [
             "capturing",
@@ -4391,7 +4392,7 @@
         },
         {
           "name": "SearchByChord",
-          "line": 257,
+          "line": 261,
           "exported": false,
           "props": [
             "listening",

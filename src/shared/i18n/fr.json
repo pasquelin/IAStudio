@@ -1534,12 +1534,15 @@
     },
     "period": {
       "label": "Période",
-      "short": "{{count, number}} j"
+      "short": "{{count, number}} j",
+      "hint": "Ne compte que les {{count, number}} derniers jours"
     },
     "refresh": "Actualiser",
+    "refreshHint": "Redemande les chiffres au compte — ils ne se rafraîchissent pas seuls",
     "loading": "Lecture de la consommation…",
     "failure": "La consommation n’a pas pu être lue.",
     "retry": "Réessayer",
+    "retryHint": "Redemande la consommation, au cas où le refus venait du réseau",
     "empty": "Aucune activité sur cette période.",
     "noAccount": "Aucune clé API enregistrée. Ajoutez-en une dans les préférences pour voir votre consommation.",
     "noBalance": "L’API Scenario n’expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu’il reste.",
@@ -1566,6 +1569,7 @@
     "assets": "Assets produits",
     "actions": "Actions",
     "loadMore": "Charger la suite",
+    "loadMoreHint": "Ajoute la page suivante du journal à celles déjà lues",
     "free": "gratuit",
     "actionNames": {
       "asset": "Asset",

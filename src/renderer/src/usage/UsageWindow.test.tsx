@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UsageEventPage, UsageReport } from '@shared/domain/usage'
@@ -38,6 +38,47 @@ function install(answered: UsageReport, events: UsageEventPage = EMPTY_EVENTS) {
 describe('UsageWindow', () => {
   beforeEach(() => {
     install(report())
+  })
+
+  /**
+   * The window renders its own React tree, so the shell's `TooltipHost` never reached it: every
+   * tooltip attribute here pointed at an id nothing answered. A closed `<Tooltip>` renders
+   * nothing at all, so hovering is the only assertion that says the host is mounted.
+   */
+  it('mounts the shared tooltip its own tree would otherwise lack', async () => {
+    render(<UsageWindow />)
+
+    const refresh = await screen.findByRole('button', { name: 'Actualiser' })
+    await userEvent.hover(refresh)
+
+    await waitFor(() => expect(refresh).toHaveAttribute('aria-describedby'))
+  })
+
+  /**
+   * Never an `aria-label`: one set over a visible label replaces it (WCAG SC 2.5.3), and a
+   * button reading "Actualiser" would answer to a sentence nobody can see. The name has to stay
+   * the word, the tooltip carries what the word does not say.
+   */
+  it('explains a labelled button without renaming it', async () => {
+    render(<UsageWindow />)
+
+    const refresh = await screen.findByRole('button', { name: 'Actualiser' })
+    expect(refresh).toHaveAttribute(
+      'data-tooltip-content',
+      'Redemande les chiffres au compte — ils ne se rafraîchissent pas seuls',
+    )
+    expect(refresh).not.toHaveAttribute('aria-label')
+  })
+
+  // The pane already carries the sentence; the tab says it before one has to go and look.
+  it('tips each section with the sentence its own pane shows', async () => {
+    render(<UsageWindow />)
+
+    const tab = await screen.findByRole('button', { name: 'Modèles' })
+    expect(tab).toHaveAttribute(
+      'data-tooltip-content',
+      'Quels modèles ont coûté, et combien de générations chacun a servi.',
+    )
   })
 
   it('shows what was spent over the period', async () => {

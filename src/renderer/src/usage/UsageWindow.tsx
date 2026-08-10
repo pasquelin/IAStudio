@@ -7,9 +7,11 @@ import {
   type UsagePeriod,
   type UsageReport,
 } from '@shared/domain/usage'
+import { TooltipHost } from '@/design/TooltipHost'
 import { UiIcon } from '@/design/UiIcon'
 import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
+import { HINT_BOTTOM, HINT_RIGHT } from '@/helpers/tooltip'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { UsageActivities } from './UsageActivities'
 import { UsageJournal } from './UsageJournal'
@@ -67,6 +69,7 @@ export function UsageWindow() {
               key={days}
               type="button"
               aria-pressed={days === period}
+              {...HINT_BOTTOM(t('usage.period.hint', { count: days }))}
               onClick={() => setPeriod(days)}
               className={cn(control(days === period), 'justify-center px-2.5 font-normal')}
             >
@@ -87,6 +90,8 @@ export function UsageWindow() {
                 <button
                   type="button"
                   aria-current={id === section ? 'page' : undefined}
+                  // The sentence the pane already carries, said before one gets there.
+                  {...HINT_RIGHT(t(`usage.descriptions.${id}`))}
                   onClick={() => setSection(id)}
                   className={cn(control(id === section), 'w-full px-3 text-left')}
                 >
@@ -98,6 +103,7 @@ export function UsageWindow() {
 
           <button
             type="button"
+            {...HINT_RIGHT(t('usage.refreshHint'))}
             onClick={reload}
             disabled={loading}
             className={cn(
@@ -117,6 +123,8 @@ export function UsageWindow() {
           <Body id={section} period={period} report={report} failure={failure} onRetry={reload} />
         </main>
       </div>
+
+      <TooltipHost />
     </div>
   )
 }
@@ -136,7 +144,12 @@ function Body({ id, period, report, failure, onRetry }: BodyProps) {
     return (
       <div className="flex flex-col items-start gap-2">
         <p className="text-xs">{t('usage.failure')}</p>
-        <button type="button" className="btn btn-xs" onClick={onRetry}>
+        <button
+          type="button"
+          className="btn btn-xs"
+          {...HINT_RIGHT(t('usage.retryHint'))}
+          onClick={onRetry}
+        >
           {t('usage.retry')}
         </button>
       </div>

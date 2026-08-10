@@ -1534,12 +1534,15 @@
     },
     "period": {
       "label": "Period",
-      "short": "{{count, number}}d"
+      "short": "{{count, number}}d",
+      "hint": "Counts the last {{count, number}} days only"
     },
     "refresh": "Refresh",
+    "refreshHint": "Asks the account for the figures again — they do not refresh on their own",
     "loading": "Reading usage…",
     "failure": "Usage could not be read.",
     "retry": "Try again",
+    "retryHint": "Asks for the usage again, in case the refusal came from the network",
     "empty": "No activity over this period.",
     "noAccount": "No API key stored. Add one in the preferences to see your usage.",
     "noBalance": "The Scenario API exposes no balance: these figures are what was spent, never what is left.",
@@ -1566,6 +1569,7 @@
     "assets": "Assets produced",
     "actions": "Actions",
     "loadMore": "Load more",
+    "loadMoreHint": "Adds the next page of the log to the ones already read",
     "free": "free",
     "actionNames": {
       "asset": "Asset",
