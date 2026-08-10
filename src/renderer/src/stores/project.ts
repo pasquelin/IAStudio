@@ -126,7 +126,16 @@ export const useProject = create<ProjectState>()(set => ({
       'folder',
       useSettings.getState().settings.storage.projectsFolder,
     )
-    if (bridge && folder) set({ project: await bridge.project.open(folder), known: true })
+    if (!bridge || !folder) return
+
+    // Swallowed, not ignored: every caller does `void openPicked()`, so a refusal left to
+    // throw was an unhandled rejection, and the main process has already put the reason in
+    // the journal on its way past.
+    try {
+      set({ project: await bridge.project.open(folder), known: true })
+    } catch {
+      // Nothing to undo — the project that was open is still the one that is open.
+    }
   },
 
   createPicked: async () => {
@@ -140,6 +149,10 @@ export const useProject = create<ProjectState>()(set => ({
     // The dialog picks where, not what to call it; renaming a project folder is the file
     // manager's job until the studio has a proper new-project sheet.
     const name = i18next.t('project.defaultName')
-    set({ project: await bridge.project.create(folder, name), known: true })
+    try {
+      set({ project: await bridge.project.create(folder, name), known: true })
+    } catch {
+      // Same as `openPicked`, and the journal says why the folder could not be written.
+    }
   },
 }))

@@ -33,8 +33,23 @@ export function Explorer() {
     void useDocuments.getState().relist()
   }, [projectPath])
 
+  // Its own way out rather than a trip back to the home: the panel is on screen in every
+  // workspace, and until it carried these the two gestures lived nowhere else.
   if (!projectPath)
-    return <EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noProject')} />
+    return (
+      <EmptyState
+        icon={mdiFolderOpenOutline}
+        message={t('explorer.noProject')}
+        action={{
+          label: t('project.open'),
+          onClick: () => void useProject.getState().openPicked(),
+        }}
+        secondary={{
+          label: t('project.create'),
+          onClick: () => void useProject.getState().createPicked(),
+        }}
+      />
+    )
 
   return (
     <Collection

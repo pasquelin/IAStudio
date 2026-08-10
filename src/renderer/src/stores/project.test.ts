@@ -5,6 +5,8 @@ import { useProject } from './project'
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
 vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
 
+const MANIFEST = { version: 1, name: 'demo', createdAt: '', updatedAt: '' }
+
 beforeEach(() => {
   useProject.setState({ project: null, known: false })
   closeOrphanTabs.mockClear()
@@ -63,5 +65,59 @@ describe('settling the tabs of a project being followed', () => {
     await useProject.getState().connect()
 
     expect(closeOrphanTabs).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * Every caller does `void openPicked()` — the home's tools, the rail, the native menu and now
+ * the explorer's empty state. A refusal left to throw was therefore an unhandled rejection,
+ * and the main process has already written the reason in the journal on its way past.
+ */
+describe('picking a folder in the dialog', () => {
+  const picking = (folder: string | null) => ({
+    dialog: { pickPath: () => Promise.resolve(folder) },
+  })
+
+  it('opens the folder that was picked', async () => {
+    const open = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
+    installFakeBridge({ ...picking('/p'), project: { open } })
+
+    await useProject.getState().openPicked()
+
+    expect(open).toHaveBeenCalledWith('/p')
+    expect(useProject.getState().project?.path).toBe('/p')
+  })
+
+  it('survives a folder that will not open', async () => {
+    installFakeBridge(picking('/not-a-project'))
+
+    await expect(useProject.getState().openPicked()).resolves.toBeUndefined()
+    expect(useProject.getState().project).toBeNull()
+  })
+
+  it('creates a project in the folder that was picked', async () => {
+    const create = vi.fn(() => Promise.resolve({ path: '/p/new', manifest: MANIFEST }))
+    installFakeBridge({ ...picking('/p'), project: { create } })
+
+    await useProject.getState().createPicked()
+
+    expect(create).toHaveBeenCalled()
+    expect(useProject.getState().project?.path).toBe('/p/new')
+  })
+
+  it('survives a folder that cannot be written', async () => {
+    installFakeBridge(picking('/read-only'))
+
+    await expect(useProject.getState().createPicked()).resolves.toBeUndefined()
+    expect(useProject.getState().project).toBeNull()
+  })
+
+  it('does nothing at all when the dialog is cancelled', async () => {
+    const open = vi.fn(() => Promise.resolve({ path: '/p', manifest: MANIFEST }))
+    installFakeBridge({ ...picking(null), project: { open } })
+
+    await useProject.getState().openPicked()
+
+    expect(open).not.toHaveBeenCalled()
   })
 })

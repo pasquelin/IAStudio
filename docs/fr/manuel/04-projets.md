@@ -26,6 +26,10 @@ logiciel qui l’a créé est un projet qu’on perd le jour où le logiciel ne 
 | **Nouveau projet** | `⌘N` / `Ctrl+N` | Fichier ▸ Nouveau projet… |
 | **Ouvrir un projet** | `⌘O` / `Ctrl+O` | Fichier ▸ Ouvrir un projet… |
 
+**Les deux gestes sont aussi dans le panneau Explorateur**, quand aucun projet n’est ouvert : il
+affiche alors **Ouvrir un projet** et **Créer un projet**, à sa place habituelle dans la colonne
+de gauche. C’est là pour ne pas avoir à repasser par l’accueil depuis un espace de travail.
+
 **Un seul projet est ouvert à la fois.** Ouvrir le second ferme le premier — sans rien perdre :
 tout ce qui était enregistré l’est resté.
 

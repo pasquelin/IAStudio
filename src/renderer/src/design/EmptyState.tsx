@@ -1,26 +1,40 @@
 import { Button } from './Button'
 import { UiIcon } from './UiIcon'
 
+/** A way out of an empty panel: what it says, and what it does. */
+export type EmptyStateAction = { label: string; onClick: () => void }
+
 export type EmptyStateProps = {
   icon: string
   message: string
   /** The way out, for a panel whose emptiness the user can act on. */
-  action?: { label: string; onClick: () => void }
+  action?: EmptyStateAction
+  /**
+   * A second way out, for an emptiness that has two — no project is either one to open or one
+   * to make, and offering only the first is the half that was missing. Both wear the same
+   * button: neither is the lesser, and a third would be a menu rather than an empty state.
+   */
+  secondary?: EmptyStateAction
 }
 
 /**
  * Message for a panel with no content. An unexplained empty dock reads as a bug.
  *
- * The action is a label and a callback rather than a free node: every panel offers its way out
+ * The actions are labels and callbacks rather than free nodes: every panel offers its way out
  * the same way, and a node would let each one grow its own button.
  */
-export function EmptyState({ icon, message, action }: EmptyStateProps) {
+export function EmptyState({ icon, message, action, secondary }: EmptyStateProps) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
       <UiIcon path={icon} size={32} className="text-muted/40" />
       <p className="text-muted max-w-56 text-[12px] leading-relaxed">{message}</p>
 
-      {action && <Button onClick={action.onClick}>{action.label}</Button>}
+      {(action || secondary) && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {action && <Button onClick={action.onClick}>{action.label}</Button>}
+          {secondary && <Button onClick={secondary.onClick}>{secondary.label}</Button>}
+        </div>
+      )}
     </div>
   )
 }

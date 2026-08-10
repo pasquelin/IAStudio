@@ -52,9 +52,17 @@ export function registerProjectHandlers({
   reveal,
   askUser,
 }: ProjectHandlerDeps): void {
-  handle(CHANNELS.projectCreate, (_event, path, name) =>
-    project.create(parseProjectPath(path), parseProjectName(name)),
-  )
+  handle(CHANNELS.projectCreate, async (_event, path, name) => {
+    try {
+      return await project.create(parseProjectPath(path), parseProjectName(name))
+    } catch (error) {
+      // Same reason as `projectOpen` below: `createPicked` watches nothing, so a folder that
+      // could not be written failed in silence. The path is not named — the user picked it
+      // from a dialog, and whatever `mkdir` says about it is not a sentence they can act on.
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotCreated' })
+      throw error
+    }
+  })
 
   handle(CHANNELS.projectOpen, async (_event, path) => {
     try {

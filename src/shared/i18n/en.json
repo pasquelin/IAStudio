@@ -153,6 +153,7 @@
     "projectNotAProject": "This folder is not a Scenario project",
     "projectUnreadable": "This project's manifest cannot be read: it was truncated or edited by hand",
     "projectTooNew": "This project was made by a newer build of the studio; update it to open this project",
+    "projectNotCreated": "The project could not be created in this folder",
     "jobFailed": "Generation \"{{name}}\" failed",
     "jobCancelled": "Generation \"{{name}}\" cancelled",
     "generated": "{{count, number}} asset generated",
