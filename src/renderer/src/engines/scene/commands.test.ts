@@ -37,7 +37,7 @@ import {
   IDENTITY_TRANSFORM,
   type SceneState,
 } from './scene-state'
-import type { EnvironmentRef } from '@shared/domain/scene'
+import type { EnvironmentRef, Transform } from '@shared/domain/scene'
 
 describe('addNode', () => {
   it('appends the node and selects it', () => {
@@ -127,6 +127,48 @@ describe('setTransform', () => {
     const node = after.nodes[0]
     expect(node?.type).toBe('mesh')
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')
+  })
+
+  /**
+   * The defect: the viewport already refused the handle, but a typed angle still reached the
+   * document — an undo entry for a screen that never moved.
+   */
+  describe('an angle that would show nowhere', () => {
+    const turned: Transform = {
+      ...IDENTITY_TRANSFORM,
+      position: { x: 5, y: 0, z: 0 },
+      rotation: { x: 0, y: Math.PI / 2, z: 0 },
+    }
+
+    it('is dropped off a lone sprite, and the rest of the move written', () => {
+      const start: SceneState = { ...EMPTY_SCENE, nodes: [sprite('s')], selectedIds: [] }
+      const after = setTransform('s', turned).apply(start)
+
+      expect(after.nodes[0]?.transform.rotation).toEqual({ x: 0, y: 0, z: 0 })
+      expect(after.nodes[0]?.transform.position).toEqual({ x: 5, y: 0, z: 0 })
+    })
+
+    it('is written on a sprite others hang from, which turning swings around it', () => {
+      const start: SceneState = {
+        ...EMPTY_SCENE,
+        nodes: [sprite('s'), mesh('m', 's')],
+        selectedIds: [],
+      }
+      const after = setTransform('s', turned).apply(start)
+
+      expect(after.nodes[0]?.transform.rotation.y).toBeCloseTo(Math.PI / 2)
+    })
+
+    // The rule is read at every `apply`, never frozen when the command was built: a child added
+    // between the two would otherwise keep answering for the scene the command was born in.
+    it('is written on redo once a child has arrived', () => {
+      const start: SceneState = { ...EMPTY_SCENE, nodes: [sprite('s')], selectedIds: [] }
+      const command = setTransform('s', turned)
+      command.apply(start)
+      const grown = addNode(mesh('m', 's')).apply(start)
+
+      expect(command.apply(grown).nodes[0]?.transform.rotation.y).toBeCloseTo(Math.PI / 2)
+    })
   })
 })
 

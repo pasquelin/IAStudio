@@ -189,10 +189,21 @@ under **Sprite**, from the project's own images — the same ones a material tak
 | **Opacity** | from transparent to opaque |
 | **Texture** | the picture shown, taken from the project's assets |
 
-Three things to know:
+Four things to know:
 
 - **Its size is its scale.** A sprite has no width of its own: you resize it with the scale handle,
   like any other object. It shrinks with distance, like everything else in the scene.
+- **It does not turn.** Since it always faces the camera, giving it an angle would show nowhere:
+  selected on its own it gets no **Rotate** handle and no **Rotation** row in the Inspector —
+  rather than a number that changes nothing on screen and still costs a `⌘Z`. Two cases do turn
+  it for real, and both show:
+  - **Objects hang under it.** It gets its handle and its row back: turning the whole thing swings
+    the children around it.
+  - **It is caught in a selection of several objects, and you drag the handle.** That turns the
+    group around a shared pivot, which carries the sprite through space. Careful, though: **the
+    Inspector's Rotation row does not do the same thing** — a typed angle is absolute and lands on
+    each object around its own origin, with no shared pivot, so the sprite does not move. The row
+    stays visible as long as one object of the selection turns, and the typed angle goes to those.
 - **It has nothing to do with shadows.** It throws none and catches none — three.js draws meshes
   into a shadow map and nothing else. The Inspector therefore shows it no Shadows section at all,
   rather than two switches with no effect.
@@ -356,7 +367,7 @@ its radius, a torus shows its tube, a spot shows its angle.
 | Section | What it holds |
 |---|---|
 | **Identity** | the name, editable |
-| **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z) |
+| **Transform** | Position, Rotation, Scale — three numbers each (X, Y, Z). A childless sprite selected on its own has no Rotation row: it would show nowhere |
 | **Geometry** | what defines the shape: radius, width, segments… |
 | **Material** | Colour, Roughness, Metalness, and five texture slots |
 

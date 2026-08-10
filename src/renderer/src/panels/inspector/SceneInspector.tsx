@@ -69,7 +69,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
 
       {node && (
         <>
-          <TransformSection node={node} selection={selection} edit={edit} />
+          <TransformSection node={node} nodes={nodes} selection={selection} edit={edit} />
           <ShadowSection node={node} selection={selection} edit={edit} />
         </>
       )}

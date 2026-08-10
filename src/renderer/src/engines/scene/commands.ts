@@ -18,7 +18,9 @@ import {
   canCastShadow,
   canReceiveShadow,
   canReparent,
+  hasChildren,
   nodeById,
+  rotationShows,
   subtreeOf,
   type SceneNodeBase,
   type SceneNodeType,
@@ -71,8 +73,16 @@ export function removeNode(id: string): Command<SceneState> {
  * One shape for every edit of a shared field: they all revert by putting the old values back.
  * The whole shared set is captured rather than the single field touched — the history is a
  * linear stack, so nothing can change the node between `apply` and `revert`.
+ *
+ * What to write may be a function of the node and the scene around it, which only `apply` holds:
+ * a command is built before it runs and replayed on redo, so a rule about the scene has to be
+ * read at each `apply` rather than frozen into the closure.
  */
-function editNode(label: string, id: string, changes: NodePatch): Command<SceneState> {
+function editNode(
+  label: string,
+  id: string,
+  changes: NodePatch | ((node: SceneNode, state: SceneState) => NodePatch),
+): Command<SceneState> {
   let previous: NodePatch | null = null
 
   return {
@@ -87,14 +97,26 @@ function editNode(label: string, id: string, changes: NodePatch): Command<SceneS
         castShadow: node.castShadow,
         receiveShadow: node.receiveShadow,
       }
-      return patch(state, id, changes)
+      return patch(state, id, typeof changes === 'function' ? changes(node, state) : changes)
     },
     revert: state => (previous ? patch(state, id, previous) : state),
   }
 }
 
+/**
+ * Where a node stands, how it is turned and how big it is.
+ *
+ * An angle `rotationShows` refuses is dropped, and the rest of the move written: the value would
+ * sit in the document and cost an undo without the screen ever moving. Dropped rather than the
+ * whole edit refused — a pivot drag over a mixed selection carries the sprite through space, and
+ * *that* shows.
+ */
 export function setTransform(id: string, next: Transform): Command<SceneState> {
-  return editNode('transform', id, { transform: next })
+  return editNode('transform', id, (node, state) => ({
+    transform: rotationShows(node, () => hasChildren(state.nodes, id))
+      ? next
+      : { ...next, rotation: node.transform.rotation },
+  }))
 }
 
 export function setNodeVisible(id: string, visible: boolean): Command<SceneState> {

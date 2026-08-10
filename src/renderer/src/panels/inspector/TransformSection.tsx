@@ -5,7 +5,7 @@ import { PropertySection } from '@/design/PropertySection'
 import { TextField } from '@/design/TextField'
 import { VectorField } from '@/design/VectorField'
 import { batch, renameNode, setTransform } from '@/engines/scene/commands'
-import type { SceneNode } from '@/engines/scene/scene-state'
+import { hasChildren, rotationShows, type SceneNode } from '@/engines/scene/scene-state'
 import { changedFields } from '@/helpers/objects'
 import type { SceneEdit } from './useSceneEdit'
 
@@ -38,6 +38,8 @@ function patched(target: Transform, patch: AxisPatch): Transform {
 export type TransformSectionProps = {
   /** The anchor: what the fields read out, and the only node the name applies to. */
   node: SceneNode
+  /** Every node of the document: only they say whether anything hangs under the anchor. */
+  nodes: readonly SceneNode[]
   /** What a moved axis writes to — the anchor included. */
   selection: readonly SceneNode[]
   edit: SceneEdit
@@ -52,10 +54,15 @@ export type TransformSectionProps = {
  * cubes given a height keep the columns they stand in. A gizmo drag is the relative gesture, and
  * it goes through the viewport rather than through here.
  */
-export function TransformSection({ node, selection, edit }: TransformSectionProps) {
+export function TransformSection({ node, nodes, selection, edit }: TransformSectionProps) {
   const { t } = useTranslation()
   const { transform } = node
   const degrees = degreesOf(transform.rotation)
+  // Any node of the selection, not the anchor alone: with a cube picked after a sprite, deciding
+  // on the anchor would take the row away from a cube a typed angle does turn.
+  const turns = selection.some(candidate =>
+    rotationShows(candidate, () => hasChildren(nodes, candidate.id)),
+  )
 
   const move = (patch: AxisPatch): void =>
     edit.run(
@@ -81,16 +88,19 @@ export function TransformSection({ node, selection, edit }: TransformSectionProp
         {...edit.gesture}
       />
 
-      <VectorField
-        label={t('inspector.rotation')}
-        value={degrees}
-        step={1}
-        // Diffed in degrees, which is the unit the field reports: converting back to radians
-        // first leaves the untouched axes a few ulps off, and those would then be written —
-        // as the anchor's own angle — onto every other node of the selection.
-        onChange={next => move({ rotation: radiansOf(changedFields(degrees, next)) })}
-        {...edit.gesture}
-      />
+      {/* Hidden where `rotationShows` refuses, for the reason the viewport refuses the handle. */}
+      {turns && (
+        <VectorField
+          label={t('inspector.rotation')}
+          value={degrees}
+          step={1}
+          // Diffed in degrees, which is the unit the field reports: converting back to radians
+          // first leaves the untouched axes a few ulps off, and those would then be written —
+          // as the anchor's own angle — onto every other node of the selection.
+          onChange={next => move({ rotation: radiansOf(changedFields(degrees, next)) })}
+          {...edit.gesture}
+        />
+      )}
 
       <VectorField
         label={t('inspector.scale')}

@@ -193,11 +193,23 @@ matériau accepte en texture.
 | **Opacité** | de transparent à opaque |
 | **Texture** | l’image affichée, prise dans les assets du projet |
 
-Trois choses à savoir :
+Quatre choses à savoir :
 
 - **Sa taille est son échelle.** Un sprite n’a pas de largeur propre : on le redimensionne avec la
   poignée d’échelle, comme n’importe quel objet. Il rapetisse avec la distance, comme le reste de
   la scène.
+- **Il ne tourne pas.** Puisqu’il fait toujours face à la caméra, lui donner un angle ne se verrait
+  nulle part : sélectionné seul, il n’a ni poignée de l’outil **Pivoter**, ni ligne **Rotation**
+  dans l’Inspecteur — plutôt qu’un nombre qui ne change rien à l’écran mais coûte un `⌘Z`. Deux
+  cas le font tourner pour de vrai, et les deux se voient :
+  - **Des objets descendent de lui.** Il retrouve sa poignée et sa ligne : tourner l’ensemble fait
+    pivoter les enfants autour de lui.
+  - **Il est pris dans une sélection de plusieurs objets, et on tire la poignée.** Elle fait
+    tourner le groupe autour d’un pivot commun, ce qui déplace le sprite dans l’espace. Attention,
+    **la ligne Rotation de l’Inspecteur ne fait pas la même chose** : un angle tapé est absolu et
+    s’applique à chaque objet autour du sien propre, sans pivot commun — le sprite, lui, ne bouge
+    pas. La ligne reste affichée tant qu’un objet de la sélection tourne, et l’angle tapé va sur
+    ceux-là.
 - **Il ne joue pas avec les ombres.** Il n’en projette pas et n’en reçoit pas — three.js ne dessine
   que des mailles dans une carte d’ombres. L’Inspecteur ne lui montre donc aucune section Ombres,
   plutôt que deux interrupteurs sans effet.
@@ -366,7 +378,7 @@ montre son rayon, un tore montre son tube, un projecteur montre son angle.
 | Section | Ce qu’elle contient |
 |---|---|
 | **Identité** | le nom, modifiable |
-| **Transformation** | Position, Rotation, Échelle — trois nombres chacune (X, Y, Z) |
+| **Transformation** | Position, Rotation, Échelle — trois nombres chacune (X, Y, Z). Un sprite sans enfant, sélectionné seul, n’a pas de ligne Rotation : elle ne se verrait nulle part |
 | **Géométrie** | ce qui définit la forme : rayon, largeur, segments… |
 | **Matériau** | Couleur, Rugosité, Métallicité, et cinq emplacements de textures |
 

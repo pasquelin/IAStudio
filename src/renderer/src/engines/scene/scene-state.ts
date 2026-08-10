@@ -105,12 +105,25 @@ export function canReceiveShadow(node: ShadowSubject): boolean {
 }
 
 /**
- * Whether turning a node shows. A sprite always faces the camera: three.js reads its size off the
- * *lengths* of the first two columns of the model matrix — which a rotation leaves untouched — and
- * takes its angle from a material uniform. So the handle would write an undo that draws nothing.
+ * Whether turning a node shows anything. A sprite always faces the camera: three.js reads its size
+ * off the *lengths* of the first two columns of the model matrix — which a rotation leaves
+ * untouched — and takes its angle from a material uniform. Nodes hanging under one are the
+ * exception: turning the sprite swings them around it, and that does show.
+ *
+ * The whole rule rather than the half the type answers, because three places have to agree: the
+ * handle offered in the viewport, the row offered in the inspector, and the command that writes
+ * the angle. Two of the three agreeing is how the angle stayed typeable after the handle was
+ * refused.
+ *
+ * The children are asked for, not handed over: every one of the three is on a drag path, and only
+ * a sprite makes the answer worth walking a scene for.
  */
-export function canRotate(node: { type: SceneNodeType }): boolean {
-  return node.type !== 'sprite'
+export function rotationShows(node: { type: SceneNodeType }, children: () => boolean): boolean {
+  return node.type !== 'sprite' || children()
+}
+
+export function hasChildren(nodes: readonly SceneNode[], id: string): boolean {
+  return nodes.some(node => node.parentId === id)
 }
 
 const SHADOW_CASTING_LIGHTS: readonly LightDescriptor['kind'][] = ['directional', 'spot', 'point']

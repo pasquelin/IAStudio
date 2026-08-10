@@ -177,6 +177,43 @@ describe('inspector panel', () => {
     expect(screen.queryByRole('button', { name: /Ombres/ })).not.toBeInTheDocument()
   })
 
+  /**
+   * The viewport already refused the handle over a lone sprite; the row went on taking an angle
+   * nothing draws, which stacked an undo for a screen that never moved.
+   */
+  it('offers a lone sprite no rotation row, and keeps the two that show', () => {
+    install(spriteNodeFixture('sprite-1'))
+    render(<Content />)
+
+    expect(screen.queryByText('Rotation')).not.toBeInTheDocument()
+    expect(screen.getByText('Position')).toBeInTheDocument()
+    expect(screen.getByText('Échelle')).toBeInTheDocument()
+  })
+
+  it('gives the row back to a sprite others hang from, which turning swings around it', () => {
+    installScene('doc-1', {
+      ...EMPTY_SCENE,
+      nodes: [spriteNodeFixture('sprite-1'), meshNode('box-1', 'sprite-1')],
+      selectedIds: ['sprite-1'],
+    })
+    render(<Content />)
+
+    expect(screen.getByText('Rotation')).toBeInTheDocument()
+  })
+
+  // The anchor is the last node picked, and it is not what the row is for: a cube selected after
+  // a sprite still turns, and deciding on the anchor alone took its row away.
+  it('keeps the row when a sprite is the anchor of a selection something else turns in', () => {
+    installScene('doc-1', {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('box-1'), spriteNodeFixture('sprite-1')],
+      selectedIds: ['box-1', 'sprite-1'],
+    })
+    render(<Content />)
+
+    expect(screen.getByText('Rotation')).toBeInTheDocument()
+  })
+
   it('fades a sprite through the history', () => {
     install(spriteNodeFixture('sprite-1'))
     render(<Content />)
