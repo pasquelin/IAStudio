@@ -73,7 +73,7 @@ The language of every text in the application: menus, buttons, messages.
 Each language names itself in its own language — "Français" stays "Français" even on an English
 screen. That is deliberate: you recognise your own language before you can read the screen's.
 
-The change is **immediate**, nothing needs relaunching. It touches neither your projects nor what
+Once applied, the change is **immediate**: nothing needs relaunching. It touches neither your projects nor what
 you write in them: a prompt written in English stays in English.
 
 > **The generation form follows too, but not always all the way.** The names of the settings a

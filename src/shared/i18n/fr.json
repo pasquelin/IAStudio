@@ -1132,7 +1132,7 @@
     "generalDescription": "Langue de l’application et ce qu’elle fait en s’ouvrant.",
     "language": {
       "title": "Langue",
-      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement est immédiat, il n’y a rien à relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
+      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement prend effet dès que vous cliquez sur Appliquer ou OK, sans rien relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
       "system": "Système"
     },
     "startup": {
