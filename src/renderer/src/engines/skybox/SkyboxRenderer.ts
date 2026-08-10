@@ -1,4 +1,4 @@
-import { Color, DirectionalLight, Raycaster, SRGBColorSpace, Vector2, type Texture } from 'three'
+import { DirectionalLight, Raycaster, SRGBColorSpace, Vector2, type Texture } from 'three'
 import type { WebGLRenderTarget } from 'three'
 import {
   anglesFromDirection,
@@ -268,7 +268,8 @@ export class SkyboxRenderer {
     // three.js reads the vector from the light to its target, which sits at the origin.
     this.sunLight.position.set(x * 100, y * 100, z * 100)
     this.sunLight.intensity = content.sun.intensity
-    this.sunLight.color = new Color(content.sun.color)
+    // `.set`, not a new Color: this runs on every frame of every drag, and three owns the instance.
+    this.sunLight.color.set(content.sun.color)
     this.viewport.requestRender()
   }
 
