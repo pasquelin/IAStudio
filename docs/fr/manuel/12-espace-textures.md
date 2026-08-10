@@ -100,6 +100,11 @@ différent de la surface.
 | **Émission** | ce qui brille par soi-même | une enseigne au néon, des braises |
 | **Cavité** | les creux et les arêtes de la surface | assombrit le fond des rainures, réglable par le curseur *Cavité* de la section **Matériau** |
 
+> **Le panneau écrit trois de ces noms plus court** : la vignette dit **Normale**, **Métal** et
+> **Occlusion** là où ce tableau et le [glossaire](17-glossaire.md) disent *Normales*,
+> *Métallicité* et *Occlusion ambiante*. Ce sont les mêmes canaux — les noms longs sont ceux du
+> métier, les courts tiennent sous une vignette.
+
 Chaque canal a une **origine** :
 
 | Origine | Ce que ça veut dire |
