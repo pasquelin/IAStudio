@@ -3,11 +3,13 @@ import {
   validateWorkflowFlow,
   type WorkflowEditorEdge,
   type WorkflowEditorFlowItem,
+  type WorkflowEditorModel,
   type WorkflowEditorNode,
 } from '@scenario-labs/sdk'
 import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import { outputNodesOf, type GraphCompileResult } from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
+import type { ScenarioInput } from './schema'
 
 /**
  * The studio's node as the converter's own union — a `switch` rather than an assertion.
@@ -86,9 +88,64 @@ const asEditorEdge = (edge: GraphEdge): WorkflowEditorEdge => ({
   ...(edge.targetHandle === undefined ? {} : { targetHandle: edge.targetHandle }),
 })
 
+/**
+ * A model as the converter reads one — its inputs, under the API's own type names.
+ *
+ * Only `inputs` is filled. `uiConfig` feeds aspect-ratio presets, which no node can ask for
+ * until the editor can create an `aspectRatio` node, and `tags` only tells the converter whether
+ * a model is `compose`, which needs the nested inputs of an `inputs_array` — a shape
+ * `ScenarioInput` does not carry and no model of the account publishes. Both are written down
+ * here rather than half-filled, so a lot that needs them knows where to start.
+ */
+export const editorModelOf = (
+  modelId: string,
+  inputs: readonly ScenarioInput[],
+): WorkflowEditorModel => ({
+  id: modelId,
+  inputs: inputs.map(input => ({
+    name: input.name,
+    type: input.type,
+    ...(input.min === undefined ? {} : { min: input.min }),
+    ...(input.max === undefined ? {} : { max: input.max }),
+    ...(input.step === undefined ? {} : { step: input.step }),
+    ...(input.allowedValues === undefined
+      ? {}
+      : { allowedValues: input.allowedValues.map(String) }),
+  })),
+})
+
+/**
+ * Every model a graph names, once each — what has to be resolved before the converter runs.
+ *
+ * `llm` carries its model id in the same field as `model`, under the arm that types nothing but
+ * the common data, so both are read the way `parseGraph` leaves them: as data, never as a shape
+ * the compiler was promised.
+ */
+export function modelIdsOf(graph: GraphState): readonly string[] {
+  const ids = new Set<string>()
+
+  for (const node of graph.nodes) {
+    if (node.type !== 'model' && node.type !== 'llm') continue
+
+    const data: Record<string, unknown> = { ...node.data }
+    if (typeof data.modelId === 'string' && data.modelId !== '') ids.add(data.modelId)
+  }
+
+  return [...ids]
+}
+
 export type CompileDeps = {
   /** Where the validator's own sentence goes: a developer's English, never the user's screen. */
   report: (message: string) => void
+  /**
+   * The models of the graph, ALREADY resolved — the converter is synchronous and the registry is
+   * not, so the awaiting happens before the call rather than inside it.
+   *
+   * Without it the converter derives no `modelInputs` and skips every wire it cannot name, which
+   * drops a generator's whole incoming wiring while its form values sail through: a flow that
+   * validates, exports, and generates from nothing.
+   */
+  getModel?: (modelId: string) => WorkflowEditorModel | undefined
 }
 
 /**
@@ -101,18 +158,15 @@ export type CompileDeps = {
  * step 9 export needs this very array, and a verdict reduced to a number is a contract no test can
  * hold to account — four mutations of the adapter survived a suite that could only assert `ok`.
  *
- * ⚠️ **`getModel` is NOT passed, and that is a hole, not a saving.** Read off the converter rather
- * than off its documentation: `workflow_converter.ts` derives `modelInputs` from `getModel` and
- * then skips every wire it cannot name — `if (!modelInput) continue`. So a generator's INCOMING
- * EDGES are dropped from the flow while its form values are kept, and this function answers a
- * flow that would export a workflow whose generators are wired to nothing.
- *
- * Not fixed here because it is a lot of its own: the converter wants the API's own input type,
- * and `ModelRegistry` translates that away into a `FieldKind` before caching. It is written up in
- * `docs/todo.md` § 5.1, and `refuses to carry a wire into a generator` pins the behaviour so the
- * day it is fixed a test says so.
+ * **`getModel` decides whether the wires survive**, which is why the caller resolves the models
+ * first: the converter derives `modelInputs` from it and skips every wire it cannot name
+ * (`if (!modelInput) continue`). Handed nothing, it keeps a generator's form values and drops its
+ * whole incoming wiring — a flow that validates and exports, and generates from nothing.
  */
-export function toEditorFlow(graph: GraphState): readonly WorkflowEditorFlowItem[] {
+export function toEditorFlow(
+  graph: GraphState,
+  getModel?: (modelId: string) => WorkflowEditorModel | undefined,
+): readonly WorkflowEditorFlowItem[] {
   const nodes: WorkflowEditorNode[] = []
   for (const node of graph.nodes) {
     const editor = asEditorNode(node)
@@ -123,16 +177,20 @@ export function toEditorFlow(graph: GraphState): readonly WorkflowEditorFlowItem
     nodes,
     edges: graph.edges.map(asEditorEdge),
     inputKeys: [...graph.inputKeys],
+    ...(getModel ? { getModel } : {}),
   })
 }
 
 /** Whether that flow holds together, and the three refusals the converter answers with silence. */
-export function compileGraph(graph: GraphState, { report }: CompileDeps): GraphCompileResult {
+export function compileGraph(
+  graph: GraphState,
+  { report, getModel }: CompileDeps,
+): GraphCompileResult {
   // Asked before the converter rather than read off its answer: an empty flow has two causes, and
   // "nothing is marked as an output" is the one the user can do something about.
   if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
 
-  const flow = toEditorFlow(graph)
+  const flow = toEditorFlow(graph, getModel)
 
   if (flow.length === 0) return { ok: false, problem: 'empty' }
 

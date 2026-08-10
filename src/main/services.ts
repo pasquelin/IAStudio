@@ -104,6 +104,12 @@ export type Services = {
   settings: SettingsStore
   client: ClientProvider
   models: ModelRegistry
+  /**
+   * Bounded background work the studio asks for on its own — captions, and the model schemas a
+   * graph must resolve before it compiles. Never the JobManager's business: none of it produces
+   * an asset or has a status to poll.
+   */
+  queue: <T>(task: () => Promise<T>) => Promise<T>
   /** Scenario's workflows, and the public ones — the Apps — the studio can run as they are. */
   workflows: WorkflowRegistry
   jobs: JobManager
@@ -756,6 +762,7 @@ export function createServices(settings: SettingsStore): Services {
     styles,
     client,
     models,
+    queue: assistQueue.run,
     workflows,
     jobs,
     prompts,

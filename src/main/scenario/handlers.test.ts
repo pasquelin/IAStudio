@@ -25,6 +25,7 @@ function registry(overrides: Partial<ModelRegistry> = {}): ModelRegistry {
     search: () => Promise.resolve({ items: [], cursor: null }),
     previews: () => Promise.resolve({}),
     describe: () => Promise.reject(new Error('unused')),
+    inputsOf: () => Promise.reject(new Error('unused')),
     ...overrides,
   }
 }
@@ -74,10 +75,35 @@ function workflowRegistry(overrides: Partial<WorkflowRegistry> = {}): WorkflowRe
   }
 }
 
+/**
+ * Two generators on the SAME model, so a compile that asked per node rather than per model would
+ * be caught by the call count. Marked as an output, or the compile stops before the converter.
+ */
+const graphWithTwoGenerators = {
+  nodes: [
+    {
+      id: 'm1',
+      type: 'model',
+      position: { x: 0, y: 0 },
+      data: { modelId: 'model_flux', isOutput: true, form: { prompt: 'a knight' } },
+    },
+    {
+      id: 'm2',
+      type: 'model',
+      position: { x: 400, y: 0 },
+      data: { modelId: 'model_flux', isOutput: true, form: { prompt: 'a castle' } },
+    },
+  ],
+  edges: [],
+  inputKeys: [],
+}
+
 /** Every dependency stubbed, so a case names only the one it is about. */
 function register(overrides: Partial<ScenarioHandlerDeps> = {}): void {
   registerScenarioHandlers({
     models: registry(),
+    // Straight through, so a case measures what the handler asks for and not what a queue does.
+    queue: task => task(),
     workflows: workflowRegistry(),
     jobs,
     prompts,
@@ -405,6 +431,49 @@ describe('scenario handlers', () => {
       await invoke(CHANNELS.workflowsRun, 'workflow_1', {})
 
       expect(submit).toHaveBeenCalledWith({ kind: 'workflow', id: 'workflow_1' }, 'workflow_1', {})
+    })
+
+    /**
+     * The compile resolves the models of the graph BEFORE the converter runs, because the
+     * converter is synchronous and skips every wire whose input it cannot name.
+     */
+    it('asks the registry for the schema of each model the graph names, once', async () => {
+      const inputsOf = vi.fn(() => Promise.resolve([{ name: 'prompt', type: 'string' }]))
+      register({ models: registry({ inputsOf }) })
+
+      await invoke(CHANNELS.workflowsCompile, graphWithTwoGenerators)
+
+      expect(inputsOf).toHaveBeenCalledTimes(1)
+      expect(inputsOf).toHaveBeenCalledWith('model_flux')
+    })
+
+    it('runs those lookups through the bounded queue rather than around it', async () => {
+      // Counted by hand rather than by `vi.fn`, which does not keep the generic the queue is.
+      let queued = 0
+      const queue = <T>(task: () => Promise<T>): Promise<T> => {
+        queued++
+        return task()
+      }
+      register({ models: registry({ inputsOf: () => Promise.resolve([]) }), queue })
+
+      await invoke(CHANNELS.workflowsCompile, graphWithTwoGenerators)
+
+      expect(queued).toBe(1)
+    })
+
+    /**
+     * A model that was deleted, or a key that no longer reaches it: the graph must still say
+     * whether it compiles. What is lost is that node's wiring, exactly as before any of this.
+     */
+    it('still answers when a model cannot be described at all', async () => {
+      register({
+        models: registry({ inputsOf: () => Promise.reject(new Error('gone')) }),
+      })
+
+      await expect(invoke(CHANNELS.workflowsCompile, graphWithTwoGenerators)).resolves.toEqual({
+        ok: true,
+        steps: 2,
+      })
     })
 
     /** One channel prices both, and the target is what says which endpoint answers. */

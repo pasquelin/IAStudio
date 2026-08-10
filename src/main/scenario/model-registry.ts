@@ -82,6 +82,15 @@ export type ModelCatalog = {
 export type ModelRegistry = {
   search: (query: ModelQuery) => Promise<ModelPage>
   describe: (modelId: string) => Promise<ModelDescriptor>
+  /**
+   * A model's inputs as the API spells them, untranslated.
+   *
+   * `describe` answers `FieldDescriptor[]`, whose `kind` is the studio's reading of `type` — all
+   * a form needs, and not enough to compile a workflow: Scenario's converter matches an edge to
+   * an input by the API's OWN type and drops every wire it cannot name. Served from the same
+   * fetch and the same cache entry as the descriptor, so asking for both costs one round trip.
+   */
+  inputsOf: (modelId: string) => Promise<readonly ScenarioInput[]>
   /** Signed picture URL per asset id, absent for the ones the API has nothing for. */
   previews: (assetIds: readonly string[]) => Promise<Record<string, string>>
 }
@@ -247,6 +256,9 @@ function preFilter(query: ModelQuery): string | undefined {
 
 type Cached<T> = { at: number; value: T }
 
+/** One `GET /models/{id}`, read two ways: the form's descriptor and the compiler's raw inputs. */
+type DescribedModel = { descriptor: ModelDescriptor; inputs: readonly ScenarioInput[] }
+
 /**
  * Serves the catalogue one page at a time and caches what it has already walked. Listing the
  * six hundred public models up front cost a freeze on the first paint, and a model's schema
@@ -262,7 +274,8 @@ export function createModelRegistry({
   const pages = new Map<string, Cached<ModelPage>>()
   /** Raw server pages, keyed by the listing they belong to — see `fetchPage`. */
   const fetched = new Map<string, Cached<CatalogPage>>()
-  const descriptors = new Map<string, Cached<ModelDescriptor>>()
+  /** The descriptor a form reads AND the inputs a workflow compiles from — one fetch answers both. */
+  const descriptors = new Map<string, Cached<DescribedModel>>()
   /**
    * `null` records an asset with nothing showable, so it is asked for once and not again.
    * Cached like the rest rather than forever: these URLs are signed and expire, and a stale
@@ -278,6 +291,25 @@ export function createModelRegistry({
 
   const fresh = <T>(entry: Cached<T> | null | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
+
+  /**
+   * The one place a model's schema is fetched, so `describe` and `inputsOf` share both the round
+   * trip and the entry: the two readings of one answer must never come from two fetches, or the
+   * form and the compiler could disagree about the same model.
+   */
+  const described = async (modelId: string): Promise<DescribedModel> => {
+    const cached = fresh(descriptors.get(modelId))
+    if (cached) return cached
+
+    const { model } = await catalog().retrieve(modelId)
+    const value: DescribedModel = {
+      descriptor: { ...summaryOf(model), fields: translateSchema(model.inputs) },
+      inputs: model.inputs ?? [],
+    }
+
+    descriptors.set(modelId, { at: now(), value })
+    return value
+  }
 
   /** Distinguishes "resolved to nothing" from "never asked", which `fresh` both read as null. */
   const held = (assetId: string): boolean => {
@@ -407,19 +439,9 @@ export function createModelRegistry({
       return value
     },
 
-    describe: async modelId => {
-      const cached = fresh(descriptors.get(modelId))
-      if (cached) return cached
+    describe: async modelId => (await described(modelId)).descriptor,
 
-      const { model } = await catalog().retrieve(modelId)
-      const descriptor: ModelDescriptor = {
-        ...summaryOf(model),
-        fields: translateSchema(model.inputs),
-      }
-
-      descriptors.set(modelId, { at: now(), value: descriptor })
-      return descriptor
-    },
+    inputsOf: async modelId => (await described(modelId)).inputs,
 
     previews: async assetIds => {
       const wanted = [...new Set(assetIds)]
