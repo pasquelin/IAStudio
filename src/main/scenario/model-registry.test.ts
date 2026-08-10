@@ -181,6 +181,25 @@ describe('model registry', () => {
     ])
   })
 
+  /**
+   * The grade decides whether the picker offers the model at all, so it has to survive both
+   * projections. Grade 0 is the trap: it is the free tier, and a truthiness test drops it to
+   * "ungraded" — which reads as allowed, silently, for every model the free plan does cover.
+   */
+  it('carries the plan grade through, zero included', async () => {
+    const registry = registryOf({
+      catalog: publicCatalog([
+        { id: 'model_pro', accessRestrictions: 50 },
+        { id: 'model_free', accessRestrictions: 0 },
+        { id: 'model_ungraded' },
+      ]),
+    })
+
+    const { items } = await registry.search({})
+
+    expect(items.map(item => item.requiredPlanLevel)).toEqual([50, 0, undefined])
+  })
+
   it('reads authorship from the official tag, the only signal the API carries', async () => {
     const registry = registryOf({ catalog: publicCatalog([FLUX, VEO]) })
 

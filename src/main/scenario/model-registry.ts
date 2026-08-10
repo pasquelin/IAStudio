@@ -29,6 +29,9 @@ export type RemoteModel = {
   thumbnail?: { url?: string }
   /** Pictures the model's owner published. Measured: 629 of the 642 public models have some. */
   exampleAssetIds?: readonly string[]
+  /** The plan grade below which the API refuses this model. Widened from the SDK's union on
+   * purpose — see `ModelSummary.requiredPlanLevel`, which two models already contradict. */
+  accessRestrictions?: number
   inputs?: readonly ScenarioInput[]
 }
 
@@ -139,6 +142,8 @@ function summaryOf(model: RemoteModel): ModelSummary {
   if (model.shortDescription) summary.description = model.shortDescription
   if (model.thumbnail?.url) summary.thumbnail = model.thumbnail.url
   if (model.createdAt) summary.createdAt = model.createdAt
+  // Not `if (…)`: grade 0 is the free tier, and truthiness would drop it to "ungraded".
+  if (model.accessRestrictions !== undefined) summary.requiredPlanLevel = model.accessRestrictions
 
   return summary
 }

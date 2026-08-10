@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
+import { isBeyondPlan } from '@shared/domain/plan'
 import { getBridge } from '@/services/bridge'
+import { usePlanAccess } from '@/helpers/plan-access'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 
@@ -46,6 +48,7 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
 export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const { t } = useTranslation()
   const models = useFamilyModels(family)
+  const plan = usePlanAccess()
   const stored = useSettings(state => state.settings.generation.defaultModels)
   const stageBranch = useSettingsDraft(state => state.stageBranch)
   // Staged like every other setting: this screen writes a branch no path can name, which is
@@ -72,11 +75,17 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
           }}
         >
           <option value="">{t('settings.noDefaultModel')}</option>
-          {models.map(model => (
-            <option key={model.id} value={model.id}>
-              {model.name}
-            </option>
-          ))}
+          {models.map(model => {
+            const refused = isBeyondPlan(model.requiredPlanLevel, plan)
+            return (
+              // A native `<option>` carries no tooltip — react-tooltip needs pointer events a
+              // disabled option never emits — so the reason is suffixed onto the label. Saying
+              // it is the point: a picker that greys a name out without a word is a dead end.
+              <option key={model.id} value={model.id} disabled={refused}>
+                {refused ? `${model.name} — ${t('models.planLocked')}` : model.name}
+              </option>
+            )
+          })}
         </select>
       </label>
     </div>

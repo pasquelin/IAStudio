@@ -9,6 +9,12 @@ export type ApiFailure =
   | 'missing'
   | 'invalid-credentials'
   | 'forbidden'
+  /**
+   * A 403 the plan caused, not the key — the API names it `ModelAccessRestrictedError`. Split
+   * from `forbidden` because the two need opposite answers: one is a key to fix, the other a
+   * subscription, and telling a paying user their key lacks permissions sends them nowhere.
+   */
+  | 'plan-restricted'
   | 'not-found'
   | 'rate-limited'
   | 'server'

@@ -4,7 +4,10 @@ import type { TFunction } from 'i18next'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MODEL_IDS_BATCH_LIMIT, type ModelPage, type ModelSummary } from '@shared/domain/model'
+import { isBeyondPlan } from '@shared/domain/plan'
 import { failureKeyOf } from '@/services/failure-message'
+import { usePlanAccess } from '@/helpers/plan-access'
+import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
@@ -106,6 +109,19 @@ export function Models() {
   const selectedId = useModelForScope(scope)
   const select = useModels(state => state.select)
   const authenticated = useSettings(state => state.auth.authenticated)
+  const plan = usePlanAccess(authenticated)
+
+  /**
+   * Why a model is refused, or `undefined` when it is not. One function answers both questions,
+   * so the row that is greyed out and the sentence explaining it can never disagree.
+   */
+  const refusalOf = useCallback(
+    (model: ModelSummary): string | undefined =>
+      isBeyondPlan(model.requiredPlanLevel, plan) && plan
+        ? t('models.planLockedHint', { plan: plan.name })
+        : undefined,
+    [plan, t],
+  )
 
   const search = useDebounced(collection.search, SEARCH_DELAY_MS)
   // No memo, and only for this one: react-query hashes the key structurally, so a fresh object
@@ -222,9 +238,14 @@ export function Models() {
           onSelect={model => select(scope, model.id, model.family)}
           onReachEnd={loadMore}
           onVisible={onVisible}
+          isDisabled={model => refusalOf(model) !== undefined}
           rowHeight={ROW_HEIGHT}
-          renderCard={model => <ModelCard model={model} picture={pictureOf(model)} />}
-          renderRow={model => <ModelRow model={model} picture={pictureOf(model)} />}
+          renderCard={model => (
+            <ModelCard model={model} picture={pictureOf(model)} refusal={refusalOf(model)} />
+          )}
+          renderRow={model => (
+            <ModelRow model={model} picture={pictureOf(model)} refusal={refusalOf(model)} />
+          )}
           empty={
             <EmptyState
               icon={mdiCubeScan}
@@ -289,12 +310,20 @@ function SelectedModel({ model, picture }: { model: ModelSummary | null; picture
   )
 }
 
+/** The tile's corner label: a standing, or the reason the model cannot be picked. */
+const BADGE = cn(
+  'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
+  'truncate rounded-(--radius-sc-sm) px-1 py-px text-[9px] leading-tight',
+)
+
 const ModelCard = memo(function ModelCard({
   model,
   picture,
+  refusal,
 }: {
   model: ModelSummary
   picture?: string
+  refusal?: string
 }) {
   const { t } = useTranslation()
 
@@ -303,16 +332,21 @@ const ModelCard = memo(function ModelCard({
       url={picture}
       caption={model.name}
       badge={
-        model.featured && (
-          <span
-            title={t('models.featured')}
-            className={cn(
-              'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
-              'truncate rounded-(--radius-sc-sm) px-1 py-px text-[9px] leading-tight',
-            )}
-          >
-            {t('models.featured')}
+        // The refusal outranks "featured": a highlighted model the plan will not run is first
+        // of all one that cannot be picked, and the tile has room for one label.
+        refusal ? (
+          // Left, not right: the badge already sits against the tile's right edge, and this
+          // panel is docked to a side — a tooltip opening outward would leave the window.
+          // HINT and not TIP: the badge's own words are on screen, so this explains them.
+          <span {...HINT_LEFT(refusal)} className={BADGE}>
+            {t('models.planLocked')}
           </span>
+        ) : (
+          model.featured && (
+            <span title={t('models.featured')} className={BADGE}>
+              {t('models.featured')}
+            </span>
+          )
         )
       }
     />
@@ -323,9 +357,11 @@ const ModelCard = memo(function ModelCard({
 const ModelRow = memo(function ModelRow({
   model,
   picture,
+  refusal,
 }: {
   model: ModelSummary
   picture?: string
+  refusal?: string
 }) {
   const { t } = useTranslation()
 
@@ -333,7 +369,10 @@ const ModelRow = memo(function ModelRow({
     <Row
       media={<Thumbnail url={picture} className="size-8" />}
       title={model.name}
-      subtitle={subtitleOf(model, t)}
+      // The subtitle says what the model IS; the refusal says why it is out of reach, and it
+      // replaces the standing rather than crowding a 10px line with both.
+      subtitle={refusal ? t('models.planLocked') : subtitleOf(model, t)}
+      hint={refusal}
     />
   )
 })

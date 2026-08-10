@@ -9,6 +9,7 @@ import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
+import type { PlanReader } from './plan'
 import type { PromptAssist } from './prompt-assist'
 import type { AssetUploader } from './uploader'
 import type { CostEstimator } from './cost'
@@ -42,6 +43,8 @@ export type ScenarioHandlerDeps = {
   prompts: PromptAssist
   uploads: AssetUploader
   usage: UsageReader
+  /** The account's plan, so the picker can refuse a model before the API does. */
+  plan: PlanReader
   /** What a run would cost, asked before it is run — of a model or of a workflow. */
   estimateCost: CostEstimator
 }
@@ -89,6 +92,7 @@ export function registerScenarioHandlers({
   prompts,
   uploads,
   usage,
+  plan,
   estimateCost,
 }: ScenarioHandlerDeps): void {
   handle(CHANNELS.scenarioUsageReport, (_event, period) =>
@@ -110,6 +114,8 @@ export function registerScenarioHandlers({
   handle(CHANNELS.scenarioDescribeModel, (_event, modelId) =>
     reduced(() => models.describe(parseModelId(modelId))),
   )
+
+  handle(CHANNELS.scenarioPlan, () => reduced(() => plan.access()))
 
   handle(CHANNELS.scenarioSuggestPrompts, (_event, request) =>
     reduced(() => prompts.suggest(parseSuggestPrompts(request))),
