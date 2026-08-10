@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SettingPath, SettingValue } from '@shared/domain/settings-path'
 import { descriptorAt } from '@shared/domain/settings-registry'
+import { TOOLTIP_ID } from '@/helpers/tooltip'
 import { useSettings } from '@/stores/settings'
 import { useSettingsDraft } from '@/stores/settings-draft'
 import { SettingRow } from './SettingRow'
@@ -148,6 +149,23 @@ describe('SettingRow', () => {
     })
 
     expect(field).toHaveValue('')
+  })
+
+  /**
+   * `title` was the native tooltip: the OS delay, none of the theme, and nothing beyond the
+   * button's own name. Read the content rather than the name — the name did not change.
+   */
+  it('explains what going back does, through the studio tooltip', () => {
+    render(rowFor('appearance.theme'))
+
+    const restore = screen.getByRole('button', { name: /Restaurer/ })
+    expect(restore).toHaveAttribute('data-tooltip-id', TOOLTIP_ID)
+    expect(restore).toHaveAttribute('data-tooltip-place', 'left')
+    expect(restore).toHaveAttribute(
+      'data-tooltip-content',
+      'Remet la valeur d’origine, celle d’avant toute modification',
+    )
+    expect(restore).not.toHaveAttribute('title')
   })
 
   it('offers no way back while the setting is still at its default', () => {

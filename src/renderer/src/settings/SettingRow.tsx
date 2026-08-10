@@ -10,6 +10,7 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { useToken } from '@/hooks/useToken'
 import { SettingLine } from './SettingLine'
 import { getBridge } from '@/services/bridge'
@@ -348,8 +349,9 @@ export function SettingRow({ descriptor }: { descriptor: SettingDescriptor }) {
 
       <button
         type="button"
-        title={t('settings.restoreDefault')}
-        aria-label={t('settings.restoreDefault')}
+        // The studio's tooltip rather than `title`: the native one comes with the OS delay and
+        // none of the theme, and this window now mounts the shared host like every other.
+        {...TIP_LEFT(t('settings.restoreDefault'), false, t('settings.restoreDefaultHint'))}
         // Kept in place rather than unmounted: a button appearing between the control and the
         // edge would shift the whole row the moment a value is touched.
         className="btn btn-ghost btn-xs btn-square"

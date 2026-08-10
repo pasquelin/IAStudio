@@ -8,6 +8,7 @@ import { bindingOf } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
+import { TooltipHost } from '@/design/TooltipHost'
 import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
@@ -289,6 +290,7 @@ export function SettingsWindow() {
       </div>
 
       <DraftBar />
+      <TooltipHost />
     </div>
   )
 }

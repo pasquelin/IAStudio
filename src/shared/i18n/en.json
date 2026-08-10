@@ -861,6 +861,7 @@
     "results": "Results",
     "noResult": "No setting matches this search.",
     "restoreDefault": "Restore the default value",
+    "restoreDefaultHint": "Puts back the original value, the one from before any change",
     "account": "Account",
     "appearance": "Appearance",
     "generation": "Generation",

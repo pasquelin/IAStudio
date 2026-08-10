@@ -48,6 +48,21 @@ describe('SettingsWindow', () => {
     await waitFor(() => expect(document.documentElement.dataset['density']).toBeDefined())
   })
 
+  /**
+   * The window renders its own React tree: `TooltipHost` living in the shell reached none of
+   * it, so every tooltip attribute written here pointed at an id nothing answered. Hovering is
+   * the only assertion that says the host is mounted — a closed `<Tooltip>` renders nothing.
+   */
+  it('mounts the shared tooltip, which its own tree would otherwise lack', async () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    const restore = screen.getAllByRole('button', { name: /Restaurer/ })[0]
+    await userEvent.hover(restore!)
+
+    await waitFor(() => expect(restore).toHaveAttribute('aria-describedby'))
+  })
+
   it('opens on the first section and shows it', () => {
     installFakeBridge()
     render(<SettingsWindow />)
