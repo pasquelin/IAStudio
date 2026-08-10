@@ -848,43 +848,17 @@ logique, les boucles, les transforms, l'approbation, puis l'import/export et la 
 > était **vide**. La case n'est offerte que sur les trois types où le convertisseur lit le champ
 > (`OUTPUT_NODE_TYPES`) : ailleurs il est ignoré en silence.
 
-### 🔴 `typesConnect` refuse le fil pour lequel l'espace Graphe existe — TRANCHÉ PAR UN APPEL
-
-**Le geste attendu** : poser un nœud Texte, poser un générateur d'image, tirer un fil de la sortie
-du texte vers l'entrée « prompt » du générateur.
-
-**Ce qui se passe** : le fil est refusé. `refuseConnection` rend `'type-mismatch'` — mesuré sur les
-nœuds que `createNode` et `createModelNode` fabriquent réellement, pas sur des fixtures :
-
-```
-textOutput  { id: 'text1-target-prompt',          name: 'output', type: 'text'   }
-modelPrompt { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' }
-refusal     'type-mismatch'
-```
-
-**Qui a tort — réglé par un appel, pas par un raisonnement.** `workflow_get` sur l'App publique
-`wflow_H1bKz78jgpinWPKJfVCM5uAp` (62 nœuds, 94 fils) : la webapp écrit **exactement les mêmes deux
-types que nous** — `type: "text"` sur la sortie d'un nœud texte, `type: "prompt"` sur le port
-prompt d'un générateur — **et elle les relie**. Toutes les paires réellement câblées de cette App,
-sans exception :
-
-| Sortie → entrée | Occurrences |
-|---|---|
-| `image` → `image` | 69 |
-| `text` → `prompt` | 25 |
-
-Donc `factory.ts` est juste des deux côtés, et **c'est `typesConnect` qui est faux** : il refuse ce
-que la webapp fait. Sa propre JSDoc énonce pourtant la règle qu'il enfreint — « the studio must not
-refuse a connection the webapp would allow ».
-
-**Le correctif** : un port d'entrée `prompt` doit accepter `text` en plus de `prompt`. À écrire
-comme une table de compatibilité dans `handles.ts`, pas comme un cas particulier — et verrouillée
-par un test qui rejoue les deux paires ci-dessus.
-
-**Et d'abord la fixture** : `engines/graph/graph-fixtures.ts` écrit `type: 'prompt'` sur la sortie
-d'un nœud texte, là où `createNode` écrit `'text'`. **Les fixtures ne reproduisent pas ce que le
-studio fabrique**, et les lots C1 et C2 s'appuient dessus — c'est ce qui a permis à trois lots de
-passer au-dessus du défaut. La corriger d'abord, pour que ce qui doit rougir rougisse.
+> ### Le fil texte → prompt passe — livré, et ce qu'il laisse comme leçon
+>
+> Le geste marche : `ALSO_ACCEPTED` dans `handles.ts` porte les **deux seules paires qu'une App
+> publique câble** (`image` → `image` 69 fois, `text` → `prompt` 25 fois, sur
+> `wflow_H1bKz78jgpinWPKJfVCM5uAp`). Une paire de plus sera une ligne là et une ligne dans le test.
+>
+> **La leçon coûte plus cher que le correctif** : le défaut a survécu à trois lots parce que
+> `graph-fixtures.ts` fabriquait un nœud texte que `createNode` ne fabrique pas — champ `output` au
+> lieu de `prompt`, type `prompt` au lieu de `text`. **Une fixture qui diverge de la fabrique rend
+> une suite entière aveugle**, et rien n'empêche encore la prochaine de diverger. Le test qui
+> manque : celui qui exigerait qu'une fixture de nœud soit ce que la fabrique construit.
 
 ### 🔴 Un fil tiré vers un générateur n'arrive pas dans le flow compilé — MESURÉ dans le SDK
 
