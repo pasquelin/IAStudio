@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -20,6 +20,30 @@ describe('LicencesWindow', () => {
 
     expect(screen.getByRole('button', { name: /FFmpeg/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^three\b/ })).toBeInTheDocument()
+  })
+
+  /**
+   * The window renders its own React tree, so the shell's `TooltipHost` never reached it. A
+   * closed `<Tooltip>` renders nothing at all, so hovering is the only assertion that says the
+   * host is mounted — and the sentence follows the state, since one row does both gestures.
+   */
+  it('mounts the shared tooltip, and says which of the two gestures the row offers', async () => {
+    render(<LicencesWindow />)
+    const entry = screen.getByRole('button', { name: /^three\b/ })
+
+    expect(entry).toHaveAttribute(
+      'data-tooltip-content',
+      'Déplie le texte complet de cette licence, ici même',
+    )
+    await userEvent.hover(entry)
+    await waitFor(() => expect(entry).toHaveAttribute('aria-describedby'))
+
+    await userEvent.click(entry)
+
+    expect(entry).toHaveAttribute(
+      'data-tooltip-content',
+      'Replie ce texte — une seule licence reste ouverte à la fois',
+    )
   })
 
   // A notice that needs a working network to be read is not a notice: the whole text is here.

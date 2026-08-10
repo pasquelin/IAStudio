@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { TooltipHost } from '@/design/TooltipHost'
+import { HINT_BOTTOM } from '@/helpers/tooltip'
 import type { Licence } from '@shared/domain/licence'
 import licences from '@shared/licences.json'
 import { DRAGGABLE } from '@/helpers/app-region'
@@ -33,6 +35,7 @@ export function LicencesWindow() {
             <button
               type="button"
               aria-expanded={openName === entry.name}
+              {...HINT_BOTTOM(openName === entry.name ? t('licences.fold') : t('licences.unfold'))}
               onClick={() => setOpenName(current => (current === entry.name ? null : entry.name))}
               className="hover:bg-surface flex w-full cursor-pointer items-baseline gap-2 py-2 text-left"
             >
@@ -56,6 +59,8 @@ export function LicencesWindow() {
           </li>
         ))}
       </ul>
+
+      <TooltipHost />
     </div>
   )
 }
