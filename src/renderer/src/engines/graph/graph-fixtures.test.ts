@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EMPTY_GRAPH, type GraphHandleInput, type GraphHandleOutput } from '@shared/domain/graph'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { createModelNode, createNode } from './factory'
-import { approvalNode, modelNode, textNode, transformNode } from './graph-fixtures'
+import { approvalNode, branchNode, modelNode, textNode, transformNode } from './graph-fixtures'
 import { inputHandlesOf, outputHandlesOf } from './handles'
 
 /**
@@ -43,6 +43,24 @@ describe('the fixtures say what the factory builds', () => {
 
     expect(portsOf('text1', outputHandlesOf(textNode('text1')))).toEqual(
       portsOf(built.id, outputHandlesOf(built)),
+    )
+  })
+
+  /**
+   * The one this suite was missing, and the executor's whole branch suite hangs off it.
+   *
+   * Compared against a `transformText`, not an `ifElse`: the factory REFUSES to build the latter
+   * — deliberately, it has no palette entry — but both carry the same `conditionalInput`, so the
+   * spelling is comparable all the same. A branch fixture typed anything else would run a graph
+   * whose port is not the one the studio writes.
+   */
+  it('gives a branch the conditional port the factory writes, type included', () => {
+    const built = createNode(EMPTY_GRAPH, 'transformText', { x: 0, y: 0 })
+    const conditionalOf = (nodeId: string, ports: readonly GraphHandleInput[]): Port[] =>
+      portsOf(nodeId, ports).filter(port => port.name === 'conditional')
+
+    expect(conditionalOf('if1', inputHandlesOf(branchNode('if1', [])))).toEqual(
+      conditionalOf(built.id, inputHandlesOf(built)),
     )
   })
 

@@ -414,7 +414,15 @@ export type GraphTransformVariables = Readonly<Record<string, string | readonly 
  * without its line in the bundles shows the user the key itself and no typecheck sees it. The
  * guard that catches that (`i18n/bundles.test.ts`) is in `shared/` and cannot reach the renderer.
  */
-export type GraphRunStatus = 'idle' | 'running' | 'awaiting' | 'cached' | 'done' | 'failed'
+export type GraphRunStatus =
+  | 'idle'
+  | 'running'
+  | 'awaiting'
+  | 'cached'
+  | 'done'
+  /** No branch reached it. Not a failure: nothing went wrong, a condition simply chose elsewhere. */
+  | 'skipped'
+  | 'failed'
 
 export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
   'idle',
@@ -422,6 +430,7 @@ export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
   'awaiting',
   'cached',
   'done',
+  'skipped',
   'failed',
 ]
 
@@ -432,7 +441,10 @@ export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
 export type GraphRunFailure =
   /** Caught in a loop: the plan refused before anything ran. */
   | 'cycle'
-  /** A type this milestone has no execution for — the logic and the loops arrive with step 8. */
+  /**
+   * A type the studio has no execution for. The branch now runs; the loops do not, and neither
+   * do the eight types that arrive with the rest of step 8.
+   */
   | 'unsupported'
   /** A generator with no model chosen. */
   | 'no-model'

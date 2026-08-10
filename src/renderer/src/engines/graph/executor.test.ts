@@ -1,16 +1,23 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { GraphNode, GraphNodeRun, GraphState } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphNode,
+  type GraphNodeRun,
+  type GraphState,
+} from '@shared/domain/graph'
 import { runGraph, type GraphRunPorts, type GraphRunResult } from './executor'
 import {
   approvalNode,
+  branchNode,
   graphOf,
   guards,
   modelNode,
+  noteNode,
   textNode,
   transformNode,
   wire,
 } from './graph-fixtures'
-import { handleId } from './handles'
+import { handleId, outputHandlesOf } from './handles'
 import { updateNodeData } from './mutations'
 import { planGraph, type GraphCache } from './plan'
 
@@ -1040,5 +1047,391 @@ describe('a transform node', () => {
 
     expect(statusesOf(watched, 'transformText1')).toEqual(['running', 'idle'])
     expect(cacheOf(watched.result).size).toBe(1)
+  })
+})
+
+describe('a branch, run locally', () => {
+  /** Two branches and the else, fed by one text node the conditions test. */
+  const graph = (value: string): GraphState =>
+    graphOf(
+      [
+        textNode('text1', value),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }] },
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+        modelNode('m2', {}, 'model_else'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+        wire('m2', 'prompt', 'if1', 'else'),
+      ],
+    )
+
+  /** The evaluator, standing in for the thread: it answers what CEL would, not what a test wants. */
+  const decides =
+    (answers: Readonly<Record<string, boolean>>): GraphRunPorts['transform'] =>
+    async expression => [String(answers[expression] ?? false)]
+
+  it('sends what it received down the branch whose condition holds', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({ "trim(text1_output) == 'a knight'": true }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
+    expect(watched.submitted[0]?.body).toEqual({ prompt: 'a knight' })
+    expect(statusesOf(watched, 'if1')).toContain('done')
+  })
+
+  /**
+   * The reader of a branch that was not taken must see NOTHING — not what the branch that was
+   * taken produced. That is the whole reason an outcome is by port rather than a flat list.
+   *
+   * And it must not be painted as a FAILURE either: `blocked` says something it reads went wrong,
+   * in the red that goes with it. Nothing went wrong here — a condition chose elsewhere, which is
+   * a branch doing its job.
+   */
+  it('leaves the readers of every other branch skipped, never failed', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({ "trim(text1_output) == 'a knight'": true }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).not.toContain('model_else')
+    expect(statusesOf(watched, 'm2')).toEqual(['skipped'])
+    expect(failureOf(watched, 'm2')).toBeUndefined()
+  })
+
+  /** The skip travels: a node reading a skipped one was not reached either, and says so. */
+  it('carries the skip on to whatever reads the branch that was not taken', async () => {
+    const chained = graph('a knight')
+    const watched = await watch(
+      {
+        ...chained,
+        nodes: [...chained.nodes, modelNode('m3', {}, 'model_after')],
+        edges: [...chained.edges, wire('m3', 'prompt', 'm2', 'image')],
+      },
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({ "trim(text1_output) == 'a knight'": true }),
+      },
+    )
+
+    expect(statusesOf(watched, 'm3')).toEqual(['skipped'])
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
+  })
+
+  it('takes the else when no condition holds', async () => {
+    const watched = await watch(
+      graph('a dragon'),
+      { model_else: ['asset_2'] },
+      {
+        transform: decides({}),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_else'])
+  })
+
+  it('takes the first branch that holds, never a later one', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      { model_case1: ['asset_1'] },
+      {
+        transform: decides({
+          "trim(text1_output) == 'a knight'": true,
+          'text1_output != null && size(text1_output) > 0 && (type(text1_output) == list || trim(text1_output) != "")': true,
+        }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
+  })
+
+  /**
+   * A branch left empty in the inspector compiles to no case at all — Scenario's converter drops
+   * it. It must therefore be UNTAKEABLE, not always true: a new branch, added and not yet filled
+   * in, would otherwise swallow everything the branches under it were meant to catch.
+   */
+  it('walks past a branch with nothing readable to test', async () => {
+    const empty = graphOf(
+      [
+        textNode('text1', 'a knight'),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ operator: 'equals', value: 'a knight' }] },
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+        modelNode('m2', {}, 'model_case2'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+        wire('m2', 'prompt', 'if1', 'case2'),
+      ],
+    )
+
+    const watched = await watch(
+      empty,
+      { model_case2: ['asset_2'] },
+      {
+        transform: decides({
+          'text1_output != null && size(text1_output) > 0 && (type(text1_output) == list || trim(text1_output) != "")': true,
+        }),
+      },
+    )
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case2'])
+  })
+
+  /**
+   * An approval standing on a branch nobody took was never PUT to anyone, so what it guards was
+   * not refused — it was not reached. Reporting `blocked` there would paint red a node whose
+   * question was never asked.
+   */
+  it('does not read an approval on a branch nobody took as a refusal', async () => {
+    const gated = graphOf(
+      [
+        textNode('text1', 'a dragon'),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'equals', value: 'a knight' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+        approvalNode('a1'),
+        modelNode('m2', {}, 'model_after'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+        guards('a1', 'm1'),
+        wire('m2', 'prompt', 'm1', 'image'),
+      ],
+    )
+
+    const watched = await watch(gated, {}, { transform: decides({}) })
+
+    expect(statusesOf(watched, 'a1')).toEqual(['skipped'])
+    expect(statusesOf(watched, 'm2')).toEqual(['skipped'])
+    expect(failureOf(watched, 'm2')).toBeUndefined()
+  })
+
+  /**
+   * Two providers in one condition, and each has to read as ITSELF.
+   *
+   * The port carries the two lists concatenated — that is what fills a body. The CEL variables do
+   * not: the converter writes one reference per edge, to that edge's own provider. Handing both
+   * names the concatenation would decide a two-field condition differently from the published
+   * workflow, which is the one thing a local run must never do.
+   */
+  it('gives each provider of a condition its own value, never the port total', async () => {
+    const two = graphOf(
+      [
+        textNode('text1', 'a knight'),
+        textNode('text2', 'a dragon'),
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+        ]),
+        modelNode('m1', {}, 'model_case1'),
+      ],
+      [
+        wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+        wire('if1', CONDITIONAL_PORT, 'text2', 'prompt'),
+        wire('m1', 'prompt', 'if1', 'case1'),
+      ],
+    )
+
+    const seen: Record<string, string | readonly string[]>[] = []
+    await watch(
+      two,
+      { model_case1: ['asset_1'] },
+      {
+        transform: async (_expression, variables) => {
+          seen.push({ ...variables })
+          return ['true']
+        },
+      },
+    )
+
+    expect(seen[0]?.text1_output).toBe('a knight')
+    expect(seen[0]?.text2_output).toBe('a dragon')
+  })
+
+  /**
+   * A file may carry more ports than blocks, and `grownTo` says in as many words that trimming
+   * them would be this editor deciding what a document it did not write meant. The converter
+   * reads EVERY port past the last block as the default; so must the studio.
+   */
+  it('serves every else port a file carries, not only the first', async () => {
+    const branch = branchNode('if1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isEmpty' }] },
+    ])
+    const many = updateNodeData(
+      graphOf(
+        [
+          textNode('text1', 'a knight'),
+          branch,
+          modelNode('m1', {}, 'model_else'),
+          modelNode('m2', {}, 'model_else2'),
+        ],
+        [
+          wire('if1', CONDITIONAL_PORT, 'text1', 'prompt'),
+          wire('m1', 'prompt', 'if1', 'else'),
+          wire('m2', 'prompt', 'if1', 'else2'),
+        ],
+      ),
+      'if1',
+      {
+        outputHandles: [
+          ...outputHandlesOf(branch),
+          { id: 'if1-target-else2', name: 'else2', type: 'text' },
+        ],
+      },
+    )
+
+    const watched = await watch(
+      many,
+      { model_else: ['a'], model_else2: ['b'] },
+      { transform: decides({}) },
+    )
+
+    expect(watched.submitted.map(one => one.modelId).sort()).toEqual(['model_else', 'model_else2'])
+  })
+
+  /** A branch with nowhere to send what none of its conditions matched cannot be run. */
+  it('fails a branch that carries no else port at all', async () => {
+    const branch = branchNode('if1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isEmpty' }] },
+    ])
+    const noElse = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), branch],
+        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt')],
+      ),
+      'if1',
+      { outputHandles: [] },
+    )
+
+    expect(failureOf(await watch(noElse, {}, { transform: decides({}) }), 'if1')).toBe(
+      'unsupported',
+    )
+  })
+
+  /**
+   * A provider that publishes on NO port at all — a note, which compiles to nothing — is a
+   * malformed wire, not a branch nobody took: red, not the quiet grey of `skipped`. The
+   * distinction is the whole reason the absent-port answer looks at what the provider did produce.
+   */
+  it('blocks a reader wired to something that publishes on no port at all', async () => {
+    const strayed = graphOf(
+      [noteNode('note1'), modelNode('m1', {}, 'model_a')],
+      [wire('m1', 'prompt', 'note1', 'output')],
+    )
+
+    const watched = await watch(strayed, { model_a: ['asset_1'] })
+
+    expect(failureOf(watched, 'm1')).toBe('blocked')
+    expect(watched.submitted).toEqual([])
+  })
+
+  /** A thread that dies is not the same as an expression that is false, but the node says the same. */
+  it('fails the branch when the evaluator throws rather than answers', async () => {
+    const watched = await watch(
+      graph('a knight'),
+      {},
+      { transform: () => Promise.reject(new Error('the thread is gone')) },
+    )
+
+    expect(failureOf(watched, 'if1')).toBe('invalid-expression')
+  })
+
+  /** A port with no name is a port nothing can be wired to: it is not an else the branch can use. */
+  it('does not count a nameless port as somewhere to send the else', async () => {
+    const branch = branchNode('if1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+    ])
+    const nameless = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), branch],
+        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt')],
+      ),
+      'if1',
+      { outputHandles: [...outputHandlesOf(branch).slice(0, 1), { id: 'if1-target-else' }] },
+    )
+
+    expect(failureOf(await watch(nameless, {}, { transform: decides({}) }), 'if1')).toBe(
+      'unsupported',
+    )
+  })
+
+  /** Nothing wired into the condition: there is nothing to test and nothing to hand on either. */
+  it('takes the else when no wire feeds the condition at all', async () => {
+    const lone = graphOf(
+      [
+        branchNode('if1', [
+          { logic: 'and', conditions: [{ field: 'text1', operator: 'isEmpty' }] },
+        ]),
+        modelNode('m1', {}, 'model_else'),
+      ],
+      [wire('m1', 'prompt', 'if1', 'else')],
+    )
+
+    const watched = await watch(lone, { model_else: ['a'] }, { transform: decides({}) })
+
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_else'])
+  })
+
+  /** A file may carry FEWER ports than blocks: a condition that held with nowhere to send it. */
+  it('fails a branch whose matching condition has no port to send to', async () => {
+    const branch = branchNode('if1', [
+      { logic: 'and', conditions: [{ field: 'text1', operator: 'isNotEmpty' }] },
+    ])
+    const short = updateNodeData(
+      graphOf(
+        [textNode('text1', 'a knight'), branch],
+        [wire('if1', CONDITIONAL_PORT, 'text1', 'prompt')],
+      ),
+      'if1',
+      { outputHandles: [] },
+    )
+
+    const watched = await watch(short, {}, { transform: async () => ['true'] })
+
+    expect(failureOf(watched, 'if1')).toBe('unsupported')
+  })
+
+  /** A stop pressed while a condition was crossing to the thread leaves the branch idle. */
+  it('goes idle when the run is stopped while its condition is being evaluated', async () => {
+    const controller = new AbortController()
+    const watched = await watch(
+      graph('a knight'),
+      {},
+      {
+        signal: controller.signal,
+        transform: async () => {
+          controller.abort()
+          return ['true']
+        },
+      },
+    )
+
+    expect(statusesOf(watched, 'if1')).toContain('idle')
+    expect(watched.submitted).toEqual([])
+  })
+
+  /** An expression the evaluator refuses is the node's failure, not a silent fall to the else. */
+  it('fails the branch when its condition cannot be evaluated at all', async () => {
+    const watched = await watch(graph('a knight'), {}, { transform: async () => null })
+
+    expect(failureOf(watched, 'if1')).toBe('invalid-expression')
+    expect(watched.submitted).toEqual([])
   })
 })

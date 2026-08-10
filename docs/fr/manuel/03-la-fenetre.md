@@ -230,6 +230,12 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > pas » : ce dont il dépend a échoué, donc il ne partira jamais de cette exécution. Relancer après
 > avoir changé le prompt du dernier nœud ne relance **que** lui.
 >
+> **Un nœud *Si / Sinon* choisit une branche, et une seule.** Sa condition est évaluée sur ce que
+> son fil d’entrée lui apporte, et ce qu’il a reçu part par la branche choisie — les autres ne
+> reçoivent rien. Les nœuds qui les lisent affichent alors **non prise** : ce n’est pas un échec,
+> c’est le branchement qui a fait son travail, et l’état se propage à tout ce qui suit. Une branche
+> laissée vide dans l’inspecteur ne peut pas être prise ; c’est le **Sinon** qui reçoit.
+>
 > **Un nœud d’approbation arrête l’exécution pour demander votre avis.** On le pose comme les
 > autres, on le relie au nœud dont il doit faire valider le résultat, et l’Inspecteur donne la
 > **question posée** — laissée vide, le nœud demande simplement « Approuver ce résultat ? ».
