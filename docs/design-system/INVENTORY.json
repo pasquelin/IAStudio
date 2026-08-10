@@ -16,7 +16,7 @@
     },
     {
       "path": "src/renderer/src/app/AccountSelect.tsx",
-      "lines": 98,
+      "lines": 100,
       "components": [
         {
           "name": "AccountSelect",
@@ -33,11 +33,11 @@
     },
     {
       "path": "src/renderer/src/app/ActivityList.tsx",
-      "lines": 239,
+      "lines": 244,
       "components": [
         {
           "name": "ActivityMessage",
-          "line": 83,
+          "line": 84,
           "exported": false,
           "props": [
             "entry"
@@ -49,7 +49,7 @@
         },
         {
           "name": "ActivityRow",
-          "line": 110,
+          "line": 111,
           "exported": false,
           "props": [
             "entry",
@@ -62,7 +62,7 @@
         },
         {
           "name": "FilterRow",
-          "line": 126,
+          "line": 127,
           "exported": false,
           "props": [
             "active",
@@ -79,7 +79,7 @@
         },
         {
           "name": "ActivityList",
-          "line": 182,
+          "line": 186,
           "exported": false,
           "props": [],
           "signature": {
@@ -196,11 +196,11 @@
     },
     {
       "path": "src/renderer/src/app/DocumentTabMenu.tsx",
-      "lines": 75,
+      "lines": 79,
       "components": [
         {
           "name": "DocumentTabMenu",
-          "line": 23,
+          "line": 24,
           "exported": false,
           "props": [
             "at",
@@ -330,11 +330,11 @@
     },
     {
       "path": "src/renderer/src/app/TitleBar.tsx",
-      "lines": 278,
+      "lines": 283,
       "components": [
         {
           "name": "TitleBar",
-          "line": 46,
+          "line": 47,
           "exported": false,
           "props": [
             "actions",
@@ -350,7 +350,7 @@
         },
         {
           "name": "BarButton",
-          "line": 217,
+          "line": 220,
           "exported": false,
           "props": [
             "current",
@@ -392,11 +392,11 @@
     },
     {
       "path": "src/renderer/src/app/UpdateStatus.tsx",
-      "lines": 37,
+      "lines": 43,
       "components": [
         {
           "name": "UpdateStatus",
-          "line": 8,
+          "line": 9,
           "exported": false,
           "props": [],
           "signature": {
@@ -613,15 +613,16 @@
     },
     {
       "path": "src/renderer/src/design/Collection.tsx",
-      "lines": 395,
+      "lines": 424,
       "components": [
         {
           "name": "Collection",
-          "line": 131,
+          "line": 144,
           "exported": false,
           "props": [
             "empty",
             "footer",
+            "isDisabled",
             "items",
             "label",
             "multiple",
@@ -643,11 +644,12 @@
         },
         {
           "name": "CollectionCell",
-          "line": 332,
+          "line": 356,
           "exported": false,
           "props": [
             "children",
             "className",
+            "disabled",
             "index",
             "onActivate",
             "onArrow",
@@ -667,19 +669,19 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 243,
+          "line": 260,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 255,
+          "line": 272,
           "text": "style={{"
         }
       ]
     },
     {
       "path": "src/renderer/src/design/CollectionBar.tsx",
-      "lines": 269,
+      "lines": 270,
       "components": [
         {
           "name": "Dropdown",
@@ -720,7 +722,7 @@
     },
     {
       "path": "src/renderer/src/design/ColorField.tsx",
-      "lines": 52,
+      "lines": 54,
       "components": [
         {
           "name": "ColorField",
@@ -742,7 +744,7 @@
       "probes": [
         {
           "probe": "hexColour",
-          "line": 26,
+          "line": 28,
           "text": "#ff0000"
         }
       ]
@@ -770,11 +772,11 @@
     },
     {
       "path": "src/renderer/src/design/DynamicForm.tsx",
-      "lines": 266,
+      "lines": 275,
       "components": [
         {
           "name": "Control",
-          "line": 73,
+          "line": 76,
           "exported": false,
           "props": [
             "field",
@@ -789,7 +791,7 @@
         },
         {
           "name": "DynamicForm",
-          "line": 156,
+          "line": 159,
           "exported": false,
           "props": [
             "accessory",
@@ -798,6 +800,7 @@
             "onSubmit",
             "onValuesChange",
             "preset",
+            "submitHint",
             "submitLabel",
             "submitNote"
           ],
@@ -811,11 +814,11 @@
     },
     {
       "path": "src/renderer/src/design/EmptyState.tsx",
-      "lines": 41,
+      "lines": 55,
       "components": [
         {
           "name": "EmptyState",
-          "line": 26,
+          "line": 32,
           "exported": false,
           "props": [
             "action",
@@ -898,11 +901,11 @@
     },
     {
       "path": "src/renderer/src/design/Masonry.tsx",
-      "lines": 204,
+      "lines": 205,
       "components": [
         {
           "name": "Masonry",
-          "line": 52,
+          "line": 53,
           "exported": false,
           "props": [
             "columnWidth",
@@ -922,22 +925,22 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 161,
+          "line": 162,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 164,
+          "line": 165,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 177,
+          "line": 178,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 185,
+          "line": 186,
           "text": "style={{"
         }
       ]
@@ -1018,7 +1021,7 @@
     },
     {
       "path": "src/renderer/src/design/NumberField.tsx",
-      "lines": 147,
+      "lines": 148,
       "components": [
         {
           "name": "NumberField",
@@ -1139,7 +1142,7 @@
     },
     {
       "path": "src/renderer/src/design/PromptAssistant.tsx",
-      "lines": 184,
+      "lines": 188,
       "components": [
         {
           "name": "PromptAssistant",
@@ -1220,11 +1223,11 @@
     },
     {
       "path": "src/renderer/src/design/PropertySection.tsx",
-      "lines": 40,
+      "lines": 44,
       "components": [
         {
           "name": "PropertySection",
-          "line": 15,
+          "line": 17,
           "exported": false,
           "props": [
             "children",
@@ -1241,7 +1244,7 @@
     },
     {
       "path": "src/renderer/src/design/RangeField.tsx",
-      "lines": 125,
+      "lines": 127,
       "components": [
         {
           "name": "RangeField",
@@ -1268,7 +1271,7 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 88,
+          "line": 90,
           "text": "style={{"
         }
       ]
@@ -1316,14 +1319,15 @@
     },
     {
       "path": "src/renderer/src/design/Row.tsx",
-      "lines": 60,
+      "lines": 67,
       "components": [
         {
           "name": "Row",
-          "line": 30,
+          "line": 36,
           "exported": false,
           "props": [
             "actions",
+            "hint",
             "icon",
             "leading",
             "media",
@@ -1381,8 +1385,34 @@
       "probes": []
     },
     {
+      "path": "src/renderer/src/design/ShelfTile.tsx",
+      "lines": 73,
+      "components": [
+        {
+          "name": "ShelfTile",
+          "line": 36,
+          "exported": false,
+          "props": [
+            "caption",
+            "corner",
+            "fallbackIcon",
+            "hint",
+            "label",
+            "onClick",
+            "tip",
+            "url"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "MediaTile>div>button"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
       "path": "src/renderer/src/design/SliderField.tsx",
-      "lines": 53,
+      "lines": 55,
       "components": [
         {
           "name": "SliderField",
@@ -1408,7 +1438,7 @@
     },
     {
       "path": "src/renderer/src/design/TextField.tsx",
-      "lines": 37,
+      "lines": 39,
       "components": [
         {
           "name": "TextField",
@@ -1431,7 +1461,7 @@
     },
     {
       "path": "src/renderer/src/design/TextureField.tsx",
-      "lines": 106,
+      "lines": 108,
       "components": [
         {
           "name": "TextureField",
@@ -1633,15 +1663,20 @@
     },
     {
       "path": "src/renderer/src/design/Tree.tsx",
-      "lines": 233,
+      "lines": 302,
       "components": [
         {
           "name": "Tree",
-          "line": 72,
+          "line": 102,
           "exported": false,
           "props": [
+            "draggable",
+            "droppable",
+            "expandable",
             "expandedIds",
             "nodes",
+            "onActivate",
+            "onContextMenu",
             "onDrop",
             "onSelect",
             "onToggle",
@@ -1658,17 +1693,17 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 152,
+          "line": 210,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 161,
+          "line": 219,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 173,
+          "line": 231,
           "text": "style={{"
         }
       ]
@@ -1696,7 +1731,7 @@
     },
     {
       "path": "src/renderer/src/design/VectorField.tsx",
-      "lines": 61,
+      "lines": 63,
       "components": [
         {
           "name": "VectorField",
@@ -1719,7 +1754,7 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 43,
+          "line": 45,
           "text": "style={{"
         }
       ]
@@ -1779,11 +1814,11 @@
     },
     {
       "path": "src/renderer/src/dictation/DictationStatus.tsx",
-      "lines": 101,
+      "lines": 105,
       "components": [
         {
           "name": "DictationStatus",
-          "line": 20,
+          "line": 21,
           "exported": false,
           "props": [],
           "signature": {
@@ -1946,11 +1981,11 @@
     },
     {
       "path": "src/renderer/src/home/HomeView.tsx",
-      "lines": 110,
+      "lines": 117,
       "components": [
         {
           "name": "HomeView",
-          "line": 24,
+          "line": 25,
           "exported": false,
           "props": [],
           "signature": {
@@ -1960,7 +1995,7 @@
         },
         {
           "name": "Closing",
-          "line": 61,
+          "line": 62,
           "exported": false,
           "props": [],
           "signature": {
@@ -1970,7 +2005,7 @@
         },
         {
           "name": "Hidden",
-          "line": 78,
+          "line": 84,
           "exported": false,
           "props": [],
           "signature": {
@@ -1983,11 +2018,11 @@
     },
     {
       "path": "src/renderer/src/home/RefusedSection.tsx",
-      "lines": 38,
+      "lines": 43,
       "components": [
         {
           "name": "RefusedSection",
-          "line": 22,
+          "line": 23,
           "exported": false,
           "props": [
             "id",
@@ -2027,7 +2062,7 @@
     },
     {
       "path": "src/renderer/src/home/SectionMenu.tsx",
-      "lines": 105,
+      "lines": 109,
       "components": [
         {
           "name": "SectionMenu",
@@ -2066,11 +2101,11 @@
     },
     {
       "path": "src/renderer/src/home/ShelfCard.tsx",
-      "lines": 125,
+      "lines": 65,
       "components": [
         {
           "name": "ShelfCard",
-          "line": 35,
+          "line": 31,
           "exported": false,
           "props": [
             "hint",
@@ -2083,142 +2118,17 @@
             "tags": 6,
             "shape": "span>UiIcon>span>span>div>button"
           }
-        },
-        {
-          "name": "ShelfTile",
-          "line": 91,
-          "exported": false,
-          "props": [
-            "caption",
-            "corner",
-            "fallbackIcon",
-            "hint",
-            "label",
-            "onClick",
-            "url"
-          ],
-          "signature": {
-            "tags": 3,
-            "shape": "MediaTile>div>button"
-          }
-        }
-      ],
-      "probes": []
-    },
-    {
-      "path": "src/renderer/src/home/sections/Activity.tsx",
-      "lines": 35,
-      "components": [
-        {
-          "name": "Activity",
-          "line": 17,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 3,
-            "shape": "Section>ul>ActivityRow"
-          }
-        }
-      ],
-      "probes": []
-    },
-    {
-      "path": "src/renderer/src/home/sections/ByMode.tsx",
-      "lines": 71,
-      "components": [
-        {
-          "name": "ByMode",
-          "line": 22,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 4,
-            "shape": "RefusedSection>Section>div>Counter"
-          }
-        },
-        {
-          "name": "Counter",
-          "line": 48,
-          "exported": false,
-          "props": [
-            "total",
-            "type"
-          ],
-          "signature": {
-            "tags": 5,
-            "shape": "button>UiIcon>span>span>span"
-          }
-        }
-      ],
-      "probes": []
-    },
-    {
-      "path": "src/renderer/src/home/sections/Creations.tsx",
-      "lines": 123,
-      "components": [
-        {
-          "name": "Creations",
-          "line": 30,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 4,
-            "shape": "RefusedSection>Section>Carousel>Tile"
-          }
-        },
-        {
-          "name": "Tile",
-          "line": 71,
-          "exported": false,
-          "props": [
-            "asset"
-          ],
-          "signature": {
-            "tags": 2,
-            "shape": "ShelfTile>Recreate"
-          }
-        },
-        {
-          "name": "Recreate",
-          "line": 96,
-          "exported": false,
-          "props": [
-            "asset",
-            "generation",
-            "model"
-          ],
-          "signature": {
-            "tags": 2,
-            "shape": "button>UiIcon"
-          }
-        }
-      ],
-      "probes": []
-    },
-    {
-      "path": "src/renderer/src/home/sections/Documents.tsx",
-      "lines": 57,
-      "components": [
-        {
-          "name": "Documents",
-          "line": 26,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 4,
-            "shape": "Section>Carousel>SectionNote>ShelfCard"
-          }
         }
       ],
       "probes": []
     },
     {
       "path": "src/renderer/src/home/sections/Explore.tsx",
-      "lines": 118,
+      "lines": 120,
       "components": [
         {
           "name": "Explore",
-          "line": 27,
+          "line": 28,
           "exported": false,
           "props": [],
           "signature": {
@@ -2228,7 +2138,7 @@
         },
         {
           "name": "Tab",
-          "line": 85,
+          "line": 86,
           "exported": false,
           "props": [
             "current",
@@ -2242,7 +2152,7 @@
         },
         {
           "name": "Tile",
-          "line": 106,
+          "line": 108,
           "exported": false,
           "props": [
             "asset"
@@ -2257,11 +2167,11 @@
     },
     {
       "path": "src/renderer/src/home/sections/Favorites.tsx",
-      "lines": 86,
+      "lines": 95,
       "components": [
         {
           "name": "Favorites",
-          "line": 23,
+          "line": 25,
           "exported": false,
           "props": [],
           "signature": {
@@ -2271,7 +2181,7 @@
         },
         {
           "name": "Tile",
-          "line": 44,
+          "line": 53,
           "exported": false,
           "props": [
             "recipe"
@@ -2283,7 +2193,7 @@
         },
         {
           "name": "Unpin",
-          "line": 68,
+          "line": 77,
           "exported": false,
           "props": [
             "recipe"
@@ -2298,11 +2208,11 @@
     },
     {
       "path": "src/renderer/src/home/sections/Jobs.tsx",
-      "lines": 34,
+      "lines": 40,
       "components": [
         {
           "name": "Jobs",
-          "line": 15,
+          "line": 17,
           "exported": false,
           "props": [],
           "signature": {
@@ -2312,69 +2222,6 @@
         }
       ],
       "probes": []
-    },
-    {
-      "path": "src/renderer/src/home/sections/Library.tsx",
-      "lines": 115,
-      "components": [
-        {
-          "name": "Library",
-          "line": 32,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 4,
-            "shape": "RefusedSection>Section>Carousel>Tile"
-          }
-        },
-        {
-          "name": "Tile",
-          "line": 88,
-          "exported": false,
-          "props": [
-            "asset",
-            "fetched"
-          ],
-          "signature": {
-            "tags": 1,
-            "shape": "ShelfTile"
-          }
-        }
-      ],
-      "probes": []
-    },
-    {
-      "path": "src/renderer/src/home/sections/Projects.tsx",
-      "lines": 81,
-      "components": [
-        {
-          "name": "Projects",
-          "line": 26,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 4,
-            "shape": "Section>Carousel>Empty>ShelfCard"
-          }
-        },
-        {
-          "name": "Empty",
-          "line": 61,
-          "exported": false,
-          "props": [],
-          "signature": {
-            "tags": 2,
-            "shape": "button>UiIcon"
-          }
-        }
-      ],
-      "probes": [
-        {
-          "probe": "inlineStyle",
-          "line": 74,
-          "text": "style={{"
-        }
-      ]
     },
     {
       "path": "src/renderer/src/home/sections/Similar.tsx",
@@ -2437,11 +2284,11 @@
     },
     {
       "path": "src/renderer/src/home/sections/Spotlight.tsx",
-      "lines": 214,
+      "lines": 222,
       "components": [
         {
           "name": "Spotlight",
-          "line": 56,
+          "line": 57,
           "exported": false,
           "props": [],
           "signature": {
@@ -2451,7 +2298,7 @@
         },
         {
           "name": "Waiting",
-          "line": 154,
+          "line": 158,
           "exported": false,
           "props": [],
           "signature": {
@@ -2461,7 +2308,7 @@
         },
         {
           "name": "Card",
-          "line": 171,
+          "line": 175,
           "exported": false,
           "props": [
             "layout",
@@ -2476,18 +2323,18 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 159,
+          "line": 163,
           "text": "style={{"
         }
       ]
     },
     {
       "path": "src/renderer/src/home/sections/Tools.tsx",
-      "lines": 114,
+      "lines": 118,
       "components": [
         {
           "name": "Tools",
-          "line": 27,
+          "line": 28,
           "exported": false,
           "props": [],
           "signature": {
@@ -2497,7 +2344,7 @@
         },
         {
           "name": "Group",
-          "line": 86,
+          "line": 87,
           "exported": false,
           "props": [
             "columns",
@@ -2514,11 +2361,11 @@
     },
     {
       "path": "src/renderer/src/home/sections/Usage.tsx",
-      "lines": 85,
+      "lines": 87,
       "components": [
         {
           "name": "Usage",
-          "line": 29,
+          "line": 30,
           "exported": false,
           "props": [],
           "signature": {
@@ -2531,15 +2378,15 @@
     },
     {
       "path": "src/renderer/src/licences/LicencesWindow.tsx",
-      "lines": 62,
+      "lines": 67,
       "components": [
         {
           "name": "LicencesWindow",
-          "line": 15,
+          "line": 17,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 13,
+            "tags": 14,
             "shape": "div>header>h1>p>ul>li>button>span>span>span>div>p"
           }
         }
@@ -2567,7 +2414,7 @@
     },
     {
       "path": "src/renderer/src/panels/apps/Apps.tsx",
-      "lines": 219,
+      "lines": 220,
       "components": [
         {
           "name": "Apps",
@@ -2819,7 +2666,80 @@
       "probes": []
     },
     {
-      "path": "src/renderer/src/panels/explorer/DocumentRow.tsx",
+      "path": "src/renderer/src/panels/counts/Counts.tsx",
+      "lines": 83,
+      "components": [
+        {
+          "name": "Counts",
+          "line": 25,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "RefusedPanel>ul>li>Counter"
+          }
+        },
+        {
+          "name": "Counter",
+          "line": 55,
+          "exported": false,
+          "props": [
+            "total",
+            "type"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "button>UiIcon>span>span>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/creations/Creations.tsx",
+      "lines": 131,
+      "components": [
+        {
+          "name": "Creations",
+          "line": 31,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "RefusedPanel>Collection>Tile>EmptyState"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 69,
+          "exported": false,
+          "props": [
+            "asset"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "ShelfTile>Recreate"
+          }
+        },
+        {
+          "name": "Recreate",
+          "line": 105,
+          "exported": false,
+          "props": [
+            "model",
+            "onClick",
+            "prompt"
+          ],
+          "signature": {
+            "tags": 2,
+            "shape": "button>UiIcon"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/documents/DocumentRow.tsx",
       "lines": 39,
       "components": [
         {
@@ -2839,12 +2759,12 @@
       "probes": []
     },
     {
-      "path": "src/renderer/src/panels/explorer/Explorer.tsx",
-      "lines": 69,
+      "path": "src/renderer/src/panels/documents/Documents.tsx",
+      "lines": 71,
       "components": [
         {
-          "name": "Explorer",
-          "line": 24,
+          "name": "Documents",
+          "line": 25,
           "exported": false,
           "props": [],
           "signature": {
@@ -2856,17 +2776,79 @@
       "probes": []
     },
     {
-      "path": "src/renderer/src/panels/generator/Generator.tsx",
-      "lines": 188,
+      "path": "src/renderer/src/panels/explorer/EntryMenu.tsx",
+      "lines": 68,
       "components": [
         {
-          "name": "Generator",
-          "line": 78,
+          "name": "EntryMenu",
+          "line": 28,
+          "exported": false,
+          "props": [
+            "at",
+            "node",
+            "onClose",
+            "onRename",
+            "openInTab"
+          ],
+          "signature": {
+            "tags": 4,
+            "shape": "ContextMenu>MenuRow>MenuRow>MenuRow"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/explorer/EntryRow.tsx",
+      "lines": 50,
+      "components": [
+        {
+          "name": "EntryRow",
+          "line": 26,
+          "exported": false,
+          "props": [
+            "icon",
+            "name",
+            "onRename",
+            "open"
+          ],
+          "signature": {
+            "tags": 3,
+            "shape": "InlineRename>Row>span"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/explorer/Explorer.tsx",
+      "lines": 163,
+      "components": [
+        {
+          "name": "Explorer",
+          "line": 39,
           "exported": false,
           "props": [],
           "signature": {
-            "tags": 11,
-            "shape": "MissingCredentials>EmptyState>EmptyState>div>FormHeader>p>ErrorBoundary>Suspense>EmptyState>DynamicForm>PromptAssistant"
+            "tags": 5,
+            "shape": "NoProject>EmptyState>Tree>EntryRow>EntryMenu"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/generator/Generator.tsx",
+      "lines": 212,
+      "components": [
+        {
+          "name": "Generator",
+          "line": 81,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 12,
+            "shape": "MissingCredentials>NoProject>EmptyState>EmptyState>div>FormHeader>p>ErrorBoundary>Suspense>EmptyState>DynamicForm>PromptAssistant"
           }
         }
       ],
@@ -2991,7 +2973,7 @@
     },
     {
       "path": "src/renderer/src/panels/inspector/GraphNodeInspector.tsx",
-      "lines": 105,
+      "lines": 116,
       "components": [
         {
           "name": "GraphNodeInspector",
@@ -3002,13 +2984,13 @@
             "node"
           ],
           "signature": {
-            "tags": 9,
-            "shape": "PropertyGroup>PropertyRow>PropertyRow>TextField>ToggleField>ModelNodeFields>TextField>TextField>AssetFields"
+            "tags": 10,
+            "shape": "PropertyGroup>PropertyRow>PropertyRow>TextField>ToggleField>ModelNodeFields>TextField>TextField>TextField>AssetFields"
           }
         },
         {
           "name": "AssetFields",
-          "line": 85,
+          "line": 96,
           "exported": false,
           "props": [
             "edit",
@@ -3145,11 +3127,11 @@
     },
     {
       "path": "src/renderer/src/panels/inspector/ModelNodeFields.tsx",
-      "lines": 217,
+      "lines": 235,
       "components": [
         {
           "name": "ModelNodeFields",
-          "line": 50,
+          "line": 52,
           "exported": false,
           "props": [
             "documentId",
@@ -3163,7 +3145,7 @@
         },
         {
           "name": "NodeForm",
-          "line": 140,
+          "line": 158,
           "exported": false,
           "props": [
             "documentId",
@@ -3307,11 +3289,11 @@
     },
     {
       "path": "src/renderer/src/panels/inspector/TextureInspector.tsx",
-      "lines": 338,
+      "lines": 341,
       "components": [
         {
           "name": "TextureInspector",
-          "line": 54,
+          "line": 55,
           "exported": false,
           "props": [
             "documentId"
@@ -3323,7 +3305,7 @@
         },
         {
           "name": "SeamReading",
-          "line": 293,
+          "line": 296,
           "exported": false,
           "props": [
             "documentId"
@@ -3527,12 +3509,42 @@
       "probes": []
     },
     {
+      "path": "src/renderer/src/panels/library/Library.tsx",
+      "lines": 117,
+      "components": [
+        {
+          "name": "Library",
+          "line": 35,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 4,
+            "shape": "RefusedPanel>Collection>Tile>EmptyState"
+          }
+        },
+        {
+          "name": "Tile",
+          "line": 89,
+          "exported": false,
+          "props": [
+            "asset",
+            "fetched"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "ShelfTile"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
       "path": "src/renderer/src/panels/models/Models.tsx",
-      "lines": 340,
+      "lines": 392,
       "components": [
         {
           "name": "Models",
-          "line": 97,
+          "line": 100,
           "exported": false,
           "props": [],
           "signature": {
@@ -3542,7 +3554,7 @@
         },
         {
           "name": "SelectedModel",
-          "line": 276,
+          "line": 308,
           "exported": false,
           "props": [
             "model",
@@ -3555,28 +3567,47 @@
         },
         {
           "name": "ModelCard",
-          "line": 292,
+          "line": 355,
           "exported": false,
           "props": [
             "model",
-            "picture"
+            "picture",
+            "refusal"
           ],
           "signature": {
-            "tags": 2,
-            "shape": "MediaTile>span"
+            "tags": 1,
+            "shape": "MediaTile"
           }
         },
         {
           "name": "ModelRow",
-          "line": 323,
+          "line": 370,
           "exported": false,
           "props": [
             "model",
-            "picture"
+            "picture",
+            "refusal"
           ],
           "signature": {
             "tags": 2,
             "shape": "Row>Thumbnail"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/projects/Projects.tsx",
+      "lines": 66,
+      "components": [
+        {
+          "name": "Projects",
+          "line": 24,
+          "exported": false,
+          "props": [],
+          "signature": {
+            "tags": 3,
+            "shape": "Collection>Row>EmptyState"
           }
         }
       ],
@@ -3641,7 +3672,7 @@
     },
     {
       "path": "src/renderer/src/panels/shared/MissingCredentials.tsx",
-      "lines": 22,
+      "lines": 26,
       "components": [
         {
           "name": "MissingCredentials",
@@ -3649,6 +3680,26 @@
           "exported": false,
           "props": [
             "icon"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/NoProject.tsx",
+      "lines": 48,
+      "components": [
+        {
+          "name": "NoProject",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "icon",
+            "message"
           ],
           "signature": {
             "tags": 1,
@@ -3693,6 +3744,27 @@
           "signature": {
             "tags": 3,
             "shape": "Collection>SceneNodeRow>EmptyState"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/panels/shared/RefusedPanel.tsx",
+      "lines": 34,
+      "components": [
+        {
+          "name": "RefusedPanel",
+          "line": 23,
+          "exported": false,
+          "props": [
+            "message",
+            "onRetry",
+            "tool"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "EmptyState"
           }
         }
       ],
@@ -3997,11 +4069,11 @@
     },
     {
       "path": "src/renderer/src/panels/view/View.tsx",
-      "lines": 87,
+      "lines": 91,
       "components": [
         {
           "name": "View",
-          "line": 35,
+          "line": 36,
           "exported": false,
           "props": [],
           "signature": {
@@ -4014,11 +4086,11 @@
     },
     {
       "path": "src/renderer/src/settings/AccountSettings.tsx",
-      "lines": 248,
+      "lines": 267,
       "components": [
         {
           "name": "AccountSettings",
-          "line": 28,
+          "line": 29,
           "exported": false,
           "props": [],
           "signature": {
@@ -4028,7 +4100,7 @@
         },
         {
           "name": "AccountRow",
-          "line": 71,
+          "line": 72,
           "exported": false,
           "props": [
             "account",
@@ -4041,7 +4113,7 @@
         },
         {
           "name": "AddAccountForm",
-          "line": 168,
+          "line": 182,
           "exported": false,
           "props": [],
           "signature": {
@@ -4088,18 +4160,18 @@
     },
     {
       "path": "src/renderer/src/settings/ModelFamilySettings.tsx",
-      "lines": 85,
+      "lines": 132,
       "components": [
         {
           "name": "ModelFamilySettings",
-          "line": 46,
+          "line": 69,
           "exported": false,
           "props": [
             "family"
           ],
           "signature": {
-            "tags": 5,
-            "shape": "div>label>select>option>option"
+            "tags": 6,
+            "shape": "div>label>select>option>option>p"
           }
         }
       ],
@@ -4107,11 +4179,11 @@
     },
     {
       "path": "src/renderer/src/settings/SettingActions.tsx",
-      "lines": 55,
+      "lines": 59,
       "components": [
         {
           "name": "ActionRow",
-          "line": 12,
+          "line": 13,
           "exported": false,
           "props": [
             "action"
@@ -4123,7 +4195,7 @@
         },
         {
           "name": "SettingActions",
-          "line": 42,
+          "line": 46,
           "exported": false,
           "props": [
             "section"
@@ -4182,7 +4254,7 @@
     },
     {
       "path": "src/renderer/src/settings/SettingRow.tsx",
-      "lines": 366,
+      "lines": 371,
       "components": [
         {
           "name": "TextControl",
@@ -4218,7 +4290,7 @@
         },
         {
           "name": "ColorControl",
-          "line": 144,
+          "line": 149,
           "exported": false,
           "props": [
             "describedBy",
@@ -4233,7 +4305,7 @@
         },
         {
           "name": "Control",
-          "line": 169,
+          "line": 174,
           "exported": false,
           "props": [
             "describedBy",
@@ -4249,7 +4321,7 @@
         },
         {
           "name": "SettingRow",
-          "line": 298,
+          "line": 303,
           "exported": false,
           "props": [
             "descriptor"
@@ -4263,18 +4335,18 @@
       "probes": [
         {
           "probe": "anyCast",
-          "line": 306,
+          "line": 311,
           "text": "as any"
         }
       ]
     },
     {
       "path": "src/renderer/src/settings/SettingsWindow.tsx",
-      "lines": 332,
+      "lines": 347,
       "components": [
         {
           "name": "NavigationEntry",
-          "line": 29,
+          "line": 30,
           "exported": false,
           "props": [
             "depth",
@@ -4289,7 +4361,7 @@
         },
         {
           "name": "SearchResults",
-          "line": 94,
+          "line": 96,
           "exported": false,
           "props": [
             "found",
@@ -4302,7 +4374,7 @@
         },
         {
           "name": "ResultRow",
-          "line": 137,
+          "line": 140,
           "exported": false,
           "props": [
             "hit",
@@ -4315,7 +4387,7 @@
         },
         {
           "name": "SettingsWindow",
-          "line": 172,
+          "line": 176,
           "exported": false,
           "props": [],
           "signature": {
@@ -4325,7 +4397,7 @@
         },
         {
           "name": "DraftBar",
-          "line": 306,
+          "line": 310,
           "exported": false,
           "props": [],
           "signature": {
@@ -4337,14 +4409,14 @@
       "probes": [
         {
           "probe": "inlineStyle",
-          "line": 52,
+          "line": 54,
           "text": "style={{"
         }
       ]
     },
     {
       "path": "src/renderer/src/settings/ShortcutsSettings.tsx",
-      "lines": 295,
+      "lines": 302,
       "components": [
         {
           "name": "CommandRow",
@@ -4365,7 +4437,7 @@
         },
         {
           "name": "ShortcutsSettings",
-          "line": 154,
+          "line": 155,
           "exported": false,
           "props": [],
           "signature": {
@@ -4375,7 +4447,7 @@
         },
         {
           "name": "Scope",
-          "line": 218,
+          "line": 219,
           "exported": false,
           "props": [
             "capturing",
@@ -4393,7 +4465,7 @@
         },
         {
           "name": "SearchByChord",
-          "line": 261,
+          "line": 262,
           "exported": false,
           "props": [
             "listening",
@@ -4430,11 +4502,11 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphCanvas.tsx",
-      "lines": 231,
+      "lines": 239,
       "components": [
         {
           "name": "GraphCanvas",
-          "line": 78,
+          "line": 81,
           "exported": false,
           "props": [
             "canRedo",
@@ -4442,6 +4514,7 @@
             "graph",
             "onAdd",
             "onConnect",
+            "onDecide",
             "onDisconnect",
             "onDropAsset",
             "onMove",
@@ -4455,8 +4528,8 @@
             "selectedNodeIds"
           ],
           "signature": {
-            "tags": 8,
-            "shape": "AssetDropTarget>div>ReactFlow>Background>GraphToolbar>ViewportBridge>GraphMenu>GraphStatus"
+            "tags": 9,
+            "shape": "AssetDropTarget>div>NodeDecisionProvider>ReactFlow>Background>GraphToolbar>ViewportBridge>GraphMenu>GraphStatus"
           }
         }
       ],
@@ -4464,7 +4537,7 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphDocument.tsx",
-      "lines": 237,
+      "lines": 244,
       "components": [
         {
           "name": "GraphDocument",
@@ -4483,11 +4556,11 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphMenu.tsx",
-      "lines": 65,
+      "lines": 76,
       "components": [
         {
           "name": "GraphMenu",
-          "line": 38,
+          "line": 51,
           "exported": false,
           "props": [
             "at",
@@ -4504,11 +4577,11 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphNodes.tsx",
-      "lines": 259,
+      "lines": 327,
       "components": [
         {
           "name": "RunBadge",
-          "line": 40,
+          "line": 44,
           "exported": false,
           "props": [
             "run"
@@ -4520,7 +4593,7 @@
         },
         {
           "name": "NodeShell",
-          "line": 52,
+          "line": 56,
           "exported": false,
           "props": [
             "children",
@@ -4533,16 +4606,17 @@
             "title"
           ],
           "signature": {
-            "tags": 10,
-            "shape": "div>header>UiIcon>span>RunBadge>span>div>div>InputPorts>OutputPorts"
+            "tags": 11,
+            "shape": "div>header>span>UiIcon>span>RunBadge>span>div>div>InputPorts>OutputPorts"
           }
         },
         {
           "name": "Node",
-          "line": 153,
+          "line": 172,
           "exported": false,
           "props": [
             "data",
+            "id",
             "selected",
             "type"
           ],
@@ -4552,8 +4626,22 @@
           }
         },
         {
+          "name": "ApprovalBody",
+          "line": 218,
+          "exported": false,
+          "props": [
+            "id",
+            "message",
+            "run"
+          ],
+          "signature": {
+            "tags": 5,
+            "shape": "div>p>div>Button>Button"
+          }
+        },
+        {
           "name": "StickyNoteNode",
-          "line": 193,
+          "line": 261,
           "exported": false,
           "props": [
             "data",
@@ -4566,7 +4654,7 @@
         },
         {
           "name": "PlainNode",
-          "line": 219,
+          "line": 287,
           "exported": false,
           "props": [
             "data",
@@ -4583,11 +4671,11 @@
     },
     {
       "path": "src/renderer/src/spaces/graph/GraphStatus.tsx",
-      "lines": 78,
+      "lines": 85,
       "components": [
         {
           "name": "GraphStatus",
-          "line": 61,
+          "line": 68,
           "exported": false,
           "props": [
             "result"
@@ -4653,6 +4741,26 @@
           "signature": {
             "tags": 4,
             "shape": "ul>li>span>Handle"
+          }
+        }
+      ],
+      "probes": []
+    },
+    {
+      "path": "src/renderer/src/spaces/graph/node-decision.tsx",
+      "lines": 31,
+      "components": [
+        {
+          "name": "NodeDecisionProvider",
+          "line": 20,
+          "exported": false,
+          "props": [
+            "children",
+            "onDecide"
+          ],
+          "signature": {
+            "tags": 1,
+            "shape": "NodeDecisionContext"
           }
         }
       ],
@@ -4845,11 +4953,11 @@
     },
     {
       "path": "src/renderer/src/spaces/video/TimelineCanvas.tsx",
-      "lines": 376,
+      "lines": 377,
       "components": [
         {
           "name": "TimelineCanvas",
-          "line": 43,
+          "line": 44,
           "exported": true,
           "props": [
             "documentId",
@@ -5130,8 +5238,8 @@
     }
   ],
   "totals": {
-    "files": 192,
-    "components": 260,
-    "probes": 62
+    "files": 197,
+    "components": 264,
+    "probes": 61
   }
 }

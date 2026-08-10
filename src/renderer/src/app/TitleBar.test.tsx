@@ -230,6 +230,23 @@ describe('TitleBar', () => {
     expect(screen.getByRole('menuitem', { name: 'Déplacer à gauche' })).toBeDisabled()
   })
 
+  it('says what each move does rather than reading the row back', () => {
+    render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
+
+    fireEvent.contextMenu(pill('Image'))
+
+    const left = screen.getByRole('menuitem', { name: 'Déplacer à gauche' })
+    expect(left).toHaveAttribute(
+      'data-tooltip-content',
+      'Place cet espace avant son voisin de gauche dans la barre',
+    )
+    expect(left).not.toHaveAttribute('aria-label')
+    expect(screen.getByRole('menuitem', { name: 'Déplacer à droite' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Place cet espace après son voisin de droite dans la barre',
+    )
+  })
+
   // The order changes, the focus does not move, and the label does not change: without this the
   // gesture succeeds in silence for anyone reading the screen rather than looking at it.
   it('says where the space landed', () => {

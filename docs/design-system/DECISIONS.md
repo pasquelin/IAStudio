@@ -9,6 +9,32 @@ refera le même chemin pour aboutir au même endroit.
 
 ---
 
+## 2026-08-10 — l'infobulle d'une rangée de menu
+
+**Décidé** : une rangée de `MenuRow` se câble par `HINT_RIGHT`, quel que soit le menu qui la
+porte. Sa phrase explique le geste ; le libellé, lui, est déjà à l'écran et répond pour
+lui-même.
+
+**Écarté, deux fois.** D'abord la fabrique `TIP_*` : elle pose un `aria-label`, qui remplace un
+libellé visible pour un lecteur d'écran (WCAG 2.5.3). Ensuite le placement rendu par l'hôte,
+comme le veut la règle générale : une rangée n'a qu'un hôte possible — un menu flottant, rangées
+empilées — et une infobulle en dessous couvre la rangée suivante. La règle « le placement vient
+de l'hôte » vaut pour un bouton qu'on peut poser dans une barre ou dans un rail ; une rangée de
+menu n'a pas ce choix.
+
+**Écarté aussi** : porter le placement dans `MenuRow` (une prop `hint: string`, le composant
+appelant `HINT_RIGHT` lui-même). Plus court aux sites, mais cela déplacerait la décision de
+placement du côté du bouton, et le dépôt tient l'inverse partout ailleurs.
+
+**Portée** : `src/renderer/src/app/{AccountSelect,DocumentTabMenu,TitleBar}.tsx`,
+`src/renderer/src/home/SectionMenu.tsx` — et les dix-huit rangées qui restent.
+
+**Rouvrable si** : un menu s'ouvre ailleurs qu'en flyout vertical, ou si `MenuRow` finit par
+exiger `tip` par son type — ce dernier geste étant la fin prévue du chantier, une fois qu'aucun
+site ne l'omet.
+
+---
+
 ## 2026-08-10 — la flèche du carrousel et le bouton d'angle d'une vignette
 
 **Décidé** : les deux gardent leur composant, et lisent leur peau commune dans

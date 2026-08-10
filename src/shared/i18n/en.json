@@ -14,7 +14,9 @@
     "moveLeft": "Move left",
     "moveRight": "Move right",
     "moved": "{{label}} moved, position {{position}} of {{total}}",
-    "switchHint": "Opens this space — drag it to change the order of the bar"
+    "switchHint": "Opens this space — drag it to change the order of the bar",
+    "moveLeftHint": "Puts this space before its left-hand neighbour on the bar",
+    "moveRightHint": "Puts this space after its right-hand neighbour on the bar"
   },
   "panels": {
     "layers": "Layers",
@@ -384,7 +386,10 @@
     "cancel": "Cancel",
     "deleteTitle": "Delete “{{title}}” from the project?",
     "deleteBody": "The file is removed from the project folder. This cannot be undone.",
-    "deleteConfirm": "Delete"
+    "deleteConfirm": "Delete",
+    "closeHint": "Takes the tab off the bar; the document stays in the project",
+    "closeOthersHint": "Closes every other tab, one after another",
+    "deleteHint": "Removes the document from the project, its file included"
   },
   "imageTools": {
     "pointer": "Pointer",
@@ -847,7 +852,8 @@
     "removeHint": "Forgets the key on this machine; the Scenario account is untouched",
     "saveHint": "Keeps the new name, provided no other account already has it",
     "cancelHint": "Leaves the name as it was",
-    "addHint": "Stores the key, encrypted by the system keychain"
+    "addHint": "Stores the key, encrypted by the system keychain",
+    "manageHint": "Opens the preferences to add, rename or remove an account"
   },
   "errors": {
     "missingCredentials": "No credentials saved.",
@@ -1947,6 +1953,11 @@
     "sparkAskHint": "Asks the API for three starting points, written for the generator's model",
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the preferences, at the account section",
-    "spotlightReadyHint": "Opens the creation space, the one where generating happens"
+    "spotlightReadyHint": "Opens the creation space, the one where generating happens",
+    "moveUpHint": "Moves this section up one place on the home",
+    "moveDownHint": "Moves this section down one place on the home",
+    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back",
+    "showCountHint_one": "Keeps only {{count, number}} item in this section",
+    "showCountHint_other": "Keeps only {{count, number}} items in this section"
   }
 }
