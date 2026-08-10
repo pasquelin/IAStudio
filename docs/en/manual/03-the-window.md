@@ -221,7 +221,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 > works identically once the App is published. An expression left empty produces nothing, so it
 > overwrites nothing the next node's form already holds; one that will not evaluate — a missing
 > bracket, a variable no wire feeds, a result that is not text — makes the node read *invalid
-> expression*, and whatever reads it reads *upstream failed*.
+> expression*, and whatever reads it reads *upstream failed*. **It takes one wire for now**:
+> assembling two texts in one expression comes with the logic nodes.
 >
 > What it cannot do **yet**: the logic and loop nodes, and importing or exporting a Scenario
 > workflow. Its chapter comes when it can.

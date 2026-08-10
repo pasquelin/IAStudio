@@ -1,37 +1,32 @@
 import { evaluateCel } from '@scenario-labs/sdk/tools/cel'
 import type { GraphTransformVariables } from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
+import type { TransformVerdict } from './transform-protocol'
 
 /**
- * What one `transformText` node computes, evaluated by Scenario's OWN CEL environment.
+ * What one `transformText` node computes, evaluated by Scenario's OWN CEL environment — the
+ * adapter and nothing else, exactly as `workflow-compile.ts` is for the converter.
  *
- * **No evaluator is written here.** `evaluateCel` is the entry point the SDK says its backend,
- * its webapp and its MCP server all share, so a local run cannot drift from what a published App
- * computes — this file is the adapter and nothing else, exactly as `workflow-compile.ts` is for
- * the converter.
- *
- * `null` for the three ways it can answer nothing, all reported the same way to the node and
- * apart in the journal: an expression that will not parse, one reading a variable no wire feeds,
- * and one whose result is a shape no port can carry.
+ * **Pure, and it has to be: this runs on a worker thread** (`transform-worker.ts`). CEL exposes
+ * `matches()`, which is JavaScript's own `RegExp` — a backtracking pattern over thirty characters
+ * was measured taking 75 seconds of solid CPU, and nothing interrupts a synchronous regex.
  */
 export function runTransform(
   expression: string,
   variables: GraphTransformVariables,
-  report: (message: string) => void,
-): readonly string[] | null {
+): TransformVerdict {
   let result: unknown
 
   try {
     result = evaluateCel(expression, variables)
   } catch (error) {
-    report(`transform ${expression}: ${messageOf(error)}`)
-    return null
+    return { ok: false, reason: `${expression}: ${messageOf(error)}` }
   }
 
   const values = asValues(result)
-  if (!values) report(`transform ${expression}: result is not text`)
+  if (!values) return { ok: false, reason: `${expression}: result is not text` }
 
-  return values
+  return { ok: true, values }
 }
 
 /**
@@ -42,8 +37,10 @@ export function runTransform(
  * on a node that computed perfectly well. `null`, maps and nested lists are refused instead of
  * being stringified — `[object Object]` in a prompt is a generation paid for and thrown away.
  *
- * An empty string answers no value at all, which is `asList`'s rule in the executor and the same
- * one for the same reason: a wire carrying nothing must not overwrite what the next form holds.
+ * A list is carried over ENTIRELY, blanks included: dropping them would change its length, and a
+ * `['', 'b']` silently becoming `['b']` makes `[0]` answer `'b'` here and `''` on a published App.
+ * A lone empty string is the one thing that answers no value at all — `asList`'s rule in the
+ * executor, and the same reason: a wire carrying nothing must not overwrite what a form holds.
  */
 function asValues(result: unknown): readonly string[] | null {
   if (Array.isArray(result)) {
@@ -52,7 +49,7 @@ function asValues(result: unknown): readonly string[] | null {
     for (const item of result) {
       const text = asText(item)
       if (text === null) return null
-      if (text !== '') items.push(text)
+      items.push(text)
     }
 
     return items

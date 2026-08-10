@@ -16,6 +16,16 @@ export const loopOutputId = (nodeId: string, index: number): string => `${nodeId
 export const DEFAULT_OUTPUT_NAME = 'output'
 
 /**
+ * What a CEL expression calls one wire: the node it comes from, then the name of the port it
+ * leaves by.
+ *
+ * Here beside the other three namings for the reason this file exists: the converter builds it
+ * itself when it compiles a `transformText`, so an expression naming a wire any other way reads
+ * an unknown variable the day the App is published. `ifElse` reads the same names.
+ */
+export const celVariableName = (nodeId: string, output: string): string => `${nodeId}_${output}`
+
+/**
  * The id the webapp gives an edge: the output handle, then the input handle.
  *
  * The converter never reads it — it walks `source`/`target` — so this is for the eye and for the

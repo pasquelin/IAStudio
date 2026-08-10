@@ -7,6 +7,7 @@ import type {
 } from '@shared/domain/graph'
 import { CONDITIONAL_PORT } from '@shared/domain/graph'
 import { readString } from '@shared/guards'
+import { celVariableName } from './handles'
 import { approvalsOf } from './approvals'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
@@ -26,14 +27,7 @@ export type GraphRunPorts = {
    * asked — the buttons are the canvas's business, and a run stops here with no DOM in sight.
    */
   approve: (nodeId: string) => Promise<boolean>
-  /**
-   * Evaluates one CEL expression and resolves with the text it produced, `null` where it would
-   * not evaluate to any.
-   *
-   * A port for the reason `generate` is: the evaluator is Scenario's own and lives in the SDK,
-   * which this side does not speak (invariant 2) — and a second one written here would drift
-   * from what a published App computes on the first function they add.
-   */
+  /** Evaluates one CEL expression — a port for the reason `generate` is. See `StudioBridge`. */
   transform: (
     expression: string,
     variables: GraphTransformVariables,
@@ -109,9 +103,7 @@ export async function runGraph(
    * provider is awaited once and the two can never disagree about what came through.
    *
    * `values` is keyed by the consumer's own port, which is what fills a generation body.
-   * `variables` is keyed the way Scenario's converter names the wire, `` `${node}_${output}` ``,
-   * copied off `workflow_converter.ts` rather than invented: named any other way, an expression
-   * that runs here reads an unknown variable once the App is published.
+   * `variables` is keyed by `celVariableName`, which is the converter's own spelling.
    *
    * The conditional port is in the first and out of the second, exactly as it is dropped from a
    * body: it steers whether the node runs at all, and the converter skips that edge before it
@@ -129,7 +121,7 @@ export async function runGraph(
 
       values[port] = upstream.values
       if (port !== CONDITIONAL_PORT) {
-        variables[`${source.node}_${source.output}`] = asVariable(upstream.values)
+        variables[celVariableName(source.node, source.output)] = asVariable(upstream.values)
       }
     }
 
@@ -181,7 +173,7 @@ export async function runGraph(
    * `parseGraph` validates the node and not its contents, so a graph read off a file can hold
    * anything there.
    */
-  const rewrite = async (
+  const evaluate = async (
     planned: GraphPlanNode,
     node: GraphNode,
     variables: GraphTransformVariables,
@@ -240,7 +232,7 @@ export async function runGraph(
     // the user before the picture exists is a question about nothing. One guarding nothing is a
     // question about nothing too — it passes without a word rather than stopping the graph.
     if (node.type === 'approval') return guarding.has(node.id) ? decide(node) : { values: [] }
-    if (node.type === 'transformText') return rewrite(planned, node, inputs.variables)
+    if (node.type === 'transformText') return evaluate(planned, node, inputs.variables)
     if (node.type !== 'model') return fail(node.id, 'unsupported')
 
     const { modelId, form } = node.data

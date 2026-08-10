@@ -214,7 +214,7 @@ const ModelNode = nodeOf('ModelNode', 'model', data => (
  * the panel's own face makes a quoted string indistinguishable from a variable name.
  */
 const TransformTextNode = nodeOf('TransformTextNode', 'transformText', data => (
-  <p className="text-muted line-clamp-3 font-mono text-[10px] break-all">{asText(data.value)}</p>
+  <p className="text-muted line-clamp-3 font-mono text-[11px] break-all">{asText(data.value)}</p>
 ))
 
 const ApprovalNode = nodeOf('ApprovalNode', 'approval', (data, id) => (

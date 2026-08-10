@@ -721,6 +721,7 @@
     "isOutput": "App result",
     "message": "Question asked",
     "expression": "Expression",
+    "expressionHint": "Write CEL: a wire reads as the id of the node it comes from, then _output",
     "nodeId": "Identifier",
     "noModel": "None",
     "sectionFoldHint": "Folds this group of properties",

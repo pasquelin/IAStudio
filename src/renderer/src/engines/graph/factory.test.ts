@@ -77,14 +77,17 @@ describe('creating a node', () => {
       if (type === 'approval') continue
 
       const node = createNode(EMPTY_GRAPH, type, at)
-
-      // Carried, not carried ALONE: a transform declares a port of its own beside it. What the
-      // claim is about is that no creatable type is born unsteerable.
-      expect(node.data.inputHandles).toContainEqual({
+      const conditional = {
         id: `${node.id}-source-conditional`,
         name: 'conditional',
         type: 'conditional',
-      })
+      }
+
+      // A transform declares a port of its own beside it, and is checked exactly below. Every
+      // other type is still held to carrying the conditional port and NOTHING else: loosening
+      // that for all of them would let a stray port onto a text node without a word.
+      if (type === 'transformText') expect(node.data.inputHandles).toContainEqual(conditional)
+      else expect(node.data.inputHandles).toEqual([conditional])
     }
   })
 

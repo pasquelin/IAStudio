@@ -6,6 +6,8 @@ import {
   GRAPH_ID_MAX,
   GRAPH_NODES_MAX,
   GRAPH_NODE_TYPES,
+  GRAPH_VARIABLE_MAX,
+  GRAPH_VARIABLE_NAME_MAX,
   GRAPH_VARIABLES_MAX,
   type GraphState,
   type GraphTransformVariables,
@@ -161,11 +163,13 @@ export function parseTransformExpression(value: unknown): string {
   return transformExpression.parse(value)
 }
 
-const transformValue = z.string().max(GRAPH_EXPRESSION_MAX)
+// What a WIRE carries, never what someone typed: a text node holding a long prompt must travel,
+// or its own expression is refused for a length that is not the expression's.
+const transformValue = z.string().max(GRAPH_VARIABLE_MAX)
 
 const transformVariables = z
   .record(
-    z.string().min(1).max(GRAPH_ID_MAX),
+    z.string().min(1).max(GRAPH_VARIABLE_NAME_MAX),
     z.union([transformValue, z.array(transformValue).max(GRAPH_VARIABLES_MAX)]),
   )
   // Zod has no cap on a record's key count, and one variable per wire into a node is the shape

@@ -335,13 +335,28 @@ export const GRAPH_ID_MAX = 200
 
 /**
  * What one CEL evaluation may weigh on its way in, for the reason the three above exist: the
- * expression is a field someone types, and its variables are one per wire into a single node.
+ * renderer is sandboxed and trusted for nothing.
  *
- * Generous against both — a prompt template runs to a few hundred characters and a node to a
- * handful of ports — and far below what an evaluator handed a megabyte would cost.
+ * **Three bounds because three different things are bounded**, and conflating them is how a
+ * refusal comes to name the wrong culprit. `GRAPH_EXPRESSION_MAX` is the field someone types — a
+ * prompt template runs to a few hundred characters. `GRAPH_VARIABLE_MAX` is what a WIRE carries,
+ * which is a whole text node's contents and answers to nobody's typing: bounded at the
+ * expression's own size, a long prompt made a perfectly good expression read "invalid". And
+ * `GRAPH_VARIABLES_MAX` counts them — one per wire into a single node.
+ *
+ * None of them bounds the COST of an evaluation, which no length can — see the evaluator's own
+ * timeout.
  */
 export const GRAPH_EXPRESSION_MAX = 10_000
+export const GRAPH_VARIABLE_MAX = 1_000_000
 export const GRAPH_VARIABLES_MAX = 200
+
+/**
+ * How long a CEL variable's name may be: it is `` `${nodeId}_${outputName}` ``, so it has to
+ * clear a node id AND the port name after it. Bounded at `GRAPH_ID_MAX` alone, a node with a long
+ * id made its own wire unnameable and the node read "invalid expression" over a sound one.
+ */
+export const GRAPH_VARIABLE_NAME_MAX = GRAPH_ID_MAX * 2 + 1
 
 /**
  * What a CEL expression reads, by the name the converter gives each wire: `<providerId>_<output>`.

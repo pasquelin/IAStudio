@@ -721,6 +721,7 @@
     "isOutput": "Résultat de l’App",
     "message": "Question posée",
     "expression": "Expression",
+    "expressionHint": "Écrivez du CEL : un fil se lit par l’identifiant du nœud d’où il vient, suivi de _output",
     "nodeId": "Identifiant",
     "noModel": "Aucun",
     "sectionFoldHint": "Replie ce groupe de propriétés",

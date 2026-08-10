@@ -1,8 +1,19 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { runTransform } from './workflow-transform'
 
-const evaluate = (expression: string, variables: Record<string, string | readonly string[]> = {}) =>
-  runTransform(expression, variables, () => {})
+/** The values it produced, or `null` where it refused — the reason is asserted on its own below. */
+const evaluate = (
+  expression: string,
+  variables: Record<string, string | readonly string[]> = {},
+): readonly string[] | null => {
+  const verdict = runTransform(expression, variables)
+  return verdict.ok ? verdict.values : null
+}
+
+const reasonOf = (expression: string): string => {
+  const verdict = runTransform(expression, {})
+  return verdict.ok ? '' : verdict.reason
+}
 
 describe('runTransform', () => {
   it('reads a variable under the name the converter gives the wire', () => {
@@ -36,8 +47,12 @@ describe('runTransform', () => {
     expect(evaluate("''")).toEqual([])
   })
 
-  it('drops the blanks out of a list rather than carrying empty values', () => {
-    expect(evaluate("['a', '', 'b']")).toEqual(['a', 'b'])
+  /**
+   * Kept, blanks included: dropping one changes the list's LENGTH, so `[0]` would answer `'b'`
+   * here and `''` on the App the same graph publishes to.
+   */
+  it('carries a list over entirely, blanks included', () => {
+    expect(evaluate("['a', '', 'b']")).toEqual(['a', '', 'b'])
   })
 
   it('refuses an expression that will not parse', () => {
@@ -61,18 +76,10 @@ describe('runTransform', () => {
     expect(evaluate("[{'k': 1}]")).toBeNull()
   })
 
-  it('names the expression and the reason in the journal, never on screen', () => {
-    const report = vi.fn()
-
-    expect(runTransform('nope(', {}, report)).toBeNull()
-    expect(report).toHaveBeenCalledWith(expect.stringContaining('nope('))
-  })
-
-  it('says so in the journal when the result is not text', () => {
-    const report = vi.fn()
-
-    expect(runTransform("{'k': 1}", {}, report)).toBeNull()
-    expect(report).toHaveBeenCalledWith(expect.stringContaining('not text'))
+  /** The reason goes to the journal, the code to the node: it names the expression at fault. */
+  it('names the expression and what was wrong with it', () => {
+    expect(reasonOf('nope(')).toContain('nope(')
+    expect(reasonOf("{'k': 1}")).toContain('not text')
   })
 
   /**

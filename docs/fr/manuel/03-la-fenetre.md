@@ -230,7 +230,8 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > publiée. Une expression laissée vide ne produit rien et n’écrase donc pas ce que le formulaire
 > du nœud suivant contient déjà ; une expression fautive — parenthèse manquante, variable qu’aucun
 > fil n’apporte, résultat qui n’est pas du texte — fait dire au nœud *expression invalide*, et
-> ceux qui le lisent disent *amont en échec*.
+> ceux qui le lisent disent *amont en échec*. **Il ne prend qu’un seul fil pour l’instant** :
+> assembler deux textes en une expression viendra avec les nœuds de logique.
 >
 > Ce qu’il ne sait **pas encore** : les nœuds de logique et de boucle, et l’import/export d’un
 > workflow Scenario. Son chapitre viendra quand il les saura.

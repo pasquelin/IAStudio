@@ -5,6 +5,12 @@ export type TextFieldProps = GestureProps & {
   label: string
   value: string
   onChange: (value: string) => void
+  /**
+   * Tooltip attributes from the host's own factory, already resolved — `HINT_LEFT` in the
+   * inspector. For a field whose label says WHAT it is and whose contents need saying HOW: a CEL
+   * expression naming its wires is the case that asked for it.
+   */
+  hint?: Record<string, string>
 }
 
 /**
@@ -15,6 +21,7 @@ export function TextField({
   label,
   value,
   onChange,
+  hint,
   onGestureStart,
   onGestureEnd,
 }: TextFieldProps) {
@@ -32,6 +39,7 @@ export function TextField({
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
         className={cn(FIELD, 'min-w-0 flex-1 text-[11px]')}
+        {...hint}
       />
     </label>
   )

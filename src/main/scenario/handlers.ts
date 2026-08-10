@@ -6,7 +6,7 @@ import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { log } from '@main/log'
 import { compileGraph, editorModelOf, modelIdsOf } from './workflow-compile'
-import { runTransform } from './workflow-transform'
+import { openTransformThread } from './transform-thread'
 import { reducedBy } from './client'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
@@ -180,16 +180,32 @@ export function registerScenarioHandlers({
     })
   })
 
-  // Here for the reason the compile above is: the evaluator is the SDK's, and only this side
-  // speaks SDK. Synchronous and local — no network, nothing billed — so it runs on the handler
-  // rather than through the job queue a generation goes through.
-  handle(CHANNELS.workflowsTransform, (_event, expression, variables) =>
-    runTransform(
-      parseTransformExpression(expression),
-      parseTransformVariables(variables),
-      message => log.warn('scenario', `workflow transform: ${message}`),
-    ),
+  /**
+   * Here for the reason the compile above is: the evaluator is the SDK's, and only this side
+   * speaks SDK. Off this process all the same — CEL's `matches()` is JavaScript's own `RegExp`,
+   * which no signal interrupts, so an evaluation runs on a thread the client can kill.
+   *
+   * The thread starts on the first expression, never at registration: a session that opens no
+   * graph pays nothing for it.
+   */
+  const transforms = openTransformThread(message =>
+    log.warn('scenario', `workflow transform: ${message}`),
   )
+
+  handle(CHANNELS.workflowsTransform, (_event, expression, variables) => {
+    // Around the parsing as well as the evaluation: a refusal here used to reject the invoke
+    // with nothing written anywhere, so a node read "invalid expression" over a bound the user
+    // had no way of learning about.
+    try {
+      return transforms.evaluate(
+        parseTransformExpression(expression),
+        parseTransformVariables(variables),
+      )
+    } catch (error) {
+      log.warn('scenario', `workflow transform refused: ${messageOf(error)}`)
+      return Promise.resolve(null)
+    }
+  })
 
   handle(CHANNELS.workflowsRun, (_event, workflowId, body) =>
     submitNamed(
