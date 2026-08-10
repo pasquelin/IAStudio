@@ -7,7 +7,7 @@ import { ToolButton } from '@/design/ToolButton'
 import { removeNodes } from '@/engines/scene/commands'
 import { labelKeyOf, NODE_KINDS, type PanelNodeType } from '@/engines/scene/node-kinds'
 import { selectedNodes } from '@/engines/scene/scene-state'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 import { useAddNode } from '@/hooks/useAddNode'
 import { sceneOf, useScenes } from '@/stores/scenes'
 
@@ -50,6 +50,7 @@ export function NodeActions({ documentId, type }: { documentId: string; type: Pa
               label={t(labelKeyOf(kind.namespace, entry))}
               icon={entry.icon}
               disabled={entry.disabled}
+              tip={HINT_RIGHT(t(`${labelKeyOf(kind.namespace, entry)}Hint`))}
               onSelect={() => {
                 addNodeOf(entry.kind)
                 close()

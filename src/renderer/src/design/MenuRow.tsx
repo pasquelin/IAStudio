@@ -22,8 +22,13 @@ type MenuRowBase = {
   icon: string
   shortcut?: string
   disabled?: boolean
-  /** Tooltip attributes from the host's factory, already resolved. */
-  tip?: Record<string, string>
+  /**
+   * Tooltip attributes from the host's factory, already resolved. Required, like `ToolButton`'s
+   * own: it was optional over thirty-three rows, and thirty-two of them said nothing. A row
+   * whose label is already on screen wants `HINT_*` — `TIP_*` would set an `aria-label` over a
+   * visible name (WCAG 2.5.3).
+   */
+  tip: Record<string, string>
   onSelect: () => void
 }
 

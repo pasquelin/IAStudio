@@ -82,6 +82,22 @@ describe('meshes panel', () => {
     )
   })
 
+  // Fifteen geometric nouns, and a dodecahedron is not something one pictures on demand: the
+  // row says what the shape IS, since its name only says what it is called.
+  it('describes each primitive rather than naming it twice', async () => {
+    render(<Actions />)
+
+    await userEvent.hover(screen.getByRole('button', { name: /Ajouter une maille/ }))
+
+    const rows = await screen.findAllByRole('menuitem')
+    expect(rows.every(row => (row.getAttribute('data-tooltip-content') ?? '') !== '')).toBe(true)
+    expect(
+      screen.getByRole('menuitem', { name: /Dodécaèdre/ }).getAttribute('data-tooltip-content'),
+    ).toBe('Douze faces pentagonales')
+    // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
+    for (const row of rows) expect(row).not.toHaveAttribute('aria-label')
+  })
+
   // Hovering is not a keyboard gesture: the flyout has to open on the click too.
   it('opens the add menu on a click, not only on hover', async () => {
     render(<Actions />)

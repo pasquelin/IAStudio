@@ -570,7 +570,22 @@
     "removeHint": "Remove the selected meshes from the scene",
     "visible": "Show or hide",
     "empty": "No mesh yet. Add one to get started.",
-    "noDocument": "Open a scene to see its meshes."
+    "noDocument": "Open a scene to see its meshes.",
+    "boxHint": "Six equal faces — the brick a scene is blocked out with",
+    "capsuleHint": "A cylinder closed by two half-spheres",
+    "circleHint": "A flat disc, seen from one side only",
+    "cylinderHint": "A solid tube, its top and bottom radii set apart",
+    "dodecahedronHint": "Twelve pentagonal faces",
+    "icosahedronHint": "Twenty triangular faces",
+    "latheHint": "A profile turned around the vertical axis",
+    "octahedronHint": "Eight triangular faces — two pyramids base to base",
+    "planeHint": "A flat rectangle, seen from one side only",
+    "ringHint": "A flat disc with a hole at its centre",
+    "sphereHint": "A smooth ball, 32 segments by 16",
+    "tetrahedronHint": "Four triangular faces — a pyramid",
+    "torusHint": "A thick ring, doughnut-shaped",
+    "torusKnotHint": "A torus knotted through itself — the shape that judges a material best",
+    "tubeHint": "A thin tube following a curve"
   },
   "lights": {
     "ambient": "Ambient",
@@ -584,7 +599,12 @@
     "removeHint": "Remove the selected lights from the scene",
     "visible": "Show or hide",
     "empty": "No light. The scene will stay black.",
-    "noDocument": "Open a scene to see its lights."
+    "noDocument": "Open a scene to see its lights.",
+    "ambientHint": "Lights everything evenly, with no direction and no shadow",
+    "directionalHint": "Parallel light from infinitely far away, like the sun",
+    "hemisphereHint": "One colour coming from the sky, another from the ground",
+    "pointHint": "Radiates in every direction from a single point",
+    "spotHint": "A cone of light, with its angle and its softened edge"
   },
   "scene": {
     "root": "Scene",
