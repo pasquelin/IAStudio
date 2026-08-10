@@ -55,9 +55,14 @@ describe('the numbers a sentence carries', () => {
 })
 
 /**
- * Pseudo-localization is the only detector that finds text nobody routed through a bundle:
- * whatever stays unaccented on screen was written in a component. It has to be reachable from
- * a running window, and it has to be unreachable from a shipped one.
+ * Pseudo-localization finds the text no static check can: whatever stays unaccented on screen
+ * never came from a bundle, however it reached the pixel. It has to be reachable from a running
+ * window, and unreachable from a shipped one.
+ *
+ * Three surfaces escape it, and reading them as hardcoded text would be a mistake: the main
+ * process draws its menu and its native dialogs from `TRANSLATIONS` without passing through
+ * here; `resolveLanguage('pseudo')` falls back to English, so model text comes out in plain
+ * English; and a `t(key, defaultValue)` call renders its default untouched.
  */
 describe('the pseudo-locale', () => {
   afterEach(async () => {
