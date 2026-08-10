@@ -211,10 +211,11 @@ export function GraphDocument({ documentId }: { documentId: string }) {
 
   const run = useCallback(
     (command: CommandId): void => {
+      if (command === 'graph.run') return onRun()
       if (command === 'graph.undo') return undo()
       if (command === 'graph.redo') return redo()
     },
-    [undo, redo],
+    [onRun, undo, redo],
   )
 
   useShortcuts({ scope: 'graph', enabled: active, onCommand: run })

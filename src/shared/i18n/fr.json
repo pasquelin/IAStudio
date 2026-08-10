@@ -975,7 +975,8 @@
     "about": "À propos de {{name}}",
     "licences": "Licences",
     "imageTools": "Outils",
-    "usage": "Consommation…"
+    "usage": "Consommation…",
+    "graph": "Graphe"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"
@@ -1336,6 +1337,10 @@
     "sceneDelete": {
       "title": "Supprimer",
       "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
+    },
+    "graphRun": {
+      "title": "Exécuter / Arrêter le graphe",
+      "help": "Lance chaque nœud dans l’ordre de ses liens, et arrête une exécution déjà en cours. Ce qui n’a pas changé depuis la dernière exécution n’est pas relancé."
     },
     "undo": {
       "title": "Annuler",

@@ -221,6 +221,7 @@ export function GraphCanvas({
               onRun={onRun}
               canUndo={canUndo}
               canRedo={canRedo}
+              canRun={graph.nodes.length > 0}
               running={running}
             />
             <ViewportBridge

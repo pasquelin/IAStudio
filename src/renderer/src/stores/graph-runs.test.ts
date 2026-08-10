@@ -129,6 +129,20 @@ describe('running a graph document', () => {
     expect(runOf(useGraphRuns.getState(), DOC).nodes.m1).toEqual({ status: 'done' })
   })
 
+  /**
+   * The keyboard is why this lives in the store: the bar greys its button on an empty graph, and
+   * a key pressed over the canvas goes nowhere near the bar.
+   */
+  it('refuses to run a graph that holds no node at all', async () => {
+    const jobs = installJobs()
+    installGraph(DOC)
+
+    await useGraphRuns.getState().start(DOC)
+
+    expect(jobs.submitted).toEqual([])
+    expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
+  })
+
   it('refuses a second run of the same document while the first is going', async () => {
     const jobs = installJobs()
     installGraph(DOC, chain())
