@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GraphCompileResult, GraphPublishResult, GraphState } from '@shared/domain/graph'
 import { TONE_TEXT } from '@/design/styles'
@@ -58,6 +58,27 @@ export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
 }
 
 /**
+ * The one line the pane draws, whichever of the two answers fills it.
+ *
+ * The studio's own tones rather than a colour of this file's: a graph that would not export is
+ * the same red as a job that failed, and it is read in the same glance. Written once so a
+ * publication and a compile cannot end up in two different corners of the same pane.
+ */
+function StatusLine({ ok, children }: { ok: boolean; children: ReactNode }) {
+  return (
+    <p
+      role="status"
+      className={cn(
+        'absolute bottom-2 left-2 z-10 text-[11px]',
+        ok ? TONE_TEXT.muted : TONE_TEXT.danger,
+      )}
+    >
+      {children}
+    </p>
+  )
+}
+
+/**
  * What the graph would export, said where it is being drawn.
  *
  * Bottom left of the pane, opposite the toolbar: the plan asked for this to be read during the
@@ -65,8 +86,7 @@ export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
  * export lands with step 9 — so what it buys today is the refusals a user cannot guess: "nothing
  * is marked as an output", and the two about a loop and its end, which no other source can emit
  * at all. `validateWorkflowFlow` accepts those two graphs, and this line is their only channel.
- */
-/**
+ *
  * `published` takes the line over when there is one, and it is deliberate: a publication is a
  * WRITE on the user's account, and the one thing it must never be is silent. It stays until the
  * next attempt rather than fading, so a refusal cannot be missed by looking away.
@@ -87,31 +107,14 @@ export function GraphStatus({
         ? t('graphPublish.refused')
         : t(`graphCompile.problem.${published.problem}`)
 
-    return (
-      <p
-        role="status"
-        className={cn(
-          'absolute bottom-2 left-2 z-10 text-[11px]',
-          published.ok ? TONE_TEXT.muted : TONE_TEXT.danger,
-        )}
-      >
-        {said}
-      </p>
-    )
+    return <StatusLine ok={published.ok}>{said}</StatusLine>
   }
 
   if (!result) return null
 
-  // The studio's own tones rather than a colour of this file's: a graph that would not export is
-  // the same red as a job that failed, and it is read in the same glance.
-  const tone = result.ok ? TONE_TEXT.muted : TONE_TEXT.danger
   const label = result.ok
     ? t('graphCompile.steps', { count: result.steps })
     : t(`graphCompile.problem.${result.problem}`)
 
-  return (
-    <p role="status" className={cn('absolute bottom-2 left-2 z-10 text-[11px]', tone)}>
-      {label}
-    </p>
-  )
+  return <StatusLine ok={result.ok}>{label}</StatusLine>
 }
