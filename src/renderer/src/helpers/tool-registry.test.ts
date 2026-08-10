@@ -1,12 +1,12 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { HOME_SURFACE, type ToolZone } from '@shared/domain/tool'
+import { HOME_SURFACE, TOOL_PLACEMENTS, type ToolId, type ToolZone } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 import { preferModels } from '@/stores/settings-fixtures'
-import { hasModelFor, shownTool, useAvailableTools } from './tool-registry'
+import { hasModelFor, shownTool, toolIcon, TOOLS, useAvailableTools } from './tool-registry'
 
 function idsOf(zone: ToolZone, workspace: WorkspaceId): string[] {
   const { result } = renderHook(() => useAvailableTools(zone, workspace))
@@ -162,5 +162,28 @@ describe('what a half of a zone shows', () => {
 
   it('shows the generator again as soon as one is there', () => {
     expect(shownTool('generator', 'left', 'primary', 'image', true)).toBe('generator')
+  })
+})
+
+describe('the glyphs of the rail', () => {
+  /**
+   * One glyph, one meaning. The comment above `ICONS` promises it, and only a test keeps the
+   * promise: `counts` wore the mesh node's glyph for a day — harmless, since the two never share
+   * a rail, but a rail one reads twice starts exactly there.
+   */
+  it('gives every panel a glyph of its own', () => {
+    const ids = TOOL_PLACEMENTS.map(placement => placement.id)
+    const byIcon = new Map<string, ToolId>()
+
+    for (const id of ids) {
+      const icon = toolIcon(id)
+      const held = byIcon.get(icon)
+      expect(held ?? id).toBe(id)
+      byIcon.set(icon, id)
+    }
+  })
+
+  it('hands the panels the same glyph the rail draws', () => {
+    for (const tool of TOOLS) expect(tool.icon).toBe(toolIcon(tool.id))
   })
 })

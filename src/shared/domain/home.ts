@@ -156,7 +156,7 @@ export type HomeMove = 'up' | 'down'
  * It steps over the sections that are not being drawn. Swapping with a hidden neighbour is a
  * write that changes the stored order and nothing on screen — an enabled row that does nothing,
  * which is exactly what `canMoveHomeSection` exists to prevent. Explore made it plain: it sits
- * last, behind three bands that need a project, so moving it up did nothing until one was open.
+ * last, behind bands that needed a project, so moving it up did nothing until one was open.
  *
  * `shown` absent means every section counts, which is what a caller with nothing hidden wants.
  */

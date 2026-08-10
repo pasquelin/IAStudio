@@ -5,7 +5,7 @@ import { emptyAssetCounts, type AssetCounts } from '@shared/domain/asset'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { settleHome } from '@/home/home-fixtures'
+import { HOME_PROJECT, settleHome } from '@/home/home-fixtures'
 import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
@@ -51,19 +51,6 @@ describe('the counts panel', () => {
     await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(2))
   })
 
-  /**
-   * The panel stands in the rail from the first launch, before any folder exists. It has to draw
-   * something then too — the six kinds at nothing, which is the honest answer.
-   */
-  it('still draws its six kinds with no project open', async () => {
-    const read = install({})
-    settleHome(null)
-    render(<Counts />)
-
-    await vi.waitFor(() => expect(read).toHaveBeenCalled())
-    expect(screen.getAllByText('0')).toHaveLength(6)
-  })
-
   // The local catalogue rarely refuses, and an empty panel said nothing about it when it did.
   it('stays and offers to count again when the catalogue refuses', async () => {
     installFakeBridge({ assets: { counts: () => Promise.reject(new Error('locked')) } })
@@ -91,12 +78,16 @@ describe('the counts panel', () => {
   })
 
   /**
-   * All six at zero rather than an empty panel: the numbers ARE the answer, and they say the
-   * project has been counted rather than not yet read. A band could take itself off the page; a
-   * column standing under a rail icon cannot — an empty one reads as a bug.
+   * All six at zero rather than an empty panel, with a folder open or without one: the numbers
+   * ARE the answer, and they say the project has been counted rather than not yet read. A band
+   * could take itself off the page; a column standing under a rail icon cannot.
    */
-  it('draws the six at zero on a project that holds nothing', async () => {
+  it.each([
+    ['a project open', HOME_PROJECT],
+    ['no project at all', null],
+  ])('draws the six kinds at zero with %s', async (_case, project) => {
     const read = install({})
+    settleHome(project)
     render(<Counts />)
 
     await vi.waitFor(() => expect(read).toHaveBeenCalled())

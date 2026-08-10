@@ -5,7 +5,9 @@ import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { SHELF_OVERLAY } from '@/design/styles'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { settleHome } from '../home-fixtures'
+import { homeSections } from '@shared/domain/home'
 import { useFavorites } from '@/stores/favorites'
+import { useSettings } from '@/stores/settings'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { Favorites } from './Favorites'
@@ -42,6 +44,35 @@ beforeEach(() => {
 })
 
 describe('the recipes shelf', () => {
+  /**
+   * The count the section menu writes has to reach the screen. Four bands read it until they
+   * became panels on 10 August; the three left are now the only proof that the row does anything
+   * at all, and a menu offering "show 6" over an unchanged shelf is worse than no menu.
+   */
+  it('draws only as many as the section menu asks for', async () => {
+    const recipes = Array.from({ length: 5 }, (_, index) =>
+      recipe({ id: `favorite_${index}`, label: `Recette ${index}` }),
+    )
+    install(recipes)
+    useFavorites.setState({ recipes, loaded: true })
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        home: {
+          ...state.settings.home,
+          sections: homeSections(state.settings.home.sections).map(section =>
+            section.id === 'favorites' ? { ...section, limit: 3 } : section,
+          ),
+        },
+      },
+    }))
+    render(<Favorites />)
+
+    expect(await screen.findByText('Recette 0')).toBeInTheDocument()
+    expect(screen.getByText('Recette 2')).toBeInTheDocument()
+    expect(screen.queryByText('Recette 3')).not.toBeInTheDocument()
+  })
+
   /** The still is a copy on disk, served outside every project — never a URL that expires. */
   it('draws each recipe from the still kept beside it', async () => {
     install([recipe()])

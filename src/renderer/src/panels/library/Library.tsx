@@ -1,4 +1,3 @@
-import { mdiCloudOutline } from '@mdi/js'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
@@ -6,6 +5,8 @@ import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
+import { toolIcon } from '@/helpers/tool-registry'
+import { TILES_ONLY } from '@/helpers/collection-state'
 import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
@@ -14,8 +15,9 @@ import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { openFromHome } from '@/home/open'
-import { ShelfTile } from '@/home/ShelfCard'
-import { PANEL_PAGE, TILE_COLLECTION } from '@/panels/shared/tiles'
+import { ShelfTile } from '@/design/ShelfTile'
+import { RefusedPanel } from '@/panels/shared/RefusedPanel'
+import { PANEL_PAGE } from '@/panels/shared/tiles'
 
 const NOTHING: readonly CloudAsset[] = []
 
@@ -49,23 +51,15 @@ export function Library() {
 
   // A 429 used to take the band off the page without a word — and since `cloudBrowse` goes
   // through `quietlyReducedBy`, the journal did not say it either.
-  if (state === 'refused') {
-    return (
-      <EmptyState
-        icon={mdiCloudOutline}
-        message={t('home.refused')}
-        action={{ label: t('home.retry'), onClick: retry }}
-      />
-    )
-  }
+  if (state === 'refused') return <RefusedPanel tool="library" onRetry={retry} />
 
   return (
     <Collection
       label={t('panels.library')}
       items={page}
-      state={TILE_COLLECTION}
+      state={TILES_ONLY}
       renderCard={asset => <Tile asset={asset} fetched={fetchedById.get(asset.id)} />}
-      empty={<EmptyState icon={mdiCloudOutline} message={t('home.library.none')} />}
+      empty={<EmptyState icon={toolIcon('library')} message={t('home.library.none')} />}
     />
   )
 }

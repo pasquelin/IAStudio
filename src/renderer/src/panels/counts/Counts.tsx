@@ -1,9 +1,7 @@
-import { mdiShapeOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, emptyAssetCounts, type AssetType } from '@shared/domain/asset'
-import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
-import { FOCUS_RING } from '@/design/styles'
+import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { revealAssetsOfKind } from '@/helpers/reveal-panel'
 import { assetIcon } from '@/helpers/workspaces'
@@ -11,6 +9,7 @@ import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
 import { HINT_LEFT } from '@/helpers/tooltip'
+import { RefusedPanel } from '@/panels/shared/RefusedPanel'
 
 const NONE = emptyAssetCounts()
 
@@ -24,7 +23,6 @@ const NONE = emptyAssetCounts()
  * whose length nobody knows, and this one is the length of `ASSET_TYPES`.
  */
 export function Counts() {
-  const { t } = useTranslation()
   const path = useProject(state => state.project?.path ?? null)
   const {
     value: counts,
@@ -32,15 +30,7 @@ export function Counts() {
     retry,
   } = useShelf(NONE, () => getBridge()?.assets.counts(), path ?? '')
 
-  if (state === 'refused') {
-    return (
-      <EmptyState
-        icon={mdiShapeOutline}
-        message={t('home.refused')}
-        action={{ label: t('home.retry'), onClick: retry }}
-      />
-    )
-  }
+  if (state === 'refused') return <RefusedPanel tool="counts" onRetry={retry} />
 
   // Drawn at zero rather than taken off: a kind with nothing in it is an answer, and the six
   // rows are what tells the reader the panel has been counted rather than not yet read.
@@ -65,11 +55,14 @@ function Counter({ type, total }: { type: AssetType; total: number }) {
       disabled={total === 0}
       {...HINT_LEFT(t('home.counts.reveal'))}
       onClick={() => revealAssetsOfKind(type)}
+      // `rowSkin` rather than the hover and the focus ring written out again: the same line must
+      // not light up differently depending on which panel lists it. A count of nothing keeps its
+      // place and stops answering — dimmed, and `disabled` takes the hover away on its own.
       className={cn(
-        'bg-surface flex w-full items-center gap-2.5 rounded-(--radius-sc-md) border-none',
-        'px-3 py-2 text-left transition-colors',
-        total === 0 ? 'opacity-40' : 'hover:bg-elevated cursor-pointer',
-        FOCUS_RING,
+        rowSkin(false),
+        'bg-surface flex w-full items-center gap-2.5 border-none px-3 py-2 text-left',
+        'transition-colors',
+        total === 0 ? 'opacity-40' : 'cursor-pointer',
       )}
     >
       <UiIcon path={assetIcon(type)} size={18} className="text-muted shrink-0" />

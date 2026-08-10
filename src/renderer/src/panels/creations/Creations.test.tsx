@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { settleHome } from '@/home/home-fixtures'
+import { HOME_PROJECT, settleHome } from '@/home/home-fixtures'
 import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useModels } from '@/stores/models'
@@ -76,21 +76,6 @@ describe('the creations panel', () => {
     await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(2))
   })
 
-  /**
-   * The panel stands in the rail from the first launch, before any folder exists — so it says
-   * what would fill it rather than standing blank under an icon.
-   */
-  it('says what would fill it with no project open', async () => {
-    const search = install([])
-    settleHome(null)
-    render(<Creations />)
-
-    await vi.waitFor(() => expect(search).toHaveBeenCalled())
-    expect(
-      screen.getByText('Ce que vous générerez dans ce projet s’affichera ici.'),
-    ).toBeInTheDocument()
-  })
-
   it('stays and offers to read again when the catalogue refuses', async () => {
     installFakeBridge({ assets: { search: () => Promise.reject(new Error('locked')) } })
     render(<Creations />)
@@ -131,11 +116,15 @@ describe('the creations panel', () => {
   })
 
   /**
-   * A panel drawing nothing under a rail icon reads as a bug: the band could take itself off
-   * the page, a column cannot. It says what would fill it instead.
+   * A panel drawing nothing under a rail icon reads as a bug — with a folder open or without
+   * one. The band could take itself off the page; a column cannot, so it says what would fill it.
    */
-  it('says what would fill it when the project has produced nothing', async () => {
+  it.each([
+    ['a project open', HOME_PROJECT],
+    ['no project at all', null],
+  ])('says what would fill it with %s', async (_case, project) => {
     const search = install([])
+    settleHome(project)
     render(<Creations />)
 
     await vi.waitFor(() => expect(search).toHaveBeenCalled())

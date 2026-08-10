@@ -2,6 +2,7 @@ import {
   mdiApplicationBracesOutline,
   mdiCloudOutline,
   mdiCreationOutline,
+  mdiChartBoxOutline,
   mdiCubeScan,
   mdiFileDocumentMultipleOutline,
   mdiFileTreeOutline,
@@ -12,7 +13,6 @@ import {
   mdiImageMultipleOutline,
   mdiLayersOutline,
   mdiPaletteSwatchOutline,
-  mdiShapeOutline,
   mdiShimmer,
   mdiTuneVariant,
   mdiVideoVintage,
@@ -64,7 +64,7 @@ const ICONS: Record<ToolId, string> = {
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
   creations: mdiShimmer,
-  counts: mdiShapeOutline,
+  counts: mdiChartBoxOutline,
   library: mdiCloudOutline,
   documents: mdiFileDocumentMultipleOutline,
   // The glyph the status bar already puts on the journal (`app/ActivityList.tsx`), which is the
@@ -105,6 +105,16 @@ export function toolsInZone(zone: ToolZone, surface: ToolSurface): Tool[] {
 /** i18n key of a tool's title — never the displayed text. */
 export function toolTitleKey(id: ToolId): string {
   return `panels.${id}`
+}
+
+/**
+ * A tool's glyph, for the panel itself rather than for the rail.
+ *
+ * Exported so an empty state can wear the icon its rail button wears: the two drifting apart is
+ * what `meshes` reading `NODE_KINDS.mesh.icon` above already guards against, one panel at a time.
+ */
+export function toolIcon(id: ToolId): string {
+  return ICONS[id]
 }
 
 /**

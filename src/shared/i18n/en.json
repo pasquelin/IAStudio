@@ -1926,8 +1926,13 @@
       "none": "Nothing published in this category yet."
     },
     "restoreHint": "Puts every hidden section back on the home, at once",
-    "byModeHint": "Opens the asset browser, filtered on this kind",
     "exploreTabHint": "Shows only this category in the shelf",
-    "createProjectHint": "Pick a folder on disk: everything the studio produces is written there"
+    "createProjectHint": "Pick a folder on disk: everything the studio produces is written there",
+    "documents": {
+      "none": "This project holds no document yet. Pick a tool in the centre to make one."
+    },
+    "counts": {
+      "reveal": "Open the project's asset shelf, narrowed to this kind"
+    }
   }
 }

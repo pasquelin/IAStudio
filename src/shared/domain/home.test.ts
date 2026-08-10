@@ -139,6 +139,22 @@ describe('reading back a stored order', () => {
 })
 
 describe('how many items a section asks for', () => {
+  /**
+   * Every band that declares a count must read it, and every band that reads one must declare it.
+   * The menu writes this setting, so a band on one side of that pair only is a row offering
+   * "show 24" that changes nothing on screen — the silent no-op `canMoveHomeSection` exists to
+   * prevent one zone away. Four bands lost the reading half when they became panels.
+   */
+  it('is declared by exactly the bands whose registry entry carries one', () => {
+    const declared = HOME_SECTIONS.filter(entry => entry.defaultLimit !== undefined).map(
+      entry => entry.id,
+    )
+
+    expect(declared).toEqual(['favorites', 'jobs', 'usage'])
+    for (const id of declared)
+      expect(homeSectionLimit(DEFAULT_HOME_SECTIONS, id)).toBeGreaterThan(0)
+  })
+
   it('prefers the stored number to the registry default', () => {
     const stored: HomeSectionSetting[] = [{ id: 'favorites', visible: true, limit: 3 }]
 

@@ -1926,8 +1926,13 @@
       "none": "Rien de publié dans cette catégorie pour le moment."
     },
     "restoreHint": "Remet toutes les sections cachées sur l’accueil, d’un coup",
-    "byModeHint": "Ouvre l’explorateur d’assets, filtré sur ce type",
     "exploreTabHint": "Ne montre que cette catégorie dans la bande",
-    "createProjectHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit"
+    "createProjectHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit",
+    "documents": {
+      "none": "Ce projet ne contient encore aucun document. Choisissez un outil au centre pour en créer un."
+    },
+    "counts": {
+      "reveal": "Ouvrir la bibliothèque d’assets du projet, filtrée sur ce type"
+    }
   }
 }

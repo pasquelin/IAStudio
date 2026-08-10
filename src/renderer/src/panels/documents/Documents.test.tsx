@@ -57,14 +57,39 @@ describe('the documents panel', () => {
   })
 
   /**
+   * The mark of "open", which is what tells this list from a list of files: a document already
+   * in front of you is one you reach by its tab, not by opening it again.
+   */
+  it('marks the documents a tab is already showing', () => {
+    useDocuments.setState({ documents: { a: POSTER }, stored: [POSTER], activeId: 'a' })
+    render(<Documents />)
+
+    expect(screen.getByText('Ouvert')).toBeInTheDocument()
+  })
+
+  // An open folder that holds nothing yet is not the same silence as no folder at all.
+  it('tells an empty project from no project at all', () => {
+    useDocuments.setState({ documents: {}, stored: [], activeId: null })
+    render(<Documents />)
+
+    expect(screen.getByText(/ne contient encore aucun document/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ouvrir un projet' })).not.toBeInTheDocument()
+  })
+
+  /**
    * A panel standing under a rail icon with nothing in it reads as a bug. With no folder open
    * there is nothing to list at all, so it offers the two gestures that fix that.
    */
-  it('offers both ways out when no project is open', () => {
-    useProject.setState({ project: null })
+  it.each([
+    ['Ouvrir un projet', 'openPicked'],
+    ['Créer un projet', 'createPicked'],
+  ])('offers %s as a way out when no project is open', async (label, gesture) => {
+    const picked = vi.fn(() => Promise.resolve())
+    useProject.setState({ project: null, [gesture]: picked })
     render(<Documents />)
 
-    expect(screen.getByRole('button', { name: 'Ouvrir un projet' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Créer un projet' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: label }))
+
+    expect(picked).toHaveBeenCalled()
   })
 })

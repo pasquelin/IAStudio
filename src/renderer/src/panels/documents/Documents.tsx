@@ -62,7 +62,7 @@ export function Documents() {
       renderRow={(document: DocumentDescriptor) => (
         <DocumentRow document={document} open={open[document.id] !== undefined} />
       )}
-      empty={<EmptyState icon={mdiFolderOpenOutline} message={t('explorer.noDocuments')} />}
+      empty={<EmptyState icon={mdiFolderOpenOutline} message={t('home.documents.none')} />}
     />
   )
 }
