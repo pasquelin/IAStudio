@@ -18,7 +18,7 @@ import {
   type FacetDescriptor,
   type FacetOption,
 } from '@/helpers/collection-state'
-import { TIP_BOTTOM } from '@/helpers/tooltip'
+import { HINT_TOP, TIP_BOTTOM } from '@/helpers/tooltip'
 import { CONTROL } from './styles'
 import { ToolButton } from './ToolButton'
 import { UiIcon } from './UiIcon'
@@ -245,6 +245,7 @@ export function CollectionBar({
         <button
           type="button"
           aria-expanded={expanded}
+          {...HINT_TOP(t(expanded ? 'collection.fewerHint' : 'collection.moreHint'))}
           onClick={() => setExpanded(current => !current)}
           className="group flex cursor-pointer items-center gap-2 py-0.5"
         >

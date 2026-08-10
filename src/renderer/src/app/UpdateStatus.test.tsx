@@ -64,6 +64,19 @@ describe('the update indicator', () => {
     expect(screen.getByRole('button')).toHaveClass(STATUS_BUTTON)
   })
 
+  /**
+   * The face reads "Redémarrer pour 0.2.0" — a version, and nothing about the download already
+   * being on disk. Pressing it restarts the studio, which is not a thing to discover afterwards.
+   */
+  it('says the restart installs something already downloaded', () => {
+    show({ phase: 'ready', version: '0.2.0' })
+
+    expect(screen.getByRole('button')).toHaveAttribute(
+      'data-tooltip-content',
+      'Redémarre le studio pour installer la version déjà téléchargée',
+    )
+  })
+
   // Nothing to restart into until the bytes are on disk: the announcement is not a button.
   it('offers no restart while the download is still running', () => {
     show({ phase: 'downloading', version: '0.2.0', progress: 0.4 })

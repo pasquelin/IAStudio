@@ -1,16 +1,84 @@
 # DRIFT_LOG
 
 `P0-button-tooltip` — tout bouton porte une infobulle qui explique son action. Quand le
-libellé est déjà à l'écran, l'infobulle explique au lieu de le répéter (champ `description`).
-Source : décision de l'utilisateur du 2026-08-10, portée dans `CLAUDE.md` § Interface.
+libellé est déjà à l'écran, l'infobulle explique au lieu de le répéter (`HINT_*`) ; sinon elle
+donne aussi le nom accessible (`TIP_*`). Source : décision de l'utilisateur du 2026-08-10,
+portée dans `CLAUDE.md` § Interface.
 
-Les `<ToolButton>` n'y figurent plus : le type l'exige désormais, la régression est
-impossible.
+**Le recensement des itérations 4 à 9 était incomplet.** Il ne comptait que les `<button>`
+bruts et les `<ToolButton>` : les appels à `<Button>` et à `<MenuRow>`, qui rendent eux aussi un
+bouton, n'y figuraient pas. Trente-sept sites manquaient. Le tableau ci-dessous les inclut, et
+c'est pourquoi le compte remonte alors qu'aucun bouton n'a été ajouté au logiciel.
 
-## Boutons à icône seule — l'action est indevinable au survol
+Les `<ToolButton>` n'y figurent pas : le type l'exige, la régression est impossible.
+
+## `<button>` bruts sans infobulle (9)
 
 | P | Fichier:ligne | Règle | Preuve |
 |---|---|---|---|
+| P0 | src/renderer/src/home/HomeView.tsx:96 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/home/ShelfCard.tsx:59 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/home/sections/ByMode.tsx:52 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/home/sections/Explore.tsx:89 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/home/sections/Projects.tsx:65 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/home/sections/Tools.tsx:93 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:215 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:238 | P0-button-tooltip | libellé visible, aucune description |
+| P0 | src/renderer/src/panels/view/View.tsx:56 | P0-button-tooltip | libellé visible, aucune description |
+
+## Appels à `<Button>` (10)
+
+`Button` répand ses props sur son `<button>`, donc `{...HINT_*}` y passe sans rien changer au
+composant. Deux d'entre eux tiennent leur libellé d'un appelant (`EmptyState`) : la phrase doit
+venir du même endroit que le mot, donc du descripteur d'action.
+
+| P | Fichier:ligne | Règle | Preuve |
+|---|---|---|---|
+| P0 | src/renderer/src/design/DynamicForm.tsx:256 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/design/EmptyState.tsx:34 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/design/EmptyState.tsx:35 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/design/PromptAssistant.tsx:176 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/design/PromptAssistant.tsx:178 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/home/HomeView.tsx:67 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/home/RefusedSection.tsx:32 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/home/sections/Spark.tsx:58 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/home/sections/Spotlight.tsx:206 | P0-button-tooltip | aucune infobulle au site d'appel |
+| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:326 | P0-button-tooltip | aucune infobulle au site d'appel |
+
+## Rangées de menu (27)
+
+`MenuRow` porte déjà une prop `tip` — le design system l'avait prévu — et un seul appelant
+s'en sert (`Toolbar`, via `tipFor(orientation, 'flyout')`). Les autres ne passent rien.
+
+| P | Fichier:ligne | Règle | Preuve |
+|---|---|---|---|
+| P0 | src/renderer/src/app/AccountSelect.tsx:70 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/app/AccountSelect.tsx:85 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/app/DocumentTabMenu.tsx:36 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/app/DocumentTabMenu.tsx:41 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/app/DocumentTabMenu.tsx:51 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/app/TitleBar.tsx:148 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/app/TitleBar.tsx:157 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/design/TextureField.tsx:67 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/design/TextureField.tsx:79 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/design/Toolbar.tsx:234 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/home/SectionMenu.tsx:52 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/home/SectionMenu.tsx:61 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/home/SectionMenu.tsx:72 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/home/SectionMenu.tsx:86 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/assets/AssetMenu.tsx:52 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/assets/AssetMenu.tsx:61 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/channels/ChannelTile.tsx:151 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/channels/ChannelTile.tsx:165 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/channels/ChannelTile.tsx:179 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/channels/ChannelTile.tsx:188 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/layers/LayerRow.tsx:117 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/layers/LayerStackActions.tsx:127 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/layers/LayerStackActions.tsx:150 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/shared/NodeActions.tsx:48 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/styles/StyleMenu.tsx:26 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/panels/styles/StyleMenu.tsx:34 | P0-button-tooltip | prop `tip` non passée |
+| P0 | src/renderer/src/spaces/graph/GraphMenu.tsx:50 | P0-button-tooltip | prop `tip` non passée |
 
 ## Peau recopiée
 
@@ -18,39 +86,13 @@ impossible.
 |---|---|---|---|
 | P1 | src/renderer/src/home/sections/Creations.tsx:110 | P1-local-skin | les trois lignes de `SHELF_OVERLAY` recopiées à la main, arrivées avec `feat/accueil` après l'extraction du 2026-08-10 |
 
-## Boutons à libellé visible — l'infobulle doit expliquer, pas répéter
-
-| P | Fichier:ligne | Règle | Preuve |
-|---|---|---|---|
-| P0 | src/renderer/src/app/ActivityList.tsx:147 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/app/ActivityList.tsx:157 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/app/TitleBar.tsx:219 | P0-button-tooltip | pastille d'espace, aucune description |
-| P0 | src/renderer/src/app/UpdateStatus.tsx:31 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/design/CollectionBar.tsx:245 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/design/PropertySection.tsx:20 | P0-button-tooltip | en-tête pliable, aucune description |
-| P0 | src/renderer/src/dictation/DictationStatus.tsx:38 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/dictation/DictationStatus.tsx:68 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/dictation/DictationStatus.tsx:83 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/HomeView.tsx:96 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/ByMode.tsx:52 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/Explore.tsx:89 | P0-button-tooltip | onglet, aucune description |
-| P0 | src/renderer/src/home/sections/Projects.tsx:65 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/home/sections/Tools.tsx:93 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:215 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/panels/inspector/TextureInspector.tsx:238 | P0-button-tooltip | libellé visible, aucune description |
-| P0 | src/renderer/src/panels/view/View.tsx:54 | P0-button-tooltip | libellé visible, aucune description |
-
-## Ce qui bloque une partie du lot
+## Ce qui reste à savoir
 
 Les quatre fenêtres montent leur `TooltipHost` : la principale depuis toujours, les
 Préférences, l'Usage et les Licences depuis le 2026-08-10. Plus rien n'est bloqué.
 
 Un `<Tooltip>` fermé **ne rend rien du tout** — vérifié. Le seul test qui prouve qu'un hôte
-est monté est donc un survol de bout en bout, ce qui a imposé de monter l'hôte d'une fenêtre
-dans le même lot qu'au moins un de ses boutons.
+est monté est donc un survol de bout en bout.
 
-`design/Button.tsx` n'accepte aujourd'hui aucune infobulle : le composant des boutons à
-libellé des docks doit d'abord en porter une, comme `ToolButton`.
-
-Les boutons à libellé visible se câblent par `HINT_*` (`helpers/tooltip.ts`), jamais par
-`TIP_*` : ce dernier pose un `aria-label`, qui remplacerait le nom visible.
+Les boutons à libellé visible se câblent par `HINT_*`, jamais par `TIP_*` : ce dernier pose un
+`aria-label`, qui remplacerait le nom visible.

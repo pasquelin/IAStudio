@@ -13,7 +13,8 @@
     "graph": "Graph",
     "moveLeft": "Move left",
     "moveRight": "Move right",
-    "moved": "{{label}} moved, position {{position}} of {{total}}"
+    "moved": "{{label}} moved, position {{position}} of {{total}}",
+    "switchHint": "Opens this space — drag it to change the order of the bar"
   },
   "panels": {
     "layers": "Layers",
@@ -201,12 +202,15 @@
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened"
-    }
+    },
+    "allHint": "Clears this filter: the log shows everything again",
+    "filterHint": "Shows only the entries of this kind — several can be ticked at once"
   },
   "updates": {
     "available": "Version {{version}} available",
     "downloading": "Downloading version {{version}}",
-    "restart": "Restart to install version {{version}}"
+    "restart": "Restart to install version {{version}}",
+    "restartHint": "Restarts the studio to install the version already downloaded"
   },
   "assets": {
     "none": "No asset yet. Generate something to get started.",
@@ -338,7 +342,9 @@
     "loading": "Loading…",
     "noMatch": "No result for this filter.",
     "more": "More filters",
-    "fewer": "Fewer filters"
+    "fewer": "Fewer filters",
+    "moreHint": "Shows the remaining filters and the display options",
+    "fewerHint": "Folds the filters away, to leave the room to the collection"
   },
   "documents": {
     "none": "No document open. Generate or open an asset to get started.",
@@ -654,7 +660,9 @@
     "title": "Title",
     "isOutput": "App result",
     "nodeId": "Identifier",
-    "noModel": "None"
+    "noModel": "None",
+    "sectionFoldHint": "Folds this group of properties",
+    "sectionUnfoldHint": "Unfolds this group of properties"
   },
   "transport": {
     "play": "Play",
@@ -1772,7 +1780,10 @@
       "modelDownloadFailed": "The model could not be downloaded.",
       "modelChecksumMismatch": "The downloaded model is damaged; it has been removed.",
       "engineCrashed": "Speech recognition stopped."
-    }
+    },
+    "downloadHint": "Once only: the model then stays on this machine",
+    "cancelDownloadHint": "Stops the download; whatever was received is thrown away",
+    "openPrivacySettingsHint": "Opens the system settings, at the microphone section"
   },
   "units": {
     "byte": "B",
