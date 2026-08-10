@@ -17,9 +17,14 @@ const COMPILE_DEBOUNCE_MS = 400
 /**
  * Whether the graph would compile, asked while it is being drawn.
  *
- * The compiler is Scenario's own and lives in the SDK, which only the main process speaks —
- * hence the round trip. Answered on the settled graph rather than on every frame of a drag: a
- * position is not part of a flow, but it changes the object all the same.
+ * The compiler is Scenario's own and lives in the SDK, which only the main process speaks — hence
+ * the round trip.
+ *
+ * **What the debounce does NOT do, and the comment here said it did:** a node dragged changes the
+ * graph object without changing anything a flow is made of, so a settled drag still costs one
+ * clone of the whole graph across the boundary. It is paced, not avoided. Avoiding it means
+ * keying on what the flow actually reads — ids, types, `data`, edges — which is a walk of the
+ * graph on every render, so it is a trade rather than a fix, and it waits for a measurement.
  */
 export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
   const settled = useDebounced(graph, COMPILE_DEBOUNCE_MS)
