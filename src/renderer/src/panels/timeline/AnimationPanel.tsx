@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { TRACK_PROPERTIES, type AnimationTrack, type TrackProperty } from '@shared/domain/animation'
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
+import { CONTROL } from '@/design/styles'
 import { clampPlayhead, keyAt, snapToFrame } from '@/engines/scene/animation-eval'
 import {
   addAnimationTrack,
@@ -25,6 +26,7 @@ import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { selectedNodes } from '@/engines/scene/scene-state'
+import { bonesOfNode, useModelClips } from '@/stores/model-clips'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
@@ -59,18 +61,22 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   usePlayback(documentId, view.playing, timeline.duration)
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
+  const bones = useModelClips(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
+  const [bone, setBone] = useState('')
 
   const addTrack = (property: TrackProperty): void => {
     if (!anchor) return
+
+    // On the bone the picker names, when one is picked: a rig is corrected bone by bone, and a
+    // track on the model itself would move the whole character instead of its arm.
+    const target = bone ? { nodeId: anchor.id, bone, property } : { nodeId: anchor.id, property }
+    const subject = bone ? `${anchor.name} · ${bone}` : anchor.name
+
     useScenes
       .getState()
       .runCommand(
         documentId,
-        addAnimationTrack(
-          { nodeId: anchor.id, property },
-          `${anchor.name} · ${t(`animation.${property}`)}`,
-          `track_${newId()}`,
-        ),
+        addAnimationTrack(target, `${subject} · ${t(`animation.${property}`)}`, `track_${newId()}`),
       )
   }
 
@@ -97,6 +103,22 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
         </span>
 
         <div className="flex-1" />
+
+        {bones.length > 0 && (
+          <select
+            aria-label={t('animation.bone')}
+            value={bone}
+            onChange={event => setBone(event.target.value)}
+            className={cn(CONTROL, 'max-w-40 px-1')}
+          >
+            <option value="">{t('animation.wholeModel')}</option>
+            {bones.map(name => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <RenderButton documentId={documentId} />
 

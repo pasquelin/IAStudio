@@ -136,6 +136,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
       onTransform: moves => recordTransform(documentId, moves),
       onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
+      onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
     })
 
     renderer.mount(element)

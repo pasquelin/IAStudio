@@ -24,7 +24,7 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js'
 import { ViewHelper } from 'three/addons/helpers/ViewHelper.js'
 import type { MotionId } from '@shared/domain/shortcut'
 import { onPaletteChange } from '../core/palette'
-import type { ExportFormat, ShadowQuality } from '@shared/domain/scene'
+import type { ExportFormat, ShadowQuality, Transform } from '@shared/domain/scene'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
@@ -102,6 +102,8 @@ export type SceneRendererOptions = {
    * live in the file, not in the document, and a panel offering a choice has to know them.
    */
   onClips?: (nodeId: string, clips: readonly string[]) => void
+  /** The bones a rigged model brought, named. Same reason as `onClips`: they live in the file. */
+  onBones?: (nodeId: string, bones: readonly string[]) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
@@ -166,6 +168,11 @@ BufferGeometry.prototype.computeBoundsTree = computeBoundsTree
 BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree
 Mesh.prototype.raycast = acceleratedRaycast
 
+/** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
+function isBone(object: Object3D): boolean {
+  return Reflect.get(object, 'isBone') === true
+}
+
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
 
@@ -222,6 +229,8 @@ export class SceneRenderer {
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline | null = null
   private playhead = 0
+  /** Where each driven bone rested when it arrived, keyed `<nodeId>/<bone>`. See `applyBonePoses`. */
+  private readonly boneRests = new Map<string, Transform>()
   private readonly held = new Set<MotionId>()
 
   private environment: ViewportEnvironment | null = null
@@ -394,6 +403,36 @@ export class SceneRenderer {
       object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z)
       object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z)
     }
+
+    this.applyBonePoses(timeline)
+  }
+
+  /**
+   * The same, for the bones inside a model. Their rest pose is the one the FILE gave them, not
+   * one the document holds — a document holds a reference to a model, never its skeleton — so
+   * it is read off the bone the first time a track asks for it and kept.
+   */
+  private applyBonePoses(timeline: AnimationTimeline): void {
+    for (const track of timeline.tracks) {
+      const bone = track.target.bone
+      if (!bone) continue
+
+      const object = this.objects.get(track.target.nodeId)?.getObjectByName(bone)
+      if (!object) continue
+
+      const key = `${track.target.nodeId}/${bone}`
+      const rest = this.boneRests.get(key) ?? {
+        position: { x: object.position.x, y: object.position.y, z: object.position.z },
+        rotation: { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z },
+        scale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
+      }
+      this.boneRests.set(key, rest)
+
+      const pose = poseAt(rest, timeline, track.target.nodeId, this.playhead, bone)
+      object.position.set(pose.position.x, pose.position.y, pose.position.z)
+      object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z)
+      object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z)
+    }
   }
 
   setMode(mode: TransformMode): void {
@@ -553,6 +592,17 @@ export class SceneRenderer {
     helper.raycast = () => {}
     this.skeletons.set(nodeId, helper)
     this.viewport.scene.add(helper)
+  }
+
+  /** The bones of a rigged model, by name, for whoever offers a track on one. */
+  private bonesOf(root: Object3D): string[] {
+    const names: string[] = []
+    root.traverse(object => {
+      // Named, always: an unnamed bone cannot be addressed by a document, and a track that
+      // pointed at one would find nothing after a reload.
+      if (isBone(object) && object.name) names.push(object.name)
+    })
+    return names
   }
 
   private unbindSkeleton(nodeId: string): void {
@@ -985,6 +1035,10 @@ export class SceneRenderer {
       if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
       this.options.onClips?.(node.id, clipNamesOf(source))
       this.bindSkeleton(node.id, holder)
+      this.options.onBones?.(node.id, this.bonesOf(holder))
+      // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
+      // on one of them would drive nothing at all until the next edit.
+      this.applyPoses()
 
       applyShadowFlags(
         holder,

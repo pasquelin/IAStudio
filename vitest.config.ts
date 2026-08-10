@@ -77,9 +77,12 @@ export default defineConfig({
           statements: -270,
           branches: -250,
         },
+        // Raised for the film pass: `renderFilm` draws off screen and reads pixels back, which
+        // no jsdom run reaches at all — the only case the comment above allows a budget to grow
+        // for. What it schedules and how its pixels come back are covered apart, in `film.ts`.
         'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
-          statements: -700,
-          branches: -310,
+          statements: -790,
+          branches: -350,
         },
         // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
@@ -108,7 +111,9 @@ export default defineConfig({
         // them is what jsdom cannot run — a canvas, a WebGL context, a drag — plus, in `panels`,
         // the branches of a shelf that needs a project open.
         'src/renderer/src/app/**': { statements: -48, branches: -26 },
-        'src/renderer/src/panels/**': { statements: -147, branches: -120 },
+        // Raised for the animation band: its playback loop is a `requestAnimationFrame` that
+        // no jsdom run turns, and the render button's work belongs to the engine behind it.
+        'src/renderer/src/panels/**': { statements: -165, branches: -130 },
         'src/renderer/src/design/**': { statements: -59, branches: -66 },
         // The fourth glob that had none, found the day a lot posted `GraphStatus.tsx` into it and
         // nothing moved. Measured at 235 and 195 the day it was set — what the six spaces carry,

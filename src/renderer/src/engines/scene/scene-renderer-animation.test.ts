@@ -255,3 +255,51 @@ describe('SceneRenderer and the timeline over the scene', () => {
     engine.dispose()
   })
 })
+
+describe('SceneRenderer and a track on one bone', () => {
+  const boneTimeline = (value: number): AnimationTimeline => ({
+    ...EMPTY_TIMELINE,
+    tracks: [
+      {
+        id: 'track-bone',
+        name: 'arm',
+        index: 0,
+        muted: false,
+        solo: false,
+        locked: false,
+        armed: false,
+        target: { nodeId: 'a', bone: 'spine', property: 'position' },
+        keys: [{ time: 0, value: { x: value, y: 0, z: 0 } }],
+      },
+    ],
+  })
+
+  it('moves the bone the track names, and leaves the model where it stands', async () => {
+    const loaded = animatedModel([walk()])
+    const bone = new Bone()
+    bone.name = 'spine'
+    loaded.add(bone)
+
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)], animation: boneTimeline(3) })
+
+    await vi.waitFor(() => expect(bone.position.x).toBe(3))
+    // The model itself was never a target of that track.
+    expect(loaded.parent?.position.x).toBe(0)
+    engine.dispose()
+  })
+
+  it('lays the track over the pose the FILE gave the bone, not over zero', async () => {
+    const loaded = animatedModel([walk()])
+    const bone = new Bone()
+    bone.name = 'spine'
+    bone.position.set(10, 0, 0)
+    loaded.add(bone)
+
+    const engine = withModel(loaded)
+    engine.apply({ ...EMPTY_SCENE, nodes: [modelNode(null)], animation: boneTimeline(3) })
+
+    await vi.waitFor(() => expect(bone.position.x).toBe(13))
+    engine.dispose()
+  })
+})
