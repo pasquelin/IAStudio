@@ -559,7 +559,7 @@
     },
     {
       "path": "src/renderer/src/design/Carousel.tsx",
-      "lines": 261,
+      "lines": 260,
       "components": [
         {
           "name": "Carousel",
@@ -580,7 +580,7 @@
         },
         {
           "name": "Arrow",
-          "line": 240,
+          "line": 239,
           "exported": false,
           "props": [
             "hidden",
@@ -601,12 +601,12 @@
         },
         {
           "probe": "inlineStyle",
-          "line": 178,
+          "line": 181,
           "text": "style={{"
         },
         {
           "probe": "inlineStyle",
-          "line": 186,
+          "line": 189,
           "text": "style={{"
         }
       ]

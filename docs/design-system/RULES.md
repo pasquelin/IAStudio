@@ -27,4 +27,4 @@ la ligne reste ici jusqu'à ce que le code s'aligne.
 
 | Ce que dit `CLAUDE.md` | Ce que fait le code | Où |
 |---|---|---|
-| « **`cn()`** pour fusionner les classes Tailwind » | un gabarit de chaîne fusionne deux classes conditionnelles | `src/renderer/src/design/Row.tsx:49` |
+| — | — | aucune contradiction ouverte |

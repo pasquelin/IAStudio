@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { cn } from '@/helpers/cn'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
@@ -46,7 +47,7 @@ export function Row({
             which comes with the OS delay and none of the theme. */}
         <p
           {...tip(title)}
-          className={`truncate text-[12px] ${muted ? 'text-muted line-through' : 'text-text'}`}
+          className={cn('truncate text-[12px]', muted ? 'text-muted line-through' : 'text-text')}
         >
           {title}
         </p>
