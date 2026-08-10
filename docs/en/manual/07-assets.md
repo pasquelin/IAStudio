@@ -15,7 +15,7 @@ It is the equivalent of a content browser — the library of raw material you dr
 
 | Workspace | Where the shelf is |
 |---|---|
-| Image, Textures, Skyboxes | in the **bottom strip** |
+| Image, Textures, Skyboxes, Graph | in the **bottom strip** |
 | Video, Audio, 3D | in the **right column**, upper half |
 
 This is not a whim: in the Video, Audio and 3D workspaces the bottom strip belongs to the timeline,
@@ -56,17 +56,18 @@ button out of the frame — so it drops back below the title.
 | Control | What it does |
 |---|---|
 | **Search…** | filters on the asset's **name**, as you type |
-| **Type** | keeps only one or more kinds of asset |
+| **Type** | keeps only **one** kind of asset — picking one replaces the previous |
 | **Location** | keeps only assets in a given state with respect to the library |
 | **Icons** / **List** | grid of thumbnails, or dense list |
-| **Smaller** / **Larger** | the thumbnail size |
+| **Smaller thumbnails** / **Larger thumbnails** | their size |
 
 Filtering is **instant**, even on a large project: the whole catalogue is already loaded in memory,
 unlike the Models panel which queries the Scenario catalogue remotely.
 
 > **Search does not ask you for accents.** Typing `foret` finds "Forêt d'hiver", and `ete` finds
-> "Été". The same holds in the **Models** panel, in **Apps** and in the settings search: you search
-> by typing, not by spelling.
+> "Été". That holds here and in the settings search: you search by typing, not by spelling. The
+> **Models** panel says nothing about it, because it does not search itself — it hands the word to
+> the API and shows what comes back. **Apps** has no search field at all.
 >
 > It applies to files coming from the Finder too. macOS writes names in a form where the accent is
 > a character of its own — invisible to the eye, different to the machine — so an imported asset
@@ -175,14 +176,19 @@ when no document able to receive it is open — not when the asset is broken.
 
 | You drag… | Onto… | Result |
 |---|---|---|
-| a video or a sound | the **timeline** | a clip on a track |
+| any asset | the **timeline** | a clip on the track you aimed at |
 | an image | the Image workspace **canvas** | it becomes one more layer, armed |
-| an image | a **texture** preview | it becomes the base colour |
+| an image | a **material** preview | it becomes the base colour |
+| an image | a specific **channel**'s thumbnail | it becomes that channel |
 | a panoramic image | a **sky** preview | it becomes the sky |
 | a mesh | the **3D view** | it enters the scene, at the origin |
+| a sound | the **audio editor** | it becomes the open take |
+| any asset | the **Graph canvas** | an asset node appears where you released it |
+| an asset | an **asset field** of a generation form | it becomes that field's input |
 
-**Those five, and nothing else.** In the 3D view the drop is accepted **anywhere on the view**,
-toolbar included: a release landing beside it would be a miss you cannot see coming.
+**The timeline does not sort.** It takes what it is given: an asset with no duration of its own
+gets a default one rather than a refusal. In the 3D view the drop is accepted **anywhere on the
+view**, toolbar included: a release landing beside it would be a miss you cannot see coming.
 
 ---
 
@@ -193,9 +199,9 @@ knows:
 
 | Section | What it holds |
 |---|---|
-| **Identity** | the name, the type |
-| **File** | the duration, dimensions, size, creation date, location on disk |
-| **Generation** | the model, the prompt, the seed — and the **Regenerate** button |
+| **Identity** | the name, the type, the duration, dimensions, size, creation date |
+| **Generation** | the model, the seed, the prompt — and two buttons, **Pin this recipe** and **Regenerate** |
+| **File** | the **Location** on disk, and nothing else — the group only appears for an asset held locally |
 
 The **Show in the file manager** button opens the folder containing the file, in Finder, Explorer or
 your file manager.
@@ -233,11 +239,17 @@ The badge is not stored, it is **recomputed**: it depends on the active account,
 opens onto one project and one only. Switch accounts in the title bar and the badges are read
 again — same file, different library on the other end.
 
-> **Three of those seven badges are out of reach today**, and consistently so: as long as
-> transfers are triggered by hand, nothing can change the online version behind your back. "To
-> fetch", "changed on both sides" and "another project" will only appear with automatic syncing,
-> once it exists. The **Location** filter therefore offers only the four states actually
-> reachable: *local only*, *in sync*, *to send* and *failed*.
+> **Two of those seven badges are out of reach today**, and consistently so: as long as transfers
+> are triggered by hand, nothing can change the online version behind your back. "To fetch" and
+> "changed on both sides" will only appear with automatic syncing, once it exists.
+>
+> **"Belongs to another project", though, needs no waiting**: fetch an asset with one key, switch
+> to another in the title bar, and it wears the badge. That is the paragraph above at work, not a
+> syncing case.
+>
+> The **Location** filter still offers only four states — *local only*, *in sync*, *to send* and
+> *failed*. "Another project" can therefore show on a thumbnail without being available to filter
+> on.
 
 ### Sending a selection
 
@@ -258,6 +270,10 @@ An unselected asset, or a closed project, leaves the button greyed out.
 > your account holds, and clicking a thumbnail brings it down into the open project. So the
 > transfer runs both ways — but each way has its own door, and they are not the same one:
 > sending starts from the shelf, fetching from the home screen.
+>
+> **The click only fetches once.** If the asset is already on your disk, that same thumbnail
+> **opens** it instead of downloading it again. And with no project open, or while a transfer is
+> running, it does not react at all.
 
 ### Naming from what the API sees
 

@@ -16,7 +16,7 @@ laquelle vous piochez.
 
 | Espace | Où se trouve l’étagère |
 |---|---|
-| Image, Textures, Skyboxes | dans la **bande basse** |
+| Image, Textures, Skyboxes, Graphe | dans la **bande basse** |
 | Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
 
 Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
@@ -59,17 +59,18 @@ titre.
 | Contrôle | Ce qu’il fait |
 |---|---|
 | **Rechercher…** | filtre sur le **nom** de l’asset, à la frappe |
-| **Type** | ne garde qu’une ou plusieurs sortes d’assets |
+| **Type** | ne garde qu’**une seule** sorte d’assets — en choisir une remplace la précédente |
 | **Emplacement** | ne garde que les assets dans un certain état vis-à-vis de la bibliothèque |
 | **Icônes** / **Liste** | grille de vignettes, ou liste dense |
-| **Réduire** / **Agrandir** | la taille des vignettes |
+| **Réduire les vignettes** / **Agrandir les vignettes** | leur taille |
 
 Le filtrage est **instantané**, même sur un gros projet : tout le catalogue est déjà chargé en
 mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario à distance.
 
 > **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
-> trouve « Été ». C’est vrai de la même façon dans le panneau **Modèles**, dans **Apps** et dans
-> la recherche des préférences : on cherche en tapant, pas en épelant.
+> trouve « Été ». C’est vrai ici et dans la recherche des préférences : on cherche en tapant, pas
+> en épelant. Le panneau **Modèles** n’en dit rien, parce qu’il ne cherche pas lui-même — il passe
+> le mot à l’API et affiche ce qu’elle rend. **Apps** n’a pas de champ de recherche du tout.
 >
 > Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
 > l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset
@@ -185,14 +186,19 @@ l’asset est abîmé.
 
 | Vous glissez… | Vers… | Résultat |
 |---|---|---|
-| une vidéo ou un son | la **timeline** | un clip sur une piste |
+| n’importe quel asset | la **timeline** | un clip sur la piste visée |
 | une image | la **toile** de l’espace Image | elle devient un calque de plus, armé |
-| une image | l’aperçu d’une **texture** | elle devient la couleur de base |
+| une image | l’aperçu d’une **matière** | elle devient la couleur de base |
+| une image | la vignette d’un **canal** précis | elle devient ce canal-là |
 | une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
 | un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
+| un son | l’**éditeur audio** | il devient la prise ouverte |
+| n’importe quel asset | la **toile du Graphe** | un nœud d’asset apparaît à l’endroit du lâcher |
+| un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 
-**Ces cinq-là, et rien d’autre.** Dans la vue 3D, le dépôt est accepté **partout sur la vue**, la
-barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’on ne voit pas venir.
+**La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une
+durée par défaut plutôt qu’un refus. Dans la vue 3D, le dépôt est accepté **partout sur la vue**,
+la barre d’outils comprise : un lâcher qui tombe à côté serait un raté qu’on ne voit pas venir.
 
 ---
 
@@ -203,9 +209,9 @@ ce qu’il sait :
 
 | Section | Ce qu’elle contient |
 |---|---|
-| **Identité** | le nom, le type |
-| **Fichier** | la durée, les dimensions, la taille, la date de création, l’emplacement sur le disque |
-| **Génération** | le modèle, le prompt, la graine — et le bouton **Régénérer** |
+| **Identité** | le nom, le type, la durée, les dimensions, la taille, la date de création |
+| **Génération** | le modèle, la graine, le prompt — et deux boutons, **Épingler la recette** et **Régénérer** |
+| **Fichier** | l’**Emplacement** sur le disque, et rien d’autre — le groupe n’apparaît que pour un asset présent localement |
 
 Le bouton **Révéler dans le gestionnaire de fichiers** ouvre le dossier contenant le fichier,
 dans le Finder, l’Explorateur ou votre gestionnaire de fichiers.
@@ -244,12 +250,18 @@ Ce badge n’est pas stocké, il est **recalculé** : il dépend du compte actif
 ouvre sur un projet et un seul. Changez de compte dans la barre de titre, et les badges se
 relisent — c’est le même fichier, c’est la bibliothèque d’en face qui a changé.
 
-> **Trois de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que
-> les transferts se déclenchent à la main, rien ne peut modifier la version en ligne dans votre
-> dos. « À rapatrier », « modifié des deux côtés » et « autre projet » n’apparaîtront qu’avec la
-> synchronisation automatique, quand elle existera. Le filtre **Emplacement** ne propose donc que
-> les quatre états réellement atteignables : *local seulement*, *synchronisé*, *à envoyer* et
-> *échec*.
+> **Deux de ces sept badges sont hors d’atteinte aujourd’hui**, et c’est cohérent : tant que les
+> transferts se déclenchent à la main, rien ne peut modifier la version en ligne dans votre dos.
+> « À rapatrier » et « modifié des deux côtés » n’apparaîtront qu’avec la synchronisation
+> automatique, quand elle existera.
+>
+> **« Appartient à un autre projet », lui, s’obtient sans rien attendre** : rapatriez un asset
+> avec une clé, basculez sur une autre dans la barre de titre, et il porte le badge. C’est le
+> paragraphe ci-dessus à l’œuvre, pas un cas de synchronisation.
+>
+> Le filtre **Emplacement** ne propose pourtant que quatre états — *local seulement*,
+> *synchronisé*, *à envoyer* et *échec*. « Autre projet » peut donc s’afficher sur une vignette
+> sans qu’on puisse s’en servir pour filtrer.
 
 ### Envoyer une sélection
 
@@ -272,6 +284,10 @@ Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
 > vignette la fait descendre dans le projet ouvert. Le transfert va donc dans les deux sens —
 > mais chaque sens a sa porte, et ce n’est pas la même : l’envoi part de l’étagère, le
 > rapatriement de l’accueil.
+>
+> **Le clic ne rapatrie qu’une fois.** Si l’asset est déjà sur votre disque, la même vignette
+> l’**ouvre** au lieu de le retélécharger. Et sans projet ouvert, ou pendant un transfert en
+> cours, elle ne réagit pas du tout.
 
 ### Nommer par ce que l’API voit
 
@@ -334,7 +350,7 @@ Un bandeau apparaît au-dessus de l’étagère et suit chaque fichier, étape p
 | **Analyse…** | le studio lit ce que le fichier est réellement | durée, codec, dimensions, images par seconde |
 | **Empreinte…** | il calcule une signature du contenu | pour repérer les doublons |
 | **Proxy…** | il fabrique une copie allégée de la vidéo | pour naviguer dedans sans à-coups |
-| **Waveform…** | il dessine la forme d’onde du son | pour la voir sur la piste audio |
+| **Forme d’onde…** | il dessine la forme d’onde du son | pour la voir sur la piste audio |
 | **Prêt** | terminé | |
 
 **Chaque étape est interruptible.** Le bouton **Interrompre la préparation** l’arrête : vous
