@@ -1,6 +1,6 @@
 import { mdiApplicationBracesOutline, mdiArrowLeft } from '@mdi/js'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { lazy, memo, Suspense, useCallback, useMemo, useState } from 'react'
+import { memo, Suspense, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   isRunnable,
@@ -12,6 +12,7 @@ import {
 import type { FormValues } from '@/helpers/dynamic-form'
 import { dictationAccessory } from '@/dictation/DictationField'
 import { Collection } from '@/design/Collection'
+import { DynamicForm } from '@/design/dynamic-form-lazy'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { FormHeader } from '@/design/FormHeader'
@@ -27,11 +28,6 @@ import { useSettings } from '@/stores/settings'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
-
-/** Deferred for the reason the generator defers it: the form drags zod and its resolver along. */
-const DynamicForm = lazy(async () => ({
-  default: (await import('@/design/DynamicForm')).DynamicForm,
-}))
 
 /**
  * The API's own maximum. The panel pulls the next page as the end of the list nears, so a small
