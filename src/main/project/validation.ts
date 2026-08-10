@@ -15,13 +15,15 @@ import {
   type DocumentEnvelope,
   type DocumentKind,
 } from '@shared/domain/document'
-import type { Manifest } from '@shared/domain/project'
+import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
 import type { SaveAudioRequest, SaveTextureRequest } from '@shared/ipc'
 import { pathSegment } from '@main/validation'
 
 const manifest = z.object({
-  version: z.number().int().min(1),
+  // Capped, not merely floored, exactly as `documentEnvelope` below — and for a heavier reason.
+  // A document flattened by a later save is one file; a project is the whole folder.
+  version: z.number().int().min(1).max(MANIFEST_VERSION),
   name: z.string().min(1),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),

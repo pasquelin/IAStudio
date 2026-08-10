@@ -77,9 +77,15 @@ chantier est livré**, sinon il envoie la prochaine session refaire ce qui est f
 > peut pas être figée à la construction d'une commande — `editNode` accepte pour ça une fonction
 > `(node, state) => NodePatch`, relue à chaque `apply`, donc au redo.
 >
-> Les candidats, sans priorité imposée : les **étapes 7 à 9 du node editor** (§ 5) · le reste
-> des retours d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par espace** (§ 4), dont
-> deux qui ne se jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
+> **L'entrée 16 est livrée le 10 août 2026** : un projet écrit par une version future est refusé
+> plutôt qu'aplati, un dossier qui n'en est pas le dit dans le journal, et `updatedAt` bouge à
+> chaque document enregistré — **c'est la décision prise, ne pas la redemander**. Ce que le lot a
+> laissé ouvert est écrit au § 1.1, sous l'entrée 15 qui reste.
+>
+> Les candidats, sans priorité imposée : l'**entrée 15**, qui a le bouton dont le message de 16
+> vient d'être écrit · les **étapes 7 à 9 du node editor** (§ 5) · le reste des retours
+> d'accessibilité (§ 2) et d'affordance (§ 3) · les **manques par espace** (§ 4), dont deux qui ne
+> se jugent qu'à l'écran : le fondu du pinceau et l'export des Textures.
 >
 > **Ce fichier est la seule liste qui reste.** `.claude/loop/BACKLOG.md`, qui portait le backlog
 > qualité, **n'existe plus** — ne pas l'y chercher, et ne pas conclure d'un renvoi trouvé ailleurs
@@ -300,12 +306,28 @@ propriété.
 > les dépasse : le **document neuf jamais enregistré, perdu au rechargement** (§ 4.1) et
 > l'**absence de `fsync`** (§ 6).
 
-## 1.1 La couche projet — un seul chantier, trois entrées
+## 1.1 La couche projet — ce qui reste après l'entrée 16
 
-**Elles se traitent d'un bloc, et le document le disait déjà** : c'est le même bouton qui ouvre
-le sélecteur de l'entrée 16 et qui manque au panneau de l'entrée 15, et c'est le même manifeste
-que la question des layouts touche. Les prendre séparément ferait écrire deux fois le chemin
-d'échec.
+**L'entrée 16 est livrée le 10 août 2026** : le manifeste est défendu à la lecture et honnête à
+l'écriture. Ce qui reste du bloc est l'entrée 15 — le bouton qui manque au panneau — et la question
+des layouts.
+
+> **Ce que le lot 16 a laissé derrière lui, et qu'il ne faut pas redécouvrir :**
+>
+> - **`readManifest` migre l'ancien nom AVANT toute validation.** Un projet hérité (`project.json`)
+>   écrit par une version future est **refusé, mais recopié** sous `.project.json` au passage —
+>   mesuré. Inoffensif aujourd'hui (le contenu est identique et la copie sous l'ancien nom reste),
+>   mais un manifeste hérité tronqué est lui aussi promu sous le nouveau nom, et `readManifest` ne
+>   retombe sur l'ancien que si le dotté est absent. **Le remède est de valider avant de migrer.**
+> - **`openPicked` du renderer n'attrape rien** (`stores/project.ts`), alors que `open` attrape.
+>   Le rejet de `project:open` y devient une rejection non gérée. C'est le chemin du bouton de
+>   l'entrée 15 : à traiter avec elle.
+> - **Une écriture de manifeste qui échoue laisse `current()` en avance sur le disque** — la copie
+>   en mémoire porte le nouveau `updatedAt`, le fichier l'ancien. Cosmétique, réparé à la
+>   sauvegarde suivante ; écarté sciemment.
+> - **Coût mesuré du canal `document:write`** : +549 ns par appel (médiane de 5, 1372 → 1921 ns),
+>   soit +40 % sur un canal réduit à son squelette, pour 70 µs d'écriture disque hors chemin
+>   critique. **Ne pas remesurer** : c'est le prix de l'estampille, et il est payé.
 
 ### 15. Un panneau ne déclare pas ce dont il a besoin — l'Explorateur sans projet
 
@@ -354,60 +376,6 @@ La première est la bonne si la création doit être atteignable de là, et c'es
 exigent un projet, sans doute. Le **Générateur** est la vraie question : générer sans projet produit un
 job qui ne se collecte nulle part — « un job ne collecte que dans son propre projet » (§ 11.3). Soit il
 exige un projet, soit il faut dire ce que devient ce qu'il produit.
-
----
-
-### 16. Ouvrir un projet ne dit rien quand ça rate, et le manifeste n'est pas défendu
-
-**Le geste attendu.** Désigner un dossier qui n'est pas un projet doit afficher « Ce dossier n'est pas un projet
-Scenario » — pas un `ENOENT` brut. Et un projet écrit par une version future doit être **refusé**,
-pas aplati.
-
-**Demandé le 9 août 2026**, à la suite de l'entrée 15 : c'est le même bouton qui va ouvrir ce
-sélecteur. Le but énoncé — **un projet reste fiable même modifié de l'extérieur, et ce qui rate le dit
-clairement**.
-
-> Le § « couche projet » de l'ancien `REPRISE.md` donnait ces trois entrées (15, 16, 17) pour closes.
-> **C'est faux pour 15 et 16** : seule l'entrée 17 est livrée (`f989b5e`, `feat/projet-dossier`).
-
-**Ce qui tient déjà, et qu'il ne faut pas défaire.** Le listing des documents est solide : le dossier
-fait foi sur l'extension, un document illisible ne coûte pas le listing des autres, un dossier absent
-rend `[]` plutôt que d'échouer, et la lecture est séquentielle pour ne pas épuiser les descripteurs.
-`open()` **répare** en repassant `ensureFolders`. Et le catalogue neuf est ouvert **avant** que
-l'ancien soit lâché.
-
-**Les quatre trous, du plus visible au plus sournois :**
-
-| Ce qui arrive | Ce qui se passe aujourd'hui |
-|---|---|
-| On désigne un dossier qui n'est pas un projet | `readFile` échoue sur le manifeste, l'erreur remonte l'IPC telle quelle. Les appelants font `() => void openPicked()` : personne ne l'attrape. L'utilisateur lit un `ENOENT` au lieu de « Ce dossier n'est pas un projet Scenario » |
-| Le manifeste est tronqué ou bricolé | Même chose : une `ZodError` brute, qui ne dit pas quel champ manque |
-| Le projet vient d'une **version future** du studio | **Il s'ouvre**, et le studio écrit dedans avec son modèle à lui |
-| Le projet est ouvert et refermé cent fois | `updatedAt` ne bouge jamais : il vaut `createdAt` à vie |
-
-**Le troisième est le plus grave, et la règle qui manque est déjà écrite dix lignes plus bas.**
-`documentEnvelope` plafonne sa version — `z.number().int().min(1).max(DOCUMENT_VERSION)` — avec ce
-commentaire : « **Capped, not merely floored**: a file written by a later build must be refused rather
-than read as if it were this one and silently flattened by the next save. » Le manifeste, dans le même
-fichier, ne porte que `min(1)`. Un document aplati, c'est un fichier ; un projet aplati, c'est le
-dossier entier.
-
-**Le quatrième est un champ qui ment.** `updatedAt` est écrit une fois, à la création (`store.ts:98`),
-et **aucune autre écriture du manifeste n'existe**. Deux réponses, il faut en choisir une : l'écrire à
-chaque fermeture de projet, ou le retirer. Un champ qu'on affiche un jour en croyant qu'il dit quelque
-chose est pire que pas de champ.
-
-**Et le sélecteur ne filtre rien** : `pickPath('folder')` est un `openDirectory` générique. C'est
-cohérent — le manifeste est la vérité, pas l'extension — mais ça met tout le poids sur le message
-d'échec, qui est justement ce qui manque.
-
-**Ce que ça demande :** un type d'erreur nommé plutôt qu'une exception brute (`NoProjectError` existe
-déjà et donne le patron), ses clés dans les deux bundles i18n, la version du manifeste plafonnée comme
-celle des documents, et une décision sur `updatedAt`. Deux des quatre points sont dans le main — c'est
-un chantier, il se traite d'un bloc.
-
-**Ce que ça touche** : `shared/domain/project.ts`, `main/project/store.ts`,
-`main/project/validation.ts`, les deux bundles i18n.
 
 ---
 

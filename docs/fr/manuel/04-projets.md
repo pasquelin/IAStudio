@@ -102,6 +102,17 @@ Un petit fichier texte, lisible avec n’importe quel éditeur :
 **C’est ce fichier qui fait d’un dossier un projet**, jamais son nom : le studio ouvre le dossier
 que vous désignez et cherche ce fichier dedans.
 
+- **`updatedAt` bouge à chaque document enregistré.** C’est la dernière fois que ce projet a
+  travaillé, pas la dernière fois qu’il a été ouvert.
+- **Désigner un dossier qui n’en contient pas** vous vaut « Ce dossier n’est pas un projet
+  Scenario », dans le journal et dans une bulle en bas à droite — pas un message système.
+- **Un fichier tronqué ou modifié à la main** est signalé comme illisible, et le studio ne l’ouvre
+  pas plutôt que d’en deviner le contenu.
+- **Un projet créé par une version PLUS RÉCENTE du studio est refusé.** Il n’est pas ouvert « du
+  mieux possible » : le studio ne connaît pas ce que cette version a ajouté, et le premier
+  enregistrement l’effacerait sans rien dire. Mettez le studio à jour pour rouvrir ce projet ; le
+  dossier, lui, n’a pas été touché.
+
 > **Un projet créé par une version précédente s’ouvre tel quel.** Son dossier s’appelait
 > « Mon projet.scenario » et sa carte d’identité `project.json`, sans point — le studio les
 > reconnaît et écrit la nouvelle forme à côté. **L’ancien fichier est laissé où il est** : le

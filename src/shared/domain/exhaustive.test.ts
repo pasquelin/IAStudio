@@ -92,6 +92,7 @@ describe('the lists that stand for a union', () => {
       import: true,
       library: true,
       document: true,
+      project: true,
     }
 
     expect(sorted(ACTIVITY_LEVELS)).toEqual(sorted(Object.keys(levels)))

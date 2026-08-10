@@ -6,9 +6,10 @@ import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
+import type { ActivityReport } from './activity-log'
 import { askCloseChoice, askDeleteDocument, type AskUser } from './document-dialogs'
 import type { DocumentFiles } from './documents'
-import type { ProjectStore } from './store'
+import { openFailureKey, type ProjectStore } from './store'
 import {
   parseAssetId,
   parseAssetQuery,
@@ -30,6 +31,8 @@ const PNG_EXTENSION = '.png'
 
 export type ProjectHandlerDeps = {
   project: ProjectStore
+  /** The journal's own `record`, injected as every other consumer of it takes it. */
+  record: (entry: ActivityReport) => void
   /** Where an edited take is written back. Injected, like everything that touches the disk. */
   assets: LocalBackend
   newAssetId: () => string
@@ -42,6 +45,7 @@ export type ProjectHandlerDeps = {
 
 export function registerProjectHandlers({
   project,
+  record,
   assets,
   newAssetId,
   documents,
@@ -52,7 +56,18 @@ export function registerProjectHandlers({
     project.create(parseProjectPath(path), parseProjectName(name)),
   )
 
-  handle(CHANNELS.projectOpen, (_event, path) => project.open(parseProjectPath(path)))
+  handle(CHANNELS.projectOpen, async (_event, path) => {
+    try {
+      return await project.open(parseProjectPath(path))
+    } catch (error) {
+      // Said out loud on the way past: the journal is the studio's error surface, and the
+      // renderer's own `openPicked` watches nothing. Rethrown all the same — `open` only knows
+      // to forget a folder when the promise rejects.
+      const messageKey = openFailureKey(error)
+      if (messageKey) record({ level: 'error', topic: 'project', messageKey })
+      throw error
+    }
+  })
 
   handle(CHANNELS.projectCurrent, () => project.current())
 
@@ -144,9 +159,12 @@ export function registerProjectHandlers({
     documents.read(parseDocumentId(id), parseDocumentKind(kind)),
   )
 
-  handle(CHANNELS.documentWrite, (_event, id, kind, draft) =>
-    documents.write(parseDocumentId(id), parseDocumentKind(kind), parseDocumentDraft(draft)),
-  )
+  handle(CHANNELS.documentWrite, async (_event, id, kind, draft) => {
+    await documents.write(parseDocumentId(id), parseDocumentKind(kind), parseDocumentDraft(draft))
+    // After the save, never before: a manifest stamped for a document the disk refused would
+    // say the project worked when nothing was written.
+    project.touch()
+  })
 
   handle(CHANNELS.documentRemove, (_event, id, kind) =>
     documents.remove(parseDocumentId(id), parseDocumentKind(kind)),

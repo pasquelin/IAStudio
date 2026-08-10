@@ -19,13 +19,14 @@ export type ActivityLevel = 'info' | 'warn' | 'error'
 export const ACTIVITY_LEVELS: readonly ActivityLevel[] = ['info', 'warn', 'error']
 
 /** What a line is about, so the panel can be read by subject rather than only by time. */
-export type ActivityTopic = 'generation' | 'import' | 'library' | 'document'
+export type ActivityTopic = 'generation' | 'import' | 'library' | 'document' | 'project'
 
 export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
   'generation',
   'import',
   'library',
   'document',
+  'project',
 ]
 
 /**
