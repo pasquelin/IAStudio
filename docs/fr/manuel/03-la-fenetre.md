@@ -208,6 +208,15 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > pendant ce temps : plus rien n’est soumis, et ce qui est en vol est annulé. Sur un graphe vide,
 > il est **grisé** : il n’y a rien à exécuter.
 >
+> **En bas à gauche, une ligne dit si le graphe s'exporterait**, et elle se met à jour pendant
+> qu'on câble plutôt qu'au bout d'un export raté : le nombre d'étapes quand tout va bien, la
+> raison sinon — aucune sortie marquée, rien qui mène à la sortie, ou le graphe ne compile pas.
+>
+> **Deux de ces raisons sont au studio seul.** Une fin de boucle qui ne ferme pas ce qu'elle
+> nomme, et deux fins qui ferment la même boucle, sont acceptées sans un mot par le validateur de
+> Scenario — et pourtant un fil s'y retrouve branché ailleurs que là où il est dessiné. Le studio
+> les refuse lui-même, parce que personne d'autre ne le dirait.
+>
 > **Arrêter rend la main tout de suite**, sans attendre que l’API réponde sur les générations
 > déjà lancées. L’annulation leur est bien envoyée, mais l’exécution ne reste pas suspendue à
 > leur réponse : le bouton redevient **Exécuter** dès la pression, y compris si le service ne

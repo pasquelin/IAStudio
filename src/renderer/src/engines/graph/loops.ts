@@ -134,25 +134,10 @@ export function setListKind(node: GraphNode, index: number, kind: LoopListKind):
   }
 }
 
-/**
- * The loop an end names — whether or not the graph still holds it.
- *
- * A loop since deleted leaves its id behind, and the panel shows it rather than falling back to
- * "no loop": a picker whose value matches no option renders BLANK, so the screen would read as an
- * end that closes nothing over one that names something, and the next stray change would
- * overwrite it unseen. `IfElseFields` keeps a deleted field visible for the same reason.
- *
- * An end naming nothing is not a silent failure: `validateWorkflowFlow` refuses a `for-each`
- * whose `loopBodyNodeIds` is empty, and `compileGraph` reports it as `invalid`. What the field
- * buys is the pairing itself — without it the studio could only close a loop a file had closed.
- *
- * `typeof` rather than the type: `parseGraph` keeps `data` as it found it, so a file may well
- * hold a number here, and it would reach a `<select>` as its value.
- */
-export function namedLoopId(node: GraphNode): string | undefined {
-  if (node.type !== 'forEachEnd') return undefined
-  return typeof node.data.parentNodeId === 'string' ? node.data.parentNodeId : undefined
-}
+// In `shared/domain/graph.ts`, where the COMPILER can reach it too: the main process refuses a
+// mispaired loop by the same reading, and a second guard on the same field is how two sides start
+// disagreeing about what a file said. Re-exported so the engine keeps one door for its loops.
+export { namedLoopId } from '@shared/domain/graph'
 
 /** Every loop of the graph, which is what the end of one can be told to close. */
 export const loopsOf = (graph: GraphState): readonly GraphNode[] =>

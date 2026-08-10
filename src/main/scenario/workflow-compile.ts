@@ -7,7 +7,7 @@ import {
   type WorkflowEditorNode,
 } from '@scenario-labs/sdk'
 import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
-import { outputNodesOf, type GraphCompileResult } from '@shared/domain/graph'
+import { namedLoopId, outputNodesOf, type GraphCompileResult } from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
 import type { ScenarioInput } from './schema'
 
@@ -152,7 +152,9 @@ export type CompileDeps = {
  * The graph as Scenario's own flow — what an export sends, and what a test can look at.
  *
  * **No compiler is written here.** `convertWorkflowEditorToFlow` is Scenario's own, so the studio
- * cannot drift from what the webapp produces; this file is the adapter and nothing else.
+ * cannot drift from what the webapp produces; this file adapts, and it REFUSES — `compileGraph`
+ * below carries two refusals of the studio's own, for shapes the SDK's validator accepts without
+ * a word. Adapting is still all that happens on the way to the flow.
  *
  * Exported rather than hidden inside `compileGraph`, for two reasons pointing the same way: the
  * step 9 export needs this very array, and a verdict reduced to a number is a contract no test can
@@ -181,7 +183,122 @@ export function toEditorFlow(
   })
 }
 
-/** Whether that flow holds together, and the three refusals the converter answers with silence. */
+/**
+ * Who reads whom, indexed once — data flows provider to consumer while the EDGE points the other
+ * way, so this is `target` to `source`.
+ *
+ * Built once for the whole check rather than per loop, as `planGraph` builds its own: walked
+ * straight off `graph.edges`, every step of every walk would rescan the lot.
+ */
+function consumersByProvider(graph: GraphState): ReadonlyMap<string, readonly string[]> {
+  const index = new Map<string, string[]>()
+
+  for (const edge of graph.edges) {
+    const found = index.get(edge.target)
+    if (found) found.push(edge.source)
+    else index.set(edge.target, [edge.source])
+  }
+
+  return index
+}
+
+/**
+ * Every node that reads this one, however far down.
+ *
+ * Indexed rather than iterated, as `plan.ts` walks its own queue: the list grows while it is being
+ * read, and `shift` on it would recopy the rest on every turn.
+ */
+function reachedFrom(
+  consumers: ReadonlyMap<string, readonly string[]>,
+  id: string,
+): ReadonlySet<string> {
+  const reached = new Set<string>()
+  const queue = [id]
+
+  // Walked while it grows, which an array iterator allows — it reads `length` on every turn, as
+  // `plan.ts` does it. Indexed instead, the bound would guarantee an element the TYPE does not,
+  // and the `?? ''` covering that gap is a branch no test could ever enter.
+  for (const current of queue) {
+    for (const consumer of consumers.get(current) ?? []) {
+      if (reached.has(consumer)) continue
+      reached.add(consumer)
+      queue.push(consumer)
+    }
+  }
+
+  return reached
+}
+
+/**
+ * How a loop and its end can be paired so the converter reads a WIRE differently from the screen.
+ *
+ * **Neither of the two is refused by `validateWorkflowFlow`**, which is the whole reason this
+ * exists. Both were measured by running the converter, and so was every case left out below.
+ *
+ * The defect is always about a wire LEAVING an end: `getSourceRef` resolves one to the node the
+ * end names, whatever that node is and wherever the end sits. An end nothing reads therefore
+ * cannot misroute anything, and refusing one would refuse a graph that compiles — measured: a
+ * second end with no wire at all gives a flow identical, item for item, to the graph without it.
+ *
+ * Left out, each for its own measured reason:
+ * - a loop NO end names: its body compiles empty and the validator does refuse it, so it already
+ *   arrives as `invalid` — which says less than it could but does not lie;
+ * - an end nothing reads, whatever it names;
+ * - an end naming a node the graph no longer holds: the lookup answers nothing and the wire is
+ *   simply dropped, which is the same as drawing no wire.
+ */
+function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-ends' | undefined {
+  const consumers = consumersByProvider(graph)
+  const read: { end: string; names: string }[] = []
+  const firstEnd = new Map<string, string>()
+
+  for (const node of graph.nodes) {
+    // The inspector's own reader, not a second one: it guards what a file may have written under
+    // `parentNodeId`, and two readings of one field are two chances to disagree about it.
+    const names = namedLoopId(node)
+    if (names === undefined) continue
+    // In NODE ORDER, because that is how the converter picks: `nodes.find`, first match wins.
+    if (!firstEnd.has(names)) firstEnd.set(names, node.id)
+    if ((consumers.get(node.id) ?? []).length > 0) read.push({ end: node.id, names })
+  }
+
+  const loops = new Set(graph.nodes.filter(node => node.type === 'forEach').map(node => node.id))
+
+  /*
+   * A loop whose read end is NOT the one the converter retained. The retained end is where the
+   * body walk stops; wires leaving any other end still resolve to the loop, so whatever reads one
+   * is pulled INTO the body and runs once per item instead of once — measured, a list of ten turns
+   * two generations into twenty, paid for, with `validateWorkflowFlow` answering OK.
+   *
+   * The POSITION is what decides, and that is not a detail: the same two ends with the spare one
+   * written after the read one compile to a flow identical, item for item, to the graph without
+   * it. Counting ends would refuse that graph — measured too.
+   *
+   * Only over real loops, and that is why this one asks the type while the check below does not:
+   * "the converter keeps the first end" happens in the scan it runs PER `forEach`, so two ends
+   * naming a generator do nothing of the sort. The check below is about `getSourceRef`, which runs
+   * for whatever a wire leaves.
+   */
+  for (const entry of read) {
+    if (!loops.has(entry.names)) continue
+    if (firstEnd.get(entry.names) !== entry.end) return 'loop-two-ends'
+  }
+
+  // An end that does not close what it names, either because that is no loop at all or because the
+  // end is not downstream of it. Measured both ways: the wire leaving it lands on the named node
+  // instead of its own provider, or is dropped and the reader falls back to its form.
+  for (const entry of read) {
+    if (!graph.nodes.some(node => node.id === entry.names)) continue
+    // Reachability alone, and NOT "is the named node a loop": the harness showed the second test
+    // never firing on its own. An end downstream of what it names resolves to it either way, loop
+    // or not — and an end that is not downstream is misrouted whatever it named.
+    if (!reachedFrom(consumers, entry.names).has(entry.end)) return 'loop-end-outside'
+  }
+
+  return undefined
+}
+
+/** Whether that flow holds together, and the refusals the converter answers with silence. */
 export function compileGraph(
   graph: GraphState,
   { report, getModel }: CompileDeps,
@@ -189,6 +306,12 @@ export function compileGraph(
   // Asked before the converter rather than read off its answer: an empty flow has two causes, and
   // "nothing is marked as an output" is the one the user can do something about.
   if (outputNodesOf(graph).length === 0) return { ok: false, problem: 'no-output' }
+
+  // Before the conversion, because the conversion is exactly what hides it: these two graphs
+  // convert and validate without a word, and the flow that comes out has a wire the graph does
+  // not. Nothing downstream can tell them from a graph that is right.
+  const pairing = loopPairingProblem(graph)
+  if (pairing) return { ok: false, problem: pairing }
 
   const flow = toEditorFlow(graph, getModel)
 

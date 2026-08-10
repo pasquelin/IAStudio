@@ -7,6 +7,7 @@ import {
   type ActivityTopic,
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
+import { GRAPH_COMPILE_PROBLEMS, type GraphCompileProblem } from './graph'
 import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
@@ -158,5 +159,21 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(TEXTURE_SLOTS)).toEqual(sorted(Object.keys(all)))
+  })
+  /**
+   * The one the bundles hang off: `bundles.test.ts` demands a sentence for every code the LIST
+   * holds, so a code added to the union alone would reach the screen under its own key with every
+   * suite green.
+   */
+  it('names every reason a graph would not compile', () => {
+    const all: Record<GraphCompileProblem, true> = {
+      'no-output': true,
+      empty: true,
+      invalid: true,
+      'loop-end-outside': true,
+      'loop-two-ends': true,
+    }
+
+    expect(sorted(GRAPH_COMPILE_PROBLEMS)).toEqual(sorted(Object.keys(all)))
   })
 })

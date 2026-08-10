@@ -201,6 +201,15 @@ It does not carry the file name. It carries the **seven workspaces**:
 > becomes **Stop** while it goes: nothing more is submitted, and what is in flight is cancelled.
 > On an empty graph it is **greyed out**: there is nothing to run.
 >
+> **Bottom left, a line says whether the graph would export**, and it keeps up while you wire
+> rather than arriving as a failed export: the number of steps when all is well, the reason when
+> it is not — no output marked, nothing reaches the output, or the graph does not compile.
+>
+> **Two of those reasons are the studio's own.** An end of loop that does not close what it names,
+> and two ends closing the same loop, are both accepted without a word by Scenario's validator —
+> and a wire ends up plugged somewhere other than where it is drawn. The studio refuses them
+> itself, because nothing else would say so.
+>
 > **Stop hands control back at once**, without waiting for the API to answer on the generations
 > already sent. They are told to cancel, but the run does not stay parked on their answer: the
 > button turns back to **Run** the moment you press it, even if the service never says another

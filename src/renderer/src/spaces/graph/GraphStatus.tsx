@@ -62,8 +62,9 @@ export function useGraphCompile(graph: GraphState): GraphCompileResult | null {
  *
  * Bottom left of the pane, opposite the toolbar: the plan asked for this to be read during the
  * wiring rather than as a 400 at the far end of an export. Nothing is sent anywhere yet — the
- * export lands with step 9 — so what it buys today is the one refusal a user cannot guess,
- * "nothing is marked as an output".
+ * export lands with step 9 — so what it buys today is the refusals a user cannot guess: "nothing
+ * is marked as an output", and the two about a loop and its end, which no other source can emit
+ * at all. `validateWorkflowFlow` accepts those two graphs, and this line is their only channel.
  */
 export function GraphStatus({ result }: { result: GraphCompileResult | null }) {
   const { t } = useTranslation()

@@ -522,6 +522,29 @@ export const inputHandleOf = (
   id: string | undefined,
 ): GraphHandleInput | undefined => inputHandlesOf(node).find(handle => handle.id === id)
 
+/**
+ * The loop a `forEachEnd` names — whether or not the graph still holds it.
+ *
+ * Read by BOTH sides, which is why it is here: the inspector offers the pairing, and the compiler
+ * refuses a loop paired so the converter reads it otherwise. Two readings of one field are two
+ * chances to disagree about what a file said.
+ *
+ * A loop since deleted leaves its id behind, and the panel shows it rather than falling back to
+ * "no loop": a picker whose value matches no option renders BLANK, so the screen would read as an
+ * end that closes nothing over one that names something, and the next stray change would
+ * overwrite it unseen. `IfElseFields` keeps a deleted field visible for the same reason.
+ *
+ * `typeof` rather than the type: `parseGraph` keeps `data` as it found it, so a file may well hold
+ * a number here, and it would reach a `<select>` as its value.
+ */
+export function namedLoopId(node: GraphNode): string | undefined {
+  if (node.type !== 'forEachEnd') return undefined
+  const named = node.data.parentNodeId
+  // `''` and `undefined` are one answer, not two: choosing "no loop" in the inspector writes the
+  // empty string, and a third caller that forgot to test for it would read a pairing to nothing.
+  return typeof named === 'string' && named !== '' ? named : undefined
+}
+
 /** The nodes the converter would compile a branch for, in the order the graph holds them. */
 export const outputNodesOf = (graph: GraphState): readonly GraphNode[] =>
   graph.nodes.filter(node => node.data.isOutput === true && canBeOutput(node.type))
@@ -537,11 +560,33 @@ export type GraphCompileProblem =
   | 'empty'
   /** `validateWorkflowFlow` refused it. Its sentence goes to the journal, not to the screen. */
   | 'invalid'
+  /**
+   * A `forEachEnd` does not close what it names — and the two below are the studio's own, not the
+   * validator's: it accepts both without a word.
+   *
+   * Measured by running the converter, not deduced. A wire LEAVING an end is resolved to the node
+   * that end names, whatever that node is and wherever the end sits. So this covers both an end
+   * outside the loop it names and an end naming something that is no loop at all: either way, the
+   * node really feeding the end is compiled and then read by nobody, while what read the end
+   * reads the named node instead.
+   *
+   * An end NOTHING reads is never this: with no wire leaving it, there is nothing to misroute —
+   * measured, a spare end gives a flow identical item for item to the graph without it.
+   */
+  | 'loop-end-outside'
+  /**
+   * Two `forEachEnd` name the same loop. The converter keeps the FIRST it finds and resolves the
+   * other's wires to the loop all the same — so a node outside the loop is pulled into its body
+   * and runs once per item instead of once. Measured the same way.
+   */
+  | 'loop-two-ends'
 
 export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
   'no-output',
   'empty',
   'invalid',
+  'loop-end-outside',
+  'loop-two-ends',
 ]
 
 /**

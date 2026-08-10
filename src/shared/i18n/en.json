@@ -135,7 +135,9 @@
     "problem": {
       "no-output": "No output marked",
       "empty": "Nothing reaches the output",
-      "invalid": "The graph does not compile"
+      "invalid": "The graph does not compile",
+      "loop-end-outside": "An end of loop does not close what it names",
+      "loop-two-ends": "Two ends close the same loop"
     }
   },
   "graphRun": {
