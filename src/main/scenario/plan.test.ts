@@ -1,4 +1,6 @@
+import { APIError } from '@scenario-labs/sdk'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { log } from '@main/log'
 import { createPlanReader, teamsOf, type RemoteTeams, type TeamsCatalog } from './plan'
 import { createCredentialsWatch } from './credentials-watch'
 
@@ -17,6 +19,7 @@ describe('plan reader', () => {
 
   beforeEach(() => {
     clock = 0
+    vi.clearAllMocks()
   })
 
   /** Counts the round trips, which is half of what this module is for. */
@@ -78,6 +81,26 @@ describe('plan reader', () => {
     const { reader } = readerOf(() => Promise.reject(new Error('nope')))
 
     expect(await reader.access()).toBeNull()
+  })
+
+  /**
+   * The one line here that could leak a key. An SDK message embeds the request that produced it,
+   * headers included, and `log.warn` is mirrored into every renderer's console — so `String(error)`
+   * would not merely write the key to a file, it would push it across the IPC boundary.
+   */
+  it('logs a refusal without carrying the credentials into it', async () => {
+    const refusal = APIError.generate(
+      403,
+      { reason: 'nope' },
+      'POST /teams — Authorization: Basic c2VjcmV0LWtleTpzZWNyZXQ=',
+      new Headers(),
+    )
+    const { reader } = readerOf(() => Promise.reject(refusal))
+
+    await reader.access()
+
+    expect(log.warn).toHaveBeenCalledOnce()
+    expect(vi.mocked(log.warn).mock.calls[0]?.[1] ?? '').not.toContain('Basic')
   })
 
   it('answers nothing when the account holds no team at all', async () => {

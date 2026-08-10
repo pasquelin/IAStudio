@@ -107,10 +107,13 @@ export function Generator() {
   const plan = usePlanAccess()
 
   /**
-   * The last door before the spend, and the only one the five other ways of arming a model pass
-   * through: a stored default, "recreate", "regenerate with these parameters", a Spark idea and
-   * the canvas edits all reach the generator without ever opening the picker. Greying the picker
-   * alone would leave every one of them to discover the 403.
+   * The last door before the spend, for everything that arms a model without opening the picker:
+   * a stored default, "recreate", "regenerate with these parameters", a Spark idea and the canvas
+   * edits all land here. Greying the picker alone would leave every one of them to discover the
+   * 403.
+   *
+   * NOT every path, though — a graph runs its own nodes through `graph-runs.ts`, straight to the
+   * job queue, and is gated where its model is chosen (`ModelNodeFields`) instead.
    */
   const refused = plan !== null && isBeyondPlan(descriptor.data?.requiredPlanLevel, plan)
 

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { PlanAccess } from '@shared/domain/plan'
 import { getBridge } from '@/services/bridge'
+import { useAccountChange } from '@/hooks/useAccountChange'
 import { useSettings } from '@/stores/settings'
 
 /**
@@ -15,9 +16,25 @@ import { useSettings } from '@/stores/settings'
  */
 export function usePlanAccess(): PlanAccess | null {
   const [access, setAccess] = useState<PlanAccess | null>(null)
-  // Read here rather than taken as a prop: three callers would each have to remember to gate
-  // the call, and the two written first had already gated it differently.
+  const [attempt, setAttempt] = useState(0)
   const authenticated = useSettings(state => state.auth.authenticated)
+
+  /**
+   * The account switch, which `authenticated` cannot report: swapping one key for another leaves
+   * that boolean true from end to end, so an effect watching it never re-runs and the window
+   * would keep the previous account's plan — greying out models the new one pays for.
+   *
+   * NOT `activeOwnerId`, which looks like the obvious key and is not: it is learned from the
+   * first assets that come back, so it is absent for the whole opening of a session, and gating
+   * on it would mean never reading the plan at all. This is the same signal the main process
+   * purges its own cache on.
+   */
+  useAccountChange(
+    useCallback(() => {
+      setAccess(null)
+      setAttempt(count => count + 1)
+    }, []),
+  )
 
   useEffect(() => {
     if (!authenticated) return
@@ -36,7 +53,7 @@ export function usePlanAccess(): PlanAccess | null {
     return () => {
       current = false
     }
-  }, [authenticated])
+  }, [authenticated, attempt])
 
   return access
 }

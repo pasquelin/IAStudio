@@ -200,6 +200,58 @@ describe('model registry', () => {
     expect(items.map(item => item.requiredPlanLevel)).toEqual([50, 0, undefined])
   })
 
+  /**
+   * MEASURED, and the reason the grade is remembered at all: `GET /models` grades every model
+   * with a number, while `POST /search/models` answers `null` on every hit — the search index
+   * does not carry the field. Written straight through, that `null` landed in a `number` field
+   * and the same model went from greyed out in the listing to freely pickable the moment the
+   * user typed its name.
+   */
+  it('grades a search hit from what the listing already said', async () => {
+    // The two endpoints answer the SAME model differently — that is the whole bug.
+    const catalog = (): ModelCatalog => ({
+      list: () =>
+        Promise.resolve({
+          models: [{ id: 'model_seedance', accessRestrictions: 50 }],
+          token: null,
+        }),
+      search: () =>
+        Promise.resolve({
+          models: [{ id: 'model_seedance', name: 'Seedance', accessRestrictions: null }],
+          token: null,
+        }),
+      retrieve: () => Promise.reject(new Error('not asked')),
+      assetUrls: () => Promise.resolve([]),
+    })
+    const registry = registryOf({ catalog })
+
+    // Listed first, as the panel does before anyone types.
+    await registry.search({})
+    const { items } = await registry.search({ search: 'seedance' })
+
+    expect(items[0]?.requiredPlanLevel).toBe(50)
+  })
+
+  // Ungraded is the permissive answer; a grade invented at 0 would refuse nothing but would
+  // also claim to know, and the free tier IS 0.
+  it('leaves a search hit it has never listed ungraded', async () => {
+    const catalog = (): ModelCatalog => ({
+      list: () => Promise.resolve({ models: [], token: null }),
+      search: () =>
+        Promise.resolve({
+          models: [{ id: 'model_unseen', name: 'Unseen', accessRestrictions: null }],
+          token: null,
+        }),
+      retrieve: () => Promise.reject(new Error('not asked')),
+      assetUrls: () => Promise.resolve([]),
+    })
+    const registry = registryOf({ catalog })
+
+    const { items } = await registry.search({ search: 'unseen' })
+
+    expect(items[0]?.requiredPlanLevel).toBeUndefined()
+  })
+
   it('reads authorship from the official tag, the only signal the API carries', async () => {
     const registry = registryOf({ catalog: publicCatalog([FLUX, VEO]) })
 

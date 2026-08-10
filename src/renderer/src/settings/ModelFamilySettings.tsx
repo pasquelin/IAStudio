@@ -44,10 +44,31 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
   return models
 }
 
+/**
+ * The stored default kept among the options whatever the page holds, so the screen never shows
+ * an empty picker over a setting that IS set — a `<select>` whose value matches no option has
+ * `selectedIndex === -1` and renders blank, and the next stray change overwrites it unseen.
+ * `ModelNodeFields` does the same for the model a graph node runs.
+ */
+function withStored(models: readonly ModelSummary[], stored: string): readonly ModelSummary[] {
+  if (!stored || models.some(model => model.id === stored)) return models
+  return [{ ...PLACEHOLDER, id: stored, name: stored }, ...models]
+}
+
+/** Enough of a summary to name a row; the picker reads nothing else off it. */
+const PLACEHOLDER: Omit<ModelSummary, 'id' | 'name'> = {
+  family: 'other',
+  source: 'other',
+  origin: 'community',
+  featured: false,
+  capabilities: [],
+  tags: [],
+}
+
 /** Per-family generation settings. Today: which model the generator preselects. */
 export function ModelFamilySettings({ family }: { family: ModelFamily }) {
   const { t } = useTranslation()
-  const models = useFamilyModels(family)
+  const fetched = useFamilyModels(family)
   const plan = usePlanAccess()
   const stored = useSettings(state => state.settings.generation.defaultModels)
   const stageBranch = useSettingsDraft(state => state.stageBranch)
@@ -57,6 +78,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
 
   const defaultModels = staged ?? stored
   const selected = defaultModels[family] ?? ''
+  const models = withStored(fetched, selected)
 
   /**
    * The default that is ALREADY stored, which nobody is choosing right now. A downgrade or an

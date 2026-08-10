@@ -29,9 +29,15 @@ export type RemoteModel = {
   thumbnail?: { url?: string }
   /** Pictures the model's owner published. Measured: 629 of the 642 public models have some. */
   exampleAssetIds?: readonly string[]
-  /** The plan grade below which the API refuses this model. Widened from the SDK's union on
-   * purpose — see `ModelSummary.requiredPlanLevel`, which two models already contradict. */
-  accessRestrictions?: number
+  /**
+   * The plan grade below which the API refuses this model. Widened from the SDK's union on
+   * purpose — see `ModelSummary.requiredPlanLevel`, which two models already contradict.
+   *
+   * `null` is a real answer, not a missing one: measured, `GET /models` always grades a model
+   * with a number, while `POST /search/models` answers `null` for every hit — the search index
+   * does not carry the field. That is why the search path is graded from `grades` below.
+   */
+  accessRestrictions?: number | null
   inputs?: readonly ScenarioInput[]
 }
 
@@ -121,7 +127,21 @@ const MAX_PAGES_PER_REQUEST = 5
 /** One round trip per screenful of cards; the endpoint takes the ids in a single body. */
 const PREVIEW_BATCH = 50
 
-function summaryOf(model: RemoteModel): ModelSummary {
+/**
+ * Every plan grade the catalogue has answered so far, by model id.
+ *
+ * MEASURED: `GET /models` grades every model with a number, while `POST /search/models` answers
+ * `null` on every hit — the search index does not carry the field. Without this, a model found
+ * by name came back ungraded and was offered as runnable, while the very same model in the
+ * listing was greyed out. Grades do not change under a model, so remembering what the listings
+ * said is enough to grade most search hits too.
+ *
+ * NOT cleared by the credential purge, unlike every other cache here: a grade is a property of
+ * the model, not of who is asking.
+ */
+type Grades = Map<string, number>
+
+function summaryOf(model: RemoteModel, grades: Grades): ModelSummary {
   const tags = model.tags ?? []
   const summary: ModelSummary = {
     id: model.id,
@@ -142,8 +162,16 @@ function summaryOf(model: RemoteModel): ModelSummary {
   if (model.shortDescription) summary.description = model.shortDescription
   if (model.thumbnail?.url) summary.thumbnail = model.thumbnail.url
   if (model.createdAt) summary.createdAt = model.createdAt
-  // Not `if (…)`: grade 0 is the free tier, and truthiness would drop it to "ungraded".
-  if (model.accessRestrictions !== undefined) summary.requiredPlanLevel = model.accessRestrictions
+  // `typeof` and not `!== undefined`: the search index answers `null`, which would otherwise be
+  // written into a `number | undefined` field and read as a grade of nothing. Not `if (…)`
+  // either — grade 0 is the free tier, and truthiness would drop it to "ungraded".
+  const grade =
+    typeof model.accessRestrictions === 'number' ? model.accessRestrictions : grades.get(model.id)
+
+  if (grade !== undefined) {
+    summary.requiredPlanLevel = grade
+    grades.set(model.id, grade)
+  }
 
   return summary
 }
@@ -293,6 +321,8 @@ export function createModelRegistry({
    * is a request spent to learn what the previous one already said.
    */
   let ownsModels: { at: number; value: boolean } | null = null
+  /** Survives `invalidate` on purpose — see `Grades`: a grade belongs to the model, not the account. */
+  const grades: Grades = new Map()
 
   const fresh = <T>(entry: Cached<T> | null | undefined): T | null =>
     entry && now() - entry.at < ttlMs ? entry.value : null
@@ -308,7 +338,7 @@ export function createModelRegistry({
 
     const { model } = await catalog().retrieve(modelId)
     const value: DescribedModel = {
-      descriptor: { ...summaryOf(model), fields: translateSchema(model.inputs) },
+      descriptor: { ...summaryOf(model, grades), fields: translateSchema(model.inputs) },
       inputs: model.inputs ?? [],
     }
 
@@ -419,7 +449,7 @@ export function createModelRegistry({
           read += 1
           if (seen.has(model.id)) continue
 
-          const summary = summaryOf(model)
+          const summary = summaryOf(model, grades)
           if (matches(summary, query, since)) {
             seen.add(model.id)
             items.push(summary)
