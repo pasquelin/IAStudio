@@ -1,43 +1,6 @@
-import type { GraphNode, GraphState } from '@shared/domain/graph'
+import type { GraphNode, GraphNodeRun, GraphRunFailure, GraphState } from '@shared/domain/graph'
+import { CONDITIONAL_PORT } from '@shared/domain/graph'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
-
-/** What a node is doing, as the canvas paints it. */
-export type GraphRunStatus = 'idle' | 'running' | 'cached' | 'done' | 'failed'
-
-export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
-  'idle',
-  'running',
-  'cached',
-  'done',
-  'failed',
-]
-
-/**
- * Why a node produced nothing. A code, never a message — the renderer translates it, exactly as
- * it does for a job's own failure (`domain/failure.ts`).
- */
-export type GraphRunFailure =
-  /** Caught in a loop: the plan refused before anything ran. */
-  | 'cycle'
-  /** A type this milestone has no execution for — the logic and the loops arrive with step 8. */
-  | 'unsupported'
-  /** A generator with no model chosen. */
-  | 'no-model'
-  /** Something it reads produced nothing, so it was never asked to run. */
-  | 'blocked'
-  /** It ran and the job did not succeed. */
-  | 'rejected'
-
-export const GRAPH_RUN_FAILURES: readonly GraphRunFailure[] = [
-  'cycle',
-  'unsupported',
-  'no-model',
-  'blocked',
-  'rejected',
-]
-
-export type GraphNodeRun =
-  { status: Exclude<GraphRunStatus, 'failed'> } | { status: 'failed'; failure: GraphRunFailure }
 
 /** What the executor cannot do itself: submit work, say where it is, and be told to stop. */
 export type GraphRunPorts = {
@@ -140,7 +103,11 @@ export async function runGraph(
 
     if (!inputs) return fail(node.id, 'blocked')
 
-    if (node.type === 'text') return keep(planned, [asText(node.data.value)])
+    // Both through `asList`, and that is the fix rather than a shortening: a text node holding
+    // nothing used to hand on `['']` and write an empty prompt over whatever the form held — a
+    // guaranteed 400 on a required field — while an emptied ASSET node left the form alone. One
+    // rule for both: a wire carrying nothing does not overwrite.
+    if (node.type === 'text') return keep(planned, asList(node.data.value))
     if (node.type === 'asset') return keep(planned, asList(node.data.value))
     // A note is drawn on the canvas and compiles to nothing — it has no output to read either.
     if (node.type === 'stickyNote') return { values: [] }
@@ -152,7 +119,18 @@ export async function runGraph(
     report(node.id, { status: 'running' })
 
     try {
-      return keep(planned, await generate(modelId, bodyOf(form, inputs)))
+      const values = await generate(modelId, bodyOf(form, inputs))
+
+      // Asked AGAIN on the way back, and it is not the same question as the one above: a stop
+      // pressed while this job was on the wire cannot un-submit it, but painting the node green
+      // and filing its result in the cache would make a run the user stopped look like one that
+      // finished — and the next Run would then reuse what it produced.
+      if (signal?.aborted) {
+        report(node.id, { status: 'idle' })
+        return null
+      }
+
+      return keep(planned, values)
     } catch {
       // A stop cancels what is on the wire, so the throw that follows is the stop rather than a
       // refusal — painting the node red would blame the API for what the user just did.
@@ -179,8 +157,6 @@ export async function runGraph(
   return { ok: true, cache: produced }
 }
 
-const asText = (value: unknown): string => (typeof value === 'string' ? value : '')
-
 const asList = (value: unknown): readonly string[] => {
   if (typeof value === 'string') return value === '' ? [] : [value]
   if (Array.isArray(value)) return value.filter(held => typeof held === 'string')
@@ -190,12 +166,16 @@ const asList = (value: unknown): readonly string[] => {
 /**
  * The body one generator is submitted with: what its form holds, with what its wires feed on top.
  *
- * Blanks are dropped, as `buildBody` drops them before a form is submitted: a node whose form was
- * never opened in the inspector still carries the model's own defaults, and an empty optional enum
- * is answered with a 400.
+ * **It is NOT `buildBody`, and the difference is worth naming rather than hiding.** `buildBody`
+ * keeps only `visibleFields`, so a parameter whose `dependsOn` is not satisfied is dropped before
+ * a form is submitted; this has no `FieldDescriptor` to read that from — the schema lives in the
+ * main process and an engine may not reach for it (invariant 4) — so a node nobody opened in the
+ * inspector, which carries `defaultValues` for EVERY field, submits its hidden ones too. Two
+ * paths, two bodies for one form. Closing it means handing the descriptors down as a port, and
+ * that is written up in `docs/todo.md` rather than left for someone to rediscover.
  *
- * A wired port's own multiplicity is read off the value the form already holds for that key —
- * Scenario publishes no arity on a field, and the model's default is the one place it shows.
+ * What it does do is drop the blanks, which is the half that would otherwise 400 on its own: an
+ * optional enum sitting at `''` is refused outright.
  */
 function bodyOf(
   form: Readonly<Record<string, unknown>> | undefined,
@@ -203,15 +183,26 @@ function bodyOf(
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {}
 
+  // `null` as well as `''`: `parseGraph` does not validate `data`, so a form read off a file can
+  // hold one, and `blankToUndefined` — the reader on the other path — drops it too.
   for (const [key, value] of Object.entries(form ?? {})) {
-    if (value !== '' && value !== undefined) body[key] = value
+    if (value !== '' && value !== undefined && value !== null) body[key] = value
   }
 
   for (const [key, values] of Object.entries(inputs)) {
-    // A provider that produced nothing leaves the key alone rather than writing `undefined` over
-    // whatever the form held for it.
+    // The port every node carries to be steered by, never a parameter of the model. Wired — which
+    // an untyped output makes possible, and graphs read from Scenario carry those — it would put a
+    // key the schema has never heard of in the body.
+    if (key === CONDITIONAL_PORT) continue
+
+    // A provider that produced nothing leaves the key alone rather than writing over whatever the
+    // form held for it.
     if (values.length === 0) continue
-    body[key] = Array.isArray(body[key]) || values.length > 1 ? values : values[0]
+
+    // The form's own value decides the arity, and nothing else does: a picture input is a single
+    // `file` in every schema this studio reads (`schema.ts` only calls a `file` an image), so a
+    // node that produced four and wrote all four would be refused. The first is what fits.
+    body[key] = Array.isArray(body[key]) ? values : values[0]
   }
 
   return body

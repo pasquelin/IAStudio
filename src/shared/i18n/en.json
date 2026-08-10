@@ -79,7 +79,7 @@
       "cycle": "loop",
       "unsupported": "not runnable",
       "no-model": "no model",
-      "blocked": "waiting",
+      "blocked": "upstream failed",
       "rejected": "failed"
     }
   },
@@ -179,6 +179,7 @@
       "assets.open": "This asset has nowhere to go",
       "font.face": "A font could not be loaded",
       "graph.node": "A node could not be created",
+      "graph.run": "The graph could not be run",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened"

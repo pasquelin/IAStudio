@@ -1,6 +1,5 @@
 import type { Edge, EdgeChange, Node, NodeChange } from '@xyflow/react'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
-import type { GraphNodeRun } from '@/engines/graph/executor'
+import type { GraphNode, GraphNodeRun, GraphState } from '@shared/domain/graph'
 
 /**
  * The one file that knows what React Flow puts on the objects it is handed.

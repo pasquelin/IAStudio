@@ -79,7 +79,7 @@
       "cycle": "boucle",
       "unsupported": "non exécutable",
       "no-model": "sans modèle",
-      "blocked": "en attente",
+      "blocked": "amont en échec",
       "rejected": "échec"
     }
   },
@@ -179,6 +179,7 @@
       "assets.open": "Cet asset n’a nulle part où aller",
       "font.face": "Une police n’a pas pu être chargée",
       "graph.node": "Un nœud n’a pas pu être créé",
+      "graph.run": "Le graphe n’a pas pu être lancé",
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
       "document.load": "Le document n’a pas pu être ouvert"

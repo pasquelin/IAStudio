@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { GraphState } from '@shared/domain/graph'
 import type { Job, JobTarget } from '@shared/domain/job'
 import { graphOf, modelNode, textNode, wire } from '@/engines/graph/graph-fixtures'
 import { updateNodeData } from '@/engines/graph/mutations'
+import { parseGraph } from '@/engines/graph/serialize'
 import { runOf, useGraphRuns } from './graph-runs'
 import { installGraph } from './graph-fixtures'
 import { useGraphs } from './graphs'
@@ -29,25 +30,30 @@ function job(id: string, overrides: Partial<Job> = {}): Job {
  * settles it by hand, exactly as a progress event from the main process would.
  */
 function installJobs(): {
+  submit: Mock<(target: JobTarget, body: Record<string, unknown>) => Promise<Job>>
   submitted: JobTarget[]
   settle: (id: string, job: Partial<Job>) => void
 } {
   const submitted: JobTarget[] = []
   let count = 0
 
-  useJobs.setState({
-    jobs: [],
-    submit: async target => {
-      count += 1
-      submitted.push(target)
-      const entry = job(`job_${count}`, { targetId: target.id })
-      useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
-      return entry
-    },
-    cancel: async () => {},
+  /**
+   * A `vi.fn` taking BOTH arguments, and that is not decoration: written to ignore the body, no
+   * test in this file could ever redden on what a graph actually submits — a mutation replacing
+   * the body with `{}` left the whole suite green. The pattern `REPRISE-workflows.md` names.
+   */
+  const submit = vi.fn(async (target: JobTarget, _body: Record<string, unknown>) => {
+    count += 1
+    submitted.push(target)
+    const entry = job(`job_${count}`, { targetId: target.id })
+    useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
+    return entry
   })
 
+  useJobs.setState({ jobs: [], submit, cancel: async () => {} })
+
   return {
+    submit,
     submitted,
     settle: (id, change) =>
       useJobs.setState(state => ({
@@ -81,6 +87,22 @@ describe('running a graph document', () => {
     await run
 
     expect(jobs.submitted[0]).toEqual({ kind: 'model', id: 'model_a' })
+  })
+
+  /** On the body itself, not only on the target: what the wires resolved to has to arrive. */
+  it('hands the jobs store the body the graph built', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, chain('a knight'))
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    expect(jobs.submit).toHaveBeenCalledWith(
+      { kind: 'model', id: 'model_a' },
+      { prompt: 'a knight' },
+    )
   })
 
   it('says the graph is running until every node has settled', async () => {
@@ -288,6 +310,101 @@ describe('stopping and forgetting a run', () => {
 
     expect(cancel).not.toHaveBeenCalled()
     await run
+  })
+
+  /**
+   * The case `withGraphRun` exists for, and the one the first test of it missed by forgetting
+   * only AFTER the run: a run still under way kept reporting, and every report went through
+   * `runOf(state, id) ?? IDLE` — which put back the entry that had just been dropped, with the
+   * local asset ids of a project the user has left.
+   */
+  it('writes nothing more once its document has been forgotten mid-run', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, chain())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    useGraphRuns.getState().forget(DOC)
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    expect(useGraphRuns.getState().runs[DOC]).toBeUndefined()
+  })
+
+  /**
+   * The window `stop` used to miss entirely: a submission crossing the IPC boundary has no job id
+   * yet, so there is nothing in `inFlight` to cancel — and the id appears a moment later, on a
+   * generation the user has already asked to stop paying for.
+   */
+  it('cancels a job whose submission came back after the stop', async () => {
+    const cancel = vi.fn(async () => {})
+    let answer: ((job: Job) => void) | undefined
+    useJobs.setState({
+      jobs: [],
+      cancel,
+      submit: async () => {
+        const entry = job('job_1')
+        useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
+        return new Promise<Job>(resolve => {
+          answer = resolve
+        })
+      },
+    })
+    installGraph(DOC, graphOf([modelNode('m1', { prompt: 'a knight' }, 'model_a')], []))
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(answer).toBeDefined())
+
+    useGraphRuns.getState().stop(DOC)
+    answer?.(job('job_1'))
+
+    await vi.waitFor(() => expect(cancel).toHaveBeenCalledWith('job_1'))
+    useJobs.setState(state => ({
+      jobs: state.jobs.map(entry => ({ ...entry, status: 'cancelled' })),
+    }))
+    await run
+  })
+
+  it('leaves a node idle rather than green when the stop landed while it ran', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, graphOf([modelNode('m1', { prompt: 'a knight' }, 'model_a')], []))
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    useGraphRuns.getState().stop(DOC)
+    // The job answers anyway — nothing un-submits one already on the wire. What must NOT happen
+    // is the node going green and its result entering the cache of a run the user stopped.
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes.m1).toEqual({ status: 'idle' })
+    expect(runOf(useGraphRuns.getState(), DOC).cache.size).toBe(0)
+  })
+
+  /**
+   * `parseGraph` validates the node, not its `data`, so a `.graph` read off disk can carry
+   * `inputHandles` that is not a list — and the plan throws on it. Left uncaught, the document
+   * stayed `running` for the rest of the session: the button froze on Stop and every later press
+   * was refused.
+   */
+  it('stops saying it is running when the run throws', async () => {
+    installJobs()
+    // Through the reader, which is the path a file actually takes: it validates the node and
+    // hands `data` over as it stands, so `inputHandles` reaches the plan as a string.
+    installGraph(
+      DOC,
+      parseGraph({
+        nodes: [
+          { id: 'text1', type: 'text', position: { x: 0, y: 0 }, data: { inputHandles: 'x' } },
+        ],
+      }),
+    )
+
+    await expect(useGraphRuns.getState().start(DOC)).rejects.toThrow()
+
+    expect(runOf(useGraphRuns.getState(), DOC).running).toBe(false)
   })
 
   it('drops the cache of a document being closed', async () => {

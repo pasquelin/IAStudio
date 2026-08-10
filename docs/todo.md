@@ -1013,6 +1013,43 @@ publication.
 > `data.isOutput`, et le convertisseur ne compile QUE les branches menant à un nœud qui le porte —
 > sans ce geste, le flow compilé est **vide**.
 
+### Ce que les revues du lot C2 ont laissé ouvert, et qu'il ne faut pas redécouvrir
+
+Trois défauts bloquants et six correctifs sont partis avec `feat/graph-run-fix`. **Ce qui reste
+est écrit ici parce que chacun demande une décision, pas une correction :**
+
+1. **`bodyOf` n'a pas le schéma du modèle, donc il soumet les champs cachés.** `buildBody` ne garde
+   que `visibleFields` — un paramètre dont le `dependsOn` n'est pas satisfait est retiré — et
+   l'exécuteur n'a aucun `FieldDescriptor` à lire pour en faire autant : il vit dans `engines/`,
+   le schéma vit dans le main. Un nœud que personne n'a ouvert dans l'inspecteur porte
+   `defaultValues` pour **tous** ses champs, cachés compris. **Deux chemins, deux corps pour un
+   même formulaire.** Le fermer veut dire descendre les descripteurs par un port — c'est un lot,
+   pas une ligne. Le commentaire de `bodyOf` dit franchement ce qu'il ne fait pas.
+2. **Le cache ne se purge ni ne se revalide.** Un nœud `cached` transmet un identifiant local dont
+   la ligne de catalogue peut avoir été supprimée entre-temps ; côté main, `remoteIdOf` ne trouve
+   rien et **rend l'identifiant local tel quel** — soumis, payé, et l'API répond comme si aucune
+   référence n'avait été donnée. C'est le défaut du lot C0 qui revient par une autre porte.
+   Le chemin : `⌘Z` vers un prompt précédent après suppression de l'asset.
+3. **`GraphPlanNode.cached` n'a plus de lecteur** : l'exécuteur lit `cache.get(hash)` et explique
+   en commentaire pourquoi il ne lit pas le champ. Le supprimer, ou lui donner son usage — un
+   « serait réutilisé » affiché avant même d'appuyer sur Exécuter.
+4. **`GraphPlanInput.handle` n'est jamais lu et `Outcome` est plat** : un nœud rend une liste, pas
+   une liste par port de sortie. Vrai tant qu'un nœud modèle n'a qu'une sortie ; **faux dès
+   l'étape 8** (`ifElse`, `splitText`, `forEach`).
+5. **Exécuter ne se désactive jamais** sur un graphe vide, alors que `ToolbarItem.disabled` sert à
+   undo/redo deux lignes plus loin.
+6. **Exécuter n'est pas un `CommandId`** : pas de raccourci, pas d'entrée dans l'écran des
+   raccourcis, pas de menu, pour le geste principal de l'espace.
+7. **Aucun état « en file ».** `running` est peint avant la soumission, donc un nœud « en cours »
+   peut n'être que `queued` côté `JobManager`, et un nœud non démarré n'affiche rien : sur vingt
+   nœuds, deux badges et dix-huit nœuds d'apparence intacte.
+8. **`role="status"` est posé par nœud**, donc vingt régions live sur un graphe de vingt nœuds.
+   Ailleurs le dépôt n'en met qu'une, et `ProgressRow` — qui peint la même information pour les
+   jobs — n'en a pas.
+9. **`whenSettled` n'a ni signal ni échéance** : un job qui n'atteindrait jamais d'état terminal
+   fige l'exécution. Le `try/finally` empêche l'application de rester bloquée, pas l'attente
+   d'être infinie.
+
 **Trois limites à porter dans le domaine** : 50 nodes par workflow, 10 jobs de workflow concurrents,
 100 requêtes par minute. Les deux dernières sont bornées ; la première appartient à l'export et doit
 **échouer proprement**, pas silencieusement.

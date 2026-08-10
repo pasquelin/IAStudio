@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
-import { runGraph, type GraphNodeRun, type GraphRunPorts, type GraphRunResult } from './executor'
+import type { GraphNode, GraphNodeRun, GraphState } from '@shared/domain/graph'
+import { runGraph, type GraphRunPorts, type GraphRunResult } from './executor'
 import { graphOf, modelNode, textNode, wire } from './graph-fixtures'
 import { handleId } from './handles'
 import { updateNodeData } from './mutations'
@@ -136,14 +136,52 @@ describe('running a graph', () => {
     expect(watched.submitted[0]?.body).toEqual({})
   })
 
-  it('reads an empty prompt out of a text node nobody has typed into', async () => {
+  it('writes nothing for a text node nobody has typed into', async () => {
     const graph = graphOf(
       [textNode('text1'), modelNode('m1', {}, 'model_a')],
       [wire('m1', 'prompt', 'text1', 'output')],
     )
     const watched = await watch(graph, { model_a: ['asset_1'] })
 
-    expect(watched.submitted[0]?.body).toEqual({ prompt: '' })
+    expect(watched.submitted[0]?.body).toEqual({})
+  })
+
+  /** The port every node carries to be steered by — never a parameter the model knows. */
+  it('keeps a wired conditional port out of the body it submits', async () => {
+    const provider: GraphNode = {
+      id: 'text1',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {
+        value: 'yes',
+        // No `type`, which is what a graph read from Scenario carries and what makes the wire
+        // legal in the first place — `typesConnect` refuses nothing when either side is silent.
+        outputHandles: [{ id: handleId('text1', 'target', 'output'), name: 'output' }],
+      },
+    }
+    const consumer: GraphNode = {
+      id: 'm1',
+      type: 'model',
+      position: { x: 0, y: 0 },
+      data: {
+        modelId: 'model_a',
+        form: { seed: 3 },
+        inputHandles: [{ id: handleId('m1', 'source', 'conditional'), name: 'conditional' }],
+      },
+    }
+
+    const graph = graphOf([provider, consumer], [wire('m1', 'conditional', 'text1', 'output')])
+    const watched = await watch(graph, { model_a: ['asset_1'] })
+
+    expect(watched.submitted[0]?.body).toEqual({ seed: 3 })
+  })
+
+  /** `parseGraph` does not validate `data`, so a form read off a file can hold one. */
+  it('drops a null the way the form reader drops it, not only an empty string', async () => {
+    const graph = graphOf([modelNode('m1', { seed: 3, style: null }, 'model_a')], [])
+    const watched = await watch(graph, { model_a: ['asset_1'] })
+
+    expect(watched.submitted[0]?.body).toEqual({ seed: 3 })
   })
 
   it('starts two independent branches at once rather than one after the other', async () => {
@@ -206,9 +244,10 @@ describe('the values a node hands on', () => {
       model_a: ['asset_1'],
     })
 
-    // An empty text node produces one empty string, which `bodyOf` writes as such — what must
-    // NOT happen is the key vanishing, which would submit the model with no prompt at all.
-    expect(watched.submitted[0]?.body).toEqual({ prompt: '' })
+    // A wire carrying nothing does not overwrite: an emptied text node used to write `''` over
+    // the prompt, which is a 400 on a required field — and an emptied ASSET node, wired the same
+    // way, left the form alone. One rule for both.
+    expect(watched.submitted[0]?.body).toEqual({ prompt: 'typed by hand' })
   })
 
   it('keeps what the form held where its wire carries no asset at all', async () => {
@@ -231,7 +270,13 @@ describe('the values a node hands on', () => {
     expect(watched.submitted[0]?.body).toEqual({ prompt: 'a fallback' })
   })
 
-  it('sends a list where a node produced several, whatever the form held', async () => {
+  /**
+   * The form decides the arity and nothing else does. A picture input is a single `file` in every
+   * schema this studio reads — `schema.ts` only calls a `file` an image, a `file_array` falls back
+   * to a raw field and never becomes a port — so a node that produced four and wrote all four
+   * would be refused with a 400.
+   */
+  it('sends the first where a node produced several and the form holds one', async () => {
     const asset: GraphNode = {
       id: 'asset1',
       type: 'asset',
@@ -247,7 +292,7 @@ describe('the values a node hands on', () => {
     )
     const watched = await watch(graph, { model_a: ['asset_out'] })
 
-    expect(watched.submitted[0]?.body).toEqual({ prompt: ['asset_one', 'asset_two'] })
+    expect(watched.submitted[0]?.body).toEqual({ prompt: 'asset_one' })
   })
 
   /** An asset node whose asset was cleared holds `''`, which is not an id the API would take. */

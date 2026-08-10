@@ -1,21 +1,23 @@
 import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeProps } from '@xyflow/react'
-import type { GraphHandleInput, GraphHandleOutput, GraphNodeType } from '@shared/domain/graph'
-import { isRecord } from '@shared/guards'
 import {
   GRAPH_RUN_FAILURES,
   GRAPH_RUN_STATUSES,
+  type GraphHandleInput,
+  type GraphHandleOutput,
   type GraphNodeRun,
+  type GraphNodeType,
   type GraphRunStatus,
-} from '@/engines/graph/executor'
+} from '@shared/domain/graph'
+import { isRecord } from '@shared/guards'
 import { TONE_TEXT, type StatusTone } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { RUN_STATE_KEY } from './adapter'
 import { NODE_LABEL_KEYS } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
 
-/** How each state reads. The colour stays in the design system, as `ProgressRow` keeps it. */
+/** How each state reads. The colour itself stays in `design/styles.ts`, with the other tones. */
 const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
   idle: 'muted',
   running: 'accent',
@@ -69,8 +71,8 @@ function NodeShell({
     >
       <header className="border-border flex items-baseline justify-between gap-2 border-b px-2 py-1">
         <span className="truncate text-[11px]">{title}</span>
-        {/* The run takes the corner while there is one to report: what a node is doing outranks
-            what it is, and the two side by side crowd a header 40 px wide. */}
+        {/* The run takes the corner while there is one to report: the header holds a title that
+            truncates and one thing beside it, and what a node is DOING outranks what it is. */}
         {run && run.status !== 'idle' ? (
           <RunBadge run={run} />
         ) : (

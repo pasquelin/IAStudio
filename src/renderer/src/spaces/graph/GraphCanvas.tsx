@@ -9,9 +9,8 @@ import {
   type IsValidConnection,
   type NodeChange,
 } from '@xyflow/react'
-import type { GraphPosition, GraphState } from '@shared/domain/graph'
+import type { GraphNodeRun, GraphPosition, GraphState } from '@shared/domain/graph'
 import { canDropConnection } from '@/engines/graph/connect'
-import type { GraphNodeRun } from '@/engines/graph/executor'
 import type { PaletteEntry } from './palette'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
