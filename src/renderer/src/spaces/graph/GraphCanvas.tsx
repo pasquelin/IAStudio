@@ -62,6 +62,7 @@ export type GraphCanvasProps = {
   /** Whether a run would report anything — the bar greys the button when it would not. */
   canRun: boolean
   canExport: boolean
+  canImport: boolean
   /** What each node is doing in the run under way, or in the last one. Absent means idle. */
   runs: Readonly<Record<string, GraphNodeRun>>
   running: boolean
@@ -107,6 +108,7 @@ export function GraphCanvas({
   canRedo,
   canRun,
   canExport,
+  canImport,
   runs,
   running,
   onRun,
@@ -245,6 +247,7 @@ export function GraphCanvas({
               canRedo={canRedo}
               canRun={canRun}
               canExport={canExport}
+              canImport={canImport}
               running={running}
             />
             <ViewportBridge

@@ -41,6 +41,7 @@ export function GraphToolbar({
   canRedo,
   canRun,
   canExport,
+  canImport,
   running,
 }: GraphToolbarProps) {
   const { zoomIn, zoomOut } = useReactFlow()
@@ -79,7 +80,7 @@ export function GraphToolbar({
   return (
     <div ref={bar} className="absolute top-2 left-2 z-10">
       <Toolbar
-        tools={graphTools({ canUndo, canRedo, canRun, canExport, running, runShortcut })}
+        tools={graphTools({ canUndo, canRedo, canRun, canExport, canImport, running, runShortcut })}
         activeTool={mode}
         onTool={onTool}
       />

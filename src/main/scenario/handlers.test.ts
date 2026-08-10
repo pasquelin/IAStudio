@@ -565,6 +565,40 @@ describe('scenario handlers', () => {
      * 50 in the prose has never been measured, and a local refusal on it would turn away graphs
      * Scenario accepts.
      */
+    /**
+     * The aller-retour, played across the REAL boundary. The renderer's own suite proved it by
+     * calling `workflowFileOf` directly — which skips `parseGraphState`, and `parseGraphState` is
+     * a zod object: it STRIPS what it does not declare. Boxes and sizes were dropped there, on the
+     * export's only path, while a green test said otherwise.
+     */
+    it('exports the boxes and the sizes, which the boundary used to strip', async () => {
+      const saveWorkflow = vi.fn((_name: string, _contents: string) => Promise.resolve('/tmp/x'))
+      const drawn = {
+        nodes: [
+          {
+            id: 'note1',
+            type: 'stickyNote',
+            position: { x: 0, y: 0 },
+            data: { group: 'g1' },
+            width: 320,
+            height: 180,
+          },
+        ],
+        edges: [],
+        inputKeys: [],
+        nodeGroups: { g1: { title: 'Heroes', color: '#3574f0' } },
+      }
+      register({ saveWorkflow })
+
+      await invoke(CHANNELS.workflowsExport, drawn, 'Heroes')
+
+      const [, contents] = saveWorkflow.mock.calls[0] ?? []
+      expect(JSON.parse(String(contents)).editorInfo).toMatchObject({
+        nodes: [expect.objectContaining({ width: 320, height: 180 })],
+        nodeGroups: { g1: { title: 'Heroes', color: '#3574f0' } },
+      })
+    })
+
     it('publishes the graph as a workflow, models resolved first', async () => {
       const create = vi.fn((_about: { name: string; description: string }) =>
         Promise.resolve({ id: 'workflow_9' }),

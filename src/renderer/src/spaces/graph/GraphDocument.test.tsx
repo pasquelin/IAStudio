@@ -9,7 +9,7 @@ import { publishCommand } from '@/services/command-bus'
 import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
-import { useGraphRuns } from '@/stores/graph-runs'
+import { runOf, useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -247,6 +247,59 @@ describe('a graph as a document', () => {
       await Promise.resolve()
 
       expect(state().nodes.map(node => node.id)).toEqual([text.id])
+    })
+
+    /**
+     * A run under way OWNS the nodes on the canvas: replacing them under it lands its results on
+     * a graph that never asked for them, and `⌘Z` cannot help — a run is not in the history.
+     */
+    it('withdraws the import while a run is under way', () => {
+      withOneNode()
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+      expect(screen.getByRole('button', { name: 'Importer un graphe' })).toBeEnabled()
+
+      act(() =>
+        useGraphRuns.setState({
+          runs: { [DOCUMENT]: { running: true, nodes: {}, cache: new Map() } },
+        }),
+      )
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(screen.getByRole('button', { name: 'Importer un graphe' })).toBeDisabled()
+    })
+
+    /**
+     * The run cache is keyed by NODE ID and outlives the graph, and the ids collide almost always
+     * — `text1`, `imageGenerator1`, the webapp's convention and ours. Left in place, an imported
+     * node wears the previous graph's verdict without ever having run.
+     */
+    it('forgets the previous graph’s run before putting another one in place', async () => {
+      const file = {
+        editorInfo: {
+          nodes: [{ id: text.id, type: 'text', position: { x: 0, y: 0 }, data: {} }],
+          edges: [],
+          inputKeys: [],
+        },
+      }
+      installFakeBridge({ workflows: { import: () => Promise.resolve(file) } })
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: { [text.id]: { status: 'failed', failure: 'rejected' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Importer un graphe' }))
+
+      await waitFor(() => expect(state().nodes.map(node => node.id)).toEqual([text.id]))
+      expect(runOf(useGraphRuns.getState(), DOCUMENT).nodes).toEqual({})
     })
 
     /**

@@ -125,11 +125,15 @@ export function parseWorkflowId(value: unknown): string {
  * NOT validated — the same contract `parseGraph` holds on the other side, and the one the
  * converter is written against.
  */
+// `width`/`height` are declared because zod STRIPS what it does not name, and this schema is on
+// the export's only path: left out, a note the user resized came back to its default size.
 const graphNode = z.object({
   id: z.string().min(1).max(GRAPH_ID_MAX),
   type: z.literal(GRAPH_NODE_TYPES),
   position: z.object({ x: z.number(), y: z.number() }),
   data: z.record(z.string(), z.unknown()),
+  width: z.number().optional(),
+  height: z.number().optional(),
 })
 
 const graphEdge = z.object({
@@ -144,6 +148,17 @@ const graphState = z.object({
   nodes: z.array(graphNode).max(GRAPH_NODES_MAX),
   edges: z.array(graphEdge).max(GRAPH_EDGES_MAX),
   inputKeys: z.array(z.string().max(GRAPH_ID_MAX)).max(GRAPH_NODES_MAX),
+  // Same reason as `width` above, and it was worse: dropped here, the boxes a user drew vanished
+  // from every export while each node kept a `data.group` naming an id nothing resolved.
+  nodeGroups: z
+    .record(
+      z.string().max(GRAPH_ID_MAX),
+      z.object({
+        title: z.string().max(GRAPH_ID_MAX).optional(),
+        color: z.string().max(32).optional(),
+      }),
+    )
+    .optional(),
 })
 
 export function parseGraphState(value: unknown): GraphState {

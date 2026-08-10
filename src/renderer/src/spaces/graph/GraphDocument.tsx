@@ -256,6 +256,11 @@ export function GraphDocument({ documentId }: { documentId: string }) {
           return reportFailure('graph.import', documentId, new Error('no node in that file'))
         }
 
+        // The run state is keyed by NODE ID and outlives the graph: ids are `text1`,
+        // `imageGenerator1` — the webapp's convention and ours — so an imported node would wear
+        // the previous graph's result without ever having run. `⌘Z` cannot help: a run is not in
+        // the history.
+        useGraphRuns.getState().forget(documentId)
         useGraphs.getState().runCommand(documentId, replaceGraph(read))
       })
       .catch(error => reportFailure('graph.import', documentId, error))
@@ -300,6 +305,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onExport={onExport}
       onPublish={onPublish}
       onImport={onImport}
+      canImport={!running}
       published={published}
       runs={runs}
       running={running}
