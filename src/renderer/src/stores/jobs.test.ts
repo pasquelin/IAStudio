@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
-import { useJobs } from './jobs'
+import { useJobs, whenSettled } from './jobs'
 
 function job(overrides: Partial<Job> = {}): Job {
   return {
@@ -111,5 +111,35 @@ describe('jobs store', () => {
 
     await useJobs.getState().submit({ kind: 'model', id: 'model_flux' }, { prompt: 'a rock' })
     expect(useJobs.getState().jobs[0]?.id).toBe('job_new')
+  })
+})
+
+describe('waiting on a job', () => {
+  beforeEach(() => {
+    useJobs.setState({ jobs: [job({ id: 'job_1' })] })
+  })
+
+  it('answers straight away for one that has already stopped', async () => {
+    useJobs.setState({ jobs: [job({ id: 'job_1', status: 'succeeded', assetIds: ['asset_1'] })] })
+
+    await expect(whenSettled('job_1')).resolves.toMatchObject({ assetIds: ['asset_1'] })
+  })
+
+  it('waits for the progress that stops it, and ignores the ones that do not', async () => {
+    const settled = whenSettled('job_1')
+
+    useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.5 })
+    useJobs.getState().apply({ id: 'job_1', status: 'failed', progress: 0.5, error: 'server' })
+
+    await expect(settled).resolves.toMatchObject({ status: 'failed' })
+  })
+
+  it('answers nothing for a job the replica no longer holds, rather than waiting for ever', async () => {
+    const settled = whenSettled('job_1')
+    // What a project closed under a running job leaves behind: the main process drops the entry
+    // and announces the list without it. Waited on, this one would never come back.
+    useJobs.setState({ jobs: [] })
+
+    await expect(settled).resolves.toBeNull()
   })
 })

@@ -176,7 +176,18 @@ It does not carry the file name. It carries the **seven workspaces**:
 > **Changing a node's model rebuilds its ports**, and the links whose port is gone leave with
 > them — in one gesture, so one `⌘Z` takes it all back.
 >
-> What it cannot do **yet**: run what it describes. Its chapter comes when it can.
+> **It runs.** The first button of its bar runs the graph: each node starts once what it reads is
+> ready, independent branches start together, and the generations go through the same queue as the
+> rest of the studio — they show in the jobs bar and count against the same budget. The button
+> becomes **Stop** while it goes: nothing more is submitted, and what is in flight is cancelled.
+>
+> **Every node says where it stands**, in the corner of its header: *running*, *done*,
+> *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
+> produced nothing: *loop*, *no model*, *not runnable*, *waiting*. Running it again after changing
+> the last node's prompt runs **only** that node.
+>
+> What it cannot do **yet**: the logic, loop and approval nodes, and importing or exporting a
+> Scenario workflow. Its chapter comes when it can.
 
 One click switches workspace. The active one is the button lighter than the others.
 

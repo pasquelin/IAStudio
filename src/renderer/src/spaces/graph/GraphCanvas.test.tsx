@@ -57,8 +57,11 @@ const canvas = (state: GraphState = graph, overrides: Overrides = {}) =>
       onSelectNodes={noop}
       onUndo={noop}
       onRedo={noop}
+      onRun={noop}
       canUndo={false}
       canRedo={false}
+      runs={{}}
+      running={false}
       {...overrides}
     />,
   )
@@ -229,6 +232,79 @@ describe('the graph canvas', () => {
       fireEvent.click(screen.getByRole('menuitem', { name: 'Note' }))
 
       expect(screen.queryByRole('menuitem', { name: 'Note' })).not.toBeInTheDocument()
+    })
+  })
+
+  /**
+   * A graph that describes without running is what this space was until now, and the one button
+   * that changes it is here rather than in the panel: it acts on the graph in front of the eye.
+   */
+  describe('running the graph', () => {
+    it('offers a run, and a stop in its place while one is going', () => {
+      const { rerender } = canvas()
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe' })).toBeInTheDocument()
+
+      rerender(
+        <GraphCanvas
+          graph={graph}
+          onMove={noop}
+          onRemoveNodes={noop}
+          onConnect={noop}
+          onDisconnect={noop}
+          onAdd={noop}
+          onDropAsset={noop}
+          selectedNodeIds={[]}
+          onSelectNodes={noop}
+          onUndo={noop}
+          onRedo={noop}
+          onRun={noop}
+          canUndo={false}
+          canRedo={false}
+          runs={{}}
+          running
+        />,
+      )
+
+      expect(screen.getByRole('button', { name: 'Arrêter l’exécution' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Exécuter le graphe' })).not.toBeInTheDocument()
+    })
+
+    it('asks upward on the press, whichever of the two the button is offering', () => {
+      const onRun = vi.fn()
+      canvas(graph, { onRun })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Exécuter le graphe' }))
+
+      expect(onRun).toHaveBeenCalledOnce()
+    })
+
+    /** Painted on the node itself: a run of twenty nodes cannot be followed in a list elsewhere. */
+    it('says on a node what it is doing', () => {
+      canvas(graph, { runs: { imageGenerator1: { status: 'running' } } })
+
+      expect(screen.getByText('en cours')).toBeInTheDocument()
+    })
+
+    /**
+     * "Failed" alone would send the user to the jobs panel for a node that never reached it — a
+     * loop, a missing model and a type the editor cannot run yet all read the same otherwise.
+     */
+    it('names why a node produced nothing rather than saying only that it did not', () => {
+      canvas(graph, {
+        runs: {
+          imageGenerator1: { status: 'failed', failure: 'cycle' },
+          text1: { status: 'failed', failure: 'blocked' },
+        },
+      })
+
+      expect(screen.getByText('boucle')).toBeInTheDocument()
+      expect(screen.getByText('en attente')).toBeInTheDocument()
+    })
+
+    it('leaves a node it has nothing to say about showing its type', () => {
+      canvas(graph, { runs: { imageGenerator1: { status: 'idle' } } })
+
+      expect(screen.getByText('model')).toBeInTheDocument()
     })
   })
 })

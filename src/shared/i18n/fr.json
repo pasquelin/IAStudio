@@ -71,7 +71,23 @@
       "stickyNote": "Note"
     }
   },
+  "graphRun": {
+    "running": "en cours",
+    "cached": "inchangé",
+    "done": "terminé",
+    "failure": {
+      "cycle": "boucle",
+      "unsupported": "non exécutable",
+      "no-model": "sans modèle",
+      "blocked": "en attente",
+      "rejected": "échec"
+    }
+  },
   "graphTools": {
+    "run": "Exécuter le graphe",
+    "runHint": "Lancer chaque nœud dans l’ordre de ses liens — ce qui n’a pas changé n’est pas relancé",
+    "stop": "Arrêter l’exécution",
+    "stopHint": "Ne rien soumettre de plus et annuler ce qui est en cours",
     "add": "Ajouter un nœud",
     "addHint": "Poser un nœud sur le canevas — clic droit fait de même",
     "select": "Sélectionner",

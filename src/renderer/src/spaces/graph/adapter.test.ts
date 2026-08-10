@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { NodeChange } from '@xyflow/react'
 import type { GraphState } from '@shared/domain/graph'
 import {
+  RUN_STATE_KEY,
   canvasNodesOf,
   isDragging,
   movesIn,
@@ -76,6 +77,25 @@ describe('handing the graph to the canvas', () => {
 
     expect(second[0]).not.toBe(first[0])
     expect(second[1]).toBe(first[1])
+  })
+
+  /**
+   * A run reports node by node, so the identity rule above earns its keep a second time: one
+   * node turning green must not make React Flow re-measure the twenty around it.
+   */
+  it('rebuilds a node whose run state changed, and nothing else', () => {
+    const first = canvasNodesOf(graph, new Set(), { text1: { status: 'running' } })
+    const second = canvasNodesOf(graph, new Set(), { text1: { status: 'done' } })
+
+    expect(second[0]).not.toBe(first[0])
+    expect(second[1]).toBe(first[1])
+  })
+
+  it('carries the run state down to the node it belongs to, and to no other', () => {
+    const [text, note] = canvasNodesOf(graph, new Set(), { text1: { status: 'running' } })
+
+    expect(text?.data[RUN_STATE_KEY]).toEqual({ status: 'running' })
+    expect(note?.data[RUN_STATE_KEY]).toBeUndefined()
   })
 
   it('carries a width only where one was set', () => {

@@ -729,6 +729,44 @@ tout lot dont les fichiers sont neufs.
    les indices, `inputHandlesOf` retombe sur `[]` — mais c’est un trou de contrat de `serialize.ts`,
    pas du plan.
 
+### Le lot C2 — l’exécution branchée
+
+Livré le 10 août 2026. `engines/graph/executor.ts` marche sur le plan du lot C1 ;
+`stores/graph-runs.ts` est le seul endroit où l’exécuteur et le bridge se rencontrent ; le bouton
+Exécuter / Arrêter est le premier de la barre du canvas, et l’état de chaque nœud s’affiche dans
+le coin de son en-tête.
+
+- **Aucune comptabilité de vagues, et c’est délibéré.** L’ordre est topologique, donc les
+  fournisseurs d’un nœud ont déjà leur promesse quand la sienne est créée : les attendre EST la
+  vague. Tout ce qui est prêt part ensemble, et la borne de trafic est celle du `JobManager`.
+- **Un job disparu n’est pas un job en retard.** `useJobs.submit` pose son entrée dans le replica
+  avant de rendre la main, donc une absence **après** coup est le main qui a lâché l’entrée — un
+  projet fermé dessous. `whenSettled` répond `null` plutôt que d’attendre pour toujours.
+- **Les blancs du formulaire sont retirés du corps.** Un nœud dont personne n’a ouvert
+  l’inspecteur porte encore `defaultValues`, `’’` compris : `DynamicForm` ne rapporte que
+  `buildBody`, mais `modelDataOf` n’en passe pas par lui. Une énumération optionnelle vide se fait
+  répondre 400.
+- **La multiplicité d’un port se lit sur la valeur que le formulaire tient déjà** pour cette clé :
+  Scenario ne publie aucune arité sur un champ, et le défaut du modèle est le seul endroit où elle
+  se voit. Un tableau reste un tableau, un fournisseur qui rend plusieurs ids force le tableau.
+- **Un arrêt annule ce qui est sur le fil, donc la génération lève juste après** : sans relire le
+  signal dans le `catch`, le nœud était peint en rouge pour ce que l’utilisateur venait de
+  demander.
+- **Un cycle n’écrase pas le cache** des exécutions précédentes : il n’a rien produit.
+- **`document-io.ts` est dans le chunk d’ouverture** et atteint ce store pour oublier un document
+  fermé — d’où l’**import dynamique** de l’exécuteur. `eager-graph.test.ts` refuse tout module de
+  `engines/graph/` autre que le lecteur sur le premier écran, et il a mordu avant la revue.
+- **Le budget de couverture passe de −18/−24 à −19/−25** : le même bras inatteignable qu’au lot
+  C1, une troisième fois — le nœud derrière un identifiant que le plan vient de rendre.
+
+**Trente et une mutations sur trente et une mordent**, chacune appliquée (vérifiée par `cmp`) et
+chaque verdict adossé à un compte de tests.
+
+**Ce qui n’est PAS fait, et qu’il ne faut pas croire fait :** l’exécution n’a jamais été lancée
+contre l’API — ce serait une vraie génération, donc des crédits. Tout ce qui précède est prouvé
+sous vitest, contre un port de soumission ; **la chaîne réelle reste à voir à l’écran**, avec le
+lot C0 dont elle dépend.
+
 ---
 
 ## Étape 8 — Logique, boucles, transforms, approbation

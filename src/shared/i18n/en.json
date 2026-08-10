@@ -71,7 +71,23 @@
       "stickyNote": "Note"
     }
   },
+  "graphRun": {
+    "running": "running",
+    "cached": "unchanged",
+    "done": "done",
+    "failure": {
+      "cycle": "loop",
+      "unsupported": "not runnable",
+      "no-model": "no model",
+      "blocked": "waiting",
+      "rejected": "failed"
+    }
+  },
   "graphTools": {
+    "run": "Run the graph",
+    "runHint": "Run every node in the order its wires allow — what has not changed is not run again",
+    "stop": "Stop the run",
+    "stopHint": "Submit nothing more and cancel what is under way",
     "add": "Add a node",
     "addHint": "Drop a node on the canvas — right-click does the same",
     "select": "Select",

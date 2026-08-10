@@ -39,7 +39,7 @@ selon ce que vous fabriquez. Ces sept arrangements s’appellent des **espaces d
 | **Audio** | des sons et des musiques | une ambiance, un bruitage, une nappe musicale |
 | **Textures** | des matières | du bois, du métal rouillé, du tissu — pour habiller un objet 3D |
 | **Skyboxes** | des ciels à 360° | ce qu’on voit autour de soi quand on lève les yeux dans une scène |
-| **Graphe** | des enchaînements de modèles | *en construction : il se pose et s’enregistre, il ne s’exécute pas encore* |
+| **Graphe** | des enchaînements de modèles | une image générée puis reprise par un second modèle, en un bouton |
 
 Vous changez d’espace en cliquant sur son nom, en haut de la fenêtre. Les panneaux se
 réorganisent tout seuls, et le catalogue de modèles se filtre sur ce qui sait fabriquer ce

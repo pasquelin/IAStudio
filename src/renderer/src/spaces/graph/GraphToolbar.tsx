@@ -10,6 +10,8 @@ export type GraphToolbarProps = GraphToolbarState & {
   onAdd: (at: { x: number; y: number }) => void
   onUndo: () => void
   onRedo: () => void
+  /** One handler for the pair: the button says which of the two it is offering right now. */
+  onRun: () => void
 }
 
 /**
@@ -25,8 +27,10 @@ export function GraphToolbar({
   onAdd,
   onUndo,
   onRedo,
+  onRun,
   canUndo,
   canRedo,
+  running,
 }: GraphToolbarProps) {
   const { zoomIn, zoomOut } = useReactFlow()
   const bar = useRef<HTMLDivElement | null>(null)
@@ -44,6 +48,7 @@ export function GraphToolbar({
 
   const onTool = useCallback(
     (id: string): void => {
+      if (id === 'run') return onRun()
       if (id === 'add') return onAdd(pointBesideBar())
       if (id === 'select' || id === 'pan') return onMode(id)
       if (id === 'undo') return onUndo()
@@ -51,12 +56,16 @@ export function GraphToolbar({
       if (id === 'zoomIn') return void zoomIn()
       if (id === 'zoomOut') return void zoomOut()
     },
-    [onAdd, onMode, onUndo, onRedo, zoomIn, zoomOut],
+    [onAdd, onMode, onUndo, onRedo, onRun, zoomIn, zoomOut],
   )
 
   return (
     <div ref={bar} className="absolute top-2 left-2 z-10">
-      <Toolbar tools={graphTools({ canUndo, canRedo })} activeTool={mode} onTool={onTool} />
+      <Toolbar
+        tools={graphTools({ canUndo, canRedo, running })}
+        activeTool={mode}
+        onTool={onTool}
+      />
     </div>
   )
 }

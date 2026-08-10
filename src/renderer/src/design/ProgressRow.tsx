@@ -2,17 +2,8 @@ import { mdiCloseCircleOutline } from '@mdi/js'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { ProgressBar } from './ProgressBar'
+import { TONE_TEXT, type StatusTone } from './styles'
 import { ToolButton } from './ToolButton'
-
-/** How a status reads. The caller names the meaning; the colour stays in the design system. */
-export type StatusTone = 'muted' | 'accent' | 'success' | 'danger'
-
-const TONE_CLASS: Record<StatusTone, string> = {
-  muted: 'text-muted',
-  accent: 'text-accent',
-  success: 'text-success',
-  danger: 'text-danger',
-}
 
 export type ProgressRowProps = {
   /** What the row is about — a job's label, an asset's name. Truncated, never wrapped. */
@@ -47,7 +38,7 @@ export function ProgressRow({
 
         {ratio !== undefined && <ProgressBar ratio={ratio} label={label} className="w-24" />}
 
-        <span className={cn('shrink-0 text-[11px]', TONE_CLASS[tone])}>{status}</span>
+        <span className={cn('shrink-0 text-[11px]', TONE_TEXT[tone])}>{status}</span>
 
         {cancel && (
           <ToolButton

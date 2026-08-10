@@ -21,6 +21,7 @@ import { useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
 import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { textNode } from '@/engines/graph/graph-fixtures'
+import { useGraphRuns } from '@/stores/graph-runs'
 import { useGraphs } from '@/stores/graphs'
 import { addClip } from '@/engines/timeline/commands'
 import { makeClip } from '@/engines/timeline/timeline-state'
@@ -807,6 +808,30 @@ describe('closing a document', () => {
     await expect(closeDocument(created.id)).resolves.toBe(true)
 
     expect(inspectedChannel(useTextureViews.getState(), created.id)).toBeNull()
+  })
+
+  /**
+   * A graph's run is session state beside its document, and it holds LOCAL asset ids — of the
+   * project being left. Kept, a tab reopened on a reissued id would show the previous graph's
+   * results as its own, and its cache would answer for nodes it never ran.
+   */
+  it('drops what a closed graph had run', async () => {
+    installFakeBridge({})
+    const created = await useDocuments.getState().create('graph')
+    if (!created) throw new Error('expected a document')
+    useGraphRuns.setState({
+      runs: {
+        [created.id]: {
+          running: false,
+          nodes: { text1: { status: 'done' } },
+          cache: new Map([['hash', ['asset_local']]]),
+        },
+      },
+    })
+
+    await expect(closeDocument(created.id)).resolves.toBe(true)
+
+    expect(useGraphRuns.getState().runs[created.id]).toBeUndefined()
   })
 
   it('leaves the flat view of a document it did not close alone', async () => {

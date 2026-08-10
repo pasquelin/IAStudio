@@ -1,4 +1,4 @@
-import type { GraphNode } from '@shared/domain/graph'
+import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import { DEFAULT_OUTPUT_NAME, handleId } from './handles'
 
 /**
@@ -20,3 +20,46 @@ export function textNode(id: string): GraphNode {
     },
   }
 }
+
+/**
+ * A generator node with one prompt port, named as `modelPorts` names one: by the field's key.
+ *
+ * `null` is a generator carrying NO model, which a node read off a file may well be — spelled
+ * that way rather than `undefined`, which the default would swallow.
+ */
+export function modelNode(
+  id: string,
+  form: Readonly<Record<string, unknown>> = {},
+  modelId: string | null = 'model_flux',
+): GraphNode {
+  return {
+    id,
+    type: 'model',
+    position: { x: 0, y: 0 },
+    data: {
+      ...(modelId === null ? {} : { modelId }),
+      form,
+      inputHandles: [{ id: handleId(id, 'source', 'prompt'), name: 'prompt', type: 'prompt' }],
+      outputHandles: [
+        { id: handleId(id, 'target', 'image'), name: DEFAULT_OUTPUT_NAME, type: 'image' },
+      ],
+    },
+  }
+}
+
+/** `source` is the CONSUMER and `target` the PROVIDER — Scenario's inverted convention. */
+export function wire(consumer: string, port: string, provider: string, from: string): GraphEdge {
+  return {
+    id: `${provider}--TO--${consumer}`,
+    source: consumer,
+    sourceHandle: handleId(consumer, 'source', port),
+    target: provider,
+    targetHandle: handleId(provider, 'target', from),
+  }
+}
+
+export const graphOf = (nodes: readonly GraphNode[], edges: readonly GraphEdge[]): GraphState => ({
+  nodes,
+  edges,
+  inputKeys: [],
+})

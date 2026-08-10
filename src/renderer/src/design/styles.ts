@@ -135,3 +135,17 @@ export const MENU_SURFACE = cn(
 /** The frame every picture sits in, so a tile and a thumbnail cut their corners the same way. */
 export const MEDIA_FRAME =
   'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
+
+/**
+ * How a status reads. The caller names the MEANING — queued, running, cached, failed — and the
+ * colour stays here: the jobs bar, the media import and a node of the graph all say "this one
+ * went wrong", and they must say it in the same red.
+ */
+export type StatusTone = 'muted' | 'accent' | 'success' | 'danger'
+
+export const TONE_TEXT: Record<StatusTone, string> = {
+  muted: 'text-muted',
+  accent: 'text-accent',
+  success: 'text-success',
+  danger: 'text-danger',
+}

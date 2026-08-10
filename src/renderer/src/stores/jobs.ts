@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Job, JobProgress, JobTarget } from '@shared/domain/job'
+import { isFinished, type Job, type JobProgress, type JobTarget } from '@shared/domain/job'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from './assets'
 
@@ -100,3 +100,33 @@ export const useJobs = create<JobsState>()((set, get) => ({
     await getBridge()?.scenario.cancelJob(jobId)
   },
 }))
+
+/**
+ * Resolves when a job stops running, whatever it stopped on.
+ *
+ * What a chain of generations needs and the jobs bar does not: the bar paints every state it is
+ * told about, while a graph has to wait on one before it can build the next body.
+ *
+ * `null` for a job the replica no longer holds. It is not "not yet": `submit` puts the entry in
+ * the list before it returns, so a job missing AFTERWARDS is one the main process dropped — a
+ * project closed under it, most of the time. Waited on, it would never come back.
+ */
+export function whenSettled(jobId: string): Promise<Job | null> {
+  const answer = (jobs: readonly Job[]): Job | null | undefined => {
+    const job = jobs.find(candidate => candidate.id === jobId)
+    if (!job) return null
+    return isFinished(job.status) ? job : undefined
+  }
+
+  const held = answer(useJobs.getState().jobs)
+  if (held !== undefined) return Promise.resolve(held)
+
+  return new Promise(resolve => {
+    const stop = useJobs.subscribe(state => {
+      const settled = answer(state.jobs)
+      if (settled === undefined) return
+      stop()
+      resolve(settled)
+    })
+  })
+}

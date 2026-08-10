@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react'
 import type { GraphPosition, GraphState } from '@shared/domain/graph'
 import { canDropConnection } from '@/engines/graph/connect'
+import type { GraphNodeRun } from '@/engines/graph/executor'
 import type { PaletteEntry } from './palette'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
@@ -52,6 +53,11 @@ export type GraphCanvasProps = {
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
+  /** What each node is doing in the run under way, or in the last one. Absent means idle. */
+  runs: Readonly<Record<string, GraphNodeRun>>
+  running: boolean
+  /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
+  onRun: () => void
 }
 
 /**
@@ -83,6 +89,9 @@ export function GraphCanvas({
   onRedo,
   canUndo,
   canRedo,
+  runs,
+  running,
+  onRun,
 }: GraphCanvasProps) {
   /** An edge has no inspector face, so which one is picked never leaves this surface. */
   const [selectedEdges, setSelectedEdges] = useState<ReadonlySet<string>>(() => new Set())
@@ -116,7 +125,10 @@ export function GraphCanvas({
     setMenuAt({ x: event.clientX, y: event.clientY })
   }, [])
 
-  const nodes = useMemo(() => canvasNodesOf(graph, selectedNodes), [graph, selectedNodes])
+  const nodes = useMemo(
+    () => canvasNodesOf(graph, selectedNodes, runs),
+    [graph, selectedNodes, runs],
+  )
   const edges = useMemo(() => toCanvasEdges(graph, selectedEdges), [graph, selectedEdges])
 
   const onNodesChange = useCallback(
@@ -197,8 +209,10 @@ export function GraphCanvas({
             onAdd={setMenuAt}
             onUndo={onUndo}
             onRedo={onRedo}
+            onRun={onRun}
             canUndo={canUndo}
             canRedo={canRedo}
+            running={running}
           />
           <ViewportBridge
             onReady={useCallback((convert: (at: { x: number; y: number }) => GraphPosition) => {

@@ -39,7 +39,7 @@ n’est plus vrai.** Les sept s’écrivent dans le dossier du projet et se rouv
 | Séquence vidéo | `.seq` | **oui** |
 | Son édité | `.aud` | **oui** |
 | Ciel | `.sky` | **oui** |
-| Graphe | `.graph` | **oui** — mais il ne sait pas encore s’exécuter |
+| Graphe | `.graph` | **oui** — ce qu’une exécution a produit ne s’enregistre pas |
 
 **Ce qui ne s’enregistre pas, et c’est délibéré :**
 
