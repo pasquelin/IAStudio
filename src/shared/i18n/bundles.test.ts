@@ -203,21 +203,25 @@ describe('the translation bundles', () => {
   })
 
   /**
-   * A plural base names every form it has, `_one` included. i18next serves the bare key when
-   * `_one` is missing, so eight bases relied on that fallback and read correctly in French and in
-   * English — where two forms are all there is.
+   * A plural base names every form the language HAS, asked of `Intl` rather than assumed. French
+   * carries three — `one`, `many`, `other` — and the third language is not where this breaks: it
+   * is French, at a million, where `select` answers `many` and a bundle without it renders the
+   * raw key. i18next falls back to the bare key for a missing `_one` and to nothing at all here.
    *
-   * A third language is where it would break, silently: Russian and Polish need `_few` and
-   * `_many`, Arabic six forms, and a bare key cannot carry them. The migration is trivial while
-   * the product speaks two languages and stops being trivial the day it speaks three, so the
-   * convention is held now rather than then.
+   * Asked of `Intl` because the list is the language's, not ours: Russian and Polish add `_few`,
+   * Arabic six forms, and a hand-written list would be the thing that goes stale.
    */
-  it.each(CODES)('names the singular of every plural base in %s', code => {
+  it.each(CODES)('names every plural form the language has in %s', code => {
+    const forms = new Intl.PluralRules(code).resolvedOptions().pluralCategories
     const bases = [...BUNDLES[code].keys()]
       .filter(key => key.endsWith('_other'))
       .map(key => key.slice(0, -'_other'.length))
 
-    expect(bases.filter(base => !BUNDLES[code].has(`${base}_one`))).toEqual([])
+    for (const form of forms)
+      expect(
+        bases.filter(base => !BUNDLES[code].has(`${base}_${form}`)),
+        `missing the ${form} form in ${code}`,
+      ).toEqual([])
     expect(bases.filter(base => BUNDLES[code].has(base))).toEqual([])
   })
 
