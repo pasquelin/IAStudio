@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { defined, isRecord, readBoolean, readNumber, readPositive, readString } from './guards'
+import {
+  defined,
+  isRecord,
+  readBoolean,
+  readColor,
+  readNumber,
+  readPositive,
+  readString,
+} from './guards'
 
 describe('isRecord', () => {
   it('rejects null, which typeof alone reports as an object', () => {
@@ -52,6 +60,43 @@ describe('readString', () => {
     expect(readString({ name: 2 }, 'name', 'track')).toBe('track')
     expect(readString({ name: null }, 'name', 'track')).toBe('track')
     expect(readString({}, 'name', 'track')).toBe('track')
+  })
+})
+
+describe('readColor', () => {
+  it('reads a hexadecimal colour, in either case', () => {
+    expect(readColor({ color: '#ffcc88' }, 'color', '#000000')).toBe('#ffcc88')
+    expect(readColor({ color: '#FFCC88' }, 'color', '#000000')).toBe('#FFCC88')
+  })
+
+  // The one three.js honours and the picker cannot show: `tokenAsHex` reads `#fff` as 0xfff, a
+  // dark blue, so a shape the app never writes must not become a colour it never chose.
+  it('refuses the three-digit shorthand', () => {
+    expect(readColor({ color: '#fff' }, 'color', '#000000')).toBe('#000000')
+  })
+
+  // The whole point of the reader: three.js answers an unknown colour by logging and leaving the
+  // material as it was, so a document holding one opens on the previous sky rather than its own.
+  it('refuses a string that is not a colour at all', () => {
+    expect(readColor({ color: 'banana' }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({ color: 'red' }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({ color: 'rgb(255,0,0)' }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({ color: '#ff00' }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({ color: '#ff000000' }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({ color: 'ffffff' }, 'color', '#ffffff')).toBe('#ffffff')
+  })
+
+  // No `g` flag on the pattern: a shared regexp carrying `lastIndex` would answer differently on
+  // its second call, and every reader here shares this one.
+  it('answers the same on a second call', () => {
+    expect(readColor({ color: '#123456' }, 'color', '#000000')).toBe('#123456')
+    expect(readColor({ color: '#123456' }, 'color', '#000000')).toBe('#123456')
+  })
+
+  it('falls back on a value of another type, or on none at all', () => {
+    expect(readColor({ color: 2 }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({ color: null }, 'color', '#ffffff')).toBe('#ffffff')
+    expect(readColor({}, 'color', '#ffffff')).toBe('#ffffff')
   })
 })
 

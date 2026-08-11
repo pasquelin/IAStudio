@@ -50,6 +50,13 @@ describe('reading a sky back', () => {
     expect(parseSkybox({ sun: { intensity: 'loud' } }).sun.intensity).toBe(DEFAULT_SUN.intensity)
   })
 
+  // A string is not a colour: `Color.set('banana')` logs and leaves the light where it was, so
+  // the file would open on whatever sun the last document lit — with nothing on screen to say so.
+  it('takes the stored default for a sun colour that is not one', () => {
+    expect(parseSkybox({ sun: { color: 'banana' } }).sun.color).toBe(DEFAULT_SUN.color)
+    expect(parseSkybox({ sun: { color: '#fff' } }).sun.color).toBe(DEFAULT_SUN.color)
+  })
+
   // A prompt credited to no model names a picture the panel cannot offer to make again.
   it('drops a provenance naming no model', () => {
     expect(parseSkybox({ generation: { prompt: 'a dawn' } }).generation).toBeUndefined()

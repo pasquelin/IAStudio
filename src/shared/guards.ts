@@ -55,6 +55,23 @@ export function readString(source: Record<string, unknown>, key: string, fallbac
 }
 
 /**
+ * The one shape a colour takes in this app: `#rrggbb`. Six digits, not three and not eight —
+ * `tokenAsHex` (`engines/core/palette.ts:16`) parses whatever follows the `#` as hexadecimal, so
+ * `#fff` reads as `0xfff`, a dark blue nobody chose.
+ */
+export const HEX_COLOR = /^#[0-9a-f]{6}$/i
+
+/**
+ * A colour read back from a document. `readString` is not enough here: any other string travels
+ * as far as three.js, which answers an unknown colour by logging and leaving the material where
+ * it was — so the sky opens on the previous sun with nothing on screen saying why.
+ */
+export function readColor(source: Record<string, unknown>, key: string, fallback: string): string {
+  const value = source[key]
+  return typeof value === 'string' && HEX_COLOR.test(value) ? value : fallback
+}
+
+/**
  * A number that cannot be negative — a length, an intensity, a point in time. Twelve call sites
  * across four engines wrote `Math.max(0, readNumber(…))` before this existed.
  */

@@ -21,15 +21,16 @@ import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
+import { HEX_COLOR } from '@shared/guards'
 import type { AccountBook, Credentials } from './accounts'
 
 // Built from the shared unions, never retyped — the same reason `scenario/validation.ts` gives:
 // a hand-copied list silently stops accepting what the panel offers.
 const scale = boundsOf('appearance.fontScale')
 
-// Six digits, not three and not eight: the value is handed to `--color-accent`, read back by
-// `tokenAsHex` for the canvas engines, and that one parses `#rrggbb` alone.
-const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i)
+// The shape itself is shared with the document readers — the reason it is six digits and not
+// three lives with it, and a setting must not accept what a `.sky` refuses.
+const hexColor = z.string().regex(HEX_COLOR)
 
 const appearance = z.object({
   theme: z.enum(THEMES).optional(),

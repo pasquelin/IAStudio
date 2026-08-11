@@ -11,7 +11,14 @@ import {
   DEFAULT_SUN,
   type SkyboxContent,
 } from '@shared/domain/skybox'
-import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
+import {
+  isRecord,
+  readBoolean,
+  readColor,
+  readNumber,
+  readPositive,
+  readString,
+} from '@shared/guards'
 
 function readSource(raw: unknown): SkyboxContent['source'] {
   if (!isRecord(raw)) return null
@@ -29,7 +36,7 @@ function readSun(raw: unknown): SkyboxContent['sun'] {
     elevation: clampElevation(readNumber(raw, 'elevation', DEFAULT_SUN.elevation)),
     azimuth: normalizeAzimuth(readNumber(raw, 'azimuth', DEFAULT_SUN.azimuth)),
     intensity: readPositive(raw, 'intensity', DEFAULT_SUN.intensity),
-    color: readString(raw, 'color', DEFAULT_SUN.color),
+    color: readColor(raw, 'color', DEFAULT_SUN.color),
   }
 }
 
