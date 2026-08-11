@@ -17,8 +17,8 @@ import type { Language } from './languages'
  * case, spacing, typographic punctuation — and the fallback is the English sentence itself, so
  * the worst case is the panel we already had.
  *
- * The vocabulary of the craft stays in English on purpose — `seed`, `guidance scale`, `sampler`
- * read that way in every other tool of the trade. The test holds that list.
+ * A word stays in English only where no surface and no glossary entry names it in French.
+ * `KEPT_IN_ENGLISH`, in `model-text.i18n.test.ts`, holds that list and is what decides.
  */
 const DICTIONARIES: Partial<Record<Language, Record<string, string>>> = { fr: frDictionary }
 
