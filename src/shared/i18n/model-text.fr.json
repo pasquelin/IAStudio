@@ -75,6 +75,8 @@
   "smart low poly": "Basse résolution intelligente",
   "quad": "Maillage en quads",
   "pbr": "Matériaux PBR",
+  "duration seconds": "Durée, en secondes",
+  "prompt influence": "Influence du prompt",
 
   "adaptive": "Adaptatif",
   "detailed": "Détaillé",
@@ -102,5 +104,14 @@
   "determines the prioritization of texture alignment in the 3d model": "Ce que l’alignement de la texture privilégie sur le modèle 3D.",
   "random seed for texture generation. using the same seed will produce identical textures": "Graine de la génération de texture. À graine égale, la texture est identique.",
   "automatically scale the model to real-world dimensions, with the unit in meters": "Met le modèle à l’échelle du monde réel, l’unité étant le mètre.",
-  "generate segmented 3d model parts. incompatible with texture, pbr, and quad": "Rend le modèle 3D découpé en pièces. Incompatible avec la texture, les matériaux PBR et les quads."
+  "generate segmented 3d model parts. incompatible with texture, pbr, and quad": "Rend le modèle 3D découpé en pièces. Incompatible avec la texture, les matériaux PBR et les quads.",
+
+  "a textual description of the sound effect to generate": "Description, en toutes lettres, de l’effet sonore à produire.",
+  "duration in seconds (0.5-30). if not set, optimal duration will be determined from prompt": "Durée en secondes (0,5 à 30). À défaut, elle est déduite du prompt.",
+  "how closely to follow the sound description. higher values mean less variation": "À quel point suivre la description du son. Plus la valeur est haute, moins il y a de variation.",
+  "whether to loop the sound effect": "Boucler, ou non, l’effet sonore.",
+  "output audio format": "Format du son produit.",
+  "text to convert to speech": "Texte à convertir en voix.",
+  "voice preset to use for speech synthesis": "Voix à employer pour la synthèse.",
+  "language for speech synthesis (auto-detected if not specified)": "Langue de la synthèse vocale, détectée automatiquement si rien n’est choisi."
 }

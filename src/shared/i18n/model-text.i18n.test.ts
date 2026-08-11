@@ -59,6 +59,15 @@ const FIELD_LABELS_FROM_THE_API = [
   'Resolution',
   'Aspect ratio',
   'Seed',
+  // Audio, measured the same way on `model_elevenlabs-sound-effects-v2` and
+  // `model_google-gemini-2-5-flash-tts`: a family whose fields nothing else in this list reaches.
+  'Duration seconds',
+  'Prompt influence',
+  'Output format',
+  'Voice',
+  'Language',
+  'Text',
+  'Loop',
 ]
 
 /**
