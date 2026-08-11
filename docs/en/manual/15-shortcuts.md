@@ -157,6 +157,8 @@ shortcuts screen.
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
 | **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
+| **Four views** | `⇧Q` | splits the viewport in four: the current view, top, front, side |
+| **Quad edges** | `⇧W` | in wireframe, erases the diagonals triangulation added |
 | **Frame selection** | `F` | brings the camera in so the object fills the view |
 | **Delete** | `Delete` | removes the chosen object. `⌘Z` brings it back |
 

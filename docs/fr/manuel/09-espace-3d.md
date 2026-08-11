@@ -265,16 +265,54 @@ aligne.
 
 | Mode | Ce qui est dessiné |
 |---|---|
-| **Rendu** | les surfaces, éclairées et texturées |
-| **Filaire** | les arêtes seules, à travers l’objet |
-| **Rendu et filaire** | les deux : les surfaces, et leurs arêtes par-dessus |
+| **Rendu** | les surfaces peintes par leur matériau, sans les arêtes |
+| **Filaire** | les arêtes seules — ce qui montre la densité du maillage |
+| **Rendu et filaire** | les surfaces peintes, et les arêtes par-dessus |
+| **Solide** | une argile unie sur toutes les surfaces : la forme, sans les matériaux |
+| **Aperçu matériau** | les matériaux sous le seul éclairage du studio, sans les lumières de la scène |
+| **Matcap** | un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur |
+| **Densité** | du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser |
 
 Le bouton porte le mode en cours et le fait défiler à chaque clic ; son menu permet d’en choisir un
-directement. `Z` fait la même chose au clavier, comme dans Blender.
+directement. `Z` fait la même chose au clavier, comme dans Blender — **et en quatre vues, sur le
+quart où se trouve le pointeur** : chaque quart garde son propre mode.
 
-Le troisième mode est le plus coûteux : les arêtes sont un objet de plus par maille, construit
+**Rendu et filaire** est le plus coûteux : les arêtes sont un objet de plus par maille, construit
 quand on l’allume et jeté quand on l’éteint. Sur un modèle importé de plusieurs milliers de
 mailles, cela se sent.
+
+### Quatre vues — `⇧Q`
+
+Le viewport se partage en quatre. **Le quart en haut à gauche garde le cadrage que vous aviez** ;
+il repasse en perspective si vous étiez en projection orthographique. Les trois autres arrivent en
+orthographique : **dessus** en haut à droite, **face** en bas à gauche, **profil gauche** en bas à
+droite.
+
+**Les quatre sont des plans de travail**, pas des aperçus : les poignées de transformation suivent
+le quart où se trouve votre pointeur. On sélectionne et on déplace dans n’importe lequel.
+
+**Le nom d’une vue, en haut à droite de son quart, est aussi la façon d’en changer.** Sept choix :
+la vue libre et les six côtés. Rien n’oblige à garder la disposition de départ — deux perspectives
+et deux axes se demandent aussi bien.
+
+**Seule la vue libre tourne.** Faire glisser dans un quart de côté ne le fait pas pivoter : une vue
+de dessus qui bascule n’est plus une vue de dessus, et c’est précisément ce qu’on lui demande.
+**C’est la vue qui décide, jamais la projection** — passer la vue libre en orthographique avec `O`
+ne l’empêche pas de tourner. Le déplacement latéral et le zoom marchent partout.
+
+**Changer la vue d’un quart recadre tous les quarts de côté** sur la scène entière : ils n’ont pas
+de cadrage à eux qu’ils retrouveraient. Seule la vue libre garde le sien.
+
+### Arêtes en quads — `⇧W`
+
+En filaire, le studio redessine les arêtes **sans les diagonales que la triangulation a
+ajoutées** — un cube perd ainsi celles qui barraient ses faces, une par face.
+
+**Ce n’est pas une lecture des quads du fichier, parce qu’il n’y en a pas.** Un GLB ne stocke que
+des triangles, quel que soit le logiciel qui l’a produit. Ce que vous voyez est une
+reconstruction : deux triangles dont l’arête commune sépare des faces presque coplanaires sont
+relus comme un quad. Sur une surface très courbée, la reconstruction se trompe — elle efface une
+arête que le modeleur avait voulue.
 
 ---
 
