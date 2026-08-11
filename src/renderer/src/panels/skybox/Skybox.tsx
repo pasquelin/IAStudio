@@ -29,6 +29,8 @@ export function Skybox() {
   const documentId = useDocuments(activeSkyboxId)
   const content = useSkyboxes(state => (documentId ? skyboxOf(state, documentId) : null))
 
+  // `!content` cannot happen — `skyboxOf` falls back to the default — but the selector must
+  // answer `null` for the no-tab case, and this is what narrows it back.
   if (!documentId || !content) {
     return <EmptyState icon={mdiWeatherPartlyCloudy} message={t('skybox.empty')} />
   }
