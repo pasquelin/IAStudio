@@ -8,14 +8,20 @@
  */
 export type Licence = {
   name: string
-  version: string
+  /** Absent where a component carries no number: the window then says so from a bundle. */
+  version?: string
   /** SPDX identifier as the package declares it, or `UNKNOWN` when it declares none. */
   spdx: string
   /** Full licence text, so the window is the notice rather than a link to it. */
   text: string
-  /** Where the corresponding sources are, for the copyleft ones that require the offer. */
+  /** Where the corresponding sources are — a URL, never a sentence about one. */
   sources?: string
+  /** Marks a source offered as the very version shipped, untouched. */
+  unmodified?: boolean
 }
+
+/** What the English notice writes for a component with no version — shared by its writer and its reader. */
+export const NO_VERSION = 'shipped with the application'
 
 /**
  * Whether these terms oblige us to say where the source is, and not merely to carry the notice.

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import licences from '@shared/licences.json'
-import { isCopyleft, type Licence } from '@shared/domain/licence'
+import { isCopyleft, type Licence, NO_VERSION } from '@shared/domain/licence'
 import manifest from '../../package.json'
 
 // Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
@@ -20,7 +20,11 @@ describe('the notice the repository carries', () => {
       expect(notices, `${entry.name} is missing from THIRD-PARTY-NOTICES.md`).toContain(
         `## ${entry.name}\n`,
       )
-      expect(notices).toContain(`| ${entry.name} | ${entry.version} | ${entry.spdx} |`)
+      // A typeface carries no version of its own; the file says so in words rather than leaving
+      // the column empty — and never `undefined`, which is what a missing field used to print.
+      expect(notices).toContain(
+        `| ${entry.name} | ${entry.version ?? NO_VERSION} | ${entry.spdx} |`,
+      )
     }
   })
 

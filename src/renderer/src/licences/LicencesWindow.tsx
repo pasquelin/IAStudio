@@ -40,7 +40,7 @@ export function LicencesWindow() {
               className="hover:bg-surface flex w-full cursor-pointer items-baseline gap-2 py-2 text-left"
             >
               <span className="text-body">{entry.name}</span>
-              <span className="text-muted text-tiny">{entry.version}</span>
+              <span className="text-muted text-tiny">{entry.version ?? t('licences.bundled')}</span>
               <span className="text-muted text-tiny ml-auto">{entry.spdx}</span>
             </button>
 
@@ -48,7 +48,10 @@ export function LicencesWindow() {
               <div className="pb-3">
                 {entry.sources && (
                   <p className="text-muted text-tiny pb-2">
-                    {t('licences.sources')} {entry.sources}
+                    {/* Two literal calls, not `t(cond ? … : …)`: `known-keys` only follows a key
+                        it can read as a string literal, and would stop covering both. */}
+                    {entry.unmodified ? t('licences.sourcesUnmodified') : t('licences.sources')}{' '}
+                    {entry.sources}
                   </p>
                 )}
                 <pre className="bg-surface text-muted text-tiny max-h-72 overflow-auto rounded p-3 whitespace-pre-wrap">

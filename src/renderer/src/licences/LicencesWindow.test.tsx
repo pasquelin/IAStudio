@@ -78,4 +78,27 @@ describe('LicencesWindow', () => {
 
     expect(screen.getByText(/ffmpeg-7\.1\.1\.tar\.xz/)).toBeInTheDocument()
   })
+
+  /**
+   * A typeface carries no version number, and the script used to fill the gap with an English
+   * sentence that travelled through the generated JSON onto a French screen — past every guard,
+   * since none of them reads a `.json`.
+   */
+  it('says in the reader’s language that a typeface ships with the application', () => {
+    render(<LicencesWindow />)
+
+    expect(screen.getByRole('button', { name: /^Lato/ })).toHaveTextContent(
+      'livré avec l’application',
+    )
+  })
+
+  // The offer is not merely a link: it is the link to THAT version, untouched. Both halves are
+  // owed to the reader, and both are owed in their language.
+  it('says the offered source is the version shipped, untouched', async () => {
+    render(<LicencesWindow />)
+    await userEvent.click(screen.getByRole('button', { name: /^mediabunny/ }))
+
+    expect(screen.getByText(/Sources correspondantes, sans modification/)).toBeInTheDocument()
+    expect(screen.getByText(/github\.com\/Vanilagy\/mediabunny/)).toBeInTheDocument()
+  })
 })
