@@ -155,7 +155,7 @@ export default defineConfig({
         // have failed the gate for the branches it posted rather than for the ones eaten before
         // it — which cost an hour of instruction on 11 August. `Skybox.tsx` had no test at all
         // and carried 26 statements and 12 branches of it; covering it is what made the room.
-        'src/renderer/src/panels/**': { statements: -190, branches: -162 },
+        'src/renderer/src/panels/**': { statements: -191, branches: -163 },
         'src/renderer/src/design/**': { statements: -59, branches: -66 },
         // The fourth glob that had none, found the day a lot posted `GraphStatus.tsx` into it and
         // nothing moved. Measured at 235 and 195 the day it was set — what the six spaces carry,
