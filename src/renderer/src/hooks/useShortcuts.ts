@@ -1,7 +1,12 @@
 import { type CommandId, type CommandScope } from '@shared/domain/command'
-import { copiesText, type MotionId, runsWhileTyping, signatureOf } from '@shared/domain/shortcut'
+import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
-import { commandDescriptor, commandFor, heldCommandFor } from '@shared/domain/command'
+import {
+  commandDescriptor,
+  commandFor,
+  heldCommandFor,
+  runsWhileTyping,
+} from '@shared/domain/command'
 import { isTyping } from '@/helpers/typing'
 import { subscribeToCommands } from '@/services/command-bus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
@@ -60,17 +65,20 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
+      const typing = isTyping(event.target)
       const signature = signatureOf(event)
-      if (isTyping(event.target) && !runsWhileTyping(signature)) return
       const motion = motionFor(signature)
       // Holding a key repeats keydown; only a set that actually changed is worth reporting.
-      if (motion && !held.has(motion)) {
+      if (!typing && motion && !held.has(motion)) {
         held.add(motion)
         handlers.current.onMotionChange?.(held)
       }
 
+      // A field keeps every command but the few that declare otherwise — the prompt one types
+      // into is where ⌘Enter is pressed, and waiting for a click away is the friction it removes.
       const command = commandFor(signature, scope, currentOverrides())
-      if (!command || (copiesText(signature) && holdsText())) return
+      if (!command || (typing && !runsWhileTyping(command))) return
+      if (copiesText(signature) && holdsText()) return
       event.preventDefault()
       // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport
       // toggled thirty times a second is a strobe, not a shortcut.

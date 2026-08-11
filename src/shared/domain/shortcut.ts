@@ -93,36 +93,6 @@ export function copiesText(signature: Signature): boolean {
   return TEXT_CHORDS.has(signature)
 }
 
-/**
- * The chords a focused field runs on its own text: undo, redo, select-all, and the clipboard
- * three. Wider than `TEXT_CHORDS`, and asked under a different condition — that one asks what
- * the platform does to a live selection anywhere, this one what an editable field does to
- * itself.
- */
-const FIELD_CHORDS: ReadonlySet<Signature> = new Set([
-  'Meta+KeyZ',
-  'Shift+Meta+KeyZ',
-  'Meta+KeyA',
-  'Meta+KeyC',
-  'Meta+KeyV',
-  'Meta+KeyX',
-])
-
-/**
- * Whether a chord still reaches the application while a text field holds the focus.
- *
- * A ⌘ is never typing: `⌘Entrée` on a prompt is a run, not a character, and the guard that
- * silences every shortcut over a field silenced those too. The exception is what the field
- * performs itself — undoing the sentence being written, pasting into it — which is precisely
- * where the user has no other way to ask.
- *
- * `Meta+` is an exact test rather than a substring guess: `signatureOf` writes the modifiers in
- * one fixed order, so it always sits immediately before the code, and a code carries no `+`.
- */
-export function runsWhileTyping(signature: Signature): boolean {
-  return signature.includes('Meta+') && !FIELD_CHORDS.has(signature)
-}
-
 const MODIFIER_GLYPHS: Record<string, string> = {
   Ctrl: '⌃',
   Alt: '⌥',
