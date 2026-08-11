@@ -1,5 +1,5 @@
 import { embeddedFontOf, embeddedFontUrl, type FontRef } from '@shared/domain/font'
-import { layerById, type CanvasState, type TextLayer } from './canvas-state'
+import { allLayers, type CanvasState, type TextLayer } from './canvas-state'
 
 /**
  * What a canvas needs of a typeface, which is not what the 3D workspace needs of the same one.
@@ -38,28 +38,23 @@ export function faceUrlOf(font: FontRef): string | null {
 }
 
 /**
- * The caption still worth redrawing now that a face has landed, or `null` when it has moved on.
+ * Every caption still worth redrawing now that a face has landed, in document order.
  *
- * Read out of the state rather than closed over: the layer may have been retyped in another face
- * or deleted entirely while the file was on its way, and what the document holds now is what
- * decides. Decided here rather than in the engine so that every way it can go is a plain test.
+ * Read out of the state rather than closed over: a layer may have been retyped in another face or
+ * deleted entirely while the file was on its way, and what the document holds now is what decides.
+ * Decided here rather than in the engine so that every way it can go is a plain test.
  *
- * Filed in a group, a caption used to be missed entirely and stayed in the generic until someone
- * edited it: `drawText` only redraws a wording that changed.
+ * All of them, not the one that asked: a face is fetched once per family, so every other caption
+ * set in it was left in the generic — and only an edit to its own words ever brought it back.
  */
-export function captionSetIn(
-  state: CanvasState | null,
-  id: string,
-  family: string,
-): TextLayer | null {
-  if (!state) return null
+export function captionsSetIn(state: CanvasState | null, family: string): TextLayer[] {
+  if (!state) return []
 
   // The family alone, not `isSameFont`: a face is registered with the page under a family name,
   // so a caption moved from the shipped Lato to an installed one is drawn by the face that landed.
-  const found = layerById(state, id)
-  if (found?.kind !== 'text' || found.font.family !== family) return null
-
-  return found
+  return allLayers(state.layers).filter(
+    (layer): layer is TextLayer => layer.kind === 'text' && layer.font.family === family,
+  )
 }
 
 /** Registers a face with the page. The one place `FontFace` is named, and it is not testable. */

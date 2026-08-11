@@ -8,7 +8,7 @@ import {
   type CanvasState,
   type Layer,
 } from './canvas-state'
-import { captionSetIn, faceUrlOf, familyStack } from './canvas-fonts'
+import { captionsSetIn, faceUrlOf, familyStack } from './canvas-fonts'
 
 describe('the stack a caption is drawn with', () => {
   // A family name is a sentence: "IBM Plex Serif" unquoted reads as three names.
@@ -54,41 +54,49 @@ describe('the file a face has to be registered from', () => {
  * A face lands long after the caption that asked for it. What the document holds by then is what
  * decides — never what asked.
  */
-describe('the caption a landed face is still worth redrawing', () => {
+describe('the captions a landed face is still worth redrawing', () => {
   const caption = textLayer('t', 'Hello', { x: 0, y: 0 })
   const landed = DEFAULT_FONT.family
   const holding = (...layers: Layer[]): CanvasState => ({ ...DEFAULT_CANVAS, layers })
 
-  it('is the one still set in that face', () => {
-    expect(captionSetIn(holding(caption), 't', landed)).toBe(caption)
+  it('are the ones still set in that face', () => {
+    expect(captionsSetIn(holding(caption), landed)).toEqual([caption])
+  })
+
+  // The face is fetched once for the family, so every caption set in it is waiting on that one
+  // file. Redrawing only the one that asked left the others in the generic for good.
+  it('are all of them, not the one that asked', () => {
+    const other = textLayer('u', 'Goodbye', { x: 0, y: 40 })
+
+    expect(captionsSetIn(holding(caption, other), landed)).toEqual([caption, other])
   })
 
   // Groups nest, so `layers` is only the root of the stack. A caption filed in one is drawn like
   // any other, and a face landing for it has to find it.
-  it('is the one still set in that face, however deep it is filed', () => {
+  it('are found however deep they are filed', () => {
     const filed = groupLayer('outer', 'Titles', [groupLayer('inner', 'Captions', [caption])])
 
-    expect(captionSetIn(holding(filed), 't', landed)).toBe(caption)
+    expect(captionsSetIn(holding(filed), landed)).toEqual([caption])
   })
 
-  it('is none when the caption was refaced while the file was on its way', () => {
+  it('leave out a caption refaced while the file was on its way', () => {
     const futura: FontRef = { source: 'system', family: 'Futura' }
+    const refaced = { ...textLayer('u', 'Goodbye', { x: 0, y: 40 }), font: futura }
 
-    expect(captionSetIn(holding({ ...caption, font: futura }), 't', landed)).toBeNull()
+    expect(captionsSetIn(holding(caption, refaced), landed)).toEqual([caption])
   })
 
-  it('is none when the caption was deleted while the file was on its way', () => {
-    expect(captionSetIn(holding(), 't', landed)).toBeNull()
+  it('are none when every caption was deleted while the file was on its way', () => {
+    expect(captionsSetIn(holding(), landed)).toEqual([])
   })
 
   // The engine holds no document at all until one is applied, and a face can land in between.
-  it('is none when there is no document to look in', () => {
-    expect(captionSetIn(null, 't', landed)).toBeNull()
+  it('are none when there is no document to look in', () => {
+    expect(captionsSetIn(null, landed)).toEqual([])
   })
 
-  // Ids are unique across kinds, but a layer replaced by another of another kind is a caption
-  // that no longer exists — and a pixel layer has no words to draw.
-  it('is none when what wears the id is no longer a caption', () => {
-    expect(captionSetIn(holding(pixelLayer('t', 'Background')), 't', landed)).toBeNull()
+  // A pixel layer has no words to draw, and nothing to read a family off.
+  it('leave out what is not a caption', () => {
+    expect(captionsSetIn(holding(pixelLayer('t', 'Background')), landed)).toEqual([])
   })
 })
