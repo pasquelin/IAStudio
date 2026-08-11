@@ -5,8 +5,8 @@ import { CONDITIONAL_PORT, type GraphEdge, type GraphNode } from '@shared/domain
 import { edgeBetween } from '@/engines/graph/connect'
 import { forEachEndNode, forEachNode, textNode, wire } from '@/engines/graph/graph-fixtures'
 import { handleId, loopInputId, loopOutputId } from '@/engines/graph/handles'
-import { installGraph, nodeNow } from '@/stores/graph-fixtures'
-import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
+import { edgesNow, installGraph, nodeNow } from '@/stores/graph-fixtures'
+import { historyOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
@@ -23,12 +23,7 @@ const READS_ITEM: GraphEdge = edgeBetween(
   loopOutputId('forEach1', 0),
 )
 
-/**
- * A wire on the port no list owns, so an edit of the lists can be asked what it LEFT rather than
- * only that it emptied the graph. `conditional` steers rather than feeds, so no retyping of a list
- * reaches it — and written the wrong way round, this one would be cut with the rest, which is the
- * whole reason the assertions below name it.
- */
+/** The wire no edit of the lists reaches: `conditional` steers rather than feeds, so it survives. */
 const STEERS: GraphEdge = wire('forEach1', CONDITIONAL_PORT, 'text1', 'prompt')
 
 beforeEach(() => {
@@ -45,9 +40,6 @@ const outputs = (): readonly (string | undefined)[] =>
 
 const types = (): readonly (string | undefined)[] =>
   (nodeOf('forEach1')?.data.outputHandles ?? []).map(handle => handle.type)
-
-const edgeIds = (): readonly string[] =>
-  graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)
 
 const show = (id: string): void => {
   render(<LiveNodeInspector documentId={DOCUMENT} id={id} />)
@@ -105,7 +97,7 @@ describe('the lists a loop walks', () => {
     show('forEach1')
     await userEvent.click(screen.getByRole('button', { name: /Supprimer cette liste/ }))
 
-    expect(edgeIds()).toEqual([STEERS.id])
+    expect(edgesNow(DOCUMENT)).toEqual([STEERS])
   })
 
   /**
@@ -140,11 +132,11 @@ describe('the lists a loop walks', () => {
       inputKeys: [],
     })
     show('forEach1')
-    expect(edgeIds()).toEqual([feeds.id, STEERS.id])
+    expect(edgesNow(DOCUMENT)).toEqual([feeds, STEERS])
 
     await userEvent.selectOptions(screen.getByLabelText('Ce que cette liste contient'), 'image')
 
-    expect(edgeIds()).toEqual([STEERS.id])
+    expect(edgesNow(DOCUMENT)).toEqual([STEERS])
   })
 
   /** And a wire the new kind still accepts stays: only what no longer connects is cut. */
@@ -166,7 +158,7 @@ describe('the lists a loop walks', () => {
     if (!first) throw new Error('no list to retype')
     await userEvent.selectOptions(first, 'text')
 
-    expect(edgeIds()).toEqual([feeds.id])
+    expect(edgesNow(DOCUMENT)).toEqual([feeds])
   })
 
   /** One entry, so ⌘Z never gives a list back without the port its item leaves by. */

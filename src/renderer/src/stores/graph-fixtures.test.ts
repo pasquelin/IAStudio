@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { GraphNode } from '@shared/domain/graph'
+import type { GraphEdge, GraphNode } from '@shared/domain/graph'
+import { wire } from '@/engines/graph/graph-fixtures'
 import { updateNodeData } from '@/engines/graph/mutations'
-import { installGraph, nodeNow } from './graph-fixtures'
+import { edgesNow, installGraph, nodeNow } from './graph-fixtures'
 import { graphOf, useGraphs } from './graphs'
 
 const DOCUMENT = 'graph-1'
@@ -12,6 +13,9 @@ const TEXT: GraphNode = {
   position: { x: 0, y: 0 },
   data: { value: 'a small grey rock' },
 }
+
+const FIRST: GraphEdge = wire('model1', 'prompt', 'text1', 'prompt')
+const SECOND: GraphEdge = wire('model2', 'prompt', 'text1', 'prompt')
 
 describe('nodeNow', () => {
   beforeEach(() => {
@@ -67,5 +71,44 @@ describe('nodeNow', () => {
 
     expect(before?.data).toMatchObject({ value: 'a small grey rock' })
     expect(nodeNow(DOCUMENT, 'text1')?.data).toMatchObject({ value: 'a kingfisher' })
+  })
+})
+
+describe('edgesNow', () => {
+  beforeEach(() => {
+    installGraph(DOCUMENT, { nodes: [TEXT], edges: [FIRST, SECOND], inputKeys: [] })
+  })
+
+  /** The ORDER is the point: it is what lets a suite say which of two wires an edit left behind. */
+  it('reads the wires in the order the graph holds them', () => {
+    expect(edgesNow(DOCUMENT)).toEqual([FIRST, SECOND])
+  })
+
+  /**
+   * WHOLE edges, and this is the reason the helper does not hand back ids: an id is spelled from
+   * the two handles, so it survives a swap of the two ends that a suite exists to catch.
+   */
+  it('hands back the ends, not only the name they compose', () => {
+    const swapped = { ...FIRST, source: FIRST.target, target: FIRST.source }
+
+    useGraphs.setState(state => ({
+      states: { ...state.states, [DOCUMENT]: { nodes: [TEXT], edges: [swapped], inputKeys: [] } },
+    }))
+
+    expect(edgesNow(DOCUMENT)).not.toEqual([FIRST])
+  })
+
+  /** The empty list for a document the store never held, as `nodeNow` answers `null` for one. */
+  it('answers an empty list for a document the store does not hold', () => {
+    expect(edgesNow('graph-404')).toEqual([])
+  })
+
+  /** Read at call time: a reader that closed over the graph it was defined with would miss this. */
+  it('reads the store as it stands at the call, not as it stood before', () => {
+    useGraphs.setState(state => ({
+      states: { ...state.states, [DOCUMENT]: { nodes: [TEXT], edges: [SECOND], inputKeys: [] } },
+    }))
+
+    expect(edgesNow(DOCUMENT)).toEqual([SECOND])
   })
 })

@@ -6,8 +6,8 @@ import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domai
 import { withQueries } from '@/app/query-fixtures'
 import { textNode, wire } from '@/engines/graph/graph-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { installGraph, nodeNow } from '@/stores/graph-fixtures'
-import { graphOf, useGraphs } from '@/stores/graphs'
+import { edgesNow, installGraph, nodeNow } from '@/stores/graph-fixtures'
+import { useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
@@ -62,23 +62,17 @@ const source: GraphNode = {
   },
 }
 
-/** The wire on the port the second model does not declare — the one a model swap must take. */
-const ON_MASK: GraphEdge = wire('imageGenerator1', 'mask', 'asset1', 'image')
+const READS_MASK: GraphEdge = wire('imageGenerator1', 'mask', 'asset1', 'image')
 
-/**
- * And one on a port BOTH models declare, so the suite can say which wire is left rather than that
- * none is: an assertion on the empty list holds just as well when the cut took the whole graph, or
- * when the fixture wired the two ends the wrong way round — `source` is the CONSUMER here.
- */
-const ON_PROMPT: GraphEdge = wire('imageGenerator1', 'prompt', 'text1', 'prompt')
+/** On a port BOTH models declare, so a swap can be asked what it LEFT rather than what it emptied. */
+const READS_PROMPT: GraphEdge = wire('imageGenerator1', 'prompt', 'text1', 'prompt')
 
 const WIRED: GraphState = {
   nodes: [generator, source, textNode('text1')],
-  edges: [ON_MASK, ON_PROMPT],
+  edges: [READS_MASK, READS_PROMPT],
   inputKeys: [],
 }
 
-const state = (): GraphState => graphOf(useGraphs.getState(), DOCUMENT)
 const generatorNow = (): GraphNode | null => nodeNow(DOCUMENT, generator.id)
 
 /** What the picker asked the catalogue — the fake used to ignore its argument entirely. */
@@ -142,7 +136,7 @@ describe('a generator node in the inspector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Modèle'), 'model_sdxl')
 
     await waitFor(() => expect(generatorNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
-    expect(state().edges.map(edge => edge.id)).toEqual([ON_PROMPT.id])
+    expect(edgesNow(DOCUMENT)).toEqual([READS_PROMPT])
   })
 
   it('rebuilds the ports from the new model rather than keeping the old ones', async () => {
@@ -169,7 +163,7 @@ describe('a generator node in the inspector', () => {
     useGraphs.getState().undo(DOCUMENT)
 
     expect(generatorNow()?.data).toMatchObject({ modelId: 'model_flux' })
-    expect(state().edges.map(edge => edge.id)).toEqual([ON_MASK.id, ON_PROMPT.id])
+    expect(edgesNow(DOCUMENT)).toEqual([READS_MASK, READS_PROMPT])
   })
 
   /** Opening a panel is not an edit: the form reports its body once at mount, and that is not one. */
