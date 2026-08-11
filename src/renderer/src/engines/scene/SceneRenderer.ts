@@ -146,15 +146,6 @@ const right = new ThreeVector3()
 const step = new ThreeVector3()
 
 /**
- * The three.js side of a scene. It owns no truth: `apply` reflects a state it never computes,
- * so the whole thing can be thrown away and rebuilt — which is exactly what changing workspace
- * does to it.
- *
- * The canvas, the renderer, the camera, the orbit controls and the on-demand loop are not its
- * own: they are the shared `ViewportEngine`, so what this file holds is what makes a scene
- * *editor* — gizmos, selection, the trihedron, the grid and keyboard flight.
- */
-/**
  * three-mesh-bvh reads a `boundsTree` if the mesh has one and falls back to walking triangles if
  * it has none, so patching the prototypes once is safe for every mesh in the studio — the two
  * other 3D spaces included, where no tree is ever built.
@@ -180,6 +171,15 @@ const DEFAULT_VIEW_DISTANCE = 8
  */
 const HELPER_SETTLES = 1
 
+/**
+ * The three.js side of a scene. It owns no truth: `apply` reflects a state it never computes,
+ * so the whole thing can be thrown away and rebuilt — which is exactly what changing workspace
+ * does to it.
+ *
+ * The canvas, the renderer, the camera, the orbit controls and the on-demand loop are not its
+ * own: they are the shared `ViewportEngine`, so what this file holds is what makes a scene
+ * *editor* — gizmos, selection, the trihedron, the grid and keyboard flight.
+ */
 export class SceneRenderer {
   private readonly viewport = new ViewportEngine({
     onFrame: delta => this.advance(delta),
