@@ -309,9 +309,43 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > ceux qui le lisent disent *amont en échec*. **Il ne prend qu’un seul fil pour l’instant** :
 > assembler deux textes en une expression viendra avec les nœuds de logique.
 >
-> Ce qu’il ne sait **pas encore** : *créer* un nœud de logique ou de boucle. Un branchement
-> n’arrive que par l’import, et une boucle ne s’exécute pas du tout. Son chapitre viendra quand
-> il les saura.
+> **Un graphe sort du studio par deux de ces boutons, et y revient par le troisième.** Ils sont
+> dans la même barre que **Exécuter**. Les deux qui font sortir sont grisés tant que le canevas ne
+> porte rien ; celui qui fait entrer l’est pendant une exécution.
+>
+> - **Exporter le graphe** l’écrit en `.workflow.json` — c’est le format que la webapp Scenario
+>   sait ouvrir, donc le chemin pour reprendre ailleurs ce qui a été dessiné ici. Une fenêtre
+>   système demande où, en proposant le nom du document suivi de `.workflow.json` ; fermer cette
+>   fenêtre sans choisir n’écrit rien.
+> - **Publier sur Scenario** ne passe pas par un fichier : la publication crée une **App de votre
+>   compte**, prête à être exécutée depuis le site. **Chaque clic en crée une nouvelle** — publier
+>   deux fois donne deux Apps, ce n’est pas une mise à jour de la première. La ligne sous le
+>   canevas — celle qui dit déjà si le graphe s’exporterait, pas la barre d’état de la fenêtre —
+>   répond **Publié sur Scenario** si c’est passé. Sinon elle donne la raison, et il y en a deux sortes :
+>   **Scenario l’a refusé — voir le journal** quand c’est l’API qui dit non, ou l’une des phrases
+>   que vous connaissez déjà — *Aucune sortie marquée*, *Le graphe ne compile pas*… — quand c’est
+>   **le studio qui refuse d’envoyer**, avant tout appel. C’est le même verdict que la ligne
+>   affiche pendant que vous câblez : publier ne demande rien de plus que ce qu’elle annonçait.
+>   **L’export, lui, ne refuse rien** — un graphe qui ne se publierait pas s’écrit quand même dans
+>   un fichier.
+> - **Importer un graphe** ouvre un `.workflow.json` — le vôtre, ou celui d’une App publiée.
+>   **Il remplace ce qui est sur le canevas**, et c’est le seul de ces gestes qui détruise quelque
+>   chose. `⌘Z` remet le graphe précédent — **mais pas les états de sa dernière exécution** : ils
+>   sont oubliés à l’import, et pour une bonne raison. Les identifiants de nœuds se ressemblent
+>   d’un graphe à l’autre (`text1`, `imageGenerator1`), donc un nœud importé porterait le résultat
+>   d’un nœud qui n’est pas lui.
+>
+> **Ce que le studio ne sait pas encore créer, l’import l’apporte.** Le menu **Ajouter un nœud**
+> propose neuf entrées, pour six types de nœuds seulement — les quatre générateurs posent tous le
+> même. Le format, lui, en connaît quinze. Un branchement, une boucle, un découpage de texte
+> arrivent donc par un fichier et se dessinent sur le canevas.
+>
+> **Arriver n’est pas s’exécuter.** Un branchement importé s’exécute ; une boucle, non — elle
+> affiche *non exécutable*, comme tous les types que le studio ne sait pas encore faire tourner.
+> Le graphe se lance quand même : c’est le nœud qui s’arrête, pas l’exécution.
+>
+> Le Graphe **n’a pas encore son chapitre** : il viendra quand le studio saura créer ces nœuds
+> autrement que par un fichier.
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 
