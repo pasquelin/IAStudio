@@ -20,7 +20,7 @@ import {
 import { handleId, inputHandlesOf } from '@/engines/graph/handles'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
-import { GraphNodeInspector } from './GraphNodeInspector'
+import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
 
@@ -78,13 +78,8 @@ const blocks = () => {
 
 const ports = (): readonly string[] => (branch()?.data.outputHandles ?? []).map(handle => handle.id)
 
-function Live({ id }: { id: string }) {
-  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
-  return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
-}
-
 const show = (id: string): void => {
-  render(<Live id={id} />)
+  render(<LiveNodeInspector documentId={DOCUMENT} id={id} />)
 }
 
 describe('the conditions of a branch', () => {
