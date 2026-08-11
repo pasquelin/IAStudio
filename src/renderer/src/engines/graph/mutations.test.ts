@@ -307,6 +307,7 @@ describe('swapping what a node is wired by', () => {
     const consumed: GraphState = {
       ...fed,
       edges: [
+        ...fed.edges,
         {
           id: 'd',
           source: 'other1',
@@ -317,7 +318,9 @@ describe('swapping what a node is wired by', () => {
       ],
     }
 
-    expect(replaceNodePorts(consumed, 'imageGenerator1', withoutMask).edges).toHaveLength(1)
+    const next = replaceNodePorts(consumed, 'imageGenerator1', withoutMask)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['a', 'd'])
   })
 
   it('hands the very same graph back when the node is not there', () => {
@@ -328,14 +331,22 @@ describe('swapping what a node is wired by', () => {
    * A port that SURVIVES with another type is judged too, by the very rule the canvas refuses a
    * connection with. Checked on the id alone, a model swap that keeps a port's name while
    * changing what it takes left a wire the editor would no longer draw.
+   *
+   * And retyping is not a reason on its own: the port next door is retyped as well, into a type
+   * its wire still offers, so it keeps it — which an assertion on an empty graph could not say.
    */
-  it('cuts the edge whose port the new model kept but retyped', () => {
+  it('cuts the edge the retyped port no longer takes, and only that one', () => {
     const retyped: Partial<GraphNode['data']> = {
-      inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'image' }],
+      inputHandles: [
+        { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'image' },
+        { id: 'imageGenerator1-source-mask', name: 'mask', type: 'prompt' },
+      ],
       outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
     }
 
-    expect(replaceNodePorts(fed, 'imageGenerator1', retyped).edges).toEqual([])
+    const next = replaceNodePorts(fed, 'imageGenerator1', retyped)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['b'])
   })
 
   /**
