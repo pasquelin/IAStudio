@@ -113,6 +113,8 @@ export class ViewportEngine {
   private readonly extras: ExtraPane[] = []
   /** Where each pane sits, in CSS pixels. One entry in a single layout, four in a quad. */
   private rects: PaneRect[] = []
+  /** How tall the added views see, in world units. Set by whoever knows what the scene holds. */
+  private extraHeight = EXTRA_PANE_HEIGHT
   private frame: number | null = null
   /** `null` while the loop is at rest: the next frame is a first frame, not a long one. */
   private lastTime: number | null = null
@@ -234,6 +236,17 @@ export class ViewportEngine {
     this.requestRender()
   }
 
+  /**
+   * How much world the added views take in. The scene editor sizes it to what the scene holds:
+   * a fixed frustum shows a hand-sized model as a dot and a building as a corner of a wall.
+   */
+  setPaneHeight(height: number): void {
+    if (height <= 0 || height === this.extraHeight) return
+    this.extraHeight = height
+    this.layOutPanes()
+    this.requestRender()
+  }
+
   get paneLayout(): PaneLayout {
     return this.layout
   }
@@ -329,7 +342,7 @@ export class ViewportEngine {
       if (!rect || rect.height === 0) continue
 
       const aspect = rect.width / rect.height
-      const half = EXTRA_PANE_HEIGHT / 2
+      const half = this.extraHeight / 2
       pane.camera.top = half
       pane.camera.bottom = -half
       pane.camera.right = half * aspect

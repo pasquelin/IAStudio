@@ -931,6 +931,8 @@
     "display": "Display",
     "displayHint": "Draw the surfaces, their edges, or both",
     "quad": "Four views",
+    "quadEdges": "Quad edges",
+    "quadEdgesHint": "Drops the triangulation diagonals from the wireframe — a reconstruction, never real quads",
     "quadHint": "Split the viewport in four: top, front, side, and the view being flown",
     "spaceHint": "Line the handles up with the object’s own orientation; when it is off, they follow the world axes",
     "group": "Group",
@@ -975,13 +977,29 @@
     "topHint": "Looks down on the scene, with no perspective",
     "bottomHint": "Looks up at the scene from below, with no perspective"
   },
+  "sceneCounters": {
+    "title": "What the scene costs",
+    "triangles": "Triangles",
+    "vertices": "Vertices",
+    "draws": "Draw calls",
+    "textures": "Textures",
+    "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
+  },
   "sceneDisplay": {
     "shaded": "Shaded",
     "wireframe": "Wireframe",
     "both": "Shaded and wireframe",
     "shadedHint": "Surfaces painted by their material, edges left out",
     "wireframeHint": "The edges alone — which is what shows how dense the mesh is",
-    "bothHint": "Surfaces painted, with the edges drawn over them"
+    "bothHint": "Surfaces painted, with the edges drawn over them",
+    "solid": "Solid",
+    "solidHint": "Plain clay on every surface: the shape, without the materials",
+    "material": "Material preview",
+    "materialHint": "The materials under the studio light alone, with the scene\u2019s own lights out",
+    "matcap": "Matcap",
+    "matcapHint": "Lighting captured on a sphere: it is the relief that reads, not the colour",
+    "density": "Density",
+    "densityHint": "Green to red by triangles per unit of surface: what is red is what to optimise"
   },
   "project": {
     "none": "No project open",
@@ -1417,7 +1435,19 @@
       "title": "Four views",
       "help": "Splits the viewport in four — top, front and side around the view being flown. Each quarter orbits under the pointer; the flown one keeps the gizmos."
     },
-    "sceneDisplay": {
+    "sceneQuadEdges": {
+      "title": "Quad edges",
+      "help": "Redraws the wireframe without the diagonals triangulation added. A GLB never holds quads: this is a reconstruction by angle, faithful except on strongly curved surfaces."
+    },
+    "sceneCounters": {
+    "title": "What the scene costs",
+    "triangles": "Triangles",
+    "vertices": "Vertices",
+    "draws": "Draw calls",
+    "textures": "Textures",
+    "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
+  },
+  "sceneDisplay": {
       "title": "Display",
       "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."
     },

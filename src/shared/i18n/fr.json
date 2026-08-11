@@ -931,6 +931,8 @@
     "display": "Affichage",
     "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
     "quad": "Quatre vues",
+    "quadEdges": "Arêtes en quads",
+    "quadEdgesHint": "Efface les diagonales de triangulation du filaire — une reconstruction, jamais de vrais quads",
     "quadHint": "Partager le viewport en quatre : dessus, face, profil, et la vue en cours",
     "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "group": "Grouper",
@@ -975,13 +977,29 @@
     "topHint": "Regarde la scène de haut, sans perspective",
     "bottomHint": "Regarde la scène de dessous, sans perspective"
   },
+  "sceneCounters": {
+    "title": "Ce que la scène coûte",
+    "triangles": "Triangles",
+    "vertices": "Sommets",
+    "draws": "Appels de dessin",
+    "textures": "Textures",
+    "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
+  },
   "sceneDisplay": {
     "shaded": "Rendu",
     "wireframe": "Filaire",
     "both": "Rendu et filaire",
     "shadedHint": "Les surfaces peintes par leur matériau, sans les arêtes",
     "wireframeHint": "Les arêtes seules — ce qui montre la densité du maillage",
-    "bothHint": "Les surfaces peintes, et les arêtes par-dessus"
+    "bothHint": "Les surfaces peintes, et les arêtes par-dessus",
+    "solid": "Solide",
+    "solidHint": "Une argile unie sur toutes les surfaces : la forme, sans les matériaux",
+    "material": "Aperçu matériau",
+    "materialHint": "Les matériaux sous le seul éclairage du studio, sans les lumières de la scène",
+    "matcap": "Matcap",
+    "matcapHint": "Un éclairage capté sur une sphère : c\u2019est le relief qui se lit, pas la couleur",
+    "density": "Densité",
+    "densityHint": "Du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser"
   },
   "project": {
     "none": "Aucun projet ouvert",
@@ -1417,7 +1435,19 @@
       "title": "Quatre vues",
       "help": "Partage le viewport en quatre — dessus, face et profil autour de la vue en cours. Chaque quart s’oriente à la souris ; celui du dessus garde les manipulateurs."
     },
-    "sceneDisplay": {
+    "sceneQuadEdges": {
+      "title": "Arêtes en quads",
+      "help": "Redessine le filaire sans les diagonales que la triangulation a ajoutées. Un fichier GLB ne contient jamais de quads : c\u2019est une reconstruction par angle, fidèle sauf sur les surfaces très courbées."
+    },
+    "sceneCounters": {
+    "title": "Ce que la scène coûte",
+    "triangles": "Triangles",
+    "vertices": "Sommets",
+    "draws": "Appels de dessin",
+    "textures": "Textures",
+    "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
+  },
+  "sceneDisplay": {
       "title": "Affichage",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },

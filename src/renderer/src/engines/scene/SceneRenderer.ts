@@ -1,4 +1,5 @@
 import {
+  Box3,
   BufferGeometry,
   CameraHelper,
   DirectionalLight,
@@ -76,10 +77,12 @@ import {
   ownedByAnotherNode,
   resizeShadowMap,
 } from './shadows'
+import { createPaneMemory, dressForPane } from './pane-dress'
+import { createPaneMaterials, type PaneMaterials } from './pane-materials'
+import { statsOf, type SceneStats } from './scene-stats'
 import {
-  applyDisplayMode,
   applyWireOverlay,
-  EDGE_LAYER,
+  showsEdges,
   directionOf,
   framingPlacement,
   viewPosition,
@@ -114,6 +117,11 @@ export type SceneRendererOptions = {
   onClips?: (nodeId: string, clips: readonly string[]) => void
   /** The bones a rigged model brought, named. Same reason as `onClips`: they live in the file. */
   onBones?: (nodeId: string, bones: readonly string[]) => void
+  /**
+   * What the scene costs, whenever that changes. Counted here because only the engine knows what
+   * a model actually brought: the document holds an asset id, not the triangles behind it.
+   */
+  onStats?: (stats: SceneStats, selected: SceneStats) => void
   /** Absent builds a real `GLTFLoader`; a test hands a stub, since jsdom parses no GLB. */
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
@@ -183,6 +191,12 @@ const QUAD_SIDES: readonly ViewDirection[] = ['top', 'front', 'left']
  * standing on the origin clips away the model it is aimed at.
  */
 const SIDE_VIEW_DISTANCE = 50
+
+/** What a side view takes in when the scene is empty, and the floor under a tiny one. */
+const SIDE_VIEW_HEIGHT = 6
+
+/** Room around what the side views frame, so nothing sits flush against the edge. */
+const SIDE_VIEW_MARGIN = 1.4
 
 /**
  * A second of the trihedron's own animation, in the seconds it takes. It turns a whole revolution
@@ -267,9 +281,15 @@ export class SceneRenderer {
   private meshColor = ''
   /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
   private displays: DisplayMode[] = ['shaded']
+  /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
+  private quadEdges = false
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
+  /** The clay, matcap and density materials a view paints with instead of the model's own. */
+  private readonly paneMaterials: PaneMaterials = createPaneMaterials()
+  /** What each mesh wore, and which lights the material preview put out — see `pane-dress`. */
+  private readonly paneMemory = createPaneMemory()
   private readonly bvh: BvhBuilder
   private readonly fonts: FontLibrary
   private stopPaletteWatch: (() => void) | null = null
@@ -384,6 +404,7 @@ export class SceneRenderer {
     this.applyPoses()
     if (this.environment) void this.sky.apply(this.environment, state.environment)
     this.attachGizmo()
+    this.reportStats()
     this.viewport.requestRender()
   }
 
@@ -517,6 +538,7 @@ export class SceneRenderer {
     if (!on) return
 
     const target = this.viewport.orbit?.target ?? this.pivot.position
+    this.viewport.setPaneHeight(this.sceneHeight())
     const cameras = this.viewport.paneCameras.slice(1)
     const orbits = this.viewport.paneOrbits.slice(1)
 
@@ -537,9 +559,39 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /**
+   * Counts what the scene holds and what is selected, and says so.
+   *
+   * Called from `apply` and after a model lands: those are the two moments the count can change,
+   * and counting per frame would walk every geometry sixty times a second for a number that
+   * moves when a document is edited.
+   */
+  private reportStats(): void {
+    const report = this.options.onStats
+    if (!report) return
+
+    const selected = this.selectedIds.flatMap(id => this.objects.get(id) ?? [])
+    report(statsOf(this.objects.values()), statsOf(selected))
+  }
+
   /** Which view the pointer is over — what a display command acts on. */
   activePane(): number {
     return this.viewport.activePane
+  }
+
+  /**
+   * How tall the side views have to see to hold what the scene holds, with room around it.
+   *
+   * The bounds of the objects rather than a constant: a character is two units tall and a set is
+   * fifty, and one frustum for both shows one as a dot and the other as a corner.
+   */
+  private sceneHeight(): number {
+    const bounds = new Box3()
+    for (const object of this.objects.values()) bounds.expandByObject(object)
+    if (bounds.isEmpty()) return SIDE_VIEW_HEIGHT
+
+    const size = bounds.getSize(new ThreeVector3())
+    return Math.max(size.x, size.y, size.z, SIDE_VIEW_HEIGHT * 0.25) * SIDE_VIEW_MARGIN
   }
 
   quadView(): boolean {
@@ -612,15 +664,18 @@ export class SceneRenderer {
    * not: a `WireframeGeometry` per mesh is its own buffer, and building one set per pane would
    * cost the scene four times its geometry to show the same edges.
    */
-  setDisplayModes(modes: readonly DisplayMode[]): void {
-    if (modes.length === this.displays.length && modes.every((m, i) => m === this.displays[i])) {
-      return
-    }
-    this.displays = [...modes]
+  setDisplayModes(modes: readonly DisplayMode[], quads = this.quadEdges): void {
+    const same =
+      modes.length === this.displays.length &&
+      modes.every((mode, index) => mode === this.displays[index])
+    if (same && quads === this.quadEdges) return
 
-    const anyEdges = modes.includes('both')
+    this.displays = [...modes]
+    this.quadEdges = quads
+
+    const anyEdges = modes.includes('both') || modes.includes('wireframe')
     for (const object of this.objects.values()) {
-      applyWireOverlay(object, anyEdges, this.wireMaterial)
+      applyWireOverlay(object, anyEdges, this.wireMaterial, quads)
     }
     this.viewport.requestRender()
   }
@@ -633,15 +688,21 @@ export class SceneRenderer {
    * manipulator nobody can grab. Only the document's own objects are walked — the gizmo, the
    * grid and the trihedron are siblings, never in `objects`.
    */
+  /** Whether any view is asking for edges at all — what decides if the geometry is built. */
+  private needsEdges(): boolean {
+    return this.displays.some(mode => showsEdges(mode, this.quadEdges))
+  }
+
   private dressPane(index: number, camera: ViewportCamera): void {
     const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
-
-    for (const object of this.objects.values()) applyDisplayMode(object, mode)
-
-    // The edges hang on their own layer, so which panes show them is a per-camera answer rather
-    // than a second set of geometry.
-    if (mode === 'both') camera.layers.enable(EDGE_LAYER)
-    else camera.layers.disable(EDGE_LAYER)
+    dressForPane(
+      this.objects.values(),
+      mode,
+      this.quadEdges,
+      this.paneMaterials,
+      this.paneMemory,
+      camera,
+    )
   }
 
   /**
@@ -802,6 +863,7 @@ export class SceneRenderer {
     this.modelCache.dispose()
     this.gltf.dispose()
     this.wireMaterial.dispose()
+    this.paneMaterials.dispose()
     this.bvh.dispose()
 
     this.grid?.dispose()
@@ -928,7 +990,7 @@ export class SceneRenderer {
       this.viewport.scene.add(object)
       // A node built while a display mode is on has to arrive in it, or it would be the one
       // object in the scene still drawn shaded.
-      if (this.displays.includes('both')) this.applyDisplay(object)
+      if (this.needsEdges()) this.applyDisplay(object)
     } else {
       // Only what an edit actually changed: rebuilding a geometry or recompiling a shader on
       // every move of the gizmo would cost the drag its frame rate.
@@ -985,7 +1047,7 @@ export class SceneRenderer {
         applyGeometry(object, node.geometry)
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
-        if (this.displays.includes('both')) this.applyDisplay(object)
+        if (this.needsEdges()) this.applyDisplay(object)
       }
 
       const material = standardMaterialOf(object)
@@ -1087,7 +1149,7 @@ export class SceneRenderer {
     // Same reason as a model landing into a wireframe scene: the edges were built from the shape
     // that was there before the face arrived — an empty one at first, the previous words after an
     // edit — and outline a mesh that no longer exists until they are built again.
-    if (this.displays.includes('both')) this.applyDisplay(object)
+    if (this.needsEdges()) this.applyDisplay(object)
     this.viewport.requestRender()
   }
 
@@ -1129,9 +1191,12 @@ export class SceneRenderer {
         receivesShadow(applied),
         this.belongsToAnotherNode,
       )
+      // The count is a count of what is really there: a model's triangles arrive with its file,
+      // which is a tick after the `apply` that asked for it.
+      this.reportStats()
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
-      if (this.displays.includes('both')) this.applyDisplay(holder)
+      if (this.needsEdges()) this.applyDisplay(holder)
       // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
@@ -1170,7 +1235,7 @@ export class SceneRenderer {
   private applyDisplay(object: Object3D): void {
     // The mode itself lands per pane, at render time; what an arriving object needs here is its
     // edges, which are geometry rather than a flag.
-    applyWireOverlay(object, this.displays.includes('both'), this.wireMaterial)
+    applyWireOverlay(object, this.needsEdges(), this.wireMaterial, this.quadEdges)
   }
 
   /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */

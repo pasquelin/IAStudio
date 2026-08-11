@@ -14,6 +14,8 @@ export type SceneView = {
   skeletons: boolean
   /** Four views instead of one — top, front, left, and the one being flown. */
   quad: boolean
+  /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
+  quadEdges: boolean
   /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
   playhead: number
   playing: boolean
@@ -24,6 +26,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   displays: ['shaded'],
   skeletons: false,
   quad: false,
+  quadEdges: false,
   playhead: 0,
   playing: false,
 }
@@ -42,6 +45,7 @@ export type SceneViewsState = {
   setDisplay: (documentId: string, pane: number, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setQuad: (documentId: string, quad: boolean) => void
+  setQuadEdges: (documentId: string, quadEdges: boolean) => void
   setPlayhead: (documentId: string, playhead: number) => void
   setPlaying: (documentId: string, playing: boolean) => void
 }
@@ -74,6 +78,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setQuad: (documentId, quad) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), quad } },
+    })),
+
+  setQuadEdges: (documentId, quadEdges) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), quadEdges } },
     })),
 
   setPlayhead: (documentId, playhead) =>

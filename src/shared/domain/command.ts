@@ -37,6 +37,7 @@ export type CommandId =
   | 'scene.space'
   | 'scene.projection'
   | 'scene.quad'
+  | 'scene.quadEdges'
   | 'scene.display'
   | 'scene.skeletons'
   | 'scene.delete'
@@ -283,6 +284,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneQuad.title',
     helpKey: 'commands.sceneQuad.help',
     defaultBinding: 'Shift+KeyQ',
+  }),
+  // `Shift+W` for wires: bare `W` is flight's "forward", and this reads the same edges the
+  // wireframe draws, so it sits beside it rather than beside the layout.
+  command({
+    id: 'scene.quadEdges',
+    scope: 'scene',
+    titleKey: 'commands.sceneQuadEdges.title',
+    helpKey: 'commands.sceneQuadEdges.help',
+    defaultBinding: 'Shift+KeyW',
   }),
   // `Z` as in Blender, where it is the key that changes what the viewport draws.
   command({

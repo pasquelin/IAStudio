@@ -336,6 +336,21 @@ describe('a viewport', () => {
       expect(engine.paneCameras).toHaveLength(1)
     })
 
+    it('takes the height its scene needs, and refuses a height of nothing', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const side = engine.paneCameras[1]
+      if (!(side instanceof OrthographicCamera)) throw new Error('the added views are flat')
+
+      engine.setPaneHeight(40)
+      expect(side.top).toBe(20)
+
+      // Nothing, and the same value again, both leave the frustum where it is.
+      engine.setPaneHeight(0)
+      engine.setPaneHeight(40)
+      expect(side.top).toBe(20)
+    })
+
     it('answers no pane for a pointer off the surface', () => {
       const engine = mounted()
       engine.setLayout('quad')

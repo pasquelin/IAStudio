@@ -236,6 +236,53 @@ describe('a scene told what changed', () => {
       renderer.dispose()
     })
 
+    /**
+     * The count is the engine's to make: the document holds an asset id, and what a model
+     * actually brought is known only once its file has landed here.
+     */
+    it('says what the scene costs, and what the selection costs of it', () => {
+      const reported: { scene: number; selected: number }[] = []
+      const renderer = new SceneRenderer({
+        onSelect: vi.fn(),
+        onTransform: vi.fn(),
+        onStats: (scene, selected) =>
+          reported.push({ scene: scene.triangles, selected: selected.triangles }),
+      })
+
+      renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1'), meshNode('box-2')] })
+      const both = reported.at(-1)
+
+      renderer.apply({
+        ...EMPTY_SCENE,
+        nodes: [meshNode('box-1'), meshNode('box-2')],
+        selectedIds: ['box-1'],
+      })
+      const one = reported.at(-1)
+
+      expect(both?.scene).toBeGreaterThan(0)
+      expect(both?.selected).toBe(0)
+      // The same scene, and a selection that is a part of it rather than all of it.
+      expect(one?.scene).toBe(both?.scene)
+      expect(one?.selected).toBeGreaterThan(0)
+      expect(one?.selected).toBeLessThan(one?.scene ?? 0)
+
+      renderer.dispose()
+    })
+
+    it('sizes the side views to what the scene holds rather than to a constant', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+
+      // An empty scene and a scene with something in it both open, which is what is reachable
+      // here: where the frustum lands is the viewport's own suite.
+      renderer.setQuadView(true)
+      renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1')] })
+      renderer.setQuadView(false)
+      renderer.setQuadView(true)
+
+      expect(renderer.quadView()).toBe(true)
+      renderer.dispose()
+    })
+
     it('takes one display mode per view, and ignores a list it already holds', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
       renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1')] })
@@ -243,6 +290,9 @@ describe('a scene told what changed', () => {
       renderer.setDisplayModes(['shaded', 'wireframe', 'both', 'shaded'])
       renderer.setDisplayModes(['shaded', 'wireframe', 'both', 'shaded'])
       renderer.setDisplayModes(['shaded'])
+      // The quad reading rebuilds the same edges differently, so it counts as a change.
+      renderer.setDisplayModes(['both'], true)
+      renderer.setDisplayModes(['both'], true)
 
       // The edges are geometry: asked for by any view, they are built; asked for by none, freed.
       expect(freedGeometries).toHaveBeenCalled()

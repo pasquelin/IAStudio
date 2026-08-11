@@ -27,6 +27,8 @@ import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, useSceneViews, viewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
+import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
+import { SceneCounters } from './SceneCounters'
 import { SCENE_TOOLS } from './scene-tools'
 
 /**
@@ -78,6 +80,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // whoever opens it next.
   const [snapping, setSnapping] = useState(false)
   const [localFrame, setLocalFrame] = useState(false)
+  /** What the scene costs, as the engine counts it — see `SceneRendererOptions.onStats`. */
+  const [stats, setStats] = useState<{ scene: SceneStats; selected: SceneStats }>({
+    scene: EMPTY_STATS,
+    selected: EMPTY_STATS,
+  })
 
   const scene = useScenes(state => sceneOf(state, documentId))
   // Booleans rather than the history itself: a selector that builds an object on every call
@@ -112,6 +119,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onTransform: moves => recordTransform(documentId, moves),
       onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
       onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
+      onStats: (scene, selected) => setStats({ scene, selected }),
     })
 
     renderer.mount(element)
@@ -158,8 +166,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [view.projection])
 
   useEffect(() => {
-    engine.current?.setDisplayModes(view.displays)
-  }, [view.displays])
+    engine.current?.setDisplayModes(view.displays, view.quadEdges)
+  }, [view.displays, view.quadEdges])
 
   useEffect(() => {
     engine.current?.setSkeletons(view.skeletons)
@@ -230,6 +238,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
         case 'scene.quad':
           return useSceneViews.getState().setQuad(documentId, !view.quad)
+        case 'scene.quadEdges':
+          return useSceneViews.getState().setQuadEdges(documentId, !view.quadEdges)
         case 'scene.projection':
           return useSceneViews
             .getState()
@@ -307,6 +317,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.projection': view.projection === 'orthographic',
       'scene.skeletons': view.skeletons,
       'scene.quad': view.quad,
+      'scene.quadEdges': view.quadEdges,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,
@@ -335,6 +346,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     >
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
+      <SceneCounters scene={stats.scene} selected={stats.selected} />
       <Toolbar
         className={PANE_TOOLBAR}
         tools={tools}

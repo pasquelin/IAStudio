@@ -17,6 +17,7 @@ import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
 import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
+import { DISPLAY_MODES } from '@/engines/scene/scene-view'
 import { SceneDocument } from './SceneDocument'
 
 const setDocumentTitle = vi.fn()
@@ -380,20 +381,31 @@ describe('how the scene is looked at', () => {
     await userEvent.hover(screen.getByRole('button', { name: /Rendu/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Filaire/ }))
 
-    expect(setDisplayModes).toHaveBeenLastCalledWith(['wireframe'])
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['wireframe'], false)
   })
 
-  it('cycles through the three modes on the bound key', async () => {
+  it('cycles through every mode on the bound key, and comes back round', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.keyboard('{z}')
-    expect(setDisplayModes).toHaveBeenLastCalledWith(['wireframe'])
+    const seen: string[] = []
+    for (let press = 0; press < DISPLAY_MODES.length; press += 1) {
+      await userEvent.keyboard('{z}')
+      const [modes] = setDisplayModes.mock.lastCall ?? []
+      seen.push(String(modes))
+    }
 
-    await userEvent.keyboard('{z}')
-    expect(setDisplayModes).toHaveBeenLastCalledWith(['both'])
+    // Starting from shaded, one press per mode lands on each of the others and returns.
+    expect(seen).toEqual([...DISPLAY_MODES.slice(1), DISPLAY_MODES[0]].map(String))
+  })
 
-    await userEvent.keyboard('{z}')
-    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded'])
+  it('reads the edges as quads on the bound key, and back as triangles', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Shift>}{W}{/Shift}')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded'], true)
+
+    await userEvent.keyboard('{Shift>}{W}{/Shift}')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded'], false)
   })
 
   /** Four views, four answers: the key lands on the one the pointer is over, and on no other. */
@@ -403,7 +415,7 @@ describe('how the scene is looked at', () => {
 
     await userEvent.keyboard('{z}')
 
-    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded', 'shaded', 'wireframe'])
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded', 'shaded', 'wireframe'], false)
     expect(viewOf(useSceneViews.getState(), 'doc-1').displays[0]).toBe('shaded')
   })
 
