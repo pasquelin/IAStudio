@@ -888,9 +888,13 @@ libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit
 exclut exactement les mêmes fichiers (`vitest.config.ts`). C'est une **décision**, prise le 11/08 :
 forcer une fixture à passer par une clé de bundle ne rend rien plus vrai et se lit plus mal.
 
-**Ce que cette exclusion ne dit pas** : rien ne signale un fichier nommé `*-fixtures.ts` qui
-deviendrait, un jour, importé par du code produit. Il serait alors invisible aux deux gardes ET
-absent des budgets de couverture. Aucun ne l'est aujourd'hui, et c'est ce qui reste à surveiller.
+**Ce que l'exclusion coûterait si elle dérivait, et le garde qui l'en empêche** : un fichier
+nommé `*-fixtures.ts` qu'un panneau importerait serait invisible aux deux gardes ET absent de tout
+budget de couverture — trois angles morts sur un même fichier, dont aucun ne dirait un mot.
+`main/import-cycles.test.ts`, § *what a shipped file may reach*, refuse cet import. Il juge sur le
+chemin RÉSOLU, si bien qu'un alias, un `.js` écrit pour un `.ts` et le suffixe `?worker` de Vite
+atterrissent tous au même endroit. **Ce qu'il ne voit pas**, et il le dit : un worker nommé par
+`new URL(…, import.meta.url)` est une URL, pas un import.
 
 **Une garde qui lit des données peut devenir aveugle sans rougir**, et c’est la raison du § *what
 the guards would catch* de `bundles.test.ts`. Ses huit vérifications passent par quatre helpers
