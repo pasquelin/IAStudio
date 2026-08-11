@@ -732,8 +732,8 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
       [...edges, wire('reader2', 'prompt', 'e2', 'results')],
     )
 
-    // `e3` names the loop and is read by nobody — so it is not in the list, though `endsNaming`
-    // would have put it there.
+    // `e3` names the loop and is read by nobody — so `endsToBlame` leaves it out, where naming
+    // every end of the loop would have put it in.
     expect(compile(graph).result).toEqual({
       ok: false,
       problem: 'loop-two-ends',

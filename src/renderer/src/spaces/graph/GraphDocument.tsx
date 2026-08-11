@@ -43,11 +43,13 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   // Held here rather than in the bar: a write on the account must leave a mark on the screen, and
   // the canvas already has the one line that says what the graph would export.
   /**
-   * The publication's verdict, WITH the graph it was given — so it can be dropped by derivation
-   * rather than by an effect writing state, which the lint refuses and rightly.
+   * The publication's verdict, WITH the graph it was given — so a stale one can be dropped by
+   * derivation rather than by an effect writing state, which the lint refuses and rightly.
    *
-   * Dropping it matters more since a refusal paints nodes: kept across an edit, it would point at
-   * a graph the user has already changed, and the status line would name a verdict long dead.
+   * Only a REFUSAL goes stale, and that is the whole distinction: it names nodes of a graph the
+   * user has since changed, and painting them would accuse the wrong ones. A success names a
+   * workflow that now exists on the account — moving a node one pixel does not un-create it, and
+   * this line is the only trace of that write anywhere on the screen.
    */
   const [published, setPublished] = useState<{
     of: GraphState
@@ -236,9 +238,9 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   }, [documentId, graph, title])
 
   /**
-   * The graph as an App of the account. Nothing is painted on the way back yet — the code the
-   * publication answers with is the compile's own vocabulary, and where it goes on the screen is
-   * the same question the compile already asks; the journal carries the API's sentence meanwhile.
+   * The graph as an App of the account. The code it answers with is the compile's own vocabulary,
+   * so it is painted the same way: the status line says which refusal, and the nodes it names are
+   * ringed on the canvas. The journal carries the API's own sentence meanwhile.
    */
   const onPublish = useCallback(() => {
     setPublished(null)
@@ -316,7 +318,9 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onPublish={onPublish}
       onImport={onImport}
       canImport={!running}
-      published={published?.of === graph ? published.result : null}
+      published={
+        published && (published.result.ok || published.of === graph) ? published.result : null
+      }
       runs={runs}
       running={running}
     />

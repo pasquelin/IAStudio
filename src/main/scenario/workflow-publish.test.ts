@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { WorkflowEditorFlowItem } from '@scenario-labs/sdk'
-import type { GraphCompileProblem, GraphState } from '@shared/domain/graph'
-import type { FlowRefusal } from './workflow-compile'
+import type { GraphCompileProblem, GraphRefusal, GraphState } from '@shared/domain/graph'
 import { publishGraph, type WorkflowWriter } from './workflow-publish'
 
 const graph: GraphState = {
@@ -32,7 +31,7 @@ const writerOf = (overrides: Partial<WorkflowWriter> = {}): WorkflowWriter => ({
   ...overrides,
 })
 
-const deps = (writer: WorkflowWriter, flow = oneStep, refused: FlowRefusal | null = null) => ({
+const deps = (writer: WorkflowWriter, flow = oneStep, refused: GraphRefusal | null = null) => ({
   write: writer,
   flowOf: () => Promise.resolve(flow),
   refuse: () => refused,
@@ -40,7 +39,7 @@ const deps = (writer: WorkflowWriter, flow = oneStep, refused: FlowRefusal | nul
 })
 
 /** A refusal pointing at no node, which is what these tests are about — the code, not the ids. */
-const refusalOf = (problem: GraphCompileProblem): FlowRefusal => ({ problem, nodes: [] })
+const refusalOf = (problem: GraphCompileProblem): GraphRefusal => ({ problem, nodes: [] })
 
 describe('publishing a graph', () => {
   it('creates the workflow, then fills it and marks it ready', async () => {

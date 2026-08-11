@@ -27,6 +27,10 @@ export const RUN_STATE_KEY = 'runState'
  * Where "the compiler refuses BECAUSE of this node" rides down, beside the run state and never
  * inside it: a refusal is not a failed run — nothing has run — and folding it into `GraphNodeRun`
  * would paint a node red under a status it never reached.
+ *
+ * Written on every node, a sticky note included, though a note can never be named by one: it
+ * compiles to nothing, so no refusal reaches it. A key that appears and disappears is a key every
+ * reader has to guard, and the note draws its own shell rather than `NodeShell`.
  */
 export const PROBLEM_KEY = 'compileProblem'
 

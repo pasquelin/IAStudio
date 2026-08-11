@@ -97,6 +97,17 @@ function StatusLine({ ok, children }: { ok: boolean; children: ReactNode }) {
  * graph itself changes — `GraphDocument` keeps it beside the graph it judged — rather than
  * fading, so a refusal cannot be missed by looking away.
  */
+/**
+ * Which of the two verdicts the screen is about — the publication's while there is one.
+ *
+ * Exported because the CANVAS paints from it: said once here and once there, the two would drift,
+ * and a drift means nodes ringed in red under a sentence that is not about them.
+ */
+export const shownVerdict = (
+  result: GraphCompileResult | null,
+  published: GraphPublishResult | null | undefined,
+): GraphCompileResult | GraphPublishResult | null => published ?? result
+
 export function GraphStatus({
   result,
   published,
@@ -106,21 +117,22 @@ export function GraphStatus({
 }) {
   const { t } = useTranslation()
 
-  if (published) {
-    const said = published.ok
-      ? t('graphPublish.done')
-      : published.problem === 'refused'
-        ? t('graphPublish.refused')
-        : t(`graphCompile.problem.${published.problem}`)
+  // Through the very rule the canvas paints by, rather than beside it.
+  const shown = shownVerdict(result, published)
 
-    return <StatusLine ok={published.ok}>{said}</StatusLine>
+  if (!shown) return null
+  if (shown.ok) {
+    // A publication says it published; a compile counts what it would send.
+    const done =
+      'steps' in shown ? t('graphCompile.steps', { count: shown.steps }) : t('graphPublish.done')
+
+    return <StatusLine ok>{done}</StatusLine>
   }
 
-  if (!result) return null
+  const said =
+    shown.problem === 'refused'
+      ? t('graphPublish.refused')
+      : t(`graphCompile.problem.${shown.problem}`)
 
-  const label = result.ok
-    ? t('graphCompile.steps', { count: result.steps })
-    : t(`graphCompile.problem.${result.problem}`)
-
-  return <StatusLine ok={result.ok}>{label}</StatusLine>
+  return <StatusLine ok={false}>{said}</StatusLine>
 }

@@ -10,8 +10,8 @@ import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import {
   namedLoopId,
   outputNodesOf,
-  type GraphCompileProblem,
   type GraphCompileResult,
+  type GraphRefusal,
 } from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
 import type { ScenarioInput } from './schema'
@@ -139,9 +139,6 @@ export function modelIdsOf(graph: GraphState): readonly string[] {
   return [...ids]
 }
 
-/** A refusal and the nodes it points at — empty where the refusal points at none. */
-export type FlowRefusal = { problem: GraphCompileProblem; nodes: readonly string[] }
-
 export type CompileDeps = {
   /** Where the validator's own sentence goes: a developer's English, never the user's screen. */
   report: (message: string) => void
@@ -238,6 +235,24 @@ function reachedFrom(
 }
 
 /**
+ * The ends to blame for that loop: the one the converter RETAINS, plus every read end that is not
+ * it. In node order, so the retained one comes first.
+ *
+ * Not every end naming the loop — a spare end NOTHING reads misroutes nothing, which the block
+ * below says in as many words, and painting it would send the user to delete a node that is not
+ * the fault. `index === 0` is the retained one: `firstEnd` is filled in this very order.
+ */
+const endsToBlame = (
+  graph: GraphState,
+  named: string,
+  read: ReadonlySet<string>,
+): readonly string[] =>
+  graph.nodes
+    .filter(node => namedLoopId(node) === named)
+    .map(node => node.id)
+    .filter((id, index) => index === 0 || read.has(id))
+
+/**
  * How a loop and its end can be paired so the converter reads a WIRE differently from the screen.
  *
  * **Neither of the two is refused by `validateWorkflowFlow`**, which is the whole reason this
@@ -255,25 +270,7 @@ function reachedFrom(
  * - an end naming a node the graph no longer holds: the lookup answers nothing and the wire is
  *   simply dropped, which is the same as drawing no wire.
  */
-/**
- * The ends to blame for that loop: the one the converter RETAINS, plus every read end that is not
- * it. In node order, so the retained one comes first.
- *
- * Not every end naming the loop — a spare end NOTHING reads misroutes nothing, which the refusal
- * above says in as many words, and painting it would send the user to delete a node that is not
- * the fault. `index === 0` is the retained one: `firstEnd` is filled in this very order.
- */
-const endsToBlame = (
-  graph: GraphState,
-  named: string,
-  read: ReadonlySet<string>,
-): readonly string[] =>
-  graph.nodes
-    .filter(node => namedLoopId(node) === named)
-    .map(node => node.id)
-    .filter((id, index) => index === 0 || read.has(id))
-
-function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
+function loopPairingProblem(graph: GraphState): GraphRefusal | undefined {
   const consumers = consumersByProvider(graph)
   const read: { end: string; names: string }[] = []
   const firstEnd = new Map<string, string>()
@@ -349,7 +346,7 @@ export function refuseFlow(
   graph: GraphState,
   flow: readonly WorkflowEditorFlowItem[],
   report: (message: string) => void,
-): FlowRefusal | null {
+): GraphRefusal | null {
   // "Nothing is marked as an output" is the one cause of an empty flow the user can act on, and
   // the one refusal with no node to point at: what is wrong is that NO node carries the mark.
   if (outputNodesOf(graph).length === 0) return { problem: 'no-output', nodes: [] }
