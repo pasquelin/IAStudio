@@ -3,21 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Job, JobStatus } from '@shared/domain/job'
 import { STATUS_BUTTON } from '@/design/styles'
+import { job } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { JobsStatus } from './JobsStatus'
 
-function job(id: string, status: JobStatus, progress: number): Job {
-  return {
-    id,
-    kind: 'model',
-    targetId: 'flux-dev',
-    label: `Take ${id}`,
-    status,
-    progress,
-    createdAt: '2026-08-07T10:00:00.000Z',
-    assetIds: [],
-  }
-}
+/** Numbered takes, so the bar can be read with several jobs in it. The SHAPE comes from `job`. */
+const take = (id: string, status: JobStatus, progress: number): Job =>
+  job({ id, status, progress, targetId: 'flux-dev', label: `Take ${id}` })
 
 beforeEach(() => {
   useJobs.setState({ jobs: [] })
@@ -30,7 +22,7 @@ describe('the jobs indicator', () => {
   })
 
   it('stays quiet once everything has succeeded', () => {
-    useJobs.setState({ jobs: [job('a', 'succeeded', 1)] })
+    useJobs.setState({ jobs: [take('a', 'succeeded', 1)] })
     const { container } = render(<JobsStatus />)
     expect(container).toBeEmptyDOMElement()
   })
@@ -41,7 +33,7 @@ describe('the jobs indicator', () => {
    * name: the name was already right.
    */
   it('says what opening it does, which its own face never shows', () => {
-    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    useJobs.setState({ jobs: [take('a', 'running', 0.4)] })
     render(<JobsStatus />)
 
     expect(screen.getByRole('button')).toHaveAttribute(
@@ -52,27 +44,27 @@ describe('the jobs indicator', () => {
   })
 
   it('counts what is under way and averages its progress', () => {
-    useJobs.setState({ jobs: [job('a', 'running', 0.4), job('b', 'running', 0.8)] })
+    useJobs.setState({ jobs: [take('a', 'running', 0.4), take('b', 'running', 0.8)] })
     render(<JobsStatus />)
     expect(screen.getByRole('button')).toHaveTextContent('2 générations')
     expect(screen.getByRole('button')).toHaveTextContent('60 %')
   })
 
   it('counts a queued job as under way — it is waiting, not done', () => {
-    useJobs.setState({ jobs: [job('a', 'queued', 0)] })
+    useJobs.setState({ jobs: [take('a', 'queued', 0)] })
     render(<JobsStatus />)
     expect(screen.getByRole('button')).toHaveTextContent('1 génération')
   })
 
   // A failure that vanishes with the last running job is a failure nobody reads.
   it('keeps a failure on screen once everything has stopped', () => {
-    useJobs.setState({ jobs: [job('a', 'failed', 0.3)] })
+    useJobs.setState({ jobs: [take('a', 'failed', 0.3)] })
     render(<JobsStatus />)
     expect(screen.getByRole('button')).toHaveTextContent('1 échec')
   })
 
   it('lists the jobs when opened', async () => {
-    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    useJobs.setState({ jobs: [take('a', 'running', 0.4)] })
     render(<JobsStatus />)
 
     await userEvent.click(screen.getByRole('button'))
@@ -81,7 +73,7 @@ describe('the jobs indicator', () => {
 
   // Same defect as the journal beside it, seen less often only because the bar is not always up.
   it('closes on a press beside it', async () => {
-    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    useJobs.setState({ jobs: [take('a', 'running', 0.4)] })
     render(
       <>
         <JobsStatus />
@@ -97,7 +89,7 @@ describe('the jobs indicator', () => {
   })
 
   it('offers the target the status line shares', () => {
-    useJobs.setState({ jobs: [job('a', 'running', 0.4)] })
+    useJobs.setState({ jobs: [take('a', 'running', 0.4)] })
     render(<JobsStatus />)
 
     expect(screen.getByRole('button')).toHaveClass(STATUS_BUTTON)
