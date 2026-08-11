@@ -191,6 +191,19 @@ function asRun(value: unknown): GraphNodeRun | undefined {
 export const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
 
 /**
+ * What a node is CALLED, for the face and for the canvas's live region alike.
+ *
+ * Through `asText` rather than the declared `title?: string`: `parseNode` keeps `data` as the file
+ * wrote it, so a `.workflow.json` carrying `"title": 42` types as a string and is not one. Two
+ * surfaces naming the same node have to name it the same way.
+ */
+export const titleOf = (
+  data: Readonly<Record<string, unknown>>,
+  type: GraphNodeType,
+  t: (key: string) => string,
+): string => asText(data.title) || t(labelOf(type))
+
+/**
  * Memoised, like the rows of the collections: React Flow re-renders every mounted node on each
  * frame of a pan, and a graph is the one surface of the studio holding dozens of them at once.
  */
@@ -208,7 +221,7 @@ function nodeOf(
 
     return (
       <NodeShell
-        title={asText(fields.title) || t(labelOf(drawn))}
+        title={titleOf(fields, drawn, t)}
         kind={type}
         run={asRun(fields[RUN_STATE_KEY])}
         output={fields.isOutput === true && canBeOutput(drawn)}

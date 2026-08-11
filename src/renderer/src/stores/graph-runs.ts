@@ -130,8 +130,14 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
       pending.set(documentId, asked)
 
       // Cleared rather than kept: a node left green from the previous run, beside one the graph
-      // has since made unreachable, reads as a result this run produced.
-      patch(documentId, controller, held => ({ ...held, running: true, nodes: {} }))
+      // has since made unreachable, reads as a result this run produced. `latest` goes with them,
+      // or the live region keeps announcing a run whose badges have all just been wiped.
+      patch(documentId, controller, held => ({
+        ...held,
+        running: true,
+        nodes: {},
+        latest: undefined,
+      }))
 
       try {
         /**

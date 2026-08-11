@@ -28,7 +28,7 @@ import {
   selectionAfter,
   toCanvasEdges,
 } from './adapter'
-import { GRAPH_NODE_TYPES, labelOf, runLabelKey } from './GraphNodes'
+import { GRAPH_NODE_TYPES, runLabelKey, titleOf } from './GraphNodes'
 import { GraphMenu } from './GraphMenu'
 import { GraphStatus, shownVerdict, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
@@ -160,14 +160,19 @@ export function GraphCanvas({
   // Composed rather than stored: the two halves are already translated, and a sentence built here
   // would be a screen string outside the bundles.
   const announcement = useMemo(() => {
-    if (!latest) return ''
+    /*
+     * `idle` and nothing else, though `SILENT_RUN_STATUSES` names two: `failed` has no sentence
+     * of its OWN, but `runLabelKey` resolves it to its reason, which does — and a failure is the
+     * one thing this region must never swallow. `idle` really has none: `bundles.test.ts` excludes
+     * it on the grounds that a node saying nothing needs no words, so announcing it would read
+     * `graphRun.idle` out loud. A stop puts every waiting node back to exactly that.
+     */
+    if (!latest || latest.run.status === 'idle') return ''
 
     const node = graph.nodes.find(candidate => candidate.id === latest.node)
     if (!node) return ''
 
-    const name = node.data.title || t(labelOf(node.type))
-
-    return `${name} — ${t(runLabelKey(latest.run))}`
+    return `${titleOf(node.data, node.type, t)} — ${t(runLabelKey(latest.run))}`
   }, [graph.nodes, latest, t])
 
   // Painted from the verdict the STATUS LINE is showing — its own rule, asked rather than
@@ -284,9 +289,9 @@ export function GraphCanvas({
             />
             {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
             <GraphStatus result={compiled} published={published} />
-            {/* ONE live region for the whole canvas, as the workspace bar carries one for its own
-                gesture. A node's badge is read by walking it; what CHANGES is announced here, or
-                twenty nodes would announce over one another. */}
+            {/* The one region that NAMES A NODE — the status line above is a live region too, and
+                says what the graph as a whole would compile to. A node's badge is read by walking
+                it; what CHANGES is announced here, or twenty nodes would announce at once. */}
             <p role="status" aria-live="polite" className="sr-only">
               {announcement}
             </p>

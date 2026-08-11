@@ -365,6 +365,83 @@ describe('a graph as a document', () => {
     })
 
     /**
+     * `idle` is the ONE state with no sentence of its own — `bundles.test.ts` excludes it, on the
+     * grounds that a node saying nothing needs no words. Announcing it would read `graphRun.idle`
+     * out loud, and a Stop puts every waiting node back to exactly that.
+     */
+    it('says nothing rather than reading a key out loud on a stopped node', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: {},
+              latest: { node: text.id, run: { status: 'idle' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe('')
+    })
+
+    /** A failure is the one thing this region must never swallow — and it reads as its REASON. */
+    it('announces a failure by the reason it names', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: {},
+              latest: { node: text.id, run: { status: 'failed', failure: 'no-model' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe(
+        'Texte — sans modèle',
+      )
+    })
+
+    /**
+     * `parseNode` keeps `data` as the file wrote it, so an imported `"title": 42` types as a
+     * string without being one. The face guards it; this region has to guard it the same way, or
+     * two surfaces name the same node differently.
+     */
+    it('names a node whose imported title is not text as its type', () => {
+      act(() =>
+        useGraphs.getState().runCommand(DOCUMENT, addGraphNode({ ...text, data: { title: 42 } })),
+      )
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: {},
+              latest: { node: text.id, run: { status: 'done' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe(
+        'Texte — terminé',
+      )
+    })
+
+    /**
      * The run state outlives the graph — an import replaces every node while `latest` still names
      * one of the old ones. Announcing its state would name a node nobody can find on the canvas.
      */
