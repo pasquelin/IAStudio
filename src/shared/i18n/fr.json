@@ -871,7 +871,7 @@
     "source": "Source",
     "program": "Programme",
     "noClip": "Sélectionnez un clip pour le voir ici.",
-    "unreadable": "Ce clip n’a pas pu être décodé : son format n’est pas lisible ici.",
+    "unreadable": "Ce clip n’a pas pu être affiché : son média est introuvable, ou son format n’est pas lisible ici.",
     "rewind": "Retour au début"
   },
   "audio": {

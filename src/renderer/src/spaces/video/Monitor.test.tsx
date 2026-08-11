@@ -52,7 +52,7 @@ describe('Monitor', () => {
   it('stays silent while every clip decodes', () => {
     mounted()
 
-    expect(screen.queryByText(/décodé/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/n’a pas pu être affiché/)).not.toBeInTheDocument()
   })
 
   /** A `.exr` on a track used to leave the programme black, with nothing on screen saying why. */
@@ -61,7 +61,7 @@ describe('Monitor', () => {
 
     report(true)
 
-    expect(screen.getByText(/n’a pas pu être décodé/)).toBeInTheDocument()
+    expect(screen.getByText(/n’a pas pu être affiché/)).toBeInTheDocument()
   })
 
   it('drops the message once the playhead reaches a clip that decodes', () => {
@@ -70,7 +70,7 @@ describe('Monitor', () => {
 
     report(false)
 
-    expect(screen.queryByText(/n’a pas pu être décodé/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/n’a pas pu être affiché/)).not.toBeInTheDocument()
   })
 
   it('prefers the reason to the invitation its host shows over an empty monitor', () => {
@@ -79,6 +79,6 @@ describe('Monitor', () => {
     report(true)
 
     expect(screen.queryByText(/Sélectionnez un clip/)).not.toBeInTheDocument()
-    expect(screen.getByText(/n’a pas pu être décodé/)).toBeInTheDocument()
+    expect(screen.getByText(/n’a pas pu être affiché/)).toBeInTheDocument()
   })
 })

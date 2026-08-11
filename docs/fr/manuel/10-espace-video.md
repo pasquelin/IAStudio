@@ -20,7 +20,8 @@ Au centre, deux moniteurs côte à côte — la convention de Premiere et de DaV
 | **Programme**, à droite | le montage tel qu’il sera |
 
 Quand aucun clip n’est sélectionné, le moniteur Source affiche « Sélectionnez un clip pour le
-voir ici. »
+voir ici. » Quand le clip sous la tête de lecture ne peut pas être décodé, c’est
+[l’autre message](#quand-un-clip-ne-peut-pas-safficher) qui prend sa place.
 
 ---
 
@@ -200,6 +201,27 @@ laborieuse. Voir [Les assets](07-assets.md#si-la-préparation-vidéo-est-indispo
 **À l’arrêt, le moniteur ne dessine rien.** Une image fixe repeinte soixante fois par seconde
 consomme autant qu’une lecture — pour rien. Le moniteur s’arrête dès que la lecture s’arrête, ce qui
 se remarque surtout sur un portable : le ventilateur se tait, la batterie tient.
+
+---
+
+## Quand un clip ne peut pas s’afficher
+
+Le moniteur affiche alors, à la place de l’image :
+
+> Ce clip n’a pas pu être affiché : son média est introuvable, ou son format n’est pas lisible ici.
+
+Trois formats d’image s’importent sans s’afficher dans un moniteur — **`.exr`, `.tif` et
+`.tiff`**. Ils entrent bien dans le projet, ils se posent bien sur une piste, mais le décodeur
+d’images du studio ne les ouvre pas. Un fichier vidéo tronqué ou abîmé donne le même message.
+
+**Le studio ne convertit rien.** Le message dit ce qui se passe ; il ne remplace pas votre
+fichier. Pour monter un `.exr` ou un `.tif`, convertissez-le vous-même en `.png` avant de
+l’importer.
+
+> **Le message n’apparaît que si le moniteur ne montre rien d’autre.** Un clip illisible posé
+> **au-dessus** d’une piste qui, elle, s’affiche laisse voir cette dernière, et se contente de
+> disparaître : recouvrir une image correcte pour signaler l’autre coûterait plus qu’il ne
+> rapporte.
 
 ---
 

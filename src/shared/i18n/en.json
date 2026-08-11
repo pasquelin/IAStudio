@@ -871,7 +871,7 @@
     "source": "Source",
     "program": "Program",
     "noClip": "Select a clip to see it here.",
-    "unreadable": "This clip could not be decoded: its format cannot be read here.",
+    "unreadable": "This clip could not be shown: its media is missing, or its format cannot be read here.",
     "rewind": "Back to start"
   },
   "audio": {
