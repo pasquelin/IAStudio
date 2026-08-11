@@ -3,7 +3,7 @@ import type { Job } from '@shared/domain/job'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
 import { job } from './job-fixtures'
-import { useJobs, whenSettled } from './jobs'
+import { useJobs, whenSettled, whenLeftQueue } from './jobs'
 
 describe('jobs store', () => {
   beforeEach(() => {
@@ -179,5 +179,57 @@ describe('waiting on a job', () => {
     useJobs.setState({ jobs: [] })
 
     await expect(settled).resolves.toBeNull()
+  })
+})
+
+describe('waiting for a job to leave the queue', () => {
+  beforeEach(() => {
+    useJobs.setState({ jobs: [job({ id: 'job_1', status: 'queued', progress: 0 })] })
+  })
+
+  it('waits while the job is still queued, and answers when it starts', async () => {
+    const started = whenLeftQueue('job_1', null)
+
+    useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.1 })
+
+    await expect(started).resolves.toMatchObject({ status: 'running' })
+  })
+
+  /**
+   * A job that finished between two polls did leave the queue, and the graph node reading this
+   * has to stop saying it is waiting. Held out for a `running` nobody observed, the node would
+   * read as queued for the whole generation and then jump to done.
+   */
+  it('answers for a job that went straight to its result', async () => {
+    const started = whenLeftQueue('job_1', null)
+
+    useJobs.getState().apply({ id: 'job_1', status: 'succeeded', progress: 1, assetIds: ['a1'] })
+
+    await expect(started).resolves.toMatchObject({ status: 'succeeded' })
+  })
+
+  it('answers straight away for one that had already started', async () => {
+    useJobs.setState({ jobs: [job({ id: 'job_1', status: 'running' })] })
+
+    await expect(whenLeftQueue('job_1', null)).resolves.toMatchObject({ status: 'running' })
+  })
+
+  /**
+   * The only test here whose job is still WAITING when the signal is raised, and the only one that
+   * makes this wait subscribe at all — the three above answer off the replica and never listen.
+   *
+   * It was written, deleted as a duplicate of `whenSettled`'s own, and put back by the review that
+   * named what the deletion cost: a graph of twenty generators all held behind the concurrency
+   * bound, stopped by the user, leaves twenty subscriptions and twenty closures alive for the rest
+   * of the session — the very leak the required `signal` exists to prevent. Nothing else would
+   * redden if a caller passed `null` here.
+   */
+  it('gives up when the caller aborts, and says it found nothing', async () => {
+    const controller = new AbortController()
+    const started = whenLeftQueue('job_1', controller.signal)
+
+    controller.abort()
+
+    await expect(started).resolves.toBeNull()
   })
 })

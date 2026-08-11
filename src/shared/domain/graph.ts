@@ -416,6 +416,12 @@ export type GraphTransformVariables = Readonly<Record<string, string | readonly 
  */
 export type GraphRunStatus =
   | 'idle'
+  /**
+   * Its turn has not come: providers still running, or a submission the job manager has taken and
+   * not yet started. Apart from `idle`, which is a node the run never reached at all — that one
+   * paints nothing, and a graph of twenty showed two badges because everything waiting wore it.
+   */
+  | 'queued'
   | 'running'
   | 'awaiting'
   | 'cached'
@@ -426,6 +432,7 @@ export type GraphRunStatus =
 
 export const GRAPH_RUN_STATUSES: readonly GraphRunStatus[] = [
   'idle',
+  'queued',
   'running',
   'awaiting',
   'cached',

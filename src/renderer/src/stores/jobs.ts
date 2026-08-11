@@ -121,11 +121,38 @@ export const useJobs = create<JobsState>()((set, get) => ({
  * up on: optional, the next caller reproduces the parked frame this exists to remove, and nothing
  * mechanical refuses it. The same lock `ToolButton` puts on its tooltip, for the same reason.
  */
-export function whenSettled(jobId: string, signal: AbortSignal | null): Promise<Job | null> {
+export const whenSettled = (jobId: string, signal: AbortSignal | null): Promise<Job | null> =>
+  whenJob(jobId, job => isFinished(job.status), signal)
+
+/**
+ * Resolves when a job stops waiting, whatever it does next — named for that and not for a start,
+ * because a terminal status answers it too and a caller told "started" would believe otherwise.
+ *
+ * The other half of what a chain of generations needs: submitting is not starting. `queued` covers
+ * both waits the studio has — its own concurrency bound (`job-manager.ts` holds the entry at
+ * `queued` while it sits in `pump`'s queue) and Scenario's, which `jobStatusOf` maps to the same
+ * word — so a caller painting work as under way on submission claims what may not begin for
+ * minutes.
+ *
+ * A terminal status answers this too, and the caller is what decides what to make of it: waiting
+ * on a `running` nobody observed would never resolve for a job that finished between two polls,
+ * and the wait would then only ever end on the abort.
+ *
+ * `null` on the same two counts as `whenSettled`: a job the replica no longer holds, and a caller
+ * that has given up.
+ */
+export const whenLeftQueue = (jobId: string, signal: AbortSignal | null): Promise<Job | null> =>
+  whenJob(jobId, job => job.status !== 'queued', signal)
+
+function whenJob(
+  jobId: string,
+  ready: (job: Job) => boolean,
+  signal: AbortSignal | null,
+): Promise<Job | null> {
   const answer = (jobs: readonly Job[]): Job | null | undefined => {
     const job = jobs.find(candidate => candidate.id === jobId)
     if (!job) return null
-    return isFinished(job.status) ? job : undefined
+    return ready(job) ? job : undefined
   }
 
   const held = answer(useJobs.getState().jobs)

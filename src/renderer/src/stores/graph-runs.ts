@@ -4,7 +4,7 @@ import { isFinished } from '@shared/domain/job'
 import type { GraphCache } from '@/engines/graph/plan'
 import { getBridge } from '@/services/bridge'
 import { graphOf, useGraphs } from './graphs'
-import { useJobs, whenSettled } from './jobs'
+import { useJobs, whenSettled, whenLeftQueue } from './jobs'
 
 /** What one graph document is doing, and what it has to show for the runs before this one. */
 export type DocumentRun = {
@@ -155,7 +155,7 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
           graphOf(useGraphs.getState(), documentId),
           runOf(get(), documentId).cache,
           {
-            generate: async (modelId, body) => {
+            generate: async (modelId, body, started) => {
               const job = await useJobs.getState().submit({ kind: 'model', id: modelId }, body)
               // No bridge, or a submission the main process would not take. The node says so; the
               // run carries on with whatever does not depend on it.
@@ -166,6 +166,15 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               // to cancel — the id did not exist yet. It exists now, and it is a generation the
               // user has already asked to stop paying for.
               if (controller.signal.aborted) cancelIfRunning(job.id)
+
+              // Watched beside the wait rather than awaited before it: the node is repainted WHILE
+              // this frame sits on the result. `isFinished` is what keeps that repaint honest — a
+              // job that ran and stopped between two polls (the interval is 2 s) leaves the queue
+              // and settles on the same event, and painting it as under way on the way past would
+              // announce a start for something already over.
+              void whenLeftQueue(job.id, controller.signal).then(taken => {
+                if (taken && !isFinished(taken.status)) started()
+              })
 
               const settled = await whenSettled(job.id, controller.signal)
               if (settled?.status !== 'succeeded') throw new Error(`${job.id} did not succeed`)
@@ -182,7 +191,12 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               patch(documentId, controller, held => ({
                 ...held,
                 nodes: { ...held.nodes, [nodeId]: run },
-                latest: nodeId,
+                // Every node the plan ordered goes `queued` in one turn at the start of a run, so
+                // following each would leave the live region on the last one the plan happened to
+                // order — announcing an arbitrary node to say nothing had happened. It follows the
+                // FIRST and then no other, which is the only reading that serves both: a run whose
+                // opening move is a long wait still says so, and the other nineteen stay quiet.
+                ...(run.status === 'queued' && held.latest !== undefined ? {} : { latest: nodeId }),
               })),
             signal: controller.signal,
           },

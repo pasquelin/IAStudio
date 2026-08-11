@@ -174,6 +174,11 @@ export function GraphCanvas({
      * question "does this have words". `idle` has none on purpose — `bundles.test.ts` excludes it
      * because a node saying nothing needs none — and a Stop puts every waiting node back to it.
      * A ninth state added without its line would go quiet here instead of reading its own key.
+     *
+     * It is not the whole policy, and reading it alone would mislead: `queued` HAS a sentence and
+     * is never announced all the same, because `graph-runs.ts` refuses to move `latest` onto it —
+     * a run opens with every node queued at once, and this region would name whichever the plan
+     * ordered last to say that nothing had happened.
      */
     const said = t(runLabelKey(run))
     if (said === runLabelKey(run)) return ''
