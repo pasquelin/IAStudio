@@ -63,7 +63,7 @@ Bottom right of the image, a small floating bar.
 | **+** | zoom in one step | `⌘+` / `Ctrl+=` |
 | **Fit** | the whole image fits in the panel | `⌘0` / `Ctrl+0` |
 
-Zoom runs from **2 %** to **6400 %**. Below 100 %, the percentage shows one decimal: 3 % and 3.7 %
+Zoom runs from **2%** to **6400%**. Below 100%, the percentage shows one decimal: 3% and 3.7%
 do not frame the same thing.
 
 **Actual size** (`⌘1`) is the only scale where you judge sharpness: one image pixel to one screen
@@ -276,7 +276,7 @@ would crawl at 400 px and leap at 4. At the bottom of the scale it stays at leas
 
 > **The circle following the pointer shows what the next stroke will cover**, at its real
 > diameter. It grows and shrinks with the zoom, exactly as the stroke would: a 24 px brush covers
-> half the screen at 1600 %, and a dot at 5 %.
+> half the screen at 1600%, and a dot at 5%.
 
 > **The cursor turns to a no-entry sign when the tool can do nothing here** — a group is armed,
 > the active layer is an adjustment layer, its pixels or its position are locked. The refusal

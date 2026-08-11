@@ -711,7 +711,7 @@ in one.
 What you see while something is working:
 
 ```
-3 generations  ▓▓▓▓▓░░░░░  45 %  ⌃
+3 generations  ▓▓▓▓▓░░░░░  45%  ⌃
 ```
 
 | Element | What it says |

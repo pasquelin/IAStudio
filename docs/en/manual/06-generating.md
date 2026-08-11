@@ -289,7 +289,7 @@ from any workspace, and a panel could only be in one. There, it costs no space a
 ### The summary
 
 ```
-3 generations  ▓▓▓▓▓░░░░░  45 %  ⌃
+3 generations  ▓▓▓▓▓░░░░░  45%  ⌃
 ```
 
 | Element | What it says |
