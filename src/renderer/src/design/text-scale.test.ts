@@ -23,8 +23,12 @@ const OFF_LADDER = /text-\[\d+px\]|\btext-(?:xl|[2-9]xl)\b/
  */
 const NUMERIC_SIZE = /\bfontSize:\s*\d/
 
-/** Line-height pairs are `--text-xs--line-height` and never match: the dash is not a letter. */
-const LADDER = [...stylesheet.matchAll(/--text-([a-z]+):\s*([^;]+);/g)]
+/**
+ * Line-height pairs are `--text-xs--line-height` and never match: a dash cannot follow the first
+ * letter here. Digits do, so a step named `body2` is read rather than skipped — the merger rule
+ * below is only as wide as this pattern, and a step it misses comes back frozen in silence.
+ */
+const LADDER = [...stylesheet.matchAll(/--text-([a-z][a-z0-9]*):\s*([^;]+);/g)]
 
 const REGISTERED = [...stylesheet.matchAll(/@property --text-([a-z]+)\s*\{([^}]+)\}/g)]
 
@@ -68,10 +72,13 @@ describe('the text ladder of the studio', () => {
   })
 
   /**
-   * `tailwind-merge` reads a font size by its t-shirt shape, so the four steps Tailwind does not
-   * ship looked like text COLOURS: `cn('text-muted', 'text-tiny')` returned the size alone, and
-   * ten sites — `CONTROL` among them — handed out a token that never reached the DOM. Derived
-   * from the sheet rather than listed, so a ninth step cannot be added silently frozen.
+   * `tailwind-merge` reads a font size by its t-shirt shape, so the steps Tailwind does not ship
+   * looked like text COLOURS to it: `cn('text-muted', 'text-tiny')` returned the size alone, and
+   * `CONTROL` had been handing out a `text-text` that never reached the DOM. Thirty call sites
+   * were rendering a class they do not write; none was rendering one it does.
+   *
+   * Read off the sheet rather than listed, so a ninth step joins the rule by being declared —
+   * `helpers/cn.ts` is where it has to be repeated, and this is what says so out loud.
    */
   it('lets a step and a colour survive each other in one call', () => {
     const eaten = LADDER.map(([, name]) => name).filter(
@@ -86,6 +93,25 @@ describe('the text ladder of the studio', () => {
     expect(cn('text-muted', 'text-accent')).toBe('text-accent')
     // Alignment and wrapping share the prefix and none of the meaning.
     expect(cn('text-tiny', 'text-left')).toBe('text-tiny text-left')
+  })
+
+  /**
+   * The cost of the step above: a font size now outranks `leading-*` for the merger, so a size
+   * written AFTER an explicit line height silently takes it away. Every site writes them the
+   * other way round today — this keeps it that way, because the loss shows nothing.
+   *
+   * One class list at a time: a run that crosses a quote or a newline is two attributes on two
+   * elements, and the pairs a `cn()` builds across its arguments are checked by hand instead.
+   */
+  it('never hands the line height to a size that would eat it', () => {
+    const offenders = WRITTEN_SOURCES.filter(([, source]) =>
+      LADDER.some(([, step]) =>
+        new RegExp(`leading-[a-z0-9-]+[^"'\\n]*\\btext-${step}\\b`).test(source),
+      ),
+    ).map(([path]) => path)
+
+    expect(cn('leading-tight', 'text-tiny')).toBe('text-tiny')
+    expect(offenders).toEqual([])
   })
 
   it('is the only way a source sizes text', () => {
