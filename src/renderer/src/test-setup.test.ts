@@ -1,7 +1,19 @@
 import { getConfig } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import config from '../../../vitest.config.ts?raw'
-import { AWAITED_QUERY_MS } from './test-setup'
+
+/**
+ * Neither bound is ours, and that is the whole design of this file.
+ *
+ * Importing `./test-setup` for its constant would run the `configure()` at its module scope, so
+ * the case would trigger what it claims to observe — and comparing the live value to the constant
+ * that just wrote it compares a number to itself. Both mutations this guard exists for survived
+ * that version: unhooking `setupFiles`, and putting the patience back to the library's default.
+ *
+ * So the case reads what the LIBRARY does when nobody configures it, and what the RUNNER allows a
+ * case. Our own number appears nowhere here; it is bracketed, not repeated.
+ */
+const LIBRARY_DEFAULT_MS = 1000
 
 /**
  * What the runner allows a case, read off the config rather than repeated. Comments are stripped
@@ -18,8 +30,12 @@ const CASE_MS = Number(
 )
 
 describe('the renderer test setup', () => {
+  /**
+   * Which is also the proof that the setup is wired at all: `setupFiles` emptied, the library
+   * answers its own default and this case is the one that says so.
+   */
   it('waits longer than Testing Library would for an awaited query', () => {
-    expect(getConfig().asyncUtilTimeout).toBe(AWAITED_QUERY_MS)
+    expect(getConfig().asyncUtilTimeout).toBeGreaterThan(LIBRARY_DEFAULT_MS)
   })
 
   /**
@@ -30,6 +46,6 @@ describe('the renderer test setup', () => {
    */
   it('expires before the runner gives up on the case', () => {
     expect(CASE_MS).toBeGreaterThan(0)
-    expect(AWAITED_QUERY_MS).toBeLessThan(CASE_MS)
+    expect(getConfig().asyncUtilTimeout).toBeLessThan(CASE_MS)
   })
 })

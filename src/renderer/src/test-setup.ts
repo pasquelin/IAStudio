@@ -104,16 +104,20 @@ function polyfillWorker(): void {
  * That second is a budget for the RUNNER, not for the studio, and the runner shares this machine
  * with whatever else builds on it. Measured on `ModelNodeFields.test.tsx`, which waits on a
  * catalogue asked only once the model's schema has named its family — two round trips: the case
- * takes 136 to 181 ms on a quiet machine, passes 15 times out of 15 on its own, and took 1035 ms
- * then 1270 ms inside full runs under six concurrent sessions. Seven times its own cost is what
- * the load did to it, against a ceiling of seven.
+ * takes 136 to 181 ms alone on a quiet machine, and took 1035 ms then 1270 ms inside full runs
+ * under six concurrent sessions. Seven to nine times its own cost, against a ceiling of seven.
+ * Those readings are one machine's on one afternoon; a review re-measuring under its own load
+ * read 186 to 525 ms, which points the same way without reproducing them.
  *
  * Three seconds is twice the worst reading. It buys tolerance, not speed: a satisfied wait
- * returns at once, so a green run pays nothing — measured, 102 s against 113 s. What it costs is
- * +2,00 s per expiry, on 462 waiting sites across 63 files.
+ * returns at once, so a green run should pay nothing — that mechanism is reasoned, not measured,
+ * and no run at one second was ever timed against a run at three. What it costs is +2,00 s per
+ * expiry, on 462 waiting sites across 63 files.
  *
- * Raised here rather than per call: two suites had already bought their own patience by hand,
- * which is how a default nobody set becomes a rule nobody can see.
+ * Raised here rather than per call: two suites of THIS project had already bought their own
+ * patience by hand, which is how a default nobody set becomes a rule nobody can see. The `node`
+ * project keeps its own — `vi.waitFor` takes no global, and `main/project/folder.test.ts` still
+ * writes its number where its neighbours name theirs.
  */
 export const AWAITED_QUERY_MS = 3000
 
