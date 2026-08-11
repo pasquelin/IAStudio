@@ -1017,7 +1017,8 @@ opaquely.
 merge, and `pnpm test` states it. Unit tests are colocated (`*.test.ts` next to the code) and
 written in the same movement as the code, never after.
 
-`pnpm validate` — typecheck, lint, format check, tests with coverage budgets — must be green
+`pnpm validate` — typecheck, lint, format check, tests with coverage budgets, and the slack
+those budgets have left (`scripts/coverage-slack.mjs`) — must be green
 before any commit.
 
 **Budgets are declared per glob in `vitest.config.ts`, and their sign is their whole meaning.** A
