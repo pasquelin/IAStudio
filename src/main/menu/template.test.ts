@@ -590,6 +590,37 @@ describe('every native role', () => {
     }
   })
 
+  /**
+   * Six roles carry a submenu of their own, spelled in the same English literals — "Minimize",
+   * "Bring All to Front". The walk above cannot reach those rows: Electron composes them when
+   * the menu is built, from a template that never wrote them down.
+   */
+  const CONTAINER_ROLES = ['appMenu', 'fileMenu', 'editMenu', 'viewMenu', 'windowMenu', 'shareMenu']
+
+  it('leaves no submenu for Electron to compose', () => {
+    const delegated = (items: MenuItemConstructorOptions[]): string[] =>
+      items.flatMap(item => [
+        ...(item.role && CONTAINER_ROLES.includes(item.role) && !item.submenu ? [item.role] : []),
+        ...(Array.isArray(item.submenu) ? delegated(item.submenu) : []),
+      ])
+
+    for (const shape of SHAPES) {
+      expect(
+        delegated(menuTemplate(options(shape))),
+        `workspace ${shape.workspace}, mac ${shape.isMac}`,
+      ).toEqual([])
+    }
+  })
+
+  // The rows Electron would have written, in our words and in its own order.
+  it('names the window rows itself, on both platforms', () => {
+    const rows = (isMac: boolean): string[] =>
+      labels(submenuOf(menuTemplate(options({ isMac })), TRANSLATIONS.fr.menu.window))
+
+    expect(rows(true)).toEqual(['Réduire', 'Zoom', '', 'Tout ramener au premier plan'])
+    expect(rows(false)).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
+  })
+
   // A label read off the wrong bundle is worse than none: it would look deliberate.
   it('reads its label from the language it was asked for', () => {
     const french = menuTemplate(options({ language: 'fr' }))

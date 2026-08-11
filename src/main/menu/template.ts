@@ -445,6 +445,20 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /**
+   * Spelled out rather than left to `role: 'windowMenu'`, which composes this very list out of
+   * English literals. Written to match what Electron builds, so the role — and whatever AppKit
+   * does with it — sees the same items under our own words.
+   */
+  const windowMenuTail: MenuItemConstructorOptions[] = isMac
+    ? [{ type: 'separator' }, roleItem('front')]
+    : [roleItem('close')]
+  const windowMenuItems: MenuItemConstructorOptions[] = [
+    roleItem('minimize'),
+    roleItem('zoom'),
+    ...windowMenuTail,
+  ]
+
   return [
     ...(isMac ? [appMenuItem] : []),
     {
@@ -504,7 +518,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ...developerItems(isDevelopment, roleItem),
       ],
     },
-    { role: 'windowMenu', label: t.menu.window },
+    { role: 'windowMenu', label: t.menu.window, submenu: windowMenuItems },
     ...helpMenu,
   ]
 }
