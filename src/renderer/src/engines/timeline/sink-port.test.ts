@@ -48,6 +48,7 @@ const picture = (): StillPicture & { frame: ReturnType<typeof vi.fn> } => {
 const videoSink = (): SinkLike => ({
   getSample: vi.fn(async () => null),
   close: vi.fn(),
+  holdsDecoder: true,
 })
 
 const port = (over: Partial<SinkPort> = {}): SinkPort => ({

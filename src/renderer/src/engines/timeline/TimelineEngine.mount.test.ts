@@ -54,6 +54,7 @@ const engineFor = (host: HTMLElement) =>
   new TimelineEngine({
     openSink: () => Promise.reject(new Error('no decoder in a test')),
     maxDecoders: 1,
+    maxPictures: 1,
     owner: host.id,
   })
 

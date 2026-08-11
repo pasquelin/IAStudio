@@ -100,6 +100,8 @@ export function createFrameSink({ upload }: { upload: (frame: VideoFrame) => voi
 export type TimelineEngineDeps = {
   openSink: (assetId: string) => Promise<SinkLike>
   maxDecoders: number
+  /** Still pictures hold no decoder; their ceiling bounds memory, not silicon. */
+  maxPictures: number
   /** Identifies this player to the single playback token — the document id does. */
   owner: string
   /** Called on every played frame, so the document can follow with its playhead. */
@@ -135,7 +137,11 @@ export class TimelineEngine {
   constructor(private readonly deps: TimelineEngineDeps) {
     // First child, so every layer added later composites over it.
     this.frame.addChild(this.backdrop)
-    this.pool = createDecoderPool({ open: deps.openSink, maxDecoders: deps.maxDecoders })
+    this.pool = createDecoderPool({
+      open: deps.openSink,
+      maxDecoders: deps.maxDecoders,
+      maxPictures: deps.maxPictures,
+    })
     this.clock = createClock({
       audioTime: deps.audioTime ?? (() => null),
       monotonic: () => performance.now(),

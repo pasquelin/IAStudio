@@ -37,6 +37,7 @@ export function createStillSink(picture: StillPicture): SinkLike {
     // closing the picture here would leave the next seek with nothing to draw.
     getSample: async () => ({ toVideoFrame: picture.frame, close: () => {} }),
     close: picture.close,
+    holdsDecoder: false,
   }
 }
 
@@ -74,7 +75,11 @@ async function openVideo(blob: Blob): Promise<SinkLike | null> {
     const track = await input.getPrimaryVideoTrack()
     if (track) {
       const sink = new VideoSampleSink(track)
-      return { getSample: seconds => sink.getSample(seconds), close: () => input.dispose() }
+      return {
+        getSample: seconds => sink.getSample(seconds),
+        close: () => input.dispose(),
+        holdsDecoder: true,
+      }
     }
   } catch (error) {
     input.dispose()

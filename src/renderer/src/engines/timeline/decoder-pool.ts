@@ -14,11 +14,18 @@ export type VideoSampleLike = {
 export type SinkLike = {
   getSample: (seconds: number) => Promise<VideoSampleLike | null>
   close: () => void
+  /**
+   * Whether this sink holds a hardware decoder. A still picture holds a bitmap and none, and
+   * counting it against the decoder budget evicted a rush that did need one.
+   */
+  holdsDecoder: boolean
 }
 
 export type DecoderPoolDeps = {
   open: (assetId: string) => Promise<SinkLike>
   maxDecoders: number
+  /** Pictures hold no decoder, so they answer to their own ceiling: memory, not silicon. */
+  maxPictures: number
 }
 
 export type DecoderPool = {
@@ -36,7 +43,11 @@ export function secondsToUs(value: number): Us {
   return Math.round(value * 1_000_000)
 }
 
-export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): DecoderPool {
+export function createDecoderPool({
+  open,
+  maxDecoders,
+  maxPictures,
+}: DecoderPoolDeps): DecoderPool {
   /**
    * Insertion order is recency order: re-inserting on every use is what makes a Map an LRU.
    *
@@ -47,10 +58,17 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
    */
   const sinks = new Map<string, Promise<SinkLike>>()
   const undecodable = new Set<string>()
+  /** Learned when an opening settles. Until then a sink is counted against the decoders. */
+  const pictures = new Set<string>()
 
   const touch = (assetId: string, opening: Promise<SinkLike>): void => {
     sinks.delete(assetId)
     sinks.set(assetId, opening)
+  }
+
+  const forget = (assetId: string): void => {
+    sinks.delete(assetId)
+    pictures.delete(assetId)
   }
 
   /** Closes whenever it finishes opening. A failed open is `sinkFor`'s business, not ours. */
@@ -58,14 +76,25 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
     void opening.then(sink => sink.close()).catch(() => {})
   }
 
+  /**
+   * Two ceilings, because the two kinds are scarce for different reasons. Insertion order is
+   * recency order, so dropping from the front drops the least recently used of the kind.
+   */
   const evict = (): void => {
-    while (sinks.size > maxDecoders) {
-      const oldest = sinks.keys().next()
-      if (oldest.done) return
+    dropOldest(assetId => !pictures.has(assetId), sinks.size - pictures.size - maxDecoders)
+    dropOldest(assetId => pictures.has(assetId), pictures.size - maxPictures)
+  }
 
-      const opening = sinks.get(oldest.value)
-      sinks.delete(oldest.value)
+  const dropOldest = (counted: (assetId: string) => boolean, over: number): void => {
+    let left = over
+    for (const assetId of [...sinks.keys()]) {
+      if (left <= 0) return
+      if (!counted(assetId)) continue
+
+      const opening = sinks.get(assetId)
+      forget(assetId)
       if (opening) closeLater(opening)
+      left -= 1
     }
   }
 
@@ -81,11 +110,17 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
     }
 
     try {
-      return await opening
+      const sink = await opening
+      // Learned only here: until it settled, this one was counted as a decoder it never took.
+      if (!sink.holdsDecoder && sinks.has(assetId)) {
+        pictures.add(assetId)
+        evict()
+      }
+      return sink
     } catch {
       // Remembered, not retried: reopening a broken asset sixty times a second is a stutter,
       // and the clip shows a placeholder either way.
-      sinks.delete(assetId)
+      forget(assetId)
       undecodable.add(assetId)
       return null
     }
@@ -115,7 +150,7 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
 
     release: assetId => {
       const opening = sinks.get(assetId)
-      sinks.delete(assetId)
+      forget(assetId)
       if (opening) closeLater(opening)
       undecodable.delete(assetId)
     },
@@ -123,6 +158,7 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
     dispose: () => {
       for (const opening of sinks.values()) closeLater(opening)
       sinks.clear()
+      pictures.clear()
       undecodable.clear()
     },
   }

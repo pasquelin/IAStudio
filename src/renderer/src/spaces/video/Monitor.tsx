@@ -14,6 +14,12 @@ import { useBinding } from '@/stores/bindings'
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
 
+/**
+ * Pictures answer to memory rather than to silicon: four 4K bitmaps are of the same order as the
+ * budget `image-cache` holds for the rest of the window.
+ */
+const MAX_PICTURES = 4
+
 export type MonitorProps = {
   /** Identifies this player to the single playback token. */
   owner: string
@@ -50,6 +56,7 @@ export function Monitor({
     const created = new TimelineEngine({
       openSink: openAssetSink,
       maxDecoders: MAX_DECODERS,
+      maxPictures: MAX_PICTURES,
       owner,
       onTime,
       onPlayingChange: setPlaying,
