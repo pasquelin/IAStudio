@@ -20,7 +20,7 @@ import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
 import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
-import { captionSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
+import { captionsSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
 import {
   allLayers,
   IDENTITY,
@@ -1548,16 +1548,22 @@ export class CanvasEngine {
 
     // The face the caption asks for may not be in the page yet. Registered once, and the caption
     // drawn again when it lands — until then the browser has drawn it in the generic beside it.
-    void this.registerFace(surface, layer)
+    // Caught here and not inside: the landing redraws every caption of the family, so one refusing
+    // to rasterize would strand the rest in the generic silently. Unhandled, it says nothing at all.
+    void this.registerFace(layer).catch(error =>
+      reportFailure('font.face', layer.font.family, error),
+    )
   }
 
   /**
-   * Puts an embedded face in the page, and redraws whatever was set in it.
+   * Puts an embedded face in the page, and redraws every caption set in it.
    *
    * Once per family, whatever asks: a document of twenty captions in one font must not fetch it
-   * twenty times, and a face already in the page is one `drawText` needs nothing more from.
+   * twenty times, and a face already in the page is one `drawText` needs nothing more from. That
+   * one fetch is why the landing sweeps the document instead of the caption that happened to ask —
+   * the other nineteen were turned away at the early return, and no landing of their own is coming.
    */
-  private async registerFace(surface: LayerSurface, layer: TextLayer): Promise<void> {
+  private async registerFace(layer: TextLayer): Promise<void> {
     const url = faceUrlOf(layer.font)
     const family = layer.font.family
     if (!url || this.faces.has(family)) return
@@ -1572,11 +1578,12 @@ export class CanvasEngine {
       return
     }
 
-    // The surface is the one `drawText` was given: a living layer never gets another, and a layer
-    // that is gone takes its surface with it — in which case `captionSetIn` finds nothing. After
-    // a dispose the texture is destroyed but `drawText` bails on the renderer before touching it.
-    const current = captionSetIn(this.state, layer.id, family)
-    if (current) this.drawText(surface, current)
+    // Looked up rather than held: only the caption that asked came with a surface. `reconcile`
+    // syncs every caption in the tree, so the guard below is the map's type, not a case in the wild.
+    for (const caption of captionsSetIn(this.state, family)) {
+      const surface = this.surfaces.get(caption.id)
+      if (surface) this.drawText(surface, caption)
+    }
   }
 
   /** A document-sized texture and the sprite that shows it, built once and kept. */

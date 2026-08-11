@@ -1999,6 +1999,38 @@ describe('captions', () => {
   })
 
   /**
+   * The one fetch is shared, so the redraw has to be too. Every caption but the one that happened
+   * to ask sat behind the early return, was drawn in the generic, and stayed there until someone
+   * edited it — two fonts on screen for a document set in one.
+   */
+  it('redraws every caption in a family when its face lands, not only the one that asked', async () => {
+    // Surfaces are built in document order, and `layer-1` takes texture 0.
+    const FIRST_CAPTION = 1
+    const SECOND_CAPTION = 2
+    let land = (): void => {}
+    const onItsWay = new Promise<void>(resolve => {
+      land = resolve
+    })
+    const { engine } = await mounted(DEFAULT_CANVAS, 'brush', () => onItsWay)
+
+    engine.apply(
+      stacked([
+        pixelLayer('layer-1', 'Background'),
+        textLayer('first', 'Hello', { x: 10, y: 20 }),
+        textLayer('second', 'Goodbye', { x: 10, y: 60 }),
+      ]),
+    )
+    await flushMicrotasks()
+    // Both are on screen in the generic by now; what follows is the file arriving.
+    gpu.painted = []
+
+    land()
+    await flushMicrotasks()
+
+    expect(gpu.painted).toEqual([FIRST_CAPTION, SECOND_CAPTION])
+  })
+
+  /**
    * The redraw is decided by a key built from what the caption says. Left out of it, the face was
    * an edit the screen never showed — the words stayed in the old font for good, and the page was
    * never asked for the new one.
