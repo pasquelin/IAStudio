@@ -10,6 +10,7 @@ import {
   queryFrom,
   sortOptions,
   TAG_FACET,
+  tagLabel,
 } from './model-filters'
 
 const identity = (key: string): string => key
@@ -113,15 +114,31 @@ describe('model filters', () => {
   })
 
   /**
-   * Tags are what the publishers wrote, matched by the API exactly as written — translating
-   * "Post Processing" would send a label that matches nothing.
+   * This read `expect({ value: 'I2V', label: 'I2V' })` and called it "verbatim rather than
+   * translated", on the grounds that translating a tag "would send a label that matches nothing".
+   * It would not: `value` is what the API matches and `label` is what a person reads, and the
+   * capability menu one push above had been splitting the two all along. What the tag menu
+   * actually did was show `Text to Image` inside an otherwise French interface.
    */
-  it('offers tags verbatim rather than translated', () => {
+  it('sends the tag the API matches, and shows the words a reader reads', () => {
+    const tag = facetsFor(DEFAULT_COLLECTION_STATE, 'video', identity).find(
+      facet => facet.key === TAG_FACET,
+    )
+
+    expect(tag?.options).toContainEqual({ value: 'First Frame', label: 'modelTags.firstFrame' })
+  })
+
+  /**
+   * An acronym reads the same in both languages, and a raw key reads like a bug. The value
+   * standing in as its own label is what keeps a tag nobody named from ever showing one.
+   */
+  it('shows an unnamed tag as the publisher wrote it, never as a key', () => {
     const tag = facetsFor(DEFAULT_COLLECTION_STATE, 'video', identity).find(
       facet => facet.key === TAG_FACET,
     )
 
     expect(tag?.options).toContainEqual({ value: 'I2V', label: 'I2V' })
+    expect(tagLabel('PBR', identity)).toBe('PBR')
   })
 
   /**

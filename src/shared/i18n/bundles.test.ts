@@ -12,7 +12,15 @@ import {
 } from '../domain/graph'
 import { isRecord } from '../guards'
 import { NAMED_KEYS } from '../domain/shortcut'
-import { CAPABILITIES_BY_FAMILY, MODEL_FAMILIES, MODEL_PERIODS, MODEL_SORTS } from '../domain/model'
+import {
+  CAPABILITIES_BY_FAMILY,
+  MODEL_FAMILIES,
+  MODEL_PERIODS,
+  MODEL_SORTS,
+  TAGS_BY_FAMILY,
+  TAG_LABEL_KEYS,
+  UNTRANSLATED_TAGS,
+} from '../domain/model'
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
@@ -266,6 +274,10 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...MODEL_FAMILIES.flatMap(family =>
     CAPABILITIES_BY_FAMILY[family].map(capability => `capabilities.${capability}`),
   ),
+  // The facet menu reads these through a table rather than through a template, so a key here is
+  // already a literal. It is listed all the same: the check below only proves every tag HAS a
+  // key, and a key naming nothing would still read as itself on screen.
+  ...Object.values(TAG_LABEL_KEYS),
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),

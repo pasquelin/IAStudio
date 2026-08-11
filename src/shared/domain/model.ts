@@ -285,6 +285,53 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
 }
 
 /**
+ * What each tag is CALLED on screen, which is not what it is MATCHED as. The value above travels
+ * to the API exactly as written; the key here only names it, the way `capabilities.*` names a
+ * capability two menus over. Splitting the two is what lets a French studio read "Texte vers
+ * image" while the request still carries `Text to Image`.
+ *
+ * The keys live here rather than being built from the value: `Flux.1 LoRA` holds a dot, and a
+ * dot is how i18next spells a level of nesting.
+ */
+export const TAG_LABEL_KEYS: Record<string, string> = {
+  'Text to Image': 'modelTags.textToImage',
+  'Image to Image': 'modelTags.imageToImage',
+  editing: 'modelTags.editing',
+  'Post Processing': 'modelTags.postProcessing',
+  characters: 'modelTags.characters',
+  fantasy: 'modelTags.fantasy',
+  cartoon: 'modelTags.cartoon',
+  tool: 'modelTags.tool',
+  Video: 'modelTags.video',
+  'First Frame': 'modelTags.firstFrame',
+  'Last Frame': 'modelTags.lastFrame',
+  'Video Editing': 'modelTags.videoEditing',
+  'Image to 3D': 'modelTags.imageTo3d',
+  'Text to 3D': 'modelTags.textTo3d',
+  '3D to 3D': 'modelTags.threeDToThreeD',
+  Multiview: 'modelTags.multiview',
+  Motion: 'modelTags.motion',
+  Audio: 'modelTags.audio',
+  Music: 'modelTags.music',
+  'Text to Music': 'modelTags.textToMusic',
+  'Text to Speech': 'modelTags.textToSpeech',
+}
+
+/**
+ * The tags shown as the publishers wrote them: acronyms a translation would only obscure, and one
+ * product name. Listed rather than left implicit so that a tag added upstairs without a label
+ * fails the check beside them instead of reaching a French menu in English.
+ */
+export const UNTRANSLATED_TAGS: readonly string[] = [
+  'Flux.1 LoRA',
+  'T2V',
+  'I2V',
+  'V2V',
+  'PBR',
+  'TTS',
+]
+
+/**
  * Who built the model, as a tag. NOT `authorId`: every public model carries the same opaque
  * one — Scenario's — and no endpoint resolves it to a name, so their own "Author" menu cannot
  * be reading it either. The publisher lives in the tags; filtering by one is an ordinary tag
