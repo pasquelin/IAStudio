@@ -534,6 +534,17 @@ chemins d’entrée d’une image dans un ciel.
 *description* d’un nœud séparée de son instanciation three.js — une scène se sérialise donc sans
 traîner le moteur de rendu avec elle, et se reconstruit depuis cette seule sérialisation.
 
+Et une fois l’objet three instancié, **on le mute, on ne le remplace pas** : `.set` plutôt qu’un
+`new`. Ces écritures arrivent à chaque image d’un glissement d’inspecteur, et le coût n’est pas
+théorique — remplacer un matériau expose à une recompilation de son programme de shader, remplacer
+une couleur jette l’instance que three détient. Dix écritures de couleur suivent la règle, et
+`three-sync.ts`, `TextureRenderer.ts` et `SkyboxRenderer.ts` la portent chacun en commentaire, au
+plus près de ce qu’elle garde.
+
+**Une exception, et elle est délibérée** : `ViewportEngine` remplace bien l’objet du fond de scène,
+parce que ce champ accepte `null` — un `.set` ne saurait pas l’effacer, et le fond ne se repeint
+qu’au montage, au changement de thème ou au retrait d’un ciel — jamais par image.
+
 La lecture passe par un **jeton unique**, `playbackToken` — une valeur de module dans
 `engines/timeline/playback.ts`, pas un gestionnaire : celui qui veut jouer l'acquiert et fournit
 de quoi l'arrêter, et l'acquisition suivante coupe le précédent. Deux lecteurs actifs, et le
