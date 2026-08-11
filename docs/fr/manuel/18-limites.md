@@ -204,6 +204,22 @@ la limite la plus lourde du studio à ce jour, parce qu’elle empêche de livre
 Une séquence neuve part toujours sur 1920 × 1080, 25 images par seconde, 48 000 Hz. Ces valeurs ne
 se changent pas encore.
 
+### Ce que la lecture ne fait pas encore entendre
+
+Le moniteur Programme joue les pistes de son. Quatre bornes restent, toutes assumées :
+
+| Ce qui ne s’entend pas | Pourquoi |
+|---|---|
+| **Le son d’une vidéo** posée sur une piste image | seules les pistes de genre son sont ordonnancées |
+| **Les fondus** d’un clip son | ils sont dessinés, saisissables et enregistrés, mais pas encore appliqués à la sortie |
+| **Le scrub** — déplacer la tête de lecture à la main | le son n’est planifié que par la boucle de lecture |
+| **Le moniteur Source** | il monte le clip sélectionné sur une piste image, quel que soit son type |
+
+**Et une dérive, non mesurée** : sur un montage long, l’image peut s’écarter du son. L’horloge de
+sortie prend la main dès qu’elle tourne, ce qui l’évite dans le cas courant — mais la toute
+première lecture après l’ouverture de l’application peut démarrer avant que la sortie ne réponde,
+et courir alors sur l’horloge système.
+
 ---
 
 ## Espace Audio

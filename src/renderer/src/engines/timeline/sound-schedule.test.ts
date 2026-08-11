@@ -163,18 +163,93 @@ describe('scheduling a sequence', () => {
     expect(cues[0]?.duration).toBe(30)
   })
 
-  it('plans a clip once, however many frames pass over it', async () => {
-    const { port, loaded } = outputAt()
+  /**
+   * Counted in cues rather than in loads: the samples are cached by asset, so a clip planned
+   * twice loads once — and starts a second source over the first, which nothing can stop since
+   * the map holds one entry per clip.
+   */
+  it('starts a clip once, however far the playhead travels across it', async () => {
+    const { port, cues } = outputAt()
     const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
     scheduler.apply(withAudio([clip('a', 0, 4_000_000)]))
 
     scheduler.start(0)
     await settled()
-    scheduler.pump(16_000)
-    scheduler.pump(32_000)
+    // Well past the planning step, so it is the clip being known that stops the second start.
+    scheduler.pump(1_000_000)
+    scheduler.pump(2_000_000)
     await settled()
 
-    expect(loaded).toEqual(['asset-a'])
+    expect(cues).toHaveLength(1)
+  })
+
+  /**
+   * The sequence is read in steps, not per frame: with a second of horizon, building a chunk
+   * for every audio clip sixty times a second is work the UI thread owes nobody.
+   */
+  it('leaves the sequence alone between two frames of the same step', async () => {
+    const { port, loaded } = outputAt()
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('edge', 1_100_000, 1_000_000)]))
+
+    scheduler.start(0)
+    // The clip is inside the horizon at this playhead, but the step has not elapsed.
+    scheduler.pump(150_000)
+    await settled()
+    expect(loaded).toEqual([])
+
+    scheduler.pump(200_000)
+    await settled()
+    expect(loaded).toEqual(['asset-edge'])
+  })
+
+  /**
+   * The anchor is taken once. Re-taken on every pass, it would absorb the drift between the
+   * output's clock and the engine's — which is the very thing it exists to expose.
+   */
+  it('keeps the anchor it first took, rather than following the engine clock', async () => {
+    let clock = 50
+    const { port, cues } = outputAt()
+    const drifting: SoundPort = { ...port, now: () => clock }
+    const scheduler = createSoundScheduler({ port: drifting, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('later', 1_500_000, 1_000_000)]))
+
+    scheduler.start(0)
+    // A second of timeline goes by, but the output ran a tenth of a second slow.
+    clock = 50.9
+    scheduler.pump(1_000_000)
+    await settled()
+
+    // Anchored at 50, the clip is due at 51.5 — not at 51.4, which re-anchoring would give.
+    expect(cues[0]?.when).toBeCloseTo(51.5, 6)
+  })
+
+  /**
+   * Muted and unmuted while the load was in flight, the clip holds a second entry. Started over
+   * it, the first load plays the clip a second time — and only the newer entry can be stopped.
+   */
+  it('never lets a load started before a mute play over the entry that replaced it', async () => {
+    const { port, cues } = outputAt()
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    // A second track holds the same take — a doubled bed, and the reason the samples survive
+    // the mute: without another holder the cache drops them and the stale load yields nothing.
+    const bed = (muted: boolean): SequenceState =>
+      sequenceWith([
+        trackFixture('A1', 'audio', [clip('a', 0, 4_000_000)], { muted }),
+        trackFixture('A2', 'audio', [{ ...clipFixture('b', 0, 4_000_000), assetId: 'asset-a' }], {
+          index: 2,
+        }),
+      ])
+    scheduler.apply(bed(false))
+
+    scheduler.start(0)
+    scheduler.apply(bed(true))
+    scheduler.apply(bed(false))
+    scheduler.pump(1_000_000)
+    await settled()
+
+    // One cue for the bed, one for the clip replanned after the unmute — never three.
+    expect(cues).toHaveLength(2)
   })
 
   it('silences everything it has in flight when the transport stops', async () => {

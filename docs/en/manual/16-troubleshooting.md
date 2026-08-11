@@ -477,6 +477,25 @@ keeps its duration; only its picture is missing.
 
 These are the most disconcerting: nothing is written, but something is wrong.
 
+### "I hear nothing during playback"
+
+There is no message: the sound stays quiet without saying so. Seven causes, from the most
+ordinary to the most technical:
+
+1. **The track is muted, or another one is soloed.** Solo wins over everything: as soon as one
+   track is soloed, the others go quiet. See [a track's header](10-video-workspace.md).
+2. **You are dragging the playhead by hand.** Sound only comes out during playback; scrubbing is
+   silent.
+3. **The clip sits on a picture track.** A video laid there is seen without being heard: only
+   sound tracks are played.
+4. **You are watching the Source monitor.** It is always silent; the Program monitor is the one
+   that plays.
+5. **The clip's gain is at the floor.** A clip's inspector gives it in decibels.
+6. **The media moved since it was imported.** The studio does not ask for it sixty times a
+   second: it gives the clip up for the session. Import the file again.
+7. **The very first sound is late.** The file is decoded whole before it plays; on a long pad the
+   first second may be skipped rather than played late.
+
 ### "I paint and nothing lands"
 
 **Look at the cursor before you drag.** If it is a no-entry sign, the tool is telling you it can
