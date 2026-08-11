@@ -170,6 +170,22 @@ describe('a side column', () => {
     expect(screen.getByLabelText('Modèles')).toBeInTheDocument()
     expect(handles()).toHaveLength(1)
   })
+
+  /**
+   * The same, from the other half — reached by closing the upper one, which leaves the lower
+   * alone in the column. It then takes the whole zone rather than the length the divider gave
+   * it, and there is no divider left to read that length from. The home was the surface that
+   * exercised this by default until its left column was cut in two.
+   */
+  it('gives the whole column to a lower half left on its own', () => {
+    useTools.setState({
+      arrangements: arrangedFor('image', { open: { right: { secondary: 'inspector' } } }),
+    })
+    renderShell()
+
+    expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
+    expect(handles()).toHaveLength(1)
+  })
 })
 
 describe('the home', () => {
