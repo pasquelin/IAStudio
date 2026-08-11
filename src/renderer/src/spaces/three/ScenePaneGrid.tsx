@@ -33,7 +33,9 @@ export function ScenePaneGrid({ views, onView }: ScenePaneGridProps) {
 
       <div className="absolute inset-0 grid grid-cols-2 grid-rows-2">
         {[0, 1, 2, 3].map(pane => (
-          <div key={pane} className="min-w-0 p-1.5">
+          // Right-aligned, not left: the space keeps its tool rail down the left edge, and a
+          // label in that corner is a label behind the toolbar.
+          <div key={pane} className="flex min-w-0 justify-end p-1.5">
             <PaneMenu
               view={views[pane] ?? 'free'}
               onView={chosen => onView(pane, chosen)}

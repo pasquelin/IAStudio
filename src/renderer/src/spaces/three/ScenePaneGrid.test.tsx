@@ -54,6 +54,14 @@ describe('the four views and their seams', () => {
     expect(screen.getByRole('button', { name: /Vue 1/ })).toHaveClass('pointer-events-auto')
   })
 
+  /** The space keeps its tool rail down the left edge: a label in that corner sits behind it. */
+  it('keeps its labels out of the corner the toolbar occupies', () => {
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+
+    const cell = screen.getByRole('button', { name: /Vue 1/ }).parentElement
+    expect(cell).toHaveClass('justify-end')
+  })
+
   it('falls back to the free view for a quarter nothing has set', () => {
     render(<ScenePaneGrid views={[]} onView={vi.fn()} />)
 
