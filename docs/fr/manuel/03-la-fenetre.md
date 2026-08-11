@@ -775,7 +775,12 @@ montre rien tant que rien n’a cassé laisse l’utilisateur sans endroit où r
 
 **Un clic ouvre la liste et marque tout comme lu** — l’ouvrir, c’est le lire. Deux filtres y
 attendent : le **niveau** (information, avertissement, échec) et le **sujet** (génération,
-import, bibliothèque, document, projet). Un bouton **Tout afficher** les relâche.
+import, bibliothèque, document, projet, interface). Chaque rangée commence par un bouton **Tout**
+qui la relâche.
+
+**Interface, c’est le studio lui-même** plutôt que ce qu’il contient : un panneau qui n’a pas pu
+se dessiner, ou l’agencement enregistré d’un espace devenu illisible. Ces pannes-là n’ont pas de
+document à qui les rattacher — [voir le chapitre 16](16-depannage.md).
 
 **Pour refermer** : un clic à côté, `Échap`, ou le passage à une autre application — recliquer
 l’icône marche aussi. C’est vrai des deux volets de la ligne d’état, et de tout ce qui flotte

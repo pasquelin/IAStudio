@@ -334,10 +334,10 @@ bar, and goes through five states: **Queued** → **Running** → **Done**, or e
 You can keep working while a job runs.
 
 **Journal** *(activity)*
-The list of what the studio has done and failed to do, opened from the *status line*. Four
-topics — generation, import, library, document — and three levels: information, warning, failure.
-A failure also raises a **toast** in the corner of the window, which only leaves if you dismiss
-it. See [When something goes wrong](16-troubleshooting.md).
+The list of what the studio has done and failed to do, opened from the *status line*. Six
+topics — generation, import, library, document, project, interface — and three levels:
+information, warning, failure. A failure also raises a **toast** in the corner of the window,
+which only leaves if you dismiss it. See [When something goes wrong](16-troubleshooting.md).
 
 ---
 
