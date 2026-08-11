@@ -4,7 +4,9 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
+import { formatDecimal, parseDecimal } from '@/helpers/format'
 import { bound, type NumericBounds } from '@shared/numeric'
 import { FIELD, FIELD_LABEL, FIELD_ROW, type GestureProps } from './styles'
 
@@ -45,6 +47,19 @@ export function NumberField({
    * parsed value back would eat the dot as it is typed.
    */
   const [typed, setTyped] = useState<string | null>(null)
+  const { i18n } = useTranslation()
+
+  /**
+   * The value as this reader writes one, and ungrouped on purpose: a separator inside the field
+   * would have to be stripped back out on the way in, and a thousand is not what a coordinate
+   * field is read for. Every digit is kept — this is a field, not a readout.
+   */
+  // `value === 0` rather than `value`: a step landing on zero from below gives `-0`, which
+  // `String` hid and `Intl` writes out. A field reading `-0` is the same defect the ruler names.
+  const shown = formatDecimal(value === 0 ? 0 : value, i18n.language, {
+    digits: 20,
+    grouped: false,
+  })
 
   const emit = (raw: number): void => {
     if (!Number.isFinite(raw)) return
@@ -122,15 +137,18 @@ export function NumberField({
         role="spinbutton"
         aria-label={label}
         aria-valuenow={value}
+        // The number and the way it is written parted company the day this field localised
+        // itself: a screen reader speaks `aria-valuenow`, and `0.5` is not what the screen says.
+        aria-valuetext={shown}
         aria-valuemin={min}
         aria-valuemax={max}
-        value={typed ?? String(value)}
+        value={typed ?? shown}
         onChange={event => {
           const text = event.target.value
           setTyped(text)
           // An emptied field is not zero: `Number('')` is, and emitting it would crush the mesh
           // to its minimum between the moment a value is cleared and the moment one is typed.
-          if (text.trim() !== '') emit(Number(text))
+          if (text.trim() !== '') emit(parseDecimal(text))
         }}
         onKeyDown={onKeyDown}
         // Typing is a gesture too: a field filled in character by character must cost one undo,

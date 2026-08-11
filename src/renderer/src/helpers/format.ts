@@ -112,3 +112,18 @@ export function formatBytes(
   const digits = value < 10 && unit !== 'byte' ? 1 : 0
   return `${formatDecimal(value, language, { digits, least: digits })} ${unitName(unit)}`
 }
+
+/**
+ * A number as a person typed it.
+ *
+ * The comma is not a preference, it is the key: on a French keyboard the numeric pad's decimal
+ * key produces `,`, so `0,5` is what a hand types by default. `Number` reads that as `NaN`, and
+ * the field it lands in refuses non-finite values — the gesture failed in silence, leaving the
+ * old value behind on blur.
+ *
+ * Both separators are taken, in every language: a studio is used with two keyboards more often
+ * than it is used in two languages, and no locale writes both.
+ */
+export function parseDecimal(text: string): number {
+  return Number(text.replace(',', '.'))
+}
