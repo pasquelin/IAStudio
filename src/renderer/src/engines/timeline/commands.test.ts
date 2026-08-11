@@ -218,6 +218,38 @@ describe('sequence commands', () => {
     expect(next.tracks[0]?.clips[0]?.duration).toBe(9_000_000)
   })
 
+  it('lengthens a still by its in edge too, which a source-bound clip cannot do', () => {
+    const state = withClips([clip('a', 2_000_000, 1_000_000)])
+    const next = trimClip('a', 'in', 1_000_000, null).apply(state)
+
+    // The image has no source to run past, so pulling its left end grows it the way the right
+    // end already did — the bound there only ever made sense for a video.
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ start: 1_000_000, duration: 2_000_000 })
+  })
+
+  it('holds a stretched still at the start of the sequence, never before it', () => {
+    const state = withClips([clip('a', 1_000_000, 1_000_000)])
+    const next = trimClip('a', 'in', -5_000_000, null).apply(state)
+
+    expect(next.tracks[0]?.clips[0]?.start).toBe(0)
+  })
+
+  it('holds a stretched still at its source start, so the project reloads as it was saved', () => {
+    const state = withClips([clip('a', 2_000_000, 1_000_000)])
+    const next = trimClip('a', 'in', 1_000_000, null).apply(state)
+
+    // `readPositive` drops a negative in point on reload; a clip that came back with a different
+    // one would not be the clip that was saved.
+    expect(next.tracks[0]?.clips[0]?.inPoint).toBe(0)
+  })
+
+  it('still stops a video at its source start, which is the bound a still does not have', () => {
+    const state = withClips([clip('a', 2_000_000, 1_000_000, { inPoint: 400_000 })])
+    const next = trimClip('a', 'in', 1_000_000, 5_000_000).apply(state)
+
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ start: 1_600_000, inPoint: 0 })
+  })
+
   it('puts back the neighbours an added clip overwrote', () => {
     const command = addClip('V1', clip('b', 500_000, 1_000_000))
     const state = withClips([clip('a', 0, 2_000_000)])

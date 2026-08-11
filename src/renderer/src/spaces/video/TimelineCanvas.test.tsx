@@ -2,7 +2,7 @@ import { fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
-import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { RULER_HEIGHT, timeToX, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import type { Clip } from '@/engines/timeline/timeline-state'
 import { EMPTY_SEQUENCE, snapToFrame } from '@/engines/timeline/timeline-state'
@@ -222,6 +222,51 @@ describe('TimelineCanvas', () => {
     fireEvent.pointerUp(canvas, { clientX: 90, clientY: RULER_HEIGHT + 30 })
 
     expect(clipsOf()).toEqual(before)
+  })
+
+  /**
+   * The cursor is the whole of the feedback a trim gets before it starts: nothing is dragged
+   * yet, and the grips painted on the canvas say a clip has ends without saying they are live.
+   */
+  it('takes a resize cursor over a clip edge', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+
+    expect(canvas.className).toContain('cursor-ew-resize')
+  })
+
+  it('leaves the cursor alone over the body of a clip, which is dragged and not trimmed', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.pointerMove(canvas, {
+      clientX: Math.round(timeToX(500_000, viewOf())),
+      clientY: RULER_HEIGHT + 30,
+    })
+
+    expect(canvas.className).not.toContain('cursor-ew-resize')
+  })
+
+  it('drops the resize cursor when the pointer leaves, rather than carrying it off the canvas', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerLeave(canvas)
+
+    expect(canvas.className).not.toContain('cursor-ew-resize')
+  })
+
+  it('keeps the hand cursor over an edge, since the hand moves the view and never the montage', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint('hand')
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+
+    expect(canvas.className).toContain('cursor-grab')
+    expect(canvas.className).not.toContain('cursor-ew-resize')
   })
 
   it('undoes the last edit from the keyboard', () => {

@@ -36,7 +36,9 @@ export type HitTarget =
 
 export const RULER_HEIGHT = 24
 /** Pixels around a clip edge that grab the edge rather than the body. */
-export const EDGE_GRAB = 6
+export const EDGE_GRAB = 8
+/** Share of a clip's width its body keeps, however narrow it gets: a clip must stay draggable. */
+const BODY_SHARE = 1 / 3
 /** Pixels around a fade handle that grab it. */
 export const FADE_GRAB = 7
 /** Depth of the strip along a clip's top where fade handles win over everything else. */
@@ -102,6 +104,26 @@ export function fadeHandleTime(clip: Clip, edge: ClipEdge): Us {
   return edge === 'in' ? clip.start + clip.fadeIn : clipEnd(clip) - clip.fadeOut
 }
 
+/**
+ * How wide each edge's grab zone is on a clip that spans `left` to `right`. Full width on any
+ * ordinary clip; on a narrow one the two zones would meet and swallow the body, and a clip that
+ * cannot be dragged is worse than one that is awkward to trim.
+ */
+export function edgeGrab(left: number, right: number): number {
+  return Math.min(EDGE_GRAB, ((right - left) * (1 - BODY_SHARE)) / 2)
+}
+
+/**
+ * What the pointer would do here. The only feedback a trim gets before it starts — nothing is
+ * dragged yet, so the cursor is what says the edge is live.
+ */
+export type TimelineCursor = 'default' | 'resize'
+
+export function cursorFor(target: HitTarget | null): TimelineCursor {
+  if (!target) return 'default'
+  return target.kind === 'edge' || target.kind === 'fade' ? 'resize' : 'default'
+}
+
 export function snap(time: Us, context: SnapContext): Us {
   const threshold = SNAP_THRESHOLD / context.viewport.scale
   let best: Us | null = null
@@ -140,10 +162,11 @@ export function hitTest(state: SequenceState, viewport: Viewport, point: Point):
       }
     }
 
-    if (point.x <= left + EDGE_GRAB) {
+    const grab = edgeGrab(left, right)
+    if (point.x <= left + grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'in' }
     }
-    if (point.x >= right - EDGE_GRAB) {
+    if (point.x >= right - grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'out' }
     }
     return { kind: 'clip', clipId: clip.id, trackId: track.id }

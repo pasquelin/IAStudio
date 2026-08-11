@@ -16,6 +16,14 @@ export type Size = { width: number; height: number }
 /** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
 const POSTER_RATIO = 16 / 9
 
+/**
+ * The bar drawn at each end of a clip. Narrower than the zone that grabs it — the target is
+ * meant to be forgiving, the mark is meant to say where the end is without eating the poster.
+ */
+const HANDLE_WIDTH = 3
+/** How far a handle stops short of the clip's top and bottom, so it reads as a grip, not a wall. */
+const HANDLE_INSET = 3
+
 const CLIP_FAMILY = 'ui-sans-serif, system-ui'
 const RULER_FAMILY = 'ui-monospace, monospace'
 
@@ -206,6 +214,35 @@ function paintPoster(
   context.drawImage(poster, left, top, width, height)
 }
 
+/**
+ * The grips at both ends, which is what says a clip can be lengthened at all. Skipped on a clip
+ * too narrow to hold them and still show a body — `edgeGrab` gives that body back to the drag,
+ * and a pair of bars covering the whole clip would promise a trim the hit test refuses.
+ */
+export function handlesFit(left: number, right: number): boolean {
+  return right - left >= HANDLE_WIDTH * 3
+}
+
+function paintHandles(
+  context: CanvasRenderingContext2D,
+  left: number,
+  right: number,
+  top: number,
+  height: number,
+  selected: boolean,
+  palette: Palette,
+): void {
+  if (!handlesFit(left, right)) return
+
+  context.fillStyle = selected ? palette.text : palette.muted
+  const barTop = top + HANDLE_INSET
+  const barHeight = height - HANDLE_INSET * 2
+  if (barHeight <= 0) return
+
+  context.fillRect(left, barTop, HANDLE_WIDTH, barHeight)
+  context.fillRect(right - HANDLE_WIDTH, barTop, HANDLE_WIDTH, barHeight)
+}
+
 function paintClip(
   context: CanvasRenderingContext2D,
   clip: Clip,
@@ -253,6 +290,10 @@ function paintClip(
   context.fillStyle = palette.border
   context.fillRect(left, boxTop, 1, boxHeight)
   context.fillRect(right - 1, boxTop, 1, boxHeight)
+
+  // After the border and outside the clipping path: a grip drawn under the poster is a grip
+  // nobody sees, and the border alone reads as a seam between two clips rather than an end.
+  paintHandles(context, left, right, boxTop, boxHeight, selected, palette)
 }
 
 export function paintTimeline(

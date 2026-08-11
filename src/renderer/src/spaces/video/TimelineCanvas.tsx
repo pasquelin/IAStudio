@@ -1,6 +1,6 @@
 import type { CommandId } from '@shared/domain/command'
 import { clamp } from '@shared/numeric'
-import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type DragEvent, type PointerEvent } from 'react'
 import { mediaDuration, posterUrl } from '@shared/domain/asset'
 import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
 import {
@@ -11,7 +11,13 @@ import {
 } from '@/engines/timeline/interactions'
 import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
-import { hitTest, xToTime, type Point, type Viewport } from '@/engines/timeline/timeline-geometry'
+import {
+  cursorFor,
+  hitTest,
+  xToTime,
+  type Point,
+  type Viewport,
+} from '@/engines/timeline/timeline-geometry'
 import {
   clipUnderPlayhead,
   sequenceDuration,
@@ -45,6 +51,9 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
+  // Whether the pointer is over an edge. The handles say a clip has ends; the cursor says they
+  // are live — nothing is dragged yet, so there is nothing else to say it with.
+  const [onEdge, setOnEdge] = useState(false)
 
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const viewport = useTimelineView(state => viewportOf(state, documentId))
@@ -296,7 +305,12 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
 
   const onPointerMove = (event: PointerEvent<HTMLCanvasElement>): void => {
     const current = dragging.current
-    if (!current) return
+    if (!current) {
+      // Set only on a transition, so hovering a clip does not re-render on every pixel.
+      const over = cursorFor(hitTest(sequence, viewport, pointAt(event))) === 'resize'
+      if (over !== onEdge) setOnEdge(over)
+      return
+    }
 
     const point = pointAt(event)
 
@@ -359,10 +373,15 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       className={cn(
         'block h-full w-full outline-none',
         tool === 'hand' && 'cursor-grab active:cursor-grabbing',
+        // The hand takes the whole surface, edge or not: it moves the view, never the montage.
+        tool !== 'hand' && onEdge && 'cursor-ew-resize',
       )}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      // A pointer that leaves mid-hover would otherwise take the resize cursor with it, and the
+      // next surface it enters would wear it until something else set one.
+      onPointerLeave={() => setOnEdge(false)}
       // Not `AssetDropTarget`: what this surface accepts is decided per track, and one outline
       // over the whole timeline would promise the ruler takes what it refuses. Only the half
       // that has nothing to do with tracks is shared — preventing a drag we do not carry is

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { forgetPalette, paintTimeline } from './painter'
-import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import { CLIP_INSET, RULER_HEIGHT, type Viewport } from './timeline-geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_TRACK_HEIGHT,
@@ -252,5 +252,38 @@ describe('timeline painter', () => {
     })
 
     expect(images[0]?.width).toBe(10)
+  })
+
+  it('marks both ends of a clip with a grip, which is what says it can be lengthened', () => {
+    const { context, rects } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    // 100 px wide, inside a box inset by CLIP_INSET and a grip inset by 3 more.
+    const boxTop = RULER_HEIGHT + CLIP_INSET
+    const grip = { y: boxTop + 3, width: 3, height: TRACK_HEIGHT - CLIP_INSET * 2 - 1 - 6 }
+
+    expect(rects).toContainEqual({ x: 0, ...grip })
+    expect(rects).toContainEqual({ x: 97, ...grip })
+  })
+
+  it('draws a grip after the border, which is what puts it outside the clipping path', () => {
+    const { context, rects } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    // The border is painted once the clip path is restored; anything before it can be masked
+    // by a poster, and a grip nobody sees says nothing about the end of a clip.
+    const border = rects.findIndex(rect => rect.x === 0 && rect.width === 1)
+    const grip = rects.findIndex(rect => rect.x === 0 && rect.width === 3)
+
+    expect(border).toBeGreaterThan(-1)
+    expect(grip).toBeGreaterThan(border)
+  })
+
+  it('leaves a clip too narrow to hold them unmarked, rather than covering it in grips', () => {
+    const { context, rects } = spyContext()
+    // 80 ms is 8 px wide: two 3 px grips would leave 2 px of body.
+    paintTimeline(context, stateWith([clip('a', 0, 80_000)]), viewport, size)
+
+    expect(rects.filter(rect => rect.width === 3)).toHaveLength(0)
   })
 })

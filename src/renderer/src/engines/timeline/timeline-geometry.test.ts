@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  cursorFor,
+  edgeGrab,
+  EDGE_GRAB,
   fadeHandleTime,
   hitTest,
   rowAt,
@@ -145,6 +148,57 @@ describe('hit testing', () => {
     const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
     const target = hitTest(stateWith([faded]), viewport, { x: 2, y: RULER_HEIGHT + 30 })
     expect(target).toEqual({ kind: 'edge', clipId: 'a', trackId: 'V1', edge: 'in' })
+  })
+
+  it('gives an ordinary clip the full grab margin at each end', () => {
+    expect(edgeGrab(0, 100)).toBe(EDGE_GRAB)
+  })
+
+  it('shrinks the grab margin on a narrow clip, so its body keeps a third of the width', () => {
+    // 12 px wide: 4 px per edge leaves the middle 4 px to the drag.
+    expect(edgeGrab(0, 12)).toBe(4)
+  })
+
+  it('leaves the middle of a narrow clip draggable rather than trimmable', () => {
+    // 12 px wide. At the full margin this point would be an edge, and the clip could not be moved.
+    const target = hitTest(stateWith([clip('a', 0, 120_000)]), viewport, {
+      x: 5,
+      y: RULER_HEIGHT + 30,
+    })
+    expect(target).toEqual({ kind: 'clip', clipId: 'a', trackId: 'V1' })
+  })
+
+  it('still grabs both edges of a narrow clip', () => {
+    const narrow = stateWith([clip('a', 0, 120_000)])
+    const at = (x: number) => hitTest(narrow, viewport, { x, y: RULER_HEIGHT + 30 })
+
+    expect(at(1)).toMatchObject({ kind: 'edge', edge: 'in' })
+    expect(at(11)).toMatchObject({ kind: 'edge', edge: 'out' })
+  })
+
+  it('asks for a resize cursor on anything that trims, and for none on anything else', () => {
+    const on = (x: number) =>
+      cursorFor(
+        hitTest(stateWith([clip('a', 0, 1_000_000)]), viewport, {
+          x,
+          y: RULER_HEIGHT + 30,
+        }),
+      )
+
+    expect(on(2)).toBe('resize')
+    expect(on(98)).toBe('resize')
+    expect(on(50)).toBe('default')
+  })
+
+  it('asks for a resize cursor on a fade handle, which is dragged the same way', () => {
+    const faded = { ...clip('a', 0, 1_000_000), fadeIn: 200_000, fadeOut: 0 }
+    const target = hitTest(stateWith([faded]), viewport, { x: 20, y: RULER_HEIGHT + 4 })
+    expect(cursorFor(target)).toBe('resize')
+  })
+
+  it('asks for no cursor where there is nothing at all', () => {
+    expect(cursorFor(null)).toBe('default')
+    expect(cursorFor({ kind: 'ruler' })).toBe('default')
   })
 
   it('reads the track a point lands on, whatever the clip beneath it', () => {

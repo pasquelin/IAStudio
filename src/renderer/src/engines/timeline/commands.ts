@@ -41,15 +41,25 @@ const withoutClip = (track: Track, clipId: string): Track => ({
  * show before a source starts or after it ends, and a clip stretched there freezes on a frame
  * while its sound goes silent.
  *
- * A media with no length of its own — a still — takes no bound: stretching one over a minute is
- * how a title card is made.
+ * A media with no length of its own — a still — has nothing to run past on either edge, so both
+ * of its edges stretch it and the only bound left is the start of the sequence. That is what
+ * makes a title card: put an image down, pull either end, decide how long it stays up.
  */
 function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, length: Us | null): Us {
   const headroom = (source: Us): Us => Math.round(source / clip.speed)
 
-  if (edge === 'in') return Math.max(at, clip.start - headroom(clip.inPoint))
+  if (edge === 'in') {
+    return length === null ? Math.max(at, 0) : Math.max(at, clip.start - headroom(clip.inPoint))
+  }
   return length === null ? at : Math.min(at, clip.start + headroom(length - clip.inPoint))
 }
+
+/**
+ * A still pulled leftwards starts before its own in point, and there is no earlier frame to seek
+ * to. Held at the source start rather than left negative: `readPositive` drops a negative one
+ * when the project is read back, so the clip would return shorter than the one that was saved.
+ */
+const heldAtSourceStart = (clip: Clip): Clip => (clip.inPoint < 0 ? { ...clip, inPoint: 0 } : clip)
 
 /**
  * Puts a track's clips back exactly as they were.
@@ -158,7 +168,9 @@ export function trimClip(
 
       const time = boundToMedia(clip, edge, snapToFrame(at, state.settings), mediaLength)
       const trimmed =
-        edge === 'out' ? { ...clip, duration: time - clip.start } : clipFrom(clip, time)
+        edge === 'out'
+          ? { ...clip, duration: time - clip.start }
+          : heldAtSourceStart(clipFrom(clip, time))
 
       // Refused rather than clamped: a zero-length clip is not a shorter clip, it is a bug.
       if (trimmed.duration <= 0) return state
