@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
+import { inkFor } from '@shared/domain/color'
 import { THEME_ATTRIBUTE, type ResolvedTheme, type Theme } from '@shared/domain/settings'
-import { refreshPalette } from '@/engines/core/palette'
+import { refreshPalette, token } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
 
 const DARK_QUERY = '(prefers-color-scheme: dark)'
@@ -76,6 +77,15 @@ export function useAppearance(): void {
       if (accent) root.style.setProperty(name, accent)
       else root.style.removeProperty(name)
     }
+
+    // The ink follows the fill, or the words keep the blue the studio shipped with while every
+    // button turns the colour that was picked. Read against the chassis the theme just selected
+    // rather than a copy of it — the attribute is already set above. Uncached on purpose: the
+    // cache still holds the palette being left, which is the whole reason `refreshPalette` runs
+    // last. With nothing to read, `inkFor` hands the accent back rather than a broken value.
+    if (accent) {
+      root.style.setProperty('--color-accent-ink', inkFor(accent, token(root, '--color-chassis')))
+    } else root.style.removeProperty('--color-accent-ink')
 
     // After the attributes, never before: the engines read the tokens back the moment they are
     // told, and `getComputedStyle` would hand them the palette they are leaving.

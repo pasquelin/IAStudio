@@ -26,7 +26,7 @@ export function DictationStatus() {
 
   if (dictation.isListening) {
     return (
-      <span role="status" className="text-accent flex items-center gap-1.5">
+      <span role="status" className="text-accent-ink flex items-center gap-1.5">
         <UiIcon path={mdiMicrophone} size={12} />
         {t('dictation.active')}
       </span>

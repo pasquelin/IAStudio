@@ -104,7 +104,7 @@ function Hidden() {
         {...HINT_TOP(t('home.restoreHint'))}
         onClick={restore}
         className={cn(
-          'text-accent cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
+          'text-accent-ink cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
           'text-tiny p-0 underline',
           FOCUS_RING,
         )}

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { HEX_COLOR, readColor } from './color'
+import {
+  AA_NORMAL_TEXT,
+  contrastRatio,
+  HEX_COLOR,
+  inkFor,
+  readColor,
+  relativeLuminance,
+} from './color'
 
 describe('readColor', () => {
   it('reads a hexadecimal colour, in either case', () => {
@@ -66,5 +73,57 @@ describe('HEX_COLOR', () => {
   // widen both at once, and asymmetrically — only the second call of each pair.
   it('carries no flag but case-insensitivity', () => {
     expect(HEX_COLOR.flags).toBe('i')
+  })
+})
+
+describe('the contrast of two colours', () => {
+  // The two extremes WCAG itself is defined against, so a sign error cannot pass.
+  it('runs from one to twenty-one', () => {
+    expect(contrastRatio('#ffffff', '#ffffff')).toBeCloseTo(1, 5)
+    expect(contrastRatio('#000000', '#ffffff')).toBeCloseTo(21, 5)
+  })
+
+  it('does not care which colour is given first', () => {
+    expect(contrastRatio('#3574f0', '#2b2d30')).toBeCloseTo(contrastRatio('#2b2d30', '#3574f0'), 9)
+  })
+
+  // The measurement this studio's ink tokens were cut from, kept as the reference it was.
+  it('reads the studio accent as unfit to carry a word on the chassis', () => {
+    expect(contrastRatio('#3574f0', '#2b2d30')).toBeLessThan(AA_NORMAL_TEXT)
+    expect(contrastRatio('#6193f3', '#2b2d30')).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+  })
+})
+
+describe('the ink of an accent', () => {
+  it('lightens on a dark backdrop and darkens on a light one', () => {
+    const onDark = inkFor('#3574f0', '#2b2d30')
+    const onLight = inkFor('#3574f0', '#dcdde1')
+
+    expect(relativeLuminance(onDark)).toBeGreaterThan(relativeLuminance('#3574f0'))
+    expect(relativeLuminance(onLight)).toBeLessThan(relativeLuminance('#3574f0'))
+  })
+
+  it('moves exactly as far as the threshold, on either backdrop', () => {
+    for (const backdrop of ['#2b2d30', '#191a1c', '#dcdde1', '#ffffff']) {
+      expect(contrastRatio(inkFor('#3574f0', backdrop), backdrop)).toBeGreaterThanOrEqual(
+        AA_NORMAL_TEXT,
+      )
+    }
+  })
+
+  it('leaves a colour that already clears it exactly as it was', () => {
+    expect(inkFor('#ffffff', '#2b2d30')).toBe('#ffffff')
+  })
+
+  // A chassis read back as an empty string is what an unmounted root hands over, and a colour
+  // is better than none on a screen: the caller gets its own accent rather than a broken value.
+  it('gives the accent back untouched when either colour is not one', () => {
+    expect(inkFor('#3574f0', '')).toBe('#3574f0')
+    expect(inkFor('rebeccapurple', '#2b2d30')).toBe('rebeccapurple')
+  })
+
+  it('stays on the studio shape, so what it returns can be stored and rendered', () => {
+    expect(inkFor('#12b600', '#2b2d30')).toMatch(HEX_COLOR)
+    expect(inkFor('#ff715b', '#ffffff')).toMatch(HEX_COLOR)
   })
 })
