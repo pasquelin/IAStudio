@@ -740,13 +740,17 @@ re-renders every mounted row on each frame, and `useTranslation()` is not free.
 
 ### What gets translated goes beyond sentences
 
-Six things go through the bundles without looking like it, and each answers an observed defect:
+Seven things go through the bundles without looking like it, and each answers an observed defect:
 
 - **key names** — `Space`, `Delete`, `Home` are not English labels left in place: the shortcuts
   screen resolves them like everything else;
 - **units and dates** — `formatBytes` computes a size but **does not name it**: the unit's name
   comes from the caller, because `Mio` and `MiB` are the same size in two languages and the
   abbreviations had ended up living in French inside a computation file;
+- **the percent sign** — `formatPercent`, in the same file: French puts a no-break space before
+  the sign, English puts none. Three sites wrote it by hand, two of them the French way, and that
+  space shipped as-is to an English reader. **No i18n guard could see it** — a sign is not a word,
+  so no bundle carries it; `no-composed-percent.test.ts` is the guard written for that gap;
 - **numbers written INSIDE a sentence** — `{{count, number}}` rather than `{{count}}`: a thousand
   reads "4,000" on one side of the Channel and "4 000" on the other, and French's separator is a
   narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.

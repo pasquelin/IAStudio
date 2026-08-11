@@ -1,8 +1,52 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
-import { BYTE_UNITS, formatBytes, type ByteUnit } from './format'
+import { BYTE_UNITS, formatBytes, formatPercent, kept, type ByteUnit } from './format'
 
 const name = (unit: ByteUnit): string => unit
+
+describe('reading a percentage', () => {
+  // The defect this closed: the French spacing was written into three components, so an English
+  // reader was shown `42 %`, which their typography does not have. The separator French uses is
+  // U+00A0, written as an escape here because it reads as a plain space in an editor.
+  it('spaces the sign the way the language does', () => {
+    expect(formatPercent(0.42, 'fr')).toBe('42\u00a0%')
+    expect(formatPercent(0.42, 'en')).toBe('42%')
+  })
+
+  it('rounds to whole percents unless asked for more', () => {
+    expect(formatPercent(0.4249, 'en')).toBe('42%')
+    expect(formatPercent(0.037, 'en', 1)).toBe('3.7%')
+  })
+
+  // A decimal place asked for is a maximum, not a padding: 100 % must not read as 100.0 %.
+  it('drops a decimal it does not need', () => {
+    expect(formatPercent(1, 'en', 1)).toBe('100%')
+  })
+
+  // A zoom is the only percentage that goes past a thousand, and a grouped one reads as two.
+  it('leaves the thousands ungrouped', () => {
+    expect(formatPercent(12.5, 'en')).toBe('1250%')
+  })
+
+  // `pseudo` is the pseudo-locale's tag, and it reaches here as `i18n.language` like any other.
+  it('answers for a language tag no region defines', () => {
+    expect(() => formatPercent(0.42, 'pseudo')).not.toThrow()
+  })
+})
+
+describe('keeping a formatter', () => {
+  // 48 µs against 4: a progress bar repainting on every job tick pays it on the UI thread.
+  it('builds one per key and holds it', () => {
+    const cache = new Map<string, string>()
+    const build = vi.fn(() => 'built')
+
+    expect(kept(cache, 'a', build)).toBe('built')
+    expect(kept(cache, 'a', build)).toBe('built')
+    expect(kept(cache, 'b', build)).toBe('built')
+
+    expect(build).toHaveBeenCalledTimes(2)
+  })
+})
 
 describe('sizing a file', () => {
   it('counts in kibibytes, like the file managers it sits beside', () => {

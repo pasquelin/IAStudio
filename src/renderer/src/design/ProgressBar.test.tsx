@@ -13,7 +13,9 @@ describe('ProgressBar', () => {
   it('names what is progressing', () => {
     render(<ProgressBar ratio={0.42} label="Sunset" />)
 
-    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Sunset 42%')
+    // The suites run in French, whose typography puts U+00A0 before the sign — the bar takes
+    // that from the language rather than writing a space of its own.
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Sunset 42 %')
   })
 
   // A job reporting 1.02 must not paint past its track.
