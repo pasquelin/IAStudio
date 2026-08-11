@@ -202,7 +202,6 @@
     "failed_other": "{{count, number}} failures",
     "open": "Show generations",
     "openHint": "Opens the list of generations, running and finished alike",
-    "cost": "{{units}} CU",
     "status": {
       "queued": "Queued",
       "running": "Running",
@@ -1895,7 +1894,6 @@
     "total": "Total spent",
     "discount": "Discounts",
     "jobs": "Generations",
-    "units": "CU",
     "indicative": "Indicative amount, derived from the public prepaid pack grid.",
     "daily": "Per day",
     "perAccount": "Per account",
@@ -2028,7 +2026,8 @@
       "json": "JSON",
       "text": "Text",
       "video": "Video"
-    }
+    },
+    "amount": "{{units}} CU"
   },
   "blend": {
     "normal": "Normal",

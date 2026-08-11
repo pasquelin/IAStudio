@@ -202,7 +202,6 @@
     "failed_other": "{{count, number}} échecs",
     "open": "Afficher les générations",
     "openHint": "Ouvre la liste des générations, en cours comme terminées",
-    "cost": "{{units}} UC",
     "status": {
       "queued": "En file",
       "running": "En cours",
@@ -1895,7 +1894,6 @@
     "total": "Total consommé",
     "discount": "Remises",
     "jobs": "Générations",
-    "units": "UC",
     "indicative": "Montant indicatif, calculé sur la grille publique des packs prépayés.",
     "daily": "Par jour",
     "perAccount": "Par compte",
@@ -2028,7 +2026,8 @@
       "json": "JSON",
       "text": "Texte",
       "video": "Vidéo"
-    }
+    },
+    "amount": "{{units}} UC"
   },
   "blend": {
     "normal": "Normal",
