@@ -152,12 +152,17 @@ export function GraphCanvas({
 
   const compiled = useGraphCompile(graph)
 
-  // A new Set only when the verdict changes, never on a drag: `canvasNodesOf` hands a node back by
-  // reference when nothing about it moved, and a fresh Set every render would defeat that.
-  const problems = useMemo(
-    () => new Set(compiled && !compiled.ok ? compiled.nodes : []),
-    [compiled],
-  )
+  /**
+   * Painted from the verdict the STATUS LINE is showing, which is why it reads `published` first:
+   * `GraphStatus` gives a publication's answer the line while there is one, and painting the
+   * compile's nodes underneath it would accuse a set of nodes the sentence beside them is not
+   * about. One verdict on the screen, said twice.
+   */
+  const shown = published ?? compiled
+
+  // A new Set per verdict, never per frame: `canvasNodesOf` hands a node back by reference when
+  // nothing about it moved, and a fresh Set on every render would defeat that.
+  const problems = useMemo(() => new Set(shown && !shown.ok ? shown.nodes : []), [shown])
 
   const nodes = useMemo(
     () => canvasNodesOf(graph, selectedNodes, runs, problems),

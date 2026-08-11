@@ -255,9 +255,23 @@ function reachedFrom(
  * - an end naming a node the graph no longer holds: the lookup answers nothing and the wire is
  *   simply dropped, which is the same as drawing no wire.
  */
-/** The ends naming that node, in node order — the converter keeps the first of them. */
-const endsNaming = (graph: GraphState, named: string): readonly string[] =>
-  graph.nodes.filter(node => namedLoopId(node) === named).map(node => node.id)
+/**
+ * The ends to blame for that loop: the one the converter RETAINS, plus every read end that is not
+ * it. In node order, so the retained one comes first.
+ *
+ * Not every end naming the loop — a spare end NOTHING reads misroutes nothing, which the refusal
+ * above says in as many words, and painting it would send the user to delete a node that is not
+ * the fault. `index === 0` is the retained one: `firstEnd` is filled in this very order.
+ */
+const endsToBlame = (
+  graph: GraphState,
+  named: string,
+  read: ReadonlySet<string>,
+): readonly string[] =>
+  graph.nodes
+    .filter(node => namedLoopId(node) === named)
+    .map(node => node.id)
+    .filter((id, index) => index === 0 || read.has(id))
 
 function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
   const consumers = consumersByProvider(graph)
@@ -298,20 +312,26 @@ function loopPairingProblem(graph: GraphState): FlowRefusal | undefined {
     // Read off the nodes rather than off `firstEnd`, whose `get` can only be `undefined` on a
     // branch nothing can reach — and an unreachable branch is one no test can ever cover.
     if (firstEnd.get(entry.names) !== entry.end)
-      return { problem: 'loop-two-ends', nodes: endsNaming(graph, entry.names) }
+      return {
+        problem: 'loop-two-ends',
+        nodes: endsToBlame(graph, entry.names, new Set(read.map(other => other.end))),
+      }
   }
 
   // An end that does not close what it names, either because that is no loop at all or because the
   // end is not downstream of it. Measured both ways: the wire leaving it lands on the named node
   // instead of its own provider, or is dropped and the reader falls back to its form.
-  for (const entry of read) {
-    if (!graph.nodes.some(node => node.id === entry.names)) continue
+  // ALL of them, not the first found: stopping at one sends the user round the same hunt for every
+  // misplaced end a file carries, one four-hundred-millisecond debounce at a time.
+  const misplaced = read
+    .filter(entry => graph.nodes.some(node => node.id === entry.names))
     // Reachability alone, and NOT "is the named node a loop": the harness showed the second test
     // never firing on its own. An end downstream of what it names resolves to it either way, loop
     // or not — and an end that is not downstream is misrouted whatever it named.
-    if (!reachedFrom(consumers, entry.names).has(entry.end))
-      return { problem: 'loop-end-outside', nodes: [entry.end] }
-  }
+    .filter(entry => !reachedFrom(consumers, entry.names).has(entry.end))
+    .map(entry => entry.end)
+
+  if (misplaced.length > 0) return { problem: 'loop-end-outside', nodes: misplaced }
 
   return undefined
 }

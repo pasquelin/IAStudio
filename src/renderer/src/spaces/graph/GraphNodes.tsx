@@ -1,4 +1,4 @@
-import { mdiExportVariant } from '@mdi/js'
+import { mdiAlertCircleOutline, mdiExportVariant } from '@mdi/js'
 import type { TFunction } from 'i18next'
 import { memo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -97,6 +97,19 @@ function NodeShell({
             alone: which node an App ends on is read at a glance on the canvas, or not at all.
             Named as `AssetBadge` names its own marks — a glyph carries the meaning, so it needs
             the words a colour cannot give, and `UiIcon` is `aria-hidden` on every site. */}
+        {/* The refusal, in words as well as in the border: the rule above applies to it too, and a
+            red edge alone says nothing to a screen reader — which is the one place the status line
+            beside the canvas cannot be reached from. */}
+        {problem && (
+          <span
+            title={t('graphCompile.blamed')}
+            aria-label={t('graphCompile.blamed')}
+            role="img"
+            className="text-danger shrink-0 self-center"
+          >
+            <UiIcon path={mdiAlertCircleOutline} size={12} />
+          </span>
+        )}
         {output && (
           <span
             title={t('inspector.isOutput')}

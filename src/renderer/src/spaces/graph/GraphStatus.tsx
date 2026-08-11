@@ -85,11 +85,17 @@ function StatusLine({ ok, children }: { ok: boolean; children: ReactNode }) {
  * wiring rather than as a 400 at the far end of an export. Nothing is sent anywhere yet — the
  * export lands with step 9 — so what it buys today is the refusals a user cannot guess: "nothing
  * is marked as an output", and the two about a loop and its end, which no other source can emit
- * at all. `validateWorkflowFlow` accepts those two graphs, and this line is their only channel.
+ * at all — `validateWorkflowFlow` accepts those two graphs without a word.
+ *
+ * No longer their ONLY channel: a refusal also names the nodes at fault, which the canvas paints
+ * and each blamed node says in words. This line says WHICH refusal; the nodes say WHERE. The two
+ * must therefore show one verdict and not two, which is why `GraphCanvas` paints from whichever
+ * of the two this component is about to render.
  *
  * `published` takes the line over when there is one, and it is deliberate: a publication is a
  * WRITE on the user's account, and the one thing it must never be is silent. It stays until the
- * next attempt rather than fading, so a refusal cannot be missed by looking away.
+ * graph itself changes — `GraphDocument` keeps it beside the graph it judged — rather than
+ * fading, so a refusal cannot be missed by looking away.
  */
 export function GraphStatus({
   result,

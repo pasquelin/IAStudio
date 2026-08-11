@@ -721,6 +721,61 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
   })
 
   /**
+   * The refusal names the ends AT FAULT, and a spare end nobody reads is not one of them: this
+   * file refuses to refuse that graph at all, on the grounds that it misroutes nothing. Blaming
+   * it anyway would send the user to delete the one end that is innocent.
+   */
+  it('leaves an unread end out of the ones it blames', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, end('e2', 'L'), end('e3', 'L'), modelNode('reader2', true)],
+      [...edges, wire('reader2', 'prompt', 'e2', 'results')],
+    )
+
+    // `e3` names the loop and is read by nobody — so it is not in the list, though `endsNaming`
+    // would have put it there.
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-two-ends',
+      nodes: ['e1', 'e2'],
+    })
+  })
+
+  /**
+   * Every misplaced end at once, not the first found: one refusal per debounce would send the user
+   * round the same hunt for each of them.
+   */
+  it('names every end that fails to close what it names, not just the first', () => {
+    // Each end names a DIFFERENT node, and neither is a loop — so the two-ends rule above, which
+    // speaks first and only over real loops, cannot answer for this graph.
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [
+        ...nodes,
+        modelNode('other', true),
+        modelNode('other2', true),
+        end('e2', 'other'),
+        end('e3', 'other2'),
+        modelNode('reader', true),
+        modelNode('reader2', true),
+      ],
+      [
+        ...edges,
+        wire('e2', 'results', 'm1', 'image'),
+        wire('e3', 'results', 'm1', 'image'),
+        wire('reader', 'prompt', 'e2', 'results'),
+        wire('reader2', 'prompt', 'e3', 'results'),
+      ],
+    )
+
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-end-outside',
+      nodes: ['e2', 'e3'],
+    })
+  })
+
+  /**
    * Measured: the converter keeps the FIRST end and resolves the second's wires to the loop all
    * the same, which pulls whatever read the second INTO the loop's body — a node outside the loop
    * running once per item instead of once.

@@ -142,7 +142,8 @@
       "invalid": "The graph does not compile",
       "loop-end-outside": "An end of loop does not close what it names",
       "loop-two-ends": "Two ends close the same loop"
-    }
+    },
+    "blamed": "The refusal is about this node"
   },
   "graphRun": {
     "running": "running",

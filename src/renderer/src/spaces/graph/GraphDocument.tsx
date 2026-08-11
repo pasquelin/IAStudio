@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { CommandId } from '@shared/domain/command'
-import type { GraphPublishResult } from '@shared/domain/graph'
+import type { GraphPublishResult, GraphState } from '@shared/domain/graph'
 import { isRunnable, type GraphPosition } from '@shared/domain/graph'
 import {
   addGraphNode,
@@ -42,7 +42,17 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const canExport = graph.nodes.length > 0
   // Held here rather than in the bar: a write on the account must leave a mark on the screen, and
   // the canvas already has the one line that says what the graph would export.
-  const [published, setPublished] = useState<GraphPublishResult | null>(null)
+  /**
+   * The publication's verdict, WITH the graph it was given — so it can be dropped by derivation
+   * rather than by an effect writing state, which the lint refuses and rightly.
+   *
+   * Dropping it matters more since a refusal paints nodes: kept across an edit, it would point at
+   * a graph the user has already changed, and the status line would name a verdict long dead.
+   */
+  const [published, setPublished] = useState<{
+    of: GraphState
+    result: GraphPublishResult
+  } | null>(null)
   /**
    * Held here, not in the global selection: that one carries a single kind at a time, so clicking
    * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
@@ -234,7 +244,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
     setPublished(null)
     void getBridge()
       ?.workflows.publish(graph, title)
-      .then(setPublished)
+      .then(result => setPublished({ of: graph, result }))
       .catch(error => reportFailure('graph.publish', documentId, error))
   }, [documentId, graph, title])
 
@@ -306,7 +316,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onPublish={onPublish}
       onImport={onImport}
       canImport={!running}
-      published={published}
+      published={published?.of === graph ? published.result : null}
       runs={runs}
       running={running}
     />
