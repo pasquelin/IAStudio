@@ -90,13 +90,19 @@ export function isFinished(status: JobStatus): boolean {
  *
  * Here rather than in either caller, and beside `isFinished` for the same reason it is: the
  * manager settles the real job and the fixture stands for one, and the day the two disagree a
- * suite affirms a shape the studio never publishes. They HAD disagreed — the fixture dated a job
- * with its `createdAt` while the manager dated it with the clock, and nothing held the pair.
+ * suite affirms a shape the studio never publishes. They HAD disagreed, and nothing held the pair.
+ *
+ * What is shared is the RULE, never the date: the manager reads the clock and the fixture hands
+ * its `createdAt`, which is deliberate — a fixture that read a clock would not be one. A fixture's
+ * `finishedAt` is therefore still no prediction of a real job's.
+ *
+ * The two shapes are spelled out rather than left to `Partial`, which would let a progress with no
+ * date past the compiler and leave the rule resting on the tests alone.
  */
 export function settlementOf(
   status: JobStatus,
   at: string,
-): Partial<Pick<Job, 'finishedAt' | 'progress'>> {
+): Record<string, never> | { finishedAt: string; progress?: number } {
   if (!isFinished(status)) return {}
 
   return status === 'succeeded' ? { finishedAt: at, progress: 1 } : { finishedAt: at }

@@ -1,5 +1,5 @@
 import type { JobFailure } from '@shared/domain/failure'
-import { isFinished, type Job, settlementOf } from '@shared/domain/job'
+import { type Job, settlementOf } from '@shared/domain/job'
 
 /** What `settle` writes when the API turned a generation down — the commonest of its four codes. */
 const DEFAULT_FAILURE: JobFailure = 'rejected'
@@ -28,7 +28,6 @@ const RUNNING: Job = {
  */
 export function job(overrides: Partial<Job> = {}): Job {
   const built: Job = { ...RUNNING, ...overrides }
-  if (!isFinished(built.status)) return built
 
   // A failed job always carries its code: `settle` is reached from four places and every one of
   // them names one. Without it, the fixture would offer a shape the manager never publishes —
@@ -38,10 +37,12 @@ export function job(overrides: Partial<Job> = {}): Job {
   return {
     ...built,
     // The manager's own rule, asked rather than copied: a second spelling of it here is exactly
-    // how this pair drifted before. `createdAt` stands in for the clock the manager reads.
+    // how this pair drifted before. `createdAt` stands in for the clock the manager reads, and a
+    // job still running settles to nothing — no guard of this file's own for that.
     ...settlementOf(built.status, built.createdAt),
-    ...('finishedAt' in overrides ? { finishedAt: overrides.finishedAt } : {}),
-    ...('progress' in overrides ? { progress: built.progress } : {}),
+    // The opt-out, said once: putting the named keys back covers whatever the rule wrote, so a
+    // third key added to it stays escapable without this line knowing the list.
+    ...overrides,
     ...(failed ? { error: DEFAULT_FAILURE } : {}),
   }
 }

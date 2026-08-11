@@ -365,7 +365,8 @@ export function createJobManager({
     workspaces?: WorkspaceId[],
   ): void => {
     entry.job.status = status
-    // Assigned onto the job rather than replacing it: a poll in flight holds this very object.
+    // Assigned onto the job rather than replacing it: `collect` holds this very object across an
+    // await, and `list` hands it out — a fresh one here would leave both on the unsettled job.
     Object.assign(entry.job, settlementOf(status, now()))
     entry.body = {}
     // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
