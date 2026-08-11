@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
@@ -159,8 +159,9 @@ async function readManifest(path: string): Promise<ManifestSource> {
  * not ours to tidy, and an older build of the studio still reads it.
  */
 async function migrateManifest(path: string, body: string): Promise<void> {
-  // Best effort: a read-only folder still opens, it just migrates on the next writable one.
-  await writeFile(join(path, MANIFEST_FILE), body, 'utf8').catch(() => undefined)
+  // Atomic like every other manifest write: a promotion torn in half would be the very burial
+  // this function exists to prevent, since the dotted file wins whatever it contains.
+  await writeAtomic(join(path, MANIFEST_FILE), body).catch(() => undefined)
   await hideFromExplorer(join(path, MANIFEST_FILE))
 }
 

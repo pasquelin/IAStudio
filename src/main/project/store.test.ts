@@ -119,7 +119,7 @@ describe('project store', () => {
     await mkdir(join(path, '.index'), { recursive: true })
     await writeFile(join(path, 'project.json'), '{ "version": 1, "name"', 'utf8')
 
-    await expect(store.open(path)).rejects.toThrow()
+    await expect(store.open(path)).rejects.toMatchObject({ reason: 'unreadable' })
 
     expect(await exists(join(path, MANIFEST_FILE))).toBe(false)
   })
@@ -131,7 +131,7 @@ describe('project store', () => {
     await mkdir(join(path, '.index'), { recursive: true })
     await writeFile(join(path, 'project.json'), JSON.stringify({ version: 1 }), 'utf8')
 
-    await expect(store.open(path)).rejects.toThrow()
+    await expect(store.open(path)).rejects.toMatchObject({ reason: 'unreadable' })
 
     expect(await exists(join(path, MANIFEST_FILE))).toBe(false)
   })
@@ -152,7 +152,7 @@ describe('project store', () => {
       'utf8',
     )
 
-    await expect(store.open(path)).rejects.toThrow()
+    await expect(store.open(path)).rejects.toMatchObject({ reason: 'too-new' })
 
     expect(await exists(join(path, MANIFEST_FILE))).toBe(false)
   })
