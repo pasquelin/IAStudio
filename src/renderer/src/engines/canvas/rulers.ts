@@ -54,7 +54,7 @@ export function ticks(from: number, to: number, step: number): number[] {
  * Ungrouped, and it is the one thing this asks of the formatter that a file size does not: the
  * labels sit a few pixels apart, where a thousands separator reads as a second number.
  */
-export function tickLabel(value: number, step: number, language: string): string {
+export function tickLabel(value: number, step: number, language: string | undefined): string {
   const decimals = step >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(step)))
   // `ticks` produces `-0` for the tick at the origin when the range starts negative, and a
   // ruler graduated `-0` is a defect.

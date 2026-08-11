@@ -62,7 +62,11 @@ export type DecimalShape = {
   grouped?: boolean
 }
 
-export function formatDecimal(value: number, language: string, shape: DecimalShape): string {
+export function formatDecimal(
+  value: number,
+  language: string | undefined,
+  shape: DecimalShape,
+): string {
   const { digits, least = 0, grouped = true } = shape
 
   return kept(

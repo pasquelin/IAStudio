@@ -458,8 +458,8 @@ export class CanvasEngine {
   private colors: OverlayColors = FALLBACK_COLORS
   private rulerFont = FALLBACK_RULER_FONT
 
-  /** Empty until the palette is read; `Intl` reads that as the host's own locale. */
-  private language = ''
+  /** What the graduations are written in. `undefined` is the host's locale; `''` would throw. */
+  private language: string | undefined
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
 
@@ -921,6 +921,18 @@ export class CanvasEngine {
     // Its texture belongs to the asset cache, and another layer may hold the same picture.
     sprite.destroy()
     this.render()
+  }
+
+  /**
+   * What the rulers are graduated in. Pushed like the view rather than read off
+   * `documentElement.lang`: that attribute is a projection written for screen readers, and it
+   * carries no notification — the rulers would keep the language they were mounted in while the
+   * inspector beside them changed.
+   */
+  setLanguage(language: string): void {
+    if (language === this.language) return
+    this.language = language
+    this.overlay.invalidate()
   }
 
   /** Pan, zoom, and what the overlay shows. Pushed in, never read out: React owns it. */
@@ -1419,9 +1431,6 @@ export class CanvasEngine {
   private readPalette(canvas: HTMLCanvasElement): void {
     this.colors = readColors(canvas)
     this.rulerFont = tokenAsFont(canvas, '--text-micro', RULER_FONT_SIZE, RULER_FAMILY)
-    // Off the document, like the font token beside it: `i18n/index.ts` keeps `lang` in step, and
-    // reading it here is what keeps this engine free of React.
-    this.language = canvas.ownerDocument.documentElement.lang
     this.overlay.invalidate()
   }
 

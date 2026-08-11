@@ -172,8 +172,8 @@ export type OverlayScene = {
    * them: it is read the same way, off the same element, but it is not one.
    */
   rulerFont: string
-  /** What the graduations are written in. Read off `documentElement.lang` by the engine. */
-  language: string
+  /** What the graduations are written in. `undefined` before React has pushed one. */
+  language: string | undefined
   /**
    * Whether anything on screen is dashed. The frame loop keeps booking frames while it is true
    * and stops the moment it is not: ants that marched on an empty canvas would be a rAF running

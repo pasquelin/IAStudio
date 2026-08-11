@@ -65,6 +65,12 @@ describe('tickLabel', () => {
     expect(tickLabel(1, 0.5, 'fr')).toBe('1,0')
   })
 
+  // Before React has pushed one: the host's own locale rather than a `RangeError` mid-frame,
+  // which is what an empty string would have cost.
+  it('graduates without a language rather than throwing', () => {
+    expect(() => tickLabel(0.5, 0.5, undefined)).not.toThrow()
+  })
+
   /**
    * Ungrouped, unlike every other number the window writes: two majors sit 72 px apart at the
    * closest, and `1 000` there reads as two ticks rather than one.

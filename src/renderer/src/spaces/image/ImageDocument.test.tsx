@@ -37,6 +37,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       apply = vi.fn()
       dispose = vi.fn()
       setView = vi.fn()
+      setLanguage = vi.fn()
       setTool = setTool
       setBrush = setBrush
       loadInto = vi.fn(() => Promise.resolve())
