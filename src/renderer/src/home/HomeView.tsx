@@ -97,7 +97,7 @@ function Hidden() {
   }
 
   return (
-    <p className="text-muted m-0 flex items-center gap-2 text-[11px]">
+    <p className="text-muted text-tiny m-0 flex items-center gap-2">
       {t('home.hidden', { count: hidden.length })}
       <button
         type="button"
@@ -105,7 +105,7 @@ function Hidden() {
         onClick={restore}
         className={cn(
           'text-accent cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
-          'p-0 text-[11px] underline',
+          'text-tiny p-0 underline',
           FOCUS_RING,
         )}
       >

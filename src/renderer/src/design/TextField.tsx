@@ -38,7 +38,7 @@ export function TextField({
         // One entry per session at the field, not one per keystroke.
         onFocus={() => onGestureStart?.()}
         onBlur={() => onGestureEnd?.()}
-        className={cn(FIELD, 'min-w-0 flex-1 text-[11px]')}
+        className={cn(FIELD, 'text-tiny min-w-0 flex-1')}
         {...hint}
       />
     </label>

@@ -26,7 +26,7 @@ export const BUTTON_BASE = cn(
  * a keyboard user cannot see.
  */
 export const CONTROL = cn(
-  'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-[11px]',
+  'bg-surface text-text h-(--sc-control) rounded-(--radius-sc-md) text-tiny',
   FOCUS_RING,
 )
 
@@ -93,7 +93,7 @@ export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
  * The gap is two, never one: at one the label, the track and the number read as a single
  * run-on string rather than as three things. It is the studio's spacing, applied throughout.
  */
-export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 text-[11px]'
+export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 text-tiny'
 
 /**
  * Fixed, so the controls of a section line up rather than each starting where its name ends.

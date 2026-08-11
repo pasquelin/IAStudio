@@ -1,0 +1,45 @@
+import { describe, expect, it } from 'vitest'
+import stylesheet from '../index.css?raw'
+import { WRITTEN_SOURCES } from './test-harness'
+
+/**
+ * A size the studio writes has to come off the ladder, because the ladder is the only thing
+ * `--sc-font-scale` reaches. An arbitrary pixel is frozen by definition, and so is any Tailwind
+ * step the stylesheet has not re-valued: those are `rem`, and `rem` answers to the root element,
+ * which nothing here sizes. That is how 95 of the 131 sized elements came to ignore the
+ * preference for as long as it existed.
+ *
+ * What this cannot see: text PAINTED rather than laid out — `context.font` in the canvas and
+ * timeline engines, a `fontSize` handed to a chart. Those are pixels in a string or a number,
+ * not a class, and they read the tokens through `engines/core/palette.ts` or not at all.
+ */
+const OFF_LADDER = /text-\[\d+px\]|\btext-(?:xl|[2-9]xl)\b/
+
+/** Line-height pairs are `--text-xs--line-height` and never match: the dash is not a letter. */
+const LADDER = [...stylesheet.matchAll(/--text-([a-z]+):\s*([^;]+);/g)]
+
+describe('the text ladder of the studio', () => {
+  it('finds the sources at all, so the rule below cannot pass on an empty list', () => {
+    expect(WRITTEN_SOURCES.length).toBeGreaterThan(100)
+  })
+
+  it('re-values the Tailwind steps it keeps, rather than leaving them in rem', () => {
+    expect(LADDER.map(([, name]) => name)).toEqual(
+      expect.arrayContaining(['micro', 'mini', 'tiny', 'body', 'xs', 'sm', 'base', 'lg']),
+    )
+  })
+
+  it('carries the scale on every step, so no step can be added frozen', () => {
+    const frozen = LADDER.filter(([, , value = '']) => !value.includes('--sc-font-scale'))
+
+    expect(frozen.map(([, name]) => name)).toEqual([])
+  })
+
+  it('is the only way a source sizes text', () => {
+    const offenders = WRITTEN_SOURCES.filter(([, source]) => OFF_LADDER.test(source)).map(
+      ([path]) => path,
+    )
+
+    expect(offenders).toEqual([])
+  })
+})

@@ -93,6 +93,27 @@
   /* No webfont ships with the studio: naming one it never loads only made the stack lie. */
   --font-sans: system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /*
+   * The text ladder — every size the studio writes, and the only thing `--sc-font-scale` can
+   * reach. Pixels times the scale, NOT `rem`: `rem` answers to the root element, which this
+   * stylesheet never sizes, so Tailwind's steps shipped frozen at a 16px root while the
+   * preference moved nothing. Each value is what its sites already read, so scale 1 renders
+   * to the pixel as before.
+   *
+   * Tailwind's own four are re-valued rather than replaced, because they carry a paired
+   * `--text-*--line-height` their sites render today. That pair is a ratio, so it follows the
+   * font-size on its own. The four below are the steps Tailwind has no slot for, and they carry
+   * no pair — their sites inherit the 1.5 of preflight, which is what they did as `text-[11px]`.
+   */
+  --text-micro: calc(9px * var(--sc-font-scale));
+  --text-mini: calc(10px * var(--sc-font-scale));
+  --text-tiny: calc(11px * var(--sc-font-scale));
+  --text-body: calc(13px * var(--sc-font-scale));
+  --text-xs: calc(12px * var(--sc-font-scale));
+  --text-sm: calc(14px * var(--sc-font-scale));
+  --text-base: calc(16px * var(--sc-font-scale));
+  --text-lg: calc(18px * var(--sc-font-scale));
 }
 
 /*
@@ -313,9 +334,10 @@ body {
   background: var(--color-chassis);
   color: var(--color-text);
   font-family: var(--font-sans);
-  /* Every `rem` and every text size follows from this one; the gauges stay in pixels, because
-     a control has to keep hitting the same target size whatever the text does. */
-  font-size: calc(13px * var(--sc-font-scale));
+  /* What text without a size class falls to; the ladder above says why it is not `rem`. The
+     gauges stay in pixels, because a control has to keep hitting the same target size whatever
+     the text does. */
+  font-size: var(--text-body);
   /* A studio never scrolls as a whole: every panel handles its own overflow. */
   overflow: hidden;
   user-select: none;

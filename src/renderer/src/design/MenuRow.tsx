@@ -76,7 +76,7 @@ export function MenuRow({
         // different questions, and colouring the armed row would answer neither.
         'group text-text hover:bg-accent flex cursor-pointer items-center hover:text-white',
         'h-(--sc-control) gap-2 rounded-(--radius-sc-md) border-none bg-transparent px-2',
-        'text-left text-[11px] transition-colors',
+        'text-tiny text-left transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
         'disabled:hover:text-text',
         // The keyboard walks these rows without the pointer being anywhere near them, so the
@@ -93,7 +93,7 @@ export function MenuRow({
       <UiIcon path={icon} size={14} />
       <span className="flex-1 truncate">{label}</span>
       {shortcut && (
-        <span className="text-muted shrink-0 pl-3 text-[10px] group-hover:text-white">
+        <span className="text-muted text-mini shrink-0 pl-3 group-hover:text-white">
           {shortcut}
         </span>
       )}

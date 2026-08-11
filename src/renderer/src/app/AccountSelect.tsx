@@ -50,7 +50,7 @@ export function AccountSelect() {
         className={cn(
           'flex h-(--sc-control) cursor-pointer items-center gap-1.5 rounded-(--radius-sc-md)',
           'text-muted hover:bg-elevated/60 hover:text-text border-none bg-transparent px-2',
-          'max-w-44 text-[11px] transition-colors',
+          'text-tiny max-w-44 transition-colors',
         )}
       >
         <span

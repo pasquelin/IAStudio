@@ -94,7 +94,7 @@ function Idea({ suggestion, modelId }: IdeaProps) {
       )}
     >
       <UiIcon path={mdiCreationOutline} size={16} className="text-create mt-px shrink-0" />
-      <span className="text-text text-[12px] leading-relaxed">{suggestion.text}</span>
+      <span className="text-text text-xs leading-relaxed">{suggestion.text}</span>
     </button>
   )
 }

@@ -44,7 +44,7 @@ export function ColorField({
           and a second copy would end up inside the field's own name. */}
       <span
         aria-hidden
-        className="text-muted min-w-0 flex-1 truncate font-mono text-[10px] uppercase"
+        className="text-muted text-mini min-w-0 flex-1 truncate font-mono uppercase"
       >
         {value}
       </span>

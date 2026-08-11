@@ -89,11 +89,11 @@ export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="text-text text-[11px] break-words">
+      <span className="text-text text-tiny break-words">
         {t(entry.messageKey, namedParams(entry.params, t))}
       </span>
       {entry.detail && (
-        <span className="text-muted/70 font-mono text-[10px] break-all">{entry.detail}</span>
+        <span className="text-muted/70 text-mini font-mono break-all">{entry.detail}</span>
       )}
     </div>
   )
@@ -120,7 +120,7 @@ function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | nul
         className={cn('mt-px shrink-0', TINTS[entry.level])}
       />
       <ActivityMessage entry={entry} />
-      <span className="text-muted shrink-0 text-[11px] tabular-nums">{time}</span>
+      <span className="text-muted text-tiny shrink-0 tabular-nums">{time}</span>
     </li>
   )
 }

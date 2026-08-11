@@ -47,7 +47,7 @@ export function InputPorts({ handles }: { handles: readonly GraphHandleInput[] }
             position={Position.Left}
             className={cn(PORT, 'border-border bg-surface')}
           />
-          <span className="text-muted truncate text-[10px]">{labelOf(handle, say)}</span>
+          <span className="text-muted text-mini truncate">{labelOf(handle, say)}</span>
         </li>
       ))}
     </ul>
@@ -61,7 +61,7 @@ export function OutputPorts({ handles }: { handles: readonly GraphHandleOutput[]
     <ul className="flex flex-col items-end gap-2">
       {handles.map(handle => (
         <li key={handle.id} className="relative flex items-center gap-2 pr-1">
-          <span className="text-muted truncate text-[10px]">{outputLabelOf(handle, say)}</span>
+          <span className="text-muted text-mini truncate">{outputLabelOf(handle, say)}</span>
           <Handle
             id={handle.id}
             type={OUTPUT_HANDLE}

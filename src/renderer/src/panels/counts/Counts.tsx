@@ -74,8 +74,8 @@ function Counter({ type, total }: { type: AssetType; total: number }) {
     >
       <UiIcon path={assetIcon(type)} size={18} className="text-muted shrink-0" />
       <span className="flex min-w-0 flex-col">
-        <span className="text-text text-[14px] font-semibold tabular-nums">{total}</span>
-        <span className="text-muted truncate text-[11px]">{t(`assetTypes.${type}`)}</span>
+        <span className="text-text text-sm leading-normal font-semibold tabular-nums">{total}</span>
+        <span className="text-muted text-tiny truncate">{t(`assetTypes.${type}`)}</span>
       </span>
     </button>
   )

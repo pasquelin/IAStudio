@@ -70,7 +70,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
         <PropertyGroup title={t('inspector.file')}>
           <PropertyRow label={t('inspector.onDisk')}>
             {missing ? (
-              <span className="text-muted text-[11px]">{t('inspector.fileMissing')}</span>
+              <span className="text-muted text-tiny">{t('inspector.fileMissing')}</span>
             ) : (
               <ToolButton
                 icon={mdiFolderOpenOutline}
@@ -122,7 +122,7 @@ function GenerationGroup({
       )}
       {generation.prompt && (
         <PropertyRow label={t('inspector.prompt')} stacked>
-          <p className="text-text bg-surface rounded-(--radius-sc-sm) p-1.5 text-[11px] whitespace-pre-wrap select-text">
+          <p className="text-text bg-surface text-tiny rounded-(--radius-sc-sm) p-1.5 whitespace-pre-wrap select-text">
             {generation.prompt}
           </p>
         </PropertyRow>

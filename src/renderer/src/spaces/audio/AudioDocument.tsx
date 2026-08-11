@@ -212,7 +212,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
         canUndo={canUndo(history)}
         canRedo={canRedo(history)}
         extras={
-          <span className="text-muted px-1 font-mono text-[11px]">
+          <span className="text-muted text-tiny px-1 font-mono">
             {formatDuration(player.currentTime)}
             {rendered && ` / ${formatDuration(durationOf(rendered.data))}`}
           </span>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { WRITTEN_SOURCES } from './test-harness'
 
 /**
  * The studio spaces its controls by two, never by one. At `gap-1` a row reads as a single
@@ -10,25 +11,13 @@ import { describe, expect, it } from 'vitest'
  */
 const BARE_GAP_ONE = /\bgap(-[xy])?-1(?![\d.])/
 
-/**
- * Read through Vite rather than `node:fs`: this project has no Node types, and the check has to
- * live beside the style it guards rather than in the main process for want of a reader.
- */
-const SOURCES: Record<string, string> = import.meta.glob('../**/*.{ts,tsx}', {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
-
-const OF_INTEREST = Object.entries(SOURCES).filter(([path]) => !/\.(test|bench)\.tsx?$/.test(path))
-
 describe('the spacing of the studio', () => {
   it('finds the sources at all, so the rule below cannot pass on an empty list', () => {
-    expect(OF_INTEREST.length).toBeGreaterThan(100)
+    expect(WRITTEN_SOURCES.length).toBeGreaterThan(100)
   })
 
   it('never spaces a row by one', () => {
-    const offenders = OF_INTEREST.filter(([, source]) => BARE_GAP_ONE.test(source)).map(
+    const offenders = WRITTEN_SOURCES.filter(([, source]) => BARE_GAP_ONE.test(source)).map(
       ([path]) => path,
     )
 

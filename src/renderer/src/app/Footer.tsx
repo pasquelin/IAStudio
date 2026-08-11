@@ -16,7 +16,7 @@ export type FooterProps = {
  */
 export function Footer({ left, right }: FooterProps) {
   return (
-    <footer className="text-muted flex shrink-0 items-center gap-3 px-(--sc-rail-inset) py-(--sc-gutter) text-[11px]">
+    <footer className="text-muted text-tiny flex shrink-0 items-center gap-3 px-(--sc-rail-inset) py-(--sc-gutter)">
       <span className="truncate">{left}</span>
       <span className="ml-auto flex shrink-0 items-center gap-3">{right}</span>
     </footer>

@@ -216,7 +216,7 @@ export function DynamicForm({
       {groups.map(([group, groupedFields]) => (
         <fieldset key={group} className="m-0 flex flex-col gap-2 border-0 p-0">
           {group && (
-            <legend className="text-muted p-0 text-[11px] tracking-wide uppercase">
+            <legend className="text-muted text-tiny p-0 tracking-wide uppercase">
               {say(group)}
             </legend>
           )}
@@ -238,9 +238,9 @@ export function DynamicForm({
                   onRoll={() => setValue(field.key, randomSeed())}
                 />
 
-                {field.help && <span className="text-muted text-[11px]">{say(field.help)}</span>}
+                {field.help && <span className="text-muted text-tiny">{say(field.help)}</span>}
                 {formState.errors[field.key] && (
-                  <span role="alert" className="text-danger text-[11px]">
+                  <span role="alert" className="text-danger text-tiny">
                     {t('errors.invalidValue')}
                   </span>
                 )}
@@ -266,7 +266,7 @@ export function DynamicForm({
           {submitLabel}
           {/* Spaced here rather than by a gap on the button: every tool button in the studio is
               built on the same base, and most of them are an icon beside a word. */}
-          {submitNote && <span className="ml-1.5 text-[11px] opacity-70">{submitNote}</span>}
+          {submitNote && <span className="text-tiny ml-1.5 opacity-70">{submitNote}</span>}
         </Button>
       )}
     </form>

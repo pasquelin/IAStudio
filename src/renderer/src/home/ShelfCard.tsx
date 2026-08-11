@@ -33,9 +33,9 @@ export function ShelfCard({ icon, title, subtitle, hint, onClick }: ShelfCardPro
     <>
       <span className="flex items-center gap-2">
         {icon !== undefined && <UiIcon path={icon} size={16} className="text-muted shrink-0" />}
-        <span className="text-text truncate text-[12px]">{title}</span>
+        <span className="text-text truncate text-xs leading-normal">{title}</span>
       </span>
-      <span className="text-muted truncate text-[11px]">{subtitle}</span>
+      <span className="text-muted text-tiny truncate">{subtitle}</span>
     </>
   )
 

@@ -115,7 +115,7 @@ function SearchResults({
             type="button"
             {...HINT_RIGHT(t('settings.searchSectionHint'))}
             onClick={() => onGo(section)}
-            className="text-base-content/60 hover:text-base-content mb-1 text-[11px] tracking-wide uppercase"
+            className="text-base-content/60 hover:text-base-content text-tiny mb-1 tracking-wide uppercase"
           >
             {t(sectionEntry(section)?.labelKey ?? '')}
           </button>
@@ -225,7 +225,7 @@ export function SettingsWindow() {
     <div className="bg-base-200 text-base-content flex h-full flex-col">
       <header
         style={DRAGGABLE}
-        className="flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 text-[13px] font-medium"
+        className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
       >
         {t('settings.title')}
       </header>

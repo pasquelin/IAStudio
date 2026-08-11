@@ -87,7 +87,7 @@ type GroupProps = {
 function Group({ title, entries, columns }: GroupProps) {
   return (
     <div className="bg-surface flex flex-col gap-2 rounded-(--radius-sc-lg) p-3">
-      <h3 className="text-muted m-0 text-[10px] font-semibold tracking-wider uppercase">{title}</h3>
+      <h3 className="text-muted text-mini m-0 font-semibold tracking-wider uppercase">{title}</h3>
 
       <div className={cn('grid gap-2', columns === 2 && 'sm:grid-cols-2')}>
         {entries.map(entry => (
@@ -106,8 +106,8 @@ function Group({ title, entries, columns }: GroupProps) {
           >
             <UiIcon path={entry.icon} size={18} className="text-muted mt-0.5 shrink-0" />
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-text truncate text-[12px]">{entry.label}</span>
-              <span className="text-muted text-[11px] leading-snug">{entry.help}</span>
+              <span className="text-text truncate text-xs leading-normal">{entry.label}</span>
+              <span className="text-muted text-tiny leading-snug">{entry.help}</span>
             </span>
           </button>
         ))}

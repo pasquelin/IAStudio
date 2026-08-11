@@ -65,7 +65,7 @@ export function MediaTile({
         className={cn(
           'absolute inset-x-0 bottom-0 truncate px-1.5 pt-5 pb-1',
           'bg-gradient-to-t from-black/85 via-black/45 to-transparent',
-          'text-[11px] text-white drop-shadow-[0_1px_2px_black]',
+          'text-tiny text-white drop-shadow-[0_1px_2px_black]',
         )}
       >
         {caption}

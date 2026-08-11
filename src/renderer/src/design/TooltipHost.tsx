@@ -22,7 +22,7 @@ export function TooltipHost() {
       delayShow={450}
       offset={8}
       noArrow
-      className="bg-elevated! text-text! z-50! rounded-(--radius-sc-sm)! px-2! py-1! text-[11px]! shadow-(--sc-shadow-floating)!"
+      className="bg-elevated! text-text! text-tiny! z-50! rounded-(--radius-sc-sm)! px-2! py-1! shadow-(--sc-shadow-floating)!"
     />
   )
 }

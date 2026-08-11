@@ -141,7 +141,7 @@ export function Monitor({
         onTool={id => (id === 'rewind' ? rewind() : toggle())}
         extras={
           <>
-            <span className="text-muted px-1 text-[11px]">{title}</span>
+            <span className="text-muted text-tiny px-1">{title}</span>
             <Timecode time={sequence.playhead} settings={sequence.settings} />
           </>
         }

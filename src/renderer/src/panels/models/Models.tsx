@@ -276,7 +276,7 @@ export function Models() {
           }
           footer={
             catalogue.isFetchingNextPage ? (
-              <p className="text-muted py-2 text-center text-[11px]">{t('collection.loading')}</p>
+              <p className="text-muted text-tiny py-2 text-center">{t('collection.loading')}</p>
             ) : null
           }
         />
@@ -324,7 +324,7 @@ function SelectedModel({ model, picture }: { model: ModelSummary | null; picture
 /** The tile's corner label: a standing, or the reason the model cannot be picked. */
 const BADGE = cn(
   'bg-chassis/75 text-text absolute top-1 right-1 max-w-[calc(100%-0.5rem)]',
-  'truncate rounded-(--radius-sc-sm) px-1 py-px text-[9px] leading-tight',
+  'truncate rounded-(--radius-sc-sm) px-1 py-px text-micro leading-tight',
 )
 
 /**

@@ -24,7 +24,7 @@ export function FormHeader({ title, leading }: FormHeaderProps) {
   return (
     <div className="border-border flex shrink-0 items-center gap-2 border-b px-1 py-1.5">
       {leading}
-      <p className="truncate text-[11px]">{title}</p>
+      <p className="text-tiny truncate">{title}</p>
     </div>
   )
 }

@@ -33,7 +33,7 @@ export function EmptyState({ icon, message, action, secondary }: EmptyStateProps
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
       <UiIcon path={icon} size={32} className="text-muted/40" />
-      <p className="text-muted max-w-56 text-[12px] leading-relaxed">{message}</p>
+      <p className="text-muted max-w-56 text-xs leading-relaxed">{message}</p>
 
       {(action || secondary) && (
         <div className="flex flex-wrap items-center justify-center gap-2">

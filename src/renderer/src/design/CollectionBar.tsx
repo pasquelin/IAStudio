@@ -250,7 +250,7 @@ export function CollectionBar({
           className="group flex cursor-pointer items-center gap-2 py-0.5"
         >
           <span className="border-border flex-1 border-t" />
-          <span className="text-muted group-hover:text-text text-[10px] transition-colors">
+          <span className="text-muted group-hover:text-text text-mini transition-colors">
             {expanded ? t('collection.fewer') : t('collection.more')}
           </span>
           <span className="border-border flex-1 border-t" />

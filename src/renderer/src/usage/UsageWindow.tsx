@@ -54,7 +54,7 @@ export function UsageWindow() {
     <div className="bg-base-200 text-base-content flex h-full flex-col">
       <header
         style={DRAGGABLE}
-        className="flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 text-[13px] font-medium"
+        className="text-body flex shrink-0 items-center pt-2 pr-4 pb-2 pl-24 font-medium"
       >
         {t('usage.title')}
 
