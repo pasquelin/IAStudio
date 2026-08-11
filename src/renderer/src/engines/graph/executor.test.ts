@@ -587,6 +587,35 @@ describe('stopping a run', () => {
     })
 
     expect(reported.get('m2')?.map(run => run.status)).toEqual(['idle'])
+    // And no node ANYWHERE is red, which is the whole of what `stalled` promises: the node that
+    // was on the wire when the stop landed has nothing to hand on, and blaming it for a run the
+    // user ended would be the one report this must never file. Asserted over every node because
+    // the mistake is a reader's, and a reader is whichever one comes next.
+    expect([...reported.values()].flat().map(run => run.status)).not.toContain('failed')
+  })
+
+  /**
+   * The other half of that same guard, and the half no test held: a generation that came back
+   * AFTER the stop must not land in the cache. Filed there, the next Run would paint the node
+   * `cached` off a run the user ended and never regenerate it — the result is real, but nobody
+   * asked for the run that produced it.
+   */
+  it('keeps out of the cache what came back after the stop', async () => {
+    const controller = new AbortController()
+
+    const run = await runGraph(chain(), undefined, {
+      generate: async () => {
+        controller.abort()
+        return ['asset_1']
+      },
+      approve: () => Promise.resolve(false),
+      transform: noTransform,
+      report: () => {},
+      signal: controller.signal,
+    })
+
+    // What the text node produced BEFORE the stop belongs there; what came back after does not.
+    expect(run.ok && [...run.cache.values()].flat()).not.toContain('asset_1')
   })
 
   it('submits nothing at all when the stop came before the run', async () => {
@@ -732,6 +761,10 @@ describe('stopping on an approval', () => {
     })
 
     expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'idle'])
+    // And nothing downstream of the gate runs. An approval that made it through hands back the
+    // same empty outcome as one nobody asked — so a stop that let this one answer `produced` would
+    // open the gate on a run the user just ended, and the next generation would be paid for.
+    expect(watched.submitted.map(call => call.modelId)).not.toContain('model_b')
   })
 
   /**
