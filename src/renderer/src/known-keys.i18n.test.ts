@@ -44,6 +44,25 @@ function isKnown(code: Language, key: string): boolean {
 /** `t('…')`, and the `…Key` fields the registries carry so a row names itself from a bundle. */
 type Interpolated = { key: string; given: readonly string[]; line: number }
 
+/**
+ * The literals an expression can resolve to. A control that says two things writes a ternary —
+ * `t(pinned ? 'inspector.pinned' : 'inspector.pin')` — and reading the outer node alone saw a
+ * `ConditionalExpression`, took nothing, and moved on. Walking in adds 36 keys to what this
+ * guard reads, measured by running both versions over the same sources; one of them named a
+ * key no bundle held.
+ *
+ * The third copy of this walk, after both `no-hardcoded-text.test.ts`. Narrower on purpose: those
+ * two hunt WORDS, so they join the parts of a template, while a key is one literal or none.
+ */
+function literalsOf(node: ts.Expression | undefined): ts.StringLiteral[] {
+  if (node === undefined) return []
+  if (ts.isStringLiteral(node)) return [node]
+  if (ts.isConditionalExpression(node))
+    return [...literalsOf(node.whenTrue), ...literalsOf(node.whenFalse)]
+  if (ts.isParenthesizedExpression(node)) return literalsOf(node.expression)
+  return []
+}
+
 /** The names an options object hands over — `t('x', { name, count })`. */
 function namesOf(options: ts.ObjectLiteralExpression, source: ts.SourceFile): string[] {
   return options.properties.flatMap(property => {
@@ -75,8 +94,10 @@ function keysIn(
   const lineOf = (node: ts.Node): number =>
     source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1
 
-  const take = (node: ts.Node, literal: ts.StringLiteral): void => {
-    keys.push({ key: literal.text, line: lineOf(node) })
+  // The literal's own line, not the call's: the two keys of a ternary spread over four lines
+  // would otherwise be reported at the same place, as if one of them were a duplicate.
+  const take = (literal: ts.StringLiteral): void => {
+    keys.push({ key: literal.text, line: lineOf(literal) })
   }
 
   const visit = (node: ts.Node): void => {
@@ -87,21 +108,24 @@ function keysIn(
     // Only the first argument: the second is a fallback, not another key.
     if (ts.isCallExpression(node) && (callee === 't' || callee.endsWith('.t'))) {
       const [first, second] = node.arguments
-      if (first !== undefined && ts.isStringLiteral(first) && first.text.includes('.')) {
-        take(node, first)
-        if (second !== undefined && ts.isObjectLiteralExpression(second)) {
-          filled.push({ key: first.text, given: namesOf(second, source), line: lineOf(node) })
-        }
+      // One options object exists at runtime whichever branch is taken, so every key it can
+      // reach is checked against that same object.
+      const given =
+        second !== undefined && ts.isObjectLiteralExpression(second)
+          ? namesOf(second, source)
+          : undefined
+      for (const literal of literalsOf(first).filter(one => one.text.includes('.'))) {
+        take(literal)
+        if (given !== undefined) filled.push({ key: literal.text, given, line: lineOf(node) })
       }
     }
 
-    if (
-      ts.isPropertyAssignment(node) &&
-      node.name.getText(source).endsWith('Key') &&
-      ts.isStringLiteral(node.initializer) &&
-      node.initializer.text.includes('.')
-    ) {
-      take(node, node.initializer)
+    // Through `literalsOf` as well: a toolbar row that toggles names its two keys in a ternary,
+    // and four registries write `labelKey` that way.
+    if (ts.isPropertyAssignment(node) && node.name.getText(source).endsWith('Key')) {
+      for (const literal of literalsOf(node.initializer).filter(one => one.text.includes('.'))) {
+        take(literal)
+      }
     }
 
     // A `Record<Union, string>` indexed by a union value: `{ missing: 'errors.missing' }`. The
@@ -130,7 +154,7 @@ function keysIn(
       keysUnder(node.initializer)
       return
     }
-    if (ts.isStringLiteral(node) && KEY_SHAPED.test(node.text)) take(node, node)
+    if (ts.isStringLiteral(node) && KEY_SHAPED.test(node.text)) take(node)
     ts.forEachChild(node, keysUnder)
   }
 
@@ -179,6 +203,50 @@ describe('every key the renderer names outright', () => {
 
   it('would see a key nobody translated', () => {
     expect(isKnown('fr', 'jobs.thereIsNoSuchKey')).toBe(false)
+  })
+
+  /**
+   * Both branches, and every branch of a nested one: a control that says two things names two
+   * keys, and only one of them is the one somebody forgot to translate.
+   */
+  it('reads every key a ternary can resolve to', () => {
+    const code = "t(a ? 'inspector.pinned' : b ? 'inspector.pinFull' : 'inspector.pin')"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual([
+      'inspector.pinned',
+      'inspector.pinFull',
+      'inspector.pin',
+    ])
+  })
+
+  // The hole check follows the key it was written for, whichever branch named it.
+  it('reads the holes of a key named in a branch', () => {
+    const code = "t(full ? 'inspector.pinFull' : 'inspector.pin', { max })"
+
+    expect(keysIn('probe.ts', code).filled.map(one => one.key)).toEqual([
+      'inspector.pinFull',
+      'inspector.pin',
+    ])
+  })
+
+  // The other way a key is named, and it had the same hole: four registries write it this way.
+  it('reads both keys of a registry field that toggles', () => {
+    const code = "const row = { labelKey: playing ? 'transport.pause' : 'transport.play' }"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual([
+      'transport.pause',
+      'transport.play',
+    ])
+  })
+
+  // Parentheses are the silent way back to the old blindness: no test would have failed.
+  it('sees through parentheses around a ternary', () => {
+    const code = "t((full ? 'inspector.pinFull' : 'inspector.pin'))"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual([
+      'inspector.pinFull',
+      'inspector.pin',
+    ])
   })
 })
 

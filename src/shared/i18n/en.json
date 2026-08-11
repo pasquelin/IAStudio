@@ -763,6 +763,7 @@
     "pin": "Pin this recipe",
     "pinned": "Recipe pinned",
     "pinHint": "Keep it on the home screen, in every project",
+    "pinFull": "The home screen holds {{max}} recipes at most — unpin one to pin this one",
     "regenerate": "Regenerate",
     "regenerateHint": "Open the generator with these parameters",
     "file": "File",
