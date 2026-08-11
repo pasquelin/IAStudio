@@ -55,6 +55,14 @@ describe('NumberField', () => {
     expect(screen.getByLabelText('Radius')).toHaveValue('2,5')
   })
 
+  // `String(-0)` was `'0'`; `Intl` writes the sign out. A step landing on zero from below is the
+  // ordinary way to get one.
+  it('never shows a negative zero', () => {
+    renderField({ value: -0 })
+
+    expect(screen.getByLabelText('Radius')).toHaveValue('0')
+  })
+
   describe('arrow keys', () => {
     it('steps the value up and down', async () => {
       const { onChange } = renderField({ value: 1, step: 0.5 })

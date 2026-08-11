@@ -54,7 +54,12 @@ export function NumberField({
    * would have to be stripped back out on the way in, and a thousand is not what a coordinate
    * field is read for. Every digit is kept — this is a field, not a readout.
    */
-  const shown = formatDecimal(value, i18n.language, { digits: 20, grouped: false })
+  // `value === 0` rather than `value`: a step landing on zero from below gives `-0`, which
+  // `String` hid and `Intl` writes out. A field reading `-0` is the same defect the ruler names.
+  const shown = formatDecimal(value === 0 ? 0 : value, i18n.language, {
+    digits: 20,
+    grouped: false,
+  })
 
   const emit = (raw: number): void => {
     if (!Number.isFinite(raw)) return
