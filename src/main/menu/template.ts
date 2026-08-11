@@ -445,20 +445,6 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
-  /**
-   * Spelled out rather than left to `role: 'windowMenu'`, which composes this very list out of
-   * English literals. Written to match what Electron builds, so the role — and whatever AppKit
-   * does with it — sees the same items under our own words.
-   */
-  const windowMenuTail: MenuItemConstructorOptions[] = isMac
-    ? [{ type: 'separator' }, roleItem('front')]
-    : [roleItem('close')]
-  const windowMenuItems: MenuItemConstructorOptions[] = [
-    roleItem('minimize'),
-    roleItem('zoom'),
-    ...windowMenuTail,
-  ]
-
   return [
     ...(isMac ? [appMenuItem] : []),
     {
@@ -518,7 +504,16 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ...developerItems(isDevelopment, roleItem),
       ],
     },
-    { role: 'windowMenu', label: t.menu.window, submenu: windowMenuItems },
+    {
+      role: 'windowMenu',
+      label: t.menu.window,
+      // Left to the role alone, Electron composes these rows out of English literals. Written
+      // out keeps the role — `MenuItem` does `submenu || getDefaultSubmenu(role)` — and the
+      // items are the ones it would have built: same roles, same order, same separator.
+      submenu: isMac
+        ? [roleItem('minimize'), roleItem('zoom'), { type: 'separator' }, roleItem('front')]
+        : [roleItem('minimize'), roleItem('zoom'), roleItem('close')],
+    },
     ...helpMenu,
   ]
 }

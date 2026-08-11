@@ -558,11 +558,11 @@ describe('exporting a sky', () => {
 describe('every native role', () => {
   const rolesWithout = (
     items: MenuItemConstructorOptions[],
-    labelled: (item: MenuItemConstructorOptions) => boolean,
+    sound: (item: MenuItemConstructorOptions) => boolean,
   ): string[] =>
     items.flatMap(item => [
-      ...(item.role && !labelled(item) ? [item.role] : []),
-      ...(Array.isArray(item.submenu) ? rolesWithout(item.submenu, labelled) : []),
+      ...(item.role && !sound(item) ? [item.role] : []),
+      ...(Array.isArray(item.submenu) ? rolesWithout(item.submenu, sound) : []),
     ])
 
   /**
@@ -591,34 +591,44 @@ describe('every native role', () => {
   })
 
   /**
-   * Six roles carry a submenu of their own, spelled in the same English literals — "Minimize",
-   * "Bring All to Front". The walk above cannot reach those rows: Electron composes them when
-   * the menu is built, from a template that never wrote them down.
+   * The walk above cannot reach the rows of a submenu the template never wrote: these six roles
+   * compose one themselves, out of the same English literals, when none is given. Only
+   * `windowMenu` is reached for today — the other five are held for the day one is.
+   *
+   * Typed rather than left as strings: a misspelt role would match nothing and pass silently.
    */
-  const CONTAINER_ROLES = ['appMenu', 'fileMenu', 'editMenu', 'viewMenu', 'windowMenu', 'shareMenu']
+  const CONTAINER_ROLES: NonNullable<MenuItemConstructorOptions['role']>[] = [
+    'appMenu',
+    'fileMenu',
+    'editMenu',
+    'viewMenu',
+    'windowMenu',
+    'shareMenu',
+  ]
 
   it('leaves no submenu for Electron to compose', () => {
-    const delegated = (items: MenuItemConstructorOptions[]): string[] =>
-      items.flatMap(item => [
-        ...(item.role && CONTAINER_ROLES.includes(item.role) && !item.submenu ? [item.role] : []),
-        ...(Array.isArray(item.submenu) ? delegated(item.submenu) : []),
-      ])
-
     for (const shape of SHAPES) {
       expect(
-        delegated(menuTemplate(options(shape))),
+        rolesWithout(
+          menuTemplate(options(shape)),
+          item => !item.role || !CONTAINER_ROLES.includes(item.role) || item.submenu !== undefined,
+        ),
         `workspace ${shape.workspace}, mac ${shape.isMac}`,
       ).toEqual([])
     }
   })
 
-  // The rows Electron would have written, in our words and in its own order.
+  // The rows Electron would have composed, in our words: same roles, same order, same separator.
   it('names the window rows itself, on both platforms', () => {
-    const rows = (isMac: boolean): string[] =>
-      labels(submenuOf(menuTemplate(options({ isMac })), TRANSLATIONS.fr.menu.window))
+    const rows = (isMac: boolean): MenuItemConstructorOptions[] =>
+      submenuOf(menuTemplate(options({ isMac })), TRANSLATIONS.fr.menu.window)
+    const shapeOf = (items: MenuItemConstructorOptions[]): (string | undefined)[] =>
+      items.map(item => item.role ?? item.type)
 
-    expect(rows(true)).toEqual(['Réduire', 'Zoom', '', 'Tout ramener au premier plan'])
-    expect(rows(false)).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
+    expect(shapeOf(rows(true))).toEqual(['minimize', 'zoom', 'separator', 'front'])
+    expect(labels(rows(true))).toEqual(['Réduire', 'Zoom', '', 'Tout ramener au premier plan'])
+    expect(shapeOf(rows(false))).toEqual(['minimize', 'zoom', 'close'])
+    expect(labels(rows(false))).toEqual(['Réduire', 'Zoom', 'Fermer la fenêtre'])
   })
 
   // A label read off the wrong bundle is worse than none: it would look deliberate.
