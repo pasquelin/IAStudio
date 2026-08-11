@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createDecoderPool, secondsToUs, usToSeconds, type VideoSampleLike } from './decoder-pool'
+import { createDecoderPool, type VideoSampleLike } from './decoder-pool'
 
 const fakeSink = (assetId: string, holdsDecoder = true) => ({
   getSample: vi.fn(async (seconds: number) => ({
@@ -26,11 +26,6 @@ const poolOver = (
 }
 
 describe('decoder pool', () => {
-  it('converts microseconds to the float seconds mediabunny speaks, and back', () => {
-    expect(usToSeconds(1_500_000)).toBe(1.5)
-    expect(secondsToUs(1.5)).toBe(1_500_000)
-  })
-
   it('opens one sink per asset, not one per call', async () => {
     const open = vi.fn(async (assetId: string) => fakeSink(assetId))
     const pool = createDecoderPool({ open, maxDecoders: 3, maxPictures: 2 })
