@@ -3,10 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
-import { nodeById } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domain/model'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { installGraph } from '@/stores/graph-fixtures'
+import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
@@ -77,7 +76,7 @@ const WIRED: GraphState = {
 }
 
 const state = (): GraphState => graphOf(useGraphs.getState(), DOCUMENT)
-const nodeNow = (): GraphNode | null => nodeById(state(), generator.id)
+const generatorNow = (): GraphNode | null => nodeNow(DOCUMENT, generator.id)
 
 /** What the picker asked the catalogue — the fake used to ignore its argument entirely. */
 let asked: (ModelQuery | undefined)[] = []
@@ -145,7 +144,7 @@ describe('a generator node in the inspector', () => {
 
     await userEvent.selectOptions(screen.getByLabelText('Modèle'), 'model_sdxl')
 
-    await waitFor(() => expect(nodeNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
+    await waitFor(() => expect(generatorNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
     expect(state().edges).toEqual([])
   })
 
@@ -156,7 +155,7 @@ describe('a generator node in the inspector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Modèle'), 'model_sdxl')
 
     await waitFor(() =>
-      expect(nodeNow()?.data.inputHandles?.map(handle => handle.name)).toEqual([
+      expect(generatorNow()?.data.inputHandles?.map(handle => handle.name)).toEqual([
         'conditional',
         'prompt',
       ]),
@@ -168,11 +167,11 @@ describe('a generator node in the inspector', () => {
     show()
     await screen.findByRole('option', { name: 'SDXL' })
     await userEvent.selectOptions(screen.getByLabelText('Modèle'), 'model_sdxl')
-    await waitFor(() => expect(nodeNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
+    await waitFor(() => expect(generatorNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
 
     useGraphs.getState().undo(DOCUMENT)
 
-    expect(nodeNow()?.data).toMatchObject({ modelId: 'model_flux' })
+    expect(generatorNow()?.data).toMatchObject({ modelId: 'model_flux' })
     expect(state().edges).toHaveLength(1)
   })
 
@@ -196,8 +195,8 @@ describe('a generator node in the inspector', () => {
 
     // `model_sdxl` declares `prompt` and not `mask`: the prompt survives, the rest goes with the
     // model that declared it. Dropping the preset cost forty words without warning.
-    await waitFor(() => expect(nodeNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
-    expect(nodeNow()?.data).toMatchObject({ form: { prompt: 'a rock' } })
+    await waitFor(() => expect(generatorNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
+    expect(generatorNow()?.data).toMatchObject({ form: { prompt: 'a rock' } })
   })
 
   /** A whole typed sentence is ONE entry, as it is in every other field of this panel. */
@@ -231,7 +230,7 @@ describe('a generator node in the inspector', () => {
 
     await waitFor(() => expect(report).toHaveBeenCalled())
     // The node keeps the model it was running: a failed swap must not half-apply.
-    expect(nodeNow()?.data).toMatchObject({ modelId: 'model_flux' })
+    expect(generatorNow()?.data).toMatchObject({ modelId: 'model_flux' })
   })
 
   it('keeps the model the node runs on offer even when the page does not list it', async () => {
