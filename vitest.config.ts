@@ -34,7 +34,14 @@ export default defineConfig({
     // and widens on its own as well-covered files land. Only the modules the checklist names.
     coverage: {
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['**/*.bench.ts', '**/*-fixtures.ts', '**/test-harness.ts', '**/fake-bridge.ts'],
+      exclude: [
+        '**/*.bench.ts',
+        // `.tsx` too, so this draws the line the two text guards draw.
+        '**/*-fixtures.ts',
+        '**/*-fixtures.tsx',
+        '**/test-harness.ts',
+        '**/fake-bridge.ts',
+      ],
       reporter: ['text-summary', 'html'],
       // Negative = how many uncovered statements/branches a module may carry. Sized per module
       // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a

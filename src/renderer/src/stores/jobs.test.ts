@@ -2,21 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
+import { job } from './job-fixtures'
 import { useJobs, whenSettled } from './jobs'
-
-function job(overrides: Partial<Job> = {}): Job {
-  return {
-    id: 'job_1',
-    kind: 'model',
-    targetId: 'model_flux',
-    label: 'Flux',
-    status: 'running',
-    progress: 0.2,
-    createdAt: '2026-08-06T10:00:00.000Z',
-    assetIds: [],
-    ...overrides,
-  }
-}
 
 describe('jobs store', () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { APIConnectionError, APIError } from '@scenario-labs/sdk'
 import { describe, expect, it, vi } from 'vitest'
-import type { Job, JobProgress } from '@shared/domain/job'
+import type { Job, JobProgress, JobStatus } from '@shared/domain/job'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import type { ActivityReport } from '@main/project/activity-log'
 import {
@@ -478,6 +478,39 @@ describe('job manager', () => {
     expect(manager.list()[0]?.assetIds).toEqual(['asset_local'])
     expect(progress).toEqual([])
   })
+
+  /** Each outcome, beside the spelling the API answers it with. */
+  const SETTLED: readonly [JobStatus, string][] = [
+    ['succeeded', 'success'],
+    ['failed', 'failed'],
+    ['cancelled', 'canceled'],
+  ]
+
+  /**
+   * The shape the renderer's fixture builds on (`stores/job-fixtures.ts`). Held here because a
+   * fixture can only assert against its own text: if `settle` stopped dating a job, five suites
+   * would go on passing against a job this process no longer produces.
+   */
+  it.each(SETTLED)(
+    'dates a %s job, and carries a succeeded one to full progress',
+    async (status, spelling) => {
+      const { manager } = harness({
+        runner: {
+          submit: () => Promise.resolve(remote(spelling)),
+          poll: () => Promise.resolve(remote(spelling)),
+          cancel: () => Promise.resolve(),
+        },
+      })
+
+      manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+      await settled()
+
+      const [job] = manager.list()
+      expect(job?.status).toBe(status)
+      expect(job?.finishedAt).toEqual(expect.any(String))
+      expect(job?.progress).toBe(status === 'succeeded' ? 1 : 0)
+    },
+  )
 
   // A local write failure is not what the API said, and neither is a code the renderer can
   // mistake for an API problem.

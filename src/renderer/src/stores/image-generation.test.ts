@@ -5,6 +5,7 @@ import { useAssets } from './assets'
 import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
+import { job as jobOf } from './job-fixtures'
 import { claimOnSubmit, connectImageGeneration } from './image-generation'
 import { useJobs } from './jobs'
 
@@ -19,17 +20,9 @@ const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job = (overrides: Partial<Job> = {}): Job => ({
-  id: 'job-1',
-  kind: 'model',
-  targetId: 'model_flux',
-  label: 'Scenario Flux.1',
-  status: 'running',
-  progress: 0.5,
-  createdAt: '2026-08-08T10:00:00.000Z',
-  assetIds: [],
-  ...overrides,
-})
+/** The shared fixture, told the id this suite's assets name. */
+const job = (overrides: Partial<Job> = {}): Job =>
+  jobOf({ id: 'job-1', label: 'Scenario Flux.1', ...overrides })
 
 /**
  * The catalogue as the main process would answer it once the ingest is done. `refresh` is what

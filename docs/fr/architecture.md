@@ -881,6 +881,17 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 | `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | dans un `.ts` de `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
 
+**Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
+gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
+mesuré : aucun des 21 fichiers de fixtures de `src/` n'est importé par du code de production. Le
+libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit. La couverture
+exclut exactement les mêmes fichiers (`vitest.config.ts`). C'est une **décision**, prise le 11/08 :
+forcer une fixture à passer par une clé de bundle ne rend rien plus vrai et se lit plus mal.
+
+**Ce que cette exclusion ne dit pas** : rien ne signale un fichier nommé `*-fixtures.ts` qui
+deviendrait, un jour, importé par du code produit. Il serait alors invisible aux deux gardes ET
+absent des budgets de couverture. Aucun ne l'est aujourd'hui, et c'est ce qui reste à surveiller.
+
 **Une garde qui lit des données peut devenir aveugle sans rougir**, et c’est la raison du § *what
 the guards would catch* de `bundles.test.ts`. Ses huit vérifications passent par quatre helpers
 locaux : un helper qui rendrait un tableau vide les ferait **toutes passer au vert en ne vérifiant
