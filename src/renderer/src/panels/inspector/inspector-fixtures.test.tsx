@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { GraphNode } from '@shared/domain/graph'
+import { nodeById, type GraphNode } from '@shared/domain/graph'
 import { installGraph } from '@/stores/graph-fixtures'
 import { updateNodeData } from '@/engines/graph/mutations'
 import { graphOf, useGraphs } from '@/stores/graphs'
@@ -71,5 +72,30 @@ describe('LiveNodeInspector', () => {
     render(<LiveNodeInspector documentId="graph-2" id="text1" />)
 
     expect(screen.getByLabelText('Prompt')).toHaveValue('a kingfisher')
+  })
+
+  /**
+   * The document is handed DOWN as well as read: `GraphNodeInspector` edits through it. Read one
+   * graph and write to another and the edit — with its undo history — lands in a document nobody
+   * is looking at. Measured as a surviving mutation before this test existed.
+   */
+  it('edits the document it is given, not the one it read', async () => {
+    installGraph('graph-2', {
+      nodes: [{ ...TEXT, data: { value: 'a kingfisher' } }],
+      edges: [],
+      inputKeys: [],
+    })
+    useGraphs.setState(state => ({
+      states: { ...state.states, [DOCUMENT]: { nodes: [TEXT], edges: [], inputKeys: [] } },
+    }))
+
+    render(<LiveNodeInspector documentId="graph-2" id="text1" />)
+    await userEvent.type(screen.getByLabelText('Prompt'), '!')
+
+    const dataIn = (documentId: string): GraphNode['data'] | undefined =>
+      nodeById(graphOf(useGraphs.getState(), documentId), 'text1')?.data
+
+    expect(dataIn('graph-2')).toMatchObject({ value: 'a kingfisher!' })
+    expect(dataIn(DOCUMENT)).toMatchObject({ value: 'a small grey rock' })
   })
 })
