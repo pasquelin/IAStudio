@@ -1,16 +1,25 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   budgetsIn,
   carried,
   granted,
+  LEAST_BUDGETS,
   matches,
   slackOf,
+  unmatched,
   type Slack,
   type Summary,
 } from './coverage-budgets'
 
 /** A summary as vitest writes it, keyed by absolute path, with only the fields the guard reads. */
 const ROOT = '/repo/'
+const tally = (statements: number, branches: number) => ({
+  statements: { total: statements, covered: 0 },
+  branches: { total: branches, covered: 0 },
+})
+
 const summary = (files: Record<string, [number, number]>): Summary =>
   Object.fromEntries(
     Object.entries(files).map(([path, [statements, branches]]) => [
@@ -78,6 +87,13 @@ describe('the room a budget has left', () => {
     expect(held).toEqual({ statements: 7, branches: 3 })
   })
 
+  // Vitest keys the summary by absolute path, but a caller may hand a relative one: same answer.
+  it('reads a path that is already relative', () => {
+    const held = carried({ 'src/a/one.ts': tally(3, 1) }, 'src/a/**', ROOT)
+
+    expect(held).toEqual({ statements: 3, branches: 1 })
+  })
+
   it('leaves out what another glob holds', () => {
     const held = carried(
       summary({ 'src/a/one.ts': [3, 1], 'src/b/two.ts': [9, 9] }),
@@ -131,5 +147,58 @@ describe('deciding which budgets have been granted room', () => {
    */
   it('takes its ceiling from the caller, so the constant is the only thing left to review', () => {
     expect(granted(rows, 44).map(row => row.glob)).toEqual(['src/wide/**'])
+  })
+})
+
+describe('the shapes a config can be written in', () => {
+  /**
+   * The defect that made this file exist: Prettier wraps a long key across lines, and a parser
+   * that reads `branches: N }` without a trailing comma sees 18 budgets where 20 are declared.
+   * The two it missed held 137 and 131 of room.
+   */
+  it('reads a budget Prettier has wrapped, trailing comma and all', () => {
+    const config = `thresholds: {
+      'src/short/**': { statements: -4, branches: -2 },
+      'src/very/long/glob/{one,two,three,four}/**': {
+        statements: -270,
+        branches: -250,
+      },
+    }`
+
+    expect(budgetsIn(config)).toEqual([
+      { glob: 'src/short/**', statements: -4, branches: -2 },
+      { glob: 'src/very/long/glob/{one,two,three,four}/**', statements: -270, branches: -250 },
+    ])
+  })
+
+  // The floor that turns "read nothing" into an error rather than a green empty table.
+  it('reads every budget the real config declares, so the floor means something', () => {
+    const config = readFileSync(join(import.meta.dirname, '..', '..', 'vitest.config.ts'), 'utf8')
+
+    expect(budgetsIn(config).length).toBeGreaterThanOrEqual(LEAST_BUDGETS)
+  })
+})
+
+describe('a glob that no longer matches anything', () => {
+  const held = summary({ 'src/a/one.ts': [3, 1] })
+
+  /**
+   * Renaming a folder turns its budget into a no-op — `vitest.config.ts` names the trap and this
+   * is what holds it. It is also the one contortion the slack ceiling cannot see: a tight budget
+   * over nothing reads as a few units of room, well under thirty.
+   */
+  it('is named, however tight its budget', () => {
+    const config = `thresholds: { 'src/gone/**': { statements: -3, branches: -1 } }`
+    const rows = slackOf(config, held, ROOT)
+
+    expect(unmatched(rows, held, ROOT)).toEqual(['src/gone/**'])
+  })
+
+  // A glob covered whole carries nothing either, and must not be mistaken for a renamed one.
+  it('is not confused with a glob whose files are all covered', () => {
+    const covered = summary({ 'src/a/one.ts': [0, 0] })
+    const config = `thresholds: { 'src/a/**': { statements: -3, branches: -1 } }`
+
+    expect(unmatched(slackOf(config, covered, ROOT), covered, ROOT)).toEqual([])
   })
 })

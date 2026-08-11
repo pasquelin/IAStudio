@@ -54,10 +54,16 @@ export const MAX_SLACK = 30
  * How few budgets mean the parser has lost its footing rather than the config having shrunk.
  *
  * A guard that reads nothing passes everything, which is the failure this whole file exists to
- * prevent — `coverage-thresholds.test.ts` defends itself the same way. Twenty is what the config
- * declares today; a batch that genuinely removes one lowers this line and says why.
+ * prevent — `coverage-thresholds.test.ts` defends itself the same way. Twenty-one is what the
+ * config declares today, this file's own budget included; a batch that genuinely removes one
+ * lowers this line and says why, and a batch that adds one raises it.
+ *
+ * **Like `MAX_SLACK`, no test holds this number** — and this one is the easier of the two to
+ * lower, since the sentence above invites it. A case does check that the real config still
+ * declares at least this many, so lowering it silently while the parser rots is what a review
+ * has to catch.
  */
-export const LEAST_BUDGETS = 20
+export const LEAST_BUDGETS = 21
 
 /**
  * The budgets, read off the config as text rather than imported — importing it would run the

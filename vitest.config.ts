@@ -58,6 +58,11 @@ export default defineConfig({
       // warning. These names follow `src/`; keep them in step.
       thresholds: {
         'src/shared/**': { statements: -6, branches: -20 },
+        // The guard that reads this file, under the rule it enforces: `src/main` has no catch-all
+        // budget, so without this line the only module exempt from a budget would be the one that
+        // checks them. What it carries is what TypeScript demands and the runtime cannot reach —
+        // the `?? ''` on capture groups a matched regex always fills.
+        'src/main/coverage-budgets.ts': { statements: -1, branches: -3 },
         'src/main/settings/**': { statements: -30, branches: -12 },
         // Raised by five for `assetBackendOf`, the asset half of the SDK adapter: like
         // `model-catalog` and `runner` beside it, it is pure delegation that no test can reach
@@ -89,6 +94,15 @@ export default defineConfig({
         'src/renderer/src/stores/**': { statements: -90, branches: -82 },
         // Split from the GPU below: together, five files jsdom cannot run held 55 % of one
         // budget, so a new render pass ate the room that guarded the state machines.
+        // LOWERED to what they measure, like `panels/**` below and for the same reason: at -270
+        // and -790 these two held 137 and 131 of room nobody had granted, and they were invisible
+        // to the guard's first parser because Prettier wraps them across lines.
+        //
+        // What zero slack means HERE, and it bites harder than elsewhere: these globs are what
+        // jsdom cannot run — a WebGL context, a 2D canvas, an audio graph. Red after a rebase is
+        // not a regression of the batch that sees it; and room genuinely needed comes back in
+        // steps of at most `MAX_SLACK` (30), each one a line saying what it is for. A WebGL pass
+        // that needs more than that needs more than one batch, which is the point.
         'src/renderer/src/engines/{timeline,canvas,audio,core}/**': {
           statements: -133,
           branches: -192,
