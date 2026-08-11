@@ -6,7 +6,10 @@ import {
   JOB_STATUSES,
   type JobKind,
   type JobStatus,
+  settlementOf,
 } from './job'
+
+const AT = '2026-08-12T10:00:00.000Z'
 
 describe('the kinds of thing a job runs', () => {
   // Missing from the list, a kind is skipped by every walk that reads it — and the gap reads
@@ -38,5 +41,38 @@ describe('the list of job statuses', () => {
 
   it('agrees with the shorter list it already had', () => {
     expect(JOB_STATUSES.filter(isFinished)).toEqual(FINISHED_STATUSES)
+  })
+})
+
+/**
+ * The rule the manager writes onto a real job and the fixture onto the one it stands for. Held
+ * here, on the one function both ask, rather than twice on either side of the boundary.
+ */
+describe('what reaching a status writes on a job', () => {
+  it('dates every terminal status', () => {
+    for (const status of FINISHED_STATUSES) {
+      expect(settlementOf(status, AT).finishedAt).toBe(AT)
+    }
+  })
+
+  it('brings a succeeded job to full progress', () => {
+    expect(settlementOf('succeeded', AT)).toEqual({ finishedAt: AT, progress: 1 })
+  })
+
+  /**
+   * A job that failed halfway kept the figure it had reached, and that is what the bar draws. A
+   * blanket "terminal means complete" would round every failure up to a full bar.
+   */
+  it('says nothing about the progress of a job that did not succeed', () => {
+    for (const status of FINISHED_STATUSES.filter(other => other !== 'succeeded')) {
+      expect(settlementOf(status, AT)).toEqual({ finishedAt: AT })
+    }
+  })
+
+  // Dating a job still in flight would make `runningJobs` and the bar disagree about it.
+  it('writes nothing at all while the job is still running', () => {
+    for (const status of JOB_STATUSES.filter(other => !isFinished(other))) {
+      expect(settlementOf(status, AT)).toEqual({})
+    }
   })
 })

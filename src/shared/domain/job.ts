@@ -84,6 +84,30 @@ export function isFinished(status: JobStatus): boolean {
   return FINISHED_STATUSES.includes(status)
 }
 
+/**
+ * What reaching a status writes on a job besides the status itself: a terminal one dates it, and
+ * a succeeded one is complete by definition. Nothing at all while it is still running.
+ *
+ * Here rather than in either caller, and beside `isFinished` for the same reason it is: the
+ * manager settles the real job and the fixture stands for one, and the day the two disagree a
+ * suite affirms a shape the studio never publishes. They HAD disagreed, and nothing held the pair.
+ *
+ * What is shared is the RULE, never the date: the manager reads the clock and the fixture hands
+ * its `createdAt`, which is deliberate — a fixture that read a clock would not be one. A fixture's
+ * `finishedAt` is therefore still no prediction of a real job's.
+ *
+ * The two shapes are spelled out rather than left to `Partial`, which would let a progress with no
+ * date past the compiler and leave the rule resting on the tests alone.
+ */
+export function settlementOf(
+  status: JobStatus,
+  at: string,
+): Record<string, never> | { finishedAt: string; progress?: number } {
+  if (!isFinished(status)) return {}
+
+  return status === 'succeeded' ? { finishedAt: at, progress: 1 } : { finishedAt: at }
+}
+
 /** What the studio is doing right now. Asked by the status line, the home and its banner. */
 export function runningJobs(jobs: readonly Job[]): Job[] {
   return jobs.filter(job => !isFinished(job.status))
