@@ -109,7 +109,10 @@ describe('NumberField', () => {
     expect(onChange).toHaveBeenLastCalledWith(0.5)
   })
 
-  // Both separators, in either language: a studio meets two keyboards more often than two locales.
+  /**
+   * Not a proof of the fix — it passed before it too, since `Number` reads a dot. It is here so
+   * that taking the comma never costs the point.
+   */
   it('takes the other one just as well', async () => {
     const { onChange } = renderField({ value: 1, min: 0, step: 0.1 })
 
@@ -117,6 +120,23 @@ describe('NumberField', () => {
     await userEvent.type(screen.getByLabelText('Radius'), '0.5')
 
     expect(onChange).toHaveBeenLastCalledWith(0.5)
+  })
+
+  /**
+   * The visible half of the change, and the one a hand notices: a value typed with a dot comes
+   * back written with a comma once the field is left. The number never moved — only its spelling.
+   */
+  it("rewrites what was typed in the reader's own separator once the field is left", async () => {
+    render(<Controlled value={1} min={0} step={0.05} onChange={vi.fn()} />)
+    const field = screen.getByLabelText('Radius')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, '2.25')
+    expect(field).toHaveDisplayValue('2.25')
+
+    await userEvent.tab()
+
+    expect(field).toHaveDisplayValue('2,25')
   })
 
   // `Number('')` is 0: emitting it would crush the mesh to its minimum in the moment between

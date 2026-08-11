@@ -137,6 +137,9 @@ export function NumberField({
         role="spinbutton"
         aria-label={label}
         aria-valuenow={value}
+        // The number and the way it is written parted company the day this field localised
+        // itself: a screen reader speaks `aria-valuenow`, and `0.5` is not what the screen says.
+        aria-valuetext={shown}
         aria-valuemin={min}
         aria-valuemax={max}
         value={typed ?? shown}
