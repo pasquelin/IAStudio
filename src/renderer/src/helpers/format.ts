@@ -51,24 +51,28 @@ const DECIMALS = new Map<string, Intl.NumberFormat>()
  * `least` is what a slider needs and a readout does not: a handle dragged past 1,20 must not
  * shorten to 1,2 and back, while a coordinate of exactly 1 has no business reading 1,00.
  *
- * Grouped, unlike `formatPercent` right above — and it is a decision rather than a default:
- * `1 048 576 Gio` and a scene's triangle count are read, not aimed at, and the studio already
- * groups those through `toLocaleString`. The one place it could bite is a readout in a field
- * sized for four characters; no slider in the registry reaches a thousand today.
+ * `grouped` is asked for rather than inherited, which is the whole reason this takes a shape
+ * instead of three numbers: a file size reads better as `1 048 576`, a ruler graduation does
+ * not — its labels sit a few pixels apart, and a separator there is a second number.
  */
-export function formatDecimal(
-  value: number,
-  language: string,
-  fractionDigits: number,
-  least: number = 0,
-): string {
+export type DecimalShape = {
+  digits: number
+  /** Zeros to keep when the value has none of its own. */
+  least?: number
+  grouped?: boolean
+}
+
+export function formatDecimal(value: number, language: string, shape: DecimalShape): string {
+  const { digits, least = 0, grouped = true } = shape
+
   return kept(
     DECIMALS,
-    `decimal:${fractionDigits}:${least}:${language}`,
+    `decimal:${digits}:${least}:${grouped}:${language}`,
     () =>
       new Intl.NumberFormat(language, {
-        maximumFractionDigits: fractionDigits,
+        maximumFractionDigits: digits,
         minimumFractionDigits: least,
+        useGrouping: grouped,
       }),
   ).format(value)
 }
@@ -102,5 +106,5 @@ export function formatBytes(
   // says nothing `847 Mio` did not. Kept even when it is a zero — a download counter refreshing
   // from `1 Gio` to `1,1 Gio` would jump a character wide under a `tabular-nums` column.
   const digits = value < 10 && unit !== 'byte' ? 1 : 0
-  return `${formatDecimal(value, language, digits, digits)} ${unitName(unit)}`
+  return `${formatDecimal(value, language, { digits, least: digits })} ${unitName(unit)}`
 }

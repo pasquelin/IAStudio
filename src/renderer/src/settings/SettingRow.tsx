@@ -252,7 +252,7 @@ function Control({
           />
           <span className={cn(WINDOW_CAPTION, 'w-10 text-right tabular-nums')}>
             {typeof value === 'number'
-              ? formatDecimal(value, i18n.language, decimals, decimals)
+              ? formatDecimal(value, i18n.language, { digits: decimals, least: decimals })
               : ''}
           </span>
         </div>

@@ -127,6 +127,7 @@ function scene(overrides: Partial<OverlayScene> = {}): OverlayScene {
     pointer: null,
     colors: COLORS,
     rulerFont: '9px system-ui, sans-serif',
+    language: 'en',
     marching: false,
     tools: NO_TOOL,
     ...overrides,
@@ -209,6 +210,28 @@ describe('drawOverlay', () => {
     // 100% steps by 100, and the tick at 0 is hidden under the corner square.
     expect(opsOf(calls, 'fillText').map(args => args[0])).toContain('100')
     expect(opsOf(calls, 'fillText').map(args => args[0])).not.toContain('0')
+  })
+
+  /**
+   * The one thing a graduation says, and it is said in the language the window is in — the same
+   * reader has an inspector beside it writing `0,5`. Zoomed far enough in for the step to be
+   * fractional, which is the only case where the separator shows.
+   */
+  it('graduates in the language the scene carries', () => {
+    const { context, calls } = recorder()
+    drawOverlay(
+      context,
+      scene({
+        showRulers: true,
+        host: { width: 400, height: 60 },
+        viewport: { x: 0, y: 0, scale: 200 },
+        language: 'fr',
+      }),
+    )
+
+    const painted = opsOf(calls, 'fillText').map(args => String(args[0]))
+    expect(painted.some(label => label.includes(','))).toBe(true)
+    expect(painted.some(label => label.includes('.'))).toBe(false)
   })
 
   it('covers the corner where the two bands meet', () => {

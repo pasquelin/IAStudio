@@ -47,15 +47,30 @@ describe('ticks', () => {
 
 describe('tickLabel', () => {
   it('drops the decimals of a whole step', () => {
-    expect(tickLabel(250, 50)).toBe('250')
+    expect(tickLabel(250, 50, 'en')).toBe('250')
   })
 
   it('keeps enough decimals for a fractional step to be distinguishable', () => {
-    expect(tickLabel(0.5, 0.5)).toBe('0.5')
-    expect(tickLabel(1, 0.5)).toBe('1.0')
+    expect(tickLabel(0.5, 0.5, 'en')).toBe('0.5')
+    expect(tickLabel(1, 0.5, 'en')).toBe('1.0')
   })
 
   it('never prints a negative zero', () => {
-    expect(tickLabel(0, 0.5)).toBe('0.0')
+    expect(tickLabel(0, 0.5, 'en')).toBe('0.0')
+  })
+
+  // A graduation is read by the same person as the inspector beside it, which writes `0,5`.
+  it('graduates in the language the window is in', () => {
+    expect(tickLabel(0.5, 0.5, 'fr')).toBe('0,5')
+    expect(tickLabel(1, 0.5, 'fr')).toBe('1,0')
+  })
+
+  /**
+   * Ungrouped, unlike every other number the window writes: two majors sit 72 px apart at the
+   * closest, and `1 000` there reads as two ticks rather than one.
+   */
+  it('leaves a thousand ungrouped, where a separator would read as a second tick', () => {
+    expect(tickLabel(1000, 50, 'fr')).toBe('1000')
+    expect(tickLabel(1000, 50, 'en')).toBe('1000')
   })
 })

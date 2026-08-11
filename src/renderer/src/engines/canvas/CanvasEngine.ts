@@ -457,6 +457,9 @@ export class CanvasEngine {
   private hostSize: Size = { width: 0, height: 0 }
   private colors: OverlayColors = FALLBACK_COLORS
   private rulerFont = FALLBACK_RULER_FONT
+
+  /** Empty until the palette is read; `Intl` reads that as the host's own locale. */
+  private language = ''
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
 
@@ -1416,6 +1419,9 @@ export class CanvasEngine {
   private readPalette(canvas: HTMLCanvasElement): void {
     this.colors = readColors(canvas)
     this.rulerFont = tokenAsFont(canvas, '--text-micro', RULER_FONT_SIZE, RULER_FAMILY)
+    // Off the document, like the font token beside it: `i18n/index.ts` keeps `lang` in step, and
+    // reading it here is what keeps this engine free of React.
+    this.language = canvas.ownerDocument.documentElement.lang
     this.overlay.invalidate()
   }
 
@@ -1446,6 +1452,7 @@ export class CanvasEngine {
       pointer: this.pointer,
       colors: this.colors,
       rulerFont: this.rulerFont,
+      language: this.language,
       marching: this.marching(),
       // Handed over whole rather than gated here: every painter already returns on nothing to
       // draw, and a gate repeating those guards is one a new decoration gets forgotten from —

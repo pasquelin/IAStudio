@@ -80,14 +80,14 @@ describe('sizing a file', () => {
 
 describe('writing a number', () => {
   it('uses the separator of the language it was asked for', () => {
-    expect(formatDecimal(0.5235, 'fr', 2)).toBe('0,52')
-    expect(formatDecimal(0.5235, 'en', 2)).toBe('0.52')
+    expect(formatDecimal(0.5235, 'fr', { digits: 2 })).toBe('0,52')
+    expect(formatDecimal(0.5235, 'en', { digits: 2 })).toBe('0.52')
   })
 
   // A slider at 1 must read `1`: `toFixed` was dropped for the separator, not to gain `1,00`.
   it('drops the zeros a whole number does not need', () => {
-    expect(formatDecimal(1, 'fr', 2)).toBe('1')
-    expect(formatDecimal(1.5, 'fr', 2)).toBe('1,5')
+    expect(formatDecimal(1, 'fr', { digits: 2 })).toBe('1')
+    expect(formatDecimal(1.5, 'fr', { digits: 2 })).toBe('1,5')
   })
 })
 
@@ -103,7 +103,7 @@ describe('the unit names', () => {
 describe('keeping a slider steady', () => {
   // A handle dragged past 1,20 must not shorten to 1,2 and back: the number is read while it moves.
   it('keeps the zeros a step implies', () => {
-    expect(formatDecimal(1.2, 'fr', 2, 2)).toBe('1,20')
-    expect(formatDecimal(1, 'fr', 2, 2)).toBe('1,00')
+    expect(formatDecimal(1.2, 'fr', { digits: 2, least: 2 })).toBe('1,20')
+    expect(formatDecimal(1, 'fr', { digits: 2, least: 2 })).toBe('1,00')
   })
 })
