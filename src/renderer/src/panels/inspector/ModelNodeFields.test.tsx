@@ -1,13 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
+import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domain/model'
 import { withQueries } from '@/app/query-fixtures'
-import { wire } from '@/engines/graph/graph-fixtures'
+import { textNode, wire } from '@/engines/graph/graph-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { installGraph, nodeNow } from '@/stores/graph-fixtures'
-import { graphOf, useGraphs } from '@/stores/graphs'
+import { edgesNow, installGraph, nodeNow } from '@/stores/graph-fixtures'
+import { useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
@@ -62,13 +62,17 @@ const source: GraphNode = {
   },
 }
 
+const READS_MASK: GraphEdge = wire('imageGenerator1', 'mask', 'asset1', 'image')
+
+/** On a port BOTH models declare, so a swap can be asked what it LEFT rather than what it emptied. */
+const READS_PROMPT: GraphEdge = wire('imageGenerator1', 'prompt', 'text1', 'prompt')
+
 const WIRED: GraphState = {
-  nodes: [generator, source],
-  edges: [wire('imageGenerator1', 'mask', 'asset1', 'image')],
+  nodes: [generator, source, textNode('text1')],
+  edges: [READS_MASK, READS_PROMPT],
   inputKeys: [],
 }
 
-const state = (): GraphState => graphOf(useGraphs.getState(), DOCUMENT)
 const generatorNow = (): GraphNode | null => nodeNow(DOCUMENT, generator.id)
 
 /** What the picker asked the catalogue — the fake used to ignore its argument entirely. */
@@ -132,7 +136,7 @@ describe('a generator node in the inspector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Modèle'), 'model_sdxl')
 
     await waitFor(() => expect(generatorNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
-    expect(state().edges).toEqual([])
+    expect(edgesNow(DOCUMENT)).toEqual([READS_PROMPT])
   })
 
   it('rebuilds the ports from the new model rather than keeping the old ones', async () => {
@@ -159,7 +163,7 @@ describe('a generator node in the inspector', () => {
     useGraphs.getState().undo(DOCUMENT)
 
     expect(generatorNow()?.data).toMatchObject({ modelId: 'model_flux' })
-    expect(state().edges).toHaveLength(1)
+    expect(edgesNow(DOCUMENT)).toEqual([READS_MASK, READS_PROMPT])
   })
 
   /** Opening a panel is not an edit: the form reports its body once at mount, and that is not one. */

@@ -1,4 +1,10 @@
-import { EMPTY_GRAPH, nodeById, type GraphNode, type GraphState } from '@shared/domain/graph'
+import {
+  EMPTY_GRAPH,
+  nodeById,
+  type GraphEdge,
+  type GraphNode,
+  type GraphState,
+} from '@shared/domain/graph'
 import type { DocumentStoreState } from './document-store'
 import { installDocument } from './document-fixtures'
 import { graphOf, useGraphs } from './graphs'
@@ -30,3 +36,15 @@ export const nodeIn = (
  */
 export const nodeNow = (documentId: string, id: string): GraphNode | null =>
   nodeIn(useGraphs.getState(), documentId, id)
+
+/**
+ * The wires the graph is left holding, in order — what a suite names to say WHICH one survived an
+ * edit. Asked of the empty list instead, an assertion holds just as well when the edit cut the lot.
+ *
+ * Whole edges rather than their ids: `edgeId` is spelled from the two HANDLES, so it is the one
+ * field an edge keeps when its two ends are swapped — the very accident these suites watch for.
+ * The empty list covers a document the store lost as much as one with no wires, for the reason
+ * `nodeNow` answers `null` twice over.
+ */
+export const edgesNow = (documentId: string): readonly GraphEdge[] =>
+  graphOf(useGraphs.getState(), documentId).edges
