@@ -1,8 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FieldDescriptor, ModelDescriptor } from '@shared/domain/model'
 import type { StudioBridge } from '@shared/ipc'
+import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { useLayouts } from '@/stores/layouts'
@@ -47,12 +47,7 @@ const host = {
 }
 
 function renderPanel() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <Generator />
-    </QueryClientProvider>,
-  )
+  return render(withQueries(<Generator />))
 }
 
 const PROJECT = {
