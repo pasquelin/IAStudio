@@ -205,6 +205,12 @@ Ces touches se **maintiennent** au lieu de se presser : tant que vous appuyez, l
 > lettre écrite dessus. Les quatre touches de direction sont donc toujours le même carré, en haut
 > à gauche : `WASD` si votre clavier est américain, `ZQSD` s’il est français. Vous n’avez rien à
 > régler.
+>
+> **Une seule exception : l’Entrée du pavé numérique.** C’est une position distincte de l’Entrée
+> principale, mais le studio la lit comme elle. Les deux touches déclenchent donc la même chose,
+> et remapper l’une déplace l’autre — vous ne pouvez pas les séparer. Les autres touches du pavé
+> gardent leur position propre : selon que le verrou numérique est mis ou non, elles changent de
+> sens, et le studio ne peut pas deviner lequel vous vouliez.
 
 La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md#espaces-de-travail).
 

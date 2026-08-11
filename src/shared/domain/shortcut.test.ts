@@ -57,10 +57,11 @@ describe('signatureOf', () => {
     )
   })
 
-  it('follows a remap of Enter, having no second spelling of its own', () => {
-    const moved = { 'canvas.cropApply': 'KeyJ' }
-    expect(commandFor(signatureOf(event('NumpadEnter')), 'canvas', moved)).toBeNull()
-    expect(commandFor(signatureOf(event('KeyJ')), 'canvas', moved)).toBe('canvas.cropApply')
+  it('follows a remap onto Enter, having no second spelling of its own', () => {
+    // A scope with nothing on Enter, so the remap is what puts a command there.
+    const moved = { 'scene.translate': 'Enter' }
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'scene', moved)).toBe('scene.translate')
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'scene', {})).toBeNull()
   })
 
   /**
@@ -226,6 +227,18 @@ describe('whether a string is a signature the studio could produce', () => {
     expect(isSignature('Meta+KeyS')).toBe(true)
     expect(isSignature('Ctrl+Alt+Shift+Meta+KeyS')).toBe(true)
     expect(isSignature('Alt+Meta+Delete')).toBe(true)
+  })
+
+  /**
+   * The shortcuts screen recorded raw codes before the keypad Enter was folded, so an install
+   * upgrading into that change can hold `NumpadEnter` in its settings file. Kept, it would name
+   * a key on screen that fires nothing while that key ran another command; refused, the schema
+   * drops the line and the command returns to a default the keypad does reach.
+   */
+  it('refuses a code no keypress spells any more', () => {
+    expect(isSignature('NumpadEnter')).toBe(false)
+    expect(isSignature('Meta+NumpadEnter')).toBe(false)
+    expect(isSignature('Enter')).toBe(true)
   })
 
   /** The defect itself: a letter is what is printed on a key, never the key's position. */
