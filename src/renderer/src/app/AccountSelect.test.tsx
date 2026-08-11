@@ -2,10 +2,13 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AccountsResult, AccountSummary } from '@shared/domain/account'
+import { BAR_GHOST } from '@/design/styles'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
 import { AccountSelect } from './AccountSelect'
+
+const BAR_GHOST_HOVER = BAR_GHOST.split(' ').filter(one => one.startsWith('hover:'))
 
 const studio: AccountSummary = { id: 'a', name: 'Studio', active: true }
 const client: AccountSummary = { id: 'b', name: 'Client X', active: false }
@@ -141,5 +144,14 @@ describe('AccountSelect', () => {
 
     expect(open).toHaveBeenCalledWith('account')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  // Read back by its hover: `cn` drops the skin's `text-muted` under this button's own `text-tiny`.
+  it('wears the same skin as the pills at the other end of the bar', () => {
+    given([studio])
+    render(<AccountSelect />)
+
+    const trigger = screen.getByRole('button', { name: 'Compte Scenario' })
+    for (const state of BAR_GHOST_HOVER) expect(trigger.className).toContain(state)
   })
 })

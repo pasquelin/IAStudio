@@ -43,6 +43,21 @@ export const STATUS_BUTTON = cn(
 )
 
 /**
+ * A control of the title bar: the space pills on one end, the account trigger on the other.
+ * Nothing until hovered, so the bar reads as a row of destinations rather than as a strip of
+ * buttons. Gauge, padding and the active state stay with the caller — a pill is as wide as its
+ * word, the account trigger is capped.
+ *
+ * Written once because the two sit in the same bar and are read together: the hover was already
+ * spelled out twice, and a copy is one end of the bar drifting away from the other.
+ */
+export const BAR_GHOST = cn(
+  'flex cursor-pointer items-center rounded-(--radius-sc-md) border-none',
+  'text-muted bg-transparent transition-colors',
+  'hover:bg-elevated/60 hover:text-text',
+)
+
+/**
  * Hover, selection and keyboard focus of one line in a list. The same line must not light up
  * differently depending on whether a `Tree` or a `Collection` is holding it.
  */

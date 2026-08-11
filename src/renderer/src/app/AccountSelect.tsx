@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
+import { BAR_GHOST } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
@@ -47,11 +48,7 @@ export function AccountSelect() {
         aria-haspopup={flyout.hasFlyout ? 'menu' : undefined}
         aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
         onClick={flyout.hasFlyout ? flyout.open : manage}
-        className={cn(
-          'flex h-(--sc-control) cursor-pointer items-center gap-1.5 rounded-(--radius-sc-md)',
-          'text-muted hover:bg-elevated/60 hover:text-text border-none bg-transparent px-2',
-          'text-tiny max-w-44 transition-colors',
-        )}
+        className={cn(BAR_GHOST, 'h-(--sc-control) gap-1.5 px-2', 'text-tiny max-w-44')}
       >
         <span
           aria-hidden
