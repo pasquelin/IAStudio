@@ -255,16 +255,52 @@ Together with the orthographic projection, that is the classic plan view — the
 
 | Mode | What is drawn |
 |---|---|
-| **Shaded** | the surfaces, lit and textured |
-| **Wireframe** | the edges alone, through the object |
-| **Shaded and wireframe** | both: the surfaces, and their edges over them |
+| **Shaded** | surfaces painted by their material, edges left out |
+| **Wireframe** | the edges alone — which is what shows how dense the mesh is |
+| **Shaded and wireframe** | surfaces painted, with the edges drawn over them |
+| **Solid** | plain clay on every surface: the shape, without the materials |
+| **Material preview** | the materials under the studio light alone, with the scene's own lights out |
+| **Matcap** | lighting captured on a sphere: it is the relief that reads, not the colour |
+| **Density** | green to red by triangles per unit of surface: what is red is what to optimise |
 
 The button wears the current mode and cycles it on each click; its menu picks one directly. `Z`
-does the same from the keyboard, as in Blender.
+does the same from the keyboard, as in Blender — **and in four views, on the quarter under the
+pointer**: each quarter keeps its own mode.
 
-The third mode is the costly one: the edges are one more object per mesh, built when it is turned
-on and thrown away when it is turned off. On an imported model of several thousand meshes, it
-shows.
+**Shaded and wireframe** is the costly one: the edges are one more object per mesh, built when it
+is turned on and thrown away when it is turned off. On an imported model of several thousand
+meshes, it shows.
+
+### Four views — `⇧Q`
+
+The viewport splits in four. **The top-left quarter keeps the framing you had**; it returns to
+perspective if you were in orthographic projection. The other three arrive orthographic: **top** at
+the top right, **front** at the bottom left, **left side** at the bottom right.
+
+**All four are work surfaces**, not previews: the transform handles follow the quarter your pointer
+is in. You can select and move in any of them.
+
+**A view's name, in the top right of its quarter, is also how you change it.** Seven choices: the
+free view and the six sides. Nothing ties you to the starting layout — two perspectives and two
+axes are just as askable.
+
+**Only the free view turns.** Dragging inside a side quarter does not spin it: a top view that tips
+over is no longer a top view, which is exactly what it is there for. **The view decides, never the
+projection** — putting the free view into orthographic with `O` does not stop it turning. Panning
+and zooming work everywhere.
+
+**Changing one quarter's view reframes every side quarter** onto the whole scene: they have no
+framing of their own to return to. Only the free view keeps its own.
+
+### Quad edges — `⇧W`
+
+In wireframe, the studio redraws the edges **without the diagonals triangulation added** — a cube
+loses the ones that crossed its faces, one per face.
+
+**This is not reading the file's quads, because there are none.** A GLB stores triangles only,
+whatever produced it. What you see is a reconstruction: two triangles whose shared edge separates
+near-coplanar faces are read back as one quad. On a strongly curved surface the reconstruction is
+wrong — it erases an edge the modeller meant to keep.
 
 ---
 

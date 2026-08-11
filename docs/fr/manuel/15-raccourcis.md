@@ -160,6 +160,8 @@ l’écran des raccourcis.
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
 | **Affichage** | `Z` | fait défiler rendu, filaire, rendu et filaire |
+| **Quatre vues** | `⇧Q` | partage le viewport en quatre : la vue en cours, dessus, face, profil |
+| **Arêtes en quads** | `⇧W` | en filaire, efface les diagonales que la triangulation a ajoutées |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l’objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 
