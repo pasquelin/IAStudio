@@ -49,7 +49,7 @@ true.** All seven write into the project folder and open back exactly as they we
 - **in Audio, the A/B monitoring**: a reopened document listens to the chain, never the source.
 
 **Closing a tab now asks.** If the document holds unsaved work, the studio puts the question —
-Save, Don't save, Cancel — and *Cancel* is what an `⎋` struck without reading answers.
+Save, Don’t save, Cancel — and *Cancel* is what an `⎋` struck without reading answers.
 
 ---
 

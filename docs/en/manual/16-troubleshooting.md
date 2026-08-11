@@ -508,7 +508,7 @@ which is far more pleasant than a jerky slide.
 ### "I lost my work when I closed a tab"
 
 **This is not supposed to be possible any more.** All document kinds save, and closing a tab
-whose work is not written asks first: *Save*, *Don't save*, *Cancel*.
+whose work is not written asks first: *Save*, *Don’t save*, *Cancel*.
 
 **If no question came up**, the document was clean — no dot (`•`) beside its name. Two known
 cases:
@@ -537,7 +537,7 @@ touched** — only the window's arrangement is.
 
 ### "The studio does not remember my settings"
 
-**The likely cause.** You closed the settings window without **Apply**, and chose "Don't apply" at
+**The likely cause.** You closed the settings window without **Apply**, and chose "Don’t apply" at
 the question asked.
 
 **What to do.** Start again, and finish with **Apply** or **OK**.

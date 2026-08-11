@@ -116,7 +116,7 @@ Un quatrième bouton, en forme de micro, se tient au même endroit. Il apparaît
 champs de texte long du formulaire, pas seulement sur le prompt : un prompt négatif se dicte
 aussi bien.
 
-**Tout se passe sur votre ordinateur.** Rien de ce que vous dites n'est envoyé nulle part, il
+**Tout se passe sur votre ordinateur.** Rien de ce que vous dites n’est envoyé nulle part, il
 n'y a pas de clé à saisir, et la dictée fonctionne sans connexion.
 
 ### La première fois

@@ -504,21 +504,21 @@ Cette section a son chapitre : [Tous les raccourcis](15-raccourcis.md).
 ## Dictée
 
 *Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous
-dites n'est envoyé nulle part.*
+dites n’est envoyé nulle part.*
 
 Le geste est décrit dans [Générer](06-generer.md#dicter-au-lieu-de-taper) ; ici, ce qui se règle.
 
 ### Activer la dictée
 
 Décochée, la dictée disparaît : plus de bouton de micro à côté des champs, plus de raccourci, et
-l'application ne charge rien ni ne demande jamais l'accès au micro.
+l'application ne charge rien ni ne demande jamais l’accès au micro.
 
 ### Façon de déclencher
 
 **Maintenir la touche** écoute tant que ⌥D est enfoncée et s'arrête au relâchement. C'est le
 réglage d'origine, et le plus sûr : on ne laisse jamais le micro ouvert par oubli.
 
-**Basculer marche/arrêt** démarre à la première pression et s'arrête à la suivante. La main se
+**Basculer marche/arrêt** démarre à la première pression et s’arrête à la suivante. La main se
 repose, ce qui vaut mieux quand on dicte longtemps.
 
 ### Silence qui termine une phrase
@@ -544,8 +544,8 @@ phrase, et la machine travaillera beaucoup moins.
 
 ### Fils de calcul
 
-De 1 à 8, deux par défaut. Le nombre de cœurs que la reconnaissance a le droit d'occuper. Plus
-haut va plus vite jusqu'à un certain point, mais chaque fil est un cœur en moins pour le reste
+De 1 à 8, deux par défaut. Le nombre de cœurs que la reconnaissance a le droit d’occuper. Plus
+haut va plus vite jusqu’à un certain point, mais chaque fil est un cœur en moins pour le reste
 de l'application — la vue 3D, le montage, l'interface.
 
 ### Libérer la mémoire après

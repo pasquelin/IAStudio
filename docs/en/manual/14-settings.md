@@ -32,7 +32,7 @@ not applied yet".
 
 > **Closing the window with pending changes does not lose them silently.** The studio asks: "You
 > changed settings without applying them. What would you like to do?" — you choose **Apply** or
-> **Don't apply**.
+> **Don’t apply**.
 
 ### Going back to the original value
 
@@ -52,7 +52,7 @@ explanation. Hunting for a vanished setting is more painful than reading why it 
 
 ## General
 
-*The application's language, and what it does when it opens.*
+*The application’s language, and what it does when it opens.*
 
 ### Language
 
@@ -272,7 +272,7 @@ The colour that marks **what is selected or under way**: the outline of the acti
 timeline playhead, the frame around a selection.
 
 It changes nothing about what you make — only how the application shows you where you are. Leave it
-be to keep the theme's own.
+be to keep the theme’s own.
 
 ### Text size
 
@@ -453,7 +453,7 @@ Snapping is switched on in the **scene's toolbar** (the `M` key); these three se
 
 **Choice. Starts at: Soft.**
 
-The grain of a shadow's edge.
+The grain of a shadow’s edge.
 
 | Value | Effect |
 |---|---|

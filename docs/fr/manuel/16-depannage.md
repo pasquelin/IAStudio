@@ -421,7 +421,7 @@ Ce n'est pas une panne : c'est la première fois. Le modèle pèse 640 Mo et n'e
 sans qu'on le demande. Cliquez, et continuez à travailler pendant le téléchargement — il ne gêne
 rien.
 
-### « L'accès au micro a été refusé. »
+### « L’accès au micro a été refusé. »
 
 Vous avez répondu non à la demande du système, et **macOS ne redemande plus**. Le bouton
 « Ouvrir les réglages du système » vous emmène à l'endroit exact où l'autoriser. Il faut ensuite
@@ -438,7 +438,7 @@ téléchargement.
 Le réseau a lâché. Ce qui était arrivé est conservé : la tentative suivante **reprend là où elle
 s'était arrêtée**, elle ne recommence pas les 640 Mo.
 
-### « La reconnaissance vocale s'est arrêtée. »
+### « La reconnaissance vocale s’est arrêtée. »
 
 Le moteur a quitté en cours de route. Il redémarre tout seul à la dictée suivante, jusqu'à trois
 fois ; au-delà, le studio cesse d'essayer plutôt que de relancer un processus qui meurt à chaque

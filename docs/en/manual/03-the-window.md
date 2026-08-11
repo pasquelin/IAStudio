@@ -616,7 +616,7 @@ The tab's cross closes the document. **If it carries the dot**, the studio first
 with what is not written:
 
 - **Save** writes the document and then closes — that is what `⏎` picks;
-- **Don't save** closes and loses the work done since the last `⌘S`;
+- **Don’t save** closes and loses the work done since the last `⌘S`;
 - **Cancel** closes nothing — and it is also what `⎋` answers, so that a key struck without
   reading can never throw work away.
 
