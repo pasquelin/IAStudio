@@ -1,3 +1,5 @@
+import { formatDecimal } from '@/helpers/format'
+
 /**
  * What a ruler is graduated in. The step is chosen from the zoom, never fixed: at 5% a tick
  * every 10 px is a grey band, and at 1600% one every 100 px leaves the ruler blank.
@@ -48,11 +50,14 @@ export function ticks(from: number, to: number, step: number): number[] {
 /**
  * A tick's label. Trailing zeros of a fractional step are kept — a ruler stepping by 0.5 that
  * printed `1` twice would be lying about where the second tick is.
+ *
+ * Ungrouped, and it is the one thing this asks of the formatter that a file size does not: the
+ * labels sit a few pixels apart, where a thousands separator reads as a second number.
  */
-export function tickLabel(value: number, step: number): string {
+export function tickLabel(value: number, step: number, language: string | undefined): string {
   const decimals = step >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(step)))
   // `ticks` produces `-0` for the tick at the origin when the range starts negative, and a
   // ruler graduated `-0` is a defect.
   const shown = value === 0 ? 0 : value
-  return shown.toFixed(decimals)
+  return formatDecimal(shown, language, { digits: decimals, least: decimals, grouped: false })
 }

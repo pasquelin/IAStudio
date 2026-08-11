@@ -172,6 +172,8 @@ export type OverlayScene = {
    * them: it is read the same way, off the same element, but it is not one.
    */
   rulerFont: string
+  /** What the graduations are written in. `undefined` before React has pushed one. */
+  language: string | undefined
   /**
    * Whether anything on screen is dashed. The frame loop keeps booking frames while it is true
    * and stops the moment it is not: ants that marched on an empty canvas would be a rAF running
@@ -372,7 +374,7 @@ function tracePath(context: OverlayContext, viewport: Viewport, outline: readonl
  * under them rather than over — a guide crossing its own ruler reads as a broken line.
  */
 function drawRulers(context: OverlayContext, scene: OverlayScene): void {
-  const { host, viewport, colors, rulerFont } = scene
+  const { host, viewport, colors, rulerFont, language } = scene
   const step = rulerStep(viewport.scale)
   const visible = visibleRect(viewport, host)
 
@@ -395,7 +397,7 @@ function drawRulers(context: OverlayContext, scene: OverlayScene): void {
 
     const major = isMajor(value, step.major)
     line(context, x, major ? 0 : RULER_SIZE - MINOR_TICK, x, RULER_SIZE)
-    if (major) context.fillText(tickLabel(value, step.major), x + 2, 2)
+    if (major) context.fillText(tickLabel(value, step.major, language), x + 2, 2)
   }
 
   for (const value of ticks(visible.y, visible.y + visible.height, step.minor)) {
@@ -407,7 +409,7 @@ function drawRulers(context: OverlayContext, scene: OverlayScene): void {
     if (!major) continue
 
     // Vertical text would need a rotation per label; every editor stacks the digits instead.
-    const label = tickLabel(value, step.major)
+    const label = tickLabel(value, step.major, language)
     label.split('').forEach((glyph, index) => context.fillText(glyph, 2, y + 2 + index * 8))
   }
 

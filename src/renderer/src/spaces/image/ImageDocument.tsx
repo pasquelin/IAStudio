@@ -83,7 +83,7 @@ const CHECKER = cn(
 )
 
 export function ImageDocument({ documentId }: ImageDocumentProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<CanvasEngine | null>(null)
 
@@ -171,6 +171,10 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   useEffect(() => {
     engine.current?.setView(view)
   }, [view])
+
+  useEffect(() => {
+    engine.current?.setLanguage(i18n.language)
+  }, [i18n.language])
 
   useEffect(() => {
     engine.current?.setSelection(selection)

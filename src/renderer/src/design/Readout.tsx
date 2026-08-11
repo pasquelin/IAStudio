@@ -23,10 +23,14 @@ const EXACT_DECIMALS = 20
  */
 export function Readout({ values }: { values: readonly number[] }) {
   const { i18n } = useTranslation()
-  const shown = values.map(value => formatDecimal(value, i18n.language, DECIMALS)).join('–')
+  const shown = values
+    .map(value => formatDecimal(value, i18n.language, { digits: DECIMALS }))
+    .join('–')
   // Exact, and in the reader's language too: the tooltip is the same number said in full, not
   // another number — and it is what a screen reader speaks.
-  const exact = values.map(value => formatDecimal(value, i18n.language, EXACT_DECIMALS)).join('–')
+  const exact = values
+    .map(value => formatDecimal(value, i18n.language, { digits: EXACT_DECIMALS }))
+    .join('–')
 
   // The tooltip's `aria-label` rides along on purpose: a screen reader then hears the exact
   // value, which is the one thing the rounded text on screen cannot give it.

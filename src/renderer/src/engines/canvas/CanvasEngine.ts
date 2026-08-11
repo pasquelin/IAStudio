@@ -457,6 +457,9 @@ export class CanvasEngine {
   private hostSize: Size = { width: 0, height: 0 }
   private colors: OverlayColors = FALLBACK_COLORS
   private rulerFont = FALLBACK_RULER_FONT
+
+  /** What the graduations are written in. `undefined` is the host's locale; `''` would throw. */
+  private language: string | undefined
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
 
@@ -918,6 +921,18 @@ export class CanvasEngine {
     // Its texture belongs to the asset cache, and another layer may hold the same picture.
     sprite.destroy()
     this.render()
+  }
+
+  /**
+   * What the rulers are graduated in. Pushed like the view rather than read off
+   * `documentElement.lang`: that attribute is a projection written for screen readers, and it
+   * carries no notification — the rulers would keep the language they were mounted in while the
+   * inspector beside them changed.
+   */
+  setLanguage(language: string): void {
+    if (language === this.language) return
+    this.language = language
+    this.overlay.invalidate()
   }
 
   /** Pan, zoom, and what the overlay shows. Pushed in, never read out: React owns it. */
@@ -1446,6 +1461,7 @@ export class CanvasEngine {
       pointer: this.pointer,
       colors: this.colors,
       rulerFont: this.rulerFont,
+      language: this.language,
       marching: this.marching(),
       // Handed over whole rather than gated here: every painter already returns on nothing to
       // draw, and a gate repeating those guards is one a new decoration gets forgotten from —
