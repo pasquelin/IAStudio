@@ -44,7 +44,7 @@ describe('the studio recording what it did', () => {
   // boundary on bookkeeping — the same reason the ingest bar coalesces its progress.
   it('sends one message for a burst rather than one per line', async () => {
     for (let index = 0; index < 200; index++) {
-      journal.record({ level: 'info', topic: 'library', messageKey: `activity.n${index}` })
+      journal.record({ level: 'info', topic: 'library', messageKey: 'activity.pushed' })
     }
     await journal.flush()
 
@@ -53,8 +53,8 @@ describe('the studio recording what it did', () => {
   })
 
   it('hands the windows the ids the database gave, so two lines are never confused', async () => {
-    journal.record({ level: 'info', topic: 'import', messageKey: 'activity.a' })
-    journal.record({ level: 'info', topic: 'import', messageKey: 'activity.b' })
+    journal.record({ level: 'info', topic: 'import', messageKey: 'activity.captioned' })
+    journal.record({ level: 'info', topic: 'import', messageKey: 'activity.pulled' })
     await journal.flush()
 
     const sent: readonly ActivityEntry[] = broadcast.mock.calls[0]?.[0] ?? []
@@ -94,7 +94,7 @@ describe('the studio recording what it did', () => {
       // The real cadence: nothing may depend on a test-only one.
     })
 
-    timed.record({ level: 'warn', topic: 'document', messageKey: 'activity.saveFailed' })
+    timed.record({ level: 'warn', topic: 'document', messageKey: 'activity.pushFailed' })
     expect(broadcast).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(ACTIVITY_FLUSH_MS)
@@ -113,7 +113,7 @@ describe('recording with no project open', () => {
       now: () => '2026-08-08T10:00:00.000Z',
     })
 
-    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.noProject' })
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.projectNotAProject' })
     await journal.flush()
 
     expect(broadcast).toHaveBeenCalledTimes(1)
@@ -129,8 +129,8 @@ describe('recording with no project open', () => {
       now: () => '2026-08-08T10:00:00.000Z',
     })
 
-    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.a' })
-    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.b' })
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.captioned' })
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.pulled' })
     await journal.flush()
 
     const sent: readonly ActivityEntry[] = broadcast.mock.calls[0]?.[0] ?? []
@@ -177,7 +177,7 @@ describe('a journal that has been disposed', () => {
     })
 
     journal.dispose()
-    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.late' })
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.generated' })
     await journal.flush()
 
     expect(broadcast).not.toHaveBeenCalled()
@@ -208,18 +208,18 @@ describe('flushing while a write is already on its way', () => {
       now: () => '2026-08-08T10:00:00.000Z',
     })
 
-    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.first' })
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.imported' })
     const inFlight = journal.flush()
     await settled()
 
     // Lands behind a write that has not come back yet.
-    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.second' })
+    journal.record({ level: 'error', topic: 'library', messageKey: 'activity.pushed' })
     const settling = journal.flush()
     await settled()
 
     release?.()
     await Promise.all([inFlight, settling])
 
-    expect(written).toEqual(['activity.first', 'activity.second'])
+    expect(written).toEqual(['activity.imported', 'activity.pushed'])
   })
 })

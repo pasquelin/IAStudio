@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { LOG_SCOPES, type LogScope } from '../ipc'
 import {
   ACTIVITY_LEVELS,
+  ACTIVITY_MESSAGES,
   ACTIVITY_TOPICS,
   type ActivityLevel,
+  type ActivityMessage,
   type ActivityTopic,
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
@@ -106,6 +108,38 @@ describe('the lists that stand for a union', () => {
 
     expect(sorted(ACTIVITY_LEVELS)).toEqual(sorted(Object.keys(levels)))
     expect(sorted(ACTIVITY_TOPICS)).toEqual(sorted(Object.keys(topics)))
+  })
+
+  // A name in the union but not in the list leaves `DYNAMIC_KEYS`, and the line ships untranslated.
+  it('names every line the main process can write', () => {
+    const messages: Record<ActivityMessage, true> = {
+      apiRefused: true,
+      captionFailed: true,
+      captioned: true,
+      fileNotMoved: true,
+      fileNotOpened: true,
+      fileNotRenamed: true,
+      fileNotTrashed: true,
+      generated: true,
+      generatedInto: true,
+      importFailed: true,
+      importUnreadable: true,
+      imported: true,
+      jobCancelled: true,
+      jobFailed: true,
+      projectNotAProject: true,
+      projectNotCreated: true,
+      projectTooNew: true,
+      projectUnreadable: true,
+      pullFailed: true,
+      pulled: true,
+      pushFailed: true,
+      pushed: true,
+      tagsNotSynced: true,
+      unknownMessage: true,
+    }
+
+    expect(sorted(ACTIVITY_MESSAGES)).toEqual(sorted(Object.keys(messages)))
   })
 
   // The one that already cost a bug: `font.face` shipped without its line and read as its key.

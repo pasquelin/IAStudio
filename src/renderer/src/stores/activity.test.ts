@@ -164,7 +164,7 @@ describe('changing project', () => {
   })
 
   it('reads the new project journal rather than keeping the last one', async () => {
-    useActivity.setState({ entries: [entry({ id: 1, messageKey: 'from.a' })] })
+    useActivity.setState({ entries: [entry({ id: 1, messageKey: 'activity.imported' })] })
     installFakeBridge({ activity: { read: () => Promise.resolve([entry({ id: 2 })]) } })
 
     await state().reload()

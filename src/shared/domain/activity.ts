@@ -37,6 +37,79 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
 ]
 
 /**
+ * Every line the main process can write, by name.
+ *
+ * Written out rather than left as `string`, and it is the only chance there is: the window draws
+ * a line with `t(entry.messageKey)`, a call whose key is a variable — `known-keys.i18n.test.ts`
+ * cannot resolve it, and its glob stops at the renderer anyway. A misspelt key here read as
+ * itself on screen, and nothing in the repository could have said so.
+ */
+export type ActivityMessage =
+  | 'apiRefused'
+  | 'captionFailed'
+  | 'captioned'
+  | 'fileNotMoved'
+  | 'fileNotOpened'
+  | 'fileNotRenamed'
+  | 'fileNotTrashed'
+  | 'generated'
+  | 'generatedInto'
+  | 'importFailed'
+  | 'importUnreadable'
+  | 'imported'
+  | 'jobCancelled'
+  | 'jobFailed'
+  | 'projectNotAProject'
+  | 'projectNotCreated'
+  | 'projectTooNew'
+  | 'projectUnreadable'
+  | 'pullFailed'
+  | 'pulled'
+  | 'pushFailed'
+  | 'pushed'
+  | 'tagsNotSynced'
+  | 'unknownMessage'
+
+export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
+  'apiRefused',
+  'captionFailed',
+  'captioned',
+  'fileNotMoved',
+  'fileNotOpened',
+  'fileNotRenamed',
+  'fileNotTrashed',
+  'generated',
+  'generatedInto',
+  'importFailed',
+  'importUnreadable',
+  'imported',
+  'jobCancelled',
+  'jobFailed',
+  'projectNotAProject',
+  'projectNotCreated',
+  'projectTooNew',
+  'projectUnreadable',
+  'pullFailed',
+  'pulled',
+  'pushFailed',
+  'pushed',
+  'tagsNotSynced',
+  'unknownMessage',
+]
+
+/**
+ * The key as it is stored and as the window looks it up.
+ *
+ * Log scopes are the one family left open, by layer rather than by accident: they are composed
+ * from `LOG_SCOPES`, which lives in `ipc.ts` — the boundary, which depends on this module and
+ * not the other way round. The family is guarded all the same, by `DYNAMIC_KEYS`, and its one
+ * site composes from `LogScope` so a scope cannot be misspelt either.
+ */
+export type ActivityMessageKey = `activity.${ActivityMessage}` | `activity.scope.${string}`
+
+export const ACTIVITY_SCOPE_PREFIX = 'activity.scope.'
+
+/**
  * The values a message key interpolates. Strings, numbers, and lists of ids — what goes in has
  * to survive a round trip through JSON and come back meaning the same thing.
  *
@@ -51,7 +124,7 @@ export type ActivityDraft = {
   level: ActivityLevel
   topic: ActivityTopic
   /** An i18n key — `activity.jobFailed`, never "La génération a échoué". */
-  messageKey: string
+  messageKey: ActivityMessageKey
   params?: ActivityParams
   /** `describeFailure()` only. Never `error.message`. */
   detail?: string
