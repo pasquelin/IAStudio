@@ -9,18 +9,18 @@ import type { AdjustmentStack } from '@shared/domain/adjustments'
  */
 export type AdjustmentField = {
   key: keyof AdjustmentStack
-  label: string
+  labelKey: string
   min: number
   max: number
   step: number
 }
 
 export const ADJUSTMENT_FIELDS: readonly AdjustmentField[] = [
-  { key: 'exposure', label: 'skybox.exposure', min: -4, max: 4, step: 0.05 },
-  { key: 'contrast', label: 'skybox.contrast', min: 0, max: 2, step: 0.01 },
-  { key: 'saturation', label: 'skybox.saturation', min: 0, max: 2, step: 0.01 },
-  { key: 'temperature', label: 'skybox.temperature', min: -1, max: 1, step: 0.01 },
-  { key: 'tint', label: 'skybox.tint', min: -1, max: 1, step: 0.01 },
-  { key: 'rotationY', label: 'skybox.rotation', min: 0, max: Math.PI * 2, step: 0.01 },
-  { key: 'blur', label: 'skybox.blur', min: 0, max: 1, step: 0.01 },
+  { key: 'exposure', labelKey: 'skybox.exposure', min: -4, max: 4, step: 0.05 },
+  { key: 'contrast', labelKey: 'skybox.contrast', min: 0, max: 2, step: 0.01 },
+  { key: 'saturation', labelKey: 'skybox.saturation', min: 0, max: 2, step: 0.01 },
+  { key: 'temperature', labelKey: 'skybox.temperature', min: -1, max: 1, step: 0.01 },
+  { key: 'tint', labelKey: 'skybox.tint', min: -1, max: 1, step: 0.01 },
+  { key: 'rotationY', labelKey: 'skybox.rotation', min: 0, max: Math.PI * 2, step: 0.01 },
+  { key: 'blur', labelKey: 'skybox.blur', min: 0, max: 1, step: 0.01 },
 ]

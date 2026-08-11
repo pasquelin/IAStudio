@@ -16,6 +16,19 @@ const SOURCES: Record<string, string> = import.meta.glob(
  */
 const PLURAL_SUFFIXES = ['', '_zero', '_one', '_two', '_few', '_many', '_other']
 
+/**
+ * What a table's value has to look like to be read as a key rather than as data.
+ *
+ * Shaped, not merely dotted: a URL, a path or a selector all carry a dot, and this guard exists
+ * to say which key is missing — not to argue about what counts as one.
+ *
+ * The hyphen and the underscore are NOT decoration: 147 of the bundle's keys carry one, between
+ * i18next's plural suffixes (`jobs.running_one`) and the hyphenated failure codes the account
+ * settings and the graph both use (`accounts.errors.too-long`). Refusing them would have skipped
+ * four keys of `AccountSettings` in silence — a guard that looks wider and covers less.
+ */
+const KEY_SHAPED = /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_-]+)+$/
+
 function resolve(code: Language, key: string): unknown {
   // Widened, not cast: the bundle's inferred type has no index signature.
   const bundle: unknown = TRANSLATIONS[code]
@@ -91,7 +104,34 @@ function keysIn(
       take(node, node.initializer)
     }
 
+    // A `Record<Union, string>` indexed by a union value: `{ missing: 'errors.missing' }`. The
+    // property is named for the CASE, never for what it holds, so no suffix can find it — which
+    // is how eight tables grew keys that nothing checked.
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.type !== undefined &&
+      ts.isTypeReferenceNode(node.type) &&
+      node.type.typeName.getText(source) === 'Record' &&
+      node.initializer !== undefined
+    ) {
+      keysUnder(node.initializer)
+    }
+
     ts.forEachChild(node, visit)
+  }
+
+  /**
+   * Values only, never the property names: a table may be keyed BY a dotted string — the main
+   * process has one keyed by log scope, `'scene.model': 'document'` — and a name read as a key
+   * would send this guard hunting for a bundle entry nobody ever wrote.
+   */
+  const keysUnder = (node: ts.Node): void => {
+    if (ts.isPropertyAssignment(node)) {
+      keysUnder(node.initializer)
+      return
+    }
+    if (ts.isStringLiteral(node) && KEY_SHAPED.test(node.text)) take(node, node)
+    ts.forEachChild(node, keysUnder)
   }
 
   visit(source)
