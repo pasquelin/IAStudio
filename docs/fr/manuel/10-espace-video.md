@@ -154,8 +154,8 @@ Sélectionnez un clip, et regardez l’**Inspecteur**, dans la colonne de droite
 | **Fin** | où il finit |
 | **Durée** | sa longueur |
 | **Point d’entrée** | à quel endroit du fichier d’origine il commence |
-| **Fondu d’entrée** | une montée depuis le noir, au début — dessinée sur un clip son, pas encore entendue |
-| **Fondu de sortie** | une descente vers le noir, à la fin — même réserve pour le son |
+| **Fondu d’entrée** | une montée depuis le noir, au début — entendue sur un clip son, seulement dessinée sur un clip image |
+| **Fondu de sortie** | une descente vers le noir, à la fin — même partage |
 | **Vitesse** | 1 = normal, 0,5 = deux fois plus lent, 2 = deux fois plus rapide |
 | **Gain** | le volume, en décibels. 0 laisse le son tel qu’il a été enregistré |
 
@@ -207,8 +207,8 @@ se remarque surtout sur un portable : le ventilateur se tait, la batterie tient.
 ## Le son du montage
 
 **Le moniteur Programme joue les pistes audio pendant la lecture.** Appuyez sur lecture : chaque
-clip posé sur une piste son se fait entendre à sa place, à son gain et à sa vitesse, et une piste
-muette ou hors solo se tait aussitôt — sans attendre la fin du clip en cours.
+clip posé sur une piste son se fait entendre à sa place, à son gain, à ses fondus et à sa vitesse,
+et une piste muette ou hors solo se tait aussitôt — sans attendre la fin du clip en cours.
 
 Quatre choses à savoir, parce qu’elles se remarquent :
 

@@ -153,8 +153,8 @@ Select a clip and look at the **Inspector**, in the right column.
 | **End** | where it finishes |
 | **Duration** | its length |
 | **In point** | where in the original file it starts |
-| **Fade in** | a rise from black, at the start — drawn on a sound clip, not yet heard |
-| **Fade out** | a fall to black, at the end — same reservation for sound |
+| **Fade in** | a rise from black, at the start — heard on a sound clip, only drawn on a picture one |
+| **Fade out** | a fall to black, at the end — the same split |
 | **Speed** | 1 = normal, 0.5 = half speed, 2 = double speed |
 | **Gain** | the volume, in decibels. 0 leaves the sound as recorded |
 
@@ -205,8 +205,8 @@ laptop: the fan goes quiet, the battery lasts.
 ## The sound of the edit
 
 **The Program monitor plays the audio tracks during playback.** Press play: every clip laid on a
-sound track is heard in its place, at its gain and at its speed, and a track muted or left out of
-a solo goes quiet at once — without waiting for the clip in progress to end.
+sound track is heard in its place, at its gain, with its fades and at its speed, and a track muted
+or left out of a solo goes quiet at once — without waiting for the clip in progress to end.
 
 Four things worth knowing, because they show:
 

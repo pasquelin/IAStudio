@@ -12,9 +12,10 @@ import {
   type Us,
 } from './timeline-state'
 
-/** One corner of the slice's envelope, on the output clock. */
-export type SoundLevel = {
-  at: number
+/** One corner of the slice's envelope: the level to reach, and when to have reached it. */
+export type SoundRamp = {
+  /** On the output clock, like `SoundCue.when` — never a timeline microsecond. */
+  when: number
   /** Linear amplitude, the clip's own gain already folded in. */
   level: number
 }
@@ -36,7 +37,7 @@ export type SoundCue = {
    * Empty rather than a first point equal to `gain`: a non-empty array would carry an element no
    * caller may drop, and a branch no test can reach.
    */
-  ramps: readonly SoundLevel[]
+  ramps: readonly SoundRamp[]
 }
 
 export type PlayingSound = { stop: () => void }
@@ -101,30 +102,26 @@ export function cueFor(chunk: AudioChunk, origin: number, now: number): SoundCue
  * `speed` plays no part: the timeline and the output clock run 1:1, and a rate only changes how
  * fast the source is consumed between two instants that stay where they are.
  */
-function rampsFor(chunk: AudioChunk, begins: Us, peak: number, when: number): SoundLevel[] {
+function rampsFor(chunk: AudioChunk, begins: Us, peak: number, when: number): SoundRamp[] {
   const ends = chunk.at + chunk.duration
   const levelAt = (moment: Us): number => peak * fadeAt(chunk.fade, moment)
 
-  // Sorted rather than trusted in order: a ramp asked to land before the one before it is an
-  // error the output throws, and the clip's edges are clamped elsewhere.
+  // Already in order: `clampFades` holds the rise before the fall, and a corner past the slice's
+  // own end is dropped. Only the duplicates are left to drop — an unramped edge sits on the end.
   const corners = [chunk.fade.risenAt, chunk.fade.fallsFrom, ends]
     .filter(moment => moment > begins && moment <= ends)
-    .sort((a, b) => a - b)
     .filter((moment, index, all) => index === 0 || moment !== all[index - 1])
 
   // A trailing corner at the level already held says nothing. A leading one may: it holds the
   // plateau a fall starts from, and dropping it would ramp down from the slice's first instant.
   const levels = [levelAt(begins), ...corners.map(levelAt)]
   let kept = 0
-  for (let index = levels.length - 1; index > 0; index--) {
-    if (levels[index] !== levels[index - 1]) {
-      kept = index
-      break
-    }
-  }
+  levels.forEach((level, index) => {
+    if (index > 0 && level !== levels[index - 1]) kept = index
+  })
 
   return corners.slice(0, kept).map(moment => ({
-    at: when + usToSeconds(moment - begins),
+    when: when + usToSeconds(moment - begins),
     level: levelAt(moment),
   }))
 }
@@ -254,7 +251,7 @@ export function createSoundScheduler({ port, horizon }: SoundSchedulerDeps): Sou
     apply: next => {
       state = next
       // Two edits are heard at once, because they say so: muting a track, and taking a clip
-      // away. Everything else — a trim, a gain, a speed — reaches the next clip planned rather
+      // away. Everything else — a trim, a gain, a speed, a fade — reaches the next clip planned rather
       // than the one already sounding, which is what keeps a drag from restarting a source on
       // every pointer move.
       for (const [clipId, entry] of playing) {

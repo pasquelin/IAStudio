@@ -1,3 +1,4 @@
+import { clamp } from '@shared/numeric'
 import { clipEnd, playsThrough, sourceTimeAt, type SequenceState, type Us } from './timeline-state'
 
 /**
@@ -24,13 +25,9 @@ export type ClipFade = {
  * hear where the eye sees it would make the drawing a lie.
  */
 export function fadeAt(fade: ClipFade, at: Us): number {
-  if (at < fade.risenAt) return clampFactor((at - fade.from) / (fade.risenAt - fade.from))
-  if (at > fade.fallsFrom) return clampFactor((fade.to - at) / (fade.to - fade.fallsFrom))
+  if (at < fade.risenAt) return clamp((at - fade.from) / (fade.risenAt - fade.from), 0, 1)
+  if (at > fade.fallsFrom) return clamp((fade.to - at) / (fade.to - fade.fallsFrom), 0, 1)
   return 1
-}
-
-function clampFactor(factor: number): number {
-  return Math.max(0, Math.min(1, factor))
 }
 
 /** A slice of one clip's audio to be scheduled, already resolved against the window. */

@@ -29,7 +29,7 @@ export function playFrom(output: SoundOutput, buffer: AudioBuffer): LoadedSound 
     // Anchored at `when`, never assigned: a ramp with no point before it starts from the instant
     // the graph was built, so a fade laid a second ahead would already be half over when it began.
     gain.gain.setValueAtTime(cue.gain, cue.when)
-    for (const ramp of cue.ramps) gain.gain.linearRampToValueAtTime(ramp.level, ramp.at)
+    for (const ramp of cue.ramps) gain.gain.linearRampToValueAtTime(ramp.level, ramp.when)
 
     source.connect(gain).connect(output.destination)
     source.onended = () => gain.disconnect()

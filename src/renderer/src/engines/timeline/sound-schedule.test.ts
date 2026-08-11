@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cueFor, createSoundScheduler, type SoundCue, type SoundPort } from './sound-schedule'
-import type { AudioChunk, ClipFade } from './audio'
+import { audioChunksIn, type AudioChunk, type ClipFade } from './audio'
 import { clipFixture, sequenceWith, settled, trackFixture } from './timeline-fixtures'
 import type { Clip, SequenceState } from './timeline-state'
 
@@ -72,7 +72,7 @@ describe('cueing one slice', () => {
   it('comes in from silence and reaches full level where the rise ends', () => {
     const cue = cueFor(ramped({ risenAt: 500_000 }), 0, 0)
 
-    expect(cue).toMatchObject({ gain: 0, ramps: [{ at: 0.5, level: 1 }] })
+    expect(cue).toMatchObject({ gain: 0, ramps: [{ when: 0.5, level: 1 }] })
   })
 
   /**
@@ -85,8 +85,8 @@ describe('cueing one slice', () => {
     expect(cue).toMatchObject({
       gain: 1,
       ramps: [
-        { at: 1.6, level: 1 },
-        { at: 2, level: 0 },
+        { when: 1.6, level: 1 },
+        { when: 2, level: 0 },
       ],
     })
   })
@@ -98,7 +98,7 @@ describe('cueing one slice', () => {
   it('enters part-way up when the load ate half the rise', () => {
     const cue = cueFor(ramped({ risenAt: 1_000_000 }), 0, 0.5)
 
-    expect(cue).toMatchObject({ when: 0.5, gain: 0.5, ramps: [{ at: 1, level: 1 }] })
+    expect(cue).toMatchObject({ when: 0.5, gain: 0.5, ramps: [{ when: 1, level: 1 }] })
   })
 
   it("folds the clip's own gain into the envelope, so the output never scales twice", () => {
@@ -114,7 +114,27 @@ describe('cueing one slice', () => {
   it('leaves the envelope where it is for a clip with a speed', () => {
     const cue = cueFor(ramped({ risenAt: 1_000_000 }, { speed: 2 }), 0, 0)
 
-    expect(cue).toMatchObject({ duration: 4, ramps: [{ at: 1, level: 1 }] })
+    expect(cue).toMatchObject({ duration: 4, ramps: [{ when: 1, level: 1 }] })
+  })
+
+  /**
+   * The ordinary case, and the only one with three corners: the rise, the plateau the fall starts
+   * from, and silence. Built from a real clip rather than a hand-made envelope, because that is
+   * where the order comes from — `clampFades` holds a clip's rise before its fall on every path
+   * that builds one, and `rampsFor` trusts it rather than sorting its own corners.
+   */
+  it('rises, holds, then falls for a clip faded at both ends', () => {
+    const faded = clip('a', 0, 2_000_000, { fadeIn: 500_000, fadeOut: 500_000 })
+    const planned = audioChunksIn(withAudio([faded]), 0, 2_000_000)[0]
+
+    expect(planned && cueFor(planned, 0, 0)).toMatchObject({
+      gain: 0,
+      ramps: [
+        { when: 0.5, level: 1 },
+        { when: 1.5, level: 1 },
+        { when: 2, level: 0 },
+      ],
+    })
   })
 
   // The window may end before the fall does, and the level it ends at is not silence.
@@ -122,8 +142,8 @@ describe('cueing one slice', () => {
     const cue = cueFor(ramped({ fallsFrom: 1_000_000 }, { duration: 1_500_000 }), 0, 0)
 
     expect(cue?.ramps).toEqual([
-      { at: 1, level: 1 },
-      { at: 1.5, level: 0.5 },
+      { when: 1, level: 1 },
+      { when: 1.5, level: 0.5 },
     ])
   })
 

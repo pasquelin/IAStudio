@@ -125,8 +125,8 @@ describe('the browser sound port', () => {
   it('lays the envelope out as ramps, each landing at its own instant', () => {
     const { output, gain } = outputWith()
     const envelope = [
-      { at: 21, level: 1 },
-      { at: 23, level: 0 },
+      { when: 21, level: 1 },
+      { when: 23, level: 0 },
     ]
     playFrom(output, {} as AudioBuffer)(cue({ ramps: envelope }))
 

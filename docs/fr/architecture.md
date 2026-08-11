@@ -558,10 +558,14 @@ le prennent tous les deux au même endroit.
 
 **Ce qu'un moniteur fait ENTENDRE passe par un second port, et son arithmétique est pure.**
 `engines/timeline/sound-schedule.ts` ne connaît que des nombres : quand un extrait tombe sur
-l'horloge de sortie, ce qu'un chargement arrivé en retard doit sauter plutôt que jouer tard, et
-combien de source dépense un clip accéléré. `sound-port.ts` tient ce que seul un navigateur sait
-faire — une `AudioContext` unique par fenêtre, ouverte au premier son et jamais fermée, le
-décodeur du navigateur, et un `AudioBufferSourceNode` par clip.
+l'horloge de sortie, ce qu'un chargement arrivé en retard doit sauter plutôt que jouer tard,
+combien de source dépense un clip accéléré, et **où passe l'enveloppe de fondu** — le `ClipFade`
+que porte un `AudioChunk` donne les bords du CLIP en instants, pas en longueurs, parce qu'une
+tranche peut commencer AU MILIEU d'un fondu, et `cueFor` en tire les coins de `SoundCue.ramps`.
+`sound-port.ts` tient ce que seul un navigateur sait faire — une `AudioContext` unique par fenêtre,
+ouverte au premier son et jamais fermée, le décodeur du navigateur, un `AudioBufferSourceNode` par
+clip, et l'enveloppe posée sur son `GainNode` : `setValueAtTime` à l'instant du cue **avant** toute
+rampe, faute de quoi la rampe partirait de l'instant où le graphe a été monté.
 
 Un clip est planifié **entier** quand il entre dans l'horizon d'une seconde, jamais fenêtre par
 fenêtre : une source relancée à chaque jointure s'entend comme un clic. Les échantillons, eux, sont

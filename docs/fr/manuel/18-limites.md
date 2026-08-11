@@ -214,12 +214,11 @@ se changent pas encore.
 
 ### Ce que la lecture ne fait pas encore entendre
 
-Le moniteur Programme joue les pistes de son. Quatre bornes restent, toutes assumées :
+Le moniteur Programme joue les pistes de son. Trois bornes restent, toutes assumées :
 
 | Ce qui ne s’entend pas | Pourquoi |
 |---|---|
 | **Le son d’une vidéo** posée sur une piste image | seules les pistes de genre son sont ordonnancées |
-| **Les fondus** d’un clip son | ils sont dessinés, saisissables et enregistrés, mais pas encore appliqués à la sortie |
 | **Le scrub** — déplacer la tête de lecture à la main | le son n’est planifié que par la boucle de lecture |
 | **Le moniteur Source** | il monte le clip sélectionné sur une piste image, quel que soit son type |
 
