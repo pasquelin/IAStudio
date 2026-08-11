@@ -77,14 +77,17 @@ export type MenuOptions = {
  * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
  * build hands an attacker `setCredentials` through a self-XSS.
  */
-function developerItems(isDevelopment: boolean): MenuItemConstructorOptions[] {
+function developerItems(
+  isDevelopment: boolean,
+  menu: (typeof TRANSLATIONS)[Language]['menu'],
+): MenuItemConstructorOptions[] {
   if (!isDevelopment) return []
   return [
     { type: 'separator' },
-    { role: 'toggleDevTools' },
+    { role: 'toggleDevTools', label: menu.toggleDevTools },
     // ⌘R is the image workspace's rulers, and `role: 'reload'` carries ⌘R implicitly: two items
     // of this very submenu would claim one key, and AppKit serves whichever it finds first.
-    { role: 'reload', accelerator: 'Shift+CmdOrCtrl+R' },
+    { role: 'reload', label: menu.reload, accelerator: 'Shift+CmdOrCtrl+R' },
   ]
 }
 
@@ -115,7 +118,8 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
   // name to one place, and a hard-coded copy here would drift past it unnoticed.
-  const aboutLabel = t.menu.about.replace('{{name}}', APP_NAME)
+  const named = (sentence: string): string => sentence.replace('{{name}}', APP_NAME)
+  const aboutLabel = named(t.menu.about)
 
   // Opened by the main process rather than routed through a renderer: settings are a window
   // now, and which window is focused has nothing to do with it.
@@ -134,13 +138,16 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { type: 'separator' },
       settingsItem,
       { type: 'separator' },
-      { role: 'services' },
+      // Labelled, though the role would draw itself: Electron ships 55 localisations and serves
+      // the one the SYSTEM is in, so a studio set to English on a French macOS read "Couper"
+      // under "Edit". The role still carries the action and its accelerator.
+      { role: 'services', label: t.menu.services },
       { type: 'separator' },
-      { role: 'hide' },
-      { role: 'hideOthers' },
-      { role: 'unhide' },
+      { role: 'hide', label: named(t.menu.hide) },
+      { role: 'hideOthers', label: t.menu.hideOthers },
+      { role: 'unhide', label: t.menu.unhide },
       { type: 'separator' },
-      { role: 'quit' },
+      { role: 'quit', label: named(t.menu.quit) },
     ],
   }
 
@@ -258,7 +265,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * `useShortcuts` decides: highlighted text keeps ⌘C, everything else is the scene's.
    */
   // Where no history exists, the platform keeps the keys — its own undo is the only one there is.
-  const nativeHistory: MenuItemConstructorOptions[] = [{ role: 'undo' }, { role: 'redo' }]
+  const nativeHistory: MenuItemConstructorOptions[] = [
+    { role: 'undo', label: t.commands.undo.title },
+    { role: 'redo', label: t.commands.redo.title },
+  ]
   const surface = scopeOfWorkspace(workspace)
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
@@ -277,10 +287,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           ]
         : nativeHistory),
       { type: 'separator' },
-      { role: 'cut', registerAccelerator: false },
-      { role: 'copy', registerAccelerator: false },
-      { role: 'paste', registerAccelerator: false },
-      { role: 'selectAll' },
+      { role: 'cut', label: t.menu.cut, registerAccelerator: false },
+      { role: 'copy', label: t.menu.copy, registerAccelerator: false },
+      { role: 'paste', label: t.menu.paste, registerAccelerator: false },
+      { role: 'selectAll', label: t.menu.selectAll },
     ],
   }
 
@@ -442,7 +452,9 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,
-        { role: isMac ? 'close' : 'quit' },
+        isMac
+          ? { role: 'close', label: t.menu.close }
+          : { role: 'quit', label: named(t.menu.quit) },
       ],
     },
     editMenu,
@@ -474,7 +486,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
-        ...developerItems(isDevelopment),
+        ...developerItems(isDevelopment, t.menu),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },
