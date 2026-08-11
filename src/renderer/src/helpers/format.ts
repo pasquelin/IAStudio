@@ -1,9 +1,9 @@
 /**
- * One formatter per shape and language, kept.
+ * One formatter per shape and language, kept — the only cache the window's formatters use.
  *
- * Building an `Intl` formatter per call costs 48 µs against 4, which a progress bar repainting
- * on every job tick would pay on the UI thread. Keys name the shape as well as the language, so
- * two shapes never share an entry.
+ * Building an `Intl` formatter per call costs 48 µs against 4, measured on a hundred-line log
+ * and a hundred-and-twenty-point axis. Keys name the shape as well as the language, so two
+ * shapes never share an entry.
  */
 export function kept<T>(cache: Map<string, T>, key: string, build: () => T): T {
   const held = cache.get(key)

@@ -15,15 +15,18 @@ describe('ProgressBar', () => {
 
     // The suites run in French, whose typography puts U+00A0 before the sign — the bar takes
     // that from the language rather than writing a space of its own.
-    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Sunset 42 %')
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Sunset 42\u00a0%')
   })
 
-  // A job reporting 1.02 must not paint past its track.
+  // A job reporting 1.02 must not paint past its track — nor announce past it. The name and the
+  // value used to be the same rounded number; they are now computed apart, so both are asserted.
   it('clamps a ratio outside 0 and 1', () => {
     const { rerender } = render(<ProgressBar ratio={1.4} label="Sunset" />)
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Sunset 100\u00a0%')
 
     rerender(<ProgressBar ratio={-0.3} label="Sunset" />)
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.getByRole('progressbar')).toHaveAccessibleName('Sunset 0\u00a0%')
   })
 })

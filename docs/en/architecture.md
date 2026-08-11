@@ -748,9 +748,12 @@ Seven things go through the bundles without looking like it, and each answers an
   comes from the caller, because `Mio` and `MiB` are the same size in two languages and the
   abbreviations had ended up living in French inside a computation file;
 - **the percent sign** — `formatPercent`, in the same file: French puts a no-break space before
-  the sign, English puts none. Three sites wrote it by hand, two of them the French way, and that
-  space shipped as-is to an English reader. **No i18n guard could see it** — a sign is not a word,
-  so no bundle carries it; `no-composed-percent.test.ts` is the guard written for that gap;
+  the sign and a comma inside the number, English neither. Three sites wrote it by hand, two of
+  them the French way, and that space shipped as-is to an English reader. **No i18n guard could
+  see it** — a sign is not a word, so no bundle carries it. `no-composed-percent.test.ts` refuses
+  both ways of building one, the template and the concatenation, and **exempts CSS lengths by
+  name** — `width`, `left`, `top`… : a length is read by the layout engine, which has no language.
+  **What it does not see**: a percentage written whole, `'42%'`, which no interpolation betrays;
 - **numbers written INSIDE a sentence** — `{{count, number}}` rather than `{{count}}`: a thousand
   reads "4,000" on one side of the Channel and "4 000" on the other, and French's separator is a
   narrow no-break space. i18next's formatter is `Intl.NumberFormat`, nothing to configure.

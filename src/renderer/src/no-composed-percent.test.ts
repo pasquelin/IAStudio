@@ -23,6 +23,16 @@ const SOURCES: Record<string, string> = import.meta.glob(
 )
 
 /**
+ * The names a percentage is allowed to wear when it is a CSS length rather than a sentence.
+ *
+ * A length is read by the layout engine, which has one syntax in every language. A closed list
+ * rather than "any object property": `cancel={{ label: `${done} %` }}` is a property too, and
+ * that label is read aloud. A new CSS property makes this check red — which is the right
+ * failure, since adding a name here is the moment to ask whether it is really a length.
+ */
+const LENGTHS = new Set(['width', 'height', 'left', 'top', 'right', 'bottom', 'inset', 'size'])
+
+/**
  * A sign put right after something computed — `${percent}%` as well as `${n} %`.
  *
  * Whatever separates the two is exactly the decision this rule takes away from the component, so
@@ -33,15 +43,31 @@ function composesAPercentage(node: ts.TemplateExpression): boolean {
   return node.templateSpans.some(span => span.literal.text.trimStart().startsWith('%'))
 }
 
+/** `String(percent) + '%'` — the same sentence, built the other way. */
+function concatenatesAPercentage(node: ts.BinaryExpression): boolean {
+  return (
+    node.operatorToken.kind === ts.SyntaxKind.PlusToken &&
+    ts.isStringLiteral(node.right) &&
+    node.right.text.trimStart().startsWith('%')
+  )
+}
+
 /**
- * A CSS length, not a sentence: `style={{ width: `${percent}%` }}`.
+ * Whether the length is on its way to the layout engine, read off the name it is bound to.
  *
- * A percentage painted as a width is read by the layout engine, which has one syntax in every
- * language. Being the value of an object property is what tells the two apart — nothing else in
- * the window builds a style string outside one.
+ * The name rather than the syntax: `style={{ width: … }}` and `const width = …` are the same
+ * decision written twice, and a check that only knew the first would fail the day someone
+ * lifted the expression out of the object.
  */
-function isStyleValue(node: ts.TemplateExpression): boolean {
-  return ts.isPropertyAssignment(node.parent)
+function isLength(node: ts.Node): boolean {
+  const holder = node.parent
+  if (ts.isPropertyAssignment(holder) && ts.isIdentifier(holder.name)) {
+    return LENGTHS.has(holder.name.text)
+  }
+  if (ts.isVariableDeclaration(holder) && ts.isIdentifier(holder.name)) {
+    return LENGTHS.has(holder.name.text)
+  }
+  return false
 }
 
 function findingsIn(path: string, code: string): string[] {
@@ -55,7 +81,11 @@ function findingsIn(path: string, code: string): string[] {
   const findings: string[] = []
 
   function visit(node: ts.Node): void {
-    if (ts.isTemplateExpression(node) && composesAPercentage(node) && !isStyleValue(node)) {
+    const composes = ts.isTemplateExpression(node)
+      ? composesAPercentage(node)
+      : ts.isBinaryExpression(node) && concatenatesAPercentage(node)
+
+    if (composes && !isLength(node)) {
       const { line } = source.getLineAndCharacterOfPosition(node.getStart())
       findings.push(`${path}:${line + 1}`)
     }
@@ -89,18 +119,29 @@ describe('the renderer', () => {
       'const A = () => <p aria-label={`${label} ${percent}%`} />',
       'const B = () => <span>{`${done} %`}</span>',
       'const C = () => `${scale * 100} %`',
+      // The way round a refactor reaches for, and the reason the rule is not written on templates.
+      "const D = () => String(percent) + '%'",
     ]
 
-    expect(put.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toHaveLength(3)
+    expect(put.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toHaveLength(4)
   })
 
-  // Where the rule stops: a length the layout engine reads, which has no language — and a sign
-  // that is not a percentage at all, which is what the console's format directives are.
-  it('leaves a width, an offset and a console directive alone', () => {
+  // The hole a review found: any object property was exempt, and a spoken label is a property.
+  it('would see one put in a prop that only looks like a style', () => {
+    const found = findingsIn('probe.tsx', 'const A = () => <Row cancel={{ label: `${done} %` }} />')
+
+    expect(found).toHaveLength(1)
+  })
+
+  // Where the rule stops: a length the layout engine reads, which has no language — named rather
+  // than placed, so lifting it into a `const` keeps it exempt — and a sign that is not a
+  // percentage at all, which is what the console's format directives are.
+  it('leaves a width, an offset, a lifted length and a console directive alone', () => {
     const quiet = [
       'const A = () => <div style={{ width: `${percent}%` }} />',
       'const B = () => <div style={{ left: `${(at / duration) * 100}%` }} />',
-      'const C = (scope: string) => `%c[main:${scope}]%c done`',
+      'const C = () => { const width = `${percent}%`; return <div style={{ width }} /> }',
+      'const D = (scope: string) => `%c[main:${scope}]%c done`',
     ]
 
     expect(quiet.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toEqual([])
