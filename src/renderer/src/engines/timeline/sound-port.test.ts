@@ -15,7 +15,11 @@ const outputWith = () => {
     stop: vi.fn(),
     onended: null as (() => void) | null,
   }
-  const gain = { gain: { value: 0 }, connect: vi.fn(), disconnect: vi.fn() }
+  const gain = {
+    gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  }
   const decoded = { length: 1 } as AudioBuffer
 
   const output = {
@@ -38,6 +42,7 @@ const cue = (over: Partial<SoundCue> = {}): SoundCue => ({
   duration: 3,
   rate: 1,
   gain: 0.5,
+  ramps: [],
   ...over,
 })
 
@@ -105,11 +110,37 @@ describe('the browser sound port', () => {
     expect(source.playbackRate.value).toBe(2)
   })
 
-  it('applies the cue gain, already linear — a decibel never reaches the output', () => {
+  /**
+   * Anchored at `when` rather than assigned: a ramp with no point before it starts from the
+   * instant the graph was built, and a fade planned a second ahead would be half over at its own
+   * start.
+   */
+  it('applies the cue gain at the cue instant, already linear — no decibel reaches the output', () => {
     const { output, gain } = outputWith()
-    playFrom(output, {} as AudioBuffer)(cue({ gain: 0.25 }))
+    playFrom(output, {} as AudioBuffer)(cue({ when: 20, gain: 0.25 }))
 
-    expect(gain.gain.value).toBe(0.25)
+    expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.25, 20)
+  })
+
+  it('lays the envelope out as ramps, each landing at its own instant', () => {
+    const { output, gain } = outputWith()
+    const envelope = [
+      { when: 21, level: 1 },
+      { when: 23, level: 0 },
+    ]
+    playFrom(output, {} as AudioBuffer)(cue({ ramps: envelope }))
+
+    expect(gain.gain.linearRampToValueAtTime.mock.calls).toEqual([
+      [1, 21],
+      [0, 23],
+    ])
+  })
+
+  it('asks for no ramp at all when the slice holds one level', () => {
+    const { output, gain } = outputWith()
+    playFrom(output, {} as AudioBuffer)(cue())
+
+    expect(gain.gain.linearRampToValueAtTime).not.toHaveBeenCalled()
   })
 
   it('sends the sound through its gain to the speakers', () => {

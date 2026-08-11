@@ -537,10 +537,14 @@ both take it from the same place.
 
 **What a monitor makes you HEAR goes through a second port, and its arithmetic is pure.**
 `engines/timeline/sound-schedule.ts` knows nothing but numbers: where a slice lands on the output
-clock, what a load that arrived late must skip rather than play late, and how much source a
-sped-up clip spends. `sound-port.ts` holds what only a browser can do — one `AudioContext` per
-window, opened on the first sound and never closed, the browser's own decoder, and one
-`AudioBufferSourceNode` per clip.
+clock, what a load that arrived late must skip rather than play late, how much source a sped-up
+clip spends, and **where the fade envelope goes** — the `ClipFade` an `AudioChunk` carries gives
+the CLIP's edges as instants rather than lengths, because a slice may begin INSIDE a fade, and
+`cueFor` turns them into the corners of `SoundCue.ramps`. `sound-port.ts` holds what only a browser
+can do — one `AudioContext` per window, opened on the first sound and never closed, the browser's
+own decoder, one `AudioBufferSourceNode` per clip, and the envelope laid on its `GainNode`:
+`setValueAtTime` at the cue instant **before** any ramp, without which a ramp would start from the
+instant the graph was built.
 
 A clip is planned **whole** as it enters the one-second horizon, never window by window: a source
 restarted at every joint is heard as a click. The samples themselves are shared per asset and

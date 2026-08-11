@@ -1,7 +1,7 @@
-import { usToSeconds } from '@shared/domain/time'
+import { secondsToUs, usToSeconds } from '@shared/domain/time'
 import { fromDb } from '../audio/audio-data'
 import { createRefCache } from '../core/ref-cache'
-import { audioChunksIn, type AudioChunk } from './audio'
+import { audioChunksIn, fadeAt, type AudioChunk } from './audio'
 import {
   EMPTY_SEQUENCE,
   playsThrough,
@@ -12,6 +12,14 @@ import {
   type Us,
 } from './timeline-state'
 
+/** One corner of the slice's envelope: the level to reach, and when to have reached it. */
+export type SoundRamp = {
+  /** On the output clock, like `SoundCue.when` — never a timeline microsecond. */
+  when: number
+  /** Linear amplitude, the clip's own gain already folded in. */
+  level: number
+}
+
 /** What one planned slice asks of the output, in the output's own seconds. */
 export type SoundCue = {
   /** On the output clock, not on the timeline. */
@@ -21,8 +29,15 @@ export type SoundCue = {
   /** How much source to read — it lasts that divided by `rate`. */
   duration: number
   rate: number
-  /** Linear amplitude: the decibels are converted here, never at the output. */
+  /** Linear amplitude **at** `when`: the decibels are converted here, never at the output. */
   gain: number
+  /**
+   * Where the envelope goes next, empty for a slice that holds one level throughout.
+   *
+   * Empty rather than a first point equal to `gain`: a non-empty array would carry an element no
+   * caller may drop, and a branch no test can reach.
+   */
+  ramps: readonly SoundRamp[]
 }
 
 export type PlayingSound = { stop: () => void }
@@ -64,7 +79,51 @@ export function cueFor(chunk: AudioChunk, origin: number, now: number): SoundCue
   const duration = (usToSeconds(chunk.duration) - late) * chunk.speed
 
   if (duration <= 0) return null
-  return { when: due + late, offset, duration, rate: chunk.speed, gain: fromDb(chunk.gain) }
+
+  const when = due + late
+  // The instant the slice really begins, which is what the envelope is read at — a clip whose
+  // load ran past its own fade-in must come in part-way up rather than from silence.
+  const begins = chunk.at + secondsToUs(late)
+  const peak = fromDb(chunk.gain)
+
+  return {
+    when,
+    offset,
+    duration,
+    rate: chunk.speed,
+    gain: peak * fadeAt(chunk.fade, begins),
+    ramps: rampsFor(chunk, begins, peak, when),
+  }
+}
+
+/**
+ * The envelope's corners after the slice's start, in the output's seconds.
+ *
+ * `speed` plays no part: the timeline and the output clock run 1:1, and a rate only changes how
+ * fast the source is consumed between two instants that stay where they are.
+ */
+function rampsFor(chunk: AudioChunk, begins: Us, peak: number, when: number): SoundRamp[] {
+  const ends = chunk.at + chunk.duration
+  const levelAt = (moment: Us): number => peak * fadeAt(chunk.fade, moment)
+
+  // Already in order: `clampFades` holds the rise before the fall, and a corner past the slice's
+  // own end is dropped. Only the duplicates are left to drop — an unramped edge sits on the end.
+  const corners = [chunk.fade.risenAt, chunk.fade.fallsFrom, ends]
+    .filter(moment => moment > begins && moment <= ends)
+    .filter((moment, index, all) => index === 0 || moment !== all[index - 1])
+
+  // A trailing corner at the level already held says nothing. A leading one may: it holds the
+  // plateau a fall starts from, and dropping it would ramp down from the slice's first instant.
+  const levels = [levelAt(begins), ...corners.map(levelAt)]
+  let kept = 0
+  levels.forEach((level, index) => {
+    if (index > 0 && level !== levels[index - 1]) kept = index
+  })
+
+  return corners.slice(0, kept).map(moment => ({
+    when: when + usToSeconds(moment - begins),
+    level: levelAt(moment),
+  }))
 }
 
 /**
@@ -192,7 +251,7 @@ export function createSoundScheduler({ port, horizon }: SoundSchedulerDeps): Sou
     apply: next => {
       state = next
       // Two edits are heard at once, because they say so: muting a track, and taking a clip
-      // away. Everything else — a trim, a gain, a speed — reaches the next clip planned rather
+      // away. Everything else — a trim, a gain, a speed, a fade — reaches the next clip planned rather
       // than the one already sounding, which is what keeps a drag from restarting a source on
       // every pointer move.
       for (const [clipId, entry] of playing) {
