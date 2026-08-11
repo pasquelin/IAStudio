@@ -66,12 +66,8 @@ export function createPeaksClient(port: PeaksPort): PeaksClient {
 
         const id = nextId++
 
-        // Sent before anything is recorded, the order `catalog-client` settled on: a port whose
-        // process is gone throws here, and the entry AND the listener below would then be left
-        // behind, the promise never settling. The throw rejects this promise on its own.
-        //
-        // Safe in this order because a port cannot answer during `postMessage`: its message
-        // event is always a turn later.
+        // Sent first, the order `catalog-client` settled on: a throw here leaves nothing behind
+        // and rejects this promise on its own. Safe because an answer is always a turn later.
         port.postMessage({ id, ...job })
 
         // Cancelling tells the worker to kill ffmpeg; the promise settles on its answer, so a
