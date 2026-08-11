@@ -109,25 +109,25 @@ describe('the journal the catalogue keeps', () => {
   })
 
   it('bounds what a project keeps, dropping the oldest first', () => {
-    // Numbered through `detail`: what this measures is which lines survive, and a message key
-    // is one of a closed list rather than a counter.
+    // Numbered through the asset: what this measures is which lines survive, and a message key
+    // is one of a closed list rather than a counter — `detail` carries `describeFailure` alone.
     const many = Array.from({ length: ACTIVITY_RETENTION + 10 }, (_, index) =>
-      line({ detail: `n${index}` }),
+      line({ assetId: `asset_${index}` }),
     )
 
     catalog.appendActivity(many)
     const kept = catalog.readActivity({ limit: ACTIVITY_RETENTION + 10 })
 
     expect(kept).toHaveLength(ACTIVITY_RETENTION)
-    expect(kept[0]?.detail).toBe(`n${ACTIVITY_RETENTION + 9}`)
-    expect(kept.map(entry => entry.detail)).not.toContain('n0')
+    expect(kept[0]?.assetId).toBe(`asset_${ACTIVITY_RETENTION + 9}`)
+    expect(kept.map(entry => entry.assetId)).not.toContain('asset_0')
   })
 
   it('keeps trimming across batches, not only within one', () => {
     for (let batch = 0; batch < 3; batch++) {
       catalog.appendActivity(
         Array.from({ length: ACTIVITY_RETENTION }, (_, index) =>
-          line({ detail: `b${batch}n${index}` }),
+          line({ assetId: `asset_${batch}_${index}` }),
         ),
       )
     }
@@ -139,10 +139,6 @@ describe('the journal the catalogue keeps', () => {
 describe('a journal written by a build that knew more than this one', () => {
   // The columns are free strings in SQLite and closed unions in the domain. A line nobody can
   // read must not take the panel down with it.
-  /**
-   * A line outlives the version that wrote it, and the journal is append-only: a key renamed
-   * since is still in the table, and the window would draw it as itself.
-   */
   it('reads an unknown level, topic and message key as ordinary ones', () => {
     const driver = openMemoryDatabase()
     const catalog = createCatalog(driver)
@@ -156,6 +152,21 @@ describe('a journal written by a build that knew more than this one', () => {
       topic: 'library',
       messageKey: 'activity.unknownMessage',
     })
+  })
+
+  /**
+   * A scope key is composed rather than named, so it is not one of the listed messages — and
+   * reading it as unknown would empty the journal of every renderer failure on reopening.
+   */
+  it('keeps a scope key, which is composed rather than listed', () => {
+    const driver = openMemoryDatabase()
+    const catalog = createCatalog(driver)
+
+    driver
+      .prepare('INSERT INTO activity (at, level, topic, message_key) VALUES (?, ?, ?, ?)')
+      .run('2026-08-08T10:00:00.000Z', 'error', 'shell', 'activity.scope.scene.model')
+
+    expect(catalog.readActivity({})[0]?.messageKey).toBe('activity.scope.scene.model')
   })
 
   it('drops a parameter that is neither a string nor a number', () => {
@@ -204,14 +215,14 @@ describe('pairing a batch with the ids it was given', () => {
 
   it('keeps pairing right when the journal was already full', () => {
     catalog.appendActivity(
-      Array.from({ length: ACTIVITY_RETENTION }, (_, index) => line({ detail: `old.${index}` })),
+      Array.from({ length: ACTIVITY_RETENTION }, (_, index) => line({ assetId: `old_${index}` })),
     )
 
-    const written = catalog.appendActivity([line({ detail: 'new.a' }), line({ detail: 'new.b' })])
+    const written = catalog.appendActivity([line({ assetId: 'new_a' }), line({ assetId: 'new_b' })])
 
-    expect(written.map(entry => entry.detail)).toEqual(['new.a', 'new.b'])
+    expect(written.map(entry => entry.assetId)).toEqual(['new_a', 'new_b'])
     for (const entry of written) {
-      expect(catalog.readActivity({}).find(one => one.id === entry.id)?.detail).toBe(entry.detail)
+      expect(catalog.readActivity({}).find(one => one.id === entry.id)?.assetId).toBe(entry.assetId)
     }
   })
 
@@ -219,18 +230,18 @@ describe('pairing a batch with the ids it was given', () => {
   // own oldest lines: what comes back must be the tail that survived, still correctly paired.
   it('answers only the tail of a batch longer than the whole retention', () => {
     const written = catalog.appendActivity(
-      Array.from({ length: ACTIVITY_RETENTION + 5 }, (_, index) => line({ detail: `n.${index}` })),
+      Array.from({ length: ACTIVITY_RETENTION + 5 }, (_, index) => line({ assetId: `n_${index}` })),
     )
 
     expect(written).toHaveLength(ACTIVITY_RETENTION)
-    expect(written[0]?.detail).toBe('n.5')
-    expect(written.at(-1)?.detail).toBe(`n.${ACTIVITY_RETENTION + 4}`)
+    expect(written[0]?.assetId).toBe('n_5')
+    expect(written.at(-1)?.assetId).toBe(`n_${ACTIVITY_RETENTION + 4}`)
 
     for (const entry of [written[0], written.at(-1)]) {
       expect(
         catalog.readActivity({ limit: ACTIVITY_RETENTION }).find(one => one.id === entry?.id)
-          ?.detail,
-      ).toBe(entry?.detail)
+          ?.assetId,
+      ).toBe(entry?.assetId)
     }
   })
 })

@@ -339,25 +339,29 @@ const DYNAMIC_KEYS: readonly string[] = [
 ]
 
 /**
- * i18next appends a plural category to the key it looks up, so a caller writing `pushed` reads
- * a bundle holding `pushed_one` and `pushed_other`. Until the journal's keys were listed here,
- * every dynamic key happened to be singular and the exact lookup was enough.
+ * i18next appends a plural category to the key it looks up, so a caller writing `pushed` reads a
+ * bundle holding `pushed_one` and `pushed_other`. Until the journal's keys were listed here, every
+ * dynamic key happened to be singular and the exact lookup was enough.
+ *
+ * `_other` and nothing else: CLDR gives it to every language, so a key carrying only `_one` is
+ * one a plural draws as itself — which is the defect this file exists to catch, not to excuse.
  */
-function named(code: Language, key: string): string {
-  const forms = ['', '_zero', '_one', '_two', '_few', '_many', '_other']
-  return forms.map(form => BUNDLES[code].get(`${key}${form}`)?.trim() ?? '').join('')
+function named(code: Language, key: string): boolean {
+  const written = (form: string): boolean =>
+    (BUNDLES[code].get(`${key}${form}`)?.trim() ?? '') !== ''
+  return written('') || written('_other')
 }
 
 describe('the keys the interface composes', () => {
   it.each(CODES)('names every value of every listed union in %s', code => {
     for (const key of DYNAMIC_KEYS) {
-      expect(named(code, key), `${key} is missing`).not.toBe('')
+      expect(named(code, key), `${key} is missing`).toBe(true)
     }
   })
 
-  it('accepts a key the bundle only holds in plural form', () => {
-    expect(named('fr', 'activity.pushed')).not.toBe('')
-    expect(named('fr', 'activity.thereIsNoSuchKey')).toBe('')
+  it('takes a key the bundle only holds in plural form', () => {
+    expect(named('fr', 'activity.pushed')).toBe(true)
+    expect(named('fr', 'activity.thereIsNoSuchKey')).toBe(false)
   })
 })
 

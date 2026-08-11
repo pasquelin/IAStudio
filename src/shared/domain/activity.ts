@@ -100,18 +100,27 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
 /**
  * The key as it is stored and as the window looks it up.
  *
- * Log scopes are the one family left open. They are composed from `LOG_SCOPES`, which lives in
- * `ipc.ts` — a module that imports this one, so naming the type here would close a cycle. The
- * family is guarded all the same, by `DYNAMIC_KEYS`, and its one site composes from `LogScope`.
+ * Log scopes are the one family left open, by layer rather than by accident: they are composed
+ * from `LOG_SCOPES`, which lives in `ipc.ts` — the boundary, which depends on this module and
+ * not the other way round. The family is guarded all the same, by `DYNAMIC_KEYS`, and its one
+ * site composes from `LogScope` so a scope cannot be misspelt either.
  */
 export type ActivityMessageKey = `activity.${ActivityMessage}` | `activity.scope.${string}`
+
+const SCOPE_PREFIX = 'activity.scope.'
 
 /**
  * A line read back from the catalogue names a key that was written by whatever version wrote it,
  * so a renamed key comes back naming nothing. Checked like `level` and `topic` beside it.
+ *
+ * The scope prefix is accepted whole: those keys are the renderer's own failures, and turning
+ * every one of them into `unknownMessage` on reopening would empty the journal of its crashes.
  */
 export function isActivityMessageKey(value: unknown): value is ActivityMessageKey {
-  return ACTIVITY_MESSAGES.some(name => `activity.${name}` === value)
+  if (typeof value !== 'string') return false
+  return (
+    value.startsWith(SCOPE_PREFIX) || ACTIVITY_MESSAGES.some(name => `activity.${name}` === value)
+  )
 }
 
 /**
