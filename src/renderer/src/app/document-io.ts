@@ -1,5 +1,6 @@
 import {
   isPartName,
+  type CloseChoice,
   type DocumentDraft,
   type DocumentKind,
   type DocumentPart,
@@ -317,10 +318,18 @@ function documentIsDirty(documentId: string): boolean {
  * not have already thrown the work away — and the question is asked before the write so that a
  * cancelled dialog costs nothing.
  */
+/**
+ * What the user wants done with a document's unsaved work. `cancel` when nothing answered —
+ * the one default that loses nothing.
+ */
+async function askAboutUnsavedWork(documentId: string): Promise<CloseChoice> {
+  const title = useDocuments.getState().documents[documentId]?.title ?? ''
+  return (await getBridge()?.documents.confirmClose(title)) ?? 'cancel'
+}
+
 export async function closeDocument(documentId: string): Promise<boolean> {
   if (documentIsDirty(documentId)) {
-    const title = useDocuments.getState().documents[documentId]?.title ?? ''
-    const choice = (await getBridge()?.documents.confirmClose(title)) ?? 'cancel'
+    const choice = await askAboutUnsavedWork(documentId)
     if (choice === 'cancel') return false
     // Left open unless the work actually reached the disk — a write that throws, and one that is
     // refused because the file would not read, both leave the tab exactly where it was. Closing
@@ -329,6 +338,42 @@ export async function closeDocument(documentId: string): Promise<boolean> {
   }
 
   forgetDocument(documentId)
+  return true
+}
+
+/** The documents whose work would go with the window. Empty when nothing is at stake. */
+export function unsavedDocumentIds(): string[] {
+  return Object.keys(useDocuments.getState().documents).filter(documentIsDirty)
+}
+
+/**
+ * Asks about every document holding unsaved work, then acts on the answers — in that order, and
+ * the order is the point.
+ *
+ * Cancelling the last question must leave the studio exactly as it was, so nothing is written and
+ * nothing is dropped until every document has been answered for. Closing them as the answers came
+ * in would have thrown away the documents answered before the one that cancelled.
+ *
+ * `false` when the user cancelled, or when a save refused — either way the window stays.
+ */
+export async function settleUnsavedWork(): Promise<boolean> {
+  const answers: Array<{ documentId: string; choice: CloseChoice }> = []
+
+  for (const documentId of unsavedDocumentIds()) {
+    const choice = await askAboutUnsavedWork(documentId)
+    // Nothing further is asked: the gesture is off, so the documents behind this one are not
+    // even questioned, let alone touched.
+    if (choice === 'cancel') return false
+    answers.push({ documentId, choice })
+  }
+
+  for (const { documentId, choice } of answers) {
+    // Same order as `closeDocument`: the file is written before anything is forgotten, so a save
+    // that fails leaves the work where it was rather than having already dropped it.
+    if (choice === 'save' && !(await saveDocument(documentId))) return false
+    forgetDocument(documentId)
+  }
+
   return true
 }
 

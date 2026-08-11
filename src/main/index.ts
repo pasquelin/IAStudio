@@ -56,8 +56,12 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // Electron only waits for this if it is told to. Without the `preventDefault`, the process is
   // torn down while the round trip to the catalogue thread is still out, and the line this is
   // here to save is the one that goes.
+  // `will-quit` rather than `before-quit`, and the difference is the whole point: `before-quit`
+  // fires before the windows are asked, so a window that refuses to close — one holding unsaved
+  // work — left the journal already flushed and the dictation already disposed for a quit that
+  // never happened, and the flag below never let a later quit flush again.
   let leaving = false
-  app.on('before-quit', event => {
+  app.on('will-quit', event => {
     if (leaving) return
 
     event.preventDefault()

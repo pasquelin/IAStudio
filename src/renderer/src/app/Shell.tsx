@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { cn } from '@/helpers/cn'
 import { TooltipHost } from '@/design/TooltipHost'
 import { useHomeVisible, useLayouts, useToolSurface } from '@/stores/layouts'
@@ -6,6 +6,7 @@ import { useSettings } from '@/stores/settings'
 import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
+import { guardUnsavedWork } from './unsaved-guard'
 import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
 import { Footer } from './Footer'
@@ -42,6 +43,9 @@ export function Shell() {
   const setActiveWorkspace = useLayouts(state => state.setActiveWorkspace)
   const setHome = useLayouts(state => state.setHome)
   const focus = useTools(state => state.focus)
+
+  // The window is the one that holds documents, so it is the one that must not go quietly.
+  useEffect(() => guardUnsavedWork(window), [])
 
   const homeEnabled = useSettings(state => state.settings.home.enabled)
   // The setting wins over the session: turning the home off must take it off the screen it is
