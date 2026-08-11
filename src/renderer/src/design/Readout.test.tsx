@@ -17,13 +17,13 @@ describe('the readout beside a track', () => {
   it('cuts a long value at two decimals, which is what the layout can hold', () => {
     render(<Readout values={[0.5235987755982988]} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('0.52')
+    expect(screen.getByRole('status')).toHaveTextContent('0,52')
   })
 
   it('offers the exact value to whoever wants it, rather than losing it', () => {
     render(<Readout values={[0.5235987755982988]} />)
 
-    expect(screen.getByRole('status')).toHaveAttribute('data-tooltip-content', '0.5235987755982988')
+    expect(screen.getByRole('status')).toHaveAttribute('data-tooltip-content', '0,5235987755982988')
   })
 
   // A tooltip that repeats what is already on screen is noise.
@@ -42,8 +42,8 @@ describe('the readout beside a track', () => {
   it('rounds both ends of a range, and tips both exactly', () => {
     render(<Readout values={[0.123456, 0.987654]} />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('0.12–0.99')
-    expect(screen.getByRole('status')).toHaveAttribute('data-tooltip-content', '0.123456–0.987654')
+    expect(screen.getByRole('status')).toHaveTextContent('0,12–0,99')
+    expect(screen.getByRole('status')).toHaveAttribute('data-tooltip-content', '0,123456–0,987654')
   })
 
   it('never lets a negative sign turn into a stray dash', () => {

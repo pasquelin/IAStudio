@@ -1,8 +1,13 @@
+import { useTranslation } from 'react-i18next'
+import { formatDecimal } from '@/helpers/format'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { FIELD_READOUT } from './styles'
 
 /** How many decimals a panel can hold. Past this the number widens the panel it sits in. */
 const DECIMALS = 2
+
+/** What the tooltip may spend: `Intl` caps at twenty, and a radian never needs more. */
+const EXACT_DECIMALS = 20
 
 /**
  * The number beside a track, cut to what the layout can hold.
@@ -13,8 +18,11 @@ const DECIMALS = 2
  * repeating what is already on screen is noise.
  */
 export function Readout({ values }: { values: readonly number[] }) {
-  const shown = values.map(short).join('–')
-  const exact = values.join('–')
+  const { i18n } = useTranslation()
+  const shown = values.map(value => formatDecimal(value, i18n.language, DECIMALS)).join('–')
+  // Exact, and in the reader's language too: the tooltip is the same number said in full, not
+  // another number — and it is what a screen reader speaks.
+  const exact = values.map(value => formatDecimal(value, i18n.language, EXACT_DECIMALS)).join('–')
 
   // The tooltip's `aria-label` rides along on purpose: a screen reader then hears the exact
   // value, which is the one thing the rounded text on screen cannot give it.
@@ -23,9 +31,4 @@ export function Readout({ values }: { values: readonly number[] }) {
       {shown}
     </output>
   )
-}
-
-/** `Number` rather than `toFixed`: 1 must stay "1" and never become "1.00". */
-function short(value: number): string {
-  return String(Number(value.toFixed(DECIMALS)))
 }

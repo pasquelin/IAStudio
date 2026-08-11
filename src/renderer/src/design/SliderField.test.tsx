@@ -27,7 +27,7 @@ describe('SliderField', () => {
   it('shows the value beside the slider, so it can be read as a number', () => {
     renderField(0.25)
 
-    expect(screen.getByText('0.25')).toBeInTheDocument()
+    expect(screen.getByText('0,25')).toBeInTheDocument()
   })
 
   it('reports where the slider was moved to', () => {
