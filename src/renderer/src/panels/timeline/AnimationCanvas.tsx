@@ -188,6 +188,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
 
     if (hit.kind === 'block') {
       grabbed.current = { kind: 'block', nodeId: hit.nodeId, grabbedAt: hit.grabbedAt }
+      // Opened here and closed on release: without it every pixel of the drag is its own entry
+      // in the history, and `runCoalescing` only merges while a gesture is open.
+      useScenes.getState().beginGesture(documentId)
       useAnimationViews.getState().setSelected(documentId, [])
       return
     }
@@ -218,10 +221,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     if (grab.kind === 'scrub') return seek(at)
 
     if (grab.kind === 'block') {
-      // Written straight through: a block has no preview of its own to draw, and `setModelAnimation`
-      // already coalesces a run of writes into one gesture — see `runCommand`.
-      const start = Math.max(0, at - grab.grabbedAt)
-      moveBlock(documentId, grab.nodeId, start)
+      // Written straight through rather than previewed: the block IS the preview, and the whole
+      // run collapses into one entry because a gesture was opened on the press.
+      moveBlock(documentId, grab.nodeId, Math.max(0, at - grab.grabbedAt))
       return
     }
 
@@ -237,6 +239,12 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     if (!grab) return
 
     event.currentTarget.releasePointerCapture(event.pointerId)
+
+    if (grab.kind === 'block') {
+      useScenes.getState().endGesture(documentId)
+      return
+    }
+
     if (grab.kind !== 'key' || grab.at === grab.from) return
 
     // One entry however many channels moved, as `keySubject` does for the same reason: a drag
