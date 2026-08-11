@@ -299,25 +299,46 @@ describe('swapping what a node is wired by', () => {
       withoutMask,
     )
 
-    expect(next.edges.some(edge => edge.id === 'c')).toBe(true)
+    expect(next.edges.map(edge => edge.id)).toEqual(['a', 'c'])
+  })
+
+  /**
+   * A wire read off this node's output, the handle being what each case varies. The reader is
+   * NOT among the nodes, deliberately: `stillConnects` vouches for an edge whose end no node
+   * declares, and this is the only graph in the repository that asks it to.
+   */
+  const consumedAt = (targetHandle: string): GraphState => ({
+    ...fed,
+    edges: [
+      ...fed.edges,
+      {
+        id: 'd',
+        source: 'other1',
+        sourceHandle: 'other1-source-image',
+        target: 'imageGenerator1',
+        targetHandle,
+      },
+    ],
   })
 
   /** The node feeds others too, and its output survives the swap: those edges must not be cut. */
   it('keeps an edge that reads the output the node still publishes', () => {
-    const consumed: GraphState = {
-      ...fed,
-      edges: [
-        {
-          id: 'd',
-          source: 'other1',
-          sourceHandle: 'other1-source-image',
-          target: 'imageGenerator1',
-          targetHandle: 'imageGenerator1-target-image',
-        },
-      ],
-    }
+    const consumed = consumedAt('imageGenerator1-target-image')
+    const next = replaceNodePorts(consumed, 'imageGenerator1', withoutMask)
 
-    expect(replaceNodePorts(consumed, 'imageGenerator1', withoutMask).edges).toHaveLength(1)
+    expect(next.edges.map(edge => edge.id)).toEqual(['a', 'd'])
+  })
+
+  /**
+   * And the same port list read the other way: an output the new model dropped takes its readers
+   * with it. Removing a branch from an `ifElse` patches the OUTPUTS alone, and the wire that read
+   * the departed branch names a handle no node carries — refused at export, far from the gesture.
+   */
+  it('cuts an edge that reads an output the new model no longer publishes', () => {
+    const consumed = consumedAt('imageGenerator1-target-gone')
+    const next = replaceNodePorts(consumed, 'imageGenerator1', withoutMask)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['a'])
   })
 
   it('hands the very same graph back when the node is not there', () => {
@@ -328,14 +349,22 @@ describe('swapping what a node is wired by', () => {
    * A port that SURVIVES with another type is judged too, by the very rule the canvas refuses a
    * connection with. Checked on the id alone, a model swap that keeps a port's name while
    * changing what it takes left a wire the editor would no longer draw.
+   *
+   * And retyping is not a reason on its own: the port next door is retyped as well, into the very
+   * type its wire offers, and keeps it.
    */
-  it('cuts the edge whose port the new model kept but retyped', () => {
+  it('cuts the edge one retyped port now refuses, and keeps the one another still takes', () => {
     const retyped: Partial<GraphNode['data']> = {
-      inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'image' }],
+      inputHandles: [
+        { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'image' },
+        { id: 'imageGenerator1-source-mask', name: 'mask', type: 'text' },
+      ],
       outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
     }
 
-    expect(replaceNodePorts(fed, 'imageGenerator1', retyped).edges).toEqual([])
+    const next = replaceNodePorts(fed, 'imageGenerator1', retyped)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['b'])
   })
 
   /**
@@ -397,19 +426,7 @@ describe('swapping what a node is wired by', () => {
 
   /** And the other way round, so the rule is the contract rather than the one case that needed it. */
   it('judges the inputs alone when the patch redeclares only those', () => {
-    const consumed: GraphState = {
-      ...fed,
-      edges: [
-        ...fed.edges,
-        {
-          id: 'd',
-          source: 'other1',
-          sourceHandle: 'other1-source-image',
-          target: 'imageGenerator1',
-          targetHandle: 'imageGenerator1-target-gone',
-        },
-      ],
-    }
+    const consumed = consumedAt('imageGenerator1-target-gone')
     const inputsOnly: Partial<GraphNode['data']> = {
       inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' }],
     }
