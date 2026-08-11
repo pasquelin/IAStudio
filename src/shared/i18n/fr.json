@@ -1329,7 +1329,7 @@
     },
     "projectOpen": {
       "title": "Ouvrir un projet",
-      "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à sauvegarder avant."
+      "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à enregistrer avant."
     },
     "documentSave": {
       "title": "Enregistrer le document",
