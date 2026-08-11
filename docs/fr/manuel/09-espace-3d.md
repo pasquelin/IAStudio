@@ -632,7 +632,7 @@ annulation**. Si l’objet est un modèle rigué, le menu **Os** apparaît dans 
 sur **Le modèle entier**, et choisir un os fait porter les clés sur lui seul, ce qui est la façon
 de corriger un bras sans déplacer tout le personnage.
 
-**La bande se lit par sujet, pas par piste.** Une ligne par objet — ou par os — et ses propriétés
+**La bande se lit par objet.** Une ligne par objet — ou par os — et ses propriétés
 animées **repliées dessous**. La ligne repliée montre toutes les clés de l’objet, celles de ses
 trois propriétés confondues ; la déplier les sépare. **Replier ne perd jamais une clé**, cela ne
 change que ce qui est montré.
@@ -643,8 +643,8 @@ change que ce qui est montré.
 | **Lire** / **Mettre en pause** | joue la timeline |
 | **Enregistrement automatique** | bouger un objet **pose une clé** au lieu de déplacer sa pose de repos |
 | **Durée** et **Images/s** | la longueur de la timeline, et sa cadence |
-| **Os** | sur un modèle rigué : l’os que la prochaine piste animera, ou **Le modèle entier** |
-| **Poser une clé sur tout ce qui est animé** | le même geste, sur toutes les pistes à la fois |
+| **Os** | sur un modèle rigué : l’os que la prochaine clé animera, ou **Le modèle entier**. Un os **cliqué dans la vue** en mode pose l’emporte sur ce choix |
+| **Poser une clé sur tout ce qui est animé** | le même geste, sur tout ce qui est **déjà** animé — grisé tant que rien ne l’est |
 | **Rendre en vidéo** | voir plus bas — grisé tant qu’aucune caméra n’est dans la scène |
 
 **Chaque ligne porte les siens**, à gauche de la bande :
@@ -653,7 +653,7 @@ change que ce qui est montré.
 |---|---|
 | le chevron | **Afficher ou masquer les propriétés animées** |
 | **Poser une clé sur *(le nom)*** | enregistre le déplacement fait depuis, sur toutes les propriétés de cet objet |
-| **Rendre muette** / **Écouter seule** / **Verrouiller** | les trois interrupteurs d’une piste, comme en Vidéo |
+| **Rendre muette** / **Écouter seule** / **Verrouiller** | les trois interrupteurs d’une ligne, les mêmes qu’en Vidéo |
 | **Supprimer la piste *(le nom)*** | sur une ligne de propriété, la retire avec ses clés |
 
 **La tête de lecture s’attrape et se déplace** sur la règle graduée, et **les clés se déplacent**
@@ -663,10 +663,14 @@ dirait que la scène est plus longue qu’elle ne l’est.
 
 **Lire quand la tête est déjà au bout rembobine** au lieu de s’arrêter sur l’image où l’on est.
 
-**Les pistes s’additionnent.** Deux pistes de position sur un même objet ajoutent leurs
-déplacements ; deux pistes d’échelle **multiplient** les leurs — deux fois deux font quatre, ce qui
-est ce qu’on veut en les empilant. C’est différent d’un montage vidéo, où le clip du dessus cache
-celui du dessous.
+**L’animation compose avec la pose de l’objet, elle ne la remplace pas** — et pas de la même
+façon selon la propriété : les déplacements **s’ajoutent**, les échelles se **multiplient**.
+C’est l’inverse d’un montage vidéo, où le clip du dessus cache celui du dessous.
+
+> **Cela s’observe en empilant deux fois la même propriété sur un objet.** Un objet n’en porte
+> qu’une de chaque tant qu’on pose des clés normalement ; **verrouillez ses lignes**, et la clé
+> suivante en ouvre de nouvelles par-dessus. Deux positions de 2 et 3 donnent 5 ; deux échelles
+> qui doublent chacune donnent **quatre fois** la taille, ce qu’on veut en les empilant.
 
 > **Un objet DÉJÀ animé enregistre de lui-même, quoi que dise l’interrupteur.** Ce que la vue
 > montre est la pose de repos **plus** ce que les clés ajoutent : déplacer un objet keyé sans
@@ -679,7 +683,7 @@ celui du dessous.
 > La distinction porte sur les **clés**, pas sur les lignes : des propriétés ouvertes et vides ne
 > sont pas encore une animation, et l’interrupteur y garde son mot.
 >
-> **Un os sans piste est un cas à part** : il n’a pas de pose de repos où retomber, donc le geste
+> **Un os sans clé est un cas à part** : il n’a pas de pose de repos où retomber, donc le geste
 > est simplement abandonné et l’os revient où il était.
 
 ### Poser les clés à la main
@@ -698,15 +702,16 @@ L’enregistrement automatique n’est pas obligatoire. Le geste, dans l’ordre
 > voulu. Dans la vue, en revanche, **rien ne bouge** : ce que vous voyez est toujours la référence
 > plus la clé, donc l’endroit où vous venez de le poser.
 
-**Une piste d’os ne travaille pas ainsi.** Elle n’a pas de pose de référence — celle d’un os vit
-dans le fichier du modèle, pas dans le document. Y poser une clé **fige ce que la piste tient
+**Un os ne travaille pas ainsi.** Ses propriétés n’ont pas de pose de référence — celle d’un os
+vit dans le fichier du modèle, pas dans le document. Y poser une clé **fige ce qu’elles tiennent
 déjà** à cet instant, et rien ne revient en place. Pour animer un os, passez donc par
 l’enregistrement automatique et le mode pose plutôt que par ces trois étapes.
 
 ### Sortir une vidéo
 
 Ajoutez une **caméra** à la scène (menu Ajouter → Objet → Caméra). C’est un objet comme un autre :
-elle se déplace au gizmo, elle s’anime par une piste, et un export glTF l’emporte avec lui.
+elle se déplace au gizmo, elle s’anime comme n’importe quel objet, et un export glTF l’emporte
+avec lui.
 
 Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` de ce que voit cette caméra,
 sur toute la durée de la timeline. Le studio demande **où enregistrer avant de calculer quoi que ce
