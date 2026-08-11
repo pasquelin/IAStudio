@@ -84,6 +84,16 @@ export class SkyboxRenderer {
   private sourceTexture: Texture | null = null
   private quiet: ReturnType<typeof setTimeout> | null = null
 
+  /**
+   * What the last `apply` was given. Held by reference rather than copied: an edit replaces the
+   * section it touches instead of writing into it (`skybox/commands.ts:31`), so a section that
+   * did not move is still the same object — asserted where it is produced, in `commands.test.ts`.
+   *
+   * Cleared by `mount`, so a renderer that received a document before it had a renderer applies
+   * it whole rather than recognising it and doing nothing.
+   */
+  private applied: SkyboxContent | null = null
+
   constructor(private readonly options: SkyboxRendererOptions) {
     this.cache = createTextureCache(options.loadTexture, (assetId, error) =>
       reportFailure('skybox.source', assetId, error),
@@ -113,20 +123,50 @@ export class SkyboxRenderer {
     window.addEventListener('pointerup', this.onPointerUp)
 
     this.aimCamera()
+
+    // A document applied before the viewport had a renderer reached none of the above. Forgetting
+    // what was applied is what makes it land now — `CanvasEngine.mount` carries the same story,
+    // and it is the difference between a sky that opens lit and one that opens on its defaults.
+    const held = this.applied
+    if (held) {
+      this.applied = null
+      this.apply(held)
+    }
   }
 
-  /** The engine holds no truth: everything it shows comes back through here. */
+  /**
+   * The engine holds no truth: everything it shows comes back through here.
+   *
+   * Each section is skipped when it is the object already applied, as `SceneRenderer.syncNode`
+   * skips a node and `CanvasEngine.apply` skips a tree: an edit replaces the one section it
+   * touches (`skybox/commands.ts:31`), so the other three come back identical. Unguarded, one
+   * frame of the sun's colour re-graded the picture into the 2048×1024 float target.
+   */
   apply(content: SkyboxContent): void {
-    this.sun = { elevation: content.sun.elevation, azimuth: content.sun.azimuth }
-    this.applySun(content)
+    const previous = this.applied
+    this.applied = content
 
-    this.environment?.setIntensity(content.environment.intensity)
-    this.backgroundWanted = content.environment.showBackground
+    if (previous?.sun !== content.sun) {
+      this.sun = { elevation: content.sun.elevation, azimuth: content.sun.azimuth }
+      this.applySun(content)
+    }
 
-    this.adjust.setAdjustments(content.adjustments)
-    this.loadSource(content.source?.assetId ?? null)
-    this.syncView()
-    this.regrade()
+    const environmentMoved = previous?.environment !== content.environment
+    if (environmentMoved) {
+      this.environment?.setIntensity(content.environment.intensity)
+      this.backgroundWanted = content.environment.showBackground
+    }
+
+    const graded = previous?.adjustments !== content.adjustments
+    if (graded) this.adjust.setAdjustments(content.adjustments)
+
+    // Before `syncView`, which reads the sky through `syncProbes`, and before `regrade`, which
+    // would otherwise grade the picture this call is about to release.
+    const skyMoved = this.loadSource(content.source?.assetId ?? null)
+
+    if (environmentMoved || skyMoved) this.syncView()
+
+    if (graded) this.regrade()
   }
 
   setFieldOfView(degrees: number): void {
@@ -226,6 +266,11 @@ export class SkyboxRenderer {
   /**
    * The expensive half, once the gesture settles. Rescheduled on every change rather than
    * queued, so a drag of two hundred frames costs one prefilter instead of two hundred.
+   *
+   * Only work that changes the PICTURE reschedules it, which is why `apply` reaches this through
+   * `regrade` alone. A sun drag is a light moving, not a picture changing: it has no prefilter of
+   * its own to delay, and postponing the one an exposure edit already owed would leave the probes
+   * lit by a stale map for as long as the hand keeps moving.
    */
   private scheduleRefresh(): void {
     if (this.quiet !== null) clearTimeout(this.quiet)
@@ -235,8 +280,9 @@ export class SkyboxRenderer {
     }, PMREM_QUIET_MS)
   }
 
-  private loadSource(assetId: string | null): void {
-    if (assetId === this.sourceAssetId) return
+  /** Whether the sky moved. The fact is decided here, so `apply` reads it rather than guessing. */
+  private loadSource(assetId: string | null): boolean {
+    if (assetId === this.sourceAssetId) return false
 
     this.releaseSource()
     this.sourceAssetId = assetId
@@ -244,7 +290,7 @@ export class SkyboxRenderer {
     if (!assetId) {
       this.adjust.setSource(null)
       this.environment?.setTexture(null)
-      return
+      return true
     }
 
     void this.cache.acquire(assetId, SRGBColorSpace).then(texture => {
@@ -254,6 +300,8 @@ export class SkyboxRenderer {
       this.adjust.setSource(texture)
       this.regrade()
     })
+
+    return true
   }
 
   private releaseSource(): void {
