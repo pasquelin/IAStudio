@@ -42,3 +42,4 @@ src/renderer/public/decoders/
 *.cer
 *.provisionprofile
 *.mobileprovision
+docs/todo-archive-*.md
