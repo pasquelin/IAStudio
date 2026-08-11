@@ -504,7 +504,16 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ...developerItems(isDevelopment, roleItem),
       ],
     },
-    { role: 'windowMenu', label: t.menu.window },
+    {
+      role: 'windowMenu',
+      label: t.menu.window,
+      // Left to the role alone, Electron composes these rows out of English literals. Written
+      // out keeps the role — `MenuItem` does `submenu || getDefaultSubmenu(role)` — and the
+      // items are the ones it would have built: same roles, same order, same separator.
+      submenu: isMac
+        ? [roleItem('minimize'), roleItem('zoom'), { type: 'separator' }, roleItem('front')]
+        : [roleItem('minimize'), roleItem('zoom'), roleItem('close')],
+    },
     ...helpMenu,
   ]
 }
