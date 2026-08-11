@@ -335,7 +335,9 @@ Deux conséquences :
 
 - **Avantage** — un rush vidéo de 12 Go n’est pas dupliqué. Votre projet reste léger.
 - **Inconvénient** — si vous déplacez, renommez ou supprimez le fichier d’origine, le lien se
-  casse, et l’inspecteur affiche « Fichier introuvable ».
+  casse **en silence** : rien ne le signale tant que vous n’avez pas cliqué sur **Révéler dans le
+  gestionnaire de fichiers**, et c’est ce clic, ne trouvant rien, qui fait apparaître
+  « Fichier introuvable » dans l’inspecteur.
 
 Si vous devez emporter un projet ailleurs, emportez aussi les médias qu’il pointe — ou copiez-les
 vous-même dans le dossier du projet avant de les importer.

@@ -55,15 +55,15 @@ Mon projet/
 │   └── sky/                les ciels
 │
 ├── documents/            VOS TRAVAUX EN COURS
-│                           un fichier par onglet enregistré
+│                           un fichier par onglet enregistré — un dossier pour une image
 │
 ├── .project.json         la carte d'identité — CACHÉ
 │
-└── .index/               DES FICHIERS DE SERVICE — supprimables sans risque, CACHÉ
+└── .index/               LE CATALOGUE ET SES CACHES — À GARDER, CACHÉ
     ├── catalog.db          l'index qui rend la recherche instantanée
     ├── proxies/            des copies allégées des vidéos, pour naviguer sans à-coups
     ├── peaks/              le dessin des formes d'onde audio
-    └── filmstrips/         les vignettes des vidéos
+    └── filmstrips/         créé d’avance, encore vide
 ```
 
 **Deux entrées sur quatre sont cachées, et la règle est simple** : ce qui est à vous se voit, ce
@@ -82,13 +82,24 @@ studio, pas votre travail.
 formats — un PNG est un PNG, un MP4 est un MP4. Vous pouvez les ouvrir avec n’importe quel autre
 logiciel.
 
-### Ce qui est reconstructible
+### `.index/` porte plus que des caches — ne le supprimez pas
 
-**Tout ce qui est sous `.index/`.** Ce sont des fichiers que le studio fabrique pour aller plus
-vite, et qu’il sait refabriquer.
+**Deux de ses quatre entrées sont bien des caches** : `proxies/` et `peaks/` sont refabriqués à
+l’import d’un média, et les jeter ne coûte qu’une réimportation. `filmstrips/` est créé d’avance
+et reste vide — rien ne l’écrit encore.
 
-Si ce dossier grossit trop, ou si quelque chose semble corrompu, **vous pouvez le supprimer**.
-Le studio le reconstruira, ce qui prendra un moment sur un gros projet, et rien ne sera perdu.
+**`catalog.db` n’en est pas un.** C’est lui qui garde le nom de chaque asset, ses tags, ses
+dimensions, le modèle et le prompt qui l’ont produit, ce dont il dérive — et, pour un média
+importé, **le chemin de votre fichier d’origine**, qui n’est écrit nulle part ailleurs. Le journal
+d’activité vit dans la même base.
+
+**Le studio ne sait pas le reconstruire à partir du dossier.** Il n’y a aucun réexamen d’`assets/`
+au démarrage : le catalogue se remplit au fil des générations et des imports, jamais après coup.
+Supprimer `.index/` rend donc un projet dont les fichiers sont tous là et dont plus rien ne dit ce
+qu’ils sont.
+
+> **Si vous devez alléger un projet**, jetez `proxies/` et `peaks/` — c’est là qu’est le poids.
+> Gardez `catalog.db`, qui pèse peu et sait tout.
 
 ### `.project.json`
 
@@ -183,11 +194,16 @@ déjà pris dans le dossier d’arrivée est refusé plutôt qu’écrasé, et l
 | **Renommer** | change le nom sur le disque, là où il est lu |
 | **Mettre à la corbeille** | envoie le fichier à la corbeille de votre système |
 
-> **Rien n’est effacé.** « Mettre à la corbeille » est la corbeille du système : le fichier s’y
-> récupère. Le studio ne supprime définitivement rien dans un dossier qui vous appartient.
+> **Rien n’est effacé ici.** « Mettre à la corbeille » est la corbeille du système : le fichier
+> s’y récupère.
+>
+> **Une porte supprime pour de bon**, et elle le dit : **Supprimer le document…**, dans le menu
+> d’un onglet, retire le fichier du dossier sans passer par la corbeille. Son dialogue annonce
+> « Cette action est irréversible », et c’est exact.
 
-**Deux refus, et ils sont grisés plutôt que cachés.** `assets/`, `documents/` et leurs
-sous-dossiers ne se renomment ni ne se jettent : l’index range chaque asset par son chemin sous
+**Deux refus, et ils sont grisés plutôt que cachés.** Les dossiers que le studio crée lui-même —
+`assets/`, ses six sous-dossiers par type, `documents/`, `.index/` et les siens — ne se renomment
+ni ne se jettent : l’index range chaque asset par son chemin sous
 `assets/`, et déplacer ce dossier laisserait des lignes que plus rien ne retrouve. **Le même
 refus vaut des deux côtés du glisser** : ces dossiers ne se prennent pas, et rien ne s’y dépose
 non plus — un fichier qui y atterrirait serait un fichier dont aucune ligne d’index ne parle. Et
@@ -198,7 +214,8 @@ nouveau. Fermez l’onglet d’abord.
 
 - les documents déjà à l’écran sont marqués **Ouvert** ;
 - l’icône d’un document dit de quel espace il relève, la même que dans le rail ;
-- `.project.json` et `.index/` ne s’affichent pas : ce sont les fichiers de service du studio.
+- **rien de ce dont le nom commence par un point ne s’affiche** — `.project.json` et `.index/`,
+  donc, mais aussi un dossier à vous que vous auriez nommé en commençant par un point.
 
 **Un dossier n’est lu qu’au moment où vous l’ouvrez.** `assets/img` peut contenir des milliers de
 fichiers dans un projet ordinaire, et les lire pour les compter coûterait une attente à chaque
@@ -236,7 +253,7 @@ intacte au lieu d’un fichier à moitié écrit.
 | Vous voulez… | Faites |
 |---|---|
 | **Le sauvegarder** | copiez le dossier. C’est tout |
-| **L’alléger avant de le copier** | supprimez `.index/` — il se reconstruira |
+| **L’alléger avant de le copier** | supprimez `.index/proxies` et `.index/peaks` — **gardez `catalog.db`** |
 | **Le déplacer ailleurs** | déplacez le dossier, puis rouvrez-le depuis le studio |
 | **Le renommer** | renommez le dossier. Le nom affiché, lui, vient de `.project.json` |
 | **Le partager** | envoyez le dossier compressé. Celui qui le reçoit devra avoir sa propre clé API |
@@ -244,10 +261,15 @@ intacte au lieu d’un fichier à moitié écrit.
 Rien ne casse : les chemins écrits à l’intérieur du projet sont **relatifs**, ce qui veut dire
 qu’ils décrivent une position à l’intérieur du dossier, pas un emplacement sur votre disque.
 
-> **Une exception : les médias importés.** Quand vous importez une vidéo ou un son de votre
-> disque, le studio **ne le copie pas** — il crée un lien vers l’endroit où il se trouve. Si
-> vous déplacez le projet sans emporter ces fichiers-là, les liens se cassent. L’inspecteur
-> affiche alors « Fichier introuvable ». Voir [Les assets](07-assets.md).
+> **Une exception : les médias importés.** Quand vous importez un fichier de votre disque —
+> **vidéo, son, image ou objet 3D**, les quatre s’importent —, le studio **ne le copie pas** : il
+> crée un lien vers l’endroit où il se trouve. Si vous déplacez le projet sans emporter ces
+> fichiers-là, les liens se cassent.
+>
+> **Rien ne vous le dira tant que vous n’aurez pas cliqué.** L’inspecteur ne montre pas « Fichier
+> introuvable » de lui-même : il affiche le bouton **Révéler dans le gestionnaire de fichiers**, et
+> c’est le clic qui, ne trouvant rien, fait apparaître le message. Voir
+> [Les assets](07-assets.md).
 
 ---
 

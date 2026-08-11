@@ -133,7 +133,7 @@ Mon premier projet/
 ├── assets/           tout ce que vous fabriquez et importez
 ├── documents/        vos travaux en cours
 ├── .project.json     la carte d'identité du projet — caché
-└── .index/           des fichiers de service, régénérables — caché
+└── .index/           le catalogue et ses caches — à garder, caché
 ```
 
 Le nom du projet s’affiche en haut de la fenêtre. Vous savez toujours dans quoi vous travaillez.
