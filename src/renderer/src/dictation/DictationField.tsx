@@ -35,7 +35,7 @@ export function DictationField() {
         a screen reader follows on its own.
       */}
       {isListening && (
-        <p aria-live="off" className="text-muted text-[11px] italic">
+        <p aria-live="off" className="text-muted text-tiny italic">
           {partial || t('dictation.listening')}
         </p>
       )}

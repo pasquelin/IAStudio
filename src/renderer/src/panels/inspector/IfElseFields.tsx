@@ -279,7 +279,7 @@ function ValueInput({
       // One entry per session at the field, not one per keystroke — as `TextField` does it.
       onFocus={() => gesture.onGestureStart()}
       onBlur={() => gesture.onGestureEnd()}
-      className={cn(FIELD, 'min-w-0 flex-1 text-[11px]')}
+      className={cn(FIELD, 'text-tiny min-w-0 flex-1')}
     />
   )
 }

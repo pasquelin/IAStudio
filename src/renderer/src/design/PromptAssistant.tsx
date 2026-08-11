@@ -125,10 +125,10 @@ export function PromptAssistant({
         />
       </div>
 
-      {pending && <p className="text-muted text-[11px]">{t('prompt.suggesting')}</p>}
+      {pending && <p className="text-muted text-tiny">{t('prompt.suggesting')}</p>}
 
       {failure !== null && !pending && (
-        <p role="status" className="text-muted text-[11px]">
+        <p role="status" className="text-muted text-tiny">
           {failure}
         </p>
       )}
@@ -160,14 +160,14 @@ function Suggestion({
 
   return (
     <div className={cn('border-border bg-surface flex flex-col gap-2 border p-1.5')}>
-      <p className="text-text text-[11px] leading-snug">{suggestion.text}</p>
+      <p className="text-text text-tiny leading-snug">{suggestion.text}</p>
 
       {suggestion.rationale && (
-        <p className="text-muted text-[11px] italic">{suggestion.rationale}</p>
+        <p className="text-muted text-tiny italic">{suggestion.rationale}</p>
       )}
 
       {settings.length > 0 && (
-        <p className="text-muted text-[11px]">
+        <p className="text-muted text-tiny">
           {settings.map(([key, value]) => `${key} ${String(value)}`).join(' · ')}
         </p>
       )}

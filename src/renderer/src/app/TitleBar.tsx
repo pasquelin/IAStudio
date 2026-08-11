@@ -94,7 +94,7 @@ export function TitleBar({
     <header
       style={DRAGGABLE}
       className={cn(
-        'flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1 text-[13px]',
+        'text-body flex shrink-0 items-center gap-2 pt-2 pr-6 pb-1',
         // The left inset only exists to clear the native traffic lights. macOS removes them
         // in full screen: without this switch, a 96 px gap would remain.
         fullScreen ? 'pl-1.5' : 'pl-24',

@@ -21,7 +21,7 @@ function JobDetail({ job }: { job: Job }) {
 
   if (job.error) {
     return (
-      <span role="alert" className="text-danger text-[11px]">
+      <span role="alert" className="text-danger text-tiny">
         {t(failureMessageKey(job.error))}
       </span>
     )
@@ -32,7 +32,7 @@ function JobDetail({ job }: { job: Job }) {
   // Through `formatUnits` like every other figure in Compute Units: it groups the thousands
   // AND keeps the decimals of a cheap call, which rounding would report as free.
   return (
-    <span className="text-muted text-[11px]">
+    <span className="text-muted text-tiny">
       {t('jobs.cost', { units: formatUnits(job.cost, i18n.language) })}
     </span>
   )

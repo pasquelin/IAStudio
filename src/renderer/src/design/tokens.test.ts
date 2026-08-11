@@ -5,8 +5,11 @@ import stylesheet from '../index.css?raw'
  * Tailwind 4 builds `text-<name>` from BOTH the font-size scale and the colour tokens, and the
  * colour wins. A token named after a size therefore repaints text instead of sizing it — the
  * `base` token did exactly that, painting titles in the panel background they sat on.
+ *
+ * Tailwind's own steps, plus the studio ladder read from the stylesheet: the ladder is where a
+ * collision would land today, since it is what the studio actually writes.
  */
-const TEXT_SIZE_NAMES = [
+const BUILT_IN_TEXT_SIZE_NAMES = [
   'xs',
   'sm',
   'base',
@@ -22,10 +25,22 @@ const TEXT_SIZE_NAMES = [
   '9xl',
 ]
 
-function colorTokenNames(): string[] {
+function themeBlock(): string {
   const [theme = ''] = stylesheet.slice(stylesheet.indexOf('@theme {')).split('\n}')
 
-  return [...theme.matchAll(/--color-([a-z0-9-]+)\s*:/g)].flatMap(([, name]) => name ?? [])
+  return theme
+}
+
+function colorTokenNames(): string[] {
+  return [...themeBlock().matchAll(/--color-([a-z0-9-]+)\s*:/g)].flatMap(([, name]) => name ?? [])
+}
+
+function textSizeNames(): string[] {
+  const ladder = [...themeBlock().matchAll(/--text-([a-z0-9-]+)\s*:/g)].flatMap(
+    ([, name]) => name ?? [],
+  )
+
+  return [...BUILT_IN_TEXT_SIZE_NAMES, ...ladder]
 }
 
 describe('color tokens', () => {
@@ -33,7 +48,10 @@ describe('color tokens', () => {
     expect(colorTokenNames()).toContain('panel')
   })
 
-  it('never take a name from the Tailwind font-size scale', () => {
-    expect(colorTokenNames().filter(name => TEXT_SIZE_NAMES.includes(name))).toEqual([])
+  it('never take a name from a font-size scale', () => {
+    const sizes = textSizeNames()
+
+    expect(sizes).toContain('tiny')
+    expect(colorTokenNames().filter(name => sizes.includes(name))).toEqual([])
   })
 })

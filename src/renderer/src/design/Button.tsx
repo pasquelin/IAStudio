@@ -30,7 +30,7 @@ export function Button({
       ref={ref}
       className={cn(
         BUTTON_BASE,
-        'h-(--sc-control) px-3 text-[12px] font-medium',
+        'h-(--sc-control) px-3 text-xs font-medium',
         VARIANT[variant],
         className,
       )}

@@ -180,7 +180,7 @@ function TrackName({
       <input
         autoFocus
         aria-label={t('timeline.rename')}
-        className="bg-surface text-text w-full rounded-(--radius-sc-sm) px-1 text-[11px] outline-none"
+        className="bg-surface text-text text-tiny w-full rounded-(--radius-sc-sm) px-1 outline-none"
         value={editing}
         onChange={event => setEditing(event.target.value)}
         onKeyDown={onKeyDown}
@@ -192,7 +192,7 @@ function TrackName({
   return (
     <span
       {...TIP_RIGHT(t('timeline.renameHint'))}
-      className={cn('cursor-text truncate text-[11px]', dimmed ? 'text-muted' : 'text-text')}
+      className={cn('text-tiny cursor-text truncate', dimmed ? 'text-muted' : 'text-text')}
       onDoubleClick={() => setEditing(track.name)}
     >
       {track.name}

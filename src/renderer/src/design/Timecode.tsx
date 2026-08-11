@@ -14,7 +14,7 @@ export type TimecodeProps = {
  */
 export function Timecode({ time, settings, className }: TimecodeProps) {
   return (
-    <span className={cn('text-muted px-1 font-mono text-[11px] tabular-nums', className)}>
+    <span className={cn('text-muted text-tiny px-1 font-mono tabular-nums', className)}>
       {formatTimecode(time, settings)}
     </span>
   )

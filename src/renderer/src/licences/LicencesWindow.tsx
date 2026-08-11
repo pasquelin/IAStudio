@@ -24,7 +24,7 @@ export function LicencesWindow() {
   return (
     <div className="bg-chassis text-text flex h-screen flex-col">
       <header style={DRAGGABLE} className="flex shrink-0 items-center px-4 pt-6 pb-3 pl-24">
-        <h1 className="text-[13px] font-semibold">{t('licences.title')}</h1>
+        <h1 className="text-body font-semibold">{t('licences.title')}</h1>
       </header>
 
       <p className="text-muted shrink-0 px-4 pb-3 text-xs">{t('licences.intro')}</p>
@@ -39,19 +39,19 @@ export function LicencesWindow() {
               onClick={() => setOpenName(current => (current === entry.name ? null : entry.name))}
               className="hover:bg-surface flex w-full cursor-pointer items-baseline gap-2 py-2 text-left"
             >
-              <span className="text-[13px]">{entry.name}</span>
-              <span className="text-muted text-[11px]">{entry.version}</span>
-              <span className="text-muted ml-auto text-[11px]">{entry.spdx}</span>
+              <span className="text-body">{entry.name}</span>
+              <span className="text-muted text-tiny">{entry.version}</span>
+              <span className="text-muted text-tiny ml-auto">{entry.spdx}</span>
             </button>
 
             {openName === entry.name && (
               <div className="pb-3">
                 {entry.sources && (
-                  <p className="text-muted pb-2 text-[11px]">
+                  <p className="text-muted text-tiny pb-2">
                     {t('licences.sources')} {entry.sources}
                   </p>
                 )}
-                <pre className="bg-surface text-muted max-h-72 overflow-auto rounded p-3 text-[11px] whitespace-pre-wrap">
+                <pre className="bg-surface text-muted text-tiny max-h-72 overflow-auto rounded p-3 whitespace-pre-wrap">
                   {entry.text}
                 </pre>
               </div>

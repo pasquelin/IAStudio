@@ -69,7 +69,7 @@ function StatusLine({ ok, children }: { ok: boolean; children: ReactNode }) {
     <p
       role="status"
       className={cn(
-        'absolute bottom-2 left-2 z-10 text-[11px]',
+        'text-tiny absolute bottom-2 left-2 z-10',
         ok ? TONE_TEXT.muted : TONE_TEXT.danger,
       )}
     >

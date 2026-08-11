@@ -77,7 +77,7 @@ export function AssetBrowserActions() {
           <UiIcon path={mdiAlertOutline} size={14} />
         </span>
       )}
-      <span className="text-muted mr-1 text-[11px]">{t('assets.count', { count })}</span>
+      <span className="text-muted text-tiny mr-1">{t('assets.count', { count })}</span>
       <ToolButton
         icon={mdiFileImportOutline}
         label={t('assets.import')}

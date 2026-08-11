@@ -18,9 +18,7 @@ export function PanelHeader({ title, children, fillActions, trailing }: PanelHea
       {/* `flex-1` is `flex: 1 1 0%`, and a basis of zero weighs nothing when the row runs short:
           all of it would be taken from the title, which `truncate` lets crush to invisible. The
           name of the panel is not what a crowded row should spend first. */}
-      <span
-        className={cn('text-text truncate text-[13px] font-semibold', fillActions && 'shrink-0')}
-      >
+      <span className={cn('text-text text-body truncate font-semibold', fillActions && 'shrink-0')}>
         {title}
       </span>
       {/* The half that gives ground: a panel crowding its row loses its own actions first, and

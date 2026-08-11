@@ -11,7 +11,7 @@ export type PropertyGroupProps = { title: string; children: ReactNode }
 export function PropertyGroup({ title, children }: PropertyGroupProps) {
   return (
     <section className="border-border border-b py-1 last:border-b-0">
-      <h3 className="text-muted px-2 py-1 text-[10px] font-semibold tracking-wide uppercase">
+      <h3 className="text-muted text-mini px-2 py-1 font-semibold tracking-wide uppercase">
         {title}
       </h3>
       <div className="px-2">{children}</div>

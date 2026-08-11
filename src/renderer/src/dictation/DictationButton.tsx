@@ -52,7 +52,7 @@ export function DictationButton({ variant = 'bar', tooltip }: DictationButtonPro
 
       {dictation.isListening && <LevelMeter />}
       {dictation.state === 'loadingEngine' && (
-        <span className="text-muted text-[11px]">{t('dictation.loadingEngine')}</span>
+        <span className="text-muted text-tiny">{t('dictation.loadingEngine')}</span>
       )}
     </span>
   )

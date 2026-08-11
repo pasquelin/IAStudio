@@ -15,6 +15,8 @@ export type SectionNoteProps = {
  */
 export function SectionNote({ children, standalone = false }: SectionNoteProps) {
   return (
-    <p className={cn('text-muted m-0 text-[12px]', standalone && 'py-6 text-center')}>{children}</p>
+    <p className={cn('text-muted m-0 text-xs leading-normal', standalone && 'py-6 text-center')}>
+      {children}
+    </p>
   )
 }

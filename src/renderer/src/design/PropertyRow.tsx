@@ -22,7 +22,7 @@ export function PropertyRow({ label, children, stacked = false }: PropertyRowPro
   return (
     <div
       className={cn(
-        'py-1 text-[11px]',
+        'text-tiny py-1',
         stacked ? 'flex flex-col gap-2' : 'flex min-h-(--sc-control) items-center gap-2',
       )}
     >

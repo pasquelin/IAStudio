@@ -31,7 +31,7 @@ export const AssetRow = memo(function AssetRow({
           <span className="flex shrink-0 items-center gap-2">
             {/* The list has room the grid does not: every state is drawn, settled ones included. */}
             <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? badge} showQuiet />
-            <span className="text-muted text-[11px]">{typeLabel}</span>
+            <span className="text-muted text-tiny">{typeLabel}</span>
           </span>
         }
       />

@@ -102,7 +102,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           active={view.playing}
           onClick={() => useSceneViews.getState().setPlaying(documentId, !view.playing)}
         />
-        <span className="text-muted text-[11px] tabular-nums">
+        <span className="text-muted text-tiny tabular-nums">
           {view.playhead.toFixed(2)} / {timeline.duration.toFixed(2)} s
         </span>
 
@@ -287,7 +287,7 @@ function TrackRow({
       data-testid={`anim-track-${track.id}`}
     >
       <div className={cn(HEADER, 'flex shrink-0 items-center gap-0.5 px-1.5 py-1')}>
-        <span title={track.name} className="text-text min-w-0 flex-1 truncate text-[11px]">
+        <span title={track.name} className="text-text text-tiny min-w-0 flex-1 truncate">
           {track.name}
         </span>
 

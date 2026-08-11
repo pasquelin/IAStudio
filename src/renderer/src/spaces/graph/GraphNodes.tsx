@@ -58,9 +58,7 @@ function RunBadge({ run }: { run: GraphNodeRun }) {
   const { t } = useTranslation()
   const key = runLabelKey(run)
 
-  return (
-    <span className={cn('shrink-0 text-[10px]', TONE_TEXT[RUN_TONE[run.status]])}>{t(key)}</span>
-  )
+  return <span className={cn('text-mini shrink-0', TONE_TEXT[RUN_TONE[run.status]])}>{t(key)}</span>
 }
 
 /** Home-made, like the whole dock: React Flow's own node carries hex values of its own. */
@@ -129,7 +127,7 @@ function NodeShell({
         {/* `mr-auto` rather than the row's `justify-between`, which sent the title to the middle
             of the header the moment a third child appeared: two nodes side by side, one marked
             and one not, stopped lining their titles up. */}
-        <span className="mr-auto truncate text-[11px]">{title}</span>
+        <span className="text-tiny mr-auto truncate">{title}</span>
         {/* The run takes the corner while there is one to report: the header holds a title that
             truncates and one thing beside it, and what a node is DOING outranks what it is. */}
         {run && run.status !== 'idle' ? (
@@ -137,7 +135,7 @@ function NodeShell({
         ) : (
           // Only when it says something the title does not: a node named after its own type would
           // otherwise read the same word twice, once translated and once not.
-          kind !== title && <span className="text-muted shrink-0 text-[10px]">{kind}</span>
+          kind !== title && <span className="text-muted text-mini shrink-0">{kind}</span>
         )}
       </header>
 
@@ -223,15 +221,15 @@ function nodeOf(
 }
 
 const TextNode = nodeOf('text', data => (
-  <p className="text-muted line-clamp-3 text-[11px] whitespace-pre-wrap">{asText(data.value)}</p>
+  <p className="text-muted text-tiny line-clamp-3 whitespace-pre-wrap">{asText(data.value)}</p>
 ))
 
 const AssetNode = nodeOf('asset', data => (
-  <p className="text-muted truncate text-[11px]">{asText(data.value)}</p>
+  <p className="text-muted text-tiny truncate">{asText(data.value)}</p>
 ))
 
 const ModelNode = nodeOf('model', data => (
-  <p className="text-muted truncate text-[11px]">{asText(data.modelId)}</p>
+  <p className="text-muted text-tiny truncate">{asText(data.modelId)}</p>
 ))
 
 /**
@@ -239,7 +237,7 @@ const ModelNode = nodeOf('model', data => (
  * the panel's own face makes a quoted string indistinguishable from a variable name.
  */
 const TransformTextNode = nodeOf('transformText', data => (
-  <p className="text-muted line-clamp-3 font-mono text-[11px] break-all">{asText(data.value)}</p>
+  <p className="text-muted text-tiny line-clamp-3 font-mono break-all">{asText(data.value)}</p>
 ))
 
 const ApprovalNode = nodeOf('approval', (data, id) => (
@@ -262,13 +260,13 @@ function IfElseBody({ blocks }: { blocks: readonly GraphConditionBlock[] }) {
   const { t } = useTranslation()
 
   if (blocks.length === 0) {
-    return <p className="text-muted text-[11px]">{t('graph.noConditions')}</p>
+    return <p className="text-muted text-tiny">{t('graph.noConditions')}</p>
   }
 
   return (
     <ul className="flex flex-col gap-2">
       {blocks.map((block, index) => (
-        <li key={index} className="text-muted truncate text-[11px]">
+        <li key={index} className="text-muted text-tiny truncate">
           {block.conditions
             .map(condition => readableCondition(condition, t))
             .join(` ${t(`graph.logic.${block.logic}`)} `)}
@@ -313,7 +311,7 @@ function ApprovalBody({
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-muted line-clamp-3 text-[11px] whitespace-pre-wrap">
+      <p className="text-muted text-tiny line-clamp-3 whitespace-pre-wrap">
         {message || t('graph.askApproval')}
       </p>
 
@@ -355,7 +353,7 @@ const StickyNoteNode = memo(function StickyNoteNode({ data, selected }: NodeProp
         selected ? 'border-accent' : 'border-border',
       )}
     >
-      <p className="text-muted text-[11px] whitespace-pre-wrap">
+      <p className="text-muted text-tiny whitespace-pre-wrap">
         {value || t(labelOf('stickyNote'))}
       </p>
     </div>

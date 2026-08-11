@@ -101,7 +101,7 @@ export function Apps() {
         to understand. "Apps" is Scenario's word, deliberately untranslated, and a product name
         held by a third party does not explain a panel in a dock.
       */}
-      <p className="text-muted px-2 pt-2 text-[11px]">{t('apps.what')}</p>
+      <p className="text-muted text-tiny px-2 pt-2">{t('apps.what')}</p>
       <Collection
         label={t('panels.apps')}
         items={items}
@@ -120,7 +120,7 @@ export function Apps() {
         }
         footer={
           listing.isFetchingNextPage ? (
-            <p className="text-muted py-2 text-center text-[11px]">{t('collection.loading')}</p>
+            <p className="text-muted text-tiny py-2 text-center">{t('collection.loading')}</p>
           ) : null
         }
       />

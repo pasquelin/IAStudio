@@ -39,7 +39,7 @@ export function ProgressRow({
 
         {ratio !== undefined && <ProgressBar ratio={ratio} label={label} className="w-24" />}
 
-        <span className={cn('shrink-0 text-[11px]', TONE_TEXT[tone])}>{status}</span>
+        <span className={cn('text-tiny shrink-0', TONE_TEXT[tone])}>{status}</span>
 
         {cancel && (
           <ToolButton

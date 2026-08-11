@@ -54,11 +54,14 @@ export function Row({
             which comes with the OS delay and none of the theme. */}
         <p
           {...tip(title, false, hint)}
-          className={cn('truncate text-[12px]', muted ? 'text-muted line-through' : 'text-text')}
+          className={cn(
+            'truncate text-xs leading-tight',
+            muted ? 'text-muted line-through' : 'text-text',
+          )}
         >
           {title}
         </p>
-        {subtitle && <p className="text-muted truncate text-[10px]">{subtitle}</p>}
+        {subtitle && <p className="text-muted text-mini truncate">{subtitle}</p>}
       </div>
       {actions}
     </div>

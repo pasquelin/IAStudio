@@ -41,7 +41,7 @@ export function Section({ id, title, actions, sticky = false, children }: Sectio
           sticky && 'bg-panel sticky top-0 z-10 py-2',
         )}
       >
-        <h2 className="text-text m-0 text-[13px] font-semibold">{title}</h2>
+        <h2 className="text-text text-body m-0 font-semibold">{title}</h2>
 
         <div className="ml-auto flex items-center gap-3">
           {actions}
