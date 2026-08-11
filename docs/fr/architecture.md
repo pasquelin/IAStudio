@@ -880,7 +880,7 @@ plus si deux ports vont ensemble. `NodePorts.tsx` porte la règle en JSDoc, là 
 C’est le même partage que `name` et `message` dans les gardes de texte en dur : **une chaîne qui
 est aussi une donnée n’est pas un libellé**, et la traduire la casse comme donnée.
 
-### Cinq gardes, et ce que chacun tient
+### Les gardes, et ce que chacun tient
 
 Ce ne sont pas les mêmes tests, et les confondre laisse croire qu’une seule chose est surveillée.
 Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm validate`.
@@ -892,6 +892,14 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 | `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | dans `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
 | `main/no-hardcoded-text.test.ts`, § *the words nobody puts in a tag* | dans les **quatre** arbres — `main` compris : une phrase liée à un nom, `const message = 'This project could not be opened'`, que ni les balises ni les champs de registre ne montrent |
+| `shared/licences.i18n.test.ts` | de la prose dans un champ **affiché** de `src/shared/licences.json`, que `pnpm licences:collect` génère et que la fenêtre Licences rend tel quel. Le champ `text` est exempté : une licence se reproduit dans la langue de ses auteurs |
+
+**Le dernier est arrivé le 11 août, et il ferme une voie qu'aucun des quatre autres ne pouvait
+voir** : ils lisent tous l'arbre TypeScript, et ce texte-là n'est écrit dans aucun `.ts` — c'est
+`scripts/collect-licences.mjs` qui l'écrit dans un JSON. Deux phrases anglaises s'affichaient
+ainsi à un lecteur français. **Un fichier généré puis rendu tel quel est une voie vers l'écran**,
+et la règle qui en sort vaut pour tous : le script porte le fait (`unmodified: true`), le rendu
+porte la phrase, et la phrase vient d'un bundle.
 
 **Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
 gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
