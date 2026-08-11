@@ -1,4 +1,9 @@
-import type { GraphHandleInput, GraphHandleOutput, GraphNode } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphHandleInput,
+  type GraphHandleOutput,
+  type GraphNode,
+} from '@shared/domain/graph'
 
 /**
  * The naming Scenario's converter reads, copied rather than invented.
@@ -73,6 +78,11 @@ export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput)
   const accepted = acceptedTypes(input)
   const offered = output.type
   if (accepted.length === 0 || offered === undefined) return true
+
+  // `conditional` names a ROLE, not a payload: a branch computes nothing and hands on what it
+  // received, so what it carries is not its to narrow. Typed after itself, the port made the node
+  // unwireable while it executed perfectly — no published App shows one wired either way.
+  if (accepted.includes(CONDITIONAL_PORT)) return true
 
   return accepted.some(type => type === offered || (ALSO_ACCEPTED[type] ?? []).includes(offered))
 }

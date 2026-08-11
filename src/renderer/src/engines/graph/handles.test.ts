@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GraphNode } from '@shared/domain/graph'
+import { CONDITIONAL_PORT, type GraphNode } from '@shared/domain/graph'
 import {
   acceptedTypes,
   DEFAULT_OUTPUT_NAME,
@@ -102,6 +102,26 @@ describe('whether an output can feed an input', () => {
   it('does not widen the pair the other way round', () => {
     expect(typesConnect({ id: 'o', type: 'prompt' }, { id: 'i', type: 'text' })).toBe(false)
     expect(typesConnect({ id: 'o', type: 'image' }, { id: 'i', type: 'prompt' })).toBe(false)
+  })
+
+  /**
+   * A branch computes nothing: it hands on what it received to the port its condition chose. What
+   * it carries is therefore not its to narrow, and typing the port after its own role left the
+   * node executing perfectly while the canvas refused every wire into it.
+   */
+  it('lets any output feed a port that steers rather than feeds', () => {
+    const steering = { id: 'i', type: CONDITIONAL_PORT }
+
+    expect(typesConnect({ id: 'o', type: 'image' }, steering)).toBe(true)
+    expect(typesConnect({ id: 'o', type: 'text' }, steering)).toBe(true)
+    expect(typesConnect({ id: 'o', type: 'video' }, steering)).toBe(true)
+  })
+
+  /** Widened one way here too: a conditional OUTPUT is not something a typed port takes. */
+  it('does not let a conditional output feed a port that names a type', () => {
+    expect(typesConnect({ id: 'o', type: CONDITIONAL_PORT }, { id: 'i', type: 'image' })).toBe(
+      false,
+    )
   })
 })
 
