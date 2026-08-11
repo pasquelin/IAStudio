@@ -583,33 +583,78 @@ at the start.
 
 **A model with no clip shows no section at all** — rather than an empty picker.
 
+**The chosen clip also shows on the band below**, laid as a block at its real length, on a line of
+its own bearing **the clip's name**. Blocks are grouped **under** the key lines, never mixed into
+them: a block and a key are not the same kind of thing, and interleaving them would make the band
+read as though a clip had properties.
+
 ### Seeing the skeleton
 
 A rigged model carries **bones**. The **B** key, or the bone button in the toolbar, draws them over
-the scene. They cannot be clicked: the bones of a rig cross every mesh they drive, and a click
-would land on a line rather than on the model.
+the scene.
+
+**To grab one, switch to pose mode** — the **P** key, or the **Pose mode** button. Clicking then
+picks bones instead of objects.
+
+> **A bone is not grabbed like the rest, which is why it takes a mode.** A bone has no volume:
+> what you see is a line between two points, and the bones of a rig cross every mesh they drive.
+> Aiming through the scene would land on whichever segment sits nearest the eye, not on the bone
+> you meant. So the studio projects them onto the screen and takes **the one nearest the
+> pointer**, whether it sits in front of a shoulder or behind it. So aim at the joint itself
+> rather than at the limb it drives.
 
 ### Laying down your own motion
 
 Select an object, then add a track from the timeline's bar: **Position**, **Rotation** or
-**Scale**. If the object is a rigged model, a **Bone** picker appears beside them: the track then
-drives that bone, which is how an arm is corrected without moving the whole character.
+**Scale**. If the object is a rigged model, a **Bone** picker appears beside them — it opens on
+**The whole model**, and picking a bone makes the track drive that bone alone, which is how an arm
+is corrected without moving the whole character.
 
-| Gesture | Effect |
+**The band reads by subject, not by track.** One line per object — or per bone — with its animated
+properties **folded underneath**. The folded line shows every key of the object, its three
+properties merged; unfolding separates them. **Folding never loses a key**, it only changes what
+is shown.
+
+| On the bar | What it does |
 |---|---|
-| **+ Position / Rotation / Scale** | adds a track on the selected object |
-| **◆** | sets a key where the playhead stands, or removes the one already there |
-| **●** | **arms** the track: the gizmo writes into it instead of moving the object |
-| **🔇 / 🎧 / 🔒** | mutes the track, solos it, locks it |
-| **🗑** | removes the track, keys and all |
+| **Back to the start** | brings the playhead to zero |
+| **Play** / **Pause** | runs the timeline |
+| **Auto-key** | moving an object **writes a key** instead of shifting its rest pose |
+| **Duration** and **FPS** | how long the timeline runs, and at what rate |
+| **Bone** | on a rigged model: the bone the next track will drive, or **The whole model** |
+| **Add a Position / Rotation / Scale track** | adds the track to the selected object |
+| **Key everything animated** | one key on every animated object, where the playhead stands |
+| **Render to video** | see below — greyed out until a camera is in the scene |
+
+**Each line carries its own**, to the left of the band:
+
+| On a line's header | What it does |
+|---|---|
+| the chevron | **Show or hide the animated properties** |
+| **Key *(the name)*** | one key on every property of that object |
+| **Mute** / **Solo** / **Lock** | the three switches a track carries, as in Video |
+| **Remove track *(the name)*** | on a property line, takes it away with its keys |
+
+**The playhead is grabbed and dragged** along the ruler, and **keys are dragged** along their line.
+
+**With no track at all, the band says so** rather than staying blank: "No track yet. Select an
+object, then add the track to animate."
 
 **Tracks add up.** Two position tracks on one object add their moves together; two scale tracks
 **multiply** theirs — twice two makes four, which is what stacking them means. This is unlike a
 video montage, where the clip on top hides the one below.
 
-> **Why arming matters.** Since tracks add to an object's own pose, dragging it with no track armed
-> writes its **rest pose** — and the tracks add themselves back on top on the next frame, so the
-> object springs back under your hand. Arm the track, and the drag becomes a key on it.
+> **Why auto-key changes everything — and what it needs.** Since tracks add to an object's own
+> pose, dragging it with auto-key off writes its **rest pose** — and the tracks add themselves
+> back on top on the next frame, so the object springs back under your hand. Turn it on, and the
+> same drag sets a key where the playhead stands.
+>
+> **But the track has to exist already.** Auto-key only writes into the tracks of the object — or
+> the bone — you are dragging; with none, the drag falls back to the rest pose, and you get back
+> exactly the problem it was meant to solve. **Add the track first, then turn it on.**
+>
+> **A bone with no track is a case apart**: it has no rest pose to fall back to, so the drag is
+> simply dropped and the bone returns where it was.
 
 ### Writing a video
 

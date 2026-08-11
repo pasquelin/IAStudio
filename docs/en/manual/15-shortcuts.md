@@ -159,6 +159,8 @@ shortcuts screen.
 | **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
 | **Four views** | `⇧Q` | splits the viewport in four: the current view, top, front, side |
 | **Quad edges** | `⇧W` | in wireframe, erases the diagonals triangulation added |
+| **Show skeletons** | `B` | draws the bones of every rigged model over the scene |
+| **Pose mode** | `P` | clicking then picks the **bones** of a rig instead of objects |
 | **Frame selection** | `F` | brings the camera in so the object fills the view |
 | **Delete** | `Delete` | removes the chosen object. `⌘Z` brings it back |
 
@@ -210,7 +212,7 @@ Speed and boost are set in [settings](14-settings.md#workspaces).
 
 | Gesture | Effect |
 |---|---|
-| **Left click** | chooses the object under the cursor |
+| **Left click** | chooses the object under the cursor — or the nearest **bone**, in pose mode (`P`) |
 | **Right click held + move** | turns your head, on the spot |
 | **Wheel** | moves forward or back |
 | **Click a handle + drag** | applies the current tool |
@@ -509,8 +511,9 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |
 | `O` |  |  | Projection |  |  |  |  |
 | `Z` |  |  | Display |  |  |  |  |
+| `B` |  |  | Show skeletons |  |  |  |  |
 | `V` |  |  | Select |  |  | Change the view |  |
-| `P` |  |  |  |  |  | Light probes |  |
+| `P` |  |  | Pose mode |  |  | Light probes |  |
 | `G` |  |  | Move |  |  |  |  |
 | `R` |  |  | Rotate |  |  |  |  |
 | `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |
