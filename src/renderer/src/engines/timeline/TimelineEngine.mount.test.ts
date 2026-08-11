@@ -13,6 +13,9 @@ const on = vi.fn<(event: string, listener: () => void) => void>()
 const off = vi.fn()
 let resolveInit: (() => void) | null = null
 let started: Record<string, unknown> | null = null
+/** Every sprite starts on the empty texture, as it does in Pixi — `swapTexture` reads it. */
+const EMPTY_TEXTURE = {}
+const PAINTED_TEXTURE = { source: {}, width: 8, height: 6, destroy: vi.fn() }
 
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
@@ -42,20 +45,47 @@ vi.mock('pixi.js', () => ({
     fill = (): this => this
   },
   Sprite: class {
+    texture = EMPTY_TEXTURE
     position = { set: vi.fn() }
     scale = { set: vi.fn() }
   },
-  Texture: { EMPTY: {} },
+  Texture: { EMPTY: EMPTY_TEXTURE, from: () => PAINTED_TEXTURE },
 }))
 
 const { TimelineEngine } = await import('./TimelineEngine')
+const { clipFixture, sequenceWith, trackFixture } = await import('./timeline-fixtures')
 
-const engineFor = (host: HTMLElement) =>
+const engineFor = (host: HTMLElement, onUnreadable?: (unreadable: boolean) => void) =>
   new TimelineEngine({
     openSink: () => Promise.reject(new Error('no decoder in a test')),
     maxDecoders: 1,
     maxPictures: 1,
     owner: host.id,
+    onUnreadable,
+  })
+
+// jsdom has no WebCodecs, so a frame is the one method the engine calls on it.
+const fakeFrame = (): VideoFrame => ({ close: vi.fn() }) as unknown as VideoFrame
+
+/** A monitor where `readable` decodes and everything else does not. */
+const engineOver = (
+  host: HTMLElement,
+  readable: string,
+  onUnreadable: (unreadable: boolean) => void,
+) =>
+  new TimelineEngine({
+    openSink: assetId =>
+      assetId === readable
+        ? Promise.resolve({
+            getSample: async () => ({ toVideoFrame: fakeFrame, close: vi.fn() }),
+            close: vi.fn(),
+            holdsDecoder: true,
+          })
+        : Promise.reject(new Error('no decoder in a test')),
+    maxDecoders: 2,
+    maxPictures: 2,
+    owner: host.id,
+    onUnreadable,
   })
 
 describe('mounting a monitor', () => {
@@ -137,6 +167,71 @@ describe('mounting a monitor', () => {
     const listener = on.mock.calls.find(([event]) => event === 'resize')?.[1]
     expect(listener).toBeDefined()
     expect(off).toHaveBeenCalledWith('resize', listener)
+  })
+
+  /**
+   * `.exr`, `.tif` and `.tiff` are catalogued as pictures and Chromium decodes none of them.
+   * Before this, the clip was simply not painted and nothing on screen said why.
+   */
+  it('reports a clip whose media cannot be decoded', async () => {
+    const onUnreadable = vi.fn()
+    const engine = engineFor(host, onUnreadable)
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]))
+
+    await engine.seek(0)
+
+    expect(onUnreadable).toHaveBeenLastCalledWith(true)
+  })
+
+  /**
+   * The order production runs in: React applies the sequence in the same commit that starts the
+   * mount, and `seek` returns on an application that is not there yet. Nothing asked again, so
+   * the picture — and the message — waited for the playhead to move.
+   */
+  it('paints what sits under the playhead as soon as Pixi is ready', async () => {
+    const onUnreadable = vi.fn()
+    const engine = engineFor(host, onUnreadable)
+    const mounting = engine.mount(host)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]))
+
+    resolveInit?.()
+    await mounting
+
+    await vi.waitFor(() => expect(onUnreadable).toHaveBeenLastCalledWith(true))
+  })
+
+  /**
+   * The message covers the whole monitor. Laid over a track that did decode, it would hide a
+   * picture that is perfectly fine to say something is wrong with another one.
+   */
+  it('stays silent when a track under the unreadable one did paint', async () => {
+    const onUnreadable = vi.fn()
+    const engine = engineOver(host, 'asset-fine', onUnreadable)
+    await mounted(engine)
+    engine.apply(
+      sequenceWith([
+        trackFixture('V1', 'video', [clipFixture('fine', 0, 1_000_000)], { index: 1 }),
+        trackFixture('V2', 'video', [clipFixture('broken', 0, 1_000_000)], { index: 2 }),
+      ]),
+    )
+
+    await engine.seek(0)
+
+    expect(onUnreadable).toHaveBeenLastCalledWith(false)
+  })
+
+  it('takes the report back where the playhead leaves the clip', async () => {
+    const onUnreadable = vi.fn()
+    const engine = engineFor(host, onUnreadable)
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]))
+    await engine.seek(0)
+
+    await engine.seek(2_000_000)
+
+    // A message raised over an unreadable clip has to fall again on the gap that follows it.
+    expect(onUnreadable).toHaveBeenLastCalledWith(false)
   })
 
   it('draws nothing once it is disposed', async () => {

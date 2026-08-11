@@ -1,7 +1,9 @@
 import { type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
-import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
+import { mdiAlertCircleOutline, mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import { EmptyState } from '@/design/EmptyState'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import { openAssetSink } from '@/engines/timeline/sink-port'
@@ -46,9 +48,11 @@ export function Monitor({
   placeholder,
   keyboard = false,
 }: MonitorProps) {
+  const { t } = useTranslation()
   const hostRef = useRef<HTMLDivElement>(null)
   const engine = useRef<TimelineEngine | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [unreadable, setUnreadable] = useState(false)
 
   useEffect(() => {
     const element = hostRef.current
@@ -61,6 +65,7 @@ export function Monitor({
       owner,
       onTime,
       onPlayingChange: setPlaying,
+      onUnreadable: setUnreadable,
     })
 
     engine.current = created
@@ -123,7 +128,17 @@ export function Monitor({
     <section className="flex min-h-0 min-w-0 flex-1 flex-col items-center gap-2 p-2">
       <div className="bg-chassis relative min-h-0 w-full flex-1">
         <div ref={hostRef} className="absolute inset-0" />
-        {placeholder}
+        {/* Positioned, like `TextureDocument` does over its own viewport: the canvas host is
+            absolute, so anything left in normal flow is painted under the opaque backdrop. */}
+        <div className="pointer-events-none absolute inset-0">
+          {/* Ahead of the host's own placeholder: a clip that is there and shows nothing is the
+              more precise thing to say about a black picture. */}
+          {unreadable ? (
+            <EmptyState icon={mdiAlertCircleOutline} message={t('transport.unreadable')} />
+          ) : (
+            placeholder
+          )}
+        </div>
       </div>
 
       <Toolbar

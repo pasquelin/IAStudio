@@ -557,6 +557,12 @@ vidéo, et un sink d'image fixe partout ailleurs — celui-ci rend la même fram
 image n'ayant pas de temps à elle. `TimelineEngine.seek` ignore la différence : il demande une
 frame et en reçoit une.
 
+**Ce qu'il n'ignore pas, c'est l'absence de frame.** Une position sans échantillon et un asset
+qu'on n'a jamais pu ouvrir rendent tous deux `null` ; `DecoderPool.undecodable(assetId)` les
+sépare, et c'est de là que vient le message « Ce clip n'a pas pu être affiché » du moniteur, porté
+jusqu'à React par `onUnreadable`. Le moteur ne le rapporte que si **aucune** piste n'a peint :
+recouvrir une image correcte pour signaler celle du dessus serait un pire silence.
+
 Les sinks ouverts sont bornés par le `DecoderPool`, une LRU par moteur, et il tient **deux
 plafonds plutôt qu'un** — parce que les deux genres sont rares pour des raisons différentes. Un
 sink vidéo occupe un décodeur matériel, dont un GPU grand public n'offre que deux à quatre ; un

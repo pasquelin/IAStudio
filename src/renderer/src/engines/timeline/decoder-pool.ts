@@ -30,6 +30,12 @@ export type DecoderPoolDeps = {
 
 export type DecoderPool = {
   frameAt: (assetId: string, time: Us) => Promise<VideoFrame | null>
+  /**
+   * Whether opening this asset has already failed for good. `frameAt` answers `null` for a
+   * position with no sample too, and only this tells the two apart — which is what a monitor
+   * needs to say why it is black rather than stay silent about it.
+   */
+  undecodable: (assetId: string) => boolean
   /** Sinks held, both kinds together — decoders alone would not say what memory is spent. */
   openCount: () => number
   release: (assetId: string) => void
@@ -164,6 +170,8 @@ export function createDecoderPool({
         return null
       }
     },
+
+    undecodable: assetId => undecodable.has(assetId),
 
     openCount: () => sinks.size,
 

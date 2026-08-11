@@ -377,6 +377,9 @@ content, an exotic format, or a file protected by digital rights.
 **What to do.** Open it in another player to check it is sound. If it is, convert it to a common
 format (`.mp4`, `.wav`, `.png`).
 
+> **Not to be confused** with "This clip could not be shown", below: there the import
+> succeeded, and it is showing it in a monitor that fails.
+
 ### "Failed" / "Stopped"
 
 **Failed**: preparation stopped on a problem. **Stopped**: you halted it yourself. In both cases,
@@ -451,6 +454,22 @@ there is nowhere to write and nothing happens: click into the field first.
 
 The microphone is hearing nothing. Check which one your computer is using (System Settings ▸
 Sound ▸ Input), and that it is not a muted input — some audio interfaces expose those.
+
+---
+
+## The editing messages
+
+### "This clip could not be shown: its media is missing, or its format cannot be read here."
+
+**What it means.** The clip is there on its track, but the monitor cannot get a picture out of
+it. It says so in place of the picture, rather than staying black.
+
+**The ordinary causes:** an `.exr`, a `.tif` or a `.tiff` — those three import as pictures but no
+monitor shows them — or a truncated video file.
+
+**What to do.** Convert the file to `.png` (picture) or `.mp4` (video) with another tool, then
+import it again: **the studio converts nothing on its own.** The clip stays on its track and
+keeps its duration; only its picture is missing.
 
 ---
 

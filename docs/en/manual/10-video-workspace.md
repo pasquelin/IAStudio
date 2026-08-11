@@ -19,7 +19,9 @@ In the centre, two monitors side by side — the Premiere and DaVinci convention
 | **Source**, on the left | the selected clip, on its own |
 | **Program**, on the right | the edit as it will be |
 
-When no clip is selected, the Source monitor shows "Select a clip to see it here."
+When no clip is selected, the Source monitor shows "Select a clip to see it here." When the clip
+under the playhead cannot be decoded, [the other message](#when-a-clip-cannot-be-shown) takes its
+place.
 
 ---
 
@@ -197,6 +199,25 @@ If ffmpeg is missing there is no proxy, and moving through large files becomes l
 **At rest, the monitor draws nothing.** A still frame repainted sixty times a second costs as much
 as playback — for nothing. The monitor stops as soon as playback stops, which shows most on a
 laptop: the fan goes quiet, the battery lasts.
+
+---
+
+## When a clip cannot be shown
+
+The monitor then shows this in place of the picture:
+
+> This clip could not be shown: its media is missing, or its format cannot be read here.
+
+Three picture formats import without ever showing in a monitor — **`.exr`, `.tif` and `.tiff`**.
+They do enter the project and they do drop onto a track, but the studio's picture decoder does
+not open them. A truncated or damaged video file gives the same message.
+
+**The studio converts nothing.** The message says what is happening; it does not replace your
+file. To edit an `.exr` or a `.tif`, convert it to `.png` yourself before importing it.
+
+> **The message only shows when the monitor has nothing else to show.** An unreadable clip laid
+> **over** a track that does display leaves that one visible and simply goes missing: covering a
+> perfectly good picture to flag another one would cost more than it gives.
 
 ---
 

@@ -295,6 +295,11 @@ above white is clipped.
 An `.exr` does import, but it is catalogued as an **image**, not as a sky. It still works as a source
 for a *skybox*: you simply have to go and find it among the images.
 
+**Three formats import without ever showing in a Video monitor** — `.exr`, `.tif` and `.tiff`.
+The clip drops onto a track and keeps its duration, but the monitor says "This clip could not be
+shown" in place of the picture. The studio does not convert them: see
+[The Video workspace](10-video-workspace.md#when-a-clip-cannot-be-shown).
+
 ### The file is not copied
 
 The studio creates a **link** to your file, where it sits. Moving or deleting the original breaks the

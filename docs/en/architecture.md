@@ -537,6 +537,12 @@ video track, and a still-picture sink everywhere else — that one answers the s
 position, a picture having no time of its own. `TimelineEngine.seek` never sees the difference: it
 asks for a frame and gets one.
 
+**What it does not overlook is a missing frame.** A position with no sample and an asset that
+never opened both answer `null`; `DecoderPool.undecodable(assetId)` tells them apart, and that is
+where the monitor's "This clip could not be shown" comes from, carried to React by `onUnreadable`.
+The engine only reports it when **no** track painted: covering a good picture to flag the one
+above it would be a worse silence.
+
 Open sinks are bounded by the `DecoderPool`, one LRU per engine, and it holds **two ceilings
 rather than one** — because the two kinds are scarce for different reasons. A video sink takes a
 hardware decoder, of which a consumer GPU offers only two to four; a still sink takes none, it

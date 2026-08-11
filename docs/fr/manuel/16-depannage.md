@@ -393,6 +393,9 @@ sur le contenu, un format exotique, ou un fichier protégé par des droits numé
 **Quoi faire.** Ouvrez-le dans un autre lecteur pour vérifier qu’il est sain. S’il l’est,
 convertissez-le dans un format courant (`.mp4`, `.wav`, `.png`).
 
+> **À ne pas confondre** avec « Ce clip n’a pas pu être affiché », plus bas : là, l’import a
+> réussi, et c’est l’affichage dans un moniteur qui échoue.
+
 ### « Échec » / « Interrompu »
 
 **Échec** : la préparation s’est arrêtée sur un problème. **Interrompu** : vous l’avez arrêtée
@@ -471,6 +474,22 @@ dans le champ.
 
 Le micro n'entend rien. Vérifiez lequel votre ordinateur utilise (Réglages Système ▸ Son ▸
 Entrée), et que ce n'est pas une entrée muette — certaines interfaces audio en exposent.
+
+---
+
+## Les messages du montage
+
+### « Ce clip n’a pas pu être affiché : son média est introuvable, ou son format n’est pas lisible ici. »
+
+**Ce que ça veut dire.** Le clip est bien là, sur sa piste, mais le moniteur n’arrive pas à en
+tirer une image. Il le dit à la place de l’image, au lieu de rester noir.
+
+**Les causes ordinaires :** un `.exr`, un `.tif` ou un `.tiff` — ces trois-là s’importent comme
+images mais aucun moniteur ne les affiche — ou un fichier vidéo tronqué.
+
+**Quoi faire.** Convertissez le fichier en `.png` (image) ou en `.mp4` (vidéo) avec un autre
+outil, puis réimportez-le : **le studio ne convertit rien tout seul.** Le clip reste sur sa
+piste et garde sa durée ; seule son image manque.
 
 ---
 

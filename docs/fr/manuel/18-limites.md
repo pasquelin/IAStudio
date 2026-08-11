@@ -306,6 +306,11 @@ dépasse le blanc est écrêté.
 Un `.exr` s’importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
 même comme source pour une *skybox* : il faut simplement aller le chercher dans les images.
 
+**Trois formats s’importent sans jamais s’afficher dans un moniteur Vidéo** — `.exr`, `.tif` et
+`.tiff`. Le clip se pose sur une piste et garde sa durée, mais le moniteur annonce à la place de
+l’image « Ce clip n’a pas pu être affiché ». Le studio ne les convertit pas : voir
+[L’espace Vidéo](10-espace-video.md#quand-un-clip-ne-peut-pas-safficher).
+
 ### Le fichier n’est pas copié
 
 Le studio crée un **lien** vers votre fichier, là où il se trouve. Déplacer ou supprimer

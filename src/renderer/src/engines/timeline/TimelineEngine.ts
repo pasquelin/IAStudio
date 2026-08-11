@@ -110,6 +110,18 @@ export type TimelineEngineDeps = {
   audioTime?: () => number | null
   /** Fires on both sides of a transport change, including a pause forced by the token. */
   onPlayingChange?: (playing: boolean) => void
+  /**
+   * Whether the frame just painted left a clip unshown because its media could not be read.
+   *
+   * `unreadable` rather than the pool's `undecodable`, and the difference is the point: the pool
+   * states a mechanical fact — this open failed, it will not be retried — where a failed fetch
+   * for a moved file counts as much as a format Chromium refuses. What reaches the screen can
+   * only claim the second.
+   *
+   * Reported on every seek rather than once per asset: the answer belongs to the playhead, and
+   * a message raised where a `.exr` sits has to fall again on the clip that follows it.
+   */
+  onUnreadable?: (unreadable: boolean) => void
 }
 
 /**
@@ -208,7 +220,10 @@ export class TimelineEngine {
 
     this.application = application
     this.layout()
-    this.draw()
+    // Seeks rather than draws: the first `apply` lands while Pixi is still starting, `seek`
+    // returns on a missing application, and nothing else asks again — a monitor mounted on a
+    // sequence already positioned showed the backdrop and waited for the playhead to move.
+    void this.seek(this.state.playhead)
   }
 
   apply(state: SequenceState): void {
@@ -224,6 +239,8 @@ export class TimelineEngine {
 
     this.generation += 1
     const generation = this.generation
+    let unreadable = false
+    let painted = false
 
     for (const track of videoTracksByDepth(this.state)) {
       const sprite = this.spriteFor(track.id)
@@ -242,10 +259,12 @@ export class TimelineEngine {
       }
       if (!frame) {
         sprite.visible = false
+        if (this.pool.undecodable(clip.assetId)) unreadable = true
         continue
       }
 
       sprite.visible = true
+      painted = true
       createFrameSink({
         upload: uploaded =>
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
@@ -253,6 +272,10 @@ export class TimelineEngine {
       this.fit(sprite)
     }
 
+    // Only when the monitor is showing nothing at all: the message covers the whole picture, and
+    // laying it over a track that did decode would trade one silence for a worse lie. A layer
+    // lost under one that painted stays silent, and that half is still open.
+    this.deps.onUnreadable?.(unreadable && !painted)
     this.draw()
   }
 
