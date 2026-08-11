@@ -153,8 +153,8 @@ Select a clip and look at the **Inspector**, in the right column.
 | **End** | where it finishes |
 | **Duration** | its length |
 | **In point** | where in the original file it starts |
-| **Fade in** | a rise from black or silence, at the start |
-| **Fade out** | a fall to black or silence, at the end |
+| **Fade in** | a rise from black, at the start — drawn on a sound clip, not yet heard |
+| **Fade out** | a fall to black, at the end — same reservation for sound |
 | **Speed** | 1 = normal, 0.5 = half speed, 2 = double speed |
 | **Gain** | the volume, in decibels. 0 leaves the sound as recorded |
 
@@ -199,6 +199,25 @@ If ffmpeg is missing there is no proxy, and moving through large files becomes l
 **At rest, the monitor draws nothing.** A still frame repainted sixty times a second costs as much
 as playback — for nothing. The monitor stops as soon as playback stops, which shows most on a
 laptop: the fan goes quiet, the battery lasts.
+
+---
+
+## The sound of the edit
+
+**The Program monitor plays the audio tracks during playback.** Press play: every clip laid on a
+sound track is heard in its place, at its gain and at its speed, and a track muted or left out of
+a solo goes quiet at once — without waiting for the clip in progress to end.
+
+Four things worth knowing, because they show:
+
+- **Sound only comes out during playback.** Dragging the playhead by hand plays nothing: it is the
+  picture that follows the cursor, not the sound.
+- **The Source monitor stays silent**, even on a selected sound clip.
+- **A video's own sound is not played yet**: only sound tracks are. A video laid on a picture track
+  is seen without being heard.
+- **The first sound may take a moment to arrive**: the file is decoded whole before it plays. A
+  clip whose start went by in the meantime does not catch up, it is skipped — otherwise the sound
+  would stay behind the picture for the rest of the clip.
 
 ---
 

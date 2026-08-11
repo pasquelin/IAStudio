@@ -3,6 +3,12 @@ import { createClock, type Clock } from './clock'
 import { createDecoderPool, type DecoderPool, type SinkLike } from './decoder-pool'
 import { playbackToken } from './playback'
 import {
+  createSoundScheduler,
+  SOUND_HORIZON,
+  type SoundPort,
+  type SoundScheduler,
+} from './sound-schedule'
+import {
   clipEnd,
   EMPTY_SEQUENCE,
   playsThrough,
@@ -99,6 +105,11 @@ export function createFrameSink({ upload }: { upload: (frame: VideoFrame) => voi
 
 export type TimelineEngineDeps = {
   openSink: (assetId: string) => Promise<SinkLike>
+  /**
+   * Where the sound goes. Required rather than optional: a player silent because a dependency
+   * was forgotten says nothing about it, and this repository has paid that once already.
+   */
+  sound: SoundPort
   maxDecoders: number
   /** Still pictures hold no decoder; their ceiling bounds memory, not silicon. */
   maxPictures: number
@@ -144,11 +155,13 @@ export class TimelineEngine {
   private laidOut = ''
 
   private readonly clock: Clock
+  private readonly sound: SoundScheduler
   private frameHandle: number | null = null
 
   constructor(private readonly deps: TimelineEngineDeps) {
     // First child, so every layer added later composites over it.
     this.frame.addChild(this.backdrop)
+    this.sound = createSoundScheduler({ port: deps.sound, horizon: SOUND_HORIZON })
     this.pool = createDecoderPool({
       open: deps.openSink,
       maxDecoders: deps.maxDecoders,
@@ -165,6 +178,9 @@ export class TimelineEngine {
 
     // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
     playbackToken.acquire(this.deps.owner, () => this.pause())
+    // Sound first: it wakes the output, and the clock asks that same output whether to follow it
+    // — asked before, the answer is always no and the sequence runs on the wall clock instead.
+    this.sound.start(this.state.playhead)
     this.clock.start(this.state.playhead)
 
     const step = (): void => {
@@ -175,6 +191,9 @@ export class TimelineEngine {
       }
 
       this.deps.onTime?.(time)
+      // Planned from the frame loop rather than from `seek`: a seek also happens while paused,
+      // where scrubbing must stay silent, and it happens per video track rather than per frame.
+      this.sound.pump(time)
       void this.seek(time)
       this.frameHandle = requestAnimationFrame(step)
     }
@@ -189,6 +208,7 @@ export class TimelineEngine {
     cancelAnimationFrame(this.frameHandle)
     this.frameHandle = null
     this.clock.stop()
+    this.sound.stop()
     playbackToken.release(this.deps.owner)
     this.deps.onTime?.(this.clock.now())
     this.deps.onPlayingChange?.(false)
@@ -228,6 +248,7 @@ export class TimelineEngine {
 
   apply(state: SequenceState): void {
     this.state = state
+    this.sound.apply(state)
     this.layout()
     // While playing, the frame loop owns the playhead; seeking here too would fight it.
     if (!this.playing()) void this.seek(state.playhead)

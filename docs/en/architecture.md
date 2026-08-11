@@ -477,7 +477,7 @@ Six of them, no React inside any one.
 |---|---|---|
 | `CanvasEngine` | PixiJS 8.19 | the image document: layers, shapes, strokes |
 | `SceneRenderer` | three.js 0.185 | the 3D scene: meshes, lights, gizmos, camera |
-| `TimelineEngine` | mediabunny + Canvas | the sequence: clips, playback, waveforms, filmstrips |
+| `TimelineEngine` | mediabunny + Canvas + Web Audio | the sequence: clips, playback of picture AND sound, waveforms, filmstrips |
 | `engines/audio` | plain sample arrays | the sound edit: crop, fades, gain, normalise, trim silence |
 | `SkyboxRenderer` | `ViewportEngine` | the sky from the inside: sun, grading, probes |
 | `TextureRenderer` | `ViewportEngine` | the material on a shape: PBR channels, environment, tiling |
@@ -496,6 +496,10 @@ decides, and running is an order of passage computed and then walked.
 The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
 three: the edit is the state, never the buffer currently in memory.
+
+**That is sound EDITING. PLAYBACK is a second pair, elsewhere** — `sound-schedule.ts` and
+`sound-port.ts`, under `engines/timeline/`, because it reads a sequence of clips rather than one
+file. The split is the same: the arithmetic on one side, what only a browser can do on the other.
 
 Each pairs with a plain state module (`canvas-state.ts`, `scene-state.ts`, `timeline-state.ts`)
 and a command module. Commands are the only way state changes, which is what makes undo a
@@ -530,6 +534,24 @@ Playback goes through a **single token**, `playbackToken` — a module value in
 the means to stop, and the next acquisition cuts the previous one off. Two active players is how
 scrubbing starts stuttering for no visible reason. The timeline and the Audio workspace's waveform
 both take it from the same place.
+
+**What a monitor makes you HEAR goes through a second port, and its arithmetic is pure.**
+`engines/timeline/sound-schedule.ts` knows nothing but numbers: where a slice lands on the output
+clock, what a load that arrived late must skip rather than play late, and how much source a
+sped-up clip spends. `sound-port.ts` holds what only a browser can do — one `AudioContext` per
+window, opened on the first sound and never closed, the browser's own decoder, and one
+`AudioBufferSourceNode` per clip.
+
+A clip is planned **whole** as it enters the one-second horizon, never window by window: a source
+restarted at every joint is heard as a click. The samples themselves are shared per asset and
+reference counted (`engines/core/ref-cache.ts`) — `decodeAudioData` decodes the **file**, not the
+share of it one clip takes.
+
+**The output clock is the master whenever it runs.** `TimelineEngine.play` wakes the sound
+**before** starting its clock, because the clock asks only once whether there is an audio clock to
+follow; asked too early it would answer no for the whole playback, and the picture would drift from
+the sound in under a minute. The port answers `null` while the output is not running — a suspended
+output freezes its time, and hanging onto it would stop the sequence rather than play it.
 
 **What a monitor shows comes from a sink, and the engine picks which one.**
 `engines/timeline/sink-port.ts` opens a mediabunny `VideoSampleSink` where the asset carries a

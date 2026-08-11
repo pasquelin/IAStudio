@@ -7,6 +7,7 @@ import { EmptyState } from '@/design/EmptyState'
 import { Timecode } from '@/design/Timecode'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
 import { openAssetSink } from '@/engines/timeline/sink-port'
+import { createSoundPort } from '@/engines/timeline/sound-port'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
@@ -58,8 +59,13 @@ export function Monitor({
     const element = hostRef.current
     if (!element) return
 
+    const sound = createSoundPort()
     const created = new TimelineEngine({
       openSink: openAssetSink,
+      sound,
+      // The output is the master clock whenever it runs: driving sound from the frame loop
+      // drifts against it audibly in under a minute, and both media then tell a different time.
+      audioTime: sound.now,
       maxDecoders: MAX_DECODERS,
       maxPictures: MAX_PICTURES,
       owner,

@@ -497,6 +497,23 @@ piste et garde sa durée ; seule son image manque.
 
 Ceux-là sont les plus déroutants : rien ne s’écrit, mais quelque chose ne va pas.
 
+### « Je n’entends rien pendant la lecture »
+
+Il n’y a pas de message : le son se tait sans rien dire. Sept causes, de la plus banale à la
+plus technique :
+
+1. **La piste est muette, ou une autre est en solo.** Solo l’emporte sur tout : dès qu’une piste
+   passe en solo, les autres se taisent. Voir [l’en-tête d’une piste](10-espace-video.md).
+2. **Vous déplacez la tête de lecture à la main.** Le son ne sort qu’en lecture ; le scrub est muet.
+3. **Le clip est sur une piste image.** Une vidéo posée là se voit sans s’entendre : seules les
+   pistes de son sont jouées.
+4. **Vous regardez le moniteur Source.** Il est muet, toujours ; c’est le Programme qui joue.
+5. **Le gain du clip est au plancher.** L’inspecteur d’un clip le donne en décibels.
+6. **Le média a bougé depuis l’import.** Le studio ne le redemande pas soixante fois par seconde :
+   il abandonne le clip pour la session. Réimportez le fichier.
+7. **Le tout premier son tarde.** Le fichier est décodé entier avant d’être joué ; sur une longue
+   nappe, la première seconde peut être sautée plutôt que jouée en retard.
+
 ### « Je peins et rien ne se dépose »
 
 **Regardez le curseur avant de glisser.** S’il est un sens interdit, l’outil vous dit qu’il ne

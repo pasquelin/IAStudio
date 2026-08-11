@@ -1,14 +1,16 @@
 import { Texture } from 'pixi.js'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clipAt,
   createFrameSink,
   fitInside,
   swapTexture,
+  TimelineEngine,
   uploadNow,
   videoTracksByDepth,
 } from './TimelineEngine'
-import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import { clipFixture, sequenceWith, settled, trackFixture } from './timeline-fixtures'
+import type { SoundCue, SoundPort } from './sound-schedule'
 import type { Clip, SequenceState } from './timeline-state'
 
 const clip = (id: string, start: number, duration: number, inPoint = 0): Clip =>
@@ -127,5 +129,152 @@ describe('timeline engine', () => {
 
     expect(() => sink.push(frame(close))).toThrow()
     expect(close).toHaveBeenCalledTimes(1)
+  })
+})
+
+/**
+ * The transport drives the sound as it drives the picture. The engine is built without a canvas
+ * here: `seek` gives up without one, and what is under test happens before it.
+ */
+describe('driving the sound', () => {
+  const soundPort = () => {
+    const cues: SoundCue[] = []
+    const loaded: string[] = []
+    const stop = vi.fn()
+    const port: SoundPort = {
+      now: () => 0,
+      resume: vi.fn(),
+      load: vi.fn(async assetId => {
+        loaded.push(assetId)
+        return (cue: SoundCue) => {
+          cues.push(cue)
+          return { stop }
+        }
+      }),
+    }
+    return { port, cues, loaded, stop }
+  }
+
+  /** The frame loop, one step at a time: a real one would run against the wall clock. */
+  const frames: Array<() => void> = []
+  vi.stubGlobal('requestAnimationFrame', (step: () => void) => frames.push(step))
+  vi.stubGlobal('cancelAnimationFrame', vi.fn())
+
+  const audioSequence = (clips: Clip[], extra = {}): SequenceState =>
+    sequenceWith([trackFixture('A1', 'audio', clips, extra)])
+
+  /** Seconds on the output clock, which the engine's own clock follows when it is given one. */
+  let elapsed = 0
+
+  const engineWith = (port: SoundPort): TimelineEngine => {
+    elapsed = 0
+    return new TimelineEngine({
+      openSink: () => Promise.reject(new Error('no decoder in a test')),
+      sound: port,
+      maxDecoders: 1,
+      maxPictures: 1,
+      owner: 'document',
+      audioTime: () => elapsed,
+    })
+  }
+
+  afterEach(() => {
+    frames.length = 0
+  })
+
+  it('plays the sound under the playhead as soon as the transport starts', async () => {
+    const { port, loaded } = soundPort()
+    const engine = engineWith(port)
+    engine.apply(audioSequence([clipFixture('a', 0, 4_000_000)]))
+
+    engine.play()
+    await settled()
+
+    expect(loaded).toEqual(['asset-a'])
+    engine.dispose()
+  })
+
+  /**
+   * Planned once at the start and never again, only the first second of a sequence would sound:
+   * everything past the horizon is planned by the frame loop as the playhead reaches it.
+   */
+  it('plans what the playhead reaches, frame after frame', async () => {
+    const { port, loaded } = soundPort()
+    const engine = engineWith(port)
+    engine.apply(audioSequence([clipFixture('far', 5_000_000, 2_000_000)]))
+
+    engine.play()
+    await settled()
+    expect(loaded).toEqual([])
+
+    elapsed = 4.5
+    frames.shift()?.()
+    await settled()
+
+    expect(loaded).toEqual(['asset-far'])
+    engine.dispose()
+  })
+
+  it('silences the sequence when the transport pauses', async () => {
+    const { port, stop } = soundPort()
+    const engine = engineWith(port)
+    engine.apply(audioSequence([clipFixture('a', 0, 4_000_000)]))
+
+    engine.play()
+    await settled()
+    engine.pause()
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    engine.dispose()
+  })
+
+  it('hands the sequence over on every change, so muting a track is heard at once', async () => {
+    const { port, stop } = soundPort()
+    const engine = engineWith(port)
+    const clips = [clipFixture('a', 0, 4_000_000)]
+    engine.apply(audioSequence(clips))
+
+    engine.play()
+    await settled()
+    engine.apply(audioSequence(clips, { muted: true }))
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    engine.dispose()
+  })
+
+  /**
+   * The clock asks the output whether to follow it, once, when the transport starts. Asked
+   * before the output was woken, the answer is always no — and the picture then runs on the
+   * wall clock while the sound runs on the output's, which drifts audibly in under a minute.
+   */
+  it('wakes the output before the clock decides which one to follow', () => {
+    const { port } = soundPort()
+    const order: string[] = []
+    const watching = {
+      ...port,
+      resume: () => order.push('sound'),
+      now: () => {
+        order.push('clock')
+        return 0
+      },
+    }
+    const engine = engineWith(watching)
+
+    engine.play()
+
+    expect(order[0]).toBe('sound')
+    engine.dispose()
+  })
+
+  it('stays silent while a paused playhead is dragged over a clip', async () => {
+    const { port, loaded } = soundPort()
+    const engine = engineWith(port)
+    engine.apply(audioSequence([clipFixture('a', 0, 4_000_000)]))
+
+    await engine.seek(1_000_000)
+    await settled()
+
+    expect(loaded).toEqual([])
+    engine.dispose()
   })
 })

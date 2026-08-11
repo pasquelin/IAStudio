@@ -493,7 +493,7 @@ Six, aucun React à l’intérieur d’aucun.
 |---|---|---|
 | `CanvasEngine` | PixiJS 8.19 | le document image : calques, formes, tracés |
 | `SceneRenderer` | three.js 0.185 | la scène 3D : maillages, lumières, gizmos, caméra |
-| `TimelineEngine` | mediabunny + Canvas | la séquence : clips, lecture, formes d’onde, vignettes |
+| `TimelineEngine` | mediabunny + Canvas + Web Audio | la séquence : clips, lecture image ET son, formes d’onde, vignettes |
 | `engines/audio` | tableaux d’échantillons | l’édition sonore : rogner, fondus, gain, normaliser, silences |
 | `SkyboxRenderer` | `ViewportEngine` | le ciel vu de l’intérieur : soleil, étalonnage, sondes |
 | `TextureRenderer` | `ViewportEngine` | la matière posée sur une forme : canaux PBR, environnement, tiling |
@@ -513,6 +513,11 @@ ordre de passage calculé puis parcouru.
 Celui du son est une paire de modules plutôt qu’une classe — `audio-data.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même
 invariant que les trois autres : l’édition est l’état, jamais le buffer en mémoire.
+
+**C’est l’ÉDITION sonore. La LECTURE est une seconde paire, ailleurs** — `sound-schedule.ts` et
+`sound-port.ts`, dans `engines/timeline/`, parce qu’elle lit une séquence de clips et non un
+fichier. Le partage y est le même : l’arithmétique d’un côté, ce que seul un navigateur sait faire
+de l’autre.
 
 Chacun va de pair avec un module d’état pur (`canvas-state.ts`, `scene-state.ts`,
 `timeline-state.ts`) et un module de commandes. Les commandes sont la seule voie par laquelle
@@ -550,6 +555,24 @@ La lecture passe par un **jeton unique**, `playbackToken` — une valeur de modu
 de quoi l'arrêter, et l'acquisition suivante coupe le précédent. Deux lecteurs actifs, et le
 scrubbing se met à saccader sans raison visible. La timeline et la forme d'onde de l'espace Audio
 le prennent tous les deux au même endroit.
+
+**Ce qu'un moniteur fait ENTENDRE passe par un second port, et son arithmétique est pure.**
+`engines/timeline/sound-schedule.ts` ne connaît que des nombres : quand un extrait tombe sur
+l'horloge de sortie, ce qu'un chargement arrivé en retard doit sauter plutôt que jouer tard, et
+combien de source dépense un clip accéléré. `sound-port.ts` tient ce que seul un navigateur sait
+faire — une `AudioContext` unique par fenêtre, ouverte au premier son et jamais fermée, le
+décodeur du navigateur, et un `AudioBufferSourceNode` par clip.
+
+Un clip est planifié **entier** quand il entre dans l'horizon d'une seconde, jamais fenêtre par
+fenêtre : une source relancée à chaque jointure s'entend comme un clic. Les échantillons, eux, sont
+partagés par asset et comptés par référence (`engines/core/ref-cache.ts`) — `decodeAudioData`
+décode le **fichier**, pas la part qu'un clip en prend.
+
+**L'horloge de sortie est maître dès qu'elle tourne.** `TimelineEngine.play` réveille le son
+**avant** de démarrer son horloge, parce que celle-ci demande une seule fois s'il y a une horloge
+audio à suivre ; interrogée trop tôt, elle répondrait non pour toute la lecture et l'image
+dériverait du son en moins d'une minute. Le port répond `null` tant que la sortie ne tourne pas —
+une sortie suspendue fige son temps, et s'y accrocher arrêterait la séquence au lieu de la jouer.
 
 **Ce qu'un moniteur affiche vient d'un sink, et le sink est choisi par le moteur.**
 `engines/timeline/sink-port.ts` ouvre un `VideoSampleSink` mediabunny là où l'asset porte une piste

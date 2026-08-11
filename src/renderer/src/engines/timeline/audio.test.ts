@@ -24,6 +24,8 @@ describe('audio scheduling', () => {
         at: 1_000_000,
         sourceStart: 0,
         duration: 2_000_000,
+        speed: 1,
+        gain: 0,
       },
     ])
   })
@@ -48,6 +50,15 @@ describe('audio scheduling', () => {
   it('ignores video tracks: the picture is not scheduled, it is painted', () => {
     const state = sequenceWith([trackFixture('V1', 'video', [clip('v', 0, 1)])])
     expect(audioChunksIn(state, 0, 2_000_000)).toEqual([])
+  })
+
+  // Both are the clip's own, and whoever plays the chunk has no other way of knowing them.
+  it("carries the clip's rate and gain over to whoever plays it", () => {
+    const loud = { ...clip('a', 0, 1_000_000), speed: 1.5, gain: -6 }
+    expect(audioChunksIn(withAudio([loud]), 0, 1_000_000)[0]).toMatchObject({
+      speed: 1.5,
+      gain: -6,
+    })
   })
 
   it('accounts for speed when mapping into the source', () => {

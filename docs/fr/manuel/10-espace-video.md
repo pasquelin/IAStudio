@@ -154,8 +154,8 @@ Sélectionnez un clip, et regardez l’**Inspecteur**, dans la colonne de droite
 | **Fin** | où il finit |
 | **Durée** | sa longueur |
 | **Point d’entrée** | à quel endroit du fichier d’origine il commence |
-| **Fondu d’entrée** | une montée depuis le noir ou le silence, au début |
-| **Fondu de sortie** | une descente vers le noir ou le silence, à la fin |
+| **Fondu d’entrée** | une montée depuis le noir, au début — dessinée sur un clip son, pas encore entendue |
+| **Fondu de sortie** | une descente vers le noir, à la fin — même réserve pour le son |
 | **Vitesse** | 1 = normal, 0,5 = deux fois plus lent, 2 = deux fois plus rapide |
 | **Gain** | le volume, en décibels. 0 laisse le son tel qu’il a été enregistré |
 
@@ -201,6 +201,25 @@ laborieuse. Voir [Les assets](07-assets.md#si-la-préparation-vidéo-est-indispo
 **À l’arrêt, le moniteur ne dessine rien.** Une image fixe repeinte soixante fois par seconde
 consomme autant qu’une lecture — pour rien. Le moniteur s’arrête dès que la lecture s’arrête, ce qui
 se remarque surtout sur un portable : le ventilateur se tait, la batterie tient.
+
+---
+
+## Le son du montage
+
+**Le moniteur Programme joue les pistes audio pendant la lecture.** Appuyez sur lecture : chaque
+clip posé sur une piste son se fait entendre à sa place, à son gain et à sa vitesse, et une piste
+muette ou hors solo se tait aussitôt — sans attendre la fin du clip en cours.
+
+Quatre choses à savoir, parce qu’elles se remarquent :
+
+- **Le son ne sort qu’en lecture.** Déplacer la tête de lecture à la main ne fait rien entendre :
+  c’est l’image qui suit le curseur, pas le son.
+- **Le moniteur Source reste muet**, même sur un clip son sélectionné.
+- **Le son d’une vidéo n’est pas encore joué** : seules les pistes de son le sont. Une vidéo posée
+  sur une piste image se voit sans s’entendre.
+- **Le premier son peut mettre un instant à venir** : le fichier est décodé entier avant d’être
+  joué. Un clip dont le début est déjà passé pendant ce temps ne rattrape pas son retard, il est
+  sauté — le son resterait sinon derrière l’image pour tout le reste du clip.
 
 ---
 

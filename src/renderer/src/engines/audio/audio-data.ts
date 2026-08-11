@@ -63,9 +63,14 @@ export function applyFades(data: AudioData, fadeIn: Us, fadeOut: Us): AudioData 
   })
 }
 
+/** Decibels as a linear amplitude — what every gain, threshold and output actually multiplies by. */
+export function fromDb(db: number): number {
+  return 10 ** (db / 20)
+}
+
 export function applyGain(data: AudioData, db: number): AudioData {
   if (db === 0) return data
-  const factor = 10 ** (db / 20)
+  const factor = fromDb(db)
 
   return mapChannels(data, channel => {
     const scaled = channel.slice()
@@ -130,7 +135,7 @@ export function edgeSilences(
   const total = frameCount(data)
   if (total === 0) return []
 
-  const floor = 10 ** (thresholdDb / 20)
+  const floor = fromDb(thresholdDb)
   const loud = (frame: number): boolean =>
     data.channels.some(channel => Math.abs(channel[frame] ?? 0) > floor)
 
