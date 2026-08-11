@@ -178,8 +178,10 @@ export class TimelineEngine {
 
     // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
     playbackToken.acquire(this.deps.owner, () => this.pause())
-    this.clock.start(this.state.playhead)
+    // Sound first: it wakes the output, and the clock asks that same output whether to follow it
+    // — asked before, the answer is always no and the sequence runs on the wall clock instead.
     this.sound.start(this.state.playhead)
+    this.clock.start(this.state.playhead)
 
     const step = (): void => {
       const time = this.clock.now()

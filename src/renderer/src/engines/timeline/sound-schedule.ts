@@ -1,9 +1,13 @@
 import { fromDb } from '../audio/audio-data'
+import { createRefCache } from '../core/ref-cache'
 import { audioChunksIn, type AudioChunk } from './audio'
+import { usToSeconds } from './decoder-pool'
 import {
   EMPTY_SEQUENCE,
   playsThrough,
+  SECOND,
   sequenceDuration,
+  trackById,
   type SequenceState,
   type Us,
 } from './timeline-state'
@@ -32,8 +36,13 @@ export type LoadedSound = (cue: SoundCue) => PlayingSound
  * are — a sound planned a frame late is heard, a picture painted a frame late is not.
  */
 export type SoundPort = {
-  /** Seconds on the output's own clock. */
-  now: () => number
+  /**
+   * Seconds on the output's own clock, or `null` while it is not running.
+   *
+   * A suspended output does not advance its clock: anchoring on it would peg the sequence to an
+   * instant that never moves, and the same answer feeds the engine's clock.
+   */
+  now: () => number | null
   /** An output built before any gesture starts suspended, and every cue lands in silence. */
   resume: () => void
   load: (assetId: string) => Promise<LoadedSound>
@@ -48,11 +57,11 @@ export type SoundPort = {
  * tenth of a second is the one thing an editor hears immediately.
  */
 export function cueFor(chunk: AudioChunk, origin: number, now: number): SoundCue | null {
-  const due = origin + chunk.at / 1_000_000
+  const due = origin + usToSeconds(chunk.at)
   const late = Math.max(0, now - due)
   // Both in source seconds: a clip at twice the rate spends two seconds of source per second.
-  const offset = chunk.sourceStart / 1_000_000 + late * chunk.speed
-  const duration = (chunk.duration / 1_000_000 - late) * chunk.speed
+  const offset = usToSeconds(chunk.sourceStart) + late * chunk.speed
+  const duration = (usToSeconds(chunk.duration) - late) * chunk.speed
 
   if (duration <= 0) return null
   return { when: due + late, offset, duration, rate: chunk.speed, gain: fromDb(chunk.gain) }
@@ -63,7 +72,13 @@ export function cueFor(chunk: AudioChunk, origin: number, now: number): SoundCue
  * start, and the amount of sound that has to be silenced when the transport stops — a second
  * covers a take of music on a warm disk without holding the whole sequence in memory.
  */
-export const SOUND_HORIZON: Us = 1_000_000
+export const SOUND_HORIZON: Us = SECOND
+
+/**
+ * How often the sequence is looked at. The horizon leaves a second of slack, so reading it on
+ * every frame would build a chunk per audio clip sixty times a second to plan the same nothing.
+ */
+const PLAN_STEP: Us = SECOND / 5
 
 export type SoundSchedulerDeps = {
   port: SoundPort
@@ -80,91 +95,133 @@ export type SoundScheduler = {
   stop: () => void
 }
 
-/** A clip in flight: the track it answers to, where it ends, and what silences it. */
-type Scheduled = { trackId: string; until: Us; stop: () => void }
+/** A clip in flight: what it holds, where it ends, and what silences it. */
+type Scheduled = { trackId: string; assetId: string; until: Us; stop: () => void }
 
 /**
  * Plays what the sequence says, one source per clip.
  *
- * A clip is planned **whole**, once, as it enters the horizon — not sliced window by window.
- * That is what keeps a sound loaded no longer than the clip that needs it: this pool holds no
- * cache of its own, where the picture needs two of them (`decoder-pool`, `image-cache`), and a
- * take of music decoded stereo costs several megabytes a minute.
- *
- * The cost of it is a clip playing twice from the same asset loading it twice.
+ * A clip is planned **whole**, once, as it enters the horizon — not sliced window by window,
+ * which would restart a source at every joint and be heard as a click. The samples themselves
+ * are shared and reference counted by asset: `decodeAudioData` decodes the *file*, not the
+ * clip's share of it, so the same jingle laid thirty times must not be decoded thirty times.
  */
 export function createSoundScheduler({ port, horizon }: SoundSchedulerDeps): SoundScheduler {
   let state: SequenceState = EMPTY_SEQUENCE
-  /** The output time the sequence's zero sits at, or null while nothing plays. */
+  /** The output time the sequence's zero sits at, or null until the output starts running. */
   let origin: number | null = null
+  /** Whether the transport is running — distinct from `origin`, which waits for the output. */
+  let started = false
+  /** The last playhead the sequence was read at, so it is not read again on the next frame. */
+  let plannedAt: Us | null = null
   const playing = new Map<string, Scheduled>()
+  /**
+   * Assets the output could not read. Remembered rather than retried: a clip whose media moved
+   * would otherwise be fetched and decoded again on every frame it stays under the playhead,
+   * which is the very stutter `decoder-pool` remembers failures to avoid.
+   */
+  const unplayable = new Set<string>()
+
+  const sounds = createRefCache<LoadedSound>({
+    load: port.load,
+    // Nothing to free by hand: a loaded sound is a closure over decoded samples, and letting
+    // the last reference go is what releases them.
+    free: () => {},
+    onFailure: assetId => unplayable.add(assetId),
+  })
+
+  const drop = (clipId: string, entry: Scheduled): void => {
+    playing.delete(clipId)
+    sounds.release(entry.assetId)
+  }
 
   const schedule = (chunk: AudioChunk, anchor: number): void => {
     const entry: Scheduled = {
       trackId: chunk.trackId,
+      assetId: chunk.assetId,
       until: chunk.at + chunk.duration,
       stop: () => {},
     }
     playing.set(chunk.clipId, entry)
 
-    const forget = (): void => {
-      if (playing.get(chunk.clipId) === entry) playing.delete(chunk.clipId)
-    }
-
-    void port.load(chunk.assetId).then(sound => {
+    void sounds.acquire(chunk.assetId).then(sound => {
       // This entry, not this clip. A stop drops it, and a track muted then unmuted while the
       // load was in flight holds a *second* entry under the same clip — starting this one over
-      // it would play the clip twice, with only the newer one stoppable.
+      // it would play the clip twice, with only the newer one stoppable. Whoever drops an entry
+      // releases its sound, so this path never does.
       if (playing.get(chunk.clipId) !== entry) return
+      if (!sound) return drop(chunk.clipId, entry)
 
-      const cue = cueFor(chunk, anchor, port.now())
-      if (!cue) return forget()
-      entry.stop = sound(cue).stop
-    }, forget)
+      const now = port.now()
+      const cue = now === null ? null : cueFor(chunk, anchor, now)
+      // A slice whose start went by while it loaded stays in the map, silent: dropped, the
+      // frame loop would plan it again, and again, for as long as the clip lasts.
+      if (cue) entry.stop = sound(cue).stop
+    })
   }
 
   const pump = (time: Us): void => {
-    if (origin === null) return
+    if (!started) return
+
+    const now = port.now()
+    // The output wakes a beat after it is asked to: until it does, its clock says nothing and
+    // there is no instant to hang the sequence on.
+    if (now === null) return
+    origin ??= now - usToSeconds(time)
     const anchor = origin
 
-    // Not stopped, only let go of: a source was given the length of its clip and has run out on
-    // its own. Holding the entry would hold the samples behind it for the whole sequence.
-    for (const [clipId, entry] of playing) if (entry.until <= time) playing.delete(clipId)
+    if (plannedAt !== null && time >= plannedAt && time - plannedAt < PLAN_STEP) return
+    plannedAt = time
+
+    // Kept a horizon past its end rather than dropped on the beat: the source runs out on the
+    // output clock and the playhead on the engine's, and an entry let go of while its source
+    // still sounds is a sound `stop` can no longer reach.
+    for (const [clipId, entry] of playing) if (entry.until + horizon <= time) drop(clipId, entry)
 
     const horizonEnd = time + horizon
     // Asked to the end of the sequence rather than to the horizon: the horizon says which clips
     // to plan, the clip itself says how long it sounds, and a window would cut it short.
     for (const chunk of audioChunksIn(state, time, sequenceDuration(state))) {
-      if (chunk.at < horizonEnd && !playing.has(chunk.clipId)) schedule(chunk, anchor)
+      if (chunk.at >= horizonEnd) continue
+      if (playing.has(chunk.clipId) || unplayable.has(chunk.assetId)) continue
+      schedule(chunk, anchor)
     }
   }
 
   return {
     apply: next => {
       state = next
-      // Muting has to be heard at once — that is what the button means. The rest of an edit
-      // reaches only what is planned after it, as in any editor: a clip already sounding out is
-      // not re-cut under the playhead.
+      // Two edits are heard at once, because they say so: muting a track, and taking a clip
+      // away. Everything else — a trim, a gain, a speed — reaches the next clip planned rather
+      // than the one already sounding, which is what keeps a drag from restarting a source on
+      // every pointer move.
       for (const [clipId, entry] of playing) {
-        const track = next.tracks.find(candidate => candidate.id === entry.trackId)
-        if (track && playsThrough(next, track)) continue
+        const track = trackById(next, entry.trackId)
+        const audible =
+          track && playsThrough(next, track) && track.clips.some(clip => clip.id === clipId)
+        if (audible) continue
+
         entry.stop()
-        playing.delete(clipId)
+        drop(clipId, entry)
       }
     },
 
     start: time => {
+      started = true
       port.resume()
-      origin = port.now() - time / 1_000_000
       pump(time)
     },
 
     pump,
 
     stop: () => {
-      for (const entry of playing.values()) entry.stop()
-      playing.clear()
+      started = false
       origin = null
+      plannedAt = null
+      for (const [clipId, entry] of [...playing]) {
+        entry.stop()
+        drop(clipId, entry)
+      }
     },
   }
 }

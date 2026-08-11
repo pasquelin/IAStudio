@@ -9,7 +9,7 @@ import {
   uploadNow,
   videoTracksByDepth,
 } from './TimelineEngine'
-import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import { clipFixture, sequenceWith, settled, trackFixture } from './timeline-fixtures'
 import type { SoundCue, SoundPort } from './sound-schedule'
 import type { Clip, SequenceState } from './timeline-state'
 
@@ -137,8 +137,6 @@ describe('timeline engine', () => {
  * here: `seek` gives up without one, and what is under test happens before it.
  */
 describe('driving the sound', () => {
-  const settled = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
-
   const soundPort = () => {
     const cues: SoundCue[] = []
     const loaded: string[] = []
@@ -241,6 +239,30 @@ describe('driving the sound', () => {
     engine.apply(audioSequence(clips, { muted: true }))
 
     expect(stop).toHaveBeenCalledTimes(1)
+    engine.dispose()
+  })
+
+  /**
+   * The clock asks the output whether to follow it, once, when the transport starts. Asked
+   * before the output was woken, the answer is always no — and the picture then runs on the
+   * wall clock while the sound runs on the output's, which drifts audibly in under a minute.
+   */
+  it('wakes the output before the clock decides which one to follow', () => {
+    const { port } = soundPort()
+    const order: string[] = []
+    const watching = {
+      ...port,
+      resume: () => order.push('sound'),
+      now: () => {
+        order.push('clock')
+        return 0
+      },
+    }
+    const engine = engineWith(watching)
+
+    engine.play()
+
+    expect(order[0]).toBe('sound')
     engine.dispose()
   })
 

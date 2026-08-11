@@ -4,7 +4,13 @@ import type { LoadedSound, SoundCue, SoundPort } from './sound-schedule'
 /** What the port needs of an output, which is far less than an `AudioContext` offers. */
 export type SoundOutput = Pick<
   AudioContext,
-  'currentTime' | 'resume' | 'decodeAudioData' | 'createBufferSource' | 'createGain' | 'destination'
+  | 'currentTime'
+  | 'state'
+  | 'resume'
+  | 'decodeAudioData'
+  | 'createBufferSource'
+  | 'createGain'
+  | 'destination'
 >
 
 /**
@@ -52,10 +58,26 @@ function sharedOutput(): AudioContext {
  * silent tab, where jsdom has none to open at all.
  */
 export function createSoundPort(output: () => SoundOutput = sharedOutput): SoundPort {
+  /** Set by the two calls that legitimately want an output. Asking the time never does. */
+  let opened = false
+
+  /** Never the reason to build one: asking the time is what the engine's clock does per frame. */
+  const clock = (): number | null => {
+    if (!opened) return null
+    const running = output()
+    // A suspended output freezes `currentTime`, and both the schedule and the engine's clock
+    // read this: handing back a frozen instant would stop the sequence rather than let it run.
+    return running.state === 'running' ? running.currentTime : null
+  }
+
   return {
-    now: () => output().currentTime,
-    resume: () => void output().resume(),
+    now: clock,
+    resume: () => {
+      opened = true
+      void output().resume()
+    },
     load: async assetId => {
+      opened = true
       const bytes = await (await fetchAsset(assetId)).arrayBuffer()
       return playFrom(output(), await output().decodeAudioData(bytes))
     },

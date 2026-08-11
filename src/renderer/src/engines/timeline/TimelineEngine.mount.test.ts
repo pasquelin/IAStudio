@@ -55,10 +55,17 @@ vi.mock('pixi.js', () => ({
 const { TimelineEngine } = await import('./TimelineEngine')
 const { clipFixture, sequenceWith, trackFixture } = await import('./timeline-fixtures')
 
+/** No output in jsdom: the suite plays nothing, and every load is refused. */
+const silence = () => ({
+  now: () => null,
+  resume: vi.fn(),
+  load: () => Promise.reject(new Error('no output')),
+})
+
 const engineFor = (host: HTMLElement, onUnreadable?: (unreadable: boolean) => void) =>
   new TimelineEngine({
     openSink: () => Promise.reject(new Error('no decoder in a test')),
-    sound: { now: () => 0, resume: vi.fn(), load: () => Promise.reject(new Error('no output')) },
+    sound: silence(),
     maxDecoders: 1,
     maxPictures: 1,
     owner: host.id,
@@ -83,6 +90,7 @@ const engineOver = (
             holdsDecoder: true,
           })
         : Promise.reject(new Error('no decoder in a test')),
+    sound: silence(),
     maxDecoders: 2,
     maxPictures: 2,
     owner: host.id,

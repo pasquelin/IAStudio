@@ -20,6 +20,7 @@ const outputWith = () => {
 
   const output = {
     currentTime: 12,
+    state: 'running',
     resume: vi.fn(async () => {}),
     decodeAudioData: vi.fn(async () => decoded),
     createBufferSource: vi.fn(() => source),
@@ -43,20 +44,34 @@ const cue = (over: Partial<SoundCue> = {}): SoundCue => ({
 describe('the browser sound port', () => {
   it('reads the output clock, which is what the schedule anchors on', () => {
     const { output } = outputWith()
-    expect(createSoundPort(() => output).now()).toBe(12)
+    const port = createSoundPort(() => output)
+    port.resume()
+
+    expect(port.now()).toBe(12)
   })
 
   /**
-   * A monitor is mounted long before anyone presses play, and often never does. Built at mount,
-   * the output holds a device for a tab that stays silent — and jsdom has none to build at all.
+   * The engine's clock reads this on every frame, and it must never be the reason an output
+   * device is opened — a sequence with no sound would hold one for the life of the window.
    */
-  it('asks for no output until something is played', () => {
+  it('answers no time at all before anything was played', () => {
     const { output } = outputWith()
     const open = vi.fn(() => output)
 
-    createSoundPort(open)
-
+    expect(createSoundPort(open).now()).toBeNull()
     expect(open).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A suspended output freezes `currentTime`. Handed back as a time, it pegs the sequence to an
+   * instant that never moves — the playhead stops rather than the sound starting.
+   */
+  it('answers no time while the output is suspended', () => {
+    const { output } = outputWith()
+    const port = createSoundPort(() => ({ ...output, state: 'suspended' }))
+    port.resume()
+
+    expect(port.now()).toBeNull()
   })
 
   // Built before any gesture, an output starts suspended and every cue lands in silence.

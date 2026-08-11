@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { cueFor, createSoundScheduler, type SoundCue, type SoundPort } from './sound-schedule'
 import type { AudioChunk } from './audio'
-import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
+import { clipFixture, sequenceWith, settled, trackFixture } from './timeline-fixtures'
 import type { Clip, SequenceState } from './timeline-state'
 
 const chunk = (over: Partial<AudioChunk> = {}): AudioChunk => ({
@@ -40,9 +40,6 @@ const outputAt = (now = 0) => {
   const loaded: string[] = []
   return { port, cues, loaded, stops }
 }
-
-/** Loading is asynchronous, and a rejection takes more turns of the queue than a value. */
-const settled = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
 
 describe('cueing one slice', () => {
   it('places a chunk on the output clock, the sequence anchored at the origin', () => {
@@ -146,7 +143,7 @@ describe('scheduling a sequence', () => {
     await settled()
     expect(loaded).toEqual([])
 
-    scheduler.pump(1)
+    scheduler.pump(200_000)
     await settled()
     expect(loaded).toEqual(['asset-edge'])
   })
@@ -294,20 +291,136 @@ describe('scheduling a sequence', () => {
     expect(loaded).toEqual([])
   })
 
-  it('survives a load that fails, and plans the clip again on a later pass', async () => {
+  /**
+   * A clip whose media moved is the ordinary case, not the exotic one. Retried, it fetches and
+   * decodes on every frame it stays under the playhead — sixty times a second, for minutes.
+   */
+  it('remembers an asset the output could not read rather than retrying it', async () => {
     const { port } = outputAt()
     const failing: SoundPort = {
       ...port,
-      load: vi.fn(async () => Promise.reject(new Error('gone'))),
+      load: vi.fn(() => Promise.reject(new Error('gone'))),
     }
     const scheduler = createSoundScheduler({ port: failing, horizon: 1_000_000 })
     scheduler.apply(withAudio([clip('a', 0, 4_000_000)]))
 
     scheduler.start(0)
     await settled()
-    scheduler.pump(16_000)
+    scheduler.pump(500_000)
+    scheduler.pump(1_000_000)
     await settled()
 
-    expect(failing.load).toHaveBeenCalledTimes(2)
+    expect(failing.load).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The other half of the same stutter: the load lands *after* the slice was due, so there is
+   * nothing left to play. Dropped, the clip would be planned again on the very next frame.
+   */
+  it('gives up on a slice its load arrived too late for, without asking again', async () => {
+    let now = 0
+    const cues: SoundCue[] = []
+    const port: SoundPort = {
+      now: () => now,
+      resume: vi.fn(),
+      // The load spends two seconds of output time — longer than the clip it was asked for.
+      load: vi.fn(async () => {
+        now += 2
+        return (cue: SoundCue) => {
+          cues.push(cue)
+          return { stop: vi.fn() }
+        }
+      }),
+    }
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('short', 0, 1_000_000)]))
+
+    scheduler.start(0)
+    await settled()
+    scheduler.pump(500_000)
+    await settled()
+
+    expect(cues).toEqual([])
+    expect(port.load).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * `decodeAudioData` decodes the file, not the clip's share of it. The same jingle laid thirty
+   * times would be thirty full copies of the samples, resident at once where the clips overlap.
+   */
+  it('decodes an asset once for the several clips that play it', async () => {
+    const { port, loaded } = outputAt()
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    // Both clips name `asset-a`, as two clips cut from one take do.
+    const second = { ...clipFixture('b', 0, 2_000_000), assetId: 'asset-a' }
+    scheduler.apply(withAudio([clip('a', 0, 2_000_000), second]))
+
+    scheduler.start(0)
+    await settled()
+
+    expect(loaded).toEqual(['asset-a'])
+  })
+
+  it('takes a clip away mid-play when the edit removed it, not only when it was muted', async () => {
+    const { port, stops } = outputAt()
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('a', 0, 4_000_000)]))
+
+    scheduler.start(0)
+    await settled()
+    scheduler.apply(withAudio([]))
+
+    expect(stops).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The source runs out on the output clock, the playhead on the engine's. Let go of on the
+   * beat, an entry whose source still sounds is a sound `stop` can no longer reach — and it
+   * keeps playing over a paused transport.
+   */
+  it('keeps hold of a finished clip a horizon longer, so a pause can still silence it', async () => {
+    const { port, stops } = outputAt()
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('a', 0, 1_000_000)]))
+
+    scheduler.start(0)
+    await settled()
+    scheduler.pump(1_200_000)
+    scheduler.stop()
+
+    expect(stops).toHaveBeenCalledTimes(1)
+  })
+
+  it('says nothing while the output is still waking up', async () => {
+    const { port, loaded } = outputAt()
+    const asleep: SoundPort = { ...port, now: () => null }
+    const scheduler = createSoundScheduler({ port: asleep, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('a', 0, 4_000_000)]))
+
+    scheduler.start(0)
+    await settled()
+
+    expect(loaded).toEqual([])
+  })
+
+  /**
+   * The anchor is the output clock's, and it is taken when the output answers — not when the
+   * transport was pressed, which may be several frames earlier.
+   */
+  it('anchors the sequence on the output as soon as it answers, not before', async () => {
+    let clock: number | null = null
+    const { port, cues } = outputAt()
+    const waking: SoundPort = { ...port, now: () => clock }
+    const scheduler = createSoundScheduler({ port: waking, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('a', 0, 4_000_000)]))
+
+    scheduler.start(0)
+    clock = 50
+    scheduler.pump(500_000)
+    await settled()
+
+    // Anchored at 50 for a playhead of half a second: the clip's zero sits at 49.5, and what is
+    // left of it starts now, half a second into the source.
+    expect(cues[0]).toMatchObject({ when: 50, offset: 0.5, duration: 3.5 })
   })
 })

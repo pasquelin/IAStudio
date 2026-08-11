@@ -59,9 +59,13 @@ export function Monitor({
     const element = hostRef.current
     if (!element) return
 
+    const sound = createSoundPort()
     const created = new TimelineEngine({
       openSink: openAssetSink,
-      sound: createSoundPort(),
+      sound,
+      // The output is the master clock whenever it runs: driving sound from the frame loop
+      // drifts against it audibly in under a minute, and both media then tell a different time.
+      audioTime: sound.now,
       maxDecoders: MAX_DECODERS,
       maxPictures: MAX_PICTURES,
       owner,
