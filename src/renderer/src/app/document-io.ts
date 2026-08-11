@@ -332,6 +332,24 @@ export async function closeDocument(documentId: string): Promise<boolean> {
   return true
 }
 
+/** The documents whose work would go with the window. Empty when nothing is at stake. */
+export function unsavedDocumentIds(): string[] {
+  return Object.keys(useDocuments.getState().documents).filter(documentIsDirty)
+}
+
+/**
+ * Asks about every document holding unsaved work, one after the other.
+ *
+ * `false` as soon as one is cancelled, and the documents after it are left untouched: the
+ * gesture that asked — leaving — is off, so there is nothing left to settle.
+ */
+export async function settleUnsavedWork(): Promise<boolean> {
+  for (const documentId of unsavedDocumentIds()) {
+    if (!(await closeDocument(documentId))) return false
+  }
+  return true
+}
+
 /**
  * Removes the document's file from the project, then closes its tab. Confirmed first, and by
  * the OS: this is the one gesture in the studio that destroys a file the user made.
