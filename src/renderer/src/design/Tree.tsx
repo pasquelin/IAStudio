@@ -93,8 +93,8 @@ export type TreeProps<T extends TreeNode> = {
   renderRow: (row: TreeRow<T>) => ReactNode
 }
 
-/** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
-const INDENT = 'calc(var(--sc-gutter) * 2)'
+/** One step of indentation, two gutters wide. A gauge rather than a pixel count — `index.css`. */
+const INDENT = 'var(--sc-gutter) * 2'
 
 /**
  * A tree that does not know what it shows. It owns the geometry — indent, chevron, selection,
