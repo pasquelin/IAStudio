@@ -129,7 +129,7 @@ export type SceneRendererOptions = {
  * reached the viewport. Whether snapping is ON stays out — that is `setSnapping`, per document,
  * not a preference.
  */
-export type ViewportOptions = Settings['three']
+type ViewportOptions = Settings['three']
 
 /**
  * How strongly the environment lights the scene. Below one because a scene has lights of its own

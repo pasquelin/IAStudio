@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { ViewportOptions } from './SceneRenderer'
 import { snapSteps } from './snap-steps'
 
-const view: ViewportOptions = DEFAULT_SETTINGS.three
+const view = DEFAULT_SETTINGS.three
 
 describe('snapSteps', () => {
   it('frees every axis while snapping is off', () => {
