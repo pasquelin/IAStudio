@@ -257,6 +257,11 @@ export class SkyboxRenderer {
   /**
    * The expensive half, once the gesture settles. Rescheduled on every change rather than
    * queued, so a drag of two hundred frames costs one prefilter instead of two hundred.
+   *
+   * Only work that changes the PICTURE reschedules it, which is why `apply` reaches this through
+   * `regrade` alone. A sun drag is a light moving, not a picture changing: it has no prefilter of
+   * its own to delay, and postponing the one an exposure edit already owed would leave the probes
+   * lit by a stale map for as long as the hand keeps moving.
    */
   private scheduleRefresh(): void {
     if (this.quiet !== null) clearTimeout(this.quiet)

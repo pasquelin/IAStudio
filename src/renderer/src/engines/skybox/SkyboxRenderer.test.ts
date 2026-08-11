@@ -93,6 +93,12 @@ const edited = <K extends keyof SkyboxContent>(
   section: SkyboxContent[K],
 ): SkyboxContent => ({ ...content, [key]: section })
 
+/** A gesture on the sun's colour, one frame per emitted value, as the slider sends them. */
+const draggedSun = (sky: SkyboxContent, frames: number): SkyboxContent[] =>
+  Array.from({ length: frames }, (_unused, frame) =>
+    edited(sky, 'sun', { ...sky.sun, color: `#ff00${frame.toString(16).padStart(2, '0')}` }),
+  )
+
 describe('the renderer of a skybox', () => {
   let onSunChange: Mock<(angles: SphericalAngles) => void>
   let source: ReturnType<typeof fakeTextureSource>
@@ -294,15 +300,43 @@ describe('the renderer of a skybox', () => {
   })
 
   describe('the prefiltered map', () => {
+    /**
+     * The burst is one of adjustments, which is the only kind that still grades: a content built
+     * whole would pass whatever the engine skips, and three frames that change nothing would
+     * count the prefilter the first `apply` had already armed.
+     */
     it('prefilters once for a burst of changes, not once per change', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
-
-      renderer.apply(skyOf('sky-1'))
-      renderer.apply(skyOf('sky-1'))
-      renderer.apply(skyOf('sky-1'))
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      // Almost the whole delay, so a burst that failed to reschedule would fire before the wait
+      // below and be counted twice rather than once.
+      await vi.advanceTimersByTimeAsync(110)
       expect(environment.refresh).not.toHaveBeenCalled()
-      await vi.advanceTimersByTimeAsync(120)
+
+      for (const exposure of [1.1, 1.2, 1.3])
+        renderer.apply(edited(sky, 'adjustments', { ...sky.adjustments, exposure }))
+      await vi.advanceTimersByTimeAsync(110)
+      expect(environment.refresh).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(10)
+
+      expect(environment.refresh).toHaveBeenCalledTimes(1)
+    })
+
+    /**
+     * A sun drag does not postpone it, which is a change of behaviour and a decision: the sun is
+     * a light, not part of the graded picture, so the drag has no prefilter of its own to delay.
+     * Before the guard, every frame rescheduled the one an exposure edit already owed, and the
+     * probes stayed lit by a stale map for as long as the hand kept moving.
+     */
+    it('runs a prefilter that was already owed, even mid-drag on the sun', async () => {
+      const renderer = mounted()
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      await vi.advanceTimersByTimeAsync(110)
+
+      for (const frame of draggedSun(sky, 50)) renderer.apply(frame)
+      await vi.advanceTimersByTimeAsync(10)
 
       expect(environment.refresh).toHaveBeenCalledTimes(1)
     })
@@ -344,14 +378,6 @@ describe('the renderer of a skybox', () => {
       expect(light.color).toBe(instance)
       expect(light.color.getHexString()).toBe('ff8800')
     })
-
-    const draggedSun = (sky: SkyboxContent, frames: number): SkyboxContent[] =>
-      Array.from({ length: frames }, (_unused, frame) =>
-        edited(sky, 'sun', {
-          ...sky.sun,
-          color: `#ff00${frame.toString(16).padStart(2, '0')}`,
-        }),
-      )
 
     /**
      * Measured before the guard: two hundred frames of the sun's colour cost two hundred grading
