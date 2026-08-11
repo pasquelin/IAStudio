@@ -2,6 +2,7 @@ import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
+import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
 
 /** Which side of its anchor the menu hangs on. */
@@ -23,6 +24,16 @@ export type FlyoutProps = {
    * would fight. Must be stable — it is what the listeners hang off.
    */
   onDismiss?: () => void
+  /**
+   * Gives the surface a menu's keyboard: focus on the first row, arrows, `Home`/`End`, a roving
+   * `tabindex`, and the focus handed back to the opener on the way out. The callback is what
+   * `Tab` calls.
+   *
+   * Optional, the same shape as `onDismiss` and for the same reason — a flyout that opens under
+   * the pointer would take the focus from whatever the caret was in. **Rows are found by their
+   * role**, so a caller that does not also declare `role="menu"` gets nothing.
+   */
+  onKeyClose?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -51,12 +62,14 @@ export function Flyout({
   placement = 'right',
   role,
   onDismiss,
+  onKeyClose,
   onPointerEnter,
   onPointerLeave,
 }: FlyoutProps) {
   const panel = useRef<HTMLDivElement | null>(null)
 
   useDismiss(onDismiss, panel, anchor)
+  useMenuKeys(panel, onKeyClose)
 
   // Placed through a callback ref rather than state: measuring in an effect and storing the
   // result would render the menu once at the wrong place, then move it.

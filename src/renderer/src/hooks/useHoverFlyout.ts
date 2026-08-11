@@ -4,6 +4,12 @@ export type HoverFlyout = {
   /** A single row is not a menu: the button acts directly, as map3D's toolbar does. */
   hasFlyout: boolean
   showing: boolean
+  /**
+   * Whether the menu was asked for — clicked, or keyed, which a button reports as a click —
+   * rather than hovered into. Only an asked-for menu may take the focus and answer the arrows:
+   * one the pointer merely crossed would pull the caret out of whatever was being typed.
+   */
+  asked: boolean
   /** Goes on the button's wrapper. */
   wrapProps: { onPointerEnter: () => void; onPointerLeave: () => void }
   /** Goes on the menu itself — without it, reaching the rows closes them. */
@@ -22,6 +28,7 @@ const GRACE = 220
 
 export function useHoverFlyout(rowCount: number): HoverFlyout {
   const [open, setOpen] = useState(false)
+  const [asked, setAsked] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasFlyout = rowCount > 1
 
@@ -35,14 +42,26 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
     setOpen(true)
   }, [cancel])
 
+  // Deliberately NOT clearing `asked`: the pointer wandering off the rows and back is one
+  // gesture, and forgetting mid-walk would hand the focus back to the opener under the user.
   const leave = useCallback(() => {
     cancel()
-    timer.current = setTimeout(() => setOpen(false), GRACE)
+    timer.current = setTimeout(() => {
+      setOpen(false)
+      setAsked(false)
+    }, GRACE)
+  }, [cancel])
+
+  const ask = useCallback(() => {
+    cancel()
+    setOpen(true)
+    setAsked(true)
   }, [cancel])
 
   const close = useCallback(() => {
     cancel()
     setOpen(false)
+    setAsked(false)
   }, [cancel])
 
   useEffect(() => cancel, [cancel])
@@ -50,9 +69,10 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
   return {
     hasFlyout,
     showing: hasFlyout && open,
+    asked: hasFlyout && open && asked,
     wrapProps: { onPointerEnter: enter, onPointerLeave: leave },
     flyoutProps: { onPointerEnter: enter, onPointerLeave: leave },
-    open: enter,
+    open: ask,
     close,
   }
 }

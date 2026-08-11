@@ -7,11 +7,14 @@ import { useMenuKeys } from './useMenuKeys'
 type MenuProps = {
   labels?: readonly string[]
   disabled?: readonly string[]
-  onClose?: () => void
+  onClose?: (() => void) | undefined
 }
 
-function Menu({ labels = ['Cut', 'Copy', 'Paste'], disabled = [], onClose = vi.fn() }: MenuProps) {
+function Menu({ labels = ['Cut', 'Copy', 'Paste'], disabled = [], ...rest }: MenuProps) {
   const surface = useRef<HTMLDivElement | null>(null)
+  // Spelled out rather than defaulted: a default parameter also fires on an explicit
+  // `undefined`, which is precisely the opt-out two of these tests are about.
+  const onClose = 'onClose' in rest ? rest.onClose : vi.fn()
   useMenuKeys(surface, onClose)
 
   return (
@@ -96,6 +99,32 @@ describe('the keyboard manners of a menu', () => {
     await userEvent.keyboard('{Tab}')
 
     expect(onClose).toHaveBeenCalled()
+  })
+
+  /**
+   * Opted out, the same way `useDismiss` is: a surface that opens under the pointer would take
+   * the focus from whatever the user was typing in, and take it back on the way out.
+   */
+  describe('handed no close at all', () => {
+    it('leaves the focus where it was', () => {
+      const outside = document.createElement('button')
+      document.body.appendChild(outside)
+      outside.focus()
+
+      render(<Menu onClose={undefined} />)
+
+      expect(outside).toHaveFocus()
+    })
+
+    it('lets the arrows fall through to whoever else is listening', async () => {
+      render(<Menu onClose={undefined} />)
+      const first = row('Cut')
+      first.focus()
+
+      await userEvent.keyboard('{ArrowDown}')
+
+      expect(first).toHaveFocus()
+    })
   })
 
   it('gives focus back to what opened it', async () => {

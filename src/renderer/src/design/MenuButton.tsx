@@ -58,7 +58,15 @@ export function MenuButton({
       />
 
       {flyout.showing && (
-        <Flyout anchor={anchor} role={menu ? 'menu' : undefined} {...flyout.flyoutProps}>
+        <Flyout
+          anchor={anchor}
+          role={menu ? 'menu' : undefined}
+          // Only once it was asked for, and only over real rows: hovering into a menu must not
+          // take the focus, and the arrows find nothing in a flyout that holds sliders.
+          onKeyClose={menu && flyout.asked ? flyout.close : undefined}
+          onDismiss={flyout.asked ? flyout.close : undefined}
+          {...flyout.flyoutProps}
+        >
           {rows(flyout.close)}
         </Flyout>
       )}
