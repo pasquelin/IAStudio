@@ -1,4 +1,3 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -13,6 +12,7 @@ import {
   type OpenByZone,
 } from '@/stores/tools'
 import { HOME_SURFACE } from '@shared/domain/tool'
+import { withQueries } from './query-fixtures'
 import { Shell } from './Shell'
 
 vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
@@ -22,12 +22,7 @@ vi.mock('./DocumentArea', () => ({ DocumentArea: () => null }))
 vi.mock('./Rail', () => ({ Rail: () => null }))
 
 function renderShell() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <Shell />
-    </QueryClientProvider>,
-  )
+  return render(withQueries(<Shell />))
 }
 
 /** Resize handles: a zone's own, plus the divider a zone cut in two puts inside itself. */
@@ -273,11 +268,7 @@ describe('the home', () => {
     const { rerender } = renderShell()
 
     useLayouts.setState({ home: false })
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <Shell />
-      </QueryClientProvider>,
-    )
+    rerender(withQueries(<Shell />))
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
   })

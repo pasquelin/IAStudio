@@ -1,8 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ModelPage, ModelQuery, ModelSummary } from '@shared/domain/model'
+import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
@@ -26,12 +26,7 @@ function model(id: string, overrides: Partial<ModelSummary> = {}): ModelSummary 
 }
 
 function renderPanel() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <Models />
-    </QueryClientProvider>,
-  )
+  return render(withQueries(<Models />))
 }
 
 describe('Models panel', () => {
@@ -276,11 +271,7 @@ describe('Models panel', () => {
     expect(await screen.findByText(/Aucun modèle dans cet espace/)).toBeInTheDocument()
 
     useModels.setState({ collection: { ...DEFAULT_COLLECTION_STATE, search: 'nothing' } })
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <Models />
-      </QueryClientProvider>,
-    )
+    rerender(withQueries(<Models />))
 
     expect(await screen.findByText(/Aucun résultat pour ce filtre/)).toBeInTheDocument()
   })

@@ -1,10 +1,10 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
 import { job as jobOf } from '@/stores/job-fixtures'
 import type { WorkflowDescriptor, WorkflowSummary } from '@shared/domain/workflow'
+import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
@@ -32,12 +32,7 @@ function descriptor(overrides: Partial<WorkflowDescriptor> = {}): WorkflowDescri
 }
 
 function renderPanel() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={client}>
-      <Apps />
-    </QueryClientProvider>,
-  )
+  return render(withQueries(<Apps />))
 }
 
 describe('Apps panel', () => {

@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domain/model'
+import { withQueries } from '@/app/query-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, useGraphs } from '@/stores/graphs'
@@ -104,13 +104,7 @@ beforeEach(() => {
 
 /** Subscribed as `Inspector` is, and given the query client the panels run under. */
 function show(): void {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-
-  render(
-    <QueryClientProvider client={client}>
-      <LiveNodeInspector documentId={DOCUMENT} id={generator.id} />
-    </QueryClientProvider>,
-  )
+  render(withQueries(<LiveNodeInspector documentId={DOCUMENT} id={generator.id} />))
 }
 
 describe('a generator node in the inspector', () => {
