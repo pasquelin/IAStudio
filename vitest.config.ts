@@ -151,11 +151,11 @@ export default defineConfig({
         // header column, each in a test of its own.
         //
         // LOWERED, for the first time, back to what the glob measures. Three raises in one
-        // evening — 147, 165, 210, 215 — had put the budget 17 statements and 12 branches above
-        // what the folder carried, and a batch that lands in that slack fails the gate for
-        // nobody while the NEXT one fails for what a previous batch ate. That is what cost an
-        // hour of instruction on 11 August. `Skybox.tsx` had no test at all and carried 26
-        // statements and 12 branches; covering it is what made the room to come back down.
+        // evening — 147, 165, 210, 215 — had left the folder ONE branch under its budget, which
+        // is the worst place to be: a batch landing in that branch fails the gate for what it
+        // posts while what ate the room merged clean. That is what cost an hour of instruction
+        // on 11 August. `Skybox.tsx` had no test at all and carried 26 statements and 12
+        // branches of the total; covering it is what made the room to come back down.
         //
         // At the measured value there is no slack at all, like `engines/graph/**` and `app/**`
         // already sit. So RED AFTER A REBASE IS NOT A REGRESSION OF THE BATCH THAT SEES IT: it
