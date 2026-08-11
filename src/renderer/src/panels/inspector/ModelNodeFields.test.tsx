@@ -6,7 +6,7 @@ import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domai
 import { withQueries } from '@/app/query-fixtures'
 import { textNode, wire } from '@/engines/graph/graph-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { edgesNow, installGraph, nodeNow } from '@/stores/graph-fixtures'
+import { edgesNow, installGraph, graphNodeNow } from '@/stores/graph-fixtures'
 import { useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
@@ -73,7 +73,7 @@ const WIRED: GraphState = {
   inputKeys: [],
 }
 
-const generatorNow = (): GraphNode | null => nodeNow(DOCUMENT, generator.id)
+const generatorNow = (): GraphNode | null => graphNodeNow(DOCUMENT, generator.id)
 
 /** What the picker asked the catalogue — the fake used to ignore its argument entirely. */
 let asked: (ModelQuery | undefined)[] = []

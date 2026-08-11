@@ -1,4 +1,4 @@
-import { nodeIn, useGraphs } from '@/stores/graphs'
+import { graphNodeIn, useGraphs } from '@/stores/graphs'
 import { GraphNodeInspector } from './GraphNodeInspector'
 
 /**
@@ -15,7 +15,7 @@ import { GraphNodeInspector } from './GraphNodeInspector'
  * around. No suite reaches that branch today — only this file's own test does.
  */
 export function LiveNodeInspector({ documentId, id }: { documentId: string; id: string }) {
-  const node = useGraphs(state => nodeIn(state, documentId, id))
+  const node = useGraphs(state => graphNodeIn(state, documentId, id))
 
   return node ? <GraphNodeInspector documentId={documentId} node={node} /> : null
 }

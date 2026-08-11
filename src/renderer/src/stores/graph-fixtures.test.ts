@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@shared/domain/graph'
 import { wire } from '@/engines/graph/graph-fixtures'
 import { updateNodeData } from '@/engines/graph/mutations'
-import { edgesNow, installGraph, nodeNow } from './graph-fixtures'
+import { edgesNow, installGraph, graphNodeNow } from './graph-fixtures'
 import { graphOf, useGraphs } from './graphs'
 
 const DOCUMENT = 'graph-1'
@@ -17,7 +17,7 @@ const TEXT: GraphNode = {
 const FIRST: GraphEdge = wire('model1', 'prompt', 'text1', 'prompt')
 const SECOND: GraphEdge = wire('model2', 'prompt', 'text1', 'prompt')
 
-describe('nodeNow', () => {
+describe('graphNodeNow', () => {
   beforeEach(() => {
     installGraph(DOCUMENT, { nodes: [TEXT], edges: [], inputKeys: [] })
   })
@@ -37,13 +37,13 @@ describe('nodeNow', () => {
       states: { ...state.states, [DOCUMENT]: { nodes: [TEXT], edges: [], inputKeys: [] } },
     }))
 
-    expect(nodeNow('graph-2', 'text1')?.data).toMatchObject({ value: 'a kingfisher' })
-    expect(nodeNow(DOCUMENT, 'text1')?.data).toMatchObject({ value: 'a small grey rock' })
+    expect(graphNodeNow('graph-2', 'text1')?.data).toMatchObject({ value: 'a kingfisher' })
+    expect(graphNodeNow(DOCUMENT, 'text1')?.data).toMatchObject({ value: 'a small grey rock' })
   })
 
   /** What the suites branch on: `null`, never a throw, for a node the graph does not hold. */
   it('answers null for an id the graph does not hold', () => {
-    expect(nodeNow(DOCUMENT, 'text2')).toBeNull()
+    expect(graphNodeNow(DOCUMENT, 'text2')).toBeNull()
   })
 
   /**
@@ -52,7 +52,7 @@ describe('nodeNow', () => {
    * fallback is what keeps `nodeById` from reading `undefined.nodes` and throwing.
    */
   it('answers null for a document the store does not hold', () => {
-    expect(nodeNow('graph-404', 'text1')).toBeNull()
+    expect(graphNodeNow('graph-404', 'text1')).toBeNull()
   })
 
   /**
@@ -60,7 +60,7 @@ describe('nodeNow', () => {
    * value. A reader that closed over the state it was defined with would pass every test above.
    */
   it('reads the store as it stands at the call, not as it stood before', () => {
-    const before = nodeNow(DOCUMENT, 'text1')
+    const before = graphNodeNow(DOCUMENT, 'text1')
 
     useGraphs.setState(state => ({
       states: {
@@ -70,7 +70,7 @@ describe('nodeNow', () => {
     }))
 
     expect(before?.data).toMatchObject({ value: 'a small grey rock' })
-    expect(nodeNow(DOCUMENT, 'text1')?.data).toMatchObject({ value: 'a kingfisher' })
+    expect(graphNodeNow(DOCUMENT, 'text1')?.data).toMatchObject({ value: 'a kingfisher' })
   })
 })
 
@@ -98,7 +98,7 @@ describe('edgesNow', () => {
     expect(edgesNow(DOCUMENT)).not.toEqual([FIRST])
   })
 
-  /** The empty list for a document the store never held, as `nodeNow` answers `null` for one. */
+  /** The empty list for a document the store never held, as `graphNodeNow` answers `null` for one. */
   it('answers an empty list for a document the store does not hold', () => {
     expect(edgesNow('graph-404')).toEqual([])
   })

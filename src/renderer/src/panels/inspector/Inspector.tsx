@@ -17,7 +17,7 @@ import {
   activeTextureId,
   useDocuments,
 } from '@/stores/documents'
-import { nodeIn, useGraphs } from '@/stores/graphs'
+import { graphNodeIn, useGraphs } from '@/stores/graphs'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useSelection } from '@/stores/selection'
 import { AssetInspector } from './AssetInspector'
@@ -132,7 +132,7 @@ function Empty() {
 function NodeSelection({ ownerId, ids }: { ownerId: string; ids: readonly string[] }) {
   const graphId = useDocuments(activeGraphId)
   const node = useGraphs(state =>
-    graphId === ownerId && ids.length === 1 ? nodeIn(state, graphId, ids[0]) : null,
+    graphId === ownerId && ids.length === 1 ? graphNodeIn(state, graphId, ids[0]) : null,
   )
 
   return graphId && node ? <GraphNodeInspector documentId={graphId} node={node} /> : <Empty />
