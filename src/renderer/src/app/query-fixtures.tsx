@@ -5,15 +5,18 @@ import type { ReactElement, ReactNode } from 'react'
  * A tree under a query client that never retries, ready to hand to `render` or `rerender`.
  *
  * Here rather than with any one panel: `Application.tsx` next door is what mounts the provider in
- * production, and the five suites that need one span four folders.
+ * production, and the five suites that need one span five folders.
  *
- * Retries are what the test client turns off, and the only thing: a suite asserting on a failed
- * query would otherwise wait out three more attempts before the error state it looks for appears.
- * The production defaults — `staleTime`, `refetchOnWindowFocus` — are deliberately NOT copied: a
- * cache that stays fresh across a suite would serve the previous test's answer to the next one.
+ * Retries are the one option this sets, and the reason those suites configured a client by hand:
+ * three more attempts stand between a failing query and the error state they assert on. The
+ * production defaults it leaves out — `staleTime`, `refetchOnWindowFocus` (`Application.tsx`) —
+ * none of the five carried either.
  *
- * Each call builds its own client, as the five sites did by hand. A shared one would carry a
- * cache between tests.
+ * Each call builds its OWN client. Five of the seven call sites already did; the two `rerender`
+ * ones took the bare defaults, so they gain `retry: false` here. Handed to `rerender`, a fresh
+ * client means a SECOND cache: an observer created on the first render keeps the client it was
+ * built with, while anything mounted by that rerender subscribes to an empty one. Both sites that
+ * do it assert on data the first render already settled.
  */
 export function withQueries(ui: ReactNode): ReactElement {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

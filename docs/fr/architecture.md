@@ -894,7 +894,7 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 
 **Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
 gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
-mesuré : aucun des 21 fichiers de fixtures de `src/` n'est importé par du code de production. Le
+mesuré : aucun des 23 fichiers de fixtures de `src/` n'est importé par du code de production. Le
 libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit. La couverture
 exclut exactement les mêmes fichiers (`vitest.config.ts`). C'est une **décision**, prise le 11/08 :
 forcer une fixture à passer par une clé de bundle ne rend rien plus vrai et se lit plus mal.

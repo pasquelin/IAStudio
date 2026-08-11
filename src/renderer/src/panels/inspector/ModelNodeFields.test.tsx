@@ -102,7 +102,7 @@ beforeEach(() => {
   })
 })
 
-/** Subscribed as `Inspector` is, and given the query client the panels run under. */
+/** Subscribed as `Inspector` is, and under a query client, as every panel that queries runs. */
 function show(): void {
   render(withQueries(<LiveNodeInspector documentId={DOCUMENT} id={generator.id} />))
 }
