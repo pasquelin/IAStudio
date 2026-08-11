@@ -52,7 +52,10 @@ describe('the jobs indicator', () => {
     useJobs.setState({ jobs: [job('a', 'running', 0.4), job('b', 'running', 0.8)] })
     render(<JobsStatus />)
     expect(screen.getByRole('button')).toHaveTextContent('2 générations')
-    expect(screen.getByRole('button')).toHaveTextContent('60 %')
+    // Read off `textContent` rather than through `toHaveTextContent`, which collapses whitespace:
+    // the separator is U+00A0 because the suites run in French, and a matcher that normalises it
+    // accepts the hand-written space this batch removed.
+    expect(screen.getByRole('button').textContent).toContain('60\u00a0%')
   })
 
   it('counts a queued job as under way — it is waiting, not done', () => {
