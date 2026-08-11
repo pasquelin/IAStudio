@@ -30,4 +30,20 @@ describe('ImportProgress', () => {
 
     expect(screen.getByText('a1')).toBeInTheDocument()
   })
+
+  // Nothing bounds the count: `advance('queued')` fires before the pool gate, so a folder
+  // dropped whole opens every row at once — unbounded, the band takes the whole panel.
+  it('scrolls rather than grow when a folder is dropped whole', () => {
+    const many: Record<string, IngestProgress> = {}
+    for (let index = 0; index < 200; index += 1) {
+      many[`a${index}`] = { assetId: `a${index}`, stage: 'queued', ratio: 0 }
+    }
+    useMedia.setState({ progress: many, capabilities: { ffmpeg: true } })
+    render(<ImportProgress />)
+
+    const list = screen.getByRole('list')
+
+    expect(list).toHaveClass('max-h-40', 'overflow-y-auto')
+    expect(list.querySelectorAll('li')).toHaveLength(200)
+  })
 })
