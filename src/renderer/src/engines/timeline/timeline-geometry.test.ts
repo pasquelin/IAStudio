@@ -151,12 +151,12 @@ describe('hit testing', () => {
   })
 
   it('gives an ordinary clip the full grab margin at each end', () => {
-    expect(edgeGrab(0, 100)).toBe(EDGE_GRAB)
+    expect(edgeGrab(100)).toBe(EDGE_GRAB)
   })
 
   it('shrinks the grab margin on a narrow clip, so its body keeps a third of the width', () => {
     // 12 px wide: 4 px per edge leaves the middle 4 px to the drag.
-    expect(edgeGrab(0, 12)).toBe(4)
+    expect(edgeGrab(12)).toBe(4)
   })
 
   it('leaves the middle of a narrow clip draggable rather than trimmable', () => {
@@ -179,26 +179,23 @@ describe('hit testing', () => {
   it('asks for a resize cursor on anything that trims, and for none on anything else', () => {
     const on = (x: number) =>
       cursorFor(
-        hitTest(stateWith([clip('a', 0, 1_000_000)]), viewport, {
-          x,
-          y: RULER_HEIGHT + 30,
-        }),
+        hitTest(stateWith([clip('a', 0, 1_000_000)]), viewport, { x, y: RULER_HEIGHT + 30 }),
       )
 
-    expect(on(2)).toBe('resize')
-    expect(on(98)).toBe('resize')
-    expect(on(50)).toBe('default')
+    expect(on(2)).toBe('ew-resize')
+    expect(on(98)).toBe('ew-resize')
+    expect(on(50)).toBe('')
   })
 
   it('asks for a resize cursor on a fade handle, which is dragged the same way', () => {
     const faded = { ...clip('a', 0, 1_000_000), fadeIn: 200_000, fadeOut: 0 }
     const target = hitTest(stateWith([faded]), viewport, { x: 20, y: RULER_HEIGHT + 4 })
-    expect(cursorFor(target)).toBe('resize')
+    expect(cursorFor(target)).toBe('ew-resize')
   })
 
-  it('asks for no cursor where there is nothing at all', () => {
-    expect(cursorFor(null)).toBe('default')
-    expect(cursorFor({ kind: 'ruler' })).toBe('default')
+  it('leaves the surface its own cursor where there is nothing to trim', () => {
+    expect(cursorFor(null)).toBe('')
+    expect(cursorFor({ kind: 'ruler' })).toBe('')
   })
 
   it('reads the track a point lands on, whatever the clip beneath it', () => {

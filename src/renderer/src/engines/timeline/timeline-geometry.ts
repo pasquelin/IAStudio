@@ -47,6 +47,14 @@ export const FADE_BAND = 12
 export const SNAP_THRESHOLD = 8
 /** Inset of a clip's rectangle inside its row, so neighbouring rows stay readable. */
 export const CLIP_INSET = 2
+/**
+ * Width of the bar drawn at each end of a clip. Narrower than the zone that grabs it — the
+ * target is meant to be forgiving, the mark is meant to say where the end is without eating
+ * the poster.
+ */
+export const HANDLE_WIDTH = 3
+/** How far a handle stops short of a clip's top and bottom, so it reads as a grip, not a wall. */
+export const HANDLE_INSET = 3
 
 export type SnapContext = {
   settings: SequenceSettings
@@ -105,23 +113,21 @@ export function fadeHandleTime(clip: Clip, edge: ClipEdge): Us {
 }
 
 /**
- * How wide each edge's grab zone is on a clip that spans `left` to `right`. Full width on any
- * ordinary clip; on a narrow one the two zones would meet and swallow the body, and a clip that
- * cannot be dragged is worse than one that is awkward to trim.
+ * How wide each edge's grab zone is on a clip of this width. Full width on any ordinary clip;
+ * on a narrow one the two zones would meet and swallow the body, and a clip that cannot be
+ * dragged is worse than one that is awkward to trim.
  */
-export function edgeGrab(left: number, right: number): number {
-  return Math.min(EDGE_GRAB, ((right - left) * (1 - BODY_SHARE)) / 2)
+export function edgeGrab(width: number): number {
+  return Math.min(EDGE_GRAB, (width * (1 - BODY_SHARE)) / 2)
 }
 
 /**
- * What the pointer would do here. The only feedback a trim gets before it starts — nothing is
- * dragged yet, so the cursor is what says the edge is live.
+ * The cursor over a point of the strip, as the CSS keyword — the same contract as the two other
+ * `cursorFor` in the studio. Both edges and fade handles are pulled sideways, and the cursor is
+ * the only sign either is live before a drag starts. Empty leaves the surface's own cursor.
  */
-export type TimelineCursor = 'default' | 'resize'
-
-export function cursorFor(target: HitTarget | null): TimelineCursor {
-  if (!target) return 'default'
-  return target.kind === 'edge' || target.kind === 'fade' ? 'resize' : 'default'
+export function cursorFor(target: HitTarget | null): string {
+  return target?.kind === 'edge' || target?.kind === 'fade' ? 'ew-resize' : ''
 }
 
 export function snap(time: Us, context: SnapContext): Us {
@@ -162,7 +168,7 @@ export function hitTest(state: SequenceState, viewport: Viewport, point: Point):
       }
     }
 
-    const grab = edgeGrab(left, right)
+    const grab = edgeGrab(right - left)
     if (point.x <= left + grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'in' }
     }

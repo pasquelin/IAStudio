@@ -234,19 +234,20 @@ describe('TimelineCanvas', () => {
 
     fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
 
-    expect(canvas.className).toContain('cursor-ew-resize')
+    expect(canvas.style.cursor).toBe('ew-resize')
   })
 
-  it('leaves the cursor alone over the body of a clip, which is dragged and not trimmed', () => {
+  it('gives the cursor back over the body of a clip, which is dragged and not trimmed', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
     const canvas = paint()
 
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
     fireEvent.pointerMove(canvas, {
       clientX: Math.round(timeToX(500_000, viewOf())),
       clientY: RULER_HEIGHT + 30,
     })
 
-    expect(canvas.className).not.toContain('cursor-ew-resize')
+    expect(canvas.style.cursor).toBe('')
   })
 
   it('drops the resize cursor when the pointer leaves, rather than carrying it off the canvas', () => {
@@ -256,17 +257,17 @@ describe('TimelineCanvas', () => {
     fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
     fireEvent.pointerLeave(canvas)
 
-    expect(canvas.className).not.toContain('cursor-ew-resize')
+    expect(canvas.style.cursor).toBe('')
   })
 
-  it('keeps the hand cursor over an edge, since the hand moves the view and never the montage', () => {
+  it('never asks under the hand, which moves the view whether or not it is over an edge', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
     const canvas = paint('hand')
 
     fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
 
+    expect(canvas.style.cursor).toBe('')
     expect(canvas.className).toContain('cursor-grab')
-    expect(canvas.className).not.toContain('cursor-ew-resize')
   })
 
   it('undoes the last edit from the keyboard', () => {

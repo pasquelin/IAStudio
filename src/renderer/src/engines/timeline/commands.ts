@@ -48,18 +48,13 @@ const withoutClip = (track: Track, clipId: string): Track => ({
 function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, length: Us | null): Us {
   const headroom = (source: Us): Us => Math.round(source / clip.speed)
 
-  if (edge === 'in') {
-    return length === null ? Math.max(at, 0) : Math.max(at, clip.start - headroom(clip.inPoint))
-  }
-  return length === null ? at : Math.min(at, clip.start + headroom(length - clip.inPoint))
-}
+  // The sequence start is the only bound a still has left, and `snapToFrame` already holds it.
+  if (length === null) return edge === 'in' ? Math.max(at, 0) : at
 
-/**
- * A still pulled leftwards starts before its own in point, and there is no earlier frame to seek
- * to. Held at the source start rather than left negative: `readPositive` drops a negative one
- * when the project is read back, so the clip would return shorter than the one that was saved.
- */
-const heldAtSourceStart = (clip: Clip): Clip => (clip.inPoint < 0 ? { ...clip, inPoint: 0 } : clip)
+  return edge === 'in'
+    ? Math.max(at, clip.start - headroom(clip.inPoint))
+    : Math.min(at, clip.start + headroom(length - clip.inPoint))
+}
 
 /**
  * Puts a track's clips back exactly as they were.
@@ -168,9 +163,7 @@ export function trimClip(
 
       const time = boundToMedia(clip, edge, snapToFrame(at, state.settings), mediaLength)
       const trimmed =
-        edge === 'out'
-          ? { ...clip, duration: time - clip.start }
-          : heldAtSourceStart(clipFrom(clip, time))
+        edge === 'out' ? { ...clip, duration: time - clip.start } : clipFrom(clip, time)
 
       // Refused rather than clamped: a zero-length clip is not a shorter clip, it is a bug.
       if (trimmed.duration <= 0) return state

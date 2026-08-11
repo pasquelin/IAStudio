@@ -62,6 +62,15 @@ describe('reading a clip against its source', () => {
     const tail = clipFrom(clip(0, 1_000_000, { inPoint: 2_000_000 }), 400_000)
     expect(tail).toMatchObject({ start: 400_000, duration: 600_000, inPoint: 2_400_000 })
   })
+
+  /**
+   * A still trimmed leftwards is the way in: it has no source to run before, so the trim lets it
+   * go. `readPositive` drops a negative in point when the project is read back, and the clip
+   * would return other than the one that was saved.
+   */
+  it('never derives a source offset before the source itself', () => {
+    expect(clipFrom(clip(1_000_000, 1_000_000), 0).inPoint).toBe(0)
+  })
 })
 
 describe('sequence state', () => {
