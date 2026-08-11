@@ -162,6 +162,17 @@ describe('Tree', () => {
     expect(selected).toHaveLength(2)
   })
 
+  // A pixel count would hold the same indent in both densities; `LayerRow` reads the gauge for
+  // the same step, and the two outliners sit side by side.
+  it('indents each level by the density gauge rather than a pixel count', () => {
+    renderTree()
+
+    const [root, child] = screen.getAllByRole('treeitem')
+    expect(root?.style.paddingLeft).toContain('var(--sc-gutter)')
+    expect(child?.style.paddingLeft).toContain('var(--sc-gutter)')
+    expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
+  })
+
   it('leaves the rows undraggable when nothing listens for a drop', () => {
     renderTree()
     expect(screen.getAllByRole('treeitem')[0]).not.toHaveAttribute('draggable', 'true')

@@ -93,7 +93,8 @@ export type TreeProps<T extends TreeNode> = {
   renderRow: (row: TreeRow<T>) => ReactNode
 }
 
-const INDENT = 12
+/** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
+const INDENT = 'calc(var(--sc-gutter) * 2)'
 
 /**
  * A tree that does not know what it shows. It owns the geometry — indent, chevron, selection,
@@ -228,7 +229,7 @@ export function Tree<T extends TreeNode>({
                 tabIndex={index === tabStop ? 0 : -1}
                 aria-selected={selected.has(row.node.id)}
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
-                style={{ paddingLeft: row.depth * INDENT }}
+                style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
                   'group flex h-(--sc-control) cursor-pointer items-center gap-2 px-1',
                   rowSkin(selected.has(row.node.id)),
