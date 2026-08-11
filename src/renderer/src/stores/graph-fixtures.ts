@@ -1,6 +1,6 @@
 import { EMPTY_GRAPH, type GraphEdge, type GraphNode, type GraphState } from '@shared/domain/graph'
 import { installDocument } from './document-fixtures'
-import { graphOf, nodeIn, useGraphs } from './graphs'
+import { graphOf, graphNodeIn, useGraphs } from './graphs'
 
 /**
  * Puts a graph document in front of a panel under test, history cleared.
@@ -15,14 +15,14 @@ export function installGraph(documentId: string, state: GraphState = EMPTY_GRAPH
 
 /**
  * The reading half of `installGraph`, for what a suite asserts BETWEEN renders, where there is no
- * state to be handed. `nodeIn` itself ships from `./graphs` — a panel reads it too.
+ * state to be handed. `graphNodeIn` itself ships from `./graphs` — a panel reads it too.
  *
  * `null` covers two different accidents — a node the graph does not hold, and a document the
  * store lost. `installGraph` REPLACES the whole map, so installing a second graph turns the
  * first into the second accident silently.
  */
-export const nodeNow = (documentId: string, id: string): GraphNode | null =>
-  nodeIn(useGraphs.getState(), documentId, id)
+export const graphNodeNow = (documentId: string, id: string): GraphNode | null =>
+  graphNodeIn(useGraphs.getState(), documentId, id)
 
 /**
  * The wires the graph is left holding, in order — what a suite names to say WHICH one survived an
@@ -31,7 +31,7 @@ export const nodeNow = (documentId: string, id: string): GraphNode | null =>
  * Whole edges rather than their ids: `edgeId` is spelled from the two HANDLES, so it is the one
  * field an edge keeps when its two ends are swapped — the very accident these suites watch for.
  * The empty list covers a document the store lost as much as one with no wires, for the reason
- * `nodeNow` answers `null` twice over.
+ * `graphNodeNow` answers `null` twice over.
  */
 export const edgesNow = (documentId: string): readonly GraphEdge[] =>
   graphOf(useGraphs.getState(), documentId).edges

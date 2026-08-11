@@ -17,7 +17,7 @@ import {
   wire,
 } from '@/engines/graph/graph-fixtures'
 import { handleId, inputHandlesOf } from '@/engines/graph/handles'
-import { installGraph, nodeNow } from '@/stores/graph-fixtures'
+import { installGraph, graphNodeNow } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
@@ -68,7 +68,7 @@ beforeEach(() => {
   installGraph(DOCUMENT, graphStateOf([TEXT, BRANCH, MODEL], [FED]))
 })
 
-const branch = (): GraphNode | null => nodeNow(DOCUMENT, 'ifElse1')
+const branch = (): GraphNode | null => graphNodeNow(DOCUMENT, 'ifElse1')
 
 const blocks = () => {
   const node = branch()

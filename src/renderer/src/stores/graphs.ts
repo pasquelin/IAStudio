@@ -19,7 +19,7 @@ export const historyOf = store.historyOf
  * `null` covers three accidents at once — a document the store never held, an id the graph does
  * not hold, and no id at all. None is worth telling apart here: all three mean nothing to inspect.
  */
-export const nodeIn = (
+export const graphNodeIn = (
   state: DocumentStoreState<GraphState>,
   documentId: string,
   id: string | undefined,

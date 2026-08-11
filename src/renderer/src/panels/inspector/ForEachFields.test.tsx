@@ -5,7 +5,7 @@ import { CONDITIONAL_PORT, type GraphEdge, type GraphNode } from '@shared/domain
 import { edgeBetween } from '@/engines/graph/connect'
 import { forEachEndNode, forEachNode, textNode, wire } from '@/engines/graph/graph-fixtures'
 import { handleId, loopInputId, loopOutputId } from '@/engines/graph/handles'
-import { edgesNow, installGraph, nodeNow } from '@/stores/graph-fixtures'
+import { edgesNow, installGraph, graphNodeNow } from '@/stores/graph-fixtures'
 import { historyOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
@@ -30,7 +30,7 @@ beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [LOOP, END, TEXT], edges: [], inputKeys: [] })
 })
 
-const nodeOf = (id: string): GraphNode | null => nodeNow(DOCUMENT, id)
+const nodeOf = (id: string): GraphNode | null => graphNodeNow(DOCUMENT, id)
 
 const inputs = (): readonly string[] =>
   (nodeOf('forEach1')?.data.inputHandles ?? []).map(handle => handle.id)
