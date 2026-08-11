@@ -1,4 +1,3 @@
-import { clamp } from '../numeric'
 import { reconcileOrder } from './order'
 
 /**
@@ -10,13 +9,14 @@ import { reconcileOrder } from './order'
  */
 
 /**
- * A band of the page, and only that. Six ids left this union on 10 August for
- * `domain/tool.ts` — the projects, what was made, the counts, the library, the documents and
- * the journal became panels of the home's two columns. A section is what the CENTRE stacks;
- * anything the rails hold is a placement, and the two registries never name the same thing.
+ * A band of the page, and only that. Twelve ids left this union for `domain/tool.ts` — six on
+ * 10 August, the last six on 11 August. A section is what the CENTRE stacks; anything the rails
+ * hold is a placement, and the two registries never name the same thing.
+ *
+ * The two left are the two that earn the width: what the studio puts forward, and the feed that
+ * pages as it is scrolled. Everything else reads better in a column than across one.
  */
-export type HomeSectionId =
-  'spotlight' | 'tools' | 'favorites' | 'jobs' | 'usage' | 'similar' | 'spark' | 'explore'
+export type HomeSectionId = 'spotlight' | 'explore'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -35,8 +35,6 @@ export type HomeSectionEntry = {
    * empty — which is why `home.test.ts` demands that no pinned section need a key.
    */
   pinned?: boolean
-  /** How many items the section shows before the user says otherwise. */
-  defaultLimit?: number
   /**
    * Held at the foot of the page, and not movable.
    *
@@ -53,34 +51,15 @@ export type HomeSectionEntry = {
  */
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'spotlight', pinned: true },
-  { id: 'tools', pinned: true },
-  // Needs no key: a recipe is kept outside every project, and the shelf is the one place that
-  // still has something to show with nothing connected.
-  { id: 'favorites', defaultLimit: 12 },
-  { id: 'jobs', requiresApi: true, defaultLimit: 8 },
-  { id: 'similar', requiresApi: true },
-  { id: 'spark', requiresApi: true },
-  { id: 'usage', requiresApi: true, defaultLimit: 6 },
-  // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
-  // count would cap what the reader can reach rather than how much is drawn at once.
   { id: 'explore', requiresApi: true, anchored: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
 
-/**
- * How far a section's item count may be pushed. The same two numbers the section menu offers
- * and the settings refuse beyond, so a limit can no longer be raised on one side alone.
- */
-export const HOME_LIMIT_MIN = 3
-export const HOME_LIMIT_MAX = 48
-
 /** What the settings keep per section. The order of the array IS the order on screen. */
 export type HomeSectionSetting = {
   id: HomeSectionId
   visible: boolean
-  /** Absent takes the registry's default — a stored number outlives a changed default. */
-  limit?: number
 }
 
 export function homeSectionOf(id: unknown): HomeSectionEntry | null {
@@ -147,81 +126,15 @@ export function visibleHomeSections(
     .map(setting => setting.id)
 }
 
-/** Which way a section is being moved. Positions are settings, not ids, so this is enough. */
-export type HomeMove = 'up' | 'down'
-
 /**
- * Where a section would land if it moved, or -1 when nothing is left to swap with.
- *
- * It steps over the sections that are not being drawn. Swapping with a hidden neighbour is a
- * write that changes the stored order and nothing on screen — an enabled row that does nothing,
- * which is exactly what `canMoveHomeSection` exists to prevent. Explore made it plain: it sits
- * last, behind bands that needed a project, so moving it up did nothing until one was open.
- *
- * `shown` absent means every section counts, which is what a caller with nothing hidden wants.
+ * The stored order is still reconciled and still read — the registry's own order decides what
+ * the centre stacks — but nothing moves a band any more, and that is a consequence rather than a
+ * decision: the centre holds two, the first is pinned to the top and the second anchored to the
+ * foot. `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with
+ * the six bands that left on 11 August. They are in the history at `HEAD~1` for the day a band
+ * comes back to the centre, and rewriting them then is cheaper than carrying rules no case can
+ * reach — which is what a coverage floor says out loud.
  */
-function neighbourOf(
-  sections: readonly HomeSectionSetting[],
-  from: number,
-  move: HomeMove,
-  shown?: readonly HomeSectionId[],
-): number {
-  // Walked as a slice rather than by index: the bounds are then the array's own, and there is
-  // no out-of-range case left to guard against.
-  const ahead =
-    move === 'up' ? [...sections.slice(0, from)].reverse() : [...sections.slice(from + 1)]
-
-  for (const candidate of ahead) {
-    // Nothing may be swapped past an anchored band either — that is how a section would end up
-    // under a feed that never ends.
-    if (anchored(candidate)) return -1
-    if (!shown || shown.includes(candidate.id)) return sections.indexOf(candidate)
-  }
-
-  return -1
-}
-
-/** Whether the menu may offer the move at all — a row that cannot act is disabled, not silent. */
-export function canMoveHomeSection(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-  move: HomeMove,
-  shown?: readonly HomeSectionId[],
-): boolean {
-  if (homeSectionOf(id)?.anchored === true) return false
-
-  const sections = homeSections(stored)
-  const from = sections.findIndex(setting => setting.id === id)
-  return from !== -1 && neighbourOf(sections, from, move, shown) !== -1
-}
-
-/**
- * The order after a section has been moved one place. Unchanged at either end: a section that
- * cannot move is a disabled row in the menu, never a write that quietly does nothing.
- */
-export function movedHomeSection(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-  move: HomeMove,
-  shown?: readonly HomeSectionId[],
-): HomeSectionSetting[] {
-  const sections = homeSections(stored)
-  if (homeSectionOf(id)?.anchored === true) return sections
-
-  const from = sections.findIndex(setting => setting.id === id)
-  if (from === -1) return sections
-
-  const to = neighbourOf(sections, from, move, shown)
-  if (to === -1) return sections
-
-  const moving = sections[from]
-  const displaced = sections[to]
-  if (!moving || !displaced) return sections
-
-  sections[to] = moving
-  sections[from] = displaced
-  return sections
-}
 
 /** One field of one section, rewritten. Both writes the menu offers are shaped like this. */
 function patchedHomeSection(
@@ -242,28 +155,9 @@ export function shownHomeSection(
   return patchedHomeSection(stored, id, { visible })
 }
 
-/** Clamped rather than refused: the menu offers a few values, and nothing else may reach here. */
-export function limitedHomeSection(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-  limit: number,
-): HomeSectionSetting[] {
-  const bounded = clamp(Math.round(limit), HOME_LIMIT_MIN, HOME_LIMIT_MAX)
-  return patchedHomeSection(stored, id, { limit: bounded })
-}
-
 /** Sections the user hid, so the home can offer them back without a trip to the preferences. */
 export function hiddenHomeSections(stored: readonly HomeSectionSetting[]): HomeSectionId[] {
   return homeSections(stored)
     .filter(setting => !setting.visible && homeSectionOf(setting.id)?.pinned !== true)
     .map(setting => setting.id)
-}
-
-/** How many items a section asks for, the stored number winning over the registry's default. */
-export function homeSectionLimit(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-): number | undefined {
-  const setting = stored.find(candidate => candidate.id === id)
-  return setting?.limit ?? homeSectionOf(id)?.defaultLimit
 }

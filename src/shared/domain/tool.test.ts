@@ -9,6 +9,7 @@ import {
   serves,
   TOOL_PLACEMENTS,
   type ToolId,
+  type ToolZone,
 } from './tool'
 import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
 
@@ -126,13 +127,35 @@ describe('the home', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
+      ['tools', 'left', 'primary'],
       ['projects', 'left', 'secondary'],
+      ['spark', 'left', 'secondary'],
+      ['favorites', 'left', 'secondary'],
+      ['similar', 'left', 'secondary'],
       ['creations', 'right', 'primary'],
       ['counts', 'right', 'primary'],
+      ['usage', 'right', 'primary'],
       ['library', 'right', 'primary'],
       ['documents', 'right', 'primary'],
       ['activity', 'right', 'secondary'],
+      ['jobs', 'right', 'secondary'],
     ])
+  })
+
+  /**
+   * The rule every space follows, and the home is the one surface that never had it applied: the
+   * left is what one produces with and what one browses, the right is what speaks about what is
+   * open. Its panels arrived one at a time, six on the right against one on the left, until the
+   * last six bands came down from the centre.
+   */
+  it('reads its two columns the way every space reads its own', () => {
+    const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
+    const inZone = (zone: ToolZone): number =>
+      served.filter(placement => placement.zone === zone).length
+
+    expect(inZone('left')).toBe(5)
+    expect(inZone('right')).toBe(7)
+    expect(served.filter(placement => placement.zone === 'bottom')).toEqual([])
   })
 
   /**
@@ -140,7 +163,8 @@ describe('the home', () => {
    * for: a panel of recent projects beside an editor is a panel about somewhere else.
    */
   it('keeps its panels to itself, and takes none of the workspaces', () => {
-    for (const id of ['projects', 'creations', 'counts', 'library', 'documents', 'activity']) {
+    const home = ['projects', 'creations', 'counts', 'library', 'documents', 'activity']
+    for (const id of [...home, 'tools', 'spark', 'favorites', 'similar', 'usage', 'jobs']) {
       expect(placementsOf(id)).toHaveLength(1)
       for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
     }

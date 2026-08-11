@@ -5,7 +5,7 @@ import type { PromptSuggestion } from '@shared/domain/prompt-assist'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
-import { settleHome } from '../home-fixtures'
+import { settleHome } from '@/home/home-fixtures'
 import { Spark } from './Spark'
 
 const IDEA: PromptSuggestion = {
@@ -25,10 +25,11 @@ beforeEach(() => {
   useModels.setState({ selected: { image: 'model_flux' }, preset: {}, prepared: null })
 })
 
-describe('the spark band', () => {
-  it('asks for nothing until somebody presses the button', async () => {
-    // It is the one band that calls the API on arrival if left to itself, and a home that fires
-    // a round trip per launch spends the account's rate limit on a band nobody looked at.
+describe('the spark panel', () => {
+  it('asks for nothing until somebody presses the button', () => {
+    // It is the one panel of this column that would call the API on arrival if left to itself,
+    // and a home that fires a round trip per launch spends the account's rate limit on a panel
+    // nobody looked at.
     const { suggestPrompts } = install()
     render(<Spark />)
 
@@ -61,13 +62,18 @@ describe('the spark band', () => {
     expect(useModels.getState().preset.image).toMatchObject({ numInferenceSteps: 30 })
   })
 
-  it('draws nothing without a model to write against', () => {
-    // The endpoint conditions on the model; asking without one proposes into the void.
+  /**
+   * The endpoint conditions on the model; asking without one proposes into the void. As a band
+   * it drew nothing at all, which a panel may not do — it says what it is waiting for instead,
+   * and what it waits for is a choice made in another panel entirely.
+   */
+  it('says what it is waiting for when no model is chosen', () => {
     install()
     useModels.setState({ selected: {} })
-    const { container } = render(<Spark />)
+    render(<Spark />)
 
-    expect(container).toBeEmptyDOMElement()
+    expect(screen.getByText(/Choisissez un modèle d’image/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Proposez-moi une idée' })).not.toBeInTheDocument()
   })
 
   it('keeps the button when the key is refused', async () => {

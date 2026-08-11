@@ -13,9 +13,10 @@ import { RefusedPanel } from './RefusedPanel'
  * an API key opens onto.
  *
  * The frame was written twice, line for line — the refusal, the grid, the empty state, the name
- * announced to a screen reader. What differs between the two is the read behind it and the tile
- * it draws, and those stay with the caller; a shelf that took over the read would have to know
- * about projects, accounts and a cloud page, none of which is a frame's business.
+ * announced to a screen reader. Four panels share it now. What differs between them is the read
+ * behind it and the tile it draws, and those stay with the caller; a shelf that took over the
+ * read would have to know about projects, accounts and a cloud page, none of which is a frame's
+ * business.
  *
  * `tool` rather than an icon and a title: `RefusedPanel` already takes the glyph from the rail's
  * own table, and a panel whose empty state wears a different icon from its rail button is the
@@ -28,6 +29,7 @@ export function ShelfPanel<T extends { id: string }>({
   onRetry,
   renderCard,
   empty,
+  refused,
 }: {
   tool: ToolId
   items: readonly T[]
@@ -36,18 +38,21 @@ export function ShelfPanel<T extends { id: string }>({
   renderCard: (item: T) => ReactNode
   /** Already translated: what this panel says when the read came back with nothing. */
   empty: string
+  /** Already translated, and optional: which read failed, when the panel knows better than
+   * the generic line — one that reads two channels can name the one that answers for both. */
+  refused?: string
 }) {
   const { t } = useTranslation()
 
   // A refusal is the one state worth offering to try again — `ready` covers "nothing to show".
-  if (state === 'refused') return <RefusedPanel tool={tool} onRetry={onRetry} />
+  if (state === 'refused') return <RefusedPanel tool={tool} message={refused} onRetry={onRetry} />
 
   return (
     <Collection
       label={t(toolTitleKey(tool))}
       items={items}
       state={TILES_ONLY}
-      // The click belongs to the tile rather than the cell, in both panels: `onOpen` would name
+      // The click belongs to the tile rather than the cell, in every one of them: `onOpen` would name
       // the cell, and a reader would hear the verb instead of "listitem". Two grids of the same
       // tile must not answer differently.
       renderCard={renderCard}

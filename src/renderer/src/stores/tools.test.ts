@@ -173,6 +173,8 @@ describe('the home and the workspaces arrange their zones apart', () => {
       secondary: null,
     })
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
+      // Its own upper half is untouched: what the home named is the lower one.
+      primary: null,
       secondary: 'projects',
     })
   })
@@ -212,17 +214,39 @@ describe('the home and the workspaces arrange their zones apart', () => {
 })
 
 describe('migrating to the split arrangement', () => {
-  // Everything version 8 stored was the workspaces': the home had no zones of its own to arrange.
-  // Version 9 gave it one column; the default is two now, which is why the home is rebuilt rather
-  // than read back at either version.
-  it.each([8, 9])('reads a version %i layout as the workspaces, and defaults the home', version => {
+  // Everything version 8 stored was the workspaces': one arrangement, flat at the root, since the
+  // home had no zones of its own to arrange.
+  it('reads a version 8 layout as the workspaces, and defaults the home', () => {
     const migrated = migrateTools(
       { open: { right: { primary: 'layers' } }, sizes: { left: 400 } },
+      8,
+    )
+
+    expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
+    expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
+  })
+
+  /**
+   * The shape versions 9 and 10 actually wrote — `partialize` has published `arrangements` since
+   * the split. Read as the flat one, none of `open`, `sizes` and `splits` is found, and every
+   * column width and chosen panel of all seven spaces goes back to the factory without a word.
+   * That is what a bump meant to add a half to the home would have cost.
+   */
+  it.each([9, 10])('keeps what version %i wrote under `arrangements`', version => {
+    const migrated = migrateTools(
+      {
+        arrangements: {
+          workspaces: { open: { right: { primary: 'layers' } }, sizes: { left: 400 }, splits: {} },
+          home: { open: { left: { secondary: 'projects' } }, sizes: {}, splits: {} },
+        },
+      },
       version,
     )
 
     expect(migrated?.arrangements.workspaces.open.right).toEqual({ primary: 'layers' })
     expect(migrated?.arrangements.workspaces.sizes).toEqual({ left: 400 })
+    // The home is the one this bump changes: it starts on both halves of both columns.
     expect(migrated?.arrangements.home).toEqual(DEFAULT_ARRANGEMENTS.home)
   })
 })

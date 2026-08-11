@@ -9,18 +9,24 @@ import { definition as counts } from '@/panels/counts'
 import { definition as creations } from '@/panels/creations'
 import { definition as documents } from '@/panels/documents'
 import { definition as explorer } from '@/panels/explorer'
+import { definition as favorites } from '@/panels/favorites'
 import { definition as library } from '@/panels/library'
 import { definition as generator } from '@/panels/generator'
 import { definition as inspector } from '@/panels/inspector'
+import { definition as jobs } from '@/panels/jobs'
 import { definition as layers } from '@/panels/layers'
 import { definition as lights } from '@/panels/lights'
 import { definition as meshes } from '@/panels/meshes'
 import { definition as models } from '@/panels/models'
 import { definition as projects } from '@/panels/projects'
 import { definition as scene } from '@/panels/scene'
+import { definition as similar } from '@/panels/similar'
 import { definition as skybox } from '@/panels/skybox'
+import { definition as spark } from '@/panels/spark'
 import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
+import { definition as tools } from '@/panels/tools'
+import { definition as usage } from '@/panels/usage'
 import { definition as view } from '@/panels/view'
 import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './tool-components'
 
@@ -54,6 +60,12 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   library,
   documents,
   activity,
+  tools,
+  spark,
+  favorites,
+  similar,
+  usage,
+  jobs,
 }
 
 const IDS = Object.keys(PANELS).filter(isKnownTool)

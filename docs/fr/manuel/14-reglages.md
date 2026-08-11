@@ -123,8 +123,8 @@ vous aviez quitté.
 l’accueil s’affiche quand même, et vous propose d’en créer un. Pour arriver directement dans un
 espace de travail, il faut décocher celui-ci.
 
-Ce qui se règle **sur l’accueil lui-même**, et pas ici : quelles bandes sont affichées, dans quel
-ordre, et combien d’éléments chacune montre — voir [La fenêtre](03-la-fenetre.md#laccueil-avant-tout-le-reste).
+Ce qui se règle **sur l’accueil lui-même**, et pas ici : quelles bandes sont affichées — voir
+[La fenêtre](03-la-fenetre.md#laccueil-avant-tout-le-reste).
 
 ---
 

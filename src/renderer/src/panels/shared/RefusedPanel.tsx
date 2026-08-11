@@ -14,11 +14,10 @@ export type RefusedPanelProps = {
 /**
  * What a panel draws when its read was refused: it stays, says so quietly, and offers to try.
  *
- * The panel twin of `home/RefusedSection`, which is the same policy in the shape of a band and
- * cannot be reused here — it mounts a `Section`, heading and customise menu included. Written
- * once because three panels needed it, which is exactly the count at which the bands' own copy
- * became a debt: five sites, each taking itself off the page on a refusal, indistinguishably
- * from having nothing to show.
+ * It was the panel twin of the bands' own `RefusedSection`, which went with them: every surface
+ * that can be refused is a panel now. Written once because three panels needed it, which is
+ * exactly the count at which the bands' copy became a debt — five sites, each taking itself off
+ * the page on a refusal, indistinguishably from having nothing to show.
  */
 export function RefusedPanel({ tool, message, onRetry }: RefusedPanelProps) {
   const { t } = useTranslation()

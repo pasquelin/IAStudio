@@ -349,8 +349,8 @@ src/renderer/src/
 │   ├── textures/   a material's channels, and their tiled preview
 │   ├── skyboxes/   the immersive sky and its three flat projections
 │   └── graph/      the node editor — it places, saves and runs
-├── panels/       the fifteen dockable tools
-├── home/         the home screen and its fourteen bands — a page, not a layout
+├── panels/       the twenty-seven dockable tools
+├── home/         the home screen and its two bands — a page, not a layout
 ├── settings/     the settings window, loaded on demand
 ├── usage/        the consumption window, likewise
 ├── licences/     the licences window, likewise

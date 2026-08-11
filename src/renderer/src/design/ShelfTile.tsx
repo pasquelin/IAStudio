@@ -4,9 +4,6 @@ import { FOCUS_RING } from './styles'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM, type TooltipFactory } from '@/helpers/tooltip'
 
-/** What a picture tile measures, square. Read by the bands still laid out sideways. */
-export const SHELF_TILE_SIZE = 132
-
 export type ShelfTileProps = {
   url?: string
   /** Overlaid at the foot of the picture. The model's name, on all three shelves that use it. */
@@ -31,7 +28,7 @@ export type ShelfTileProps = {
  *
  * The creations, the library and the recipes each draw the same square: a still, the model
  * underneath, a glyph when there is no picture. They had it three times, byte for byte, down to
- * the hover — which is exactly what `ShelfCard` above exists to prevent.
+ * the hover, and this is the one copy left.
  */
 export function ShelfTile({
   url,

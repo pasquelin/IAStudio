@@ -85,18 +85,28 @@ describe('Rail', () => {
       expect(createPicked).toHaveBeenCalled()
     })
 
-    // What one opens, and nothing to open it WITH: the spaces reserve the upper half of this
-    // column for generation, and the home generates nothing.
-    it('carries the projects alone in the left rail, with no cut to draw', () => {
+    // The upper half is what every space keeps for generation, and the home generates nothing:
+    // it gives it to what the studio can start instead. The cut is drawn, and what one browses
+    // stacks under it.
+    it('cuts the left rail: what the studio can do above, what one browses below', () => {
       const { container } = render(<Rail side="left" />)
 
-      expect(marksOf(container)).toEqual(['Nouveau projet', 'separator', 'Vos projets'])
+      expect(marksOf(container)).toEqual([
+        'Nouveau projet',
+        'separator',
+        'Outils',
+        'separator',
+        'Vos projets',
+        'Une idée pour commencer',
+        'Vos recettes',
+        'Dans la même veine',
+      ])
     })
 
     /**
      * The right rail is the legend of the right column, and it draws the same cut: what the open
-     * project holds above, the journal below. The separator is the cut itself — four icons and
-     * one, not five in a pile.
+     * project holds and what it cost above, what is going on now below. The separator is the cut
+     * itself — five icons and two, not seven in a pile.
      */
     it('cuts the right rail where the column is cut: the project above, the journal below', () => {
       const { container } = render(<Rail side="right" />)
@@ -104,10 +114,12 @@ describe('Rail', () => {
       expect(marksOf(container)).toEqual([
         'Ce que vous avez produit',
         'Par type',
+        'Ce que vous avez consommé',
         'Votre bibliothèque',
         'Vos documents',
         'separator',
         'Activité récente',
+        'En cours',
       ])
     })
 
@@ -143,6 +155,18 @@ describe('Rail', () => {
         secondary: null,
       })
     })
+  })
+
+  /**
+   * A lone group has nothing to be cut from. The home used to be the one surface with such a
+   * half; both of its columns are cut in two since 11 August, and the graph is where the case
+   * lives now — no placement gives it the upper right, so its rail draws the inspector alone.
+   */
+  it('draws no separator in a column with a single populated half', () => {
+    useLayouts.setState({ activeWorkspace: 'graph', home: false })
+    const { container } = render(<Rail side="right" />)
+
+    expect(marksOf(container)).toEqual(['Inspecteur'])
   })
 
   // Generating without a model is impossible, so the icon is absent rather than dead: the rail

@@ -39,7 +39,13 @@
     "counts": "By kind",
     "library": "Your library",
     "documents": "Your documents",
-    "activity": "Recent activity"
+    "activity": "Recent activity",
+    "tools": "Tools",
+    "spark": "An idea to start from",
+    "favorites": "Your recipes",
+    "similar": "In the same vein",
+    "usage": "What you have spent",
+    "jobs": "Running now"
   },
   "view": {
     "empty": "Open a skybox to change how it is being displayed.",
@@ -2119,12 +2125,6 @@
   "home": {
     "sections": {
       "spotlight": "Where you were",
-      "tools": "Tools",
-      "favorites": "Your recipes",
-      "jobs": "Running now",
-      "spark": "An idea to start from",
-      "similar": "In the same vein",
-      "usage": "What you have spent",
       "explore": "Explore"
     },
     "title": "Home",
@@ -2157,6 +2157,7 @@
       "none": "Your Scenario account library is empty, or no API key has been entered yet."
     },
     "favorites": {
+      "none": "No recipe pinned yet. Pin a generation to find it here, in every project.",
       "unpin": "Take “{{name}}” off your recipes"
     },
     "spotlight": {
@@ -2178,31 +2179,29 @@
       "title": "Create or explore. One click to what comes next.",
       "action": "Start creating"
     },
-    "customise": "Customise this section",
-    "moveUp": "Move up",
-    "moveDown": "Move down",
     "hide": "Hide this section",
-    "showCount_one": "Show {{count, number}} item",
-    "showCount_many": "Show {{count, number}} items",
-    "showCount_other": "Show {{count, number}} items",
     "hidden_one": "{{count, number}} section hidden",
     "hidden_many": "{{count, number}} sections hidden",
     "hidden_other": "{{count, number}} sections hidden",
     "restore": "Show them again",
     "retry": "Try again",
-    "refused": "This section did not get an answer.",
+    "refused": "This panel did not get an answer.",
+    "reading": "Reading…",
     "open": "Open “{{name}}”",
     "spark": {
+      "noModel": "Choose an image model to get starting points written for it.",
       "ask": "Suggest an idea",
       "asking": "One moment…",
       "help": "Starting points written for the model the generator will open on. Free: no creative unit is spent.",
       "use": "Open the generator on “{{prompt}}”"
     },
     "similar": {
+      "none": "Nothing to compare against yet: your Scenario library is empty, or no API key is set.",
       "title": "In the vein of “{{name}}”",
-      "refused": "The library did not answer. The band comes back as soon as you try again."
+      "refused": "The library did not answer. The panel comes back as soon as you try again."
     },
     "usage": {
+      "none": "Nothing spent over the period, or no API key is set.",
       "summary_one": "{{units}} units over {{days, number}} days, for {{count, number}} generation.",
       "summary_many": "{{units}} units over {{days, number}} days, for {{count, number}} generations.",
       "summary_other": "{{units}} units over {{days, number}} days, for {{count, number}} generations.",
@@ -2227,12 +2226,7 @@
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the preferences, at the account section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens",
-    "moveUpHint": "Moves this section up one place on the home",
-    "moveDownHint": "Moves this section down one place on the home",
-    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back",
-    "showCountHint_one": "Keeps only {{count, number}} item in this section",
-    "showCountHint_many": "Keeps only {{count, number}} items in this section",
-    "showCountHint_other": "Keeps only {{count, number}} items in this section"
+    "hideHint": "Takes the section off the home; a line at the foot of the page brings it back"
   },
   "animation": {
     "play": "Play",

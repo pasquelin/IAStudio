@@ -1,7 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { installIntersectionObserver } from '@/test-setup'
-import { useDeferredShelf, useShelf } from './use-shelf'
+import { useShelf } from './use-shelf'
 
 const EMPTY: readonly string[] = []
 
@@ -125,95 +124,4 @@ const REAL = globalThis.IntersectionObserver
 
 afterEach(() => {
   globalThis.IntersectionObserver = REAL
-})
-
-function Band({
-  read,
-  source = 'key',
-  showState = false,
-}: {
-  read: () => Promise<string | null>
-  source?: string
-  /** Off by default: two tests read `container.firstElementChild`, which a probe would occupy. */
-  showState?: boolean
-}) {
-  const { value, state, marker } = useDeferredShelf<string | null>(null, read, source)
-  return (
-    <>
-      {showState && <span data-testid="state">{state}</span>}
-      {value === null ? marker : <p>{value}</p>}
-    </>
-  )
-}
-
-describe('a shelf that waits to be reached', () => {
-  it('reads nothing while the band is still below the fold', () => {
-    installIntersectionObserver({ eager: false })
-    const read = vi.fn(() => Promise.resolve('spent'))
-
-    render(<Band read={read} />)
-
-    expect(read).not.toHaveBeenCalled()
-  })
-
-  it('keeps something on screen to be scrolled to, or it could never be reached', () => {
-    // The marker is the whole mechanism: a band that renders nothing has nothing to observe,
-    // and its read would never happen at all.
-    installIntersectionObserver({ eager: false })
-    const { container } = render(<Band read={() => Promise.resolve('spent')} />)
-
-    expect(container.firstElementChild).not.toBeNull()
-  })
-
-  it('reads once the band has been reached', async () => {
-    const { reveal } = installIntersectionObserver({ eager: false })
-    const read = vi.fn(() => Promise.resolve('spent'))
-
-    render(<Band read={read} />)
-    act(() => reveal())
-
-    expect(await screen.findByText('spent')).toBeInTheDocument()
-    expect(read).toHaveBeenCalledTimes(1)
-  })
-
-  it('takes no room once it has been seen and has nothing to say', async () => {
-    // The home lays its sections out with a gap, and a marker left behind would take one — two
-    // silent bands would then leave a band's worth of blank between the ones that do speak.
-    const { reveal } = installIntersectionObserver({ eager: false })
-    const { container } = render(<Band read={() => Promise.resolve(null)} />)
-
-    act(() => reveal())
-    await act(async () => {
-      await new Promise(done => setTimeout(done, 0))
-    })
-
-    expect(container.firstElementChild).toBeNull()
-  })
-
-  /**
-   * The trap this forecloses: unseen, the read answers `undefined`, which is `ready`. A band
-   * that declared itself ready would draw its content instead of the marker — and the marker is
-   * what makes it observed, so the band would never load at all.
-   */
-  it('holds at "reading" while unseen, whatever the unread read answers', () => {
-    installIntersectionObserver({ eager: false })
-    render(<Band read={() => Promise.resolve('spent')} showState />)
-
-    expect(screen.getByTestId('state').textContent).toBe('reading')
-  })
-
-  it('reads again when what it reads under changes, having already been seen', async () => {
-    // What the retry of a refused band relies on: `seen` is latched, so a new source has to be
-    // enough on its own to start a second read.
-    const { reveal } = installIntersectionObserver({ eager: false })
-    const read = vi.fn(() => Promise.resolve('spent'))
-
-    const { rerender } = render(<Band read={read} source="first" />)
-    act(() => reveal())
-    expect(await screen.findByText('spent')).toBeInTheDocument()
-
-    rerender(<Band read={read} source="second" />)
-
-    await vi.waitFor(() => expect(read).toHaveBeenCalledTimes(2))
-  })
 })

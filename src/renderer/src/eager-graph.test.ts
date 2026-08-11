@@ -241,18 +241,19 @@ describe('the opening chunk', () => {
   })
 
   /**
-   * Deferred by `app/tool-components.ts` on 9 August: not one of the fourteen, the home screen's
-   * Explorer included. Stated over the whole folder, so a fifteenth panel cannot land eager with
+   * Deferred by `app/tool-components.ts` on 9 August: every panel of the table, the home screen's
+   * own included. Stated over the whole folder, so a panel added tomorrow cannot land eager with
    * the guard still green.
    *
-   * The four left are not tools of that table: `panels/jobs/**` belongs to the status bar
-   * (`app/JobsStatus.tsx:8`) and the home (`home/sections/Jobs.tsx:3`), and the two facet keys
-   * are read by `helpers/reveal-panel.ts`, which narrows a browser before bringing it up. Each
-   * of those two is a lone constant in a file of its own for exactly this reason — declaring it
-   * beside the facets it belongs to would drag that panel's vocabulary in behind it. None of
-   * them opens in a zone.
+   * The four left are reached for something other than a zone. `panels/jobs/Jobs.tsx` and its row
+   * ARE a panel of the table since 11 August — but they are also what the status bar's flyout
+   * opens (`app/JobsStatus.tsx:10`), which is the first screen, so the chunk holds them either
+   * way. That is why `Jobs.tsx` may not read `helpers/tool-registry`: it would drag the scene's
+   * node kinds in behind it. The two facet keys are read by `helpers/reveal-panel.ts`, which
+   * narrows a browser before bringing it up; each is a lone constant in a file of its own for
+   * exactly that reason.
    */
-  it('reaches no panel of the tool table, not even the one the home screen opens', () => {
+  it('reaches no panel of the tool table, except the list the status bar itself opens', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./panels/')).sort()).toEqual([

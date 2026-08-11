@@ -7,7 +7,7 @@ import { MediaTile } from '@/design/MediaTile'
 import { chipSkin } from '@/design/styles'
 import { cloudTileFace } from '@/helpers/cloud-tile'
 import { Section } from '../Section'
-import { SectionNote } from '../SectionNote'
+import { QuietNote } from '@/design/QuietNote'
 import { useExplore } from '../use-explore'
 import { HINT_BOTTOM } from '@/helpers/tooltip'
 
@@ -60,9 +60,9 @@ export function Explore() {
         // a page the studio narrowed away after the index answered — still has pages behind it,
         // and announcing emptiness there is a claim that is about to be contradicted.
         empty={
-          <SectionNote standalone>
+          <QuietNote standalone>
             {t(exhausted ? 'home.explore.none' : 'home.explore.loading')}
-          </SectionNote>
+          </QuietNote>
         }
         renderCard={asset => <Tile asset={asset} />}
       />

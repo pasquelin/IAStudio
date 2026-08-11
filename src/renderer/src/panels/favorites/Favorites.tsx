@@ -2,51 +2,41 @@ import { mdiPinOffOutline } from '@mdi/js'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { favoriteThumbnailUrl, type FavoriteRecipe } from '@shared/domain/favorite'
-import { Carousel } from '@/design/Carousel'
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { TIP_RIGHT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
-import { homeSectionLimit } from '@shared/domain/home'
 import { useFavorites } from '@/stores/favorites'
-import { useSettings } from '@/stores/settings'
 import { useProject } from '@/stores/project'
-import { Section } from '../Section'
-import { ShelfTile, SHELF_TILE_SIZE } from '@/design/ShelfTile'
-import { recreate } from '../recreate'
+import { recreate } from '@/home/recreate'
+import { ShelfTile } from '@/design/ShelfTile'
+import { ShelfPanel } from '@/panels/shared/ShelfPanel'
 
 /**
  * The recipes worth keeping, whichever project one is in.
  *
- * That is what tells this shelf from the creations above it: those belong to a project and go
- * with it, while a favourite is a way of working that follows the person.
+ * That is what tells this shelf from the creations: those belong to a project and go with it,
+ * while a favourite is a way of working that follows the person — which is also why it is the
+ * one panel of this column that has something to show with no key connected.
+ *
+ * The read is local and cannot be refused, so `ready` is the only state it ever reports.
  */
 export function Favorites() {
   const { t } = useTranslation()
-  const sections = useSettings(state => state.settings.home.sections)
-  // Cut to what the section menu was asked for. Every band carrying a count reads it: the row
-  // offers 6, 12, 24 or 48, and a control that writes a setting nothing draws is a control that
-  // silently does nothing.
-  const recipes = useFavorites(state => state.recipes).slice(
-    0,
-    homeSectionLimit(sections, 'favorites'),
-  )
+  const recipes = useFavorites(state => state.recipes)
 
   useEffect(() => void useFavorites.getState().load(), [])
 
-  if (recipes.length === 0) return null
-
   return (
-    <Section id="favorites" title={t('home.sections.favorites')}>
-      <Carousel
-        items={recipes}
-        itemWidth={SHELF_TILE_SIZE}
-        itemHeight={SHELF_TILE_SIZE}
-        label={t('home.sections.favorites')}
-        renderCard={recipe => <Tile recipe={recipe} />}
-      />
-    </Section>
+    <ShelfPanel
+      tool="favorites"
+      items={recipes}
+      state="ready"
+      onRetry={() => void useFavorites.getState().load()}
+      renderCard={recipe => <Tile recipe={recipe} />}
+      empty={t('home.favorites.none')}
+    />
   )
 }
 
@@ -64,6 +54,7 @@ function Tile({ recipe }: { recipe: FavoriteRecipe }) {
       fallbackIcon={assetIcon(recipe.type)}
       hint={recipe.generation.prompt || recipe.label}
       label={t('home.creations.recreate', { model: recipe.label })}
+      tip={TIP_RIGHT}
       {...(hasProject ? { onClick: () => recreate(recipe.type, recipe.generation) } : {})}
       corner={<Unpin recipe={recipe} />}
     />
@@ -81,7 +72,7 @@ function Unpin({ recipe }: { recipe: FavoriteRecipe }) {
     <button
       type="button"
       onClick={() => void useFavorites.getState().unpin(recipe.id)}
-      {...TIP_LEFT(t('home.favorites.unpin', { name: recipe.label }))}
+      {...TIP_RIGHT(t('home.favorites.unpin', { name: recipe.label }))}
       className={cn(
         SHELF_OVERLAY,
         'text-muted hover:text-text top-1 right-1 size-6 focus-visible:opacity-100',

@@ -10,7 +10,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { DEFAULT_WORKSPACE } from '@shared/domain/workspace'
 import { HOME_COMPONENTS } from './home-registry'
-import { SectionNote } from './SectionNote'
+import { QuietNote } from '@/design/QuietNote'
 import { enterWorkspace } from './open'
 import { useHomeSections } from './use-home-sections'
 import { HINT_TOP } from '@/helpers/tooltip'
@@ -64,7 +64,7 @@ function Closing() {
 
   return (
     <div className="flex flex-col items-center gap-3 py-8">
-      <SectionNote standalone>{t('home.closing.title')}</SectionNote>
+      <QuietNote standalone>{t('home.closing.title')}</QuietNote>
       <Button
         {...HINT_TOP(t('home.closingActionHint'))}
         onClick={() => enterWorkspace(DEFAULT_WORKSPACE)}

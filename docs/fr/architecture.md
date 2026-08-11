@@ -358,8 +358,8 @@ src/renderer/src/
 │   ├── textures/   les canaux d'un matériau, et leur aperçu répété
 │   ├── skyboxes/   le ciel immersif et ses trois projections à plat
 │   └── graph/      le node editor — il pose, enregistre et exécute
-├── panels/       les quinze outils ancrables
-├── home/         l'accueil et ses quatorze bandes — une page, pas une disposition
+├── panels/       les vingt-sept outils ancrables
+├── home/         l'accueil et ses deux bandes — une page, pas une disposition
 ├── settings/     la fenêtre des réglages, chargée à la demande
 ├── usage/        la fenêtre de consommation, idem
 ├── licences/     la fenêtre des licences, idem

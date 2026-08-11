@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset, CloudPage } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { expectSilent, settleHome, settled } from '../home-fixtures'
+import { settleHome, settled } from '@/home/home-fixtures'
 import { Similar } from './Similar'
 
 function cloudAsset(id: string, overrides: Partial<CloudAsset> = {}): CloudAsset {
@@ -28,7 +28,7 @@ type Installed = {
   similar: ReturnType<typeof vi.fn>
 }
 
-/** The two reads the band makes: one to pick a reference, one to ask what resembles it. */
+/** The two reads the panel makes: one to pick a reference, one to ask what resembles it. */
 function install(library: CloudAsset[], alike: CloudAsset[]): Installed {
   const browse = vi.fn(() => Promise.resolve<CloudPage>({ assets: library, cursor: null }))
   const similar = vi.fn(() => Promise.resolve(alike))
@@ -42,9 +42,10 @@ beforeEach(() => {
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
 })
 
-describe('the band of lookalikes', () => {
+describe('the panel of lookalikes', () => {
   it('names what the likeness was measured against', async () => {
-    // A row of pictures with no stated reason to be there is a row nobody trusts.
+    // A column of pictures with no stated reason to be there is a column nobody trusts, and the
+    // rail's own title cannot carry the name.
     install([cloudAsset('ref', { name: 'boulder.png' })], [cloudAsset('a'), cloudAsset('b')])
     render(<Similar />)
 
@@ -52,7 +53,7 @@ describe('the band of lookalikes', () => {
   })
 
   it('picks the reference itself, rather than being handed one', async () => {
-    // The choice belongs to the band: the channel answers for whatever asset it is given, so a
+    // The choice belongs to the panel: the channel answers for whatever asset it is given, so a
     // right-click elsewhere can use it too.
     const { similar } = install([cloudAsset('ref')], [cloudAsset('a')])
     render(<Similar />)
@@ -63,7 +64,7 @@ describe('the band of lookalikes', () => {
   it('looks past the records the catalogue drops, rather than asking for one', async () => {
     // A captioning job writes JSON into the library — the studio makes those itself on every
     // pull — and the catalogue drops them on the way through. One of them at the head of the
-    // listing left the reference empty and took the band off an account holding thousands.
+    // listing left the reference empty and took the panel off an account holding thousands.
     const { browse } = install([cloudAsset('ref')], [cloudAsset('a')])
     render(<Similar />)
 
@@ -72,21 +73,21 @@ describe('the band of lookalikes', () => {
     expect(asked?.pageSize ?? 1).toBeGreaterThan(1)
   })
 
-  it('draws nothing when the account holds nothing to compare', async () => {
+  it('says the account holds nothing to compare, rather than drawing nothing', async () => {
     const { browse } = install([], [])
-    const { container } = render(<Similar />)
+    render(<Similar />)
 
     await settled(browse)
-    expectSilent(container)
+    expect(await screen.findByText(/Rien à comparer pour l’instant/)).toBeInTheDocument()
   })
 
-  it('draws nothing when nothing out there resembles it', async () => {
+  it('says as much when nothing out there resembles it', async () => {
     // Not an incident: a fresh account's first upload may genuinely match nothing published.
     const { similar } = install([cloudAsset('ref')], [])
-    const { container } = render(<Similar />)
+    render(<Similar />)
 
     await settled(similar)
-    expectSilent(container)
+    expect(await screen.findByText(/Rien à comparer pour l’instant/)).toBeInTheDocument()
   })
 
   it('offers to try again when the library refused, instead of vanishing', async () => {
@@ -97,6 +98,9 @@ describe('the band of lookalikes', () => {
     render(<Similar />)
 
     expect(await screen.findByRole('button', { name: 'Réessayer' })).toBeInTheDocument()
+    // Its own words rather than the generic line: what failed is the library, and the panel
+    // knows which of its two reads that is.
+    expect(screen.getByText(/La bibliothèque n’a pas répondu/)).toBeInTheDocument()
   })
 
   it('reads again when the offer is taken', async () => {

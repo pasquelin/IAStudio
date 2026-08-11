@@ -39,7 +39,13 @@
     "counts": "Par type",
     "library": "Votre bibliothèque",
     "documents": "Vos documents",
-    "activity": "Activité récente"
+    "activity": "Activité récente",
+    "tools": "Outils",
+    "spark": "Une idée pour commencer",
+    "favorites": "Vos recettes",
+    "similar": "Dans la même veine",
+    "usage": "Ce que vous avez consommé",
+    "jobs": "En cours"
   },
   "view": {
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
@@ -2119,12 +2125,6 @@
   "home": {
     "sections": {
       "spotlight": "Où vous en étiez",
-      "tools": "Outils",
-      "favorites": "Vos recettes",
-      "jobs": "En cours",
-      "spark": "Une idée pour commencer",
-      "similar": "Dans la même veine",
-      "usage": "Ce que vous avez consommé",
       "explore": "Explorer"
     },
     "title": "Accueil",
@@ -2157,6 +2157,7 @@
       "none": "La bibliothèque de votre compte Scenario est vide, ou aucune clé API n’est renseignée."
     },
     "favorites": {
+      "none": "Aucune recette épinglée. Épinglez une génération pour la retrouver ici, dans tous vos projets.",
       "unpin": "Retirer « {{name}} » de vos recettes"
     },
     "spotlight": {
@@ -2178,31 +2179,29 @@
       "title": "Créer ou explorer. Un clic vers la suite.",
       "action": "Commencer à créer"
     },
-    "customise": "Personnaliser cette section",
-    "moveUp": "Monter",
-    "moveDown": "Descendre",
     "hide": "Masquer cette section",
-    "showCount_one": "Afficher {{count, number}} élément",
-    "showCount_many": "Afficher {{count, number}} éléments",
-    "showCount_other": "Afficher {{count, number}} éléments",
     "hidden_one": "{{count, number}} section masquée",
     "hidden_many": "{{count, number}} sections masquées",
     "hidden_other": "{{count, number}} sections masquées",
     "restore": "Les réafficher",
     "retry": "Réessayer",
-    "refused": "Cette section n’a pas obtenu de réponse.",
+    "refused": "Ce panneau n’a pas obtenu de réponse.",
+    "reading": "Lecture en cours…",
     "open": "Ouvrir « {{name}} »",
     "spark": {
+      "noModel": "Choisissez un modèle d’image pour obtenir des départs écrits pour lui.",
       "ask": "Proposez-moi une idée",
       "asking": "Un instant…",
       "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
       "use": "Ouvrir le générateur sur « {{prompt}} »"
     },
     "similar": {
+      "none": "Rien à comparer pour l’instant : votre bibliothèque Scenario est vide, ou aucune clé API n’est renseignée.",
       "title": "Dans la veine de « {{name}} »",
-      "refused": "La bibliothèque n’a pas répondu. La bande revient dès que vous réessayez."
+      "refused": "La bibliothèque n’a pas répondu. Le panneau revient dès que vous réessayez."
     },
     "usage": {
+      "none": "Rien de consommé sur la période, ou aucune clé API n’est renseignée.",
       "summary_one": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} génération.",
       "summary_many": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} générations.",
       "summary_other": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} générations.",
@@ -2227,12 +2226,7 @@
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
     "spotlightConnectHint": "Ouvre les préférences, à la section du compte",
     "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère",
-    "moveUpHint": "Remonte cette section d’un cran sur l’accueil",
-    "moveDownHint": "Descend cette section d’un cran sur l’accueil",
-    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit",
-    "showCountHint_one": "Ne garde que {{count, number}} élément dans cette section",
-    "showCountHint_many": "Ne garde que {{count, number}} éléments dans cette section",
-    "showCountHint_other": "Ne garde que {{count, number}} éléments dans cette section"
+    "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit"
   },
   "animation": {
     "play": "Lire",

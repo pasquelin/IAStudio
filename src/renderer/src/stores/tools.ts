@@ -96,8 +96,10 @@ export const DEFAULT_SPLIT = 240
  * exist so the generator stays visible WHILE the Explorer is read, and a half that starts closed
  * would be that arrangement withheld until someone goes looking for it in the rail.
  *
- * The home names the two columns it has and no band. Its left column is a lone half — `Edge`
- * gives one the whole zone, so the projects fill it rather than hanging under an empty top.
+ * The home names the two columns it has and no band. Both halves of both, since 11 August: its
+ * upper left was a lone empty half until the tools moved into it, and a half left closed there
+ * would be the one panel that says something with no key connected, withheld until somebody went
+ * looking for it in the rail.
  */
 export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
@@ -106,7 +108,7 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     bottom: { primary: null },
   },
   home: {
-    left: { secondary: null },
+    left: { primary: null, secondary: null },
     right: { primary: null, secondary: null },
   },
 }
@@ -244,10 +246,15 @@ function openEverywhereItSits(open: OpenByZone): OpenByZone {
 }
 
 /**
- * What an older store comes back as. The whole stored arrangement is read as the workspaces':
- * every version this runs for either predates the split — the home had no zones of its own to
- * arrange — or gave the home a single column. It becomes theirs, and the home starts on its
- * default, which is now two columns rather than one.
+ * What an older store comes back as, and the home starts on its default either way: every
+ * version this runs for gave it fewer halves than it has.
+ *
+ * The workspaces' own arrangement is where the care is, and the shape it was written in is what
+ * decides. **Version 9 is the line**: before it, one arrangement lay flat at the root — `open`,
+ * `sizes`, `splits`; from it, `partialize` writes `{ arrangements: { workspaces, home } }`, and
+ * reading THAT as the flat shape finds none of the three keys. It would answer the factory
+ * defaults, which is every column width and every chosen panel of all seven spaces lost without
+ * a word — the cost of a version bump that only meant to add a half to the home.
  */
 export function migrateTools(
   persisted: unknown,
@@ -255,9 +262,12 @@ export function migrateTools(
 ): { arrangements: Record<SurfaceFamily, Arrangement> } | undefined {
   if (!isRecord(persisted)) return undefined
 
+  const held: unknown = Reflect.get(persisted, 'arrangements')
+  const workspaces = isRecord(held) ? Reflect.get(held, 'workspaces') : persisted
+
   return {
     arrangements: {
-      workspaces: arrangementFrom(persisted, version),
+      workspaces: arrangementFrom(workspaces, version),
       home: DEFAULT_ARRANGEMENTS.home,
     },
   }
@@ -401,7 +411,9 @@ export const useTools = create<ToolsState>()(
       // the spaces keep for generation, and a click on either was a click on both. 9 gave the
       // home a left column and nothing else; it has two now, and a stored arrangement naming
       // only the first would withhold the right one from everyone who had ever opened the app.
-      version: 10,
+      // 10 left the home's upper left closed, which is where the tools moved on 11 August: the
+      // same withholding, one half further in.
+      version: 11,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.

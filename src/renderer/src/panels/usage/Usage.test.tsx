@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UsageReport } from '@shared/domain/usage'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { expectSilent, settleHome } from '../home-fixtures'
+import { settleHome } from '@/home/home-fixtures'
 import { Usage } from './Usage'
 
 function report(overrides: Partial<UsageReport> = {}): UsageReport {
@@ -42,7 +42,7 @@ beforeEach(() => {
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
 })
 
-describe('the usage band', () => {
+describe('the usage panel', () => {
   it('says what went, over the period the usage window itself opens on', async () => {
     // The two must not disagree: a home saying one figure and the window another is worse than
     // the home saying nothing.
@@ -61,12 +61,29 @@ describe('the usage band', () => {
     expect(screen.getByText('Seedream')).toBeInTheDocument()
   })
 
-  it('draws nothing at all before the report has landed', () => {
-    // An initial state is not an answer, and "0 units" is a claim this band has not verified.
+  /**
+   * As a band it read when it was scrolled to and drew nothing until then. A panel is mounted
+   * only once its half shows it, so there is nothing left to defer — and drawing nothing is not
+   * open to it either.
+   *
+   * What it says meanwhile is not "nothing spent": this is the slowest aggregate of the six, and
+   * a claim it has not verified is one it contradicts a second later.
+   */
+  it('says the read is under way rather than claiming nothing was spent', async () => {
     install(report())
-    const { container } = render(<Usage />)
+    render(<Usage />)
 
-    expectSilent(container)
+    expect(screen.getByText('Lecture en cours…')).toBeInTheDocument()
+    expect(screen.queryByText(/Rien de consommé/)).not.toBeInTheDocument()
+    // And it does land: an empty state that never resolves would pass the two lines above.
+    expect(await screen.findByText(/1 240 unités sur 31 jours/)).toBeInTheDocument()
+  })
+
+  it('says nothing was spent once the read has landed on an empty report', async () => {
+    install(report({ units: 0, jobs: 0, models: [] }))
+    render(<Usage />)
+
+    expect(await screen.findByText(/0 unités sur 31 jours/)).toBeInTheDocument()
   })
 
   /**
