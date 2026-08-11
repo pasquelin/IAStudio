@@ -615,7 +615,7 @@ rigged model, a **Bone** picker appears in the bar: it opens on **The whole mode
 bone makes the keys drive that bone alone, which is how an arm is corrected without moving the
 whole character.
 
-**The band reads by subject, not by track.** One line per object — or per bone — with its animated
+**The band reads by object.** One line per object — or per bone — with its animated
 properties **folded underneath**. The folded line shows every key of the object, its three
 properties merged; unfolding separates them. **Folding never loses a key**, it only changes what
 is shown.
@@ -626,8 +626,8 @@ is shown.
 | **Play** / **Pause** | runs the timeline |
 | **Auto-key** | moving an object **writes a key** instead of shifting its rest pose |
 | **Duration** and **FPS** | how long the timeline runs, and at what rate |
-| **Bone** | on a rigged model: the bone the next track will drive, or **The whole model** |
-| **Key everything animated** | the same gesture, on every track at once |
+| **Bone** | on a rigged model: the bone the next key will drive, or **The whole model**. A bone **clicked in the view** in pose mode wins over this choice |
+| **Key everything animated** | the same gesture, on everything **already** animated — greyed out until something is |
 | **Render to video** | see below — greyed out until a camera is in the scene |
 
 **Each line carries its own**, to the left of the band:
@@ -636,7 +636,7 @@ is shown.
 |---|---|
 | the chevron | **Show or hide the animated properties** |
 | **Key *(the name)*** | records the movement made since, on every property of that object |
-| **Mute** / **Solo** / **Lock** | the three switches a track carries, as in Video |
+| **Mute** / **Solo** / **Lock** | the three switches a line carries, the same as in Video |
 | **Remove track *(the name)*** | on a property line, takes it away with its keys |
 
 **The playhead is grabbed and dragged** along the ruler, and **keys are dragged** along their
@@ -646,9 +646,14 @@ scene is longer than it is.
 
 **Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 
-**Tracks add up.** Two position tracks on one object add their moves together; two scale tracks
-**multiply** theirs — twice two makes four, which is what stacking them means. This is unlike a
-video montage, where the clip on top hides the one below.
+**Animation composes with the object's pose, it does not replace it** — and not the same way for
+every property: moves **add up**, scales **multiply**. That is the opposite of a video montage,
+where the clip on top hides the one below.
+
+> **You can see it by stacking the same property twice on one object.** An object carries one of
+> each as long as you key normally; **lock its lines**, and the next key opens fresh ones over
+> them. Two positions of 2 and 3 give 5; two scales that each double give **four times** the
+> size, which is what stacking them means.
 
 > **An object that is ALREADY animated records on its own, whatever the switch says.** What the
 > view shows is the rest pose **plus** what the keys add: dragging a keyed object without
@@ -661,7 +666,7 @@ video montage, where the clip on top hides the one below.
 > The distinction is on the **keys**, not on the lines: properties that are open and empty are not
 > an animation yet, and the switch still has its say there.
 >
-> **A bone with no track is a case apart**: it has no rest pose to fall back to, so the drag is
+> **A bone with no key is a case apart**: it has no rest pose to fall back to, so the drag is
 > simply dropped and the bone returns where it was.
 
 ### Keying by hand
@@ -680,15 +685,15 @@ Auto-key is not compulsory. The gesture, in order:
 > though, **nothing moves**: what you see is always the reference plus the key, which is
 > where you just put it.
 
-**A bone track does not work that way.** It has no reference pose — a bone's lives in the
-model's file, not in the document. Setting a key there **pins what the track already holds**
+**A bone does not work that way.** Its properties have no reference pose — a bone's lives in the
+model's file, not in the document. Setting a key there **pins what they already hold**
 at that instant, and nothing springs back. To animate a bone, go through auto-key and pose
 mode rather than through these three steps.
 
 ### Writing a video
 
 Add a **camera** to the scene (Add menu → Object → Camera). It is an object like any other: it
-moves with the gizmo, it animates through a track, and a glTF export carries it along.
+moves with the gizmo, it animates like any other object, and a glTF export carries it along.
 
 The timeline's **Render to video** button writes an `.mp4` of what that camera sees, over the whole
 length of the timeline. The studio asks **where to save before computing anything**: a render takes
