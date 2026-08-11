@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@shared/domain/graph'
+import { edgeBetween } from '@/engines/graph/connect'
 import { forEachEndNode, forEachNode, textNode } from '@/engines/graph/graph-fixtures'
-import { loopInputId, loopOutputId } from '@/engines/graph/handles'
+import { handleId, loopInputId, loopOutputId } from '@/engines/graph/handles'
 import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
@@ -15,13 +16,12 @@ const END: GraphNode = forEachEndNode('end1', 'forEach1')
 const TEXT: GraphNode = textNode('text1')
 
 /** A model reading the item of the first list — the port a removed list takes with it. */
-const READS_ITEM: GraphEdge = {
-  id: 'e1',
-  source: 'model1',
-  target: 'forEach1',
-  sourceHandle: 'model1-source-prompt',
-  targetHandle: loopOutputId('forEach1', 0),
-}
+const READS_ITEM: GraphEdge = edgeBetween(
+  'model1',
+  handleId('model1', 'source', 'prompt'),
+  'forEach1',
+  loopOutputId('forEach1', 0),
+)
 
 beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [LOOP, END, TEXT], edges: [], inputKeys: [] })
@@ -113,13 +113,12 @@ describe('the lists a loop walks', () => {
    * list, and `validateWorkflowFlow` says nothing.
    */
   it('cuts the wire a retyped list would no longer accept', async () => {
-    const feeds: GraphEdge = {
-      id: 'e2',
-      source: 'forEach1',
-      target: 'text1',
-      sourceHandle: loopInputId('forEach1', 0),
-      targetHandle: 'text1-target-prompt',
-    }
+    const feeds: GraphEdge = edgeBetween(
+      'forEach1',
+      loopInputId('forEach1', 0),
+      'text1',
+      handleId('text1', 'target', 'prompt'),
+    )
     installGraph(DOCUMENT, {
       nodes: [forEachNode('forEach1', ['text']), END, TEXT],
       edges: [feeds],
@@ -135,13 +134,12 @@ describe('the lists a loop walks', () => {
 
   /** And a wire the new kind still accepts stays: only what no longer connects is cut. */
   it('keeps the wire of another list while one is retyped', async () => {
-    const feeds: GraphEdge = {
-      id: 'e3',
-      source: 'forEach1',
-      target: 'text1',
-      sourceHandle: loopInputId('forEach1', 1),
-      targetHandle: 'text1-target-prompt',
-    }
+    const feeds: GraphEdge = edgeBetween(
+      'forEach1',
+      loopInputId('forEach1', 1),
+      'text1',
+      handleId('text1', 'target', 'prompt'),
+    )
     installGraph(DOCUMENT, {
       nodes: [forEachNode('forEach1', ['image', 'text']), END, TEXT],
       edges: [feeds],
@@ -153,7 +151,7 @@ describe('the lists a loop walks', () => {
     if (!first) throw new Error('no list to retype')
     await userEvent.selectOptions(first, 'text')
 
-    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual(['e3'])
+    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual([feeds.id])
   })
 
   /** One entry, so ⌘Z never gives a list back without the port its item leaves by. */
