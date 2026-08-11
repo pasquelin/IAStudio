@@ -99,6 +99,18 @@ describe('following the project folder', () => {
     const announce = vi.fn()
     watches.push(watchProjectFolder(root, announce))
 
+    /**
+     * The folder was made moments ago and its own creation is still in flight. Drained and
+     * forgotten here, because otherwise an announcement `project()` caused would answer for one
+     * this case never made: starved of its two writes, the case still passed 8 runs out of 10.
+     *
+     * 500 ms is measured, not the debounce plus a margin. What bounds it is the LAST leftover
+     * arriving, plus the debounce it arms: leftovers land at 3–52 ms, so the cliff sits near
+     * 352 ms. Starved, 200 ms still passed 4 times in 6; 350 ms, 500 ms and 1500 ms passed none.
+     */
+    await new Promise(done => setTimeout(done, 500))
+    announce.mockClear()
+
     await writeFile(join(root, 'one.txt'), '')
     await writeFile(join(root, 'two.txt'), '')
     await vi.waitFor(() => expect(announce).toHaveBeenCalled(), { timeout: 10_000 })
