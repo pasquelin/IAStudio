@@ -49,8 +49,9 @@ describe('LiveNodeInspector', () => {
   })
 
   /**
-   * The document travels as a prop: each of the four suites declares its own, and a fixture that
-   * hard-coded one would answer for the wrong graph.
+   * The document travels as a prop. An assurance, not a fix: all four suites happen to name their
+   * document `graph-1` today, so a hard-coded id would hurt none of them — the fifth is what this
+   * holds the door against.
    *
    * Two graphs have to stand at once for that to be observable — with a single one installed, a
    * fixture reading the wrong id finds nothing and renders nothing, which is what a missing node
