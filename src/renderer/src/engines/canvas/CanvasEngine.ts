@@ -18,7 +18,7 @@ import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
-import { onPaletteChange, token } from '../core/palette'
+import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
 import { captionSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
 import {
@@ -362,6 +362,12 @@ const FALLBACK_COLORS: OverlayColors = {
   scrim: '#00000099',
 }
 
+const RULER_FAMILY = 'system-ui, sans-serif'
+
+/** `--text-micro` at scale 1, for a canvas not yet in a document — as `FALLBACK_COLORS` is. */
+const RULER_FONT_SIZE = '9px'
+const FALLBACK_RULER_FONT = `${RULER_FONT_SIZE} ${RULER_FAMILY}`
+
 function readColors(element: HTMLElement): OverlayColors {
   const read = (part: keyof OverlayColors): string =>
     token(element, OVERLAY_TOKENS[part]) || FALLBACK_COLORS[part]
@@ -450,6 +456,7 @@ export class CanvasEngine {
   private view: CanvasView = DEFAULT_VIEW
   private hostSize: Size = { width: 0, height: 0 }
   private colors: OverlayColors = FALLBACK_COLORS
+  private rulerFont = FALLBACK_RULER_FONT
   /** Read on resize rather than per event: `getBoundingClientRect` forces a layout. */
   private bounds: DOMRect | null = null
 
@@ -1408,6 +1415,7 @@ export class CanvasEngine {
 
   private readPalette(canvas: HTMLCanvasElement): void {
     this.colors = readColors(canvas)
+    this.rulerFont = tokenAsFont(canvas, '--text-micro', RULER_FONT_SIZE, RULER_FAMILY)
     this.overlay.invalidate()
   }
 
@@ -1437,6 +1445,7 @@ export class CanvasEngine {
       activeGuideId: this.gesture.kind === 'guide' ? this.gesture.id : null,
       pointer: this.pointer,
       colors: this.colors,
+      rulerFont: this.rulerFont,
       marching: this.marching(),
       // Handed over whole rather than gated here: every painter already returns on nothing to
       // draw, and a gate repeating those guards is one a new decoration gets forgotten from —

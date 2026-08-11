@@ -15,7 +15,7 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
-import { onPaletteChange, token } from '../core/palette'
+import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { waveformColumns, type WaveColumn } from './waveform'
 
 export type Size = { width: number; height: number }
@@ -23,8 +23,12 @@ export type Size = { width: number; height: number }
 /** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
 const POSTER_RATIO = 16 / 9
 
-const CLIP_FONT = '11px ui-sans-serif, system-ui'
-const RULER_FONT = '10px ui-monospace, monospace'
+const CLIP_FAMILY = 'ui-sans-serif, system-ui'
+const RULER_FAMILY = 'ui-monospace, monospace'
+
+/** `--text-tiny` and `--text-mini` at scale 1, for a paint with no document to read from. */
+const CLIP_SIZE = '11px'
+const RULER_SIZE = '10px'
 
 export type PaintOptions = {
   /** What a clip is called. Absent falls back to its asset id, which is always available. */
@@ -45,6 +49,8 @@ type Palette = {
   playhead: string
   text: string
   muted: string
+  clipFont: string
+  rulerFont: string
 }
 
 let cached: Palette | null = null
@@ -75,6 +81,9 @@ function computePalette(): Palette {
   const root = typeof document === 'undefined' ? null : document.documentElement
   const read = (name: string): string => (root ? token(root, name) : '') || '#000'
 
+  const font = (name: string, size: string, family: string): string =>
+    root ? tokenAsFont(root, name, size, family) : `${size} ${family}`
+
   return {
     ruler: read('--color-chassis'),
     track: read('--color-panel'),
@@ -85,6 +94,8 @@ function computePalette(): Palette {
     playhead: read('--color-accent'),
     text: read('--color-text'),
     muted: read('--color-muted'),
+    clipFont: font('--text-tiny', CLIP_SIZE, CLIP_FAMILY),
+    rulerFont: font('--text-mini', RULER_SIZE, RULER_FAMILY),
   }
 }
 
@@ -118,7 +129,7 @@ function paintRuler(
 
   const step = tickStep(viewport, state)
   const [from, to] = visibleRange(viewport, size.width)
-  context.font = RULER_FONT
+  context.font = palette.rulerFont
   context.textBaseline = 'middle'
 
   for (let time = Math.floor(from / step) * step; time <= to; time += step) {
@@ -294,7 +305,7 @@ export function paintTimeline(
 
   // Hoisted out of the clip loop: assigning `font` reparses the CSS shorthand and drops the
   // context's metrics cache, and at five hundred clips a frame that is not free.
-  context.font = CLIP_FONT
+  context.font = palette.clipFont
   context.textBaseline = 'top'
 
   for (const { track, offset } of trackRows(state)) {
