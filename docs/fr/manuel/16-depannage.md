@@ -163,9 +163,9 @@ Rafraîchissez le panneau **Modèles** et prenez-en un autre.
 
 **Ce que ça veut dire.** Quelque chose a échoué d’une façon que le studio n’a pas su nommer.
 
-**Quoi faire.** Réessayez une fois. Si cela recommence, passez le **Détail du journal** sur
-« Tout » (Réglages → Avancé), refaites le geste, et ouvrez les **Outils de développement** pour
-lire ce qui est écrit. C’est la seule situation où ce bouton sert à quelque chose.
+**Quoi faire.** Réessayez une fois. Si cela recommence, ouvrez le **journal d’activité** : la
+ligne de l’échec y porte, en petit, le nom technique de ce qui a échoué et le message d’erreur.
+C’est cela qu’il faut recopier dans une demande d’aide.
 
 > **Aucun message d’erreur du service ne vous est montré tel quel.** Le studio les traduit tous en
 > une de ces phrases. Ce n’est pas de la paresse : un message d’erreur brut contient la requête qui
@@ -589,10 +589,20 @@ Trois vérifications, dans cet ordre :
 
 ### Le journal
 
-Réglages → **Avancé** → **Détail du journal**. Passez-le sur « Tout », refaites le geste qui
-échoue, puis ouvrez les **Outils de développement** (même section) : les messages s’y affichent.
+**Le journal d’activité, celui de la ligne d’état, est la seule trace lisible depuis
+l’application** — et c’est lui qu’il faut joindre quand vous demandez de l’aide. Chaque échec y
+laisse une ligne, avec son heure. **Quand le studio a un détail technique à donner**, il l’écrit en
+petit sous le message : c’est le cas des pannes d’affichage, des refus de l’API et des échecs
+d’envoi vers la bibliothèque. Les échecs de projet, eux, n’en portent pas — le chemin que vous avez
+choisi dans un dialogue n’apprendrait rien de plus. Un projet ouvert garde la ligne : elle est
+écrite dans le projet et se relit plus tard.
 
-C’est ce qu’il faut joindre quand vous demandez de l’aide.
+> **Deux réglages de la section Avancé n’aident pas ici, et il vaut mieux le savoir avant
+> d’essayer.** **Détail du journal** règle ce que le studio écrit dans *son* journal interne, qui
+> n’est lisible que depuis un terminal — pas dans la version que vous avez installée, et il ne
+> change rien à ce que montre le panneau Activité. **Outils de développement** n’ouvre rien non
+> plus : la console est refusée hors version de développement, délibérément — voir
+> [le chapitre 14](14-reglages.md#outils-de-développement).
 
 ### Le fichier de réglages
 

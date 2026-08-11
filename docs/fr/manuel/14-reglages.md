@@ -645,6 +645,11 @@ Combien l’application raconte ce qu’elle fait, dans son journal.
 « Tout » est utile pour comprendre un problème, et bavard le reste du temps. Ce réglage ne change
 rien à ce que fait le logiciel — seulement à ce qu’il en dit.
 
+**Attention à ne pas confondre ce journal avec celui de la ligne d’état.** Celui-ci est le journal
+interne du studio, écrit dans le terminal qui l’a lancé : **dans la version installée, il n’y a pas
+de terminal, donc rien à lire**. Le panneau **Activité récente**, lui, ne dépend pas de ce réglage —
+il reçoit ses lignes quoi qu’il arrive.
+
 ### Fichier de réglages
 
 **Bouton : Montrer.**
@@ -673,8 +678,14 @@ aide à comprendre un problème.
 Ouvre la console technique du navigateur intégré : les messages du journal, les erreurs, l’état
 interne de l’affichage.
 
-Réservé au dépannage. **Rien de ce qui s’y trouve n’est nécessaire pour se servir du logiciel** —
-et rien de ce qu’on y tape n’est prévu pour l’être.
+**Dans la version installée, ce bouton n’ouvre rien.** La console y est refusée au niveau de la
+fenêtre elle-même, et c’est une décision de sécurité : une dépendance compromise qui l’appellerait
+atteindrait sinon les fonctions internes du studio. Le bouton reste affiché, sans effet — et il ne
+vous manque rien, car **le journal d’activité porte déjà ce qui sert à un signalement**, détail
+technique compris. Voir [Quand ça coince](16-depannage.md#le-journal).
+
+Réservé au dépannage, dans une version de développement. **Rien de ce qui s’y trouve n’est
+nécessaire pour se servir du logiciel** — et rien de ce qu’on y tape n’est prévu pour l’être.
 
 ### Tout réinitialiser
 
