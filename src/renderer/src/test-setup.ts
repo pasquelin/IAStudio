@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeAll } from 'vitest'
 import {
   handleRequest,
@@ -97,6 +97,31 @@ function polyfillWorker(): void {
   // that nothing in the studio reaches for.
   globalThis.Worker = InProcessWorker as unknown as typeof Worker
 }
+
+/**
+ * How long an awaited query may wait. Testing Library's own default is one second.
+ *
+ * That second is a budget for the RUNNER, not for the studio, and the runner shares this machine
+ * with whatever else builds on it. Measured on `ModelNodeFields.test.tsx`, which waits on a
+ * catalogue asked only once the model's schema has named its family — two round trips: the case
+ * takes 136 to 181 ms alone on a quiet machine, and took 1035 ms then 1270 ms inside full runs
+ * under six concurrent sessions. Seven to nine times its own cost, against a ceiling of seven.
+ * Those readings are one machine's on one afternoon; a review re-measuring under its own load
+ * read 186 to 525 ms, which points the same way without reproducing them.
+ *
+ * Three seconds is twice the worst reading. It buys tolerance, not speed: a satisfied wait
+ * returns at once, so a green run should pay nothing — that mechanism is reasoned, not measured,
+ * and no run at one second was ever timed against a run at three. What it costs is +2,00 s per
+ * expiry, on 462 waiting sites across 63 files.
+ *
+ * Raised here rather than per call: two suites of THIS project had already bought their own
+ * patience by hand, which is how a default nobody set becomes a rule nobody can see. The `node`
+ * project keeps its own — `vi.waitFor` takes no global, and `main/project/folder.test.ts` still
+ * writes its number where its neighbours name theirs.
+ */
+export const AWAITED_QUERY_MS = 3000
+
+configure({ asyncUtilTimeout: AWAITED_QUERY_MS })
 
 // At module scope, not in `beforeAll`: a component rendered while a test file is imported
 // would already have asked for a context by then.
