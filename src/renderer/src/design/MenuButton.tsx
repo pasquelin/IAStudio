@@ -51,6 +51,10 @@ export function MenuButton({
         {...button}
         ref={setAnchor}
         tooltip={tooltip}
+        // Announced before it opens, as `AccountSelect` does on the same mounting: a menu that
+        // takes the focus without a reader having said it was coming is a jump out of nowhere.
+        aria-haspopup={menu && flyout.hasFlyout ? 'menu' : undefined}
+        aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
         onClick={() => {
           onClick?.()
           if (opensOnClick) flyout.open()

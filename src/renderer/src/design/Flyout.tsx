@@ -2,6 +2,7 @@ import { useCallback, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/helpers/cn'
 import { useDismiss } from '@/hooks/useDismiss'
+import { useMenuKeys } from '@/hooks/useMenuKeys'
 import { MENU_SURFACE } from './styles'
 
 /** Which side of its anchor the menu hangs on. */
@@ -18,11 +19,24 @@ export type FlyoutProps = {
    */
   role?: 'menu'
   /**
-   * Closes on a press outside, on `Escape`, and when the window loses focus. Optional because
-   * the hover callers already close on pointer-out, with a grace period a global `pointerdown`
-   * would fight. Must be stable — it is what the listeners hang off.
+   * Closes on a press outside, on `Escape`, and when the window loses focus. Optional for a
+   * surface whose caller closes it another way — `useHoverFlyout` now passes it always, since a
+   * menu it kept open for the keyboard has no pointer-out left to close it. Must be stable: it
+   * is what the listeners hang off.
    */
   onDismiss?: () => void
+  /**
+   * Gives the surface a menu's keyboard: focus on the first row, arrows, `Home`/`End`, a roving
+   * `tabindex`, and the focus handed back to the opener on the way out. The callback is what
+   * `Tab` calls.
+   *
+   * Optional, the same shape as `onDismiss` and for the same reason — a flyout that opens under
+   * the pointer would take the focus from whatever the caret was in. Rows are found by THEIR OWN
+   * role inside the panel, not by the panel's: a surface holding sliders installs the walk and
+   * finds nothing to walk, which costs a listener and hands the focus back to the opener as it
+   * closes. Both are wanted, so there is no guard against it.
+   */
+  onKeyClose?: () => void
   onPointerEnter?: () => void
   onPointerLeave?: () => void
 }
@@ -51,12 +65,14 @@ export function Flyout({
   placement = 'right',
   role,
   onDismiss,
+  onKeyClose,
   onPointerEnter,
   onPointerLeave,
 }: FlyoutProps) {
   const panel = useRef<HTMLDivElement | null>(null)
 
   useDismiss(onDismiss, panel, anchor)
+  useMenuKeys(panel, onKeyClose)
 
   // Placed through a callback ref rather than state: measuring in an effect and storing the
   // result would render the menu once at the wrong place, then move it.

@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { Flyout } from './Flyout'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
+import { Flyout, type FlyoutProps } from './Flyout'
 
 describe('Flyout', () => {
   it('renders its rows outside the anchor, at the document root', () => {
@@ -99,5 +100,57 @@ describe('Flyout', () => {
       </Flyout>,
     )
     expect(screen.getByRole('menu')).toBeInTheDocument()
+  })
+
+  /**
+   * The menu keyboard, opted into rather than assumed — the same shape as `onDismiss`, and for
+   * the same reason: two callers open on hover, and a surface that grabs the focus as the
+   * pointer passes over it takes the caret out of whatever was being typed.
+   */
+  describe('the keyboard', () => {
+    const menu = (props: Partial<FlyoutProps> = {}) => {
+      const anchor = document.createElement('div')
+      document.body.appendChild(anchor)
+
+      render(
+        <Flyout anchor={anchor} role="menu" {...props}>
+          <button type="button" role="menuitem">
+            Pinceau
+          </button>
+          <button type="button" role="menuitem">
+            Gomme
+          </button>
+        </Flyout>,
+      )
+      return anchor
+    }
+
+    it('walks the rows once a caller asks for it', async () => {
+      menu({ onKeyClose: vi.fn() })
+      expect(screen.getByRole('menuitem', { name: 'Pinceau' })).toHaveFocus()
+
+      await userEvent.keyboard('{ArrowDown}')
+
+      expect(screen.getByRole('menuitem', { name: 'Gomme' })).toHaveFocus()
+    })
+
+    it('closes on Tab through the callback it was handed', async () => {
+      const onKeyClose = vi.fn()
+      menu({ onKeyClose })
+
+      await userEvent.keyboard('{Tab}')
+
+      expect(onKeyClose).toHaveBeenCalled()
+    })
+
+    it('takes no focus at all from a caller that did not ask', () => {
+      const outside = document.createElement('button')
+      document.body.appendChild(outside)
+      outside.focus()
+
+      menu()
+
+      expect(outside).toHaveFocus()
+    })
   })
 })

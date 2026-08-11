@@ -17,19 +17,28 @@ const ROWS = '[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"]
  *
  * `Tab` closes rather than walking the rows — the pattern APG names, and the alternative is a
  * trap someone can only leave by guessing at `Escape`.
+ *
+ * Pass `undefined` to opt out entirely, the way `useDismiss` does: a surface that opens under
+ * the pointer would take the focus from whatever was being typed, and take it back on the way
+ * out. A menu without a close has no `Tab` either, which is the trap this hook exists to avoid.
  */
-export function useMenuKeys(surface: RefObject<HTMLElement | null>, onClose: () => void): void {
+export function useMenuKeys(
+  surface: RefObject<HTMLElement | null>,
+  onClose: (() => void) | undefined,
+): void {
   // Read at event time, never a dependency: every caller passes an inline arrow, so depending on
   // it would tear the effect down on each render of the parent — and put focus back on the first
-  // row every time, mid-walk.
+  // row every time, mid-walk. Only its PRESENCE is a dependency, since that is the opt-in.
   const close = useRef(onClose)
   useEffect(() => {
     close.current = onClose
   })
 
+  const wanted = Boolean(onClose)
+
   useEffect(() => {
     const menu = surface.current
-    if (!menu) return
+    if (!menu || !wanted) return
 
     // Whatever had focus when the menu opened — the row that was right-clicked, usually.
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -60,7 +69,7 @@ export function useMenuKeys(surface: RefObject<HTMLElement | null>, onClose: () 
       else if (event.key === 'ArrowUp') focus(all[at <= 0 ? last : at - 1])
       else if (event.key === 'Home') focus(all[0])
       else if (event.key === 'End') focus(all[last])
-      else if (event.key === 'Tab') close.current()
+      else if (event.key === 'Tab') close.current?.()
       else return
 
       event.preventDefault()
@@ -81,5 +90,5 @@ export function useMenuKeys(surface: RefObject<HTMLElement | null>, onClose: () 
       const focused = document.activeElement
       if (focused === document.body || menu.contains(focused)) opener?.focus()
     }
-  }, [surface])
+  }, [surface, wanted])
 }

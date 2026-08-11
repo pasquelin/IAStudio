@@ -63,6 +63,63 @@ describe('useHoverFlyout', () => {
     expect(result.current.showing).toBe(false)
   })
 
+  /**
+   * Which of the two ways it opened, because they do not deserve the same manners: a menu the
+   * pointer wandered into must not take the focus, and one that was asked for must.
+   */
+  describe('what asked for it', () => {
+    it('is not asked for when the pointer merely arrived', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+
+      act(() => result.current.wrapProps.onPointerEnter())
+
+      expect(result.current.showing).toBe(true)
+      expect(result.current.asked).toBe(false)
+    })
+
+    it('is asked for when it was opened on purpose', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+
+      act(() => result.current.open())
+
+      expect(result.current.asked).toBe(true)
+    })
+
+    // The pointer leaving and coming back mid-walk would otherwise hand the focus back to the
+    // opener, in the middle of the gesture that asked for the menu.
+    it('stays asked for while the pointer wanders in and out', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => result.current.wrapProps.onPointerEnter())
+
+      expect(result.current.asked).toBe(true)
+    })
+
+    // The walk it is holding would otherwise end 220 ms after a mouse moved off a bar nobody
+    // touched, with the focus thrown back to the opener.
+    it('does not let the grace period close a menu that was asked for', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => vi.advanceTimersByTime(AFTER_GRACE))
+
+      expect(result.current.showing).toBe(true)
+      expect(result.current.asked).toBe(true)
+    })
+
+    it('forgets it was asked for once it is closed', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+
+      act(() => result.current.close())
+
+      expect(result.current.asked).toBe(false)
+    })
+  })
+
   it('closes on demand, for a row that just acted', () => {
     const { result } = renderHook(() => useHoverFlyout(3))
 

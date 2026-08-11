@@ -17,8 +17,9 @@ import { useEffect, type RefObject } from 'react'
  * out, the press closes and the click that follows reopens, so the toggle never looks like it
  * closed.
  *
- * Pass `undefined` to opt out entirely. Two of `Flyout`'s callers open and close on hover with a
- * grace period, and a global `pointerdown` underneath them would fight it.
+ * Pass `undefined` to opt out entirely — for a surface whose caller closes it another way. The
+ * hover flyouts did, until one of them started holding a menu open for the keyboard: with no
+ * pointer-out to close it, dismissal is the only way out and they now pass it always.
  */
 export function useDismiss(
   onDismiss: (() => void) | undefined,
