@@ -133,12 +133,16 @@ C’est le filtre le plus utile. Le vocabulaire est technique mais court :
 
 ### Tag — les mots-clés des publieurs
 
-Des étiquettes posées par ceux qui publient les modèles. Elles ne sont pas traduites, parce
-qu’elles sont écrites telles quelles dans le catalogue.
+Des étiquettes posées par ceux qui publient les modèles. Le menu les affiche **traduites** ;
+c’est l’étiquette d’origine, non traduite, qui part au catalogue — vous lisez « Première image »,
+le filtre demande `First Frame`.
 
-Quelques exemples, selon l’espace : `Flux.1 LoRA`, `characters`, `fantasy`, `cartoon` pour
-l’image ; `T2V`, `I2V`, `First Frame` pour la vidéo ; `PBR`, `Multiview` pour la 3D ; `TTS`,
-`Music` pour l’audio.
+Quelques exemples, selon l’espace : « Personnages », « Fantasy », « Dessin animé » pour l’image ;
+« Première image », « Montage vidéo » pour la vidéo ; « Multivue », « Mouvement » pour la 3D ;
+« Musique », « Texte vers voix » pour l’audio.
+
+Les sigles restent tels quels, faute d’avoir une traduction qui éclaire quoi que ce soit :
+`T2V`, `I2V`, `V2V`, `PBR`, `TTS`, et le nom de produit `Flux.1 LoRA`.
 
 ### Éditeur — qui a fabriqué le modèle
 

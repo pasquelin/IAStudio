@@ -128,11 +128,15 @@ This is the most useful filter. The vocabulary is technical but short:
 
 ### Tag — the publishers' keywords
 
-Labels put there by whoever publishes the models. They are not translated, because they are written
-as-is in the catalogue.
+Labels put there by whoever publishes the models. The menu shows them **translated**; it is the
+original label, untranslated, that reaches the catalogue — you read "First frame", the filter asks
+for `First Frame`.
 
-A few examples, by workspace: `Flux.1 LoRA`, `characters`, `fantasy`, `cartoon` for image; `T2V`,
-`I2V`, `First Frame` for video; `PBR`, `Multiview` for 3D; `TTS`, `Music` for audio.
+A few examples, by workspace: "Characters", "Fantasy", "Cartoon" for image; "First frame", "Video
+editing" for video; "Multiview", "Motion" for 3D; "Music", "Text to speech" for audio.
+
+Acronyms stay as they are, having no translation that would make anything clearer: `T2V`, `I2V`,
+`V2V`, `PBR`, `TTS`, and the product name `Flux.1 LoRA`.
 
 ### Publisher — who made the model
 

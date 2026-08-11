@@ -17,9 +17,7 @@ import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
   MODEL_SORTS,
-  TAGS_BY_FAMILY,
   TAG_LABEL_KEYS,
-  UNTRANSLATED_TAGS,
 } from '../domain/model'
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
