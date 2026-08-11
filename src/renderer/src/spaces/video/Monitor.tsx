@@ -1,12 +1,10 @@
 import { type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
-import { ALL_FORMATS, BlobSource, Input, VideoSampleSink } from 'mediabunny'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Timecode } from '@/design/Timecode'
-import { fetchAsset } from '@/helpers/asset-fetch'
 import { Toolbar, type ToolbarItem } from '@/design/Toolbar'
-import type { SinkLike } from '@/engines/timeline/decoder-pool'
+import { openAssetSink } from '@/engines/timeline/open-sink'
 import { transports } from '@/engines/timeline/playback'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
@@ -15,20 +13,6 @@ import { useBinding } from '@/stores/bindings'
 
 /** A consumer GPU offers two to four hardware decoders; two per monitor leaves room to spare. */
 const MAX_DECODERS = 2
-
-async function openSink(assetId: string): Promise<SinkLike> {
-  const response = await fetchAsset(assetId)
-
-  const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(await response.blob()) })
-  const track = await input.getPrimaryVideoTrack()
-  if (!track) {
-    input.dispose()
-    throw new Error(`asset ${assetId} carries no video track`)
-  }
-
-  const sink = new VideoSampleSink(track)
-  return { getSample: seconds => sink.getSample(seconds), close: () => input.dispose() }
-}
 
 export type MonitorProps = {
   /** Identifies this player to the single playback token. */
@@ -64,7 +48,7 @@ export function Monitor({
     if (!element) return
 
     const created = new TimelineEngine({
-      openSink,
+      openSink: openAssetSink,
       maxDecoders: MAX_DECODERS,
       owner,
       onTime,
