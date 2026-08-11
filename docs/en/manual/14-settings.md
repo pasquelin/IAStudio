@@ -688,7 +688,7 @@ What you have on a fresh install, at a glance.
 | Appearance | Text size | 1 | 0.85 to 1.40 |
 | Appearance | Limit animations | unchecked | — |
 | Generation | Concurrent generations | 3 | 1 to 16 |
-| Generation | Describe fetched assets | — | — |
+| Generation | Describe fetched assets | ticked | — |
 | Generation | Max retries | 4 | 0 to 10 |
 | Generation | Default model ×7 | Ask every time | — |
 | 3D | Show the grid | checked | — |

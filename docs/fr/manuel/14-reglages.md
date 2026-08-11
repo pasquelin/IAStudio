@@ -711,7 +711,7 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | Apparence | Taille du texte | 1 | 0,85 à 1,40 |
 | Apparence | Limiter les animations | décochée | — |
 | Génération | Générations simultanées | 3 | 1 à 16 |
-| Génération | Décrire les assets rapatriés | — | — |
+| Génération | Décrire les assets rapatriés | cochée | — |
 | Génération | Tentatives maximum | 4 | 0 à 10 |
 | Génération | Modèle par défaut ×7 | Demander à chaque fois | — |
 | 3D | Afficher la grille | cochée | — |

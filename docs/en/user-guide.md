@@ -52,9 +52,15 @@ machine, without sending them anywhere.
 | 13 | [Skyboxes workspace](manual/13-skyboxes-workspace.md) | Make a 360° sky and adjust it |
 
 > **The seventh workspace, the Graph, has no chapter yet.** It opens, holds nodes, wires them,
-> saves them, and **runs them** — each node leaves when what it reads is ready, and what has not
-> changed is not rerun, and **an approval node stops it to ask you**. What it still lacks: the
-> logic and loop nodes, and importing or exporting a workflow. Its chapter comes when it has them. What it does today is in
+> saves them, and **runs them** — each node leaves when what it reads is ready, what has not changed
+> is not rerun, and **an approval node stops it to ask you**. It can **export then reimport
+> itself**, and it runs a **branch** — a node that picks a route from a condition.
+>
+> **Two caveats.** That branch cannot be laid down from the palette: it only ever arrives with an
+> imported workflow. And the **loop** node is not run at all — whatever follows it waits, while the
+> rest of the graph carries on.
+> What the Graph still lacks: those two gestures, its chapter, and the fact that **what a run
+> produced is not saved**. What it does today is in
 > [chapter 3](manual/03-the-window.md), and its limits in [chapter 18](manual/18-limits.md).
 
 ### Appendices
@@ -144,6 +150,13 @@ keychain — the same vault that holds your passwords — and only the part of t
 to Scenario can reach them. The screen you are looking at never knows what your key is: it only
 knows whether it is connected.
 
-**Neither do your files.** Your projects are ordinary folders on your disk. Nothing is sent
-anywhere, except what you explicitly ask to generate — that is, the text of your prompt and, where
-relevant, the image you supply as input.
+**Neither do your files.** Your projects are ordinary folders on your disk. What goes to Scenario
+is what you ask it to generate: the text of your prompt and, where relevant, the image you supply
+as input.
+
+**One exception, and it is ticked by default** — but it does not touch your files. The **Describe
+fetched assets** setting, under **Settings ▸ Generation**, asks the API to name a picture that
+arrives without a useful one. **No byte leaves your disk**: that picture is already at Scenario,
+since that is where it came from, and the studio sends only its id. What does get spent is
+**creative units**, with no click from you — the one place where the studio spends of its own
+accord. Untick it and that stops; [chapter 14](manual/14-settings.md) covers it.
