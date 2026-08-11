@@ -1,4 +1,4 @@
-import { ACESFilmicToneMapping, NoToneMapping } from 'three'
+import { ACESFilmicToneMapping, NoToneMapping, OrthographicCamera } from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ViewportEngine } from './ViewportEngine'
@@ -17,6 +17,9 @@ const disposed = vi.fn()
 const sized = vi.fn()
 const pixelRatio = vi.fn()
 const rendered = vi.fn()
+const viewported = vi.fn()
+const scissored = vi.fn()
+const scissorTest = vi.fn()
 
 vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
@@ -44,6 +47,10 @@ vi.mock('three', async importOriginal => ({
     setPixelRatio = pixelRatio
     setSize = sized
     dispose = disposed
+    setViewport = viewported
+    setScissor = scissored
+    setScissorTest = scissorTest
+    getPixelRatio = (): number => 1
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
       this.info.render.calls += 1
@@ -136,6 +143,109 @@ describe('a viewport', () => {
 
       expect(sized).toHaveBeenCalledWith(HOST_WIDTH, HOST_HEIGHT, false)
       expect(engine.perspective.aspect).toBe(HOST_WIDTH / HOST_HEIGHT)
+    })
+  })
+
+  describe('the quad layout', () => {
+    /** A pointer event jsdom will carry, at a point of the canvas that stands at the origin. */
+    const pointerAt = (x: number, y: number): PointerEvent =>
+      new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true })
+
+    it('starts as one view over the whole surface', () => {
+      const engine = mounted()
+
+      expect(engine.paneLayout).toBe('single')
+      expect(engine.paneCameras).toHaveLength(1)
+    })
+
+    it('adds three orthographic views, and takes them away again', () => {
+      const engine = mounted()
+
+      engine.setLayout('quad')
+      expect(engine.paneCameras).toHaveLength(4)
+      // The main one keeps its projection; the three added are side views, never perspective.
+      const added = engine.paneCameras.slice(1)
+      expect(added.every(camera => camera instanceof OrthographicCamera)).toBe(true)
+
+      engine.setLayout('single')
+      expect(engine.paneCameras).toHaveLength(1)
+    })
+
+    /** One context for four views — a second one per pane is what this layout must never cost. */
+    it('draws four scissored passes into the one canvas', () => {
+      const engine = atRest()
+      rendered.mockClear()
+      viewported.mockClear()
+
+      engine.setLayout('quad')
+      drawFrames()
+
+      expect(rendered).toHaveBeenCalledTimes(4)
+      expect(scissorTest).toHaveBeenLastCalledWith(false)
+      // Bottom-left quarter, in WebGL's own frame: origin at the bottom, so the top-left pane
+      // sits at half the height and the bottom row at zero.
+      expect(viewported).toHaveBeenCalledWith(0, HOST_HEIGHT / 2, HOST_WIDTH / 2, HOST_HEIGHT / 2)
+      expect(scissored).toHaveBeenCalledWith(HOST_WIDTH / 2, 0, HOST_WIDTH / 2, HOST_HEIGHT / 2)
+    })
+
+    it('draws one pass and no scissor while there is one view', () => {
+      const engine = atRest()
+      rendered.mockClear()
+      scissorTest.mockClear()
+
+      engine.requestRender()
+      drawFrames()
+
+      expect(rendered).toHaveBeenCalledTimes(1)
+      expect(scissorTest).not.toHaveBeenCalled()
+    })
+
+    it('sizes the main camera to its quarter rather than to the canvas', () => {
+      const engine = mounted()
+
+      engine.setLayout('quad')
+      // Same ratio here, since both halves are halved — what changes is which rectangle it reads.
+      expect(engine.perspective.aspect).toBe(HOST_WIDTH / HOST_HEIGHT)
+      expect(engine.paneAtPointer(pointerAt(10, 10))).toBe(0)
+    })
+
+    it('hands the drag to the pane under the pointer, and to it alone', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, 10))
+
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, true, false, false])
+    })
+
+    it('leaves every orbit alone while there is one view', () => {
+      const engine = mounted()
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(10, 10))
+
+      expect(engine.orbit?.enabled).toBe(true)
+    })
+
+    it('reads a pointer against its own pane, not against the canvas', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+
+      // Dead centre of the bottom-right pane: its own centre, whatever the canvas thinks.
+      const ndc = engine.pointerNdcOf(pointerAt(HOST_WIDTH * 0.75, HOST_HEIGHT * 0.75))
+
+      expect(ndc?.x).toBeCloseTo(0)
+      expect(ndc?.y).toBeCloseTo(0)
+    })
+
+    it('answers no pane for a pointer off the surface', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+
+      expect(engine.paneAtPointer(pointerAt(HOST_WIDTH + 5, 10))).toBeNull()
     })
   })
 

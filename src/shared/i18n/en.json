@@ -930,6 +930,8 @@
     "viewHint": "Look at the scene from one of its six sides",
     "display": "Display",
     "displayHint": "Draw the surfaces, their edges, or both",
+    "quad": "Four views",
+    "quadHint": "Split the viewport in four: top, front, side, and the view being flown",
     "spaceHint": "Line the handles up with the object’s own orientation; when it is off, they follow the world axes",
     "group": "Group",
     "groupHint": "File the selected objects under one group",
@@ -1410,6 +1412,10 @@
     "sceneProjection": {
       "title": "Projection",
       "help": "Switches between perspective, where receding lines converge, and orthographic projection, where parallels stay parallel. That is what lets an alignment be judged by eye."
+    },
+    "sceneQuad": {
+      "title": "Four views",
+      "help": "Splits the viewport in four — top, front and side around the view being flown. Each quarter orbits under the pointer; the flown one keeps the gizmos."
     },
     "sceneDisplay": {
       "title": "Display",

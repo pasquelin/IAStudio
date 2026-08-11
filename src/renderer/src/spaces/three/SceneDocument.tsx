@@ -165,6 +165,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.setSkeletons(view.skeletons)
   }, [view.skeletons])
 
+  useEffect(() => {
+    engine.current?.setQuadView(view.quad)
+  }, [view.quad])
+
   // The head is session state React owns; the engine is told where it stands, never the reverse.
   useEffect(() => {
     engine.current?.setPlayhead(view.playhead)
@@ -209,6 +213,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return useSceneViews.getState().setDisplay(documentId, nextDisplayMode(view.display))
         case 'scene.skeletons':
           return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
+        case 'scene.quad':
+          return useSceneViews.getState().setQuad(documentId, !view.quad)
         case 'scene.projection':
           return useSceneViews
             .getState()
@@ -285,6 +291,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
       'scene.skeletons': view.skeletons,
+      'scene.quad': view.quad,
     }
     const unavailable: Partial<Record<CommandId, boolean>> = {
       'scene.delete': nothingSelected,

@@ -166,6 +166,20 @@ function isBone(object: Object3D): boolean {
 const DEFAULT_VIEW_DISTANCE = 8
 
 /**
+ * The three sides a quad view opens on, in the order the panes read: top-right looks down,
+ * bottom-left from the front, bottom-right from the left. The fourth pane is the main view,
+ * which keeps whatever angle it was already at.
+ */
+const QUAD_SIDES: readonly ViewDirection[] = ['top', 'front', 'left']
+
+/**
+ * How far a side view stands off its target. Distance changes nothing an orthographic camera
+ * shows — its frustum does that — but it decides what falls behind the near plane, and a camera
+ * standing on the origin clips away the model it is aimed at.
+ */
+const SIDE_VIEW_DISTANCE = 50
+
+/**
  * A second of the trihedron's own animation, in the seconds it takes. It turns a whole revolution
  * per second and no side is half of one away, so one step lands on the target exactly.
  */
@@ -481,6 +495,43 @@ export class SceneRenderer {
     camera.position.set(x, y, z)
     orbit.update()
     this.viewport.requestRender()
+  }
+
+  /**
+   * Four views or one, and where the three added ones stand.
+   *
+   * The sides are the three a modelling package opens with — down, from the front, from the left
+   * — and the main view keeps the corner it was in, gizmo and all. Aimed from here rather than by
+   * the viewport: where a camera stands is a question about the scene, and the viewport holds no
+   * scene of its own.
+   */
+  setQuadView(on: boolean): void {
+    this.viewport.setLayout(on ? 'quad' : 'single')
+    if (!on) return
+
+    const target = this.viewport.orbit?.target ?? this.pivot.position
+    const cameras = this.viewport.paneCameras.slice(1)
+    const orbits = this.viewport.paneOrbits.slice(1)
+
+    for (const [index, direction] of QUAD_SIDES.entries()) {
+      const camera = cameras[index]
+      if (!camera) continue
+
+      const { x, y, z } = viewPosition(direction, target, SIDE_VIEW_DISTANCE)
+      camera.position.set(x, y, z)
+      camera.lookAt(target)
+
+      const orbit = orbits[index]
+      if (orbit) {
+        orbit.target.copy(target)
+        orbit.update()
+      }
+    }
+    this.viewport.requestRender()
+  }
+
+  quadView(): boolean {
+    return this.viewport.paneLayout === 'quad'
   }
 
   /**

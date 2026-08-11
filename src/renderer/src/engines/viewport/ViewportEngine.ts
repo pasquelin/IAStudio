@@ -12,6 +12,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { token } from '../core/palette'
 import { frameDelta } from './frame-clock'
 import { emptyGpuStats, recordFrame, type GpuStats } from './gpu-stats'
+import { glRect, paneAt, paneCount, paneRects, type PaneLayout, type PaneRect } from './panes'
 import { pointerNdc, type PointerPosition } from './pointer'
 
 /** Where an unmounted viewport orbits, having no controls to hold a target. Never written to. */
@@ -70,6 +71,21 @@ export type ProjectionKind = 'perspective' | 'orthographic'
 
 export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 
+/**
+ * One of the views beside the main one.
+ *
+ * Orthographic without an option: these exist to be looked through straight down an axis, and a
+ * perspective camera aimed at a side shows converging edges — which is the one thing the side
+ * views are there to rule out.
+ */
+type ExtraPane = { camera: OrthographicCamera; controls: OrbitControls | null }
+
+/**
+ * How tall a pane's frustum is by default, before anything frames a selection into it. Half a
+ * dozen studio units: a primitive dropped at the origin lands inside it rather than filling it.
+ */
+const EXTRA_PANE_HEIGHT = 6
+
 export class ViewportEngine {
   readonly scene = new Scene()
   /** The perspective one is the default, and the only one the two other 3D spaces ever draw with. */
@@ -80,6 +96,15 @@ export class ViewportEngine {
   private renderer: WebGLRenderer | null = null
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
+  private layout: PaneLayout = 'single'
+  /**
+   * The views beside the main one, which is always pane 0 and always the one that was already
+   * there. Empty in a single layout, so every viewport that never asks for four draws exactly
+   * what it drew before — one camera, one render, no scissor.
+   */
+  private readonly extras: ExtraPane[] = []
+  /** Where each pane sits, in CSS pixels. One entry in a single layout, four in a quad. */
+  private rects: PaneRect[] = []
   private frame: number | null = null
   /** `null` while the loop is at rest: the next frame is a first frame, not a long one. */
   private lastTime: number | null = null
@@ -161,8 +186,9 @@ export class ViewportEngine {
    * orbit target as the field of view makes it at that distance.
    */
   private fitProjection(): void {
-    const canvas = this.renderer?.domElement
-    const aspect = canvas && canvas.clientHeight > 0 ? canvas.clientWidth / canvas.clientHeight : 1
+    // The main camera's own pane, which is the whole canvas until a quad layout says otherwise.
+    const main = this.rects[0]
+    const aspect = main && main.height > 0 ? main.width / main.height : 1
 
     // Read off the camera that is drawing: while the perspective one is active, the other's
     // placement is one swap out of date, and a resize would size the frustum from where the
@@ -178,6 +204,111 @@ export class ViewportEngine {
     this.orthographic.right = width / 2
     this.orthographic.left = -width / 2
     this.orthographic.updateProjectionMatrix()
+  }
+
+  /**
+   * How the surface is divided. `quad` adds three orthographic views around the one that was
+   * already there; `single` takes them away and gives the whole canvas back.
+   *
+   * The extra views arrive unaimed on purpose: where each one stands is a question about the
+   * scene, and this module knows nothing about scenes. Whoever asks for four places them.
+   */
+  setLayout(layout: PaneLayout): void {
+    if (layout === this.layout) return
+    this.layout = layout
+
+    const wanted = paneCount(layout) - 1
+    while (this.extras.length > wanted) this.disposeExtra()
+    while (this.extras.length < wanted) this.extras.push(this.createExtra())
+
+    this.layOutPanes()
+    this.requestRender()
+  }
+
+  get paneLayout(): PaneLayout {
+    return this.layout
+  }
+
+  /** Every camera that draws, main one first. What a caller aims, and what a picker picks with. */
+  get paneCameras(): readonly ViewportCamera[] {
+    return [this.camera, ...this.extras.map(pane => pane.camera)]
+  }
+
+  /** The orbit of each pane, main one first — `null` where a viewport was built without controls. */
+  get paneOrbits(): readonly (OrbitControls | null)[] {
+    return [this.controls, ...this.extras.map(pane => pane.controls)]
+  }
+
+  /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
+  paneAtPointer(pointer: PointerPosition): number | null {
+    const canvas = this.renderer?.domElement
+    if (!canvas) return null
+
+    const bounds = canvas.getBoundingClientRect()
+    return paneAt(this.rects, pointer.clientX - bounds.left, pointer.clientY - bounds.top)
+  }
+
+  private createExtra(): ExtraPane {
+    const camera = new OrthographicCamera()
+    camera.near = this.options.near ?? 0.1
+    camera.far = this.options.far ?? 1000
+
+    const canvas = this.renderer?.domElement
+    if (this.options.controls === 'none' || !canvas) return { camera, controls: null }
+
+    const controls = new OrbitControls(camera, canvas)
+    controls.enableDamping = true
+    controls.addEventListener('change', this.requestRender)
+    // Only the pane under the pointer listens — see `armPaneUnderPointer`. Four live orbits on
+    // one canvas would each answer the same drag, and the three off-screen ones would answer it
+    // invisibly.
+    controls.enabled = false
+    return { camera, controls }
+  }
+
+  private disposeExtra(): void {
+    const pane = this.extras.pop()
+    pane?.controls?.removeEventListener('change', this.requestRender)
+    pane?.controls?.dispose()
+  }
+
+  /**
+   * Hands the drag to the pane the pointer is over, and takes it from the others.
+   *
+   * Bound at mount rather than left to the caller: an orbit is the viewport's own gesture, and a
+   * scene editor that had to arm it would be the second place deciding which view is being used.
+   */
+  private readonly armPaneUnderPointer = (event: PointerEvent): void => {
+    if (this.layout === 'single') return
+
+    const over = this.paneAtPointer(event)
+    const orbits = this.paneOrbits
+    for (const [index, orbit] of orbits.entries()) {
+      if (orbit) orbit.enabled = index === over
+    }
+  }
+
+  /** Where each pane sits, and what that does to the cameras that draw into them. */
+  private layOutPanes(): void {
+    const canvas = this.renderer?.domElement
+    if (!canvas) return
+
+    const { clientWidth, clientHeight } = canvas
+    this.rects = paneRects(this.layout, clientWidth, clientHeight)
+
+    for (const [index, pane] of this.extras.entries()) {
+      // Pane 0 is the main camera's, so an extra reads the rect one past its own index.
+      const rect = this.rects[index + 1]
+      if (!rect || rect.height === 0) continue
+
+      const aspect = rect.width / rect.height
+      const half = EXTRA_PANE_HEIGHT / 2
+      pane.camera.top = half
+      pane.camera.bottom = -half
+      pane.camera.right = half * aspect
+      pane.camera.left = -half * aspect
+      pane.camera.updateProjectionMatrix()
+    }
   }
 
   /** Makes its own canvas: React must never own it — see the engine invariants in CLAUDE.md. */
@@ -205,6 +336,9 @@ export class ViewportEngine {
       this.controls.addEventListener('change', this.requestRender)
     }
 
+    canvas.addEventListener('pointerdown', this.armPaneUnderPointer)
+    canvas.addEventListener('pointermove', this.armPaneUnderPointer)
+
     this.observer = new ResizeObserver(this.onResize)
     this.observer.observe(canvas)
     this.onResize()
@@ -221,7 +355,11 @@ export class ViewportEngine {
     this.controls?.dispose()
     this.controls = null
 
+    while (this.extras.length > 0) this.disposeExtra()
+
     const canvas = this.renderer?.domElement
+    canvas?.removeEventListener('pointerdown', this.armPaneUnderPointer)
+    canvas?.removeEventListener('pointermove', this.armPaneUnderPointer)
     this.renderer?.dispose()
     this.renderer = null
 
@@ -263,10 +401,26 @@ export class ViewportEngine {
     this.requestRender()
   }
 
-  /** Where a pointer sits in device coordinates, or `null` if the canvas has no surface yet. */
+  /**
+   * Where a pointer sits in device coordinates, or `null` if the canvas has no surface yet.
+   *
+   * Relative to the PANE under it, not to the canvas: a ray cast from a quarter-sized view with
+   * whole-canvas coordinates lands somewhere the pointer never was.
+   */
   pointerNdcOf(pointer: PointerPosition): { x: number; y: number } | null {
     const canvas = this.renderer?.domElement
-    return canvas ? pointerNdc(pointer, canvas.getBoundingClientRect()) : null
+    if (!canvas) return null
+
+    const bounds = canvas.getBoundingClientRect()
+    const pane = this.rects[this.paneAtPointer(pointer) ?? 0]
+    if (!pane) return pointerNdc(pointer, bounds)
+
+    return pointerNdc(pointer, {
+      left: bounds.left + pane.x,
+      top: bounds.top + pane.y,
+      width: pane.width,
+      height: pane.height,
+    })
   }
 
   /**
@@ -291,10 +445,50 @@ export class ViewportEngine {
     if (clientWidth === 0 || clientHeight === 0) return
 
     this.renderer.setSize(clientWidth, clientHeight, false)
-    this.perspective.aspect = clientWidth / clientHeight
+    this.layOutPanes()
+    // The main camera follows its own pane, not the canvas: in a quad layout that is a quarter
+    // of it, and an aspect taken from the whole surface stretches every one of the four.
+    const main = this.rects[0] ?? { x: 0, y: 0, width: clientWidth, height: clientHeight }
+    this.perspective.aspect = main.height === 0 ? 1 : main.width / main.height
     this.perspective.updateProjectionMatrix()
     this.fitProjection()
     this.requestRender()
+  }
+
+  /**
+   * One render in a single layout, four scissored ones in a quad — never four contexts.
+   *
+   * A second WebGL context per view would quadruple what the machine holds for a view that shows
+   * the same scene, and a consumer GPU drops the oldest context when it runs out. The scissor is
+   * what keeps a pane from clearing the three beside it.
+   */
+  private renderPanes(renderer: WebGLRenderer): void {
+    const cameras = this.paneCameras
+    if (cameras.length < 2) {
+      renderer.render(this.scene, this.camera)
+      return
+    }
+
+    const height = renderer.domElement.clientHeight
+    const ratio = renderer.getPixelRatio()
+
+    renderer.setScissorTest(true)
+    try {
+      for (const [index, camera] of cameras.entries()) {
+        const rect = this.rects[index]
+        if (!rect || rect.width === 0 || rect.height === 0) continue
+
+        const { x, y, width, height: paneHeight } = glRect(rect, height, ratio)
+        renderer.setViewport(x, y, width, paneHeight)
+        renderer.setScissor(x, y, width, paneHeight)
+        renderer.render(this.scene, camera)
+      }
+    } finally {
+      // In a `finally`, and both of them: a throw mid-pane would otherwise leave every later
+      // frame — overlay included — clipped to whichever quarter failed.
+      renderer.setScissorTest(false)
+      renderer.setViewport(0, 0, renderer.domElement.clientWidth * ratio, height * ratio)
+    }
   }
 
   /**
@@ -320,10 +514,13 @@ export class ViewportEngine {
 
     // `update` reports whether the camera actually moved: it keeps returning true while damping
     // settles, and false once it has — which is what ends the loop instead of running forever.
-    const controls = this.controls
-    const settling = controls !== null && controls.enabled && controls.update()
+    // Every pane is asked: the one being dragged is not always the one that is still settling.
+    let settling = false
+    for (const orbit of this.paneOrbits) {
+      if (orbit !== null && orbit.enabled && orbit.update()) settling = true
+    }
 
-    renderer.render(this.scene, this.camera)
+    this.renderPanes(renderer)
 
     const overlay = this.options.onOverlay
     if (overlay) {

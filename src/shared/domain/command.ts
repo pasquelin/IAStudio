@@ -36,6 +36,7 @@ export type CommandId =
   | 'scene.snap'
   | 'scene.space'
   | 'scene.projection'
+  | 'scene.quad'
   | 'scene.display'
   | 'scene.skeletons'
   | 'scene.delete'
@@ -273,6 +274,15 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneProjection.title',
     helpKey: 'commands.sceneProjection.help',
     defaultBinding: 'KeyO',
+  }),
+  // `Q` as in Blender's own quad view, but shifted: bare `Q` is flight's "down", and the one
+  // overlap this scope tolerates is already spent on `KeyS` — see `shortcut.test.ts`.
+  command({
+    id: 'scene.quad',
+    scope: 'scene',
+    titleKey: 'commands.sceneQuad.title',
+    helpKey: 'commands.sceneQuad.help',
+    defaultBinding: 'Shift+KeyQ',
   }),
   // `Z` as in Blender, where it is the key that changes what the viewport draws.
   command({

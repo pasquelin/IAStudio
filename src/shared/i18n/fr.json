@@ -930,6 +930,8 @@
     "viewHint": "Regarder la scène par l’un de ses six côtés",
     "display": "Affichage",
     "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
+    "quad": "Quatre vues",
+    "quadHint": "Partager le viewport en quatre : dessus, face, profil, et la vue en cours",
     "spaceHint": "Aligner les poignées sur l’orientation de l’objet ; bouton relâché, elles suivent les axes du monde",
     "group": "Grouper",
     "groupHint": "Ranger les objets sélectionnés sous un même groupe",
@@ -1410,6 +1412,10 @@
     "sceneProjection": {
       "title": "Projection",
       "help": "Bascule entre la perspective, où les fuyantes convergent, et la projection orthographique, où les parallèles restent parallèles. C’est ce qui permet de juger un alignement à l’œil."
+    },
+    "sceneQuad": {
+      "title": "Quatre vues",
+      "help": "Partage le viewport en quatre — dessus, face et profil autour de la vue en cours. Chaque quart s’oriente à la souris ; celui du dessus garde les manipulateurs."
     },
     "sceneDisplay": {
       "title": "Affichage",

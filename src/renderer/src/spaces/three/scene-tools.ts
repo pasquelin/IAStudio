@@ -26,6 +26,7 @@ import {
   mdiPlus,
   mdiResize,
   mdiVectorSquare,
+  mdiViewGrid,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
@@ -148,6 +149,13 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.viewHint',
     icon: mdiCubeOutline,
     modes: VIEW_MODES,
+  },
+  {
+    id: 'quad',
+    command: 'scene.quad',
+    labelKey: 'sceneTools.quad',
+    descriptionKey: 'sceneTools.quadHint',
+    icon: mdiViewGrid,
   },
   {
     id: 'display',

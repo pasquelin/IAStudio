@@ -7,6 +7,8 @@ export type SceneView = {
   display: DisplayMode
   /** Whether the bones of every rigged model are drawn over it. Off, like every other overlay. */
   skeletons: boolean
+  /** Four views instead of one — top, front, left, and the one being flown. */
+  quad: boolean
   /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
   playhead: number
   playing: boolean
@@ -16,6 +18,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   projection: 'perspective',
   display: 'shaded',
   skeletons: false,
+  quad: false,
   playhead: 0,
   playing: false,
 }
@@ -33,6 +36,7 @@ export type SceneViewsState = {
   setProjection: (documentId: string, projection: ProjectionKind) => void
   setDisplay: (documentId: string, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
+  setQuad: (documentId: string, quad: boolean) => void
   setPlayhead: (documentId: string, playhead: number) => void
   setPlaying: (documentId: string, playing: boolean) => void
 }
@@ -53,6 +57,11 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setSkeletons: (documentId, skeletons) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), skeletons } },
+    })),
+
+  setQuad: (documentId, quad) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), quad } },
     })),
 
   setPlayhead: (documentId, playhead) =>

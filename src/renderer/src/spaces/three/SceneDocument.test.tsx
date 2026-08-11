@@ -35,6 +35,7 @@ const setSpace = vi.fn()
 const setProjection = vi.fn()
 const setDisplayMode = vi.fn()
 const setSkeletons = vi.fn()
+const setQuadView = vi.fn()
 const setPlayhead = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
@@ -63,6 +64,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setProjection = setProjection
     setDisplayMode = setDisplayMode
     setSkeletons = setSkeletons
+    setQuadView = setQuadView
     setPlayhead = setPlayhead
     viewFrom = viewFrom
     frameSelection = frameSelection
@@ -472,6 +474,16 @@ describe('exporting the scene', () => {
 
     await userEvent.keyboard('{b}')
     expect(setSkeletons).toHaveBeenLastCalledWith(false)
+  })
+
+  it('splits the viewport in four on the bound key, and puts it back', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{Shift>}{Q}{/Shift}')
+    expect(setQuadView).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{Shift>}{Q}{/Shift}')
+    expect(setQuadView).toHaveBeenLastCalledWith(false)
   })
 })
 
