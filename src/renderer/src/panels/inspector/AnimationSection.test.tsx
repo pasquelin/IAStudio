@@ -4,26 +4,27 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, type ModelNode } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
-import { installScene } from '@/stores/scene-fixtures'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { installScene, sceneNodeIn, sceneNodeNow } from '@/stores/scene-fixtures'
+import { useScenes } from '@/stores/scenes'
 import { AnimationSection } from './AnimationSection'
 import { useSceneEdit } from './useSceneEdit'
 
 const DOCUMENT = 'doc-1'
 
 const nodeOf = (): ModelNode | undefined => {
-  const node = sceneOf(useScenes.getState(), DOCUMENT).nodes.find(current => current.id === 'a')
+  const node = sceneNodeNow(DOCUMENT, 'a')
   return node?.type === 'model' ? node : undefined
 }
 
 /**
- * The section takes its node and its edit exactly as the inspector hands them — subscribed, so
- * a write reaches the screen the way it does in the panel.
+ * The section takes its node and its edit subscribed, so a write reaches the screen the way it
+ * does in the panel. Narrower than `SceneInspector.tsx:43`, which watches the whole node list —
+ * fair while the section reads nothing of the scene outside its own node, and to be widened the
+ * day it does, or a write it should redraw on would leave this host still.
  */
 function Host() {
-  const nodes = useScenes(state => sceneOf(state, DOCUMENT).nodes)
+  const node = useScenes(state => sceneNodeIn(state, DOCUMENT, 'a'))
   const edit = useSceneEdit(DOCUMENT)
-  const node = nodes.find(current => current.id === 'a')
   if (node?.type !== 'model') throw new Error('the fixture installs one model node')
   return <AnimationSection documentId={DOCUMENT} node={node} edit={edit} />
 }
