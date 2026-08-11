@@ -6,7 +6,11 @@ import { FIELD_READOUT } from './styles'
 /** How many decimals a panel can hold. Past this the number widens the panel it sits in. */
 const DECIMALS = 2
 
-/** What the tooltip may spend: `Intl` caps at twenty, and a radian never needs more. */
+/**
+ * What the tooltip may spend. Not an `Intl` limit — it takes a hundred — but what a double is
+ * worth: past this the digits are the ones the format invented. A value under `1e-20` therefore
+ * reads `0` here, which no coordinate this studio holds ever is.
+ */
 const EXACT_DECIMALS = 20
 
 /**

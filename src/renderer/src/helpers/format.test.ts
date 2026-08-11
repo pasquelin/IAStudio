@@ -58,7 +58,7 @@ describe('keeping a formatter', () => {
 describe('sizing a file', () => {
   it('counts in kibibytes, like the file managers it sits beside', () => {
     expect(formatBytes(512, name, 'en')).toBe('512 byte')
-    expect(formatBytes(1024, name, 'en')).toBe('1 kibibyte')
+    expect(formatBytes(1024, name, 'en')).toBe('1.0 kibibyte')
     expect(formatBytes(1024 * 1024 * 4.2, name, 'en')).toBe('4.2 mebibyte')
   })
 

@@ -50,6 +50,11 @@ const DECIMALS = new Map<string, Intl.NumberFormat>()
  *
  * `least` is what a slider needs and a readout does not: a handle dragged past 1,20 must not
  * shorten to 1,2 and back, while a coordinate of exactly 1 has no business reading 1,00.
+ *
+ * Grouped, unlike `formatPercent` right above — and it is a decision rather than a default:
+ * `1 048 576 Gio` and a scene's triangle count are read, not aimed at, and the studio already
+ * groups those through `toLocaleString`. The one place it could bite is a readout in a field
+ * sized for four characters; no slider in the registry reaches a thousand today.
  */
 export function formatDecimal(
   value: number,
@@ -94,7 +99,8 @@ export function formatBytes(
   }
 
   // One decimal below ten, none above: `1,5 Mio` says something `2 Mio` does not, and `847,3 Mio`
-  // says nothing `847 Mio` did not.
+  // says nothing `847 Mio` did not. Kept even when it is a zero — a download counter refreshing
+  // from `1 Gio` to `1,1 Gio` would jump a character wide under a `tabular-nums` column.
   const digits = value < 10 && unit !== 'byte' ? 1 : 0
-  return `${formatDecimal(value, language, digits)} ${unitName(unit)}`
+  return `${formatDecimal(value, language, digits, digits)} ${unitName(unit)}`
 }

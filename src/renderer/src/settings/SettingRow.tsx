@@ -188,6 +188,7 @@ function Control({
   onChange: (value: SettingValue | undefined) => void
 }) {
   const { t, i18n } = useTranslation()
+  const decimals = decimalsOf(descriptor.step)
 
   switch (descriptor.kind) {
     case 'choice':
@@ -251,12 +252,7 @@ function Control({
           />
           <span className={cn(WINDOW_CAPTION, 'w-10 text-right tabular-nums')}>
             {typeof value === 'number'
-              ? formatDecimal(
-                  value,
-                  i18n.language,
-                  decimalsOf(descriptor.step),
-                  decimalsOf(descriptor.step),
-                )
+              ? formatDecimal(value, i18n.language, decimals, decimals)
               : ''}
           </span>
         </div>
