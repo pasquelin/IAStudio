@@ -220,5 +220,5 @@ export function sttModelPaths(
   return paths as Record<SttModelRole, string>
 }
 
-/** Suffix of a download in flight. Nothing reads a `.part`, and an orphan is swept at startup. */
+/** Suffix of a download in flight. An orphan is kept, not swept: a resume starts from it. */
 export const PART_SUFFIX = '.part'

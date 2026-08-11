@@ -74,9 +74,15 @@ dénoncerait qu'à l'empreinte, très loin de là.
 exécutions ont écrit ensemble. Recommencer coûte un téléchargement ; lui faire confiance
 coûterait un modèle silencieusement faux.
 
-**Un `.part` orphelin traîne.** Il est balayé **avant** chaque téléchargement, pas au démarrage :
-un `.part` n'est jamais repris que par un téléchargement que quelqu'un a demandé, et c'est ce
-moment-là.
+**Un `.part` orphelin traîne, et rien ne le balaie.** C'est délibéré : le balayer serait perdre
+ce qui est déjà arrivé, alors qu'une reprise repart précisément de là. Un reste qui ne serait pas
+un préfixe de ce qu'on télécharge ne survit pas non plus — il échoue à son empreinte et se supprime
+à ce moment-là.
+
+> **Ce document a dit le contraire.** Un balayage existait, retiré par `112706ef` — « Le
+> téléchargement ne reprenait jamais » — après la rédaction de cette note. Le commentaire de
+> `src/main/services.ts:611` porte désormais la règle : « Nothing sweeps the `.part` files first,
+> and that is the point ».
 
 Sur une reprise, l'empreinte couvre **ce qui était déjà là autant que ce qui arrive** — sans quoi
 un préfixe corrompu passerait sans bruit.

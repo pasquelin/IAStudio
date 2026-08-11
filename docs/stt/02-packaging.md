@@ -115,8 +115,18 @@ Trois entrées que npm ne décrit pas, fabriquées par `collect-licences.mjs` :
   Listé quand même : CC-BY demande l'attribution partout où l'œuvre est utilisée.
 
 `sherpa-onnx-node` lui-même est collecté comme n'importe quel paquet. Aucun des quatre n'est
-copyleft, donc aucune offre de sources n'est due — mais `licence.test.ts` refuserait la build si
-l'un d'eux disparaissait de la notice.
+copyleft, donc aucune offre de sources n'est due.
+
+**Les quatre sont tenus, et par plusieurs verrous.** `licences.test.ts` exige que chaque entrée de
+`licences.json` soit reprise dans la notice, nom, version et licence compris : en retirer une de
+`THIRD-PARTY-NOTICES.md` fait échouer la build. `licence.test.ts` en ajoute deux qui valent pour
+toutes les entrées — un texte de licence d'au moins vingt caractères, et pas de `spdx` inconnu. Un
+seul de ses tests part de `package.json`, et celui-là ne voit en effet que `sherpa-onnx-node`.
+
+**Ce que rien ne tient, c'est l'amont.** Les trois ressources téléchargées ne sont pas des paquets
+npm : leurs entrées sont **écrites en dur dans `scripts/collect-licences.mjs`**. Les en retirer
+retirerait aussi la ligne de la notice, et les deux tests seraient d'accord — sur une notice
+incomplète.
 
 ---
 

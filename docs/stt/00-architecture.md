@@ -41,8 +41,9 @@ Les quatre documents de ce dossier : celui-ci pour les processus et le flux,
 ```
 
 Le moteur tourne là et nulle part ailleurs : voir
-[`ADR-17`](../ci/adr/ADR-17-moteur-de-dictee-hors-processus.md) pour les trois emplacements
-possibles et pourquoi les deux autres ont été écartés.
+[`ADR-17`](../ci/adr/ADR-17-moteur-de-dictee-hors-processus.md) pour les emplacements envisagés
+— le processus principal, un Web Worker du rendu, un `worker_threads` du principal — et pourquoi
+chacun a été écarté. **Le décompte appartient à l'ADR, pas à cette note** : elle seule le tient.
 
 ---
 
@@ -84,8 +85,12 @@ Les deux marchaient parfaitement sous Node et cassaient dans le studio.
 **Le paquet s'importe par défaut, jamais par ses noms.** `sherpa-onnx-node` est CommonJS et
 construit ses exports par accès de propriété (`OfflineRecognizer: non_streaming_asr.OfflineRecognizer`),
 ce que l'analyseur CommonJS de Node ne traverse pas. `import { Vad }` compile parfaitement puis
-lève `Named export 'Vad' not found` au premier lancement. La déclaration de types
-(`shared/types/sherpa-onnx-node.d.ts`) n'expose donc **que** l'export par défaut.
+lève `Named export 'Vad' not found` au premier lancement. L'export par défaut de la déclaration
+de types (`shared/types/sherpa-onnx-node.d.ts`) porte donc les deux classes qu'on instancie —
+`Vad` et `OfflineRecognizer` — et c'est par lui que le worker les atteint à l'exécution.
+
+Les mêmes noms s'importent **en tant que types** par import nommé, ce qui est sans risque : un
+`import { type Vad }` disparaît à la compilation et n'atteint jamais Node.
 
 **Le détecteur rend un tampon externe, qu'Electron refuse.** `vad.front()` enveloppe par défaut
 la mémoire de l'addon dans un `Float32Array` externe ; Electron lève « External buffers are not
