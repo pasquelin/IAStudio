@@ -192,10 +192,11 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
                 ...held,
                 nodes: { ...held.nodes, [nodeId]: run },
                 // Every node the plan ordered goes `queued` in one turn at the start of a run, so
-                // moving the live region on those would have it announce the last of them — a node
-                // picked by the plan's order, saying that nothing has happened yet. It speaks for
-                // what a node DOES; waiting is what the badges say.
-                ...(run.status === 'queued' ? {} : { latest: nodeId }),
+                // following each would leave the live region on the last one the plan happened to
+                // order — announcing an arbitrary node to say nothing had happened. It follows the
+                // FIRST and then no other, which is the only reading that serves both: a run whose
+                // opening move is a long wait still says so, and the other nineteen stay quiet.
+                ...(run.status === 'queued' && held.latest !== undefined ? {} : { latest: nodeId }),
               })),
             signal: controller.signal,
           },

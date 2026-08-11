@@ -172,15 +172,15 @@ describe('running a graph document', () => {
    * the plan has nodes. Moved onto those, it would announce a node the plan's order picked, to say
    * that nothing has started.
    */
-  it('does not move the live region onto a node that is merely waiting', async () => {
+  it('names each node once as the run reaches it, and never goes back', async () => {
     const jobs = installJobs({ status: 'queued', progress: 0 })
     installGraph(DOC, chain())
-    // Read at every write rather than at the end: `latest` moves on and the state it pointed at
-    // is gone by the last one, which is where a version announcing the queue would look innocent.
+    // Every write, not the end state: `latest` moves on, and a version that followed the whole
+    // queue would land on the same last node — innocent-looking from the outside.
     const announced: string[] = []
     const stop = useGraphRuns.subscribe(state => {
-      const run = runOf(state, DOC)
-      if (run.latest) announced.push(run.nodes[run.latest]?.status ?? 'none')
+      const { latest } = runOf(state, DOC)
+      if (latest && announced.at(-1) !== latest) announced.push(latest)
     })
 
     const run = useGraphRuns.getState().start(DOC)
@@ -189,9 +189,68 @@ describe('running a graph document', () => {
     await run
     stop()
 
-    expect(announced).not.toHaveLength(0)
-    expect(announced).not.toContain('queued')
-    expect(runOf(useGraphRuns.getState(), DOC).latest).toBe('m1')
+    // Not `['text1', 'm1', 'text1', 'm1']`, which is what following the queue gives: the region
+    // would name the generator as waiting, go back to the text node, then forward again.
+    expect(announced).toEqual(['text1', 'm1'])
+  })
+
+  /**
+   * A wait on a job that never leaves the queue has no way out of its own: the main process polls
+   * an unfinished job with no ceiling, deliberately. The stop is that way out, and NOTHING else in
+   * this file can see it missing — every other stop test settles its job first, so the wait answers
+   * off the replica and never subscribes at all.
+   *
+   * Counted through the store's own `subscribe` because a parked wait leaves no other trace: on a
+   * graph of twenty generators all held behind the concurrency bound, a stop would leave twenty
+   * subscriptions and twenty closures alive for the rest of the session.
+   */
+  it('lets go of a job still queued when the run is stopped', async () => {
+    const jobs = installJobs({ status: 'queued', progress: 0 })
+    installGraph(DOC, chain())
+    const watching = new Set<() => void>()
+    const real = useJobs.subscribe.bind(useJobs)
+    const spy = vi.spyOn(useJobs, 'subscribe').mockImplementation(listener => {
+      const release = real(listener)
+      const wrapped = (): void => {
+        watching.delete(wrapped)
+        release()
+      }
+      watching.add(wrapped)
+      return wrapped
+    })
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    // Two: the wait for the job to leave the queue, and the wait for its result.
+    expect(watching.size).toBe(2)
+
+    useGraphRuns.getState().stop(DOC)
+    await run
+    spy.mockRestore()
+
+    expect(watching.size).toBe(0)
+  })
+
+  /**
+   * The other half, and it is a REGRESSION this guards against rather than a defect: before the
+   * queue existed, pressing Run painted `running` on the first generator at once, so the region
+   * said something immediately. A graph whose first node is a generator has nothing else to say
+   * until its job leaves the queue — minutes, behind the concurrency bound — and a region silent
+   * for that long is a run a screen reader cannot tell from a button that did nothing.
+   */
+  it('says a run has begun even when its first node only waits', async () => {
+    const jobs = installJobs({ status: 'queued', progress: 0 })
+    installGraph(DOC, graphOf([modelNode('m1', { prompt: 'a knight' }, 'model_a')], []))
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    const opened = runOf(useGraphRuns.getState(), DOC)
+    expect(opened.latest).toBe('m1')
+    expect(opened.latest && opened.nodes[opened.latest]).toEqual({ status: 'queued' })
+
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
   })
 
   /**

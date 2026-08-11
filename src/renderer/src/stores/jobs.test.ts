@@ -213,4 +213,23 @@ describe('waiting for a job to leave the queue', () => {
 
     await expect(whenLeftQueue('job_1', null)).resolves.toMatchObject({ status: 'running' })
   })
+
+  /**
+   * The only test here whose job is still WAITING when the signal is raised, and the only one that
+   * makes this wait subscribe at all — the three above answer off the replica and never listen.
+   *
+   * It was written, deleted as a duplicate of `whenSettled`'s own, and put back by the review that
+   * named what the deletion cost: a graph of twenty generators all held behind the concurrency
+   * bound, stopped by the user, leaves twenty subscriptions and twenty closures alive for the rest
+   * of the session — the very leak the required `signal` exists to prevent. Nothing else would
+   * redden if a caller passed `null` here.
+   */
+  it('gives up when the caller aborts, and says it found nothing', async () => {
+    const controller = new AbortController()
+    const started = whenLeftQueue('job_1', controller.signal)
+
+    controller.abort()
+
+    await expect(started).resolves.toBeNull()
+  })
 })
