@@ -1555,7 +1555,9 @@ export class CanvasEngine {
    * Puts an embedded face in the page, and redraws every caption set in it.
    *
    * Once per family, whatever asks: a document of twenty captions in one font must not fetch it
-   * twenty times, and a face already in the page is one `drawText` needs nothing more from.
+   * twenty times, and a face already in the page is one `drawText` needs nothing more from. That
+   * one fetch is why the landing sweeps the document instead of the caption that happened to ask —
+   * the other nineteen were turned away at the early return, and no landing of their own is coming.
    */
   private async registerFace(layer: TextLayer): Promise<void> {
     const url = faceUrlOf(layer.font)
