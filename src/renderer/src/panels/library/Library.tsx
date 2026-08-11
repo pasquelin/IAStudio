@@ -3,10 +3,6 @@ import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
-import { Collection } from '@/design/Collection'
-import { EmptyState } from '@/design/EmptyState'
-import { toolIcon } from '@/helpers/tool-registry'
-import { TILES_ONLY } from '@/helpers/collection-state'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
@@ -17,7 +13,7 @@ import { useProject } from '@/stores/project'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { openFromHome } from '@/home/open'
 import { ShelfTile } from '@/design/ShelfTile'
-import { RefusedPanel } from '@/panels/shared/RefusedPanel'
+import { ShelfPanel } from '@/panels/shared/ShelfPanel'
 import { PANEL_PAGE } from '@/panels/shared/tiles'
 
 const NOTHING: readonly CloudAsset[] = []
@@ -50,17 +46,16 @@ export function Library() {
     return found
   }, [items])
 
-  // A 429 used to take the band off the page without a word — and since `cloudBrowse` goes
-  // through `quietlyReducedBy`, the journal did not say it either.
-  if (state === 'refused') return <RefusedPanel tool="library" onRetry={retry} />
-
   return (
-    <Collection
-      label={t('panels.library')}
+    <ShelfPanel
+      tool="library"
       items={page}
-      state={TILES_ONLY}
+      // A 429 used to take the band off the page without a word — and since `cloudBrowse` goes
+      // through `quietlyReducedBy`, the journal did not say it either.
+      state={state}
+      onRetry={retry}
       renderCard={asset => <Tile asset={asset} fetched={fetchedById.get(asset.id)} />}
-      empty={<EmptyState icon={toolIcon('library')} message={t('home.library.none')} />}
+      empty={t('home.library.none')}
     />
   )
 }

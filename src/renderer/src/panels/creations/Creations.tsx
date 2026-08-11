@@ -1,14 +1,10 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { posterUrl, type Asset } from '@shared/domain/asset'
-import { Collection } from '@/design/Collection'
-import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { toolIcon } from '@/helpers/tool-registry'
-import { TILES_ONLY } from '@/helpers/collection-state'
 import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
@@ -16,7 +12,7 @@ import { useProject } from '@/stores/project'
 import { openFromHome } from '@/home/open'
 import { recreate } from '@/home/recreate'
 import { ShelfTile } from '@/design/ShelfTile'
-import { RefusedPanel } from '@/panels/shared/RefusedPanel'
+import { ShelfPanel } from '@/panels/shared/ShelfPanel'
 import { PANEL_PAGE } from '@/panels/shared/tiles'
 
 const NOTHING: readonly Asset[] = []
@@ -42,19 +38,15 @@ export function Creations() {
     path ?? '',
   )
 
-  // The local catalogue rarely refuses — and when it does, an empty panel says nothing about it.
-  if (state === 'refused') return <RefusedPanel tool="creations" onRetry={retry} />
-
   return (
-    <Collection
-      label={t('panels.creations')}
+    <ShelfPanel
+      tool="creations"
       items={assets}
-      state={TILES_ONLY}
-      // The click is the tile's own rather than the collection's, as it is in the library beside
-      // it: `onOpen` would name the cell, and the verb — "open boulder.png" — is what a reader
-      // hears instead of "listitem". Two grids of the same tile must not answer differently.
+      // The local catalogue rarely refuses — and when it does, an empty grid says nothing of it.
+      state={state}
+      onRetry={retry}
       renderCard={asset => <Tile asset={asset} />}
-      empty={<EmptyState icon={toolIcon('creations')} message={t('home.creations.none')} />}
+      empty={t('home.creations.none')}
     />
   )
 }
