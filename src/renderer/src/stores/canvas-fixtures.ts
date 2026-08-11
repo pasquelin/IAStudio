@@ -21,9 +21,10 @@ export function installCanvas(documentId: string, state: CanvasState = DEFAULT_C
 /**
  * Reading half of `installCanvas`, for what a suite asserts BETWEEN renders.
  *
- * Where the scene answers `null` for a document the store lost, this one answers the layer the
- * DEFAULT canvas holds under that id — `canvasOf` falls back to a canvas that already has one.
- * A suite asserting on the wrong document therefore reads a layer, never a hole.
+ * Where the scene answers `null` for a document the store lost, this one falls back to the DEFAULT
+ * canvas — which holds exactly one layer, `layer-1`. So a lost document answers `Background` under
+ * that id and `null` under any other, `layer-2` included: neither answer tells a lost document
+ * apart from a missing layer, and an isolation assertion needs its own non-null guard.
  */
 export const layerNow = (documentId: string, id: string): Layer | null =>
   layerById(canvasOf(useCanvases.getState(), documentId), id)

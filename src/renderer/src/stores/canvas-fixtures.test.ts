@@ -7,10 +7,10 @@ import { useCanvases } from './canvases'
 
 const DOCUMENT = 'image-1'
 
-const canvasOfOne = (name: string): CanvasState => ({
-  ...DEFAULT_CANVAS,
-  layers: [layerFixture({ name })],
-})
+const canvasOfOne = (name: string): CanvasState => {
+  const layer = layerFixture({ name })
+  return { ...DEFAULT_CANVAS, layers: [layer], activeLayerId: layer.id }
+}
 
 describe('layerNow', () => {
   beforeEach(() => {
@@ -41,9 +41,14 @@ describe('layerNow', () => {
    * store falls back to `DEFAULT_CANVAS`, which opens with `layer-1`. Suites lean on it — one
    * asserts an untouched position on a document nothing ever installed — so it is pinned rather
    * than left to be rediscovered as a surprise.
+   *
+   * And it answers it under `layer-1` ALONE: `layerFixture` hands out `layer-2`, so the id most
+   * suites carry reads `null` on a lost document, indistinguishable from a layer that went
+   * missing. An isolation assertion written on the second layer needs its own non-null guard.
    */
   it('answers the default canvas layer for a document the store does not hold', () => {
     expect(layerNow('image-404', 'layer-1')?.name).toBe('Background')
+    expect(layerNow('image-404', 'layer-2')).toBeNull()
   })
 
   /** Read at call time: the suites call it after an edit and expect the edited value. */

@@ -14,7 +14,7 @@ const sceneOfOne = (name: string): SceneState => ({
 
 describe('sceneNodeNow', () => {
   beforeEach(() => {
-    installScene(DOCUMENT, sceneOfOne('Socle'))
+    installScene(DOCUMENT, sceneOfOne('Base'))
   })
 
   /**
@@ -24,11 +24,11 @@ describe('sceneNodeNow', () => {
    */
   it('reads the document it is given, not one of its own', () => {
     useScenes.setState({
-      states: { [DOCUMENT]: sceneOfOne('Socle'), 'scene-2': sceneOfOne('Colonne') },
+      states: { [DOCUMENT]: sceneOfOne('Base'), 'scene-2': sceneOfOne('Column') },
     })
 
-    expect(sceneNodeNow('scene-2', 'box-1')?.name).toBe('Colonne')
-    expect(sceneNodeNow(DOCUMENT, 'box-1')?.name).toBe('Socle')
+    expect(sceneNodeNow('scene-2', 'box-1')?.name).toBe('Column')
+    expect(sceneNodeNow(DOCUMENT, 'box-1')?.name).toBe('Base')
   })
 
   /** What the suites branch on: `null`, never a throw, for a node the scene does not hold. */
@@ -49,9 +49,9 @@ describe('sceneNodeNow', () => {
   it('reads the store as it stands at the call, not as it stood before', () => {
     const before = sceneNodeNow(DOCUMENT, 'box-1')
 
-    useScenes.getState().runCommand(DOCUMENT, renameNode('box-1', 'Colonne'))
+    useScenes.getState().runCommand(DOCUMENT, renameNode('box-1', 'Column'))
 
-    expect(before?.name).toBe('Socle')
-    expect(sceneNodeNow(DOCUMENT, 'box-1')?.name).toBe('Colonne')
+    expect(before?.name).toBe('Base')
+    expect(sceneNodeNow(DOCUMENT, 'box-1')?.name).toBe('Column')
   })
 })

@@ -17,8 +17,10 @@ const nodeOf = (): ModelNode | undefined => {
 }
 
 /**
- * The section takes its node and its edit exactly as the inspector hands them — subscribed, so
- * a write reaches the screen the way it does in the panel.
+ * The section takes its node and its edit subscribed, so a write reaches the screen the way it
+ * does in the panel. Narrower than `SceneInspector.tsx:43`, which watches the whole node list —
+ * fair while the section reads nothing of the scene outside its own node, and to be widened the
+ * day it does, or a write it should redraw on would leave this host still.
  */
 function Host() {
   const node = useScenes(state => sceneNodeIn(state, DOCUMENT, 'a'))
