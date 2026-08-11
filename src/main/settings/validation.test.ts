@@ -67,6 +67,19 @@ describe('settings validation', () => {
     expect(() => parsePartialSettings({ generation: { concurrentJobs: 2.5 } })).toThrow()
   })
 
+  /*
+   * The shape is `HEX_COLOR`, shared with the document readers rather than restated here. The
+   * three-digit case is the one worth naming: CSS honours it, `tokenAsHex` reads `#fff` as
+   * `0xfff` — a dark blue — and this is the only side of that shared constant zod guards.
+   */
+  it('rejects an accent that is not six hexadecimal digits', () => {
+    expect(parsePartialSettings({ appearance: { accent: '#3574F0' } })).toEqual({
+      appearance: { accent: '#3574F0' },
+    })
+    expect(() => parsePartialSettings({ appearance: { accent: '#fff' } })).toThrow()
+    expect(() => parsePartialSettings({ appearance: { accent: 'red' } })).toThrow()
+  })
+
   it('accepts a path to ffmpeg, which it never checks for existence', () => {
     // The binary may be plugged in later; `resolveFfmpeg` falls through to the PATH meanwhile.
     expect(parsePartialSettings({ media: { ffmpegPath: '/nowhere/yet/ffmpeg' } })).toEqual({

@@ -3,9 +3,38 @@ import {
   channelFromScenarioType,
   seamVerdict,
   CHANNEL_BY_SCENARIO_TYPE,
+  DEFAULT_TEXTURE_MATERIAL,
   isPbrChannel,
   PBR_CHANNELS,
+  readMaterial,
 } from './texture'
+
+describe('reading a material back', () => {
+  /**
+   * A hand-edited `.tex` is user territory. `rgb(255,0,0)` renders and normalises — refused for
+   * one spelling, not for a bug — while `banana` is the half three.js refuses, where the material
+   * keeps whatever colour it already carried and nothing on screen reports it.
+   *
+   * `roughness` rides along on purpose: it proves the record was read field by field, rather than
+   * the whole material having fallen back to the defaults, which is how such a test passes for
+   * the wrong reason.
+   */
+  it('takes the default for a colour this studio would not have written, both slots', () => {
+    const read = readMaterial({ color: 'banana', emissive: 'rgb(255,0,0)', roughness: 0.25 })
+
+    expect(read.color).toBe(DEFAULT_TEXTURE_MATERIAL.color)
+    expect(read.emissive).toBe(DEFAULT_TEXTURE_MATERIAL.emissive)
+    expect(read.roughness).toBe(0.25)
+    expect(DEFAULT_TEXTURE_MATERIAL.roughness).not.toBe(0.25)
+  })
+
+  it('keeps a colour a picker could have written', () => {
+    const read = readMaterial({ color: '#ffcc88', emissive: '#102030' })
+
+    expect(read.color).toBe('#ffcc88')
+    expect(read.emissive).toBe('#102030')
+  })
+})
 
 describe('isPbrChannel', () => {
   it('accepts every declared channel', () => {

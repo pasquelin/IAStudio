@@ -4,6 +4,7 @@
  * file stops being trusted.
  */
 import { readAdjustments } from '@shared/domain/adjustments'
+import { readColor } from '@shared/domain/color'
 import { clampElevation, normalizeAzimuth } from '@shared/domain/angles'
 import {
   createSkyboxContent,
@@ -29,7 +30,7 @@ function readSun(raw: unknown): SkyboxContent['sun'] {
     elevation: clampElevation(readNumber(raw, 'elevation', DEFAULT_SUN.elevation)),
     azimuth: normalizeAzimuth(readNumber(raw, 'azimuth', DEFAULT_SUN.azimuth)),
     intensity: readPositive(raw, 'intensity', DEFAULT_SUN.intensity),
-    color: readString(raw, 'color', DEFAULT_SUN.color),
+    color: readColor(raw, 'color', DEFAULT_SUN.color),
   }
 }
 

@@ -50,6 +50,16 @@ describe('reading a sky back', () => {
     expect(parseSkybox({ sun: { intensity: 'loud' } }).sun.intensity).toBe(DEFAULT_SUN.intensity)
   })
 
+  /*
+   * Two classes, and only the second is a defect on its own: `#fff` renders and the control
+   * normalises it, so refusing it buys one spelling rather than two; `banana` is the one three.js
+   * refuses, where the sun silently keeps the colour it already had.
+   */
+  it('takes the stored default for a sun colour this studio would not have written', () => {
+    expect(parseSkybox({ sun: { color: '#fff' } }).sun.color).toBe(DEFAULT_SUN.color)
+    expect(parseSkybox({ sun: { color: 'banana' } }).sun.color).toBe(DEFAULT_SUN.color)
+  })
+
   // A prompt credited to no model names a picture the panel cannot offer to make again.
   it('drops a provenance naming no model', () => {
     expect(parseSkybox({ generation: { prompt: 'a dawn' } }).generation).toBeUndefined()

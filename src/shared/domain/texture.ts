@@ -1,5 +1,6 @@
-import { isRecord, readBoolean, readNumber, readString } from '../guards'
+import { isRecord, readBoolean, readNumber } from '../guards'
 import { clamp } from '../numeric'
+import { readColor } from './color'
 import { normalizeAzimuth } from './angles'
 
 /**
@@ -213,7 +214,7 @@ export function readMaterial(value: unknown): MaterialSettings {
   if (!isRecord(value)) return structuredClone(fallback)
 
   return {
-    color: readString(value, 'color', fallback.color),
+    color: readColor(value, 'color', fallback.color),
     roughness: readUnit(value, 'roughness', fallback.roughness),
     metalness: readUnit(value, 'metalness', fallback.metalness),
     roughnessRange: readRange(value, 'roughnessRange', fallback.roughnessRange),
@@ -225,7 +226,7 @@ export function readMaterial(value: unknown): MaterialSettings {
     heightScale: readBounded(value, 'heightScale', fallback.heightScale, 'heightScale'),
     aoIntensity: readUnit(value, 'aoIntensity', fallback.aoIntensity),
     edgeIntensity: readUnit(value, 'edgeIntensity', fallback.edgeIntensity),
-    emissive: readString(value, 'emissive', fallback.emissive),
+    emissive: readColor(value, 'emissive', fallback.emissive),
     emissiveIntensity: readBounded(
       value,
       'emissiveIntensity',
