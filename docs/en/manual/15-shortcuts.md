@@ -201,6 +201,12 @@ These keys are **held** rather than pressed: while you hold, the camera moves.
 > **Why two columns.** The studio listens to the **position** of the key on the keyboard, not the
 > letter printed on it. The four direction keys are therefore always the same square, top left:
 > `WASD` if your keyboard is American, `ZQSD` if it is French. There is nothing to set.
+>
+> **One exception: the keypad's Enter.** It is a position of its own, distinct from the main
+> Enter, but the studio reads it as that one. Both keys therefore do the same thing, and
+> remapping either moves both — you cannot tell them apart. The rest of the keypad keeps its own
+> positions: with Num Lock on or off those keys mean different things, and the studio cannot
+> guess which one you meant.
 
 Speed and boost are set in [settings](14-settings.md#workspaces).
 

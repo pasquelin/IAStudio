@@ -33,6 +33,23 @@ export type KeyChord = {
   metaKey: boolean
 }
 
+/**
+ * Codes folded onto the key of the same name on the main keyboard, before a signature is built.
+ *
+ * Folded at the source rather than by giving a command a second binding: a signature is what the
+ * registry, the settings file and the shortcuts screen all compare on, and two spellings of one
+ * chord would have to agree in all three — a remap would write one of them and the other would
+ * go on answering the old key. Here the second spelling never exists.
+ *
+ * `NumpadEnter` is a distinct position, and the table stays keyed on positions: nothing is
+ * renamed, one code is read as another. Only keys whose meaning does not depend on Num Lock
+ * belong here — `Numpad1` is `End` with the lock off, so folding it onto `Digit1` would fire a
+ * command on a key the user pressed to move the caret.
+ */
+const CODE_ALIASES: Record<string, string> = {
+  NumpadEnter: 'Enter',
+}
+
 /** Fixed modifier order, so one combination always produces one signature. */
 export function signatureOf(event: KeyChord): Signature {
   const parts: string[] = []
@@ -40,7 +57,7 @@ export function signatureOf(event: KeyChord): Signature {
   if (event.altKey) parts.push('Alt')
   if (event.shiftKey) parts.push('Shift')
   if (event.metaKey) parts.push('Meta')
-  parts.push(event.code)
+  parts.push(CODE_ALIASES[event.code] ?? event.code)
   return parts.join('+')
 }
 
@@ -71,9 +88,16 @@ const SIGNATURE_SHAPE = /^(Ctrl\+)?(Alt\+)?(Shift\+)?(Meta\+)?[A-Z][A-Za-z0-9]+$
  *
  * Checked here rather than at each caller: the registry is one user, the recorder on the
  * shortcuts screen is another, and the overrides read off the settings file are a third.
+ *
+ * A folded code is refused, and that is what makes this more than a shape check. The recorder
+ * wrote raw codes before `CODE_ALIASES` existed, so a settings file can hold `NumpadEnter` — a
+ * spelling no keypress produces any more. Kept, it would sit on the shortcuts screen naming a
+ * key that fires nothing while that same key ran another command. Refused, the schema drops the
+ * line and the command goes back to its default, which the keypad does reach.
  */
 export function isSignature(value: unknown): value is Signature {
-  return typeof value === 'string' && SIGNATURE_SHAPE.test(value)
+  if (typeof value !== 'string' || !SIGNATURE_SHAPE.test(value)) return false
+  return CODE_ALIASES[value.split('+').at(-1) ?? ''] === undefined
 }
 
 /**
