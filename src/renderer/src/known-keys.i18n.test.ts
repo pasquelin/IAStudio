@@ -45,16 +45,20 @@ function isKnown(code: Language, key: string): boolean {
 type Interpolated = { key: string; given: readonly string[]; line: number }
 
 /**
- * The literals a first argument can resolve to. A control that says two things writes a ternary
- * — `t(pinned ? 'inspector.pinned' : 'inspector.pin')` — and reading the outer node alone saw a
- * `ConditionalExpression`, took nothing, and moved on: 34 sites, one of them naming a key that
+ * The literals an expression can resolve to. A control that says two things writes a ternary —
+ * `t(pinned ? 'inspector.pinned' : 'inspector.pin')` — and reading the outer node alone saw a
+ * `ConditionalExpression`, took nothing, and moved on: 38 sites, one of them naming a key that
  * no bundle held.
+ *
+ * The third copy of this walk, after both `no-hardcoded-text.test.ts`. Narrower on purpose: those
+ * two hunt WORDS, so they join the parts of a template, while a key is one literal or none.
  */
-function literalsOf(node: ts.Expression): ts.StringLiteral[] {
+function literalsOf(node: ts.Expression | undefined): ts.StringLiteral[] {
+  if (node === undefined) return []
   if (ts.isStringLiteral(node)) return [node]
-  if (ts.isConditionalExpression(node)) {
+  if (ts.isConditionalExpression(node))
     return [...literalsOf(node.whenTrue), ...literalsOf(node.whenFalse)]
-  }
+  if (ts.isParenthesizedExpression(node)) return literalsOf(node.expression)
   return []
 }
 
@@ -101,22 +105,24 @@ function keysIn(
     // Only the first argument: the second is a fallback, not another key.
     if (ts.isCallExpression(node) && (callee === 't' || callee.endsWith('.t'))) {
       const [first, second] = node.arguments
-      const named = first === undefined ? [] : literalsOf(first)
-      for (const literal of named.filter(one => one.text.includes('.'))) {
+      // One options object exists at runtime whichever branch is taken, so every key it can
+      // reach is checked against that same object.
+      const given =
+        second !== undefined && ts.isObjectLiteralExpression(second)
+          ? namesOf(second, source)
+          : undefined
+      for (const literal of literalsOf(first).filter(one => one.text.includes('.'))) {
         take(node, literal)
-        if (second !== undefined && ts.isObjectLiteralExpression(second)) {
-          filled.push({ key: literal.text, given: namesOf(second, source), line: lineOf(node) })
-        }
+        if (given !== undefined) filled.push({ key: literal.text, given, line: lineOf(node) })
       }
     }
 
-    if (
-      ts.isPropertyAssignment(node) &&
-      node.name.getText(source).endsWith('Key') &&
-      ts.isStringLiteral(node.initializer) &&
-      node.initializer.text.includes('.')
-    ) {
-      take(node, node.initializer)
+    // Through `literalsOf` as well: a toolbar row that toggles names its two keys in a ternary,
+    // and four registries write `labelKey` that way.
+    if (ts.isPropertyAssignment(node) && node.name.getText(source).endsWith('Key')) {
+      for (const literal of literalsOf(node.initializer).filter(one => one.text.includes('.'))) {
+        take(node, literal)
+      }
     }
 
     // A `Record<Union, string>` indexed by a union value: `{ missing: 'errors.missing' }`. The
@@ -215,6 +221,26 @@ describe('every key the renderer names outright', () => {
     const code = "t(full ? 'inspector.pinFull' : 'inspector.pin', { max })"
 
     expect(keysIn('probe.ts', code).filled.map(one => one.key)).toEqual([
+      'inspector.pinFull',
+      'inspector.pin',
+    ])
+  })
+
+  // The other way a key is named, and it had the same hole: four registries write it this way.
+  it('reads both keys of a registry field that toggles', () => {
+    const code = "const row = { labelKey: playing ? 'transport.pause' : 'transport.play' }"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual([
+      'transport.pause',
+      'transport.play',
+    ])
+  })
+
+  // Parentheses are the silent way back to the old blindness: no test would have failed.
+  it('sees through parentheses around a ternary', () => {
+    const code = "t((full ? 'inspector.pinFull' : 'inspector.pin'))"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual([
       'inspector.pinFull',
       'inspector.pin',
     ])
