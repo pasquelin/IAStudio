@@ -17,11 +17,11 @@ and greyed out, views to come are in the panels, and this chapter says exactly w
 
 Three categories, not to be confused:
 
-|                         |                                            |
-| ----------------------- | ------------------------------------------ |
-| **Not done yet**        | it is planned, it will be there one day    |
+|  |  |
+|---|---|
+| **Not done yet** | it is planned, it will be there one day |
 | **Deliberately absent** | it will not be done, and there is a reason |
-| **Known defect**        | it works badly, and it is identified       |
+| **Known defect** | it works badly, and it is identified |
 
 ---
 
@@ -30,29 +30,29 @@ Three categories, not to be confused:
 **This chapter long opened with "three documents out of six do not save". That is no longer
 true.** All seven write into the project folder and open back exactly as they were.
 
-| Document       | Extension | Saves?                                             |
-| -------------- | --------- | -------------------------------------------------- |
-| 3D scene       | `.scene`  | **yes**                                            |
-| Material       | `.tex`    | **yes**                                            |
-| Layered image  | `.img`    | **yes**                                            |
-| Video sequence | `.seq`    | **yes**                                            |
-| Edited sound   | `.aud`    | **yes**                                            |
-| Sky            | `.sky`    | **yes**                                            |
-| Graph          | `.graph`  | **yes** — what a run produced is not saved with it |
+| Document | Extension | Saves? |
+|---|---|---|
+| 3D scene | `.scene` | **yes** |
+| Material | `.tex` | **yes** |
+| Layered image | `.img` | **yes** |
+| Video sequence | `.seq` | **yes** |
+| Edited sound | `.aud` | **yes** |
+| Sky | `.sky` | **yes** |
+| Graph | `.graph` | **yes** — what a run produced is not saved with it |
 
 **What does not save, and that is deliberate:**
 
 - **the undo history** — reopening a document means starting again without `⌘Z`;
 - **how you were looking at it** — zoom, framing, a sky's view, a selection: that is session
-  state, not what the document _is_. A reopened document does not argue with the window that
+  state, not what the document *is*. A reopened document does not argue with the window that
   opens it;
 - **in Audio, the A/B monitoring**: a reopened document listens to the chain, never the source.
 
 **Closing a tab now asks.** If the document holds unsaved work, the studio puts the question —
-Save, Don’t save, Cancel — and _Cancel_ is what an `⎋` struck without reading answers.
+Save, Don’t save, Cancel — and *Cancel* is what an `⎋` struck without reading answers.
 
 **So does quitting.** The window no longer leaves carrying unsaved work: it refuses to go and
-puts the same question, once per document that holds any. _Cancel_ at any of them calls off the
+puts the same question, once per document that holds any. *Cancel* at any of them calls off the
 whole departure, and **no document is closed or written** — the studio is exactly where it was
 left. Answering all of them closes those tabs without quitting: the studio leaves on the next
 gesture, once it has nothing left to save.
@@ -80,12 +80,12 @@ its layers — that is an export, not a save.
 
 They are visible in the toolbar, greyed out.
 
-| Tool              | Group              |
-| ----------------- | ------------------ |
-| **Slice** (`⇧S`)  | Frame              |
-| **Cut** (`S`)     | Frame              |
-| **Pen**           | Drawing            |
-| **Text on path**  | Text               |
+| Tool | Group |
+|---|---|
+| **Slice** (`⇧S`) | Frame |
+| **Cut** (`S`) | Frame |
+| **Pen** | Drawing |
+| **Text on path** | Text |
 | **Comment** (`C`) | alone in its group |
 
 **They all say their state by their grey**, which is the only thing asked of them until they
@@ -130,7 +130,7 @@ That is not a defect: it is a different tool, and its name says so.
 
 ### History stops at 100
 
-The _undo stack_ keeps the **last 100** actions. Beyond that, the oldest disappear for good.
+The *undo stack* keeps the **last 100** actions. Beyond that, the oldest disappear for good.
 
 ### Export flattens, saving does not
 
@@ -175,7 +175,7 @@ which one failed.
 
 ### The `S` shortcut does two things at once
 
-In the 3D view, `S` picks the **Scale** tool _and_ moves the camera backwards while held. The two key
+In the 3D view, `S` picks the **Scale** tool *and* moves the camera backwards while held. The two key
 tables — the tools and the flying — are read on the same press.
 
 In practice you barely notice: taking the tool backs the camera up by a hair. But it is an overlap,
@@ -206,12 +206,12 @@ changed yet.
 
 The Program monitor plays sound tracks. Four bounds remain, all deliberate:
 
-| What is not heard                                | Why                                                               |
-| ------------------------------------------------ | ----------------------------------------------------------------- |
-| **A video's own sound**, laid on a picture track | only tracks of the sound kind are scheduled                       |
-| **The fades** of a sound clip                    | drawn, grabbable and saved, but not yet applied at the output     |
-| **Scrubbing** — dragging the playhead by hand    | sound is planned by the playback loop alone                       |
-| **The Source monitor**                           | it mounts the selected clip on a picture track, whatever its type |
+| What is not heard | Why |
+|---|---|
+| **A video's own sound**, laid on a picture track | only tracks of the sound kind are scheduled |
+| **The fades** of a sound clip | drawn, grabbable and saved, but not yet applied at the output |
+| **Scrubbing** — dragging the playhead by hand | sound is planned by the playback loop alone |
+| **The Source monitor** | it mounts the selected clip on a picture track, whatever its type |
 
 **And one drift, unmeasured**: on a long edit the picture can pull away from the sound. The output
 clock takes over as soon as it runs, which avoids this in the common case — but the very first
@@ -245,7 +245,7 @@ holds is **the edit**, not the sound: the cuts, the fades, the gain, replayed ov
 asset. What it does not keep is the **A/B listen** — a reopened document listens to the chain,
 never to the source.
 
-The workspace can also write an _asset_ directly, through **Apply** or **Save as new**: that is
+The workspace can also write an *asset* directly, through **Apply** or **Save as new**: that is
 what you do when the result has to serve elsewhere rather than carry on being edited.
 
 ---
@@ -295,7 +295,7 @@ reopen exactly as they were. What the document does not keep: the view and the f
 say how you were looking at it rather than what it is.
 
 The six faces of a cube export from **File › Export the sky**, at 512, 1024 or 2048. What is
-still missing is the _HDRI_: the faces come out as PNG, so eight bits a channel, and anything
+still missing is the *HDRI*: the faces come out as PNG, so eight bits a channel, and anything
 above white is clipped.
 
 ---
@@ -304,12 +304,12 @@ above white is clipped.
 
 ### What can be imported
 
-| Type      | Extensions                                   |
-| --------- | -------------------------------------------- |
-| **Video** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`   |
-| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg`         |
+| Type | Extensions |
+|---|---|
+| **Video** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
+| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
-| **3D**    | `glb`                                        |
+| **3D** | `glb` |
 
 ### What cannot
 
@@ -317,7 +317,7 @@ above white is clipped.
 - **HDRIs** — `.hdr`.
 
 An `.exr` does import, but it is catalogued as an **image**, not as a sky. It still works as a source
-for a _skybox_: you simply have to go and find it among the images.
+for a *skybox*: you simply have to go and find it among the images.
 
 **Three formats import without ever showing in a Video monitor** — `.exr`, `.tif` and `.tiff`.
 The clip drops onto a track and keeps its duration, but the monitor says "This clip could not be
@@ -417,7 +417,7 @@ on top of it. That is a professional decision, and it will not change.
 ### Your credentials will never be displayed
 
 There is no "show my API key" button, and there will not be one. Once stored, the key is encrypted by
-your system's _keychain_, and the part of the software that draws the screen has **structurally** no
+your system's *keychain*, and the part of the software that draws the screen has **structurally** no
 access to it.
 
 This is not an inconvenience to work around: it is what guarantees that a screenshot of your settings
