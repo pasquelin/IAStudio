@@ -91,10 +91,8 @@ describe('the captions a landed face is still worth redrawing', () => {
   // A face is registered with the page under a family name and nothing else, so the one that lands
   // draws for both. Deliberate, and the reason `source` is left out of the filter.
   it('take in a caption set in the same family from another source', () => {
-    const installed = {
-      ...textLayer('u', 'Goodbye', { x: 0, y: 40 }),
-      font: { source: 'system', family: landed },
-    }
+    const sameName: FontRef = { source: 'system', family: landed }
+    const installed = { ...textLayer('u', 'Goodbye', { x: 0, y: 40 }), font: sameName }
 
     expectExactly(captionsSetIn(holding(caption, installed), landed), caption, installed)
   })
