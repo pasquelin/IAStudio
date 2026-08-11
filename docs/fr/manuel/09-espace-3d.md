@@ -622,10 +622,15 @@ cesse alors de choisir des objets et choisit des os.
 
 ### Poser vos propres mouvements
 
-Sélectionnez un objet, puis ajoutez une piste depuis la barre de la timeline : **Position**,
-**Rotation** ou **Échelle**. Si l’objet est un modèle rigué, le menu **Os** apparaît à côté — il
-s’ouvre sur **Le modèle entier**, et choisir un os fait porter la piste sur lui seul, ce qui est
-la façon de corriger un bras sans déplacer tout le personnage.
+**Vos objets sont déjà dans la bande.** Ouvrez l’espace 3D et chaque objet de la scène y a sa
+ligne — il n’y a rien à créer pour l’y faire entrer, et aucun bouton pour cela : un objet existe
+déjà, le demander une seconde fois n’aurait pas de sens.
+
+Placez la tête de lecture, puis **posez une clé sur la ligne de l’objet**. Les trois propriétés
+animées — Position, Rotation, Échelle — naissent à ce moment-là, ensemble, et en **une seule
+annulation**. Si l’objet est un modèle rigué, le menu **Os** apparaît dans la barre : il s’ouvre
+sur **Le modèle entier**, et choisir un os fait porter les clés sur lui seul, ce qui est la façon
+de corriger un bras sans déplacer tout le personnage.
 
 **La bande se lit par sujet, pas par piste.** Une ligne par objet — ou par os — et ses propriétés
 animées **repliées dessous**. La ligne repliée montre toutes les clés de l’objet, celles de ses
@@ -639,7 +644,6 @@ change que ce qui est montré.
 | **Enregistrement automatique** | bouger un objet **pose une clé** au lieu de déplacer sa pose de repos |
 | **Durée** et **Images/s** | la longueur de la timeline, et sa cadence |
 | **Os** | sur un modèle rigué : l’os que la prochaine piste animera, ou **Le modèle entier** |
-| **Ajouter une piste Position / Rotation / Échelle** | ajoute la piste à l’objet sélectionné |
 | **Poser une clé sur tout ce qui est animé** | le même geste, sur toutes les pistes à la fois |
 | **Rendre en vidéo** | voir plus bas — grisé tant qu’aucune caméra n’est dans la scène |
 
@@ -659,23 +663,21 @@ dirait que la scène est plus longue qu’elle ne l’est.
 
 **Lire quand la tête est déjà au bout rembobine** au lieu de s’arrêter sur l’image où l’on est.
 
-**Sans aucune piste, la bande le dit** plutôt que de rester vide : « Aucune piste. Sélectionnez un
-objet, puis ajoutez la piste à animer. »
-
 **Les pistes s’additionnent.** Deux pistes de position sur un même objet ajoutent leurs
 déplacements ; deux pistes d’échelle **multiplient** les leurs — deux fois deux font quatre, ce qui
 est ce qu’on veut en les empilant. C’est différent d’un montage vidéo, où le clip du dessus cache
 celui du dessous.
 
-> **Pourquoi l’enregistrement automatique change tout — et ce qu’il exige.** Comme les pistes
-> s’ajoutent à la pose de l’objet, déplacer un objet au gizmo l’enregistrement éteint écrit sa
-> **pose de repos** — et les pistes se rajoutent par-dessus à l’image suivante, si bien que
-> l’objet revient sous la main. Allumez-le, et le même geste pose une clé là où est la tête.
+> **Un objet DÉJÀ animé enregistre de lui-même, quoi que dise l’interrupteur.** Ce que la vue
+> montre est la pose de repos **plus** ce que les clés ajoutent : déplacer un objet keyé sans
+> enregistrer écrirait sa pose de repos, et l’objet atterrirait décalé de la valeur exacte de la
+> clé posée à cet instant. Personne ne déplace un objet en voulant cela.
 >
-> **Mais il faut que la piste existe déjà.** L’enregistrement n’écrit que dans les pistes de
-> l’objet — ou de l’os — que vous bougez ; s’il n’y en a aucune, le geste retombe sur la pose de
-> repos, et vous retrouvez exactement le problème qu’il devait résoudre. **Ajoutez la piste
-> d’abord, allumez ensuite.**
+> **L’interrupteur décide donc d’une seule chose** : si un objet **pas encore animé** se met à
+> l’être. Une fois qu’il porte une clé, le bouger édite son animation.
+>
+> La distinction porte sur les **clés**, pas sur les lignes : des propriétés ouvertes et vides ne
+> sont pas encore une animation, et l’interrupteur y garde son mot.
 >
 > **Un os sans piste est un cas à part** : il n’a pas de pose de repos où retomber, donc le geste
 > est simplement abandonné et l’os revient où il était.
@@ -684,10 +686,10 @@ celui du dessous.
 
 L’enregistrement automatique n’est pas obligatoire. Le geste, dans l’ordre :
 
-1. **ajoutez la piste** — elle retient la pose où l’objet se tient à cet instant, et c’est contre
-   elle que toutes ses clés se mesureront ;
-2. **posez une clé** au départ ;
-3. **déplacez l’objet**, puis **posez une clé** à l’endroit voulu de la timeline.
+1. **posez une clé** au départ, sur la ligne de l’objet — elle ouvre ses trois propriétés et
+   retient la pose où il se tient à cet instant, contre laquelle toutes ses clés se mesureront ;
+2. **déplacez la tête** sur la règle ;
+3. **déplacez l’objet**, puis **posez une clé** à nouveau.
 
 > **Les chiffres de l’Inspecteur reviennent à la pose de référence, pas l’objet à l’écran.** La
 > clé retient le déplacement que vous venez de faire, et la position **enregistrée** de l’objet

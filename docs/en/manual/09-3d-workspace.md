@@ -605,10 +605,15 @@ picks bones instead of objects.
 
 ### Laying down your own motion
 
-Select an object, then add a track from the timeline's bar: **Position**, **Rotation** or
-**Scale**. If the object is a rigged model, a **Bone** picker appears beside them — it opens on
-**The whole model**, and picking a bone makes the track drive that bone alone, which is how an arm
-is corrected without moving the whole character.
+**Your objects are in the band already.** Open the 3D workspace and every object of the scene has
+its line — there is nothing to create to put one there, and no button for it: an object exists
+already, and asking for it a second time would mean nothing.
+
+Place the playhead, then **key the object's line**. Its three animated properties — Position,
+Rotation, Scale — are born at that moment, together, and in **one undo**. If the object is a
+rigged model, a **Bone** picker appears in the bar: it opens on **The whole model**, and picking a
+bone makes the keys drive that bone alone, which is how an arm is corrected without moving the
+whole character.
 
 **The band reads by subject, not by track.** One line per object — or per bone — with its animated
 properties **folded underneath**. The folded line shows every key of the object, its three
@@ -622,7 +627,6 @@ is shown.
 | **Auto-key** | moving an object **writes a key** instead of shifting its rest pose |
 | **Duration** and **FPS** | how long the timeline runs, and at what rate |
 | **Bone** | on a rigged model: the bone the next track will drive, or **The whole model** |
-| **Add a Position / Rotation / Scale track** | adds the track to the selected object |
 | **Key everything animated** | the same gesture, on every track at once |
 | **Render to video** | see below — greyed out until a camera is in the scene |
 
@@ -642,21 +646,20 @@ scene is longer than it is.
 
 **Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 
-**With no track at all, the band says so** rather than staying blank: "No track yet. Select an
-object, then add the track to animate."
-
 **Tracks add up.** Two position tracks on one object add their moves together; two scale tracks
 **multiply** theirs — twice two makes four, which is what stacking them means. This is unlike a
 video montage, where the clip on top hides the one below.
 
-> **Why auto-key changes everything — and what it needs.** Since tracks add to an object's own
-> pose, dragging it with auto-key off writes its **rest pose** — and the tracks add themselves
-> back on top on the next frame, so the object springs back under your hand. Turn it on, and the
-> same drag sets a key where the playhead stands.
+> **An object that is ALREADY animated records on its own, whatever the switch says.** What the
+> view shows is the rest pose **plus** what the keys add: dragging a keyed object without
+> recording would write its rest pose, and the object would land short of where you dropped it,
+> by exactly the value of the key standing at that instant. Nobody drags an object meaning that.
 >
-> **But the track has to exist already.** Auto-key only writes into the tracks of the object — or
-> the bone — you are dragging; with none, the drag falls back to the rest pose, and you get back
-> exactly the problem it was meant to solve. **Add the track first, then turn it on.**
+> **So the switch decides one thing only**: whether an object that is **not yet animated** starts
+> being so. Once it carries a key, moving it edits its animation.
+>
+> The distinction is on the **keys**, not on the lines: properties that are open and empty are not
+> an animation yet, and the switch still has its say there.
 >
 > **A bone with no track is a case apart**: it has no rest pose to fall back to, so the drag is
 > simply dropped and the bone returns where it was.
@@ -665,10 +668,10 @@ video montage, where the clip on top hides the one below.
 
 Auto-key is not compulsory. The gesture, in order:
 
-1. **add the track** — it keeps the pose the object stands in at that moment, and every key of
-   its own is measured against it;
-2. **set a key** at the start;
-3. **move the object**, then **set a key** where you want it on the timeline.
+1. **set a key** at the start, on the object's line — it opens its three properties and keeps the
+   pose the object stands in at that moment, which every key of its own is measured against;
+2. **move the playhead** along the ruler;
+3. **move the object**, then **set a key** again.
 
 > **The Inspector's numbers go back to the reference pose, not the object on screen.** The key
 > holds the movement you just made, and the object's **stored** position returns to its
