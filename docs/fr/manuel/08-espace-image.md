@@ -95,8 +95,10 @@ selon le zoom.
 
 Elle est en haut du document. Les outils sont **groupés**, comme dans Figma :
 
-- **survolez un groupe** pour voir le reste de ses outils ;
-- **cliquez le bouton lui-même** pour armer l’outil qu’il montre déjà.
+- **survolez un groupe** pour voir le reste de ses outils, ou faites `⌥↓` si vous êtes au
+  clavier ;
+- **cliquez le bouton lui-même** pour armer l’outil qu’il montre déjà — `Entrée` fait la même
+  chose.
 
 Autrement dit : un outil armé n’a jamais besoin du menu pour être repris.
 
