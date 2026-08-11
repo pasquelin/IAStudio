@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_FONT, type FontRef } from '@shared/domain/font'
-import { pixelLayer, textLayer } from './canvas-state'
+import {
+  DEFAULT_CANVAS,
+  groupLayer,
+  pixelLayer,
+  textLayer,
+  type CanvasState,
+  type Layer,
+} from './canvas-state'
 import { captionSetIn, faceUrlOf, familyStack } from './canvas-fonts'
 
 describe('the stack a caption is drawn with', () => {
@@ -49,29 +56,39 @@ describe('the file a face has to be registered from', () => {
  */
 describe('the caption a landed face is still worth redrawing', () => {
   const caption = textLayer('t', 'Hello', { x: 0, y: 0 })
+  const landed = DEFAULT_FONT.family
+  const holding = (...layers: Layer[]): CanvasState => ({ ...DEFAULT_CANVAS, layers })
 
   it('is the one still set in that face', () => {
-    expect(captionSetIn({ layers: [caption] }, 't', 'Lato')).toBe(caption)
+    expect(captionSetIn(holding(caption), 't', landed)).toBe(caption)
+  })
+
+  // Groups nest, so `layers` is only the root of the stack. A caption filed in one is drawn like
+  // any other, and a face landing for it has to find it.
+  it('is the one still set in that face, however deep it is filed', () => {
+    const filed = groupLayer('outer', 'Titles', [groupLayer('inner', 'Captions', [caption])])
+
+    expect(captionSetIn(holding(filed), 't', landed)).toBe(caption)
   })
 
   it('is none when the caption was refaced while the file was on its way', () => {
     const futura: FontRef = { source: 'system', family: 'Futura' }
 
-    expect(captionSetIn({ layers: [{ ...caption, font: futura }] }, 't', 'Lato')).toBeNull()
+    expect(captionSetIn(holding({ ...caption, font: futura }), 't', landed)).toBeNull()
   })
 
   it('is none when the caption was deleted while the file was on its way', () => {
-    expect(captionSetIn({ layers: [] }, 't', 'Lato')).toBeNull()
+    expect(captionSetIn(holding(), 't', landed)).toBeNull()
   })
 
   // The engine holds no document at all until one is applied, and a face can land in between.
   it('is none when there is no document to look in', () => {
-    expect(captionSetIn(null, 't', 'Lato')).toBeNull()
+    expect(captionSetIn(null, 't', landed)).toBeNull()
   })
 
   // Ids are unique across kinds, but a layer replaced by another of another kind is a caption
   // that no longer exists — and a pixel layer has no words to draw.
   it('is none when what wears the id is no longer a caption', () => {
-    expect(captionSetIn({ layers: [pixelLayer('t', 'Background')] }, 't', 'Lato')).toBeNull()
+    expect(captionSetIn(holding(pixelLayer('t', 'Background')), 't', landed)).toBeNull()
   })
 })
