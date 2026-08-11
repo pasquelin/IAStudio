@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domain/model'
 import { withQueries } from '@/app/query-fixtures'
+import { wire } from '@/engines/graph/graph-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, useGraphs } from '@/stores/graphs'
@@ -63,15 +64,7 @@ const source: GraphNode = {
 
 const WIRED: GraphState = {
   nodes: [generator, source],
-  edges: [
-    {
-      id: 'mask-edge',
-      source: 'imageGenerator1',
-      sourceHandle: 'imageGenerator1-source-mask',
-      target: 'asset1',
-      targetHandle: 'asset1-target-image',
-    },
-  ],
+  edges: [wire('imageGenerator1', 'mask', 'asset1', 'image')],
   inputKeys: [],
 }
 
