@@ -576,6 +576,20 @@ export function namedLoopId(node: GraphNode): string | undefined {
   return typeof named === 'string' && named !== '' ? named : undefined
 }
 
+/**
+ * The node an id names, or `null`. Here rather than in the engine because the READER needs it —
+ * the inspector asks for the selected node, and the opening chunk holds no engine.
+ *
+ * `null` and not `undefined`, so it answers as `nodeById` does on the scene side
+ * (`engines/scene/scene-state.ts`): one name across the studio must not mean two shapes.
+ *
+ * `id` may be missing, as `inputHandleOf` takes it: a selection reads `ids[0]`, and no node
+ * answers to nothing anyway — the alternative is every caller widening it back with `?? ''`.
+ */
+export function nodeById(graph: GraphState, id: string | undefined): GraphNode | null {
+  return graph.nodes.find(node => node.id === id) ?? null
+}
+
 /** The nodes the converter would compile a branch for, in the order the graph holds them. */
 export const outputNodesOf = (graph: GraphState): readonly GraphNode[] =>
   graph.nodes.filter(node => node.data.isOutput === true && canBeOutput(node.type))

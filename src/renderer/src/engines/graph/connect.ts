@@ -1,5 +1,5 @@
 import type { GraphEdge, GraphState } from '@shared/domain/graph'
-import { takesManyWires } from '@shared/domain/graph'
+import { nodeById, takesManyWires } from '@shared/domain/graph'
 import { edgeId, inputHandleOf, outputHandleOf, typesConnect } from './handles'
 
 /**
@@ -34,8 +34,8 @@ export function refuseConnection(graph: GraphState, connection: Connection): Ref
   const { source, target, sourceHandle, targetHandle } = connection
   if (source === target) return 'same-node'
 
-  const consumer = graph.nodes.find(node => node.id === source)
-  const provider = graph.nodes.find(node => node.id === target)
+  const consumer = nodeById(graph, source)
+  const provider = nodeById(graph, target)
   if (!consumer || !provider) return 'unknown-node'
 
   if (!sourceHandle || !targetHandle) return 'unknown-handle'

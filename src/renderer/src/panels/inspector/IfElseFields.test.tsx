@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   CONDITIONAL_PORT,
+  nodeById,
   type GraphConditionBlock,
   type GraphEdge,
   type GraphNode,
@@ -68,8 +69,7 @@ beforeEach(() => {
   installGraph(DOCUMENT, graphStateOf([TEXT, BRANCH, MODEL], [FED]))
 })
 
-const branch = (): GraphNode | undefined =>
-  graphOf(useGraphs.getState(), DOCUMENT).nodes.find(node => node.id === 'ifElse1')
+const branch = (): GraphNode | null => nodeById(graphOf(useGraphs.getState(), DOCUMENT), 'ifElse1')
 
 const blocks = () => {
   const node = branch()
@@ -79,7 +79,7 @@ const blocks = () => {
 const ports = (): readonly string[] => (branch()?.data.outputHandles ?? []).map(handle => handle.id)
 
 function Live({ id }: { id: string }) {
-  const node = useGraphs(state => graphOf(state, DOCUMENT).nodes.find(entry => entry.id === id))
+  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
   return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
 }
 

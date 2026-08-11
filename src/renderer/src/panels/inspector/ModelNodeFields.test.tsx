@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
+import { nodeById } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domain/model'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { installGraph } from '@/stores/graph-fixtures'
@@ -76,7 +77,7 @@ const WIRED: GraphState = {
 }
 
 const state = (): GraphState => graphOf(useGraphs.getState(), DOCUMENT)
-const nodeNow = (): GraphNode | undefined => state().nodes.find(node => node.id === generator.id)
+const nodeNow = (): GraphNode | null => nodeById(state(), generator.id)
 
 /** What the picker asked the catalogue — the fake used to ignore its argument entirely. */
 let asked: (ModelQuery | undefined)[] = []
@@ -107,9 +108,7 @@ function show(): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
   function Live() {
-    const node = useGraphs(inner =>
-      graphOf(inner, DOCUMENT).nodes.find(entry => entry.id === generator.id),
-    )
+    const node = useGraphs(inner => nodeById(graphOf(inner, DOCUMENT), generator.id))
     return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
   }
 

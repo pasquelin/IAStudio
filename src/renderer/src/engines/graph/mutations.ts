@@ -1,7 +1,7 @@
 import type { GraphEdge, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
 import type { Connection } from './connect'
 import { edgeOf } from './connect'
-import { takesManyWires } from '@shared/domain/graph'
+import { nodeById, takesManyWires } from '@shared/domain/graph'
 import {
   inputHandleOf,
   inputHandlesOf,
@@ -64,11 +64,11 @@ export function connect(graph: GraphState, connection: Connection): GraphState {
   const edge = edgeOf(connection)
   if (!edge) return graph
 
-  const consumer = graph.nodes.find(node => node.id === edge.source)
+  const consumer = nodeById(graph, edge.source)
   // By the port's NAME, not by its handle id: only `edgeOf` spells an id the convention's way, and
   // `conditional` has to be recognised wherever a file put it.
   const joins =
-    consumer !== undefined &&
+    consumer !== null &&
     takesManyWires(consumer.type, inputHandleOf(consumer, edge.sourceHandle)?.name)
 
   const kept = graph.edges.filter(existing =>
@@ -127,7 +127,7 @@ export function replaceNodePorts(
   patch: Partial<GraphNode['data']>,
 ): GraphState {
   const next = updateNodeData(graph, id, patch)
-  const node = next.nodes.find(candidate => candidate.id === id)
+  const node = nodeById(next, id)
   if (!node) return graph
 
   // The VALUE, not the key: a patch carrying `outputHandles: undefined` would pass an `in` test
@@ -169,8 +169,8 @@ const idsOf = (handles: readonly { id: string }[]): ReadonlySet<string> =>
  * type nobody declared.
  */
 function stillConnects(graph: GraphState, edge: GraphEdge): boolean {
-  const consumer = graph.nodes.find(node => node.id === edge.source)
-  const provider = graph.nodes.find(node => node.id === edge.target)
+  const consumer = nodeById(graph, edge.source)
+  const provider = nodeById(graph, edge.target)
   if (!consumer || !provider) return true
 
   const input = inputHandleOf(consumer, edge.sourceHandle)
