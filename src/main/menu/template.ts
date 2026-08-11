@@ -22,7 +22,7 @@ import {
   type CommandId,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
-import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
 import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
@@ -74,20 +74,33 @@ export type MenuOptions = {
 }
 
 /**
+ * A native role the studio labels itself.
+ *
+ * Electron writes role labels as English literals in `roleList` — "Cut", "Select All" — and
+ * consults no locale, so an unlabelled role reads English everywhere. The label is only a
+ * default there: `accelerator`, `registerAccelerator` and the click all derive from the role,
+ * which is why naming one changes nothing but the word.
+ *
+ * Keyed by the role itself rather than through a table: `menu.cut` IS the label of `cut`, so a
+ * role without a translation fails to compile instead of waiting for a test to say so.
+ */
+type LabelledRole = keyof Translations['menu'] & NonNullable<MenuItemConstructorOptions['role']>
+
+/**
  * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
  * build hands an attacker `setCredentials` through a self-XSS.
  */
 function developerItems(
   isDevelopment: boolean,
-  menu: (typeof TRANSLATIONS)[Language]['menu'],
+  roleItem: (role: LabelledRole) => MenuItemConstructorOptions,
 ): MenuItemConstructorOptions[] {
   if (!isDevelopment) return []
   return [
     { type: 'separator' },
-    { role: 'toggleDevTools', label: menu.toggleDevTools },
+    roleItem('toggleDevTools'),
     // ⌘R is the image workspace's rulers, and `role: 'reload'` carries ⌘R implicitly: two items
     // of this very submenu would claim one key, and AppKit serves whichever it finds first.
-    { role: 'reload', label: menu.reload, accelerator: 'Shift+CmdOrCtrl+R' },
+    { ...roleItem('reload'), accelerator: 'Shift+CmdOrCtrl+R' },
   ]
 }
 
@@ -121,6 +134,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const named = (sentence: string): string => sentence.replace('{{name}}', APP_NAME)
   const aboutLabel = named(t.menu.about)
 
+  // `named` rides along: only `hide` and `quit` carry a placeholder, and a sentence without one
+  // comes back untouched.
+  const roleItem = (role: LabelledRole): MenuItemConstructorOptions => ({
+    role,
+    label: named(t.menu[role]),
+  })
+
   // Opened by the main process rather than routed through a renderer: settings are a window
   // now, and which window is focused has nothing to do with it.
   const settingsItem: MenuItemConstructorOptions = {
@@ -138,16 +158,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { type: 'separator' },
       settingsItem,
       { type: 'separator' },
-      // Labelled, though the role would draw itself: Electron ships 55 localisations and serves
-      // the one the SYSTEM is in, so a studio set to English on a French macOS read "Couper"
-      // under "Edit". The role still carries the action and its accelerator.
-      { role: 'services', label: t.menu.services },
+      roleItem('services'),
       { type: 'separator' },
-      { role: 'hide', label: named(t.menu.hide) },
-      { role: 'hideOthers', label: t.menu.hideOthers },
-      { role: 'unhide', label: t.menu.unhide },
+      roleItem('hide'),
+      roleItem('hideOthers'),
+      roleItem('unhide'),
       { type: 'separator' },
-      { role: 'quit', label: named(t.menu.quit) },
+      roleItem('quit'),
     ],
   }
 
@@ -287,10 +304,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           ]
         : nativeHistory),
       { type: 'separator' },
-      { role: 'cut', label: t.menu.cut, registerAccelerator: false },
-      { role: 'copy', label: t.menu.copy, registerAccelerator: false },
-      { role: 'paste', label: t.menu.paste, registerAccelerator: false },
-      { role: 'selectAll', label: t.menu.selectAll },
+      { ...roleItem('cut'), registerAccelerator: false },
+      { ...roleItem('copy'), registerAccelerator: false },
+      { ...roleItem('paste'), registerAccelerator: false },
+      roleItem('selectAll'),
     ],
   }
 
@@ -452,9 +469,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,
-        isMac
-          ? { role: 'close', label: t.menu.close }
-          : { role: 'quit', label: named(t.menu.quit) },
+        roleItem(isMac ? 'close' : 'quit'),
       ],
     },
     editMenu,
@@ -486,7 +501,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
-        ...developerItems(isDevelopment, t.menu),
+        ...developerItems(isDevelopment, roleItem),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },
