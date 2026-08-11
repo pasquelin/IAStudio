@@ -1,12 +1,17 @@
 import { mdiPencil } from '@mdi/js'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { MenuButton, type MenuButtonProps } from './MenuButton'
 
 function bar(props: Partial<MenuButtonProps> = {}) {
-  render(
+  render(menu(props))
+  return screen.getByRole('button', { name: 'Brush' })
+}
+
+function menu(props: Partial<MenuButtonProps> = {}) {
+  return (
     <MenuButton
       icon={mdiPencil}
       label="Brush"
@@ -24,9 +29,8 @@ function bar(props: Partial<MenuButtonProps> = {}) {
         </>
       )}
       {...props}
-    />,
+    />
   )
-  return screen.getByRole('button', { name: 'Brush' })
 }
 
 const row = (name: string): HTMLElement => screen.getByRole('menuitem', { name })
@@ -111,6 +115,29 @@ describe('MenuButton', () => {
       await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
 
       expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
+    })
+
+    /**
+     * `ask` sets its state whether or not there is anything to show, and `showing` reads the row
+     * count only at render. Without the guard the press is remembered, and the menu springs open
+     * by itself the moment a row appears — which the brush panel does, its rows being the fields
+     * left after filtering.
+     */
+    it('does not remember a press made while there was no menu', async () => {
+      const { rerender } = render(menu({ rowCount: 1, opensOnClick: false }))
+      screen.getByRole('button', { name: 'Brush' }).focus()
+
+      await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
+      rerender(menu({ rowCount: 2, opensOnClick: false }))
+
+      expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
+    })
+
+    /** Alt+Down scrolls, and on macOS pages down: the chord this button takes is its own. */
+    it('stops the browser acting on the chord it takes', () => {
+      const button = bar({ opensOnClick: false })
+
+      expect(fireEvent.keyDown(button, { key: 'ArrowDown', altKey: true })).toBe(false)
     })
 
     it('leaves the focus alone when the pointer merely crossed the bar', async () => {
