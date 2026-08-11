@@ -340,6 +340,24 @@ describe('the keys the interface composes', () => {
  * image", which is what `capabilities.txt2img` had said all along. Until then the tags were in
  * English, and that — not any design — was the only thing telling the two menus apart.
  */
+/**
+ * The one gesture that silenced the whole arrangement, found by review: setting a translatable
+ * tag to `null` left sixty-one tests green and abandoned its `modelTags.*` line in both bundles,
+ * read by nobody. The table's guard only asks that every tag HAS an answer — `null` is one.
+ *
+ * So the orphan is what gets forbidden. A tag turned silent now fails here, at the line it left
+ * behind, which is also the check that catches a key renamed on one side only.
+ */
+describe('the tag names the bundles carry', () => {
+  it.each(CODES)('are all claimed by the table, in %s', code => {
+    const orphans = [...BUNDLES[code].keys()]
+      .filter(key => key.startsWith('modelTags.'))
+      .filter(key => !TAG_LABEL_KEY_LIST.includes(key))
+
+    expect(orphans).toEqual([])
+  })
+})
+
 describe('two facet menus of the same bar', () => {
   it.each(CODES)('never puts the same words in both, in %s', code => {
     const capabilities = new Set(
