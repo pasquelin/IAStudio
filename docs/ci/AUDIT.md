@@ -3,6 +3,31 @@
 État du dépôt au **8 août 2026**, relevé avant toute écriture. Ce document fige le point de
 départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser.
 
+> **Ce document ne décrit pas le dépôt d’aujourd’hui, et ne doit pas être corrigé pour le faire.**
+> C’est une photographie, prise pour justifier les décisions qui l’ont suivie. La mettre à jour
+> reviendrait à effacer ce que les ADR ont résolu — leur raison d’être deviendrait illisible.
+>
+> **La preuve que l’audit a servi, c’est justement que ses constats sont périmés.** Les neuf que
+> le dépôt a démentis, relevés un par un le 11 août 2026 :
+>
+> | Ce que l’audit relevait | Depuis | Traité par |
+> |---|---|---|
+> | ni `packageManager`, ni `.nvmrc` | les deux existent — `pnpm@11.16.0`, Node 24 | ADR-13 |
+> | `publish:` absent | configuré | ADR-05, ADR-06 |
+> | `electron-updater` absent | `^6.8.9` | ADR-05 |
+> | `.github/` n’existait pas | `ci.yml` et `release.yml` | ADR-02, ADR-14 |
+> | branche par défaut `feat/scenario-pipeline`, pas de `develop` | `develop` intègre, `main` publie | ADR-15 |
+> | entitlements : une seule clé, `allow-jit` | **deux** — la dictée a ajouté `device.audio-input` | ADR-11, amendée |
+> | `better-sqlite3` seule dépendance native | **deux** — `sherpa-onnx-node` s’ajoute, d’où l’`asarUnpack` | ADR-17 |
+> | main à **3 entrées** | **cinq** — `stt-worker` et `transform-worker` s’ajoutent | — |
+> | `resources/ffmpeg/` = 96 Mo · aucun Toast · `react-toastify` inutilisé | 152 Mo · `ActivityToasts` existe · paquet retiré | — |
+>
+> **Ce qui n’a pas bougé** : les cibles de packaging, l’`appId`, les fuses, et le point marqué
+> « état assumé » — `CLAUDE.md` gitignoré, qui l’est toujours.
+>
+> **Ce tableau se relit quand une ADR change**, pas à date fixe : c’est la seule chose qui le
+> rende utile plutôt que rassurant.
+
 ## L’existant
 
 | Point | Constat | Chemin |
