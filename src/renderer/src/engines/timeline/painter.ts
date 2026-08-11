@@ -1,8 +1,9 @@
 import {
   CLIP_INSET,
+  EDGE_BAR_INSET,
+  EDGE_BAR_WIDTH,
   edgeGrab,
-  HANDLE_INSET,
-  HANDLE_WIDTH,
+  FADE_BAND,
   RULER_HEIGHT,
   timeToX,
   trackRows,
@@ -210,11 +211,15 @@ function paintPoster(
 }
 
 /**
- * The grips at both ends, which is what says a clip can be lengthened at all. Skipped once the
- * bar would be wider than the zone that grabs it: on a narrow clip `edgeGrab` gives the middle
- * back to the drag, and a bar sticking out past its own target promises a trim that is refused.
+ * The grips at both ends, which is what says a clip can be lengthened at all.
+ *
+ * They start BELOW the fade band, and that offset is the whole point: up there the same corner
+ * opens a fade rather than a trim (`hitTest`), so a bar drawn into the band would be pressed for
+ * a lengthening and hand back a ramp. Skipped altogether once the bar would be wider than the
+ * zone that grabs it — on a narrow clip `edgeGrab` gives the middle back to the drag, and a bar
+ * sticking out past its own target promises a trim that is refused.
  */
-function paintHandles(
+function paintEdgeBars(
   context: CanvasRenderingContext2D,
   left: number,
   right: number,
@@ -223,16 +228,16 @@ function paintHandles(
   selected: boolean,
   palette: Palette,
 ): void {
-  if (edgeGrab(right - left) < HANDLE_WIDTH) return
+  if (edgeGrab(right - left) < EDGE_BAR_WIDTH) return
+
+  // The band is measured from the row, `top` is the clip box: one inset apart.
+  const barTop = top + FADE_BAND - CLIP_INSET
+  // Never negative: MIN_TRACK_HEIGHT leaves a 23 px box against the 13 px the two insets take.
+  const barHeight = height - (FADE_BAND - CLIP_INSET) - EDGE_BAR_INSET
 
   context.fillStyle = selected ? palette.text : palette.muted
-  context.fillRect(left, top + HANDLE_INSET, HANDLE_WIDTH, height - HANDLE_INSET * 2)
-  context.fillRect(
-    right - HANDLE_WIDTH,
-    top + HANDLE_INSET,
-    HANDLE_WIDTH,
-    height - HANDLE_INSET * 2,
-  )
+  context.fillRect(left, barTop, EDGE_BAR_WIDTH, barHeight)
+  context.fillRect(right - EDGE_BAR_WIDTH, barTop, EDGE_BAR_WIDTH, barHeight)
 }
 
 function paintClip(
@@ -285,7 +290,7 @@ function paintClip(
 
   // After the border and outside the clipping path: a grip drawn under the poster is a grip
   // nobody sees, and the border alone reads as a seam between two clips rather than an end.
-  paintHandles(context, left, right, boxTop, boxHeight, selected, palette)
+  paintEdgeBars(context, left, right, boxTop, boxHeight, selected, palette)
 }
 
 export function paintTimeline(

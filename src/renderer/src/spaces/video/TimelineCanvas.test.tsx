@@ -270,6 +270,61 @@ describe('TimelineCanvas', () => {
     expect(canvas.className).toContain('cursor-grab')
   })
 
+  // The blade cuts where it is pressed. A resize cursor there would promise a lengthening and
+  // hand back a cut two frames from the end, plus a history entry to undo.
+  it('never asks under the blade either, which cuts rather than trims', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint('blade')
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+
+    expect(canvas.style.cursor).toBe('')
+  })
+
+  /**
+   * The gesture the whole lot exists for: lay an image down, pull its left end, decide how long
+   * it stays on screen. The clip starts at two seconds so there is room to grow leftwards.
+   */
+  const pullLeftEdgeTo = (target: number): void => {
+    const canvas = paint()
+    const left = Math.round(timeToX(2_000_000, viewOf()))
+
+    fireEvent.pointerDown(canvas, { clientX: left + 1, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerUp(canvas, {
+      clientX: Math.round(timeToX(target, viewOf())),
+      clientY: RULER_HEIGHT + 30,
+    })
+  }
+
+  const layDown = (): void => {
+    useSequences
+      .getState()
+      .runCommand('doc-1', addClip('V1', clipFixture('c', 2_000_000, 1_000_000, { assetId: 'a1' })))
+  }
+
+  it('lengthens a still by its left edge, which is how an image gets its time on screen', () => {
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'image', name: 'card.png' })] })
+    layDown()
+
+    pullLeftEdgeTo(1_000_000)
+
+    expect(clipsOf()[0]).toMatchObject({ start: 1_000_000, duration: 2_000_000 })
+  })
+
+  /**
+   * `mediaDuration` answers null for a still AND for an asset nobody has probed yet, so without
+   * telling them apart this pull would succeed here too — and the clip would then ask for more
+   * source than the rush holds, freezing its tail on a frame with the sound gone.
+   */
+  it('refuses the same pull on a rush nobody has probed, whose source starts somewhere', () => {
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'video', name: 'rush.mp4' })] })
+    layDown()
+
+    pullLeftEdgeTo(1_000_000)
+
+    expect(clipsOf()[0]).toMatchObject({ start: 2_000_000, duration: 1_000_000 })
+  })
+
   it('undoes the last edit from the keyboard', () => {
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
 

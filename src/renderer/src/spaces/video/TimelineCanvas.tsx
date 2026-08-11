@@ -2,7 +2,7 @@ import type { CommandId } from '@shared/domain/command'
 import { clamp } from '@shared/numeric'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { mediaDuration, posterUrl } from '@shared/domain/asset'
-import { addClip, removeClip, splitClip } from '@/engines/timeline/commands'
+import { addClip, removeClip, splitClip, type MediaExtent } from '@/engines/timeline/commands'
 import {
   beginGesture,
   commandForGesture,
@@ -123,7 +123,16 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
 
   // A trim stops where the media does, and only the catalogue knows how long that is.
   const mediaLengths = useCallback(
-    (assetId: string) => mediaDuration(byId.get(assetId) ?? null),
+    (assetId: string): MediaExtent => {
+      const asset = byId.get(assetId) ?? null
+      const length = mediaDuration(asset)
+      if (length !== null) return length
+
+      // `mediaDuration` answers null for a still and for an asset nobody has probed. Only a
+      // picture has no source to run past; anything else has one whose length is merely not
+      // known yet, and a trim that guessed otherwise would run a clip off the end of its rush.
+      return asset?.type === 'image' ? 'still' : 'unknown'
+    },
     [byId],
   )
 
@@ -305,8 +314,9 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     if (!current) {
       // Written straight to the node, the way `CanvasEngine` does it: this component keeps
       // everything that moves with the pointer out of React, and a hover is no exception.
-      // The hand owns the whole surface — it moves the view, edge or not — so it never asks.
-      if (tool !== 'hand') {
+      // Only the Selection tool trims. The hand moves the view and the blade cuts where it is
+      // pressed, so promising either a trim would be a cursor the press then refuses.
+      if (tool === 'select') {
         event.currentTarget.style.cursor = cursorFor(hitTest(sequence, viewport, pointAt(event)))
       }
       return

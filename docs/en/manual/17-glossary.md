@@ -575,7 +575,9 @@ A line of the edit, on which *clips* are laid end to end. A picture track, a sou
 each if needed.
 
 **Trim**
-To shorten a *clip* from one of its ends, or to keep only the selected portion of a sound.
+To shorten or lengthen a *clip* from one of its ends, or to keep only the selected portion of a
+sound. A video stops where its source does; a still has no source to run past, so both of its
+ends stretch it.
 
 ---
 

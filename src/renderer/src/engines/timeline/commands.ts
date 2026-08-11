@@ -37,23 +37,31 @@ const withoutClip = (track: Track, clipId: string): Track => ({
 })
 
 /**
+ * What is known of the media behind a clip, which is not the same question as how long it runs.
+ * `mediaDuration` answers null for a still AND for an asset nobody has probed yet — deliberately,
+ * since both are timeless when a clip is first laid down. A trim has to tell them apart: a still
+ * has no source to run past, an unprobed video has one whose length is simply not known yet.
+ */
+export type MediaExtent = Us | 'still' | 'unknown'
+
+/**
  * How far a trim may travel before it would run past the media behind it. There is nothing to
  * show before a source starts or after it ends, and a clip stretched there freezes on a frame
  * while its sound goes silent.
  *
- * A media with no length of its own — a still — has nothing to run past on either edge, so both
- * of its edges stretch it and the only bound left is the start of the sequence. That is what
- * makes a title card: put an image down, pull either end, decide how long it stays up.
+ * A still has nothing to run past on either edge, so both of its edges stretch it and the only
+ * bound left is the start of the sequence. That is what makes a title card: put an image down,
+ * pull either end, decide how long it stays up.
  */
-function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, length: Us | null): Us {
+function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, media: MediaExtent): Us {
   const headroom = (source: Us): Us => Math.round(source / clip.speed)
 
   // The sequence start is the only bound a still has left, and `snapToFrame` already holds it.
-  if (length === null) return edge === 'in' ? Math.max(at, 0) : at
+  if (media === 'still') return edge === 'in' ? Math.max(at, 0) : at
 
-  return edge === 'in'
-    ? Math.max(at, clip.start - headroom(clip.inPoint))
-    : Math.min(at, clip.start + headroom(length - clip.inPoint))
+  // An unknown length still bounds the in point: the source starts somewhere, whoever knows when.
+  if (edge === 'in') return Math.max(at, clip.start - headroom(clip.inPoint))
+  return media === 'unknown' ? at : Math.min(at, clip.start + headroom(media - clip.inPoint))
 }
 
 /**
@@ -147,7 +155,7 @@ export function trimClip(
   clipId: string,
   edge: ClipEdge,
   at: Us,
-  mediaLength: Us | null,
+  media: MediaExtent,
 ): Command<SequenceState> {
   let before: { clips: Clip[]; trackId: string } | null = null
   // Minted once with the command: a trim landing mid-neighbour cuts a tail loose, and a redo
@@ -161,7 +169,7 @@ export function trimClip(
       const clip = clipById(state, clipId)
       if (!track || track.locked || !clip) return state
 
-      const time = boundToMedia(clip, edge, snapToFrame(at, state.settings), mediaLength)
+      const time = boundToMedia(clip, edge, snapToFrame(at, state.settings), media)
       const trimmed =
         edge === 'out' ? { ...clip, duration: time - clip.start } : clipFrom(clip, time)
 

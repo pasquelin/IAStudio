@@ -33,7 +33,8 @@ its place; a sound clip whose media is missing stays black and silent, announcin
 | **Track** | a horizontal line that holds clips. There are picture tracks and sound tracks |
 | **Clip** | a piece of media placed on a track |
 | **Playhead** | the vertical line showing where you are |
-| **Trim** | to shorten a clip from one of its ends |
+| **Trim** | to shorten **or lengthen** a clip from one of its ends |
+| **Handle** | the vertical bar at each end of a clip, the one you grab to trim it |
 | **In point** | the place in the original file where the clip starts |
 
 ---
@@ -58,7 +59,8 @@ would look like it did nothing.
 Either way, the studio settles two things:
 
 - **the duration** — that of the media. A still image, or a medium whose duration is unknown,
-  lasts **5 seconds** by default;
+  lasts **5 seconds** by default. That is only a starting point: how long an image stays on
+  screen is decided by pulling either of its ends, see below;
 - **the alignment** — on a whole frame, never between two. You can aim to the pixel; the clip
   files itself onto the nearest frame.
 
@@ -68,7 +70,7 @@ Either way, the studio settles two things:
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Selection** | `V` | selects, moves and trims clips |
+| **Selection** | `V` | selects, moves, trims and lengthens clips |
 | **Blade** | `C` | cuts a clip where you click |
 | **Hand** | `H` | scrolls the timeline — wheel to zoom |
 
@@ -82,7 +84,16 @@ Either way, the studio settles two things:
 |---|---|
 | **Click** a clip | selects it — the inspector shows it |
 | **Drag** the clip's body | moves it, including from one track to another |
-| **Drag** a clip's edge | trims it on that side |
+| **Drag** a clip's edge | trims or lengthens it on that side |
+
+**Each end of a clip carries a handle**, a vertical bar, and the cursor there becomes a double
+arrow: that is the sign the edge can be grabbed. On a clip too narrow to hold them the handles
+disappear and the middle stays with the drag — otherwise a thin clip could not be moved at all.
+The **Hand** tool never shows that double arrow: it takes the whole surface to scroll.
+
+**A lengthened clip grows over its neighbour** rather than stopping at it, the way DaVinci and
+Premiere do it: lengthening a shot means asking the next one to give way. `⌘Z` puts the whole
+track back as it was.
 
 **Snapping is automatic.** A moved clip sticks:
 
@@ -90,8 +101,12 @@ Either way, the studio settles two things:
 - to the **edges of neighbouring clips**, so there is no thousandth-of-a-second gap invisible to the
   eye.
 
-> A trimmed clip cannot exceed the length of the original media. The studio stops the trim itself
-> rather than showing black.
+> **A video or a sound** cannot exceed the length of the original media. The studio stops the trim
+> itself rather than showing black.
+>
+> **A still image has no media to exceed**: both of its ends lengthen it as far as you like, and
+> the only bound is the start of the sequence. That is how you decide how long a title card stays
+> on screen.
 
 ---
 

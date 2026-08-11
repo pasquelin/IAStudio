@@ -144,6 +144,16 @@ describe('hit testing', () => {
     expect(target).toEqual({ kind: 'fade', clipId: 'a', trackId: 'V1', edge: 'in' })
   })
 
+  /**
+   * `EDGE_GRAB` is the wider of the two, so without this the ring between the two margins would
+   * trim inside the band — and the comment beside `hitTest` promises the fade wins there.
+   */
+  it('leaves the whole corner to the fade inside the band, even past its own margin', () => {
+    const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
+    const target = hitTest(stateWith([faded]), viewport, { x: 7.5, y: RULER_HEIGHT + 4 })
+    expect(target).toMatchObject({ kind: 'fade', edge: 'in' })
+  })
+
   it('leaves the same corner to the trim below the fade band', () => {
     const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
     const target = hitTest(stateWith([faded]), viewport, { x: 2, y: RULER_HEIGHT + 30 })

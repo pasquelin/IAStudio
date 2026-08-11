@@ -50,11 +50,11 @@ export const CLIP_INSET = 2
 /**
  * Width of the bar drawn at each end of a clip. Narrower than the zone that grabs it — the
  * target is meant to be forgiving, the mark is meant to say where the end is without eating
- * the poster.
+ * the poster. Named for the edge, not for the fade handle this file already calls a handle.
  */
-export const HANDLE_WIDTH = 3
-/** How far a handle stops short of a clip's top and bottom, so it reads as a grip, not a wall. */
-export const HANDLE_INSET = 3
+export const EDGE_BAR_WIDTH = 3
+/** How far the bar stops short of a clip's bottom, so it reads as a grip and not as a wall. */
+export const EDGE_BAR_INSET = 3
 
 export type SnapContext = {
   settings: SequenceSettings
@@ -158,17 +158,21 @@ export function hitTest(state: SequenceState, viewport: Viewport, point: Point):
     const right = timeToX(clipEnd(clip), viewport)
     if (point.x < left || point.x > right) continue
 
+    const grab = edgeGrab(right - left)
+
     // Fades win in the top band only: below it the same corner has to stay grabbable for a trim.
+    // Never by a smaller margin than the edge, or a ring around the corner would trim inside the
+    // band and leave that promise half true.
     if (inBand) {
+      const reach = Math.max(FADE_GRAB, grab)
       for (const edge of CLIP_EDGES) {
         const handle = timeToX(fadeHandleTime(clip, edge), viewport)
-        if (Math.abs(point.x - handle) <= FADE_GRAB) {
+        if (Math.abs(point.x - handle) <= reach) {
           return { kind: 'fade', clipId: clip.id, trackId: track.id, edge }
         }
       }
     }
 
-    const grab = edgeGrab(right - left)
     if (point.x <= left + grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'in' }
     }

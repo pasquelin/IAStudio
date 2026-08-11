@@ -54,13 +54,13 @@ describe('sequence commands', () => {
   })
 
   it('trims the out edge', () => {
-    const command = trimClip('a', 'out', 600_000, null)
+    const command = trimClip('a', 'out', 600_000, 'unknown')
     const next = command.apply(withClips([clip('a', 0, 1_000_000)]))
     expect(next.tracks[0]?.clips[0]).toMatchObject({ start: 0, duration: 600_000, inPoint: 0 })
   })
 
   it('trims the in edge, moving both start and in point', () => {
-    const command = trimClip('a', 'in', 200_000, null)
+    const command = trimClip('a', 'in', 200_000, 'still')
     const next = command.apply(withClips([clip('a', 0, 1_000_000)]))
     expect(next.tracks[0]?.clips[0]).toMatchObject({
       start: 200_000,
@@ -71,8 +71,8 @@ describe('sequence commands', () => {
 
   it('refuses a trim that would leave nothing rather than clamping it to zero', () => {
     const state = withClips([clip('a', 0, 1_000_000)])
-    expect(trimClip('a', 'out', 0, null).apply(state)).toEqual(state)
-    expect(trimClip('a', 'in', 1_000_000, null).apply(state)).toEqual(state)
+    expect(trimClip('a', 'out', 0, 'unknown').apply(state)).toEqual(state)
+    expect(trimClip('a', 'in', 1_000_000, 'unknown').apply(state)).toEqual(state)
   })
 
   it('splits a clip in two, the second one starting later in the source', () => {
@@ -139,7 +139,7 @@ describe('sequence commands', () => {
 
   it('grows a trim over the neighbour, which gives way as it would under a drop', () => {
     const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
-    const next = trimClip('a', 'out', 1_800_000, null).apply(state)
+    const next = trimClip('a', 'out', 1_800_000, 'unknown').apply(state)
 
     expect(next.tracks[0]?.clips[0]).toMatchObject({ id: 'a', duration: 1_800_000 })
     // What is left of the neighbour starts later in the source, as a trimmed head does.
@@ -153,7 +153,7 @@ describe('sequence commands', () => {
 
   it('swallows a neighbour a trim covers whole', () => {
     const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 500_000)])
-    const next = trimClip('a', 'out', 2_000_000, null).apply(state)
+    const next = trimClip('a', 'out', 2_000_000, 'unknown').apply(state)
 
     expect(next.tracks[0]?.clips.map(candidate => candidate.id)).toEqual(['a'])
   })
@@ -165,21 +165,23 @@ describe('sequence commands', () => {
         inPoint: 1_000_000,
       }),
     ])
-    const next = trimClip('b', 'in', 400_000, null).apply(state)
+    const next = trimClip('b', 'in', 400_000, 'unknown').apply(state)
 
     expect(next.tracks[0]?.clips[0]).toMatchObject({ id: 'a', duration: 400_000 })
     expect(next.tracks[0]?.clips[1]).toMatchObject({ id: 'b', start: 400_000, inPoint: 400_000 })
   })
 
   it('puts back the neighbours a trim overwrote', () => {
-    const command = trimClip('a', 'out', 1_800_000, null)
+    const command = trimClip('a', 'out', 1_800_000, 'unknown')
     const state = withClips([clip('a', 0, 1_000_000), clip('b', 1_000_000, 1_000_000)])
 
     expect(command.revert(command.apply(state)).tracks[0]?.clips).toEqual(state.tracks[0]?.clips)
   })
 
   it('lets a trim run freely when there is no neighbour in the way', () => {
-    const next = trimClip('a', 'out', 3_000_000, null).apply(withClips([clip('a', 0, 1_000_000)]))
+    const next = trimClip('a', 'out', 3_000_000, 'unknown').apply(
+      withClips([clip('a', 0, 1_000_000)]),
+    )
     expect(next.tracks[0]?.clips[0]?.duration).toBe(3_000_000)
   })
 
@@ -214,13 +216,15 @@ describe('sequence commands', () => {
   })
 
   it('leaves a still unbounded, which is how a title card is stretched', () => {
-    const next = trimClip('a', 'out', 9_000_000, null).apply(withClips([clip('a', 0, 1_000_000)]))
+    const next = trimClip('a', 'out', 9_000_000, 'still').apply(
+      withClips([clip('a', 0, 1_000_000)]),
+    )
     expect(next.tracks[0]?.clips[0]?.duration).toBe(9_000_000)
   })
 
   it('lengthens a still by its in edge too, which a source-bound clip cannot do', () => {
     const state = withClips([clip('a', 2_000_000, 1_000_000)])
-    const next = trimClip('a', 'in', 1_000_000, null).apply(state)
+    const next = trimClip('a', 'in', 1_000_000, 'still').apply(state)
 
     // The image has no source to run past, so pulling its left end grows it the way the right
     // end already did — the bound there only ever made sense for a video.
@@ -229,18 +233,39 @@ describe('sequence commands', () => {
 
   it('holds a stretched still at the start of the sequence, never before it', () => {
     const state = withClips([clip('a', 1_000_000, 1_000_000)])
-    const next = trimClip('a', 'in', -5_000_000, null).apply(state)
+    const next = trimClip('a', 'in', -5_000_000, 'still').apply(state)
 
     expect(next.tracks[0]?.clips[0]?.start).toBe(0)
   })
 
   it('holds a stretched still at its source start, so the project reloads as it was saved', () => {
     const state = withClips([clip('a', 2_000_000, 1_000_000)])
-    const next = trimClip('a', 'in', 1_000_000, null).apply(state)
+    const next = trimClip('a', 'in', 1_000_000, 'still').apply(state)
 
     // `readPositive` drops a negative in point on reload; a clip that came back with a different
     // one would not be the clip that was saved.
     expect(next.tracks[0]?.clips[0]?.inPoint).toBe(0)
+  })
+
+  /**
+   * `mediaDuration` answers null for a still AND for an asset nobody has probed yet, so the two
+   * used to arrive here as the same thing. Only the first has no source: a rush whose length is
+   * merely unknown still starts somewhere, and letting its in point run before that start would
+   * freeze the tail of the clip on a frame with its sound gone.
+   */
+  it('keeps the in point bounded on a rush nobody has probed yet, unlike a still', () => {
+    const state = withClips([clip('a', 2_000_000, 1_000_000)])
+    const next = trimClip('a', 'in', 1_000_000, 'unknown').apply(state)
+
+    // Its in point is zero, so `clip.start - headroom(0)` is the clip's own start: refused.
+    expect(next).toEqual(state)
+  })
+
+  it('lets an unprobed rush give back the head it had already trimmed, and no more', () => {
+    const state = withClips([clip('a', 2_000_000, 1_000_000, { inPoint: 400_000 })])
+    const next = trimClip('a', 'in', 1_000_000, 'unknown').apply(state)
+
+    expect(next.tracks[0]?.clips[0]).toMatchObject({ start: 1_600_000, inPoint: 0 })
   })
 
   it('still stops a video at its source start, which is the bound a still does not have', () => {

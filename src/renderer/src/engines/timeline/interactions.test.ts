@@ -30,7 +30,7 @@ const twoTracks = (clips: Clip[], secondLocked = false): SequenceState => {
 const GRAB: Point = { x: 50, y: RULER_HEIGHT + 10 }
 
 /** No media bound here — how a trim reads its own is covered in `commands.test.ts`. */
-const TIMELESS: MediaLengths = () => null
+const TIMELESS: MediaLengths = () => 'still'
 
 const commandFor = (gesture: Gesture, state: SequenceState, to: Point) =>
   commandForGesture(gesture, state, viewport, to, TIMELESS)
