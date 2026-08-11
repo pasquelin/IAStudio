@@ -97,12 +97,9 @@ export function createSoundScheduler({ port, horizon }: SoundSchedulerDeps): Sou
   let state: SequenceState = EMPTY_SEQUENCE
   /** The output time the sequence's zero sits at, or null while nothing plays. */
   let origin: number | null = null
-  /** Revoked by every stop: a load resolving afterwards has nothing left to play. */
-  let generation = 0
   const playing = new Map<string, Scheduled>()
 
   const schedule = (chunk: AudioChunk, anchor: number): void => {
-    const planned = generation
     const entry: Scheduled = {
       trackId: chunk.trackId,
       until: chunk.at + chunk.duration,
@@ -115,10 +112,10 @@ export function createSoundScheduler({ port, horizon }: SoundSchedulerDeps): Sou
     }
 
     void port.load(chunk.assetId).then(sound => {
-      // Compared by identity rather than by key: a track muted and unmuted while this was
-      // loading holds a second entry under the same clip, and starting this one over it would
-      // play the clip twice with only the newer one stoppable.
-      if (planned !== generation || playing.get(chunk.clipId) !== entry) return
+      // This entry, not this clip. A stop drops it, and a track muted then unmuted while the
+      // load was in flight holds a *second* entry under the same clip — starting this one over
+      // it would play the clip twice, with only the newer one stoppable.
+      if (playing.get(chunk.clipId) !== entry) return
 
       const cue = cueFor(chunk, anchor, port.now())
       if (!cue) return forget()
@@ -165,7 +162,6 @@ export function createSoundScheduler({ port, horizon }: SoundSchedulerDeps): Sou
     pump,
 
     stop: () => {
-      generation += 1
       for (const entry of playing.values()) entry.stop()
       playing.clear()
       origin = null

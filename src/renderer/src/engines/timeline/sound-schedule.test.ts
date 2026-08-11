@@ -134,6 +134,24 @@ describe('scheduling a sequence', () => {
   })
 
   /**
+   * The horizon is a bound, not a hint: everything planned early is a sound decoded early and
+   * held in memory until its turn, and a sequence is mostly clips whose turn has not come.
+   */
+  it('holds off a clip sitting exactly on the horizon until the playhead moves', async () => {
+    const { port, loaded } = outputAt()
+    const scheduler = createSoundScheduler({ port, horizon: 1_000_000 })
+    scheduler.apply(withAudio([clip('edge', 1_000_000, 1_000_000)]))
+
+    scheduler.start(0)
+    await settled()
+    expect(loaded).toEqual([])
+
+    scheduler.pump(1)
+    await settled()
+    expect(loaded).toEqual(['asset-edge'])
+  })
+
+  /**
    * Planning window by window would cut every clip into slices the length of the horizon, and
    * a source restarted on each of them is heard as a click at every joint.
    */
