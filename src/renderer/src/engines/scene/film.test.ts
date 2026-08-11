@@ -1,26 +1,28 @@
 import { describe, expect, it } from 'vitest'
+import { SECOND, frameDuration } from '@shared/domain/time'
 import { evenSize, flipRows, frameTimes } from './film'
 
 describe('the schedule of a film', () => {
   it('starts at zero and steps by one frame', () => {
-    expect(frameTimes(0.2, 25)).toEqual([0, 0.04, 0.08, 0.12, 0.16])
+    expect(frameTimes(0.2 * SECOND, 25)).toEqual([0, 40_000, 80_000, 120_000, 160_000])
   })
 
   it('counts rather than accumulates, so a long film does not drift', () => {
-    const times = frameTimes(100, 30)
+    const times = frameTimes(100 * SECOND, 30)
     expect(times).toHaveLength(3000)
-    // Accumulated, the last instant would land measurably past where it belongs.
-    expect(times.at(-1)).toBeCloseTo(2999 / 30, 12)
+    // Accumulated, the last instant would land measurably past where it belongs. In whole
+    // microseconds it is not merely close to the right frame, it IS that frame.
+    expect(times.at(-1)).toBe(2999 * frameDuration(30))
   })
 
   it('rounds up, so the last moment of the timeline is shown rather than cut', () => {
-    expect(frameTimes(0.1, 25)).toHaveLength(3)
+    expect(frameTimes(0.1 * SECOND, 25)).toHaveLength(3)
   })
 
   it('answers nothing for a film with no length or no rate', () => {
     expect(frameTimes(0, 25)).toEqual([])
-    expect(frameTimes(5, 0)).toEqual([])
-    expect(frameTimes(-1, 25)).toEqual([])
+    expect(frameTimes(5 * SECOND, 0)).toEqual([])
+    expect(frameTimes(-1 * SECOND, 25)).toEqual([])
   })
 
   it('still gives one frame to a film shorter than one', () => {

@@ -9,6 +9,7 @@ import {
   type TrackProperty,
 } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
+import type { Us } from '@shared/domain/time'
 import { clamp } from '@shared/numeric'
 
 /**
@@ -43,7 +44,7 @@ const multiply = (left: Vector3, right: Vector3): Vector3 => ({
  * them — a track that starts at two seconds holds its first value before that rather than easing
  * out of nothing.
  */
-export function valueAt(track: AnimationTrack, time: number): Vector3 {
+export function valueAt(track: AnimationTrack, time: Us): Vector3 {
   const keys = track.keys
   if (keys.length === 0) return neutralOf(track.target.property)
 
@@ -104,7 +105,7 @@ export function tracksFor(
 export function contributionAt(
   timeline: AnimationTimeline,
   nodeId: string,
-  time: number,
+  time: Us,
   bone?: string,
 ): Transform | null {
   const soloed = anySoloed(timeline)
@@ -143,7 +144,7 @@ export function poseAt(
   rest: Transform,
   timeline: AnimationTimeline,
   nodeId: string,
-  time: number,
+  time: Us,
   bone?: string,
 ): Transform {
   const delta = contributionAt(timeline, nodeId, time, bone)
@@ -201,17 +202,12 @@ export function drivenNodes(timeline: AnimationTimeline): Set<string> {
   return new Set(timeline.tracks.map(track => track.target.nodeId))
 }
 
-/** Snapped to the frame grid: a playhead between two frames shows a pose no render would. */
-export function snapToFrame(time: number, fps: number): number {
-  return Math.round(time * fps) / fps
-}
-
-export function clampPlayhead(time: number, duration: number): number {
+export function clampPlayhead(time: Us, duration: Us): Us {
   return clamp(time, 0, duration)
 }
 
 /** What a track is called when nobody has named it: what it drives, and what of it. */
-export function keyAt(keys: readonly Keyframe[], time: number): Keyframe | undefined {
+export function keyAt(keys: readonly Keyframe[], time: Us): Keyframe | undefined {
   return keys.find(key => key.time === time)
 }
 
@@ -220,7 +216,7 @@ export function withKey(keys: readonly Keyframe[], key: Keyframe): Keyframe[] {
   return [...kept, key].sort((left, right) => left.time - right.time)
 }
 
-export function withoutKey(keys: readonly Keyframe[], time: number): Keyframe[] {
+export function withoutKey(keys: readonly Keyframe[], time: Us): Keyframe[] {
   return keys.filter(key => key.time !== time)
 }
 

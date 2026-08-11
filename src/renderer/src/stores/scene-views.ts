@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Us } from '@shared/domain/time'
 import { DEFAULT_PANE_VIEWS, type DisplayMode, type PaneView } from '@/engines/scene/scene-view'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
@@ -19,7 +20,7 @@ export type SceneView = {
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
   /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
-  playhead: number
+  playhead: Us
   playing: boolean
 }
 
@@ -50,7 +51,7 @@ export type SceneViewsState = {
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
-  setPlayhead: (documentId: string, playhead: number) => void
+  setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
 }
 

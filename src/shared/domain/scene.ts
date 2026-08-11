@@ -90,7 +90,11 @@ export type AnimationRef = {
   /** The clip's name as the file spells it. A name the file no longer holds simply plays nothing. */
   clip: string
   playing: boolean
-  /** Where the head stands inside the clip, in seconds. */
+  /**
+   * Where the head stands inside the clip, in SECONDS — three's mixer counts in them and this
+   * rides straight into it. The scene's own timeline counts in microseconds (`Keyframe.time`):
+   * the two meet only through `secondsToUs`, never by being handed to one another.
+   */
   time: number
   /** A multiplier, never a frame rate: the clip carries its own timing. */
   speed: number

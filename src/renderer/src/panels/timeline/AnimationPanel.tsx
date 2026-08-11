@@ -19,7 +19,8 @@ import {
 import { EmptyState } from '@/design/EmptyState'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
-import { clampPlayhead, keyAt, snapToFrame } from '@/engines/scene/animation-eval'
+import { snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
+import { clampPlayhead, keyAt } from '@/engines/scene/animation-eval'
 import {
   addAnimationTrack,
   removeAnimationKey,
@@ -103,7 +104,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
           onClick={() => useSceneViews.getState().setPlaying(documentId, !view.playing)}
         />
         <span className="text-muted text-tiny tabular-nums">
-          {view.playhead.toFixed(2)} / {timeline.duration.toFixed(2)} s
+          {usToSeconds(view.playhead).toFixed(2)} / {usToSeconds(timeline.duration).toFixed(2)} s
         </span>
 
         <div className="flex-1" />
@@ -226,7 +227,7 @@ function RenderButton({ documentId }: AnimationPanelProps) {
  * loop: the head is session state React owns, and the engine is told where it stands — never the
  * other way round, which is invariant 4.
  */
-function usePlayback(documentId: string, playing: boolean, duration: number): void {
+function usePlayback(documentId: string, playing: boolean, duration: Us): void {
   useEffect(() => {
     if (!playing) return
 
@@ -237,7 +238,8 @@ function usePlayback(documentId: string, playing: boolean, duration: number): vo
       // Read from the store rather than from a prop: the effect must not restart on the very
       // frames it causes, and a ref written during render is not allowed either.
       const views = useSceneViews.getState()
-      const next = viewOf(views, documentId).playhead + (now - last) / 1000
+      // `performance.now()` counts milliseconds; the head counts microseconds.
+      const next = viewOf(views, documentId).playhead + (now - last) * 1000
       last = now
 
       if (next >= duration) {
@@ -263,8 +265,8 @@ function TrackRow({
 }: {
   documentId: string
   track: AnimationTrack
-  playhead: number
-  duration: number
+  playhead: Us
+  duration: Us
   fps: number
 }) {
   const { t } = useTranslation()
