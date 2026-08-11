@@ -178,6 +178,25 @@ describe('the translation bundles', () => {
     expect(breakable).toEqual([])
   })
 
+  /**
+   * A plural base names every form it has, `_one` included. i18next serves the bare key when
+   * `_one` is missing, so eight bases relied on that fallback and read correctly in French and in
+   * English — where two forms are all there is.
+   *
+   * A third language is where it would break, silently: Russian and Polish need `_few` and
+   * `_many`, Arabic six forms, and a bare key cannot carry them. The migration is trivial while
+   * the product speaks two languages and stops being trivial the day it speaks three, so the
+   * convention is held now rather than then.
+   */
+  it.each(CODES)('names the singular of every plural base in %s', code => {
+    const bases = [...BUNDLES[code].keys()]
+      .filter(key => key.endsWith('_other'))
+      .map(key => key.slice(0, -'_other'.length))
+
+    expect(bases.filter(base => !BUNDLES[code].has(`${base}_one`))).toEqual([])
+    expect(bases.filter(base => BUNDLES[code].has(base))).toEqual([])
+  })
+
   // A hole dropped in translation renders as a sentence with a number missing from it.
   it.each(CODES)('keeps the same interpolations in %s', code => {
     for (const [key, text] of BUNDLES[code]) {
