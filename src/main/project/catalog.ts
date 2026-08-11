@@ -2,6 +2,7 @@ import { defined, isRecord } from '@shared/guards'
 import {
   ACTIVITY_RETENTION,
   isActivityLevel,
+  isActivityMessageKey,
   isActivityTopic,
   type ActivityDraft,
   type ActivityEntry,
@@ -367,6 +368,9 @@ function activityParams(row: SqlRow): ActivityParams | undefined {
 function activityOf(row: SqlRow): ActivityEntry {
   const level = text(row, 'level')
   const topic = text(row, 'topic')
+  // A line outlives the version that wrote it: a key renamed since would come back naming
+  // nothing, and the window would draw it as itself.
+  const messageKey = text(row, 'message_key')
   const params = activityParams(row)
   const detail = optionalText(row, 'detail')
   const assetId = optionalText(row, 'asset_id')
@@ -376,7 +380,7 @@ function activityOf(row: SqlRow): ActivityEntry {
     at: text(row, 'at'),
     level: isActivityLevel(level) ? level : 'info',
     topic: isActivityTopic(topic) ? topic : 'library',
-    messageKey: text(row, 'message_key'),
+    messageKey: isActivityMessageKey(messageKey) ? messageKey : 'activity.unknownMessage',
     ...defined({ params, detail, assetId }),
   }
 }

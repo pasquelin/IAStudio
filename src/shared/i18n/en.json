@@ -213,6 +213,7 @@
     "cancel": "Cancel job"
   },
   "activity": {
+    "unknownMessage": "Event recorded by an earlier version",
     "open": "Show the journal",
     "openHint": "Opens the log — and marks everything in it as read",
     "none": "Nothing to report.",

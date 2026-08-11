@@ -11,6 +11,7 @@ import {
   type Manifest,
   type Project,
 } from '@shared/domain/project'
+import type { ActivityMessageKey } from '@shared/domain/activity'
 import { isRecord } from '@shared/guards'
 import { log } from '@main/log'
 import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
@@ -46,7 +47,7 @@ export class ProjectOpenError extends Error {
   }
 }
 
-const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, string> = {
+const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, ActivityMessageKey> = {
   'not-a-project': 'activity.projectNotAProject',
   unreadable: 'activity.projectUnreadable',
   'too-new': 'activity.projectTooNew',
@@ -59,7 +60,7 @@ const OPEN_FAILURE_KEYS: Record<ProjectOpenFailure, string> = {
  * Beside the error rather than in the handler: two paths open a project, the picker and the
  * reopening at startup, and only one of them goes through a channel.
  */
-export function openFailureKey(error: unknown): string | null {
+export function openFailureKey(error: unknown): ActivityMessageKey | null {
   return error instanceof ProjectOpenError ? OPEN_FAILURE_KEYS[error.reason] : null
 }
 

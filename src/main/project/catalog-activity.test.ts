@@ -57,23 +57,23 @@ describe('the journal the catalogue keeps', () => {
 
   it('writes a batch in the order it was given, and reads it newest first', () => {
     catalog.appendActivity([
-      line({ messageKey: 'activity.first' }),
-      line({ messageKey: 'activity.second' }),
+      line({ messageKey: 'activity.imported' }),
+      line({ messageKey: 'activity.pushed' }),
     ])
 
     expect(catalog.readActivity({}).map(entry => entry.messageKey)).toEqual([
-      'activity.second',
-      'activity.first',
+      'activity.pushed',
+      'activity.imported',
     ])
   })
 
   it('answers a batch in the order it was handed, so a caller can pair them up', () => {
     const written = catalog.appendActivity([
-      line({ messageKey: 'activity.first' }),
-      line({ messageKey: 'activity.second' }),
+      line({ messageKey: 'activity.imported' }),
+      line({ messageKey: 'activity.pushed' }),
     ])
 
-    expect(written.map(entry => entry.messageKey)).toEqual(['activity.first', 'activity.second'])
+    expect(written.map(entry => entry.messageKey)).toEqual(['activity.imported', 'activity.pushed'])
   })
 
   it('writes nothing, and asks nothing of the database, for an empty batch', () => {
@@ -109,23 +109,25 @@ describe('the journal the catalogue keeps', () => {
   })
 
   it('bounds what a project keeps, dropping the oldest first', () => {
+    // Numbered through `detail`: what this measures is which lines survive, and a message key
+    // is one of a closed list rather than a counter.
     const many = Array.from({ length: ACTIVITY_RETENTION + 10 }, (_, index) =>
-      line({ messageKey: `activity.n${index}` }),
+      line({ detail: `n${index}` }),
     )
 
     catalog.appendActivity(many)
     const kept = catalog.readActivity({ limit: ACTIVITY_RETENTION + 10 })
 
     expect(kept).toHaveLength(ACTIVITY_RETENTION)
-    expect(kept[0]?.messageKey).toBe(`activity.n${ACTIVITY_RETENTION + 9}`)
-    expect(kept.map(entry => entry.messageKey)).not.toContain('activity.n0')
+    expect(kept[0]?.detail).toBe(`n${ACTIVITY_RETENTION + 9}`)
+    expect(kept.map(entry => entry.detail)).not.toContain('n0')
   })
 
   it('keeps trimming across batches, not only within one', () => {
     for (let batch = 0; batch < 3; batch++) {
       catalog.appendActivity(
         Array.from({ length: ACTIVITY_RETENTION }, (_, index) =>
-          line({ messageKey: `activity.b${batch}n${index}` }),
+          line({ detail: `b${batch}n${index}` }),
         ),
       )
     }
@@ -137,15 +139,23 @@ describe('the journal the catalogue keeps', () => {
 describe('a journal written by a build that knew more than this one', () => {
   // The columns are free strings in SQLite and closed unions in the domain. A line nobody can
   // read must not take the panel down with it.
-  it('reads an unknown level and topic as ordinary ones', () => {
+  /**
+   * A line outlives the version that wrote it, and the journal is append-only: a key renamed
+   * since is still in the table, and the window would draw it as itself.
+   */
+  it('reads an unknown level, topic and message key as ordinary ones', () => {
     const driver = openMemoryDatabase()
     const catalog = createCatalog(driver)
 
     driver
       .prepare('INSERT INTO activity (at, level, topic, message_key) VALUES (?, ?, ?, ?)')
-      .run('2026-08-08T10:00:00.000Z', 'fatal', 'weather', 'activity.unknown')
+      .run('2026-08-08T10:00:00.000Z', 'fatal', 'weather', 'activity.retiredLongAgo')
 
-    expect(catalog.readActivity({})[0]).toMatchObject({ level: 'info', topic: 'library' })
+    expect(catalog.readActivity({})[0]).toMatchObject({
+      level: 'info',
+      topic: 'library',
+      messageKey: 'activity.unknownMessage',
+    })
   })
 
   it('drops a parameter that is neither a string nor a number', () => {
@@ -160,7 +170,7 @@ describe('a journal written by a build that knew more than this one', () => {
         '2026-08-08T10:00:00.000Z',
         'error',
         'import',
-        'activity.mixed',
+        'activity.generatedInto',
         JSON.stringify({ name: 'moss', size: 2, nested: { deep: true } }),
       )
 
@@ -181,9 +191,9 @@ describe('pairing a batch with the ids it was given', () => {
 
   it('gives each line of a batch the id its own row got', () => {
     const written = catalog.appendActivity([
-      line({ messageKey: 'activity.a' }),
-      line({ messageKey: 'activity.b' }),
-      line({ messageKey: 'activity.c' }),
+      line({ messageKey: 'activity.captioned' }),
+      line({ messageKey: 'activity.pulled' }),
+      line({ messageKey: 'activity.tagsNotSynced' }),
     ])
 
     for (const entry of written) {
@@ -194,21 +204,14 @@ describe('pairing a batch with the ids it was given', () => {
 
   it('keeps pairing right when the journal was already full', () => {
     catalog.appendActivity(
-      Array.from({ length: ACTIVITY_RETENTION }, (_, index) =>
-        line({ messageKey: `old.${index}` }),
-      ),
+      Array.from({ length: ACTIVITY_RETENTION }, (_, index) => line({ detail: `old.${index}` })),
     )
 
-    const written = catalog.appendActivity([
-      line({ messageKey: 'new.a' }),
-      line({ messageKey: 'new.b' }),
-    ])
+    const written = catalog.appendActivity([line({ detail: 'new.a' }), line({ detail: 'new.b' })])
 
-    expect(written.map(entry => entry.messageKey)).toEqual(['new.a', 'new.b'])
+    expect(written.map(entry => entry.detail)).toEqual(['new.a', 'new.b'])
     for (const entry of written) {
-      expect(catalog.readActivity({}).find(one => one.id === entry.id)?.messageKey).toBe(
-        entry.messageKey,
-      )
+      expect(catalog.readActivity({}).find(one => one.id === entry.id)?.detail).toBe(entry.detail)
     }
   })
 
@@ -216,20 +219,18 @@ describe('pairing a batch with the ids it was given', () => {
   // own oldest lines: what comes back must be the tail that survived, still correctly paired.
   it('answers only the tail of a batch longer than the whole retention', () => {
     const written = catalog.appendActivity(
-      Array.from({ length: ACTIVITY_RETENTION + 5 }, (_, index) =>
-        line({ messageKey: `n.${index}` }),
-      ),
+      Array.from({ length: ACTIVITY_RETENTION + 5 }, (_, index) => line({ detail: `n.${index}` })),
     )
 
     expect(written).toHaveLength(ACTIVITY_RETENTION)
-    expect(written[0]?.messageKey).toBe('n.5')
-    expect(written.at(-1)?.messageKey).toBe(`n.${ACTIVITY_RETENTION + 4}`)
+    expect(written[0]?.detail).toBe('n.5')
+    expect(written.at(-1)?.detail).toBe(`n.${ACTIVITY_RETENTION + 4}`)
 
     for (const entry of [written[0], written.at(-1)]) {
       expect(
         catalog.readActivity({ limit: ACTIVITY_RETENTION }).find(one => one.id === entry?.id)
-          ?.messageKey,
-      ).toBe(entry?.messageKey)
+          ?.detail,
+      ).toBe(entry?.detail)
     }
   })
 })

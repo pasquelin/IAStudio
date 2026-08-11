@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '../domain/activity'
+import { ACTIVITY_LEVELS, ACTIVITY_MESSAGES, ACTIVITY_TOPICS } from '../domain/activity'
 import { TRACK_PROPERTIES } from '../domain/animation'
 import { HOME_SECTION_IDS } from '../domain/home'
 import { TOOL_PLACEMENTS } from '../domain/tool'
@@ -293,6 +293,9 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),
   ...ACTIVITY_TOPICS.map(topic => `activity.topics.${topic}`),
+  // The lines the main process writes. The window draws them with `t(entry.messageKey)`, a call
+  // whose key is a variable: no AST guard resolves it, and the renderer's stops at its own glob.
+  ...ACTIVITY_MESSAGES.map(name => `activity.${name}`),
   // Written by the main process into the journal, so the miss surfaces long after the failure
   // that caused it — `font.face` shipped untranslated and read as its own key on screen.
   ...LOG_SCOPES.map(scope => `activity.scope.${scope}`),
@@ -335,11 +338,26 @@ const DYNAMIC_KEYS: readonly string[] = [
   ...STT_ERROR_CODES.map(code => `dictation.errors.${code}`),
 ]
 
+/**
+ * i18next appends a plural category to the key it looks up, so a caller writing `pushed` reads
+ * a bundle holding `pushed_one` and `pushed_other`. Until the journal's keys were listed here,
+ * every dynamic key happened to be singular and the exact lookup was enough.
+ */
+function named(code: Language, key: string): string {
+  const forms = ['', '_zero', '_one', '_two', '_few', '_many', '_other']
+  return forms.map(form => BUNDLES[code].get(`${key}${form}`)?.trim() ?? '').join('')
+}
+
 describe('the keys the interface composes', () => {
   it.each(CODES)('names every value of every listed union in %s', code => {
     for (const key of DYNAMIC_KEYS) {
-      expect(BUNDLES[code].get(key)?.trim() ?? '', `${key} is missing`).not.toBe('')
+      expect(named(code, key), `${key} is missing`).not.toBe('')
     }
+  })
+
+  it('accepts a key the bundle only holds in plural form', () => {
+    expect(named('fr', 'activity.pushed')).not.toBe('')
+    expect(named('fr', 'activity.thereIsNoSuchKey')).toBe('')
   })
 })
 

@@ -37,6 +37,84 @@ export const ACTIVITY_TOPICS: readonly ActivityTopic[] = [
 ]
 
 /**
+ * Every line the main process can write, by name.
+ *
+ * Written out rather than left as `string`, and it is the only chance there is: the window draws
+ * a line with `t(entry.messageKey)`, a call whose key is a variable — `known-keys.i18n.test.ts`
+ * cannot resolve it, and its glob stops at the renderer anyway. A misspelt key here read as
+ * itself on screen, and nothing in the repository could have said so.
+ */
+export type ActivityMessage =
+  | 'apiRefused'
+  | 'captionFailed'
+  | 'captioned'
+  | 'fileNotMoved'
+  | 'fileNotOpened'
+  | 'fileNotRenamed'
+  | 'fileNotTrashed'
+  | 'generated'
+  | 'generatedInto'
+  | 'importFailed'
+  | 'importUnreadable'
+  | 'imported'
+  | 'jobCancelled'
+  | 'jobFailed'
+  | 'projectNotAProject'
+  | 'projectNotCreated'
+  | 'projectTooNew'
+  | 'projectUnreadable'
+  | 'pullFailed'
+  | 'pulled'
+  | 'pushFailed'
+  | 'pushed'
+  | 'tagsNotSynced'
+  | 'unknownMessage'
+
+export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
+  'apiRefused',
+  'captionFailed',
+  'captioned',
+  'fileNotMoved',
+  'fileNotOpened',
+  'fileNotRenamed',
+  'fileNotTrashed',
+  'generated',
+  'generatedInto',
+  'importFailed',
+  'importUnreadable',
+  'imported',
+  'jobCancelled',
+  'jobFailed',
+  'projectNotAProject',
+  'projectNotCreated',
+  'projectTooNew',
+  'projectUnreadable',
+  'pullFailed',
+  'pulled',
+  'pushFailed',
+  'pushed',
+  'tagsNotSynced',
+  'unknownMessage',
+]
+
+/**
+ * The key as it is stored and as the window looks it up.
+ *
+ * Log scopes are the one family left open. They are composed from `LOG_SCOPES`, which lives in
+ * `ipc.ts` — a module that imports this one, so naming the type here would close a cycle. The
+ * family is guarded all the same, by `DYNAMIC_KEYS`, and its one site composes from `LogScope`.
+ */
+export type ActivityMessageKey = `activity.${ActivityMessage}` | `activity.scope.${string}`
+
+/**
+ * A line read back from the catalogue names a key that was written by whatever version wrote it,
+ * so a renamed key comes back naming nothing. Checked like `level` and `topic` beside it.
+ */
+export function isActivityMessageKey(value: unknown): value is ActivityMessageKey {
+  return ACTIVITY_MESSAGES.some(name => `activity.${name}` === value)
+}
+
+/**
  * The values a message key interpolates. Strings, numbers, and lists of ids — what goes in has
  * to survive a round trip through JSON and come back meaning the same thing.
  *
@@ -51,7 +129,7 @@ export type ActivityDraft = {
   level: ActivityLevel
   topic: ActivityTopic
   /** An i18n key — `activity.jobFailed`, never "La génération a échoué". */
-  messageKey: string
+  messageKey: ActivityMessageKey
   params?: ActivityParams
   /** `describeFailure()` only. Never `error.message`. */
   detail?: string

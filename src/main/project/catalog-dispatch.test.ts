@@ -3,7 +3,12 @@ import { createCatalog, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import { emptyAssetCounts, type Asset } from '@shared/domain/asset'
-import type { ActivityLevel, ActivityTopic } from '@shared/domain/activity'
+import type {
+  ActivityDraft,
+  ActivityLevel,
+  ActivityMessageKey,
+  ActivityTopic,
+} from '@shared/domain/activity'
 
 function catalogOf(): Catalog {
   return createCatalog(openMemoryDatabase())
@@ -123,7 +128,7 @@ describe('dispatchCatalogRequest', () => {
 
   it('appends journal lines and reads them back, newest first', () => {
     const catalog = catalogOf()
-    const draft = (at: string, messageKey: string) => ({
+    const draft = (at: string, messageKey: ActivityMessageKey): ActivityDraft => ({
       at,
       level: 'info' as ActivityLevel,
       topic: 'project' as ActivityTopic,
@@ -133,7 +138,10 @@ describe('dispatchCatalogRequest', () => {
     const appended = dispatchCatalogRequest(catalog, {
       id: 1,
       op: 'appendActivity',
-      entries: [draft('2026-08-10T10:00:00.000Z', 'a'), draft('2026-08-10T11:00:00.000Z', 'b')],
+      entries: [
+        draft('2026-08-10T10:00:00.000Z', 'activity.imported'),
+        draft('2026-08-10T11:00:00.000Z', 'activity.pushed'),
+      ],
     })
     expect(appended).toMatchObject({ id: 1, ok: true })
 
@@ -142,7 +150,7 @@ describe('dispatchCatalogRequest', () => {
     expect(read).toMatchObject({
       id: 2,
       ok: true,
-      value: [{ messageKey: 'b' }, { messageKey: 'a' }],
+      value: [{ messageKey: 'activity.pushed' }, { messageKey: 'activity.imported' }],
     })
   })
 
