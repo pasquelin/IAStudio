@@ -42,7 +42,9 @@ export default defineConfig({
         '**/test-harness.ts',
         '**/fake-bridge.ts',
       ],
-      reporter: ['text-summary', 'html'],
+      // `json-summary` is what `scripts/coverage-slack.mjs` reads back: a budget can only be
+      // compared to what a glob carries after the run that measures it, so no test can do it.
+      reporter: ['text-summary', 'html', 'json-summary'],
       // Negative = how many uncovered statements/branches a module may carry. Sized per module
       // rather than by one rule: a glob whose room to grow is mostly untestable GPU needs a
       // wider budget than one made of state machines, or growth alone would break it.
