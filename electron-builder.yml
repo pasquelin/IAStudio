@@ -81,6 +81,17 @@ extraResources:
     to: THIRD-PARTY-NOTICES.md
 
 mac:
+  # The permission sentence, once per language. macOS reads `InfoPlist.strings` from the `.lproj`
+  # matching the reader's language and falls back to `extendInfo` below for every other one, so a
+  # French user sees a French reason where they used to read English under a French dialog.
+  #
+  # Under `mac:` rather than at the root: an `.lproj` folder means nothing to Windows or Linux.
+  # electron-builder has no localisation feature of its own — it only places the files — which is
+  # why `docs/stt/02-packaging.md` called this untranslatable. It is not; it is unassembled.
+  extraResources:
+    - from: build/lproj
+      to: .
+      filter: ['**/*']
   category: public.app-category.graphics-design
   icon: build/icon.svg
   hardenedRuntime: true
