@@ -87,10 +87,10 @@ export class SkyboxRenderer {
   /**
    * What the last `apply` was given. Held by reference rather than copied: an edit replaces the
    * section it touches instead of writing into it (`skybox/commands.ts:31`), so a section that
-   * did not move is still the same object.
+   * did not move is still the same object — asserted where it is produced, in `commands.test.ts`.
    *
-   * This makes `mount` before `apply` load-bearing — a renderer mounted afterwards is never told
-   * again what it already holds. `SkyboxDocument` declares the two effects in that order.
+   * Cleared by `mount`, so a renderer that received a document before it had a renderer applies
+   * it whole rather than recognising it and doing nothing.
    */
   private applied: SkyboxContent | null = null
 
@@ -123,6 +123,15 @@ export class SkyboxRenderer {
     window.addEventListener('pointerup', this.onPointerUp)
 
     this.aimCamera()
+
+    // A document applied before the viewport had a renderer reached none of the above. Forgetting
+    // what was applied is what makes it land now — `CanvasEngine.mount` carries the same story,
+    // and it is the difference between a sky that opens lit and one that opens on its defaults.
+    const held = this.applied
+    if (held) {
+      this.applied = null
+      this.apply(held)
+    }
   }
 
   /**

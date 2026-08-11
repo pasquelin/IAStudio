@@ -185,6 +185,27 @@ describe('the renderer of a skybox', () => {
       expect(pipeline.createTarget).not.toHaveBeenCalled()
     })
 
+    /**
+     * A document can reach the engine before the viewport has a renderer, and everything `apply`
+     * does then falls on the floor. Mounting has to put it back — recognising the content and
+     * skipping it would open the sky on its defaults with nothing to say so.
+     */
+    it('applies the document again when it arrived before the renderer did', () => {
+      const renderer = new SkyboxRenderer({ onSunChange, loadTexture: source.load })
+      mountedRenderers.push(renderer)
+      const content = skyOf('sky-1')
+      content.environment = { intensity: 0.25, showBackground: false }
+      vi.spyOn(ViewportEngine.prototype, 'gl', 'get').mockReturnValueOnce(null)
+      renderer.mount(host)
+      renderer.apply(content)
+      vi.clearAllMocks()
+
+      renderer.mount(host)
+
+      expect(environment.setIntensity).toHaveBeenCalledWith(0.25)
+      expect(environment.setBackgroundVisible).toHaveBeenCalledWith(false)
+    })
+
     it('grades into a half-float target', () => {
       mounted()
 
