@@ -108,11 +108,29 @@ describe('MenuButton', () => {
       expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
     })
 
-    it('opens nothing on a button that has no menu', async () => {
-      const button = bar({ rowCount: 1, opensOnClick: false })
-      button.focus()
+    /**
+     * The chord belongs to the button: these sit inside `Collection` cells, which walk the list
+     * on a bare `ArrowDown` without reading the modifiers. Bubbling, one press opened the menu
+     * and moved the focus a row on, leaving the menu anchored where nobody was.
+     */
+    it('keeps the chord from the surface it sits in', async () => {
+      const reached: string[] = []
+      render(
+        <div onKeyDown={event => reached.push(event.key)}>{menu({ opensOnClick: false })}</div>,
+      )
+      screen.getByRole('button', { name: 'Brush' }).focus()
 
       await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
+
+      expect(row('Pinceau')).toBeInTheDocument()
+      expect(reached).not.toContain('ArrowDown')
+    })
+
+    it('leaves a chord carrying a fourth modifier alone', async () => {
+      const button = bar({ opensOnClick: false })
+      button.focus()
+
+      await userEvent.keyboard('{Shift>}{Alt>}{ArrowDown}{/Alt}{/Shift}')
 
       expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
     })
@@ -120,8 +138,8 @@ describe('MenuButton', () => {
     /**
      * `ask` sets its state whether or not there is anything to show, and `showing` reads the row
      * count only at render. Without the guard the press is remembered, and the menu springs open
-     * by itself the moment a row appears — which the brush panel does, its rows being the fields
-     * left after filtering.
+     * by itself the moment a row appears — a shape no caller produces today, and the reason the
+     * guard is not left to `showing` to compensate for.
      */
     it('does not remember a press made while there was no menu', async () => {
       const { rerender } = render(menu({ rowCount: 1, opensOnClick: false }))

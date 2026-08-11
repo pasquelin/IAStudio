@@ -23,7 +23,12 @@ export type HoverFlyout = {
     onDismiss: () => void
     onKeyClose: (() => void) | undefined
   }
-  /** For a button whose only job is its menu: hovering is not a keyboard gesture. */
+  /**
+   * The opening a keyboard asks for, since hovering is not a keyboard gesture — a click on a
+   * button whose only job is its menu, or `Alt+ArrowDown` on one whose click does something else.
+   * It records the ask whether or not there are rows to show, so a caller with a row count that
+   * varies has to check `hasFlyout` first.
+   */
   open: () => void
   close: () => void
 }

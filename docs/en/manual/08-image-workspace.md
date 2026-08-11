@@ -91,8 +91,8 @@ within a few pixels. The tolerance is in screen pixels, so it does not change wi
 
 It sits at the top of the document. The tools are **grouped**, as in Figma:
 
-- **hover a group** to see the rest of its tools;
-- **click the button itself** to arm the tool it already shows.
+- **hover a group** to see the rest of its tools, or press `⌥↓` if you are on the keyboard;
+- **click the button itself** to arm the tool it already shows — `Enter` does the same.
 
 In other words: an armed tool never needs the menu to be taken up again.
 
