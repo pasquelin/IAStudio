@@ -20,6 +20,8 @@ const rendered = vi.fn()
 const viewported = vi.fn()
 const scissored = vi.fn()
 const scissorTest = vi.fn()
+/** What the display is worth. Two is a laptop retina screen, which is where the fault showed. */
+let displayRatio = 1
 
 vi.mock('three', async importOriginal => ({
   ...(await importOriginal<typeof ThreeModule>()),
@@ -50,7 +52,7 @@ vi.mock('three', async importOriginal => ({
     setViewport = viewported
     setScissor = scissored
     setScissorTest = scissorTest
-    getPixelRatio = (): number => 1
+    getPixelRatio = (): number => displayRatio
     render = (...args: unknown[]): void => {
       if (this.info.autoReset) this.info.reset()
       this.info.render.calls += 1
@@ -71,6 +73,7 @@ describe('a viewport', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    displayRatio = 1
     host = document.createElement('div')
     document.body.appendChild(host)
     engines = []
@@ -186,6 +189,25 @@ describe('a viewport', () => {
       // sits at half the height and the bottom row at zero.
       expect(viewported).toHaveBeenCalledWith(0, HOST_HEIGHT / 2, HOST_WIDTH / 2, HOST_HEIGHT / 2)
       expect(scissored).toHaveBeenCalledWith(HOST_WIDTH / 2, 0, HOST_WIDTH / 2, HOST_HEIGHT / 2)
+    })
+
+    /**
+     * The fault this caught the hard way: three multiplies by the renderer's pixel ratio itself,
+     * so scaling the rectangle here as well squared it. On a display at 2 the first pane covered
+     * four times its share and hid the three others — a quad view that drew one view. Every test
+     * before this one ran at a ratio of 1, where the fault cannot show.
+     */
+    it('places its panes in CSS pixels, whatever the display is worth', () => {
+      displayRatio = 2
+      const engine = atRest()
+      viewported.mockClear()
+
+      engine.setLayout('quad')
+      drawFrames()
+
+      // The same rectangles as at a ratio of 1: three applies the display's own scale after this.
+      expect(viewported).toHaveBeenCalledWith(0, HOST_HEIGHT / 2, HOST_WIDTH / 2, HOST_HEIGHT / 2)
+      expect(viewported).not.toHaveBeenCalledWith(0, HOST_HEIGHT, HOST_WIDTH, HOST_HEIGHT)
     })
 
     it('draws one pass and no scissor while there is one view', () => {

@@ -61,17 +61,19 @@ export function paneAt(rects: readonly PaneRect[], x: number, y: number): number
 }
 
 /**
- * The same rectangle as WebGL wants it: origin bottom-left, and in device pixels.
+ * The same rectangle the other way up: origin bottom-left, as `setViewport` and `setScissor`
+ * read it, and still in CSS pixels.
  *
- * Two conversions in one, because they are never needed apart — `setViewport` takes device
- * pixels while the pointer speaks CSS ones, and a pane placed with one and picked with the other
- * is a pane whose clicks land in its neighbour.
+ * NOT in device pixels, however much the name of the frame suggests it: three multiplies by the
+ * renderer's pixel ratio itself (`WebGLRenderer.setViewport`). Scaling here as well squared the
+ * ratio — on a display at 2, the first pane covered four times its share and hid the other
+ * three, which is a quad view that draws exactly one view.
  */
-export function glRect(rect: PaneRect, surfaceHeight: number, pixelRatio: number): PaneRect {
+export function glRect(rect: PaneRect, surfaceHeight: number): PaneRect {
   return {
-    x: rect.x * pixelRatio,
-    y: (surfaceHeight - rect.y - rect.height) * pixelRatio,
-    width: rect.width * pixelRatio,
-    height: rect.height * pixelRatio,
+    x: rect.x,
+    y: surfaceHeight - rect.y - rect.height,
+    width: rect.width,
+    height: rect.height,
   }
 }
