@@ -499,7 +499,9 @@ describe('the words nobody puts in a tag', () => {
   })
 
   it('reads a module whose generic arrow would open a tag in JSX', () => {
-    const code = "const identity = <T,>(value: T) => value\nconst label = 'Delete this project'"
+    // Without the comma: `<T,>` stays a generic even in TSX, so the probe this inherited proved
+    // nothing — it passed in either mode. `app/document-io.ts:105` writes the shape that breaks.
+    const code = "const asIs = <S>(state: S): unknown => state\nconst label = 'Delete this project'"
 
     expect(boundSentencesIn('probe.ts', code)).toHaveLength(1)
   })

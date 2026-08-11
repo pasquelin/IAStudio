@@ -51,7 +51,11 @@ function keysIn(
   path: string,
   code: string,
 ): { keys: { key: string; line: number }[]; filled: Interpolated[] } {
-  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  // No `ScriptKind`: TypeScript reads it off the name, and forcing TSX on a `.ts` was worse than
+  // useless — `const f = <T,>(x: T) => x` opens a tag, the parser drops into error recovery, and
+  // nothing after it is visited. Measured on this glob: 697 nodes of `app/document-io.ts` seen
+  // out of 1653, and 483 of `engines/graph/serialize.ts` out of 866.
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
   const keys: { key: string; line: number }[] = []
   const filled: Interpolated[] = []
 
@@ -112,6 +116,25 @@ describe('every key the renderer names outright', () => {
 
   it('accepts a key the bundle only holds in plural form', () => {
     expect(isKnown('fr', 'assets.count')).toBe(true)
+  })
+
+  /**
+   * The half of a module this check could not see. Nothing was lost — the one key-shaped literal
+   * behind a generic arrow turned out to be a `LogScope` — but the check that catches the
+   * costliest defect of all, a raw key on screen, was reading half of three modules.
+   */
+  it('reads a module whose generic arrow used to open a tag', () => {
+    // Without the comma, which is how `app/document-io.ts:105` writes it — `<T,>` stays a
+    // generic even in TSX, so a probe using it would pass whatever the mode.
+    const code = "const asIs = <S>(state: S): unknown => state\nconst title = t('panels.assets')"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual(['panels.assets'])
+  })
+
+  it('still reads a component, where the arrow really is a tag', () => {
+    const code = "const View = () => <p>{t('panels.assets')}</p>"
+
+    expect(keysIn('probe.tsx', code).keys.map(found => found.key)).toEqual(['panels.assets'])
   })
 
   it('would see a key nobody translated', () => {
