@@ -302,7 +302,11 @@ describe('swapping what a node is wired by', () => {
     expect(next.edges.map(edge => edge.id)).toEqual(['a', 'c'])
   })
 
-  /** Another node reading one of this one's output ports — the handle is what each case varies. */
+  /**
+   * A wire read off this node's output, the handle being what each case varies. The reader is
+   * NOT among the nodes, deliberately: `stillConnects` vouches for an edge whose end no node
+   * declares, and this is the only graph in the repository that asks it to.
+   */
   const consumedAt = (targetHandle: string): GraphState => ({
     ...fed,
     edges: [
@@ -323,6 +327,18 @@ describe('swapping what a node is wired by', () => {
     const next = replaceNodePorts(consumed, 'imageGenerator1', withoutMask)
 
     expect(next.edges.map(edge => edge.id)).toEqual(['a', 'd'])
+  })
+
+  /**
+   * And the same port list read the other way: an output the new model dropped takes its readers
+   * with it. Removing a branch from an `ifElse` patches the OUTPUTS alone, and the wire that read
+   * the departed branch names a handle no node carries — refused at export, far from the gesture.
+   */
+  it('cuts an edge that reads an output the new model no longer publishes', () => {
+    const consumed = consumedAt('imageGenerator1-target-gone')
+    const next = replaceNodePorts(consumed, 'imageGenerator1', withoutMask)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['a'])
   })
 
   it('hands the very same graph back when the node is not there', () => {
