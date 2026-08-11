@@ -470,6 +470,14 @@ export async function runGraph(
     // — on a graph of twenty, two badges and eighteen nodes that read as untouched.
     if (!inert(node)) report(node.id, { status: 'queued' })
 
+    /**
+     * Answered BEFORE anything is awaited, and that is not a shortcut: an approval guarding a
+     * sticky note reads that note, which produces nothing, so `resolveInputs` handed back a stall
+     * and the node was painted `blocked` — red, for a node the run was supposed to walk past
+     * without a word. Nothing downstream can want its result either: it declares no output.
+     */
+    if (inert(node)) return { kind: 'produced', values: {} }
+
     // Before the inputs, and both before the cache: a REFUSED approval outweighs a merely skipped
     // provider, and a result kept from a run somebody approved must not come back on a run they
     // have declined.
@@ -511,10 +519,6 @@ export async function runGraph(
     // rule for both: a wire carrying nothing does not overwrite.
     if (node.type === 'text') return keep(planned, node, asList(node.data.value))
     if (node.type === 'asset') return keep(planned, node, asList(node.data.value))
-    // A note drawn on the canvas, or an approval nothing waits on: neither compiles to a thing to
-    // run, so both pass without a word rather than stopping the graph, and neither has an output
-    // to read either.
-    if (inert(node)) return { kind: 'produced', values: {} }
     // Asked only once what it guards has produced, which the inputs above are: an approval put to
     // the user before the picture exists is a question about nothing.
     if (node.type === 'approval') return decide(node)

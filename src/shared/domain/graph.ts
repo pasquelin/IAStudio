@@ -391,15 +391,37 @@ export function approvalsOf(graph: GraphState): ReadonlyMap<string, string> {
  * naming types.
  */
 export function silentNodesOf(graph: GraphState): ReadonlySet<string> {
-  const guarding = new Set(approvalsOf(graph).values())
+  const asked = new Map<string, string>()
+  for (const [guarded, approval] of approvalsOf(graph)) asked.set(approval, guarded)
 
-  return new Set(
-    graph.nodes
-      .filter(
-        node => node.type === 'stickyNote' || (node.type === 'approval' && !guarding.has(node.id)),
-      )
-      .map(node => node.id),
+  const silent = new Set(
+    graph.nodes.filter(node => node.type === 'stickyNote').map(node => node.id),
   )
+
+  /**
+   * Walked to a FIXED POINT, because silence travels back up a chain of approvals: one guarding a
+   * note asks about a node that produces nothing, and one guarding THAT approval asks about a
+   * question nobody was ever put. Settled in one pass only when the chain happens to be in order,
+   * which the node order does not promise.
+   *
+   * Two approvals guarding each other settle as neither silent, and rightly: the plan calls that a
+   * cycle and paints them, which is a report.
+   */
+  for (let quiet = true; quiet;) {
+    quiet = false
+
+    for (const node of graph.nodes) {
+      if (node.type !== 'approval' || silent.has(node.id)) continue
+
+      const guarded = asked.get(node.id)
+      if (guarded === undefined || silent.has(guarded)) {
+        silent.add(node.id)
+        quiet = true
+      }
+    }
+  }
+
+  return silent
 }
 
 /**
@@ -407,10 +429,14 @@ export function silentNodesOf(graph: GraphState): ReadonlySet<string> {
  * `start` refuses. Named once and shared, because a bar that offers a run the store then declines
  * is two surfaces of one screen disagreeing.
  *
- * Asked of the nodes rather than of the set's size: a file is free to name two nodes the same, and
- * counting ids would call a graph of two identical sticky notes runnable.
+ * **The type test comes first, and it is not a micro-optimisation.** This is read by a zustand
+ * selector (`spaces/graph/GraphDocument.tsx`), so it runs on every store write — one per node per
+ * frame while a selection is dragged. Any node that is neither a note nor an approval settles the
+ * question without walking a single edge; only a canvas made of nothing else pays for the wires.
  */
 export const isRunnable = (graph: GraphState): boolean => {
+  if (graph.nodes.some(node => node.type !== 'stickyNote' && node.type !== 'approval')) return true
+
   const silent = silentNodesOf(graph)
   return graph.nodes.some(node => !silent.has(node.id))
 }

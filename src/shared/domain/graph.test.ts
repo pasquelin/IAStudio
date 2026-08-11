@@ -68,8 +68,22 @@ describe('reading the approvals of a graph', () => {
     expect([...approvalsOf(held)]).toEqual([['m1', 'approval1']])
   })
 
+  // WITH an ordinary wire in it, which is the half that matters: a graph with no edge at all
+  // would answer nothing whatever the reader did with the ones it has.
   it('answers nothing for a graph with no approval in it', () => {
-    expect(approvalsOf(graph([node('text1', 'text'), node('m1', 'model')])).size).toBe(0)
+    const held = graph(
+      [node('text1', 'text'), node('m1', 'model')],
+      [
+        {
+          id: 'e1',
+          source: 'm1',
+          target: 'text1',
+          sourceHandle: handleId('m1', 'source', 'prompt'),
+        },
+      ],
+    )
+
+    expect(approvalsOf(held).size).toBe(0)
   })
 
   /**
@@ -133,9 +147,19 @@ describe('reading the approvals of a graph', () => {
 
 describe('the nodes a run passes over without a word', () => {
   it('holds a sticky note, whatever it is wired to', () => {
-    expect([...silentNodesOf(graph([node('note1', 'stickyNote'), node('m1', 'model')]))]).toEqual([
-      'note1',
-    ])
+    const held = graph(
+      [node('note1', 'stickyNote'), node('m1', 'model')],
+      [
+        {
+          id: 'e1',
+          source: 'm1',
+          target: 'note1',
+          sourceHandle: handleId('m1', 'source', 'prompt'),
+        },
+      ],
+    )
+
+    expect([...silentNodesOf(held)]).toEqual(['note1'])
   })
 
   /**
@@ -149,6 +173,42 @@ describe('the nodes a run passes over without a word', () => {
     )
 
     expect([...silentNodesOf(held)]).toEqual(['approval2'])
+  })
+
+  /**
+   * Silence travels back up the chain: guarding a note is asking about a node that produces
+   * nothing, and the answer would be put to nobody's benefit.
+   */
+  it('holds an approval that guards a sticky note', () => {
+    const held = graph(
+      [node('note1', 'stickyNote'), node('approval1', 'approval')],
+      [guards('approval1', 'note1')],
+    )
+
+    expect([...silentNodesOf(held)].sort()).toEqual(['approval1', 'note1'])
+  })
+
+  /**
+   * Two links of the same chain, and the reason the walk is a fixed point rather than one pass:
+   * `approval2` only becomes silent once `approval1` has, whatever order the nodes are in.
+   */
+  it('holds a chain of approvals whose end guards a note', () => {
+    const held = graph(
+      [node('approval2', 'approval'), node('approval1', 'approval'), node('note1', 'stickyNote')],
+      [guards('approval2', 'approval1'), guards('approval1', 'note1')],
+    )
+
+    expect([...silentNodesOf(held)].sort()).toEqual(['approval1', 'approval2', 'note1'])
+  })
+
+  /** A cycle is something the plan paints, and painting is reporting — so neither is silent. */
+  it('holds neither of two approvals guarding each other', () => {
+    const held = graph(
+      [node('approval1', 'approval'), node('approval2', 'approval')],
+      [guards('approval1', 'approval2'), guards('approval2', 'approval1')],
+    )
+
+    expect(silentNodesOf(held).size).toBe(0)
   })
 
   // Both reported `done` by the executor, and both were on the list of silent TYPES this replaces.
@@ -187,12 +247,15 @@ describe('whether a graph is worth running', () => {
   })
 
   /**
-   * A file is free to name two nodes the same. Counting the silent set against `nodes.length`
-   * would call this graph runnable, the set holding one id for the two notes.
+   * The other half of the same defect: guarding a note is a question about a node that produces
+   * nothing, so the run walks past it and the button must not offer it.
    */
-  it('refuses a graph whose two sticky notes carry one id', () => {
-    expect(isRunnable(graph([node('note1', 'stickyNote'), node('note1', 'stickyNote')]))).toBe(
-      false,
+  it('refuses a graph whose only approval guards a note', () => {
+    const held = graph(
+      [node('note1', 'stickyNote'), node('approval1', 'approval')],
+      [guards('approval1', 'note1')],
     )
+
+    expect(isRunnable(held)).toBe(false)
   })
 })

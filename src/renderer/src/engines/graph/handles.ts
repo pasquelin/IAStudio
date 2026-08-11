@@ -8,8 +8,9 @@ import {
 /**
  * The nth list a loop walks, which the converter finds by the regexp `/-input-(\d+)$/`.
  *
- * Not `handleId`: a loop's own ports are the one place the converter numbers instead of naming,
- * and it pairs the list coming IN with the item going OUT by that number alone.
+ * Not `handleId`, which this file re-exports at the bottom: a loop's own ports are the one place
+ * the converter numbers instead of naming, and it pairs the list coming IN with the item going
+ * OUT by that number alone.
  */
 export const loopInputId = (nodeId: string, index: number): string => `${nodeId}-input-${index}`
 

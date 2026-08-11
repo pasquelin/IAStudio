@@ -237,7 +237,8 @@ It does not carry the file name. It carries the **seven workspaces**:
 > ready, independent branches start together, and the generations go through the same queue as the
 > rest of the studio — they show in the jobs bar and count against the same budget. The button
 > becomes **Stop** while it goes: nothing more is submitted, and what is in flight is cancelled.
-> On an empty graph it is **greyed out**: there is nothing to run.
+> On an empty graph it is **greyed out**: there is nothing to run — as on a canvas holding only
+> *Notes* and *Approvals* wired to nothing, both of which a run passes over without a word.
 >
 > **Bottom left, a line says whether the graph would export**, and it keeps up while you wire
 > rather than arriving as a failed export: the number of steps when all is well, the reason when

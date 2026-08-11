@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   GRAPH_NODE_TYPES,
+  handleId,
   type GraphConditionBlock,
   type GraphEdge,
   type GraphNode,
@@ -15,9 +16,6 @@ import {
   refuseFlow,
   toEditorFlow,
 } from './workflow-compile'
-
-const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
-  `${nodeId}-${side}-${field}`
 
 /**
  * As `createNode` builds one, handle id included — and that is not a detail. A text node's output
