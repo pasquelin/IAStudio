@@ -576,6 +576,22 @@ export function namedLoopId(node: GraphNode): string | undefined {
   return typeof named === 'string' && named !== '' ? named : undefined
 }
 
+/**
+ * The node an id names, or `null`. Here for the reason `outputNodesOf` and `isRunnable` are: a
+ * total function over `GraphState` belongs beside `GraphState`, and this one is asked by the
+ * engine and by a panel both.
+ *
+ * `null` and not `undefined`, so it answers as `nodeById` does on the scene side
+ * (`engines/scene/scene-state.ts`). The two never meet in one file — this buys a habit, not a
+ * substitution, and the ports next door still answer `undefined`.
+ *
+ * `id` may be missing, as `inputHandleOf` takes it: a selection reads `ids[0]`, and no node
+ * answers to nothing anyway — the alternative is every caller widening it back with `?? ''`.
+ */
+export function nodeById(graph: GraphState, id: string | undefined): GraphNode | null {
+  return graph.nodes.find(node => node.id === id) ?? null
+}
+
 /** The nodes the converter would compile a branch for, in the order the graph holds them. */
 export const outputNodesOf = (graph: GraphState): readonly GraphNode[] =>
   graph.nodes.filter(node => node.data.isOutput === true && canBeOutput(node.type))

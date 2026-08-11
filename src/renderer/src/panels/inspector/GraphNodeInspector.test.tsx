@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphNode } from '@shared/domain/graph'
+import { nodeById } from '@shared/domain/graph'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { GraphNodeInspector } from './GraphNodeInspector'
@@ -79,8 +80,8 @@ beforeEach(() => {
   })
 })
 
-const nodeById = (id: string): GraphNode | undefined =>
-  graphOf(useGraphs.getState(), DOCUMENT).nodes.find(node => node.id === id)
+const nodeOf = (id: string): GraphNode | null =>
+  nodeById(graphOf(useGraphs.getState(), DOCUMENT), id)
 
 /**
  * Subscribed, as `Inspector` is. Handed a frozen node instead, every field reads the value it
@@ -88,7 +89,7 @@ const nodeById = (id: string): GraphNode | undefined =>
  * second character overwrites the first.
  */
 function Live({ id }: { id: string }) {
-  const node = useGraphs(state => graphOf(state, DOCUMENT).nodes.find(entry => entry.id === id))
+  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
   return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
 }
 
@@ -107,7 +108,7 @@ describe('GraphNodeInspector', () => {
     show(TEXT)
     await userEvent.type(screen.getByLabelText('Prompt'), '!')
 
-    expect(nodeById('text1')?.data).toMatchObject({ value: 'a small grey rock!' })
+    expect(nodeOf('text1')?.data).toMatchObject({ value: 'a small grey rock!' })
   })
 
   /**
@@ -118,8 +119,8 @@ describe('GraphNodeInspector', () => {
     show(NOTE)
     await userEvent.type(screen.getByLabelText('Texte'), '!')
 
-    expect(nodeById('stickyNote1')?.data).toMatchObject({ content: 'Read me!' })
-    expect(nodeById('stickyNote1')?.data).not.toHaveProperty('value')
+    expect(nodeOf('stickyNote1')?.data).toMatchObject({ content: 'Read me!' })
+    expect(nodeOf('stickyNote1')?.data).not.toHaveProperty('value')
   })
 
   it('renames a node without touching what it holds', async () => {
@@ -127,7 +128,7 @@ describe('GraphNodeInspector', () => {
     await userEvent.clear(screen.getByLabelText('Titre'))
     await userEvent.type(screen.getByLabelText('Titre'), 'Reference')
 
-    expect(nodeById('asset1')?.data).toMatchObject({ title: 'Reference', value: 'asset_Hr7' })
+    expect(nodeOf('asset1')?.data).toMatchObject({ title: 'Reference', value: 'asset_Hr7' })
   })
 
   /**
@@ -173,7 +174,7 @@ describe('GraphNodeInspector', () => {
     show(APPROVAL)
     await userEvent.type(screen.getByLabelText('Question posée'), '!')
 
-    expect(nodeById('approval1')?.data).toMatchObject({ message: 'On garde ?!' })
+    expect(nodeOf('approval1')?.data).toMatchObject({ message: 'On garde ?!' })
   })
 
   /** A graph read off a file carries no `message` at all, and the field must still open. */
@@ -205,7 +206,7 @@ describe('GraphNodeInspector', () => {
     show(TRANSFORM)
     await userEvent.type(screen.getByLabelText('Expression'), '!')
 
-    expect(nodeById('transformText1')?.data).toMatchObject({
+    expect(nodeOf('transformText1')?.data).toMatchObject({
       value: "'A photo of ' + text1_output!",
     })
   })

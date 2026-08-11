@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@shared/domain/graph'
+import { nodeById } from '@shared/domain/graph'
 import { forEachEndNode, forEachNode, textNode } from '@/engines/graph/graph-fixtures'
 import { loopInputId, loopOutputId } from '@/engines/graph/handles'
 import { installGraph } from '@/stores/graph-fixtures'
@@ -27,8 +28,8 @@ beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [LOOP, END, TEXT], edges: [], inputKeys: [] })
 })
 
-const nodeOf = (id: string): GraphNode | undefined =>
-  graphOf(useGraphs.getState(), DOCUMENT).nodes.find(node => node.id === id)
+const nodeOf = (id: string): GraphNode | null =>
+  nodeById(graphOf(useGraphs.getState(), DOCUMENT), id)
 
 const inputs = (): readonly string[] =>
   (nodeOf('forEach1')?.data.inputHandles ?? []).map(handle => handle.id)
@@ -40,7 +41,7 @@ const types = (): readonly (string | undefined)[] =>
   (nodeOf('forEach1')?.data.outputHandles ?? []).map(handle => handle.type)
 
 function Live({ id }: { id: string }) {
-  const node = useGraphs(state => graphOf(state, DOCUMENT).nodes.find(entry => entry.id === id))
+  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
   return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
 }
 
