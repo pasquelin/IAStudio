@@ -11,6 +11,8 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { runOf, useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, useGraphs } from '@/stores/graphs'
+import { installGraph } from '@/stores/graph-fixtures'
+import { parseGraph } from '@/engines/graph/serialize'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSelection } from '@/stores/selection'
@@ -418,9 +420,14 @@ describe('a graph as a document', () => {
      * two surfaces name the same node differently.
      */
     it('names a node whose imported title is not text as its type', () => {
-      act(() =>
-        useGraphs.getState().runCommand(DOCUMENT, addGraphNode({ ...text, data: { title: 42 } })),
-      )
+      // Through `parseGraph`, which is the real path of a file: written as a literal, `title: 42`
+      // would not compile — the type says `string`, and that is exactly the claim under test.
+      const imported = parseGraph({
+        nodes: [{ id: text.id, type: 'text', position: { x: 0, y: 0 }, data: { title: 42 } }],
+        edges: [],
+      })
+
+      act(() => installGraph(DOCUMENT, imported))
       act(() =>
         useGraphRuns.setState({
           runs: {
