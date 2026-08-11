@@ -58,9 +58,13 @@ function sourceFiles(directory: string, into: string[] = []): string[] {
  * `message` is absent for the same kind of reason: it names a worker's failure, never a screen.
  */
 /**
- * One parse per file, however many guards read it. Two of them walk the same trees, and parsing
- * 706 files twice took this file past the 15 s timeout the moment the machine was busy — 2.5 s
- * when idle, and nothing in the result changed.
+ * One parse per file for the two guards that walk the whole project — the registries and the
+ * bindings. Parsing 706 files twice took this file past the shared 15 s timeout the moment the
+ * machine was busy; 2.5 s when idle, and nothing in the result changed.
+ *
+ * The dialog and menu checks below do NOT use it: they read `main` alone, they were here first,
+ * and routing them through a cache they never needed would say this file has one invariant when
+ * it has an optimisation.
  */
 const parsedByPath = new Map<string, ts.SourceFile>()
 
@@ -375,6 +379,13 @@ const LOGICAL_OPERATORS = new Set([
 function literalsIn(expression: ts.Expression): string[] {
   if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression))
     return [expression.text]
+  // `Deleted ${n} assets` is the commonest shape of a sentence bound to a name, and the copy
+  // that started this guard had dropped this branch: the interpolation is what someone reaches
+  // for the moment the wording carries a number.
+  if (ts.isTemplateExpression(expression))
+    return [
+      expression.head.text + expression.templateSpans.map(span => span.literal.text).join(' '),
+    ]
   if (ts.isConditionalExpression(expression))
     return [...literalsIn(expression.whenTrue), ...literalsIn(expression.whenFalse)]
   if (ts.isBinaryExpression(expression) && LOGICAL_OPERATORS.has(expression.operatorToken.kind))
@@ -446,6 +457,9 @@ function boundSentencesFrom(source: ts.SourceFile): string[] {
  * array element — the last two being the registry guard's job. What it adds is the bare binding.
  */
 describe('the words nobody puts in a tag', () => {
+  // Four trees where the registry check reads three: `main` writes its screens through
+  // `TRANSLATIONS`, so a sentence bound to a name there reaches a dialog exactly as one bound in
+  // the window reaches a tag. The registry check stopping at three is its own question.
   const trees = ['renderer', 'shared', 'preload'].map(tree => join(MAIN, '..', tree))
 
   const findingsOf = (): string[] =>
@@ -474,6 +488,14 @@ describe('the words nobody puts in a tag', () => {
 
   it('would see a sentence parked in a constant', () => {
     expect(boundSentencesIn('probe.tsx', "const label = 'Delete this project'")).toHaveLength(1)
+  })
+
+  // The branch this guard lost on its way here, and the shape a wording takes the moment it
+  // carries a number. The JSX check asserts the same thing on its own side.
+  it('reads a sentence that interpolates', () => {
+    const code = 'const label = `Deleted ${count} of your assets`'
+
+    expect(boundSentencesIn('probe.ts', code)).toHaveLength(1)
   })
 
   it('reads a module whose generic arrow would open a tag in JSX', () => {

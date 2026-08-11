@@ -880,7 +880,7 @@ plus si deux ports vont ensemble. `NodePorts.tsx` porte la règle en JSDoc, là 
 C’est le même partage que `name` et `message` dans les gardes de texte en dur : **une chaîne qui
 est aussi une donnée n’est pas un libellé**, et la traduire la casse comme donnée.
 
-### Quatre gardes, et ce que chacun tient
+### Cinq gardes, et ce que chacun tient
 
 Ce ne sont pas les mêmes tests, et les confondre laisse croire qu’une seule chose est surveillée.
 Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm validate`.
@@ -890,7 +890,8 @@ Ils se partagent l’arbre sans se recouvrir, et tournent tous dans `pnpm valida
 | `shared/i18n/bundles.test.ts` | une clé présente d’un côté et pas de l’autre, un ordre qui diverge, une valeur vide, une apostrophe ASCII en français, **une espace sécable devant `; : ! ?` ou dans les guillemets français**, un trou d’interpolation perdu — **et une phrase anglaise recopiée dans `fr.json`** |
 | `renderer/src/no-hardcoded-text.test.ts` | dans un `.tsx` : du texte entre balises, un littéral entre accolades, derrière un ternaire ou un `&&`, et tout attribut qu’un humain lit |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | un mot écrit dans un dialogue natif ou dans un `label` de menu |
-| `main/no-hardcoded-text.test.ts`, § *the registries* | dans un `.ts` de `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
+| `main/no-hardcoded-text.test.ts`, § *the registries* | dans `renderer`, `shared` ou `preload` : un libellé écrit là où une clé est attendue |
+| `main/no-hardcoded-text.test.ts`, § *the words nobody puts in a tag* | dans les **quatre** arbres — `main` compris : une phrase liée à un nom, `const message = 'This project could not be opened'`, que ni les balises ni les champs de registre ne montrent |
 
 **Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
 gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
