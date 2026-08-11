@@ -219,7 +219,7 @@ says about missing fonts holds word for word here.
 
 | Tool | Shortcut | What it does |
 |---|---|---|
-| **Spot eraser** | `E` | erases as the pointer passes |
+| **Point eraser** | `E` | erases as the pointer passes |
 | **Selective eraser** | — | erases the inside of the selection in one gesture |
 
 The eraser erases **to transparency**; it does not paint white.
@@ -303,8 +303,8 @@ on the one that is **active** — click its name to choose it.
 | Action | How |
 |---|---|
 | **Add a layer** | the panel's **+** button — it lands on top of the stack |
-| **Delete the layer** | the delete button — the last layer cannot be deleted |
-| **Hide / show** | the eye, to the left of the name |
+| **Delete layer** | the delete button — the last layer cannot be deleted |
+| **Show or hide** | the eye, to the left of the name |
 | **Reorder** | the stack buttons, or drag and drop |
 
 A hidden layer is **dimmed and struck through**: you can see at a glance what is hidden.

@@ -259,7 +259,7 @@ Together with the orthographic projection, that is the classic plan view — the
 | **Wireframe** | the edges alone — which is what shows how dense the mesh is |
 | **Shaded and wireframe** | surfaces painted, with the edges drawn over them |
 | **Solid** | plain clay on every surface: the shape, without the materials |
-| **Material preview** | the materials under the studio light alone, with the scene's own lights out |
+| **Material preview** | the materials under the studio light alone, with the scene’s own lights out |
 | **Matcap** | lighting captured on a sphere: it is the relief that reads, not the colour |
 | **Density** | green to red by triangles per unit of surface: what is red is what to optimise |
 
@@ -442,7 +442,7 @@ result you cannot predict without trying.
 
 The five texture slots — **Texture**, **Normals**, **Roughness map**, **Metalness map**, **Ambient
 occlusion** — take images from the project. The **Choose a texture** button opens the list;
-**Remove texture** empties it.
+**Remove the texture** empties it.
 
 ### For a light
 
@@ -508,7 +508,7 @@ at what height. It appears in no render.
 
 | Setting | What it does | Default |
 |---|---|---|
-| **Show grid** | shows or hides it | on |
+| **Show the grid** | shows or hides it | on |
 | **Grid size** | its extent in metres — one square is always 1 m | 20 |
 
 Hide it to judge an image with nothing around it.

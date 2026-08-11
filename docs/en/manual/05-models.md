@@ -50,9 +50,9 @@ It searches the model's **name**.
 
 | Sort | What it puts first |
 |---|---|
-| **Quality: the best** | the most used and best rated models — the default sort |
-| **Created: newest** | the most recently published |
-| **Created: oldest** | the oldest, often the most proven |
+| **Quality: highest first** | the most used and best rated models — the default sort |
+| **Created: newest first** | the most recently published |
+| **Created: oldest first** | the oldest, often the most proven |
 
 ---
 
@@ -88,9 +88,9 @@ This is the most useful filter. The vocabulary is technical but short:
 |---|---|
 | **Text to image** | you write a sentence, it draws |
 | **Image to image** | you give a starting image, it transforms it |
-| **Inpaint** | you erase an area, it redraws it |
-| **Outpaint** | it extends the image beyond its edges |
-| **ControlNet** | it follows a structure you impose — a pose, an outline |
+| **Inpainting** | you erase an area, it redraws it |
+| **Outpainting** | it extends the image beyond its edges |
+| **Guidance** | it follows a structure you impose — a pose, an outline |
 | **Reference** | it takes style cues from an image you supply |
 
 **In the Video workspace**
@@ -151,7 +151,7 @@ The big names in the field, different per workspace:
 
 ### Date — how long the model has existed
 
-**Last 24 h** · **Last 7 days** · **Last 30 days** · **Last 3 months**.
+**Last 24 hours** · **Last 7 days** · **Last 30 days** · **Last quarter**.
 
 Useful for seeing what has just come out.
 

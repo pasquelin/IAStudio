@@ -384,7 +384,7 @@ Seven things are kept out, each because an ordinary session does not open them a
 | The **font parser** (`opentype.js`) | only text in volume and captions need it |
 
 **A failed `lazy()` cannot be mended by retrying**: React caches the rejection, so the error
-boundary's "Retry" button cannot win on those routes. The boundary sits above the routes — the
+boundary's "Try again" button cannot win on those routes. The boundary sits above the routes — the
 per-panel ones cover the docks, not the shell holding them — and it catches renders only: not
 event handlers, not rejected promises, and not `main.tsx`'s own evaluation, where a throw predates
 the boundary and leaves an empty window no React can see.
