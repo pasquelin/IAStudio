@@ -5,7 +5,7 @@ import type { GraphNode } from '@shared/domain/graph'
 import { nodeById } from '@shared/domain/graph'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
-import { GraphNodeInspector } from './GraphNodeInspector'
+import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
 
@@ -83,18 +83,8 @@ beforeEach(() => {
 const nodeOf = (id: string): GraphNode | null =>
   nodeById(graphOf(useGraphs.getState(), DOCUMENT), id)
 
-/**
- * Subscribed, as `Inspector` is. Handed a frozen node instead, every field reads the value it
- * opened on however many keystrokes it took — so a test typing one character passes while the
- * second character overwrites the first.
- */
-function Live({ id }: { id: string }) {
-  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
-  return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
-}
-
 const show = (node: GraphNode): void => {
-  render(<Live id={node.id} />)
+  render(<LiveNodeInspector documentId={DOCUMENT} id={node.id} />)
 }
 
 describe('GraphNodeInspector', () => {

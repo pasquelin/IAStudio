@@ -7,7 +7,7 @@ import { forEachEndNode, forEachNode, textNode } from '@/engines/graph/graph-fix
 import { loopInputId, loopOutputId } from '@/engines/graph/handles'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
-import { GraphNodeInspector } from './GraphNodeInspector'
+import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
 
@@ -40,13 +40,8 @@ const outputs = (): readonly (string | undefined)[] =>
 const types = (): readonly (string | undefined)[] =>
   (nodeOf('forEach1')?.data.outputHandles ?? []).map(handle => handle.type)
 
-function Live({ id }: { id: string }) {
-  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
-  return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
-}
-
 const show = (id: string): void => {
-  render(<Live id={id} />)
+  render(<LiveNodeInspector documentId={DOCUMENT} id={id} />)
 }
 
 describe('the lists a loop walks', () => {

@@ -8,7 +8,7 @@ import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domai
 import { installFakeBridge } from '@/services/fake-bridge'
 import { installGraph } from '@/stores/graph-fixtures'
 import { graphOf, useGraphs } from '@/stores/graphs'
-import { GraphNodeInspector } from './GraphNodeInspector'
+import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
 
@@ -107,14 +107,9 @@ beforeEach(() => {
 function show(): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 
-  function Live() {
-    const node = useGraphs(inner => nodeById(graphOf(inner, DOCUMENT), generator.id))
-    return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
-  }
-
   render(
     <QueryClientProvider client={client}>
-      <Live />
+      <LiveNodeInspector documentId={DOCUMENT} id={generator.id} />
     </QueryClientProvider>,
   )
 }
