@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { canUndo } from '@/engines/core/history'
@@ -11,6 +11,7 @@ import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { installScene } from '@/stores/scene-fixtures'
 import { useModelClips } from '@/stores/model-clips'
 import { useSceneViews } from '@/stores/scene-views'
+import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationPanel } from './AnimationPanel'
 
@@ -32,6 +33,7 @@ describe('AnimationPanel', () => {
   beforeEach(() => {
     withSelectedCube()
     useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
   })
 
   it('says what to do while no track has been added', () => {
@@ -63,57 +65,95 @@ describe('AnimationPanel', () => {
     expect(canUndo(historyOf(useScenes.getState(), DOCUMENT))).toBe(true)
   })
 
-  it('sets a key where the head stands, and takes it back off', async () => {
+  it('shows ONE line for the object, whatever its channel count', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Rotation/ }))
 
-    await userEvent.click(screen.getByRole('button', { name: /Poser une clé ici/ }))
-    expect(tracks()[0]?.keys).toHaveLength(1)
-
-    await userEvent.click(screen.getByRole('button', { name: /Retirer la clé posée ici/ }))
-    expect(tracks()[0]?.keys).toHaveLength(0)
+    // The name the old column never had room to show.
+    expect(screen.getByTestId('anim-subject-cube-1')).toHaveTextContent('cube-1')
+    expect(screen.queryByTestId('anim-channel-' + (tracks()[0]?.id ?? ''))).not.toBeInTheDocument()
   })
 
-  it('opens a key on the neutral value, so posing one moves nothing by itself', async () => {
+  it('unfolds the channels under the object, and folds them back', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
+    const channel = () => screen.queryByTestId('anim-channel-' + (tracks()[0]?.id ?? ''))
+    const fold = () =>
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', { name: 'cube-1' })
+
+    await userEvent.click(fold())
+    expect(channel()).toBeInTheDocument()
+
+    await userEvent.click(fold())
+    expect(channel()).not.toBeInTheDocument()
+  })
+
+  it('keys every channel at once, which is what a pose is', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Échelle/ }))
+
+    await userEvent.click(screen.getByRole('button', { name: /sur tout ce qui est animé/ }))
+
+    expect(tracks()[0]?.keys).toHaveLength(1)
+    expect(tracks()[1]?.keys).toHaveLength(1)
+  })
+
+  it('keys a scale at one, not zero — a neutral key must not flatten the object', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Échelle/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Poser une clé ici/ }))
+    await userEvent.click(screen.getByRole('button', { name: /sur tout ce qui est animé/ }))
 
-    // One, not zero: the neutral of a scale is what leaves the object its own size.
     expect(tracks()[0]?.keys[0]?.value).toEqual({ x: 1, y: 1, z: 1 })
   })
 
-  it('arms a track, which is what makes the gizmo write into it', async () => {
+  it('costs ONE undo for a key on three channels', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Armer la piste/ }))
-
-    expect(tracks()[0]?.armed).toBe(true)
-  })
-
-  it('keeps arming off the undo stack: it is how one works, not what one made', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Rotation/ }))
     const before = historyOf(useScenes.getState(), DOCUMENT).past.length
 
-    await userEvent.click(screen.getByRole('button', { name: /Armer la piste/ }))
+    await userEvent.click(screen.getByRole('button', { name: /sur tout ce qui est animé/ }))
+    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+  })
+
+  it('records with auto-key, and keeps the switch off the undo stack', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+
+    await userEvent.click(screen.getByRole('button', { name: /Enregistrement automatique/ }))
+
+    expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).autoKey).toBe(true)
     expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
   })
 
-  it('removes a track from its own row', async () => {
+  it('removes a channel from its own row, once unfolded', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', { name: 'cube-1' }),
+    )
     await userEvent.click(screen.getByRole('button', { name: /Supprimer la piste/ }))
 
     expect(tracks()).toHaveLength(0)
   })
 
+  it('sets the duration and the rate, which nothing could reach before', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    await userEvent.tripleClick(screen.getByLabelText(/Images\/s/))
+    await userEvent.keyboard('30{Enter}')
+
+    expect(timelineOf().fps).toBe(30)
+  })
+
   it('runs the head back to the start', async () => {
-    useSceneViews.getState().setPlayhead(DOCUMENT, 2)
+    useSceneViews.getState().setPlayhead(DOCUMENT, 2_000_000)
     render(<AnimationPanel documentId={DOCUMENT} />)
     await userEvent.click(screen.getByRole('button', { name: /Revenir au début/ }))
 
-    expect(screen.getByText(/0\.00 \//)).toBeInTheDocument()
+    expect(screen.getByText('00:00:00:00')).toBeInTheDocument()
   })
 
   it('switches between playing and paused', async () => {

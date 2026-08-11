@@ -8,6 +8,7 @@ import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
 import { movesToCommand } from '@/engines/scene/animation-commands'
+import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { setDocumentTitle } from '@/app/dockview-api'
@@ -66,8 +67,9 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
   const store = useScenes.getState()
   const state = sceneOf(store, documentId)
   const at = snapToFrame(viewOf(useSceneViews.getState(), documentId).playhead, state.animation.fps)
+  const recording = animationViewOf(useAnimationViews.getState(), documentId).autoKey
 
-  const command = movesToCommand(state, moves, at)
+  const command = movesToCommand(state, moves, at, recording)
   if (command) store.runCommand(documentId, command)
 }
 

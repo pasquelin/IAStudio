@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { TrackTarget } from '@shared/domain/animation'
+import { SECOND } from '@shared/domain/time'
 import {
   addAnimationTrack,
-  armedTracksFor,
+  recordingTracksFor,
+  keySubject,
+  moveAnimationKey,
   movesToCommand,
   recordMove,
   removeAnimationKey,
   removeAnimationTrack,
   setAnimationKey,
   setTimelineSettings,
+  updateAnimationTrack,
 } from './animation-commands'
 import { EMPTY_SCENE, type SceneNode, type SceneState } from './scene-state'
 
@@ -162,36 +166,49 @@ describe('what an armed track catches', () => {
     animation: {
       ...state.animation,
       tracks: state.animation.tracks.map(track =>
-        track.id === trackId ? { ...track, armed: true } : track,
+        track.id === trackId ? { ...track, locked: true } : track,
       ),
     },
   })
 
-  it('names no track while none is armed, so a drag stays a move of the node', () => {
-    expect(armedTracksFor(withTwoTracks(), 'cube')).toEqual([])
+  it('names every channel of that node, and no other node', () => {
+    const state = withTwoTracks()
+    expect(recordingTracksFor(state, 'cube').map(track => track.id)).toEqual(['track-1', 'track-2'])
+    expect(recordingTracksFor(state, 'sphere')).toEqual([])
   })
 
-  it('names the armed track of that node, and never a locked one', () => {
+  it('leaves a locked channel out, so a padlock still refuses a drag', () => {
     const state = armed(withTwoTracks(), 'track-1')
-    expect(armedTracksFor(state, 'cube').map(track => track.id)).toEqual(['track-1'])
-    expect(armedTracksFor(state, 'sphere')).toEqual([])
+    expect(recordingTracksFor(state, 'cube').map(track => track.id)).toEqual(['track-2'])
+  })
+
+  it('keeps a bone apart from the node that carries it', () => {
+    const boned = addAnimationTrack(
+      { nodeId: 'cube', bone: 'Hips', property: 'position' },
+      'Cube Hips',
+      'track-bone',
+    ).apply(withTwoTracks())
+
+    expect(recordingTracksFor(boned, 'cube').map(track => track.id)).toEqual(['track-1', 'track-2'])
+    // And a bone IS reachable now, which is what the pose mode needed.
+    expect(recordingTracksFor(boned, 'cube', 'Hips').map(track => track.id)).toEqual(['track-bone'])
   })
 
   it('writes the DIFFERENCE to the rest pose, never the pose itself', () => {
-    const state = armed(withTwoTracks(), 'track-1')
+    const state = withTwoTracks()
     const pose = { ...rest, position: vec(4) }
-    const [command] = recordMove(rest, pose, 1, armedTracksFor(state, 'cube'))
-    if (!command) throw new Error('one track is armed')
+    const [command] = recordMove(rest, pose, 1, recordingTracksFor(state, 'cube').slice(0, 1))
+    if (!command) throw new Error('one channel is recording')
 
     const after = command.apply(state)
     expect(after.animation.tracks[0]?.keys[0]).toMatchObject({ time: 1, value: vec(3) })
   })
 
   it('divides a scale back out rather than subtracting it', () => {
-    const state = armed(withTwoTracks(), 'track-2')
+    const state = withTwoTracks()
     const pose = { ...rest, scale: { x: 6, y: 6, z: 6 } }
-    const [command] = recordMove(rest, pose, 0, armedTracksFor(state, 'cube'))
-    if (!command) throw new Error('one track is armed')
+    const [command] = recordMove(rest, pose, 0, recordingTracksFor(state, 'cube').slice(1))
+    if (!command) throw new Error('one channel is recording')
 
     expect(command.apply(state).animation.tracks[1]?.keys[0]?.value.x).toBe(3)
   })
@@ -228,27 +245,17 @@ describe('what one drag becomes over a whole selection', () => {
     type: 'group',
   })
 
-  const sceneWith = (armedTrack: boolean): SceneState => {
-    const state = addAnimationTrack(target('cube'), 'Cube position', 'track-1').apply({
+  const sceneWith = (): SceneState =>
+    addAnimationTrack(target('cube'), 'Cube position', 'track-1').apply({
       ...EMPTY_SCENE,
       nodes: [node('cube'), node('sphere')],
     })
-    return armedTrack
-      ? {
-          ...state,
-          animation: {
-            ...state.animation,
-            tracks: state.animation.tracks.map(track => ({ ...track, armed: true })),
-          },
-        }
-      : state
-  }
 
   const moved = (id: string, x: number) => ({ id, transform: { ...rest, position: vec(x) } })
 
-  it('moves the nodes themselves while nothing is armed', () => {
-    const state = sceneWith(false)
-    const command = movesToCommand(state, [moved('cube', 5)], 0)
+  it('moves the nodes themselves while auto-key is off', () => {
+    const state = sceneWith()
+    const command = movesToCommand(state, [moved('cube', 5)], 0, false)
     if (!command) throw new Error('one node moved')
 
     const after = command.apply(state)
@@ -256,20 +263,20 @@ describe('what one drag becomes over a whole selection', () => {
     expect(after.animation.tracks[0]?.keys).toEqual([])
   })
 
-  it('writes a key instead, on the node whose track is armed', () => {
-    const state = sceneWith(true)
-    const command = movesToCommand(state, [moved('cube', 5)], 1)
+  it('writes a key instead once auto-key is recording', () => {
+    const state = sceneWith()
+    const command = movesToCommand(state, [moved('cube', 5)], 1, true)
     if (!command) throw new Error('one node moved')
 
     const after = command.apply(state)
     expect(after.animation.tracks[0]?.keys[0]).toMatchObject({ time: 1, value: vec(5) })
-    // The node itself never moved: that is the whole point of an armed track.
+    // The node itself never moved: that is the whole point of recording.
     expect(after.nodes[0]?.transform.position.x).toBe(0)
   })
 
   it('is ONE command over a mixed selection, so one drag is one undo', () => {
-    const state = sceneWith(true)
-    const command = movesToCommand(state, [moved('cube', 5), moved('sphere', 9)], 0)
+    const state = sceneWith()
+    const command = movesToCommand(state, [moved('cube', 5), moved('sphere', 9)], 0, true)
     if (!command) throw new Error('two nodes moved')
 
     const after = command.apply(state)
@@ -280,6 +287,100 @@ describe('what one drag becomes over a whole selection', () => {
   })
 
   it('answers nothing when there is nothing to write', () => {
-    expect(movesToCommand(sceneWith(false), [], 0)).toBeNull()
+    expect(movesToCommand(sceneWith(), [], 0, false)).toBeNull()
+  })
+})
+
+describe('keying a whole subject at once', () => {
+  it('writes on every channel, so one press keys move, turn and size together', () => {
+    const state = withTwoTracks()
+    const command = keySubject(state, ['track-1', 'track-2'], 2 * SECOND)
+    if (!command) throw new Error('two tracks were given')
+
+    const after = command.apply(state)
+    expect(tracksOf(after)[0]?.keys).toHaveLength(1)
+    expect(tracksOf(after)[1]?.keys).toHaveLength(1)
+  })
+
+  it('holds each channel at the value it ALREADY stands at, never at a neutral', () => {
+    // A scale track keyed with nothing on it must hold one, not zero — zero would flatten it.
+    const state = withTwoTracks()
+    const command = keySubject(state, ['track-2'], 0)
+    if (!command) throw new Error('one track was given')
+
+    expect(command.apply(state).animation.tracks[1]?.keys[0]?.value).toEqual({ x: 1, y: 1, z: 1 })
+  })
+
+  it('pins the interpolated pose when it lands between two keys', () => {
+    const keyed = setAnimationKey('track-1', 0, vec(0)).apply(withTwoTracks())
+    const spanned = setAnimationKey('track-1', 4 * SECOND, vec(8)).apply(keyed)
+
+    const command = keySubject(spanned, ['track-1'], 2 * SECOND)
+    if (!command) throw new Error('one track was given')
+
+    const written = command.apply(spanned).animation.tracks[0]?.keys
+    expect(written?.find(key => key.time === 2 * SECOND)?.value.x).toBeCloseTo(4, 5)
+  })
+
+  it('reverts as ONE entry, so a key costs one undo and not three', () => {
+    const state = withTwoTracks()
+    const command = keySubject(state, ['track-1', 'track-2'], SECOND)
+    if (!command) throw new Error('two tracks were given')
+
+    expect(command.revert(command.apply(state))).toEqual(state)
+  })
+
+  it('skips a locked channel rather than refusing the whole press', () => {
+    const state = updateAnimationTrack(withTwoTracks(), 'track-1', track => ({
+      ...track,
+      locked: true,
+    }))
+    const command = keySubject(state, ['track-1', 'track-2'], 0)
+    if (!command) throw new Error('one channel is still writable')
+
+    const after = command.apply(state)
+    expect(tracksOf(after)[0]?.keys).toHaveLength(0)
+    expect(tracksOf(after)[1]?.keys).toHaveLength(1)
+  })
+
+  it('answers nothing when no channel can take a key', () => {
+    expect(keySubject(withTwoTracks(), [], 0)).toBeNull()
+    expect(keySubject(withTwoTracks(), ['nowhere'], 0)).toBeNull()
+  })
+})
+
+describe('sliding a key along its track', () => {
+  it('carries the value to the new instant', () => {
+    const state = setAnimationKey('track-1', SECOND, vec(7)).apply(withTwoTracks())
+    const after = moveAnimationKey('track-1', SECOND, 3 * SECOND).apply(state)
+
+    expect(tracksOf(after)[0]?.keys).toEqual([{ time: 3 * SECOND, value: vec(7) }])
+  })
+
+  it('replaces a key already standing where it lands', () => {
+    const one = setAnimationKey('track-1', 0, vec(1)).apply(withTwoTracks())
+    const two = setAnimationKey('track-1', 2 * SECOND, vec(9)).apply(one)
+
+    const after = moveAnimationKey('track-1', 0, 2 * SECOND).apply(two)
+    expect(tracksOf(after)[0]?.keys).toEqual([{ time: 2 * SECOND, value: vec(1) }])
+  })
+
+  it('leaves the track alone when nothing stands at the instant given', () => {
+    const state = setAnimationKey('track-1', SECOND, vec(7)).apply(withTwoTracks())
+    expect(moveAnimationKey('track-1', 9 * SECOND, 0).apply(state)).toBe(state)
+  })
+
+  it('refuses to move a key of a locked track', () => {
+    const keyed = setAnimationKey('track-1', SECOND, vec(7)).apply(withTwoTracks())
+    const locked = updateAnimationTrack(keyed, 'track-1', track => ({ ...track, locked: true }))
+
+    expect(moveAnimationKey('track-1', SECOND, 0).apply(locked)).toBe(locked)
+  })
+
+  it('puts the key back where it was', () => {
+    const state = setAnimationKey('track-1', SECOND, vec(7)).apply(withTwoTracks())
+    const command = moveAnimationKey('track-1', SECOND, 3 * SECOND)
+
+    expect(command.revert(command.apply(state))).toEqual(state)
   })
 })

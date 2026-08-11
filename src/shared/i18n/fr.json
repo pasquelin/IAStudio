@@ -988,9 +988,9 @@
   "skyboxFaceSize": "{{size}} × {{size}}",
   "sceneViews": {
     "free": "Perspective",
-    "freeHint": "La vue qu\u2019on pilote : c\u2019est la seule qui tourne",
+    "freeHint": "La vue qu’on pilote : c’est la seule qui tourne",
     "pane": "Vue {{number, number}}",
-    "paneHint": "Choisit ce que ce quart montre \u2014 une perspective, ou un axe qui ne tourne pas",
+    "paneHint": "Choisit ce que ce quart montre — une perspective, ou un axe qui ne tourne pas",
     "front": "De face",
     "back": "De dos",
     "left": "De gauche",
@@ -1024,7 +1024,7 @@
     "material": "Aperçu matériau",
     "materialHint": "Les matériaux sous le seul éclairage du studio, sans les lumières de la scène",
     "matcap": "Matcap",
-    "matcapHint": "Un éclairage capté sur une sphère : c\u2019est le relief qui se lit, pas la couleur",
+    "matcapHint": "Un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur",
     "density": "Densité",
     "densityHint": "Du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser"
   },
@@ -1479,17 +1479,17 @@
     },
     "sceneQuadEdges": {
       "title": "Arêtes en quads",
-      "help": "Redessine le filaire sans les diagonales que la triangulation a ajoutées. Un fichier GLB ne contient jamais de quads : c\u2019est une reconstruction par angle, fidèle sauf sur les surfaces très courbées."
+      "help": "Redessine le filaire sans les diagonales que la triangulation a ajoutées. Un fichier GLB ne contient jamais de quads : c’est une reconstruction par angle, fidèle sauf sur les surfaces très courbées."
     },
     "sceneCounters": {
-    "title": "Ce que la scène coûte",
-    "triangles": "Triangles",
-    "vertices": "Sommets",
-    "draws": "Appels de dessin",
-    "textures": "Textures",
-    "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
-  },
-  "sceneDisplay": {
+      "title": "Ce que la scène coûte",
+      "triangles": "Triangles",
+      "vertices": "Sommets",
+      "draws": "Appels de dessin",
+      "textures": "Textures",
+      "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
+    },
+    "sceneDisplay": {
       "title": "Affichage",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },
@@ -2245,6 +2245,15 @@
     "renderHint": "Écrit un fichier vidéo de ce que voit la caméra de la scène",
     "renderNeedsCamera": "Ajoutez une caméra à la scène pour pouvoir la rendre",
     "bone": "Os",
-    "wholeModel": "Le modèle entier"
+    "wholeModel": "Le modèle entier",
+    "autoKey": "Enregistrement automatique",
+    "autoKeyHint": "Bouger un objet pose une clé au lieu de déplacer sa pose de repos",
+    "keySubject": "Poser une clé sur {{name}}",
+    "keySubjectHint": "Pose une clé sur toutes les propriétés de cet objet",
+    "foldHint": "Afficher ou masquer les propriétés animées",
+    "duration": "Durée",
+    "fps": "Images/s",
+    "keyAll": "Poser une clé sur tout ce qui est animé",
+    "keyAllHint": "Pose une clé sur chaque objet animé, à la position de la tête"
   }
 }

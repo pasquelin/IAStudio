@@ -1,10 +1,10 @@
 import { Euler, Quaternion } from 'three'
 import { describe, expect, it } from 'vitest'
-import type { AnimationTimeline, AnimationTrack, Keyframe } from '@shared/domain/animation'
-import { EMPTY_TIMELINE, ONE, ZERO } from '@shared/domain/animation'
+import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
+import { ONE, ZERO } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
+import { animationTrack, timelineWith } from './animation-fixtures'
 import { IDENTITY_TRANSFORM } from './scene-state'
-import type { TrackProperty } from '@shared/domain/animation'
 import {
   clampPlayhead,
   deltaOf,
@@ -19,30 +19,8 @@ import {
 
 const vec = (x: number, y = 0, z = 0) => ({ x, y, z })
 
-function track(
-  id: string,
-  property: TrackProperty,
-  keys: Keyframe[],
-  extra: Partial<AnimationTrack> = {},
-): AnimationTrack {
-  return {
-    id,
-    name: id,
-    index: 0,
-    muted: false,
-    solo: false,
-    locked: false,
-    armed: false,
-    target: { nodeId: 'cube', property },
-    keys,
-    ...extra,
-  }
-}
-
-const timelineOf = (tracks: AnimationTrack[]): AnimationTimeline => ({
-  ...EMPTY_TIMELINE,
-  tracks,
-})
+const track = animationTrack
+const timelineOf = (tracks: AnimationTrack[]): AnimationTimeline => timelineWith(tracks)
 
 describe('where a track stands', () => {
   it('answers its neutral while it holds no key at all', () => {

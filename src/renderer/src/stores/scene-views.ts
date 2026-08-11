@@ -19,7 +19,7 @@ export type SceneView = {
   quadEdges: boolean
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
-  /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
+  /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
   playhead: Us
   playing: boolean
 }

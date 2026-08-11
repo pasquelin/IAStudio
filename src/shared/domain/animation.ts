@@ -35,11 +35,6 @@ export type AnimationTrack = {
   muted: boolean
   solo: boolean
   locked: boolean
-  /**
-   * Where the gizmo writes. Additive tracks make this necessary rather than nice: with no track
-   * armed, moving an object writes to its rest pose and the tracks drag it straight back.
-   */
-  armed: boolean
   target: TrackTarget
   /** Sorted by time. Nothing outside the commands may append to this. */
   keys: readonly Keyframe[]
