@@ -1,3 +1,4 @@
+import { placeRows, rowAtOffset, rowsHeight } from './band'
 import {
   clipEnd,
   snapToFrame,
@@ -68,20 +69,15 @@ export type TrackRow = {
 
 /**
  * Rows are stacked in track order with their own heights, so every reader — painter, hit test,
- * header column — derives a position the same way instead of each cumulating its own.
+ * header column — derives a position the same way instead of each cumulating its own. The stack
+ * itself is `band.ts`, which a scene's animation lays out the same way.
  */
 export function trackRows(state: SequenceState): TrackRow[] {
-  const rows: TrackRow[] = []
-  let offset = 0
-  for (const track of state.tracks) {
-    rows.push({ track, offset })
-    offset += track.height
-  }
-  return rows
+  return placeRows(state.tracks).map(({ item, offset }) => ({ track: item, offset }))
 }
 
 export function tracksHeight(state: SequenceState): number {
-  return state.tracks.reduce((total, track) => total + track.height, 0)
+  return rowsHeight(state.tracks)
 }
 
 export function trackTop(state: SequenceState, index: number, viewport: Viewport): number {
@@ -93,13 +89,8 @@ export function trackTop(state: SequenceState, index: number, viewport: Viewport
 
 /** The row under a vertical coordinate, or nothing below the last track. */
 export function rowAt(state: SequenceState, viewport: Viewport, y: number): TrackRow | null {
-  const from = y + viewport.scrollTop - RULER_HEIGHT
-  if (from < 0) return null
-
-  for (const row of trackRows(state)) {
-    if (from < row.offset + row.track.height) return row
-  }
-  return null
+  const found = rowAtOffset(state.tracks, y + viewport.scrollTop - RULER_HEIGHT)
+  return found ? { track: found.item, offset: found.offset } : null
 }
 
 export function visibleRange(viewport: Viewport, width: number): [Us, Us] {
