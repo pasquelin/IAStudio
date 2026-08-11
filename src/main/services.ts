@@ -452,13 +452,6 @@ export function createServices(settings: SettingsStore): Services {
     now: () => new Date(),
   })
 
-  const prompts = createPromptAssist({
-    api: () => promptAssistApiOf(client.require()),
-    // Through the registry rather than the API: the generator just described the model to draw
-    // the form, so the descriptors are warm and no round trip is spent narrowing the answer.
-    fields: async modelId => (await models.describe(modelId)).fields,
-  })
-
   // The two need each other: the journal writes into the open project's catalogue, and the
   // project must see the journal emptied before that catalogue stops answering. Read at call
   // time rather than at construction, which is the only order that ties the knot.
@@ -725,10 +718,20 @@ export function createServices(settings: SettingsStore): Services {
    * resolved per call, like every other service here: the project and the key both change under
    * a resolver held for the life of the process.
    */
-  const resolveAssetInputs = createAssetInputResolver({
+  const assetInputs = createAssetInputResolver({
     find: assetId => project.catalog().find(assetId),
     push: assetId => cloudAssets.push(assetId),
     activeOwnerId: ownerScope.current,
+  })
+
+  // Built here rather than beside the other Scenario services, because it needs the resolver
+  // above and the resolver needs the project and the cloud backend.
+  const prompts = createPromptAssist({
+    api: () => promptAssistApiOf(client.require()),
+    // Through the registry rather than the API: the generator just described the model to draw
+    // the form, so the descriptors are warm and no round trip is spent narrowing the answer.
+    fields: async modelId => (await models.describe(modelId)).fields,
+    resolvePictureIds: assetInputs.resolvePictureIds,
   })
 
   /**
@@ -776,7 +779,7 @@ export function createServices(settings: SettingsStore): Services {
       },
     },
     projectPath: () => project.current()?.path ?? null,
-    resolveAssetInputs,
+    resolveAssetInputs: assetInputs.resolveBody,
     persist: (unfinished, handled) => {
       // Nothing waits on this: the write is settled at quit and on a project change, which are
       // the two moments the process may not outlive it. Said out loud all the same — a full disk

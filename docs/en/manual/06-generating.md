@@ -173,7 +173,7 @@ studio does not try to guess which of its fields is a prompt.
 |---|---|
 | **Suggest variants** | has your draft rewritten by the model that will read it |
 | **Translate to English** | rewrites your text in the language the models learned on |
-| **Describe the style of the references** | reads the pictures already on the form and writes what they have in common |
+| **Describe the style of the references** | sends the pictures on the form if they are not in the library yet, then writes what they have in common |
 
 While it works, "Writing variants…" appears and all three buttons are inactive.
 
@@ -209,10 +209,17 @@ own.
 
 Neither is a failure, and nothing is spent when they appear.
 
-> **These requests are immediate**, unlike a generation: they do not enter the queue, do not show
-> in the status line, and there is nothing to cancel. **Suggesting variants costs no creative
-> units** — that is measured, not assumed. For translation and style reading the studio measures
-> nothing: treat them as ordinary calls.
+> **These requests do not enter the queue**: they do not show in the status line, and there is
+> nothing to cancel. **Suggesting variants costs no creative units** — that is measured, not
+> assumed. For translation and style reading the studio measures nothing: treat them as ordinary
+> calls.
+>
+> **One exception to how fast they are: the first click on "Describe the style of the
+> references".** A picture the library does not know yet has to go up before the API can look at
+> it, and that transfer is a whole file — on a large PNG the wait is counted in seconds. The
+> picture's badge then goes from **Local only** to **Synced**, and later clicks on the same
+> picture are immediate. This is intended: the gesture is explicit, so the transfer is expected.
+> **Nothing of the sort happens while you type** — the cost estimate never sends a picture.
 
 ---
 

@@ -36,14 +36,16 @@ describe('createAssetInputResolver', () => {
       asset('asset_local', { remoteAssetId: 'asset_remote' }),
     ])
 
-    expect(await resolve({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
     expect(push).not.toHaveBeenCalled()
   })
 
   it('sends an asset the account has never seen, then names the twin it became', async () => {
     const { resolve, push } = resolverOver([asset('asset_local')])
 
-    expect(await resolve({ image: 'asset_local' })).toEqual({ image: 'remote-of-asset_local' })
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({
+      image: 'remote-of-asset_local',
+    })
     expect(push).toHaveBeenCalledWith('asset_local')
   })
 
@@ -51,7 +53,7 @@ describe('createAssetInputResolver', () => {
     const { resolve, push } = resolverOver([])
 
     const body = { prompt: 'a fox', image: 'https://example.test/fox.png', seed: 4 }
-    expect(await resolve(body)).toEqual(body)
+    expect(await resolve.resolveBody(body)).toEqual(body)
     expect(push).not.toHaveBeenCalled()
   })
 
@@ -61,7 +63,9 @@ describe('createAssetInputResolver', () => {
       asset('asset_b', { remoteAssetId: 'asset_rb' }),
     ])
 
-    expect(await resolve({ referenceImages: ['asset_a', 'unknown', 'asset_b'] })).toEqual({
+    expect(
+      await resolve.resolveBody({ referenceImages: ['asset_a', 'unknown', 'asset_b'] }),
+    ).toEqual({
       referenceImages: ['asset_ra', 'unknown', 'asset_rb'],
     })
   })
@@ -69,7 +73,7 @@ describe('createAssetInputResolver', () => {
   it('reaches a value nested under an object', async () => {
     const { resolve } = resolverOver([asset('asset_local', { remoteAssetId: 'asset_remote' })])
 
-    expect(await resolve({ layers: { base: 'asset_local' } })).toEqual({
+    expect(await resolve.resolveBody({ layers: { base: 'asset_local' } })).toEqual({
       layers: { base: 'asset_remote' },
     })
   })
@@ -79,7 +83,7 @@ describe('createAssetInputResolver', () => {
   it('sends an asset named twice in one body only once', async () => {
     const { resolve, push } = resolverOver([asset('asset_local')])
 
-    expect(await resolve({ image: 'asset_local', mask: 'asset_local' })).toEqual({
+    expect(await resolve.resolveBody({ image: 'asset_local', mask: 'asset_local' })).toEqual({
       image: 'remote-of-asset_local',
       mask: 'remote-of-asset_local',
     })
@@ -91,7 +95,7 @@ describe('createAssetInputResolver', () => {
   it('leaves an asset id the catalogue has no row for as it stands', async () => {
     const { resolve, push } = resolverOver([])
 
-    expect(await resolve({ image: 'asset_rDVkmKpz3eN41aDsqMNXPbCT' })).toEqual({
+    expect(await resolve.resolveBody({ image: 'asset_rDVkmKpz3eN41aDsqMNXPbCT' })).toEqual({
       image: 'asset_rDVkmKpz3eN41aDsqMNXPbCT',
     })
     expect(push).not.toHaveBeenCalled()
@@ -105,7 +109,9 @@ describe('createAssetInputResolver', () => {
       'proj_here',
     )
 
-    expect(await resolve({ image: 'asset_local' })).toEqual({ image: 'remote-of-asset_local' })
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({
+      image: 'remote-of-asset_local',
+    })
     expect(push).toHaveBeenCalledWith('asset_local')
   })
 
@@ -119,7 +125,9 @@ describe('createAssetInputResolver', () => {
       }),
     ])
 
-    expect(await resolve({ image: 'asset_local' })).toEqual({ image: 'remote-of-asset_local' })
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({
+      image: 'remote-of-asset_local',
+    })
     expect(push).toHaveBeenCalledWith('asset_local')
   })
 
@@ -132,7 +140,7 @@ describe('createAssetInputResolver', () => {
       }),
     ])
 
-    expect(await resolve({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
     expect(push).not.toHaveBeenCalled()
   })
 
@@ -145,8 +153,8 @@ describe('createAssetInputResolver', () => {
     const { resolve, push } = resolverOver([asset('asset_local')])
 
     const [first, second] = await Promise.all([
-      resolve({ image: 'asset_local' }),
-      resolve({ mask: 'asset_local' }),
+      resolve.resolveBody({ image: 'asset_local' }),
+      resolve.resolveBody({ mask: 'asset_local' }),
     ])
 
     expect(first).toEqual({ image: 'remote-of-asset_local' })
@@ -165,8 +173,8 @@ describe('createAssetInputResolver', () => {
     }
     const resolve = createAssetInputResolver({ find, push, activeOwnerId: () => null })
 
-    await expect(resolve({ image: 'asset_local' })).rejects.toThrow('offline')
-    expect(await resolve({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
+    await expect(resolve.resolveBody({ image: 'asset_local' })).rejects.toThrow('offline')
+    expect(await resolve.resolveBody({ image: 'asset_local' })).toEqual({ image: 'asset_remote' })
   })
 
   it('refuses a submission when a sent asset came back without a twin', async () => {
@@ -174,13 +182,13 @@ describe('createAssetInputResolver', () => {
     const push = async (): Promise<Asset> => asset('asset_local')
     const resolve = createAssetInputResolver({ find, push, activeOwnerId: () => null })
 
-    await expect(resolve({ image: 'asset_local' })).rejects.toThrow('asset_local')
+    await expect(resolve.resolveBody({ image: 'asset_local' })).rejects.toThrow('asset_local')
   })
 
   it('does not ask the catalogue about a value no local id could look like', async () => {
     const { resolve, find } = resolverOver([])
 
-    await resolve({ prompt: 'a fox in the snow', steps: 30 })
+    await resolve.resolveBody({ prompt: 'a fox in the snow', steps: 30 })
     expect(find).not.toHaveBeenCalled()
   })
 
@@ -193,7 +201,7 @@ describe('createAssetInputResolver', () => {
     }
     const resolve = createAssetInputResolver({ find, push, activeOwnerId: () => null })
 
-    await expect(resolve({ image: 'asset_local' })).rejects.toThrow('image/tiff')
+    await expect(resolve.resolveBody({ image: 'asset_local' })).rejects.toThrow('image/tiff')
   })
 
   it('survives a body that holds itself', async () => {
@@ -201,7 +209,96 @@ describe('createAssetInputResolver', () => {
     const body: Record<string, unknown> = { image: 'asset_local' }
     body.itself = body
 
-    const resolved = await resolve(body)
+    const resolved = await resolve.resolveBody(body)
     expect(resolved.image).toBe('asset_remote')
+  })
+})
+
+describe('resolvePictureIds', () => {
+  it('rewrites every local id of a list, in the order it was given', async () => {
+    const { resolve } = resolverOver([
+      asset('asset_a', { remoteAssetId: 'asset_ra' }),
+      asset('asset_b', { remoteAssetId: 'asset_rb' }),
+    ])
+
+    await expect(resolve.resolvePictureIds(['asset_a', 'asset_b'])).resolves.toEqual([
+      'asset_ra',
+      'asset_rb',
+    ])
+  })
+
+  it('sends a picture the account has never seen, then names the twin it became', async () => {
+    const { resolve, push } = resolverOver([asset('asset_local')])
+
+    await expect(resolve.resolvePictureIds(['asset_local'])).resolves.toEqual([
+      'remote-of-asset_local',
+    ])
+    expect(push).toHaveBeenCalledWith('asset_local')
+  })
+
+  /**
+   * The hole this door does NOT close, pinned so it cannot be lost: both vocabularies share the
+   * `asset_` prefix, so an id no row answers to is indistinguishable from one pasted from the
+   * webapp. Drop a picture on the form, delete it from the assets panel, then click — the local
+   * id goes out and the API answers as though no reference had been given. Written down in
+   * `docs/todo.md` under 6.2.
+   */
+  it('lets an id the catalogue no longer answers to go out as it stands', async () => {
+    const { resolve, push } = resolverOver([])
+
+    await expect(resolve.resolvePictureIds(['asset_deleted'])).resolves.toEqual(['asset_deleted'])
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  // What the form hands over is either kind, and the field cannot say which — see
+  // `referencePictures`. A data URL is already something the API reads.
+  it('leaves a data URL as it stands, without asking the catalogue', async () => {
+    const { resolve, find, push } = resolverOver([])
+
+    await expect(resolve.resolvePictureIds(['data:image/png;base64,iVBOR'])).resolves.toEqual([
+      'data:image/png;base64,iVBOR',
+    ])
+    expect(find).not.toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
+  })
+
+  // Not dropped: a style read from two of three pictures, worded as though it had seen all
+  // three, is the silent wrongness this whole path exists to close.
+  it('fails the whole call when one picture cannot be sent', async () => {
+    const find = async (): Promise<Asset> => asset('asset_local')
+    const push = async (): Promise<Asset> => {
+      throw new Error('the API does not accept image/tiff')
+    }
+    const resolve = createAssetInputResolver({ find, push, activeOwnerId: () => null })
+
+    await expect(resolve.resolvePictureIds(['asset_local'])).rejects.toThrow('image/tiff')
+  })
+
+  // The two doors share one in-flight map, which is the whole reason they are one translator:
+  // assisting on a picture a generation is still sending would otherwise send it twice.
+  it('sends an asset named by a body and a picture list at once only once', async () => {
+    const { resolve, push } = resolverOver([asset('asset_local')])
+
+    const [body, pictures] = await Promise.all([
+      resolve.resolveBody({ image: 'asset_local' }),
+      resolve.resolvePictureIds(['asset_local']),
+    ])
+
+    expect(body).toEqual({ image: 'remote-of-asset_local' })
+    expect(pictures).toEqual(['remote-of-asset_local'])
+    expect(push).toHaveBeenCalledTimes(1)
+  })
+
+  // A key carries its own project: an id twinned under another account names nothing here.
+  it('sends again a twin recorded under another project', async () => {
+    const { resolve, push } = resolverOver(
+      [asset('asset_local', { remoteAssetId: 'asset_remote', remoteOwnerId: 'other-project' })],
+      'this-project',
+    )
+
+    await expect(resolve.resolvePictureIds(['asset_local'])).resolves.toEqual([
+      'remote-of-asset_local',
+    ])
+    expect(push).toHaveBeenCalledWith('asset_local')
   })
 })

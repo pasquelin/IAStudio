@@ -181,7 +181,7 @@ est un prompt.
 |---|---|
 | **Proposer des variantes** | fait réécrire votre brouillon par le modèle qui va le lire |
 | **Traduire en anglais** | réécrit votre texte dans la langue sur laquelle les modèles ont appris |
-| **Décrire le style des références** | lit les images déjà posées sur le formulaire et écrit ce qu’elles ont en commun |
+| **Décrire le style des références** | envoie les images posées sur le formulaire si elles ne sont pas déjà dans la bibliothèque, puis écrit ce qu’elles ont en commun |
 
 Pendant le travail, « Rédaction des variantes… » s’affiche et les trois boutons sont inactifs.
 
@@ -217,10 +217,18 @@ prend toute seule.
 
 Ces deux-là ne sont pas des pannes, et rien n’est dépensé quand ils s’affichent.
 
-> **Ces demandes-là sont immédiates**, contrairement à une génération : elles n’entrent pas dans
-> la file, ne s’affichent pas dans la ligne d’état, et il n’y a rien à annuler. **Proposer des
-> variantes ne coûte aucune unité créative** — c’est mesuré, pas supposé. Pour la traduction et la
-> lecture de style, le studio ne mesure rien : traitez-les comme des appels ordinaires.
+> **Ces demandes-là n’entrent pas dans la file** : elles ne s’affichent pas dans la ligne d’état,
+> et il n’y a rien à annuler. **Proposer des variantes ne coûte aucune unité créative** — c’est
+> mesuré, pas supposé. Pour la traduction et la lecture de style, le studio ne mesure rien :
+> traitez-les comme des appels ordinaires.
+>
+> **Une exception à leur rapidité : le premier clic sur « Décrire le style des références ».** Une
+> image que la bibliothèque ne connaît pas encore doit y monter avant que l’API puisse la
+> regarder, et ce transfert est un fichier entier — sur un gros PNG, l’attente se compte en
+> secondes. Le badge de l’image passe alors de **Local seulement** à **Synchronisé**, et les clics
+> suivants sur la même image sont immédiats. C’est voulu : le geste est explicite, donc l’envoi
+> est attendu. **Rien de tel ne se produit pendant que vous tapez** — l’estimation de coût
+> n’envoie jamais d’image.
 
 ---
 

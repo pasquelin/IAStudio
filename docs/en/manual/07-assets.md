@@ -216,6 +216,12 @@ your file manager.
 Your project is a folder on your disk. Your Scenario account has a library of its own, online.
 The two exist separately, and **nothing travels between them unless you ask**.
 
+> **"Asking" does not mean "asking from this shelf".** Two gestures made elsewhere send a picture
+> without going through the buttons below: **running a generation** that carries a reference
+> picture, and clicking **Describe the style of the references** in the generator (chapter 6). In
+> both cases the API has to see the picture to answer, so the studio sends it once, and its badge
+> turns to **In sync**. Nothing is sent while you type.
+
 ### What a thumbnail's badge tells you
 
 A small mark says where an asset stands with respect to the library:

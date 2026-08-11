@@ -70,13 +70,23 @@ export type PromptAssistDeps = {
   api: () => PromptAssistApi
   /** The target model's fields, to narrow what the API proposes. Served warm by the registry. */
   fields: (modelId: string) => Promise<readonly FieldDescriptor[]>
+  /**
+   * Turns the local asset ids a form carries into the ids Scenario knows them by, sending what
+   * it has never seen — `AssetInputResolver.resolvePictureIds`, the same translator a generation
+   * goes through. Assistance is not a job, so nothing did it on the way, and the API answered on
+   * ids it could not resolve: a style read from no picture, worded as though it had seen one.
+   */
+  resolvePictureIds: (images: readonly string[]) => Promise<string[]>
 }
 
 export type PromptAssist = {
   suggest: (request: SuggestRequest) => Promise<PromptSuggestion[]>
   translate: (draft: string) => Promise<PromptTranslation>
   describeStyle: (images: readonly string[]) => Promise<PromptStyle>
-  /** One caption per image, in the order they were given. */
+  /**
+   * One caption per image, in the order they were given. Takes ids the API already answers to —
+   * captioning runs on what has just been pushed, never on what a form carries.
+   */
   caption: (images: readonly string[]) => Promise<string[]>
 }
 
@@ -88,16 +98,22 @@ export type PromptAssist = {
  */
 const MODE = 'contextual-v2'
 
-export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAssist {
+export function createPromptAssist({
+  api,
+  fields,
+  resolvePictureIds,
+}: PromptAssistDeps): PromptAssist {
   return {
     suggest: async ({ modelId, prompt, images, numResults }) => {
+      const references = images?.length ? await resolvePictureIds(images) : undefined
+
       const answer = await api().prompt({
         mode: MODE,
         modelId,
         // An empty draft is no draft: sent as `""` it reads as an instruction to rewrite
         // nothing, where absent lets the API propose from the model's own examples.
         ...(prompt ? { prompt } : {}),
-        ...(images?.length ? { images } : {}),
+        ...(references ? { images: references } : {}),
         ...(numResults ? { numResults: clampResults(numResults) } : {}),
       })
 
@@ -116,10 +132,15 @@ export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAss
     },
 
     describeStyle: async images => {
-      const { description, synthesis } = await api().describeStyle({ images })
+      const { description, synthesis } = await api().describeStyle({
+        images: await resolvePictureIds(images),
+      })
       return { description, synthesis }
     },
 
+    // Not resolved, unlike the two above: its one caller captions what has ALREADY gone up
+    // (`Describable.remoteAssetId`, `assets/auto-caption.ts`), so there is nothing to rewrite —
+    // and it runs per arriving asset, where a catalogue hop each would be paid for nothing.
     caption: async images => [...(await api().caption({ images })).captions],
   }
 }
