@@ -55,7 +55,7 @@ export function SceneCounters({ scene, selected }: SceneCountersProps) {
     <div
       // Pointer events off: it sits over the canvas, and a click meant for the model must not
       // land on a read-out.
-      className="text-muted bg-panel/80 pointer-events-none absolute bottom-2 left-2 rounded-(--radius-sc-md) px-2 py-1 text-[10px] tabular-nums"
+      className="text-muted bg-panel/80 text-mini pointer-events-none absolute bottom-2 left-2 rounded-(--radius-sc-md) px-2 py-1 tabular-nums"
     >
       <table>
         <caption className="sr-only">{t('sceneCounters.title')}</caption>
