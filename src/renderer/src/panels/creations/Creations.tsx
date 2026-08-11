@@ -1,6 +1,6 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { posterUrl, type Asset } from '@shared/domain/asset'
+import { assetCaption, posterUrl, type Asset } from '@shared/domain/asset'
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
@@ -61,12 +61,11 @@ export function Creations() {
 function Tile({ asset }: { asset: Asset }) {
   const { t } = useTranslation()
   const generation = asset.generation
-  const model = generation?.modelLabel || asset.name
+  const model = assetCaption(asset)
 
   return (
     <ShelfTile
       url={posterUrl(asset) ?? undefined}
-      // The model, as on scenario.com: a row of file names says what one already knows.
       caption={model}
       fallbackIcon={assetIcon(asset.type)}
       hint={generation?.prompt || asset.name}

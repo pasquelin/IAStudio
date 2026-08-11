@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
-import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { Masonry } from '@/design/Masonry'
 import { MediaTile } from '@/design/MediaTile'
 import { chipSkin } from '@/design/styles'
-import { assetIcon } from '@/helpers/workspaces'
+import { cloudTileFace } from '@/helpers/cloud-tile'
 import { Section } from '../Section'
 import { SectionNote } from '../SectionNote'
 import { useExplore } from '../use-explore'
@@ -106,14 +106,5 @@ function Tab({ type, current, onSelect }: TabProps) {
  * owns. Showing a fetch button that may refuse is worse than showing none.
  */
 function Tile({ asset }: { asset: CloudAsset }) {
-  return (
-    <MediaTile
-      fill
-      // The thumbnail, never the asset's own URL: that one is signed, and a parameter appended
-      // to it invalidates the signature — the CDN answers 403.
-      url={cloudPreviewUrl(asset, { width: PREVIEW_WIDTH }) ?? undefined}
-      caption={asset.generation?.modelLabel || asset.name}
-      fallbackIcon={assetIcon(asset.type)}
-    />
-  )
+  return <MediaTile fill {...cloudTileFace(asset, PREVIEW_WIDTH)} />
 }
