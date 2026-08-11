@@ -10,6 +10,8 @@ import {
   mdiArrowUpBold,
   mdiAxisArrow,
   mdiAxisArrowLock,
+  mdiCircleHalfFull,
+  mdiCircleOpacity,
   mdiContentCopy,
   mdiContentCut,
   mdiContentDuplicate,
@@ -20,12 +22,16 @@ import {
   mdiCursorDefaultOutline,
   mdiDelete,
   mdiFolderPlusOutline,
+  mdiGrid,
   mdiBone,
   mdiHexagonOutline,
   mdiMagnet,
   mdiPlus,
   mdiResize,
+  mdiSphere,
+  mdiThermometer,
   mdiVectorSquare,
+  mdiViewGrid,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
@@ -50,6 +56,10 @@ const DISPLAY_ICONS: Record<DisplayMode, string> = {
   shaded: mdiHexagonOutline,
   wireframe: mdiVectorSquare,
   both: mdiCubeUnfolded,
+  solid: mdiCircleOpacity,
+  material: mdiSphere,
+  matcap: mdiCircleHalfFull,
+  density: mdiThermometer,
 }
 
 /** `command` is absent on a group that only offers modes: `add` acts through its rows. */
@@ -150,12 +160,26 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     modes: VIEW_MODES,
   },
   {
+    id: 'quad',
+    command: 'scene.quad',
+    labelKey: 'sceneTools.quad',
+    descriptionKey: 'sceneTools.quadHint',
+    icon: mdiViewGrid,
+  },
+  {
     id: 'display',
     command: 'scene.display',
     labelKey: 'sceneTools.display',
     descriptionKey: 'sceneTools.displayHint',
     icon: mdiHexagonOutline,
     modes: DISPLAY_TOOL_MODES,
+  },
+  {
+    id: 'quadEdges',
+    command: 'scene.quadEdges',
+    labelKey: 'sceneTools.quadEdges',
+    descriptionKey: 'sceneTools.quadEdgesHint',
+    icon: mdiGrid,
   },
   {
     id: 'skeletons',

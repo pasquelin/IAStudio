@@ -1,5 +1,6 @@
 import {
   BoxGeometry,
+  Layers,
   LineBasicMaterial,
   LineSegments,
   Material,
@@ -14,6 +15,12 @@ import {
   applyDisplayMode,
   applyWireOverlay,
   directionOf,
+  DISPLAY_MODES,
+  EDGE_LAYER,
+  hidesSceneLights,
+  showsEdges,
+  substituteFor,
+  substituteOf,
   isDisplayMode,
   isViewDirection,
   viewPosition,
@@ -162,6 +169,37 @@ describe('applyDisplayMode', () => {
   })
 })
 
+describe('what a mode paints with', () => {
+  it('names one substitute per mode, and none for the modes that keep the real materials', () => {
+    expect(DISPLAY_MODES.map(mode => substituteOf(mode))).toEqual([
+      'none',
+      'none',
+      'none',
+      'solid',
+      'none',
+      'matcap',
+      'density',
+    ])
+  })
+
+  it('hides the surfaces of a wireframe read as quads, and of that mode alone', () => {
+    expect(substituteFor('wireframe', true)).toBe('hidden')
+    expect(substituteFor('wireframe', false)).toBe('none')
+    expect(substituteFor('both', true)).toBe('none')
+  })
+
+  it('puts the lights out for the material preview only', () => {
+    expect(DISPLAY_MODES.filter(hidesSceneLights)).toEqual(['material'])
+  })
+
+  it('draws the edge overlay for the two modes that read edges', () => {
+    expect(showsEdges('both', false)).toBe(true)
+    expect(showsEdges('wireframe', true)).toBe(true)
+    expect(showsEdges('wireframe', false)).toBe(false)
+    expect(showsEdges('shaded', true)).toBe(false)
+  })
+})
+
 describe('applyWireOverlay', () => {
   const line = new LineBasicMaterial()
 
@@ -173,6 +211,36 @@ describe('applyWireOverlay', () => {
 
     applyWireOverlay(mesh, false, line)
     expect(mesh.children).toHaveLength(0)
+  })
+
+  /**
+   * A GLB never carries quads — the exporter triangulated long before the file existed — so what
+   * this draws is a reconstruction by angle, and it has to draw FEWER lines than the triangles.
+   */
+  it('drops the triangulation diagonals when the edges are read as quads', () => {
+    const { mesh } = meshTree()
+
+    applyWireOverlay(mesh, true, line, false)
+    const triangles = mesh.children.find(child => child instanceof LineSegments)
+    const trianglePoints = triangles?.geometry.attributes.position?.count ?? 0
+
+    applyWireOverlay(mesh, true, line, true)
+    const quads = mesh.children.find(child => child instanceof LineSegments)
+    const quadPoints = quads?.geometry.attributes.position?.count ?? 0
+
+    expect(quadPoints).toBeGreaterThan(0)
+    expect(quadPoints).toBeLessThan(trianglePoints)
+  })
+
+  /** Which views draw the edges is a per-camera answer, and a layer is what makes it one. */
+  it('hangs the edges on the layer a camera opts into', () => {
+    const { mesh } = meshTree()
+
+    applyWireOverlay(mesh, true, line)
+    const edges = mesh.children.find(child => child instanceof LineSegments)
+
+    expect(edges?.layers.test(new Layers())).toBe(false)
+    expect(edges?.layers.isEnabled(EDGE_LAYER)).toBe(true)
   })
 
   // Applied twice, it would otherwise stack a second set of edges on the first.

@@ -1,5 +1,6 @@
 import {
   Box3,
+  EdgesGeometry,
   LineSegments,
   Mesh,
   Vector3,
@@ -85,10 +86,74 @@ export function directionOf(offset: Vector3): ViewDirection | null {
   )
 }
 
-/** What the viewport draws: the surfaces, their edges, or both. */
-export type DisplayMode = 'shaded' | 'wireframe' | 'both'
+/**
+ * What the viewport draws. Seven answers, and the order is the order the key cycles through:
+ * the three the studio opened with first, then the four a model is judged by.
+ *
+ * `solid`, `matcap` and `density` paint every surface with one stand-in material, so what shows
+ * is the SHAPE — a matcap reads curvature the way a clay render does, and density says which
+ * object of a set carries the triangles. `material` keeps the real materials but drops the
+ * scene's own lights, which is how a texture is judged without a light flattering it.
+ */
+export type DisplayMode =
+  'shaded' | 'wireframe' | 'both' | 'solid' | 'material' | 'matcap' | 'density'
 
-export const DISPLAY_MODES: readonly DisplayMode[] = ['shaded', 'wireframe', 'both']
+export const DISPLAY_MODES: readonly DisplayMode[] = [
+  'shaded',
+  'wireframe',
+  'both',
+  'solid',
+  'material',
+  'matcap',
+  'density',
+]
+
+/**
+ * Which stand-in material a mode paints every surface with, or `none` for the real ones.
+ *
+ * A table rather than a chain of comparisons: the renderer asks it once per pass, and a mode
+ * added without an answer here would silently draw as the real materials.
+ */
+export type Substitute = 'none' | 'solid' | 'matcap' | 'density' | 'hidden'
+
+const SUBSTITUTES: Record<DisplayMode, Substitute> = {
+  shaded: 'none',
+  wireframe: 'none',
+  both: 'none',
+  solid: 'solid',
+  material: 'none',
+  matcap: 'matcap',
+  density: 'density',
+}
+
+export function substituteOf(mode: DisplayMode): Substitute {
+  return SUBSTITUTES[mode]
+}
+
+/**
+ * What a view draws when the edges are read as quads.
+ *
+ * `wireframe` normally rides on the material's own flag, which draws every triangle — diagonals
+ * included, which is precisely what the quad reading removes. Asked for quads, the mode hides
+ * its surfaces instead and lets the edge overlay be the whole picture.
+ */
+export function substituteFor(mode: DisplayMode, quads: boolean): Substitute {
+  if (quads && mode === 'wireframe') return 'hidden'
+  return substituteOf(mode)
+}
+
+/** Whether this view draws the edge overlay, which is where the quad reading lives. */
+export function showsEdges(mode: DisplayMode, quads: boolean): boolean {
+  return mode === 'both' || (quads && mode === 'wireframe')
+}
+
+/**
+ * Whether the scene's own lights are put out for this view. Only the material preview does it —
+ * the point of that mode is to judge a material against the studio environment alone.
+ */
+export function hidesSceneLights(mode: DisplayMode): boolean {
+  return mode === 'material'
+}
 
 /** The next mode in the list, wrapping — what one key does when three modes share it. */
 export function nextDisplayMode(mode: DisplayMode): DisplayMode {
@@ -135,13 +200,34 @@ function materialsOf(mesh: Mesh): readonly Material[] {
 export const OVERLAY_NAME = 'wireframe-overlay'
 
 /**
+ * The layer the overlays hang on, so a camera decides for itself whether it draws them.
+ *
+ * Here rather than beside the renderer: whoever builds the edges is who has to place them, and
+ * the two spellings drifting apart would show the edges in every view or in none.
+ */
+export const EDGE_LAYER = 1
+
+/**
+ * How far two faces may tilt apart and still count as one surface, in degrees.
+ *
+ * One degree, not the thirty a hard-edge pass would use: the diagonal of a quad is exactly
+ * coplanar, so a tight threshold erases it and leaves everything a modeller would call an edge.
+ */
+const QUAD_ANGLE = 1
+
+/**
  * The edges drawn over a shaded mesh, for the one mode a material cannot express.
  *
  * Built on demand and thrown away with the mode: a `WireframeGeometry` is its own buffer, and
  * keeping one alive per mesh of an imported model would cost the scene twice its geometry for a
  * mode nobody left on.
  */
-export function applyWireOverlay(object: Object3D, on: boolean, material: Material): void {
+export function applyWireOverlay(
+  object: Object3D,
+  on: boolean,
+  material: Material,
+  quads = false,
+): void {
   // Collected first: `traverse` walks what it is given, and adding a child mid-walk would visit
   // the overlay just added, then the one added to it.
   const meshes: Mesh[] = []
@@ -158,8 +244,16 @@ export function applyWireOverlay(object: Object3D, on: boolean, material: Materi
   if (!on) return
 
   for (const mesh of meshes) {
-    const edges = new LineSegments(new WireframeGeometry(mesh.geometry), material)
+    // `EdgesGeometry` drops the edge between two coplanar triangles, which is what makes a
+    // triangulated quad read as a quad again. A GLB never carries real quads — the format stores
+    // triangles and the exporter triangulated before the file was ever written — so this is a
+    // reconstruction by angle, faithful except on strongly curved surfaces. Never call it truth.
+    const geometry = quads
+      ? new EdgesGeometry(mesh.geometry, QUAD_ANGLE)
+      : new WireframeGeometry(mesh.geometry)
+    const edges = new LineSegments(geometry, material)
     edges.name = OVERLAY_NAME
+    edges.layers.set(EDGE_LAYER)
     // Decoration, and kept out of everything that reads the scene as content. The ray above all:
     // a line is met within a whole world unit of itself, so left pickable the overlay wraps every
     // edge in a halo that size, and a click into the void beside a cube would select the cube.

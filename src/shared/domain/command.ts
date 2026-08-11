@@ -36,6 +36,8 @@ export type CommandId =
   | 'scene.snap'
   | 'scene.space'
   | 'scene.projection'
+  | 'scene.quad'
+  | 'scene.quadEdges'
   | 'scene.display'
   | 'scene.skeletons'
   | 'scene.delete'
@@ -273,6 +275,24 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneProjection.title',
     helpKey: 'commands.sceneProjection.help',
     defaultBinding: 'KeyO',
+  }),
+  // `Q` as in Blender's own quad view, but shifted: bare `Q` is flight's "down", and the one
+  // overlap this scope tolerates is already spent on `KeyS` — see `shortcut.test.ts`.
+  command({
+    id: 'scene.quad',
+    scope: 'scene',
+    titleKey: 'commands.sceneQuad.title',
+    helpKey: 'commands.sceneQuad.help',
+    defaultBinding: 'Shift+KeyQ',
+  }),
+  // `Shift+W` for wires: bare `W` is flight's "forward", and this reads the same edges the
+  // wireframe draws, so it sits beside it rather than beside the layout.
+  command({
+    id: 'scene.quadEdges',
+    scope: 'scene',
+    titleKey: 'commands.sceneQuadEdges.title',
+    helpKey: 'commands.sceneQuadEdges.help',
+    defaultBinding: 'Shift+KeyW',
   }),
   // `Z` as in Blender, where it is the key that changes what the viewport draws.
   command({
