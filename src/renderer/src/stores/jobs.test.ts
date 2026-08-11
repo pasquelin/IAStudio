@@ -3,7 +3,7 @@ import type { Job } from '@shared/domain/job'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
 import { job } from './job-fixtures'
-import { useJobs, whenSettled } from './jobs'
+import { useJobs, whenSettled, whenStarted } from './jobs'
 
 describe('jobs store', () => {
   beforeEach(() => {
@@ -179,5 +179,47 @@ describe('waiting on a job', () => {
     useJobs.setState({ jobs: [] })
 
     await expect(settled).resolves.toBeNull()
+  })
+})
+
+describe('waiting for a job to leave the queue', () => {
+  beforeEach(() => {
+    useJobs.setState({ jobs: [job({ id: 'job_1', status: 'queued', progress: 0 })] })
+  })
+
+  it('waits while the job is still queued, and answers when it starts', async () => {
+    const started = whenStarted('job_1', null)
+
+    useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.1 })
+
+    await expect(started).resolves.toMatchObject({ status: 'running' })
+  })
+
+  /**
+   * A job that finished between two polls did leave the queue, and the graph node reading this
+   * has to stop saying it is waiting. Held out for a `running` nobody observed, the node would
+   * read as queued for the whole generation and then jump to done.
+   */
+  it('answers for a job that went straight to its result', async () => {
+    const started = whenStarted('job_1', null)
+
+    useJobs.getState().apply({ id: 'job_1', status: 'succeeded', progress: 1, assetIds: ['a1'] })
+
+    await expect(started).resolves.toMatchObject({ status: 'succeeded' })
+  })
+
+  it('answers straight away for one that had already started', async () => {
+    useJobs.setState({ jobs: [job({ id: 'job_1', status: 'running' })] })
+
+    await expect(whenStarted('job_1', null)).resolves.toMatchObject({ status: 'running' })
+  })
+
+  it('gives up when the caller aborts, and says it found nothing', async () => {
+    const controller = new AbortController()
+    const started = whenStarted('job_1', controller.signal)
+
+    controller.abort()
+
+    await expect(started).resolves.toBeNull()
   })
 })

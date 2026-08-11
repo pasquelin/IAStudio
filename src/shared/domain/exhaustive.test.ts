@@ -212,6 +212,7 @@ describe('the lists that stand for a union', () => {
   it('names every state a running node reports', () => {
     const all: Record<GraphRunStatus, true> = {
       idle: true,
+      queued: true,
       running: true,
       awaiting: true,
       cached: true,

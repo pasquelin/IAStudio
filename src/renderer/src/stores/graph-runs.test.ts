@@ -26,7 +26,7 @@ const DOC = 'doc_graph'
  * A stand-in for the whole job round trip: `submit` puts an entry in the replica, and the test
  * settles it by hand, exactly as a progress event from the main process would.
  */
-function installJobs(): {
+function installJobs(initial: Partial<Job> = {}): {
   submit: Mock<(target: JobTarget, body: Record<string, unknown>) => Promise<Job>>
   submitted: JobTarget[]
   settle: (id: string, job: Partial<Job>) => void
@@ -42,7 +42,9 @@ function installJobs(): {
   const submit = vi.fn(async (target: JobTarget, _body: Record<string, unknown>) => {
     count += 1
     submitted.push(target)
-    const entry = job({ id: `job_${count}`, targetId: target.id })
+    // `initial` is how a suite asks for a job the manager has taken but not started — the default
+    // is one already running, which is what every test written before the queue existed assumed.
+    const entry = job({ id: `job_${count}`, targetId: target.id, ...initial })
     useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
     return entry
   })
@@ -118,6 +120,32 @@ describe('running a graph document', () => {
   })
 
   /**
+   * Submitting is not starting: the job manager holds a submission behind its own concurrency
+   * bound and its rate limiter, and a node painted as running on the call would claim work a
+   * semaphore may sit on for minutes. This is the one place the two are told apart, since the
+   * executor cannot see that queue — it hands over through a port and is told when it moves.
+   */
+  it('leaves a generator queued until the job manager takes it', async () => {
+    const jobs = installJobs({ status: 'queued', progress: 0 })
+    installGraph(DOC, chain())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes['m1']).toEqual({ status: 'queued' })
+
+    jobs.settle('job_1', { status: 'running', progress: 0.4 })
+    await vi.waitFor(() =>
+      expect(runOf(useGraphRuns.getState(), DOC).nodes['m1']).toEqual({ status: 'running' }),
+    )
+
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes['m1']).toEqual({ status: 'done' })
+  })
+
+  /**
    * `nodes` is a record, and a record remembers no order — so it cannot say which node spoke
    * LAST. The canvas needs exactly that, and only the reporter knows it: without `latest` every
    * node had to carry its own live region, twenty of them announcing over each other.
@@ -129,7 +157,8 @@ describe('running a graph document', () => {
     const run = useGraphRuns.getState().start(DOC)
     await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
 
-    // `running` is reported on the generator itself, after the text node it reads is done.
+    // The generator is the last to have spoken by now: the text node it reads went queued then
+    // done while this one was still waiting on it.
     expect(runOf(useGraphRuns.getState(), DOC).latest).toBe('m1')
 
     jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })

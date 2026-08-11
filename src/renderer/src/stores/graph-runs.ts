@@ -4,7 +4,7 @@ import { isFinished } from '@shared/domain/job'
 import type { GraphCache } from '@/engines/graph/plan'
 import { getBridge } from '@/services/bridge'
 import { graphOf, useGraphs } from './graphs'
-import { useJobs, whenSettled } from './jobs'
+import { useJobs, whenSettled, whenStarted } from './jobs'
 
 /** What one graph document is doing, and what it has to show for the runs before this one. */
 export type DocumentRun = {
@@ -155,7 +155,7 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
           graphOf(useGraphs.getState(), documentId),
           runOf(get(), documentId).cache,
           {
-            generate: async (modelId, body) => {
+            generate: async (modelId, body, started) => {
               const job = await useJobs.getState().submit({ kind: 'model', id: modelId }, body)
               // No bridge, or a submission the main process would not take. The node says so; the
               // run carries on with whatever does not depend on it.
@@ -166,6 +166,13 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               // to cancel — the id did not exist yet. It exists now, and it is a generation the
               // user has already asked to stop paying for.
               if (controller.signal.aborted) cancelIfRunning(job.id)
+
+              // Watched beside the wait rather than awaited before it: the node is to be repainted
+              // WHILE this frame sits on the result, and awaiting the start first would have a job
+              // that finished between two polls resolve both at once, painting nothing.
+              void whenStarted(job.id, controller.signal).then(taken => {
+                if (taken) started()
+              })
 
               const settled = await whenSettled(job.id, controller.signal)
               if (settled?.status !== 'succeeded') throw new Error(`${job.id} did not succeed`)

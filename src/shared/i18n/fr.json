@@ -146,6 +146,7 @@
     "blamed": "Le refus porte sur ce nœud"
   },
   "graphRun": {
+    "queued": "en file",
     "running": "en cours",
     "awaiting": "à approuver",
     "cached": "inchangé",

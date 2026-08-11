@@ -121,11 +121,33 @@ export const useJobs = create<JobsState>()((set, get) => ({
  * up on: optional, the next caller reproduces the parked frame this exists to remove, and nothing
  * mechanical refuses it. The same lock `ToolButton` puts on its tooltip, for the same reason.
  */
-export function whenSettled(jobId: string, signal: AbortSignal | null): Promise<Job | null> {
+export const whenSettled = (jobId: string, signal: AbortSignal | null): Promise<Job | null> =>
+  whenJob(jobId, job => isFinished(job.status), signal)
+
+/**
+ * Resolves when the job manager takes a job off its own queue, whatever it does next.
+ *
+ * The other half of what a chain of generations needs: submitting is not starting — the manager
+ * holds a job behind its concurrency bound and its rate limiter — so a node painted as running on
+ * submission claims work that has not begun. `succeeded` answers this too, deliberately: a job
+ * that finished between two polls did leave the queue, and waiting for a `running` nobody observed
+ * would leave the node reading as queued for the whole generation.
+ *
+ * `null` on the same two counts as `whenSettled`: a job the replica no longer holds, and a caller
+ * that has given up.
+ */
+export const whenStarted = (jobId: string, signal: AbortSignal | null): Promise<Job | null> =>
+  whenJob(jobId, job => job.status !== 'queued', signal)
+
+function whenJob(
+  jobId: string,
+  ready: (job: Job) => boolean,
+  signal: AbortSignal | null,
+): Promise<Job | null> {
   const answer = (jobs: readonly Job[]): Job | null | undefined => {
     const job = jobs.find(candidate => candidate.id === jobId)
     if (!job) return null
-    return isFinished(job.status) ? job : undefined
+    return ready(job) ? job : undefined
   }
 
   const held = answer(useJobs.getState().jobs)

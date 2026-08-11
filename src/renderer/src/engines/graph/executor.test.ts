@@ -59,12 +59,18 @@ async function watch(
   const submitted: Submitted[] = []
   const reported = new Map<string, GraphNodeRun[]>()
 
-  const generate = vi.fn(async (modelId: string, body: Record<string, unknown>) => {
-    submitted.push({ modelId, body })
-    const answer = outputs[modelId]
-    if (!answer) throw new Error(`no output declared for ${modelId}`)
-    return answer
-  })
+  // Announces its start before answering, which is what a job manager that takes the job does. A
+  // stub that skipped it would leave every generator reading `queued` through its own success, and
+  // no suite here would be able to tell that from a node the queue really is holding.
+  const generate = vi.fn(
+    async (modelId: string, body: Record<string, unknown>, started: () => void) => {
+      submitted.push({ modelId, body })
+      started()
+      const answer = outputs[modelId]
+      if (!answer) throw new Error(`no output declared for ${modelId}`)
+      return answer
+    },
+  )
 
   const result = await runGraph(graph, options.cache, {
     generate,
@@ -129,9 +135,57 @@ describe('running a graph', () => {
   it('says of every node that it ran', async () => {
     const watched = await watch(chain(), { model_a: ['asset_1'], model_b: ['asset_2'] })
 
-    expect(statusesOf(watched, 'text1')).toEqual(['done'])
-    expect(statusesOf(watched, 'm1')).toEqual(['running', 'done'])
-    expect(statusesOf(watched, 'm2')).toEqual(['running', 'done'])
+    expect(statusesOf(watched, 'text1')).toEqual(['queued', 'done'])
+    expect(statusesOf(watched, 'm1')).toEqual(['queued', 'running', 'done'])
+    expect(statusesOf(watched, 'm2')).toEqual(['queued', 'running', 'done'])
+  })
+
+  /**
+   * The defect this state was added for: a run painted the two nodes it was on and left every
+   * other one looking untouched, so a graph of twenty read as eighteen nodes nobody had asked
+   * anything of. Asserted at the FIRST submission rather than at the end, because by then every
+   * node has spoken and the queue would prove nothing.
+   */
+  it('says of every node that it is waiting, before the first submission', async () => {
+    const seen: string[] = []
+    const reported = new Map<string, GraphNodeRun[]>()
+
+    await runGraph(chain(), undefined, {
+      generate: async (modelId, _body, started) => {
+        seen.push(...reported.keys())
+        started()
+        return modelId === 'model_a' ? ['asset_1'] : ['asset_2']
+      },
+      approve: () => Promise.resolve(true),
+      transform: noTransform,
+      report: (nodeId, run) => {
+        const held = reported.get(nodeId)
+        if (held) held.push(run)
+        else reported.set(nodeId, [run])
+      },
+    })
+
+    // The reader of the generator being submitted included: it is waiting on this very call.
+    expect(seen.slice(0, 3)).toEqual(['text1', 'm1', 'm2'])
+  })
+
+  it('leaves a generator queued while the job manager has not taken it', async () => {
+    const graph = graphOf([modelNode('m1', {}, 'model_a')], [])
+    const reported = new Map<string, GraphNodeRun[]>()
+
+    await runGraph(graph, undefined, {
+      // Never announces a start, which is a job held behind the manager's own bound.
+      generate: () => Promise.resolve(['asset_1']),
+      approve: () => Promise.resolve(true),
+      transform: noTransform,
+      report: (nodeId, run) => {
+        const held = reported.get(nodeId)
+        if (held) held.push(run)
+        else reported.set(nodeId, [run])
+      },
+    })
+
+    expect(reported.get('m1')?.map(run => run.status)).toEqual(['queued', 'done'])
   })
 
   it('drops the blanks a form carries for the fields nobody filled', async () => {
@@ -454,7 +508,7 @@ describe('reusing what a previous run produced', () => {
     )
 
     expect(second.submitted.map(call => call.modelId)).toEqual(['model_b'])
-    expect(statusesOf(second, 'm1')).toEqual(['cached'])
+    expect(statusesOf(second, 'm1')).toEqual(['queued', 'cached'])
   })
 
   it('hands the cached ids on, so what reads a cached node still runs on them', async () => {
@@ -507,8 +561,8 @@ describe('reusing what a previous run produced', () => {
     )
 
     expect(third.submitted).toEqual([])
-    expect(statusesOf(third, 'm1')).toEqual(['cached'])
-    expect(statusesOf(third, 'm2')).toEqual(['cached'])
+    expect(statusesOf(third, 'm1')).toEqual(['queued', 'cached'])
+    expect(statusesOf(third, 'm2')).toEqual(['queued', 'cached'])
   })
 })
 
@@ -586,7 +640,7 @@ describe('stopping a run', () => {
       signal: controller.signal,
     })
 
-    expect(reported.get('m2')?.map(run => run.status)).toEqual(['idle'])
+    expect(reported.get('m2')?.map(run => run.status)).toEqual(['queued', 'idle'])
     // And no node ANYWHERE is red, which is the whole of what `stalled` promises: the node that
     // was on the wire when the stop landed has nothing to hand on, and blaming it for a run the
     // user ended would be the one report this must never file. Asserted over every node because
@@ -650,7 +704,38 @@ describe('stopping a run', () => {
       signal: controller.signal,
     })
 
-    expect(reported.get('m1')?.map(run => run.status)).toEqual(['running', 'idle'])
+    // `queued` and not `running`: this stub never announced a start, which is what a submission
+    // the manager was still holding when the stop landed looks like.
+    expect(reported.get('m1')?.map(run => run.status)).toEqual(['queued', 'idle'])
+  })
+
+  /**
+   * A start is watched beside the wait rather than awaited, so it can land after the stop that
+   * ended the run — and repaint as work in progress a node already painted idle. The generation
+   * itself is never interrupted, so this is the ordinary case, not a race worth calling rare.
+   */
+  it('ignores a start announced after the stop', async () => {
+    const controller = new AbortController()
+    const graph = graphOf([modelNode('m1', {}, 'model_a')], [])
+
+    const reported = new Map<string, GraphNodeRun[]>()
+    await runGraph(graph, undefined, {
+      generate: async (_modelId, _body, started) => {
+        controller.abort()
+        started()
+        return ['asset_1']
+      },
+      approve: () => Promise.resolve(true),
+      transform: noTransform,
+      report: (nodeId, run) => {
+        const held = reported.get(nodeId)
+        if (held) held.push(run)
+        else reported.set(nodeId, [run])
+      },
+      signal: controller.signal,
+    })
+
+    expect(reported.get('m1')?.map(run => run.status)).toEqual(['queued', 'idle'])
   })
 })
 
@@ -696,8 +781,8 @@ describe('stopping on an approval', () => {
   it('says it is waiting, then done, when the answer is yes', async () => {
     const watched = await watch(gated(), outputs, { approve: () => Promise.resolve(true) })
 
-    expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'done'])
-    expect(statusesOf(watched, 'm2')).toEqual(['running', 'done'])
+    expect(statusesOf(watched, 'approval1')).toEqual(['queued', 'awaiting', 'done'])
+    expect(statusesOf(watched, 'm2')).toEqual(['queued', 'running', 'done'])
   })
 
   it('holds back everything reading the guarded node when the answer is no', async () => {
@@ -736,7 +821,7 @@ describe('stopping on an approval', () => {
     })
 
     expect(asked).toEqual(['approval1'])
-    expect(statusesOf(second, 'm1')).toEqual(['cached'])
+    expect(statusesOf(second, 'm1')).toEqual(['queued', 'cached'])
     // Declined this time, so what reads the guarded node is held back — cache or no cache.
     expect(failureOf(second, 'm2')).toBe('blocked')
     expect(statusesOf(second, 'm2')).not.toContain('cached')
@@ -760,7 +845,7 @@ describe('stopping on an approval', () => {
       },
     })
 
-    expect(statusesOf(watched, 'approval1')).toEqual(['awaiting', 'idle'])
+    expect(statusesOf(watched, 'approval1')).toEqual(['queued', 'awaiting', 'idle'])
     // And nothing downstream of the gate runs. An approval that made it through hands back the
     // same empty outcome as one nobody asked — so a stop that let this one answer `produced` would
     // open the gate on a run the user just ended, and the next generation would be paid for.
@@ -901,7 +986,7 @@ describe('a transform node', () => {
       },
     )
 
-    expect(statusesOf(watched, 'transformText1')).toEqual(['running', 'done'])
+    expect(statusesOf(watched, 'transformText1')).toEqual(['queued', 'running', 'done'])
   })
 
   /** The state every transform starts in, and what the converter compiles it to: `''`. */
@@ -911,7 +996,7 @@ describe('a transform node', () => {
     const watched = await watch(rewriting(''), { model_flux: ['asset_1'] }, { transform })
 
     expect(transform).not.toHaveBeenCalled()
-    expect(statusesOf(watched, 'transformText1')).toEqual(['done'])
+    expect(statusesOf(watched, 'transformText1')).toEqual(['queued', 'done'])
   })
 
   /** Nothing produced must not overwrite what the form of the node reading it holds. */
@@ -985,7 +1070,7 @@ describe('a transform node', () => {
     )
 
     expect(transform).not.toHaveBeenCalled()
-    expect(statusesOf(second, 'transformText1')).toEqual(['cached'])
+    expect(statusesOf(second, 'transformText1')).toEqual(['queued', 'cached'])
   })
 
   it('evaluates again once its expression changed', async () => {
@@ -1119,7 +1204,7 @@ describe('a transform node', () => {
       },
     )
 
-    expect(statusesOf(watched, 'transformText1')).toEqual(['running', 'idle'])
+    expect(statusesOf(watched, 'transformText1')).toEqual(['queued', 'running', 'idle'])
     expect(cacheOf(watched.result).size).toBe(1)
   })
 })
@@ -1181,7 +1266,7 @@ describe('a branch, run locally', () => {
     )
 
     expect(watched.submitted.map(one => one.modelId)).not.toContain('model_else')
-    expect(statusesOf(watched, 'm2')).toEqual(['skipped'])
+    expect(statusesOf(watched, 'm2')).toEqual(['queued', 'skipped'])
     expect(failureOf(watched, 'm2')).toBeUndefined()
   })
 
@@ -1200,7 +1285,7 @@ describe('a branch, run locally', () => {
       },
     )
 
-    expect(statusesOf(watched, 'm3')).toEqual(['skipped'])
+    expect(statusesOf(watched, 'm3')).toEqual(['queued', 'skipped'])
     expect(watched.submitted.map(one => one.modelId)).toEqual(['model_case1'])
   })
 
@@ -1236,7 +1321,7 @@ describe('a branch, run locally', () => {
     const planned = planGraph(swapped, kept)
     expect(planned.ok && planned.order.find(node => node.id === 'm1')?.cached).toBe(true)
 
-    expect(statusesOf(second, 'm1')).toEqual(['skipped'])
+    expect(statusesOf(second, 'm1')).toEqual(['queued', 'skipped'])
     expect(second.submitted.map(one => one.modelId)).toEqual(['model_else'])
   })
 
@@ -1267,7 +1352,7 @@ describe('a branch, run locally', () => {
       },
     )
 
-    expect(statusesOf(second, 'm1')).toEqual(['idle'])
+    expect(statusesOf(second, 'm1')).toEqual(['queued', 'idle'])
     expect(second.submitted).toEqual([])
   })
 
@@ -1383,8 +1468,8 @@ describe('a branch, run locally', () => {
 
     const watched = await watch(gated, {}, { transform: decides({}) })
 
-    expect(statusesOf(watched, 'a1')).toEqual(['skipped'])
-    expect(statusesOf(watched, 'm2')).toEqual(['skipped'])
+    expect(statusesOf(watched, 'a1')).toEqual(['queued', 'skipped'])
+    expect(statusesOf(watched, 'm2')).toEqual(['queued', 'skipped'])
     expect(failureOf(watched, 'm2')).toBeUndefined()
   })
 

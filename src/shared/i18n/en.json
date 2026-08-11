@@ -146,6 +146,7 @@
     "blamed": "The refusal is about this node"
   },
   "graphRun": {
+    "queued": "queued",
     "running": "running",
     "awaiting": "to approve",
     "cached": "unchanged",

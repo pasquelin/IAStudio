@@ -30,6 +30,9 @@ import { InputPorts, OutputPorts } from './NodePorts'
 /** How each state reads. The colour itself stays in `design/styles.ts`, with the other tones. */
 const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
   idle: 'muted',
+  // Muted, never accent: on a graph of twenty every node wears this at once, and an accent on all
+  // of them would say twenty things are happening where at most a handful are.
+  queued: 'muted',
   running: 'accent',
   awaiting: 'warning',
   cached: 'muted',
