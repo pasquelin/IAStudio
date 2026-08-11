@@ -24,9 +24,12 @@ export const GLYPHS: Record<ActivityLevel, string> = {
   error: mdiAlertCircleOutline,
 }
 
-/** Exported beside `GLYPHS`: the home draws the same levels, and one of the two tables
- * drifting would make a failure look like one thing there and another here. */
-export const TINTS: Record<ActivityLevel, string> = {
+/**
+ * Read by the rows of this file alone. It was exported beside `GLYPHS` for a home that would
+ * draw the same levels, and no site ever did — the toasts, the only other reader, hold nothing
+ * but failures and paint them all in the one red.
+ */
+const TINTS: Record<ActivityLevel, string> = {
   info: 'text-muted',
   warn: 'text-warning',
   error: 'text-danger',
@@ -97,18 +100,18 @@ export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
 }
 
 /**
- * One journal line, wherever it is read. Written twice, the two had each kept half of it: the
- * panel had `tabular-nums` but no `shrink-0`, so a long message squeezed its level glyph; the
- * home had `shrink-0` but no `tabular-nums`, so its timestamps did not line up down the column.
+ * One journal line. Written twice once — the panel had `tabular-nums` but no `shrink-0`, so a
+ * long message squeezed its level glyph; the home band had `shrink-0` but no `tabular-nums`, so
+ * its timestamps did not line up down the column. The band is gone; the row it forced is right.
  *
- * It carries its own padding, like `ProgressRow` — the row on the band beside it in the home,
- * which indents by `px-2` where this one indented by `px-1`. Two bands stacked on the same shelf
- * and starting at different columns is drift, not a density anyone chose.
+ * It carries its own padding, like `ProgressRow`, which indents by `px-2` where this one indented
+ * by `px-1`. Two bands stacked on the same shelf and starting at different columns is drift, not
+ * a density anyone chose.
  *
- * `time` is handed over already written: the panel states the hour and the home says how long
- * ago, and that difference is the one worth keeping. `null` for a stamp neither can read.
+ * `time` is handed over already written: an hour and an "how long ago" are the same row said to
+ * two different readers. `null` for a stamp neither can read.
  */
-export function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | null }) {
+function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | null }) {
   return (
     <li className="flex items-start gap-2 px-2 py-1.5">
       <UiIcon
