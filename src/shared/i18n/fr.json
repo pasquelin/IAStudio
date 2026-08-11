@@ -763,6 +763,7 @@
     "pin": "Épingler la recette",
     "pinned": "Recette épinglée",
     "pinHint": "La garder à portée sur l’accueil, dans tous vos projets",
+    "pinFull": "L’accueil ne peut garder que {{max}} recettes — détachez-en une pour épingler celle-ci",
     "regenerate": "Régénérer",
     "regenerateHint": "Ouvrir le générateur avec ces paramètres",
     "file": "Fichier",

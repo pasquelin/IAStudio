@@ -135,7 +135,9 @@ function GenerationGroup({
         <ToolButton
           icon={pinned ? mdiPin : mdiPinOutline}
           label={t(pinned ? 'inspector.pinned' : 'inspector.pin')}
-          description={t(full && !pinned ? 'inspector.pinFull' : 'inspector.pinHint')}
+          description={t(full && !pinned ? 'inspector.pinFull' : 'inspector.pinHint', {
+            max: FAVORITES_MAX,
+          })}
           tooltip={TIP_LEFT}
           variant="header"
           active={pinned}

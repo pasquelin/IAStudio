@@ -44,6 +44,20 @@ function isKnown(code: Language, key: string): boolean {
 /** `t('…')`, and the `…Key` fields the registries carry so a row names itself from a bundle. */
 type Interpolated = { key: string; given: readonly string[]; line: number }
 
+/**
+ * The literals a first argument can resolve to. A control that says two things writes a ternary
+ * — `t(pinned ? 'inspector.pinned' : 'inspector.pin')` — and reading the outer node alone saw a
+ * `ConditionalExpression`, took nothing, and moved on: 34 sites, one of them naming a key that
+ * no bundle held.
+ */
+function literalsOf(node: ts.Expression): ts.StringLiteral[] {
+  if (ts.isStringLiteral(node)) return [node]
+  if (ts.isConditionalExpression(node)) {
+    return [...literalsOf(node.whenTrue), ...literalsOf(node.whenFalse)]
+  }
+  return []
+}
+
 /** The names an options object hands over — `t('x', { name, count })`. */
 function namesOf(options: ts.ObjectLiteralExpression, source: ts.SourceFile): string[] {
   return options.properties.flatMap(property => {
@@ -87,10 +101,11 @@ function keysIn(
     // Only the first argument: the second is a fallback, not another key.
     if (ts.isCallExpression(node) && (callee === 't' || callee.endsWith('.t'))) {
       const [first, second] = node.arguments
-      if (first !== undefined && ts.isStringLiteral(first) && first.text.includes('.')) {
-        take(node, first)
+      const named = first === undefined ? [] : literalsOf(first)
+      for (const literal of named.filter(one => one.text.includes('.'))) {
+        take(node, literal)
         if (second !== undefined && ts.isObjectLiteralExpression(second)) {
-          filled.push({ key: first.text, given: namesOf(second, source), line: lineOf(node) })
+          filled.push({ key: literal.text, given: namesOf(second, source), line: lineOf(node) })
         }
       }
     }
@@ -179,6 +194,30 @@ describe('every key the renderer names outright', () => {
 
   it('would see a key nobody translated', () => {
     expect(isKnown('fr', 'jobs.thereIsNoSuchKey')).toBe(false)
+  })
+
+  /**
+   * Both branches, and every branch of a nested one: a control that says two things names two
+   * keys, and only one of them is the one somebody forgot to translate.
+   */
+  it('reads every key a ternary can resolve to', () => {
+    const code = "t(a ? 'inspector.pinned' : b ? 'inspector.pinFull' : 'inspector.pin')"
+
+    expect(keysIn('probe.ts', code).keys.map(found => found.key)).toEqual([
+      'inspector.pinned',
+      'inspector.pinFull',
+      'inspector.pin',
+    ])
+  })
+
+  // The hole check follows the key it was written for, whichever branch named it.
+  it('reads the holes of a key named in a branch', () => {
+    const code = "t(full ? 'inspector.pinFull' : 'inspector.pin', { max })"
+
+    expect(keysIn('probe.ts', code).filled.map(one => one.key)).toEqual([
+      'inspector.pinFull',
+      'inspector.pin',
+    ])
   })
 })
 
