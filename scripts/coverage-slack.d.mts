@@ -26,3 +26,4 @@ export declare function budgetsIn(config: string): Budget[]
 export declare function matches(path: string, glob: string): boolean
 export declare function carried(summary: unknown, glob: string, root: string): Counts
 export declare function slackOf(config: string, summary: unknown, root: string): Budget[]
+export declare function granted(rows: Budget[], max: number): Budget[]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { budgetsIn, carried, matches, slackOf } from '../../scripts/coverage-slack.mjs'
+import { budgetsIn, carried, granted, matches, slackOf } from '../../scripts/coverage-slack.mjs'
 
 /** A summary as vitest writes it, keyed by absolute path, with only the fields the guard reads. */
 const ROOT = '/repo/'
@@ -98,5 +98,30 @@ describe('the room a budget has left', () => {
     expect(slackOf(config, summary({ 'src/a/one.ts': [7, 4] }), ROOT)).toEqual([
       { glob: 'src/gone/**', statements: 12, branches: 8 },
     ])
+  })
+})
+
+describe('deciding which budgets have been granted room', () => {
+  const rows = [
+    { glob: 'src/tight/**', statements: 3, branches: 0 },
+    { glob: 'src/wide/**', statements: 45, branches: 2 },
+    { glob: 'src/branchy/**', statements: 1, branches: 40 },
+  ]
+
+  it('names the ones past the ceiling, on either count', () => {
+    expect(granted(rows, 30).map(row => row.glob)).toEqual(['src/wide/**', 'src/branchy/**'])
+  })
+
+  it('names none when every budget sits under it', () => {
+    expect(granted(rows, 50)).toEqual([])
+  })
+
+  /**
+   * What no case here can hold: `MAX_SLACK` itself. Raising it disarms the guard and every test
+   * in this file stays green — the ceiling is a decision, and only a diff read by someone shows
+   * it moving. Written down rather than papered over with an assertion on a literal.
+   */
+  it('takes its ceiling from the caller, so the constant is the only thing left to review', () => {
+    expect(granted(rows, 44).map(row => row.glob)).toEqual(['src/wide/**'])
   })
 })

@@ -90,6 +90,18 @@ export function slackOf(config, summary, root) {
   })
 }
 
+/**
+ * The globs whose budget sits further above what they carry than `max` allows.
+ *
+ * Taken apart from the reporting so the decision can be tested with a ceiling of its own: what
+ * NO test can hold is the value of `MAX_SLACK` itself — raising it disarms this guard and every
+ * case here stays green. That is a review's job, and it is why the constant carries its two
+ * measurements in prose rather than a bare number.
+ */
+export function granted(rows, max) {
+  return rows.filter(row => row.statements > max || row.branches > max)
+}
+
 function report(rows) {
   const width = Math.max(...rows.map(row => row.glob.length))
   for (const row of rows) {
@@ -109,9 +121,9 @@ if (import.meta.main) {
   process.stdout.write('\nCoverage budgets, and the room each has left:\n')
   report(rows)
 
-  const granted = rows.filter(row => row.statements > MAX_SLACK || row.branches > MAX_SLACK)
-  if (granted.length > 0) {
-    const names = granted.map(row => row.glob).join(', ')
+  const over = granted(rows, MAX_SLACK)
+  if (over.length > 0) {
+    const names = over.map(row => row.glob).join(', ')
     process.stderr.write(
       `\nERROR: ${names} sit more than ${MAX_SLACK} above what they carry.\n` +
         `A budget that far ahead is room nobody decided to grant — lower it to the measured\n` +
