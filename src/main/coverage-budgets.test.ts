@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { budgetsIn, carried, granted, matches, slackOf } from '../../scripts/coverage-slack.mjs'
+import {
+  budgetsIn,
+  carried,
+  granted,
+  matches,
+  slackOf,
+  type Slack,
+  type Summary,
+} from './coverage-budgets'
 
 /** A summary as vitest writes it, keyed by absolute path, with only the fields the guard reads. */
 const ROOT = '/repo/'
-const summary = (files: Record<string, [number, number]>): object =>
+const summary = (files: Record<string, [number, number]>): Summary =>
   Object.fromEntries(
     Object.entries(files).map(([path, [statements, branches]]) => [
       `${ROOT}${path}`,
@@ -102,7 +110,7 @@ describe('the room a budget has left', () => {
 })
 
 describe('deciding which budgets have been granted room', () => {
-  const rows = [
+  const rows: Slack[] = [
     { glob: 'src/tight/**', statements: 3, branches: 0 },
     { glob: 'src/wide/**', statements: 45, branches: 2 },
     { glob: 'src/branchy/**', statements: 1, branches: 40 },

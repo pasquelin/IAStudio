@@ -90,8 +90,8 @@ export default defineConfig({
         // Split from the GPU below: together, five files jsdom cannot run held 55 % of one
         // budget, so a new render pass ate the room that guarded the state machines.
         'src/renderer/src/engines/{timeline,canvas,audio,core}/**': {
-          statements: -270,
-          branches: -250,
+          statements: -133,
+          branches: -192,
         },
         // Raised for the film pass: `renderFilm` draws off screen and reads pixels back, which
         // no jsdom run reaches at all — the only case the comment above allows a budget to grow
@@ -111,7 +111,7 @@ export default defineConfig({
         // decides which bone a point names, and its nine cases include the two that mattered
         // (a bone behind the camera, two bones projecting to the same spot).
         'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
-          statements: -790,
+          statements: -659,
           branches: -415,
         },
         // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network

@@ -1072,7 +1072,8 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés (`*.test.ts` à côté du
 code) et écrits dans le même mouvement que le code, jamais après.
 
-`pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture —
+`pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture,
+et le jeu que ces budgets ont laissé (`scripts/coverage-slack.mjs`) —
 doit être vert avant tout commit.
 
 **Les budgets se déclarent par glob dans `vitest.config.ts`, et leur signe est tout leur sens.**

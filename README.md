@@ -93,7 +93,7 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | `pnpm test:coverage` | vitest with coverage, enforcing the per-module budgets |
 | `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
 | `pnpm format` · `pnpm format:check` | prettier, write or check |
-| `pnpm validate` | typecheck + lint + format check + tests with coverage budgets |
+| `pnpm validate` | typecheck + lint + format check + tests with coverage budgets + the slack those budgets have left |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 | `pnpm docs:scenario` | regenerate the local copy of the Scenario API docs |
 
@@ -133,9 +133,10 @@ A selection, not an inventory — enough to find your way, and no more.
 
 ## Quality bar
 
-`pnpm validate` must be green before any commit: typecheck, lint, format check, and the full
-test suite — **over 5,600 tests across more than 440 files**. Unit tests are colocated
-with the code they cover and written in the same movement, never after.
+`pnpm validate` must be green before any commit: typecheck, lint, format check, the full
+test suite — **over 5,600 tests across more than 440 files** — and a check that no coverage
+budget sits further above what its folder carries than anyone decided to grant. Unit tests are
+colocated with the code they cover and written in the same movement, never after.
 
 Every change also goes through a reuse-and-simplification pass and an automated review before
 it is called done.
