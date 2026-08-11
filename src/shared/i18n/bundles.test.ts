@@ -151,12 +151,27 @@ describe('the translation bundles', () => {
    * A straight quote is one — the bundle already wrote `’` in a hundred and twenty-three lines
    * and `'` in thirty-four, so the same word was drawn two ways depending on where it was read.
    *
-   * French only: English interface text writes the straight one far more often here, and no
-   * rule in the repository picks a side for it.
+   * English had no rule for a while, and this comment said so. It has one now — the check below
+   * — because the count made the case: fifteen straight against five typographic, in a bundle
+   * already wearing `“ ”` in fifteen values.
    */
   it('types the French apostrophe rather than the ASCII one', () => {
     for (const [key, text] of BUNDLES.fr) {
       expect(text, `${key} uses a straight apostrophe`).not.toMatch(/\w'\w/)
+    }
+  })
+
+  /**
+   * The same rule for English, and it took a count to notice: the bundle held fifteen straight
+   * apostrophes against five typographic ones, so `Don't apply` sat beside `Don’t save` and the
+   * same word was drawn two ways depending on which screen showed it.
+   *
+   * The guard beside this one used to say English had no rule picking a side. It has one now, and
+   * it is the side the bundle already took for its quotation marks — fifteen values wear `“ ”`.
+   */
+  it('types the English apostrophe the way it types its quotation marks', () => {
+    for (const [key, text] of BUNDLES.en) {
+      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/\p{Letter}'\p{Letter}/u)
     }
   })
 
