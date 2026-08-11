@@ -246,7 +246,9 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > ensemble, et les générations passent par la même file que le reste du studio — elles s’affichent
 > dans la barre des tâches et se comptent dans le même budget. Le bouton devient **Arrêter**
 > pendant ce temps : plus rien n’est soumis, et ce qui est en vol est annulé. Sur un graphe vide,
-> il est **grisé** : il n’y a rien à exécuter.
+> il est **grisé** : il n’y a rien à exécuter — comme sur un canevas qui ne porte que des
+> *Notes* et des *Approbations* que rien ne relie, puisque l’exécution passe sur les deux sans
+> un mot.
 >
 > **En bas à gauche, une ligne dit si le graphe s'exporterait**, et elle se met à jour pendant
 > qu'on câble plutôt qu'au bout d'un export raté : le nombre d'étapes quand tout va bien, la

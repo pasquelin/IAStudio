@@ -334,20 +334,112 @@ export type GraphState = {
 export const EMPTY_GRAPH: GraphState = { nodes: [], edges: [], inputKeys: [] }
 
 /**
- * Types a local run passes over without a word: a value read straight off the canvas, and a note
- * that compiles to nothing. Read off `engines/graph/executor.ts`, which is what actually decides —
- * every other type either generates, transforms, asks, or reports that the studio cannot run it
- * yet, and all four of those are answers worth pressing the button for.
+ * The naming Scenario's converter reads, copied rather than invented.
+ *
+ * `workflow_converter.js` matches handle ids literally — it builds `` `${nodeId}-source-items` ``
+ * to find a port — so a handle named any other way is a port the compiler cannot see.
+ *
+ * Here rather than beside the engine's other namings, where it was written: the READER below needs
+ * it to tell an approval that guards from one that does not, and reaching into `engines/graph/`
+ * for that would put half the graph engine on the first screen. `handles.ts` re-exports it, so the
+ * engine still has one door for its ports.
  */
-const SILENT_NODE_TYPES: readonly GraphNodeType[] = ['text', 'asset', 'stickyNote']
+export const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
+  `${nodeId}-${side}-${field}`
+
+/**
+ * Which approval node guards which node, keyed by the node being guarded.
+ *
+ * Transcribed from the SDK's own `workflow_converter.js` rather than reasoned out, because the
+ * studio and the export must agree on what an approval covers: it reads the FIRST edge leaving an
+ * approval through `` `${id}-source-approval` ``, and when two approvals name the same node the
+ * LAST one in the node order wins. Both are its behaviour, not a preference of ours — matching
+ * them is what makes a graph run here the way it would run once published.
+ *
+ * The edge points from the approval to the node it guards, which reads backwards and is the
+ * convention everywhere else in this format: `source` is the consumer — see `GraphEdge`.
+ */
+export function approvalsOf(graph: GraphState): ReadonlyMap<string, string> {
+  const guards = new Map<string, string>()
+  const held = new Set(graph.nodes.map(node => node.id))
+
+  for (const node of graph.nodes) {
+    if (node.type !== 'approval') continue
+
+    const wire = graph.edges.find(
+      edge =>
+        edge.source === node.id && edge.sourceHandle === handleId(node.id, 'source', APPROVAL_PORT),
+    )
+
+    // An approval wired to nothing — or to a node a file names and the graph no longer holds —
+    // guards nothing: the converter drops it, so the studio must not stop on it either. That it
+    // asks nothing is the executor's half, which reads this very map.
+    if (wire && held.has(wire.target)) guards.set(wire.target, node.id)
+  }
+
+  return guards
+}
+
+/**
+ * The nodes a run passes over without a word: a note drawn on the canvas, and an approval guarding
+ * nobody. **The one list**, read by the Run button and by the executor both.
+ *
+ * It was a list of TYPES, transcribed by hand from the executor and wrong in both directions:
+ * `text` and `asset` sat on it though a run reports `done` on each, and an unwired approval sat
+ * off it though the executor passes over it without a question. Silence is not a property of a
+ * type — an approval's depends on its wires, which is why this reads `approvalsOf` rather than
+ * naming types.
+ */
+export function silentNodesOf(graph: GraphState): ReadonlySet<string> {
+  const asked = new Map<string, string>()
+  for (const [guarded, approval] of approvalsOf(graph)) asked.set(approval, guarded)
+
+  const silent = new Set(
+    graph.nodes.filter(node => node.type === 'stickyNote').map(node => node.id),
+  )
+
+  /**
+   * Walked to a FIXED POINT, because silence travels back up a chain of approvals: one guarding a
+   * note asks about a node that produces nothing, and one guarding THAT approval asks about a
+   * question nobody was ever put. Settled in one pass only when the chain happens to be in order,
+   * which the node order does not promise.
+   *
+   * Two approvals guarding each other settle as neither silent, and rightly: the plan calls that a
+   * cycle and paints them, which is a report.
+   */
+  for (let quiet = true; quiet;) {
+    quiet = false
+
+    for (const node of graph.nodes) {
+      if (node.type !== 'approval' || silent.has(node.id)) continue
+
+      const guarded = asked.get(node.id)
+      if (guarded === undefined || silent.has(guarded)) {
+        silent.add(node.id)
+        quiet = true
+      }
+    }
+  }
+
+  return silent
+}
 
 /**
  * Whether running this graph would report anything at all — what greys the Run button, and what
  * `start` refuses. Named once and shared, because a bar that offers a run the store then declines
  * is two surfaces of one screen disagreeing.
+ *
+ * **The type test comes first, and it is not a micro-optimisation.** This is read by a zustand
+ * selector (`spaces/graph/GraphDocument.tsx`), so it runs on every store write — one per node per
+ * frame while a selection is dragged. Any node that is neither a note nor an approval settles the
+ * question without walking a single edge; only a canvas made of nothing else pays for the wires.
  */
-export const isRunnable = (graph: GraphState): boolean =>
-  graph.nodes.some(node => !SILENT_NODE_TYPES.includes(node.type))
+export const isRunnable = (graph: GraphState): boolean => {
+  if (graph.nodes.some(node => node.type !== 'stickyNote' && node.type !== 'approval')) return true
+
+  const silent = silentNodesOf(graph)
+  return graph.nodes.some(node => !silent.has(node.id))
+}
 
 /**
  * Scenario's announced limit on a workflow, kept as a NUMBER NOBODY ENFORCES — deliberately.

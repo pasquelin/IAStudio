@@ -863,6 +863,30 @@ describe('stopping on an approval', () => {
   })
 
   /**
+   * The same question one step further out: a note compiles to nothing, so an approval guarding
+   * one guards no flow item either. Asked, it would put a question about a node that produces
+   * nothing — and `isRunnable` reads the very list this predicate does, so the button greys on
+   * such a canvas rather than offering a run that would stop on it.
+   */
+  it('asks nothing of an approval guarding a sticky note', async () => {
+    const loose = graphOf(
+      [modelNode('m1', {}, 'model_a'), noteNode('note1'), approvalNode('approval1')],
+      [guards('approval1', 'note1')],
+    )
+    const asked: string[] = []
+    const watched = await watch(loose, outputs, {
+      approve: async nodeId => {
+        asked.push(nodeId)
+        return true
+      },
+    })
+
+    expect(asked).toEqual([])
+    expect(statusesOf(watched, 'approval1')).toEqual([])
+    expect(watched.submitted.map(one => one.modelId)).toEqual(['model_a'])
+  })
+
+  /**
    * Two approvals on one node: the converter keeps the LAST and gives the other no flow item, so
    * one question is asked once. Asking both would queue them, and declining the winner painted
    * the loser "upstream failed" — for a node nothing had failed on and nobody had asked.

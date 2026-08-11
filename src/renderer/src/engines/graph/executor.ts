@@ -5,11 +5,10 @@ import type {
   GraphState,
   GraphTransformVariables,
 } from '@shared/domain/graph'
-import { CONDITIONAL_PORT } from '@shared/domain/graph'
+import { CONDITIONAL_PORT, silentNodesOf } from '@shared/domain/graph'
 import { blockToCel } from '@shared/domain/branch'
 import { readString } from '@shared/guards'
 import { celVariableName, DEFAULT_OUTPUT_NAME, outputHandlesOf } from './handles'
-import { approvalsOf } from './approvals'
 import { conditionBlocksOf } from './conditions'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
@@ -153,21 +152,24 @@ export async function runGraph(
   }
 
   const byId = new Map(graph.nodes.map(node => [node.id, node]))
-  // The approvals that actually guard something. One dropped on the canvas and left unwired, or
-  // beaten to its node by a second one, compiles to no flow item at all — so it must not stop a
-  // local run either, and above all must not put a question the export would never ask.
-  const guarding = new Set(approvalsOf(graph).values())
 
   /**
-   * A node with nothing of its own to do: a sticky note, and an approval guarding nothing.
+   * A node with nothing of its own to do: a sticky note, and an approval guarding nothing. One
+   * dropped on the canvas and left unwired, or beaten to its node by a second one, compiles to no
+   * flow item at all — so it must not stop a local run either, and above all must not put a
+   * question the export would never ask.
+   *
+   * The same set the Run button reads (`isRunnable`), and that is the point of it living in
+   * `shared`: a bar that offers a run over nothing but silent nodes would be offering a run this
+   * engine then walks through without a word.
    *
    * Read where the queue is painted and again where the run dispatches, one predicate for the two:
    * badged `queued`, such a node would claim to be work that never comes. It is NOT a node that
    * says nothing all run — a stop paints it `idle`, and a provider that failed paints it `blocked`
    * through `stopAt`; what it has none of is a turn of its own.
    */
-  const inert = (node: GraphNode): boolean =>
-    node.type === 'stickyNote' || (node.type === 'approval' && !guarding.has(node.id))
+  const silent = silentNodesOf(graph)
+  const inert = (node: GraphNode): boolean => silent.has(node.id)
 
   const produced = new Map(cache)
   const settled = new Map<string, Promise<Outcome>>()
@@ -468,6 +470,14 @@ export async function runGraph(
     // — on a graph of twenty, two badges and eighteen nodes that read as untouched.
     if (!inert(node)) report(node.id, { status: 'queued' })
 
+    /**
+     * Answered BEFORE anything is awaited, and that is not a shortcut: an approval guarding a
+     * sticky note reads that note, which produces nothing, so `resolveInputs` handed back a stall
+     * and the node was painted `blocked` — red, for a node the run was supposed to walk past
+     * without a word. Nothing downstream can want its result either: it declares no output.
+     */
+    if (inert(node)) return { kind: 'produced', values: {} }
+
     // Before the inputs, and both before the cache: a REFUSED approval outweighs a merely skipped
     // provider, and a result kept from a run somebody approved must not come back on a run they
     // have declined.
@@ -509,10 +519,6 @@ export async function runGraph(
     // rule for both: a wire carrying nothing does not overwrite.
     if (node.type === 'text') return keep(planned, node, asList(node.data.value))
     if (node.type === 'asset') return keep(planned, node, asList(node.data.value))
-    // A note drawn on the canvas, or an approval nothing waits on: neither compiles to a thing to
-    // run, so both pass without a word rather than stopping the graph, and neither has an output
-    // to read either.
-    if (inert(node)) return { kind: 'produced', values: {} }
     // Asked only once what it guards has produced, which the inputs above are: an approval put to
     // the user before the picture exists is a question about nothing.
     if (node.type === 'approval') return decide(node)
