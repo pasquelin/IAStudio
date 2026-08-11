@@ -55,10 +55,14 @@ part.
 
 > **Le septième espace, le Graphe, n’a pas encore son chapitre.** Il s’ouvre, on y pose des
 > nœuds, on les relie, on les enregistre, et **il les exécute** — chaque nœud part quand ce qu’il
-> lit est prêt, ce qui n’a pas changé n’est pas relancé, et **un nœud d’approbation l’arrête
-> pour demander votre avis**. Ce qui lui manque encore : les nœuds de logique et de boucle, et
-> l’import/export d’un workflow. Son chapitre viendra
-> quand il les saura. Ce qu’il fait aujourd’hui est au
+> lit est prêt, ce qui n’a pas changé n’est pas relancé, et **un nœud d’approbation l’arrête pour
+> demander votre avis**. Il sait **s’exporter puis se réimporter**, et il exécute un
+> **branchement** — un nœud qui choisit une route selon une condition.
+>
+> **Deux réserves.** Ce branchement ne se pose pas depuis la palette : il n’arrive que par un
+> workflow importé. Et le nœud de **boucle**, lui, n’est pas exécuté du tout — ce qui le suit
+> reste en attente, le reste du graphe continue. Ce qui manque encore au Graphe : ces deux gestes, son chapitre, et le fait que
+> **ce qu’une exécution a produit ne s’enregistre pas**. Ce qu’il fait aujourd’hui est au
 > [chapitre 3](manuel/03-la-fenetre.md) et ses limites au [chapitre 18](manuel/18-limites.md).
 
 ### Les annexes
@@ -148,6 +152,14 @@ votre système d’exploitation — le même coffre-fort que celui qui garde vos
 seule la partie du logiciel qui parle à Scenario y a accès. L’écran que vous regardez, lui, ne
 sait jamais quelle est votre clé : il sait seulement s’il est connecté ou non.
 
-**Vos fichiers non plus.** Vos projets sont des dossiers ordinaires sur votre disque. Rien n’est
-envoyé ailleurs, sauf ce que vous demandez explicitement de générer — c’est-à-dire le texte de
-votre prompt et, le cas échéant, l’image que vous fournissez en entrée.
+**Vos fichiers non plus.** Vos projets sont des dossiers ordinaires sur votre disque. Ce qui part
+vers Scenario, c’est ce que vous demandez de générer : le texte de votre prompt et, le cas échéant,
+l’image que vous fournissez en entrée.
+
+**Une exception, et elle est cochée par défaut** — mais elle ne touche pas vos fichiers. Le
+réglage **Décrire les assets rapatriés**, dans **Réglages ▸ Génération**, demande à l’API de nommer
+une image qui arrive sans nom utile. **Aucun octet ne quitte votre disque** : cette image-là est
+déjà chez Scenario, puisqu’elle en vient, et le studio n’envoie que son identifiant. Ce qui se
+dépense, en revanche, ce sont des **unités créatives**, sans clic de votre part — c’est le seul
+endroit où le studio dépense de lui-même. Décochez-le et cela s’arrête ; le
+[chapitre 14](manuel/14-reglages.md) le détaille.
