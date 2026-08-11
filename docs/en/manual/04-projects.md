@@ -53,15 +53,15 @@ My project/
 │   └── sky/                skies
 │
 ├── documents/            YOUR WORKS IN PROGRESS
-│                           one file per saved tab
+│                           one file per saved tab — a folder for an image
 │
 ├── .project.json         the identity card — HIDDEN
 │
-└── .index/               SERVICE FILES — safe to delete, HIDDEN
+└── .index/               THE CATALOGUE AND ITS CACHES — KEEP THIS, HIDDEN
     ├── catalog.db          the index that makes search instant
     ├── proxies/            lightweight copies of videos, for smooth scrubbing
     ├── peaks/              the drawing of audio waveforms
-    └── filmstrips/         video thumbnails
+    └── filmstrips/         created ahead of time, still empty
 ```
 
 **Two entries out of four are hidden, and the rule is simple**: what is yours shows, what is the
@@ -78,13 +78,23 @@ not your work.
 **`assets/` and `documents/`.** This is your work. They are real files, in real formats — a PNG is
 a PNG, an MP4 is an MP4. You can open them with any other software.
 
-### What is rebuildable
+### `.index/` holds more than caches — do not delete it
 
-**Everything under `.index/`.** These are files the studio makes to go faster, and knows how to
-remake.
+**Two of its four entries really are caches**: `proxies/` and `peaks/` are remade when a medium is
+imported, and throwing them away costs one reimport. `filmstrips/` is created ahead of time and
+stays empty — nothing writes to it yet.
 
-If that folder grows too large, or if something seems corrupted, **you can delete it**. The studio
-will rebuild it, which takes a while on a large project, and nothing will be lost.
+**`catalog.db` is not one.** It is what holds every asset's name, its tags, its dimensions, the
+model and prompt that produced it, what it derives from — and, for an imported medium, **the path
+to your original file**, which is written nowhere else. The activity journal lives in the same
+database.
+
+**The studio cannot rebuild it from the folder.** There is no rescan of `assets/` at startup: the
+catalogue fills up as you generate and import, never after the fact. Deleting `.index/` therefore
+leaves a project whose files are all still there and about which nothing says what they are.
+
+> **If you need to slim a project down**, throw away `proxies/` and `peaks/` — that is where the
+> weight is. Keep `catalog.db`, which weighs little and knows everything.
 
 ### `.project.json`
 
@@ -175,11 +185,16 @@ already taken in the destination is refused rather than overwritten, and the jou
 | **Rename** | changes the name on disk, where it is read |
 | **Move to trash** | sends the file to your system's trash |
 
-> **Nothing is deleted.** "Move to trash" is the system's own trash: the file can be got back
-> from it. The studio never permanently removes anything in a folder that belongs to you.
+> **Nothing is deleted here.** "Move to trash" is the system's own trash: the file can be got
+> back from it.
+>
+> **One door of the studio does delete for good**, and it says so: **Delete document…**, in a tab's
+> menu, takes the file out of the folder without going through the trash. Its dialogue announces
+> "This cannot be undone.", and it means it.
 
-**Two refusals, greyed rather than hidden.** `assets/`, `documents/` and their subfolders cannot
-be renamed or trashed: the index files every asset by its path under `assets/`, and moving that
+**Two refusals, greyed rather than hidden.** The folders the studio creates itself — `assets/`,
+its six per-kind subfolders, `documents/`, `.index/` and its own — cannot be renamed or trashed:
+the index files every asset by its path under `assets/`, and moving that
 folder would leave rows nothing can find again. **The same refusal holds on both sides of a
 drag**: those folders cannot be picked up, and nothing can be dropped into them either — a file
 landing there would be a file no index row speaks of. And **a document a tab is holding cannot be
@@ -188,7 +203,8 @@ write the old name back beside the new file. Close the tab first.
 
 - documents already on screen are marked **Open**;
 - a document's icon says which workspace it belongs to, the same one the rail uses;
-- `.project.json` and `.index/` are not shown: they are the studio's own service files.
+- **nothing whose name starts with a dot is shown** — so `.project.json` and `.index/`, but also
+  a folder of your own whose name you began with a dot.
 
 **A folder is only read once you open it.** `assets/img` can hold thousands of files in an ordinary
 project, and reading them to count them would cost a wait on every project opening.
@@ -225,7 +241,7 @@ half-written file.
 | You want to… | Do this |
 |---|---|
 | **Back it up** | copy the folder. That is all |
-| **Slim it before copying** | delete `.index/` — it will rebuild |
+| **Slim it before copying** | delete `.index/proxies` and `.index/peaks` — **keep `catalog.db`** |
 | **Move it elsewhere** | move the folder, then reopen it from the studio |
 | **Rename it** | rename the folder. The displayed name comes from `.project.json` |
 | **Share it** | send the compressed folder. Whoever receives it will need their own API key |
@@ -233,10 +249,13 @@ half-written file.
 Nothing breaks: the paths written inside the project are **relative**, which means they describe a
 position inside the folder, not a location on your disk.
 
-> **One exception: imported media.** When you import a video or a sound from your disk, the studio
-> **does not copy it** — it creates a link to where it sits. If you move the project without taking
-> those files along, the links break. The inspector then shows "File not found". See
-> [Assets](07-assets.md).
+> **One exception: imported media.** When you import a file from your disk — **video, sound,
+> picture or 3D object, all four can be imported** — the studio **does not copy it**: it creates a
+> link to where it sits. If you move the project without taking those files along, the links break.
+>
+> **Nothing will tell you until you click.** The inspector does not show "File not found" of its
+> own accord: it shows the **Show in the file manager** button, and it is the click, finding
+> nothing, that brings the message up. See [Assets](07-assets.md).
 
 ---
 

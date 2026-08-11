@@ -317,8 +317,9 @@ it sits.
 Two consequences:
 
 - **Upside** — a 12 GB video rush is not duplicated. Your project stays light.
-- **Downside** — if you move, rename or delete the original file, the link breaks, and the inspector
-  shows "File not found".
+- **Downside** — if you move, rename or delete the original file, the link breaks **silently**:
+  nothing reports it until you click **Show in the file manager**, and it is that click, finding
+  nothing, that brings "File not found" up in the inspector.
 
 If you have to take a project elsewhere, take the media it points at too — or copy them into the
 project folder yourself before importing them.

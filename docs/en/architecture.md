@@ -590,8 +590,12 @@ structure the studio creates on open — see the [manual](manual/04-projects.md)
 
 The **catalogue** is `.index/catalog.db`, a SQLite index of every asset: id, name, type,
 location, tags, timestamps, and the path when the asset is local. It exists so the asset shelf
-can search thousands of items without touching the filesystem, and so a project remains portable
-— delete `.index/` and it rebuilds.
+can search thousands of items without touching the filesystem, and so a project remains portable.
+
+**It does not rebuild.** No rescan of `assets/` refills the catalogue: it fills up as you generate
+and import, never after the fact. Deleting it loses the names, the tags, the dimensions, the
+generation recipe, `derivedFrom`, the `sourcePath` of linked media and the activity journal — the
+files remain, and nothing says what they are any more.
 
 Assets are either `local` (a file in the project) or `cloud` (still only on Scenario). A local
 image is served to the renderer as `scenario://<id>`.

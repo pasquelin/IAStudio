@@ -130,7 +130,7 @@ My first project/
 ├── assets/           everything you make and import
 ├── documents/        your works in progress
 ├── .project.json     the project's identity card — hidden
-└── .index/           service files, regenerable — hidden
+└── .index/           the catalogue and its caches — keep this, hidden
 ```
 
 The project's name appears at the top of the window. You always know what you are working in.

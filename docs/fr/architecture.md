@@ -614,7 +614,12 @@ la structure que le studio crée à l’ouverture — l’arborescence est dans 
 Le **catalogue** est `.index/catalog.db`, un index SQLite de chaque asset : identifiant, nom,
 type, emplacement, étiquettes, dates, et le chemin quand l’asset est local. Il existe pour que
 l’étagère puisse chercher parmi des milliers d’éléments sans toucher au système de fichiers, et
-pour qu’un projet reste transportable — supprimez `.index/` et il se reconstruit.
+pour qu’un projet reste transportable.
+
+**Il ne se reconstruit pas.** Aucun réexamen d’`assets/` ne repeuple le catalogue : il se remplit
+au fil des générations et des imports, jamais après coup. Le supprimer perd les noms, les
+étiquettes, les dimensions, la recette de génération, `derivedFrom`, le `sourcePath` des médias
+liés et le journal d’activité — les fichiers restent, plus rien ne dit ce qu’ils sont.
 
 Un asset est soit `local` (un fichier du projet), soit `cloud` (encore uniquement chez Scenario).
 Une image locale est servie au renderer sous la forme `scenario://<id>`.
