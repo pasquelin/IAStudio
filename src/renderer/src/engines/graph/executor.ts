@@ -56,7 +56,7 @@ export type GraphRunResult =
  * By port and no longer flat, because a node can have more than one: `ifElse` produces on the
  * branch it chose and on none of the others, and a reader wired to a branch that was not taken
  * must see nothing rather than see what a sibling branch produced. Every other node declares one
- * port, so its record holds one entry — `outputName` says which.
+ * port, so its record holds one entry — `outputNames` says which.
  *
  * Three facts, three names. `stalled` deliberately covers BOTH a node that went wrong and a run
  * the user ended: a reader does the same thing with either — it has nothing to read — and the one
@@ -169,7 +169,7 @@ export async function runGraph(
    * Apart from `blocked`, and the distinction is the whole point of this: `blocked` says something
    * it reads FAILED, and paints red. A node on the branch a condition did not choose has nothing
    * wrong with it — painting it red would report a fault where the graph did exactly what it was
-   * wired to do. It hands on `'skipped'` so its own readers say the same rather than blame it.
+   * wired to do. It hands on a `skipped` outcome so its own readers say the same rather than blame it.
    */
   const skip = (id: string): Outcome => {
     report(id, { status: 'skipped' })

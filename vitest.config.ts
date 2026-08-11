@@ -95,10 +95,12 @@ export default defineConfig({
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
         // fallback arm of a `Map.get` that a topological order makes unreachable, which
         // `noUncheckedIndexedAccess` requires anyway.
-        // The executor added exactly one of each, and it is that same arm a third time: the node
-        // behind an id the plan just handed back, which cannot be missing from the graph the plan
-        // was built on.
-        'src/renderer/src/engines/graph/**': { statements: -19, branches: -25 },
+        // The executor holds TWO of that same arm, and both are the node behind an id the plan
+        // just handed back, which cannot be missing from the graph the plan was built on:
+        // `settledOn`'s `?? STALLED` and the `if (!node) continue` of the run loop. Measured
+        // unreachable rather than assumed — `planGraph` filters the dangling edges and only
+        // reports `ok` when every node was ordered, so `settled` holds an entry for each.
+        'src/renderer/src/engines/graph/**': { statements: -19, branches: -26 },
         // Both covered whole: the diagnostics channel is the studio's only trace of a failure
         // that has no surface, and a branch of it nobody exercises is a failure nobody would
         // ever read.
