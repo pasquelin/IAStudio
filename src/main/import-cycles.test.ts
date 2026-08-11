@@ -122,6 +122,76 @@ const cyclesIn = (graph: Map<string, string[]>): string[] => {
   return [...found].sort()
 }
 
+/**
+ * What `vitest.config.ts` calls test material — fixtures, harnesses, the fake bridge, and the
+ * suites themselves. The regex is that exclusion list, kept here because this is where the
+ * question « who may import this » is asked (`vitest.config.ts`, `coverage.exclude`).
+ */
+const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|test-harness\.ts|fake-bridge\.ts)$/
+
+/** A fixture, recognised where the resolver LANDED rather than where a specifier pointed. */
+const IS_FIXTURE = /-fixtures\.tsx?$/
+
+/**
+ * The fixtures one file reaches, resolved.
+ *
+ * Fixtures are out of both text guards and out of every coverage budget — a decision, and its
+ * whole safety rests on nothing shipped importing one. Such a file would put words on screen that
+ * no guard reads and no budget counts: three blind spots meeting, none of which would say a word.
+ *
+ * Resolved rather than matched on the specifier, so `?worker`, a `.js` spelt for a `.ts` and the
+ * three aliases all land the same. The hole is the one written above `resolveImport`: a worker
+ * named through `new URL(…, import.meta.url)` is a URL, not an import, and stays invisible here.
+ */
+const fixturesReachedBy = (file: string, code: string): string[] =>
+  ts
+    .preProcessFile(code, true, true)
+    .importedFiles.map(({ fileName }) => resolveImport(fileName, file))
+    .filter((target): target is string => target !== null && IS_FIXTURE.test(target))
+    .map(target => `${relative(SRC, file)} -> ${relative(SRC, target)}`)
+
+const shippedFiles = (): string[] => sources(SRC).filter(file => !TEST_MATERIAL.test(file))
+
+describe('what a shipped file may reach', () => {
+  it('reaches no fixture', () => {
+    const found = shippedFiles().flatMap(file =>
+      fixturesReachedBy(file, readFileSync(file, 'utf8')),
+    )
+
+    expect(found).toEqual([])
+  })
+
+  /**
+   * An empty result proves nothing unless the files were opened. A floor rather than a tally: it
+   * will not notice a handful going missing, but it does notice a walk that stopped walking —
+   * which is how this check would pass while watching nothing.
+   */
+  it('opened the whole tree to say so', () => {
+    expect(shippedFiles().length).toBeGreaterThan(600)
+  })
+
+  /** And it can fail. Four spellings that all land on one file, and two that land on none. */
+  it('would see one reached for, however it was spelt', () => {
+    const from = join(SRC, 'renderer', 'src', 'panels', 'jobs', 'probe.ts')
+    const reached = 'renderer/src/panels/jobs/probe.ts -> renderer/src/stores/job-fixtures.ts'
+
+    expect(fixturesReachedBy(from, "import { job } from '@/stores/job-fixtures'")).toEqual([
+      reached,
+    ])
+    expect(fixturesReachedBy(from, "export { job } from '@/stores/job-fixtures'")).toEqual([
+      reached,
+    ])
+    expect(fixturesReachedBy(from, "await import('@/stores/job-fixtures')")).toEqual([reached])
+    // Vite's own suffix, which names the same module — `resolveImport` is what makes it land.
+    expect(fixturesReachedBy(from, "import W from '@/stores/job-fixtures?worker'")).toEqual([
+      reached,
+    ])
+
+    expect(fixturesReachedBy(from, "import { j } from '@/stores/jobs'")).toEqual([])
+    expect(fixturesReachedBy(from, "import { load } from './fixture'")).toEqual([])
+  })
+})
+
 describe('the import graph', () => {
   it('carries no cycle beyond the four already there', () => {
     const files = sources(SRC)
