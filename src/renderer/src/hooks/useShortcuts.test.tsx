@@ -87,6 +87,43 @@ describe('useShortcuts', () => {
   })
 
   /**
+   * A ⌘ is never typing. `⌘Entrée` on a prompt is a run and not a character, and the guard above
+   * silenced it along with the letters — the node editor could be typed into but never started
+   * from the field it was typed in.
+   *
+   * Dispatched from the field rather than through focus, so what this pins is the guard: the
+   * event carries the field as its target either way.
+   */
+  it('lets a ⌘ chord through from inside a text field', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    fireEvent.keyDown(screen.getByLabelText('prompt'), { code: 'KeyG', metaKey: true })
+
+    expect(onCommand).toHaveBeenCalledWith('scene.group')
+  })
+
+  /**
+   * The exception, and the reason the rule is not simply "⌘ always wins": these six are what the
+   * field itself performs. Taking ⌘Z would undo the document instead of the sentence being
+   * written, and ⌘V would paste a node into the scene instead of text into the field.
+   */
+  it.each([
+    ['KeyZ', {}],
+    ['KeyZ', { shiftKey: true }],
+    ['KeyC', {}],
+    ['KeyV', {}],
+    ['KeyX', {}],
+  ])('leaves ⌘%s to the field it was typed in', (code, modifiers) => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+
+    fireEvent.keyDown(screen.getByLabelText('prompt'), { code, metaKey: true, ...modifiers })
+
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  /**
    * The native menu fires a command, never a key — and on macOS the menu is what hears an
    * accelerator it declared, so the window never sees it. Both doors lead to the surface, or a
    * menu row does nothing: eleven of them did.

@@ -1,5 +1,5 @@
 import { type CommandId, type CommandScope } from '@shared/domain/command'
-import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
+import { copiesText, type MotionId, runsWhileTyping, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
 import { commandDescriptor, commandFor, heldCommandFor } from '@shared/domain/command'
 import { isTyping } from '@/helpers/typing'
@@ -60,8 +60,8 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isTyping(event.target)) return
       const signature = signatureOf(event)
+      if (isTyping(event.target) && !runsWhileTyping(signature)) return
       const motion = motionFor(signature)
       // Holding a key repeats keydown; only a set that actually changed is worth reporting.
       if (motion && !held.has(motion)) {

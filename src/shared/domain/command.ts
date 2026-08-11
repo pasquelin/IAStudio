@@ -329,8 +329,8 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     defaultBinding: 'Meta+KeyG',
   }),
   // The four gestures every editor shares, on the keys every editor uses. `role: 'editMenu'`
-  // carries the same three for text fields; a scene tab is not one, and `isTyping` keeps them
-  // apart when it is.
+  // carries the same three for text fields; a scene tab is not one, and `runsWhileTyping` keeps
+  // them apart when it is.
   command({
     id: 'scene.duplicate',
     scope: 'scene',

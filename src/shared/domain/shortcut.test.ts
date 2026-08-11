@@ -5,6 +5,7 @@ import {
   DEFAULT_MOTION,
   isSignature,
   MOTION_IDS,
+  runsWhileTyping,
   shortcutLabel,
   signatureOf,
   type KeyChord,
@@ -254,4 +255,41 @@ describe('whether a string is a signature the studio could produce', () => {
 
     expect(malformed).toEqual([])
   })
+})
+
+describe('runsWhileTyping', () => {
+  /**
+   * The case this answers: a prompt is typed into a node's field, and ⌘Entrée has to reach the
+   * graph that runs it. Read off the registry rather than spelled here, so rebinding the command
+   * moves the test with it instead of leaving it pinned to a key nobody presses.
+   */
+  it('lets the chord that runs a graph through from inside a field', () => {
+    expect(runsWhileTyping(shipped('graph.run'))).toBe(true)
+  })
+
+  it.each(['Meta+KeyS', 'Meta+KeyG', 'Shift+Meta+KeyE', 'Ctrl+Meta+KeyF'])(
+    'lets %s through, because a ⌘ is never typing',
+    signature => {
+      expect(runsWhileTyping(signature)).toBe(true)
+    },
+  )
+
+  /**
+   * What an editable field performs on its own text. Taking these would leave a prompt with no
+   * undo and no paste — the one place the user has no other way to ask for them.
+   */
+  it.each(['Meta+KeyZ', 'Shift+Meta+KeyZ', 'Meta+KeyA', 'Meta+KeyC', 'Meta+KeyV', 'Meta+KeyX'])(
+    'leaves %s to the field it was typed in',
+    signature => {
+      expect(runsWhileTyping(signature)).toBe(false)
+    },
+  )
+
+  // The general rule is untouched: without a ⌘, a shortcut still yields to what is being typed.
+  it.each(['KeyG', 'Delete', 'Shift+KeyE', 'Alt+KeyD', 'Ctrl+KeyZ'])(
+    'still yields %s to the field',
+    signature => {
+      expect(runsWhileTyping(signature)).toBe(false)
+    },
+  )
 })
