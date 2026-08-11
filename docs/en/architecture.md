@@ -843,7 +843,7 @@ ports go together. `NodePorts.tsx` carries the rule in JSDoc, where it would be 
 It is the same split as `name` and `message` in the hardcoded-text guards: **a string that is also
 data is not a label**, and translating it breaks it as data.
 
-### Four guards, and what each one holds
+### Five guards, and what each one holds
 
 They are not the same test, and treating them as one suggests a single thing is being watched.
 They share the tree without overlapping, and all of them run in `pnpm validate`.
@@ -853,7 +853,8 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 | `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, **a breaking space before `; : ! ?` or inside French quotation marks**, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
 | `renderer/src/no-hardcoded-text.test.ts` | in a `.tsx`: text between tags, a literal in braces, one behind a ternary or an `&&`, and any attribute a human reads |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
-| `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key is expected |
+| `main/no-hardcoded-text.test.ts`, § *the registries* | in `renderer`, `shared` or `preload`: a label written where a key is expected |
+| `main/no-hardcoded-text.test.ts`, § *the words nobody puts in a tag* | in all **four** trees, `main` included: a sentence bound to a name — `const message = 'This project could not be opened'` — that neither the tags nor the registry fields ever show |
 
 **Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, none of the 23 fixture files in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. Coverage excludes exactly the same files (`vitest.config.ts`). It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
 
