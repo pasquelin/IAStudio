@@ -11,11 +11,13 @@ import {
   Object3D,
   PerspectiveCamera,
   Raycaster,
+  type Camera,
   SkeletonHelper,
   SpotLight,
   Sprite,
   SpriteMaterial,
   Vector2,
+  Vector3,
   WebGLRenderTarget,
   Vector3 as ThreeVector3,
 } from 'three'
@@ -64,8 +66,10 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
-import { SceneAnimations, clipNamesOf, clipsOf } from './animation'
+import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animation-eval'
+import type { Us } from '@shared/domain/time'
+import { nearestBone, type ProjectedBone } from './bone-picking'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
 import { createModelCache, instanceOf, type ModelCache, type ModelSource } from './model-cache'
@@ -116,9 +120,20 @@ export type SceneRendererOptions = {
    * What clips a model brought, once its file has landed. React cannot ask the cache: the names
    * live in the file, not in the document, and a panel offering a choice has to know them.
    */
-  onClips?: (nodeId: string, clips: readonly string[]) => void
+  onClips?: (
+    nodeId: string,
+    clips: readonly string[],
+    lengths: Readonly<Record<string, number>>,
+  ) => void
   /** The bones a rigged model brought, named. Same reason as `onClips`: they live in the file. */
   onBones?: (nodeId: string, bones: readonly string[]) => void
+  /**
+   * The bone a click picked while the pose mode is on, or nothing for a click in the void.
+   *
+   * Apart from `onSelect` because a bone is not a node: it has no id in the document, it is
+   * addressed by the pair its channels are addressed by — see `TrackTarget`.
+   */
+  onSelectBone?: (picked: { nodeId: string; bone: string } | null) => void
   /**
    * What the scene costs, whenever that changes. Counted here because only the engine knows what
    * a model actually brought: the document holds an asset id, not the triangles behind it.
@@ -171,6 +186,9 @@ Mesh.prototype.raycast = acceleratedRaycast
 
 /** Posed on long-lived helpers: a fresh closure each would keep its enclosing scope alive. */
 const NOOP = (): void => {}
+
+/** Scratch for projecting a bone, so a click over a rig allocates nothing per bone. */
+const BONE_WORLD = new Vector3()
 
 /** three marks its bones with a flag; `instanceof` would miss one from another three instance. */
 function isBone(object: Object3D): boolean {
@@ -246,6 +264,16 @@ export class SceneRenderer {
   /** One per rigged model, drawn over it. Beside the nodes like the grid — never inside one. */
   private readonly skeletons = new Map<string, SkeletonHelper>()
   private showSkeletons = false
+  /**
+   * Whether a click picks a BONE rather than a mesh.
+   *
+   * The two are exclusive on purpose, which is what answers the reason bones were taken off the
+   * raycaster: a rig's bones cross every mesh they drive, so offering both at once means a click
+   * that lands on whichever the ray happens to meet first.
+   */
+  private poseMode = false
+  /** The bone the gizmo is aimed at while the pose mode is on, and what a release reports. */
+  private pickedBone: { nodeId: string; bone: string } | null = null
   /** The tracks of the document, and where the head stands over them. */
   private timeline: AnimationTimeline = EMPTY_TIMELINE
   private playhead = 0
@@ -413,10 +441,13 @@ export class SceneRenderer {
    * Where the head stands, in seconds. Session state, so it arrives by a call of its own rather
    * than inside the document — playing would otherwise put one undo entry per frame.
    */
-  setPlayhead(time: number): void {
+  setPlayhead(time: Us): void {
     if (time === this.playhead) return
     this.playhead = time
     this.applyPoses()
+    // The clips of every imported model follow the head too, which is what puts them on the band
+    // rather than on real time — and what stops a render from writing a frozen character.
+    this.animations.seek(time)
     this.viewport.requestRender()
   }
 
@@ -754,6 +785,44 @@ export class SceneRenderer {
 
     for (const helper of this.skeletons.values()) helper.visible = shown
     this.viewport.requestRender()
+  }
+
+  /**
+   * Whether a click picks a bone instead of a mesh. The skeletons are shown while it is on: a
+   * mode that picks what nothing draws is a mode nobody can aim.
+   */
+  setPoseMode(on: boolean): void {
+    if (on === this.poseMode) return
+    this.poseMode = on
+
+    for (const helper of this.skeletons.values()) helper.visible = on || this.showSkeletons
+    this.viewport.requestRender()
+  }
+
+  /**
+   * Every bone on stage, as the screen sees it. Built per click rather than kept: a bone moves
+   * with its rig, and a cached projection would name whatever stood there a frame ago.
+   */
+  private projectedBones(camera: Camera): ProjectedBone[] {
+    const projected: ProjectedBone[] = []
+
+    for (const [nodeId, helper] of this.skeletons) {
+      for (const bone of helper.bones) {
+        if (!bone.name) continue
+
+        bone.getWorldPosition(BONE_WORLD)
+        BONE_WORLD.project(camera)
+        projected.push({
+          nodeId,
+          bone: bone.name,
+          x: BONE_WORLD.x,
+          y: BONE_WORLD.y,
+          z: BONE_WORLD.z,
+        })
+      }
+    }
+
+    return projected
   }
 
   /**
@@ -1218,7 +1287,7 @@ export class SceneRenderer {
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
       if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
-      this.options.onClips?.(node.id, clipNamesOf(source))
+      this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
       this.bindSkeleton(node.id, holder)
       this.options.onBones?.(node.id, this.bonesOf(holder))
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track
@@ -1422,6 +1491,15 @@ export class SceneRenderer {
     // would drag it to the origin — a mode key pressed during a drag must not move anything.
     if (gizmo.dragging) return
 
+    // A picked bone is what the gizmo holds while the pose mode is on, and it is attached
+    // directly: a bone is inside a model's instance, so the pivot has nothing to carry.
+    const boneObject = this.pickedBoneObject()
+    if (boneObject) {
+      if (this.mode === 'select') gizmo.detach()
+      else gizmo.attach(boneObject)
+      return
+    }
+
     const target = gizmoTargetFor(this.mode, this.space, this.selectedObjects(), object =>
       this.applied.get(object.name),
     )
@@ -1472,8 +1550,46 @@ export class SceneRenderer {
       return
     }
 
+    const picked = this.pickedBone
+    const boneObject = this.pickedBoneObject()
+    if (picked && boneObject) {
+      const rest = this.boneRestOf(picked.nodeId, picked.bone, boneObject)
+      this.options.onTransform([
+        { id: picked.nodeId, bone: picked.bone, rest, transform: transformOf(boneObject) },
+      ])
+      return
+    }
+
     const target = this.gizmo?.object
     if (target) this.options.onTransform([{ id: target.name, transform: transformOf(target) }])
+  }
+
+  /** The three object of the bone the pose mode picked, while one is picked and still on stage. */
+  private pickedBoneObject(): Object3D | null {
+    const picked = this.pickedBone
+    if (!picked || !this.poseMode) return null
+    return this.objects.get(picked.nodeId)?.getObjectByName(picked.bone) ?? null
+  }
+
+  /**
+   * Where a bone rested when it arrived, remembered the first time anything asks. It is the pose
+   * the FILE gave it, which is what every delta is measured against — see `applyBonePoses`.
+   */
+  private boneRestOf(nodeId: string, bone: string, object: Object3D): Transform {
+    const key = `${nodeId}/${bone}`
+    const held = this.boneRests.get(key)
+    if (held) return held
+
+    const rest = transformOf(object)
+    this.boneRests.set(key, rest)
+    return rest
+  }
+
+  /** Aims the gizmo at a bone, or lets go of the one it held. */
+  setPickedBone(picked: { nodeId: string; bone: string } | null): void {
+    this.pickedBone = picked
+    this.attachGizmo()
+    this.viewport.requestRender()
   }
 
   /** Redraws nodes from what was last applied, undoing what a gesture moved without meaning to. */
@@ -1535,7 +1651,17 @@ export class SceneRenderer {
     // The camera of the view under the pointer, never the main one: a ray cast from elsewhere
     // meets whatever stands in ITS way, so a click in a side view picked something the pointer
     // was nowhere near — which made every view but the first one inert.
-    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
+    const camera = this.cameraInHand()
+
+    // In pose mode a click names a BONE and never a node: the two are exclusive, which is what
+    // keeps a rig's bones from stealing every click meant for the mesh they drive.
+    if (this.poseMode) {
+      const picked = nearestBone(this.projectedBones(camera), { x: ndc.x, y: ndc.y })
+      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
+      return
+    }
+
+    this.raycaster.setFromCamera(this.pointer, camera)
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
     // that the ray actually meets. Both they and the light carry the node's id.

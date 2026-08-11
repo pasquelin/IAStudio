@@ -6,15 +6,8 @@ import {
   visibleRange,
   type Viewport,
 } from './timeline-geometry'
-import { formatTimecode } from './timecode'
-import {
-  clipEnd,
-  frameDuration,
-  type Clip,
-  type SequenceState,
-  type Track,
-  type Us,
-} from './timeline-state'
+import { paintRuler as paintBandRuler } from './ruler'
+import { clipEnd, type Clip, type SequenceState, type Track, type Us } from './timeline-state'
 import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { waveformColumns, type WaveColumn } from './waveform'
 
@@ -99,24 +92,6 @@ function computePalette(): Palette {
   }
 }
 
-/**
- * Microseconds between two graduations, chosen so they never crowd below ~60 px apart. Below a
- * second the grid becomes the frame grid: zoomed in that far, seconds are what stops being
- * useful, and a graduation off the frame boundary cannot be trusted to cut against.
- */
-export function tickStep(viewport: Viewport, state: SequenceState): Us {
-  const frame = frameDuration(state.settings)
-  const fits = (step: Us): boolean => step * viewport.scale >= 60
-
-  for (const frames of [1, 2, 5, 10, 25]) {
-    const step = frame * frames
-    if (step < 1_000_000 && fits(step)) return step
-  }
-
-  const seconds = [1, 2, 5, 10, 30, 60, 120, 300, 600, 900]
-  return (seconds.find(step => fits(step * 1_000_000)) ?? 1_800) * 1_000_000
-}
-
 function paintRuler(
   context: CanvasRenderingContext2D,
   state: SequenceState,
@@ -124,25 +99,17 @@ function paintRuler(
   size: Size,
   palette: Palette,
 ): void {
-  context.fillStyle = palette.ruler
-  context.fillRect(0, 0, size.width, RULER_HEIGHT)
-
-  const step = tickStep(viewport, state)
-  const [from, to] = visibleRange(viewport, size.width)
-  context.font = palette.rulerFont
-  context.textBaseline = 'middle'
-
-  for (let time = Math.floor(from / step) * step; time <= to; time += step) {
-    const x = Math.round(timeToX(time, viewport)) + 0.5
-    context.fillStyle = palette.border
-    context.fillRect(x, RULER_HEIGHT - 6, 1, 6)
-
-    context.fillStyle = palette.muted
-    context.fillText(formatTimecode(time, state.settings), x + 4, RULER_HEIGHT / 2)
-  }
-
-  context.fillStyle = palette.border
-  context.fillRect(0, RULER_HEIGHT - 1, size.width, 1)
+  paintBandRuler(context, {
+    viewport,
+    width: size.width,
+    fps: state.settings.fps,
+    style: {
+      background: palette.ruler,
+      tick: palette.border,
+      text: palette.muted,
+      font: palette.rulerFont,
+    },
+  })
 }
 
 function paintTrack(

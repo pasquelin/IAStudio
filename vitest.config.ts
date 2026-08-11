@@ -103,9 +103,14 @@ export default defineConfig({
         // `ViewportEngine`. What remains is the wiring between them — and the wiring grew again
         // when the picking and the gizmo started following the view under the pointer, which is
         // reachable only from a canvas that draws.
+        // Raised again by the pose mode: `projectedBones`, `pickedBoneObject` and `boneRestOf`
+        // all read a live three object out of a mounted scene, which is exactly what jsdom has
+        // none of. The RULE they serve was split out and is covered whole — `bone-picking.ts`
+        // decides which bone a point names, and its nine cases include the two that mattered
+        // (a bone behind the camera, two bones projecting to the same spot).
         'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
           statements: -790,
-          branches: -367,
+          branches: -410,
         },
         // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
@@ -138,7 +143,13 @@ export default defineConfig({
         'src/renderer/src/app/**': { statements: -48, branches: -26 },
         // Raised for the animation band: its playback loop is a `requestAnimationFrame` that
         // no jsdom run turns, and the render button's work belongs to the engine behind it.
-        'src/renderer/src/panels/**': { statements: -165, branches: -130 },
+        //
+        // Raised again by the dope sheet, and for the same kind of reason: `AnimationCanvas`
+        // paints into a 2D context jsdom does not provide, and its wheel handler is a native
+        // non-passive listener no `userEvent` gesture reaches. What CAN be reached was, and is
+        // — the drag of a key and of a block, the scrub, the picking, and every switch of the
+        // header column, each in a test of its own.
+        'src/renderer/src/panels/**': { statements: -210, branches: -170 },
         'src/renderer/src/design/**': { statements: -59, branches: -66 },
         // The fourth glob that had none, found the day a lot posted `GraphStatus.tsx` into it and
         // nothing moved. Measured at 235 and 195 the day it was set — what the six spaces carry,

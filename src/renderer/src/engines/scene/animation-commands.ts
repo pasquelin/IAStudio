@@ -1,8 +1,9 @@
 import type { AnimationTrack, Keyframe, TrackTarget } from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
+import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
 import { moveNodes, multi } from './commands'
-import { deltaOf, withKey, withoutKey } from './animation-eval'
+import { deltaOf, valueAt, withKey, withoutKey } from './animation-eval'
 import { nodeById, type NodeMove, type SceneState } from './scene-state'
 
 /**
@@ -70,7 +71,6 @@ export function addAnimationTrack(
           muted: false,
           solo: false,
           locked: false,
-          armed: false,
           target,
           keys: [],
         },
@@ -164,11 +164,74 @@ export function removeAnimationKey(trackId: string, time: number): Command<Scene
   }
 }
 
+/**
+ * A key on every channel of one subject, holding where the object STANDS right now.
+ *
+ * This is what a sheet's key button does — Blender spells it `LocRotScale` — and it is the whole
+ * difference between a usable band and the one that wrote a neutral value: a key that holds
+ * nothing moves nothing, so pressing the button appeared to do nothing at all.
+ *
+ * One command whatever the channel count, so a key costs one ⌘Z rather than three.
+ */
+export function keySubject(
+  state: SceneState,
+  trackIds: readonly string[],
+  time: Us,
+): Command<SceneState> | null {
+  const writes: Command<SceneState>[] = []
+
+  for (const trackId of trackIds) {
+    const track = trackById(state, trackId)
+    if (!track || track.locked) continue
+
+    // What the track ALREADY stands at, which is what the viewport is showing. Between two keys
+    // that is the interpolated value, so keying there pins the pose instead of snapping it to a
+    // neutral — and a neutral is exactly what made the old button appear to do nothing.
+    writes.push(setAnimationKey(trackId, time, valueAt(track, time)))
+  }
+
+  if (writes.length === 0) return null
+  return writes.length === 1 && writes[0] ? writes[0] : multi('key:subject', writes)
+}
+
+/**
+ * Slides a key along its track, keeping its value.
+ *
+ * A key landing on an instant another already holds REPLACES it, which is what `withKey` does
+ * everywhere else — two keys on one frame is a state no evaluation can read twice.
+ */
+export function moveAnimationKey(trackId: string, from: Us, to: Us): Command<SceneState> {
+  let previous: readonly Keyframe[] | null = null
+
+  return {
+    id: `key:move:${trackId}`,
+    apply: state => {
+      const track = trackById(state, trackId)
+      if (!track || track.locked) return state
+
+      const moving = track.keys.find(key => key.time === from)
+      if (!moving) return state
+
+      previous = track.keys
+      return editTrack(state, trackId, current => ({
+        ...current,
+        keys: withKey(withoutKey(current.keys, from), { time: to, value: moving.value }),
+      }))
+    },
+    revert: state => {
+      const origin = previous
+      return origin === null
+        ? state
+        : editTrack(state, trackId, track => ({ ...track, keys: origin }))
+    },
+  }
+}
+
 /** How long the whole thing runs, and how finely it is cut. */
 export function setTimelineSettings(
-  settings: Partial<{ duration: number; fps: number }>,
+  settings: Partial<{ duration: Us; fps: number }>,
 ): Command<SceneState> {
-  let previous: { duration: number; fps: number } | null = null
+  let previous: { duration: Us; fps: number } | null = null
 
   return {
     id: 'timeline:settings',
@@ -184,26 +247,30 @@ export function setTimelineSettings(
 }
 
 /**
- * What a gizmo drag means when tracks are armed.
+ * The channels a drag records on, once auto-key is recording.
  *
- * Additive tracks make this the crux: with nothing armed, a drag writes the node's REST pose and
- * every track then adds itself on top again, so the object springs back the moment the pointer is
- * released. With a track armed, the drag becomes a key on it — the difference between where the
- * object was put and where it rests.
+ * Additive tracks make the flag necessary rather than nice: with nothing recording, a drag writes
+ * the node's REST pose and every track then adds itself on top again, so the object springs back
+ * the moment the pointer is released. Recording, the drag becomes a key instead — the difference
+ * between where the object was put and where it rests.
  *
- * A node with no armed track keeps the old behaviour, which is what makes an untouched scene
- * behave exactly as it did before any of this existed.
+ * A bone is reached the same way. It was excluded here until the pose mode gave a way to select
+ * one, which left bone channels evaluable and impossible to fill.
  */
-export function armedTracksFor(state: SceneState, nodeId: string): AnimationTrack[] {
+export function recordingTracksFor(
+  state: SceneState,
+  nodeId: string,
+  bone?: string,
+): AnimationTrack[] {
   return state.animation.tracks.filter(
-    track => track.armed && !track.locked && track.target.nodeId === nodeId && !track.target.bone,
+    track => !track.locked && track.target.nodeId === nodeId && track.target.bone === bone,
   )
 }
 
 export function recordMove(
   rest: Transform,
   pose: Transform,
-  time: number,
+  time: Us,
   tracks: readonly AnimationTrack[],
 ): Command<SceneState>[] {
   return tracks.map(track =>
@@ -212,28 +279,32 @@ export function recordMove(
 }
 
 /**
- * What one gizmo drag becomes, over a whole selection: keys on the tracks that are armed, and an
- * ordinary move for every node that has none.
+ * What one gizmo drag becomes, over a whole selection: keys where auto-key is recording and a
+ * channel exists, an ordinary move everywhere else.
  *
- * One command whatever the mix, so a drag over an armed cube and a plain sphere is one undo.
+ * One command whatever the mix, so a drag over a keyed cube and a plain sphere is one undo.
  * `null` when there is nothing to write at all.
  */
 export function movesToCommand(
   state: SceneState,
   moves: readonly NodeMove[],
-  at: number,
+  at: Us,
+  recording: boolean,
 ): Command<SceneState> | null {
   const keys: Command<SceneState>[] = []
   const plain: NodeMove[] = []
 
   for (const move of moves) {
-    const armed = armedTracksFor(state, move.id)
-    const rest = nodeById(state, move.id)?.transform
-    if (armed.length === 0 || !rest) {
-      plain.push(move)
+    const tracks = recording ? recordingTracksFor(state, move.id, move.bone) : []
+    const rest = move.rest ?? nodeById(state, move.id)?.transform
+
+    if (tracks.length === 0 || !rest) {
+      // A bone has nowhere else to go: it is not a node, so there is no plain move to fall back
+      // on — an unrecorded bone drag is simply dropped, and the renderer puts it back.
+      if (!move.bone) plain.push(move)
       continue
     }
-    keys.push(...recordMove(rest, move.transform, at, armed))
+    keys.push(...recordMove(rest, move.transform, at, tracks))
   }
 
   if (plain.length > 0) keys.push(moveNodes(plain))

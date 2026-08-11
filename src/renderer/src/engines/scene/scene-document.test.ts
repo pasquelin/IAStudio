@@ -382,7 +382,6 @@ describe('the timeline a file holds', () => {
     muted: false,
     solo: false,
     locked: false,
-    armed: false,
     target: { nodeId: 'cube', property: 'position' },
     keys: [{ time: 1, value: { x: 1, y: 0, z: 0 } }],
   }

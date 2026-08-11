@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Us } from '@shared/domain/time'
 import { DEFAULT_PANE_VIEWS, type DisplayMode, type PaneView } from '@/engines/scene/scene-view'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
@@ -12,14 +13,18 @@ export type SceneView = {
   displays: readonly DisplayMode[]
   /** Whether the bones of every rigged model are drawn over it. Off, like every other overlay. */
   skeletons: boolean
+  /** Whether a click picks a bone rather than a mesh. Exclusive on purpose — see the renderer. */
+  poseMode: boolean
+  /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
+  pickedBone: { nodeId: string; bone: string } | null
   /** Four views instead of one — top, front, left, and the one being flown. */
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
   quadEdges: boolean
   /** What each of the four views shows. Only a free one turns — see `PaneView`. */
   panes: readonly PaneView[]
-  /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
-  playhead: number
+  /** Where the animation head stands, in microseconds. Never in the document — see `AnimationTimeline`. */
+  playhead: Us
   playing: boolean
 }
 
@@ -27,6 +32,8 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   projection: 'perspective',
   displays: ['shaded'],
   skeletons: false,
+  poseMode: false,
+  pickedBone: null,
   quad: false,
   quadEdges: false,
   panes: DEFAULT_PANE_VIEWS,
@@ -47,10 +54,12 @@ export type SceneViewsState = {
   setProjection: (documentId: string, projection: ProjectionKind) => void
   setDisplay: (documentId: string, pane: number, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
+  setPoseMode: (documentId: string, poseMode: boolean) => void
+  setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
-  setPlayhead: (documentId: string, playhead: number) => void
+  setPlayhead: (documentId: string, playhead: Us) => void
   setPlaying: (documentId: string, playing: boolean) => void
 }
 
@@ -77,6 +86,16 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setSkeletons: (documentId, skeletons) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), skeletons } },
+    })),
+
+  setPoseMode: (documentId, poseMode) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), poseMode } },
+    })),
+
+  setPickedBone: (documentId, pickedBone) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), pickedBone } },
     })),
 
   setQuad: (documentId, quad) =>

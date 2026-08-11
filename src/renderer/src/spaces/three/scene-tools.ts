@@ -24,6 +24,7 @@ import {
   mdiFolderPlusOutline,
   mdiGrid,
   mdiBone,
+  mdiHumanHandsup,
   mdiHexagonOutline,
   mdiMagnet,
   mdiPlus,
@@ -194,6 +195,13 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     labelKey: 'sceneTools.skeletons',
     descriptionKey: 'sceneTools.skeletonsHint',
     icon: mdiBone,
+  },
+  {
+    id: 'poseMode',
+    command: 'scene.poseMode',
+    labelKey: 'sceneTools.poseMode',
+    descriptionKey: 'sceneTools.poseModeHint',
+    icon: mdiHumanHandsup,
   },
   {
     id: 'frame',

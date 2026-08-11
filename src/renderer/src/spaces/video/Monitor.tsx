@@ -155,7 +155,7 @@ export function Monitor({
         extras={
           <>
             <span className="text-muted text-tiny px-1">{title}</span>
-            <Timecode time={sequence.playhead} settings={sequence.settings} />
+            <Timecode time={sequence.playhead} fps={sequence.settings.fps} />
           </>
         }
       />

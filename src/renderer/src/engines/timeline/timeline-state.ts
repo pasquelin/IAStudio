@@ -2,11 +2,19 @@
  * A sequence, as plain data. It holds no decoder and no Pixi object: an engine is rebuilt from
  * its serialized state, never from its DOM, and jsdom has neither WebCodecs nor WebGL.
  */
+import {
+  SECOND,
+  frameDuration as frameOf,
+  snapToFrame as snapOf,
+  type Us,
+} from '@shared/domain/time'
 import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 import { clamp } from '@shared/numeric'
 
-/** Timeline time, in microseconds. Never float seconds: drift accumulates over a long edit. */
-export type Us = number
+// Re-exported where the montage has always read them from: a scene's animation is written in the
+// same unit, so the definition moved to `shared/` where both sides may reach it.
+export { SECOND }
+export type { Us }
 
 export type SequenceSettings = {
   width: number
@@ -63,9 +71,6 @@ export type SequenceState = {
   selectedId: string | null
   playhead: Us
 }
-
-/** One second, in the unit the whole studio counts time in. */
-export const SECOND: Us = 1_000_000
 
 export const DEFAULT_SETTINGS: SequenceSettings = {
   width: 1920,
@@ -161,13 +166,14 @@ export function reindexTracks(tracks: readonly Track[]): Track[] {
   return tracks.map((track, position) => ({ ...track, index: tracks.length - 1 - position }))
 }
 
+// Adapters over the shared pair: a sequence carries four settings where the grid needs one. They
+// exist so the montage's call sites stay untouched while another branch is editing them.
 export function frameDuration(settings: SequenceSettings): Us {
-  return Math.round(SECOND / settings.fps)
+  return frameOf(settings.fps)
 }
 
 export function snapToFrame(time: Us, settings: SequenceSettings): Us {
-  const frame = frameDuration(settings)
-  return Math.max(0, Math.round(time / frame) * frame)
+  return snapOf(time, settings.fps)
 }
 
 /**

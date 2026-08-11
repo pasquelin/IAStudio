@@ -2,12 +2,25 @@ import { create } from 'zustand'
 
 type ClipsByNode = Record<string, readonly string[]>
 
+/** How long each clip runs, in the seconds three measures it in, keyed by name. */
+type LengthsByNode = Record<string, Readonly<Record<string, number>>>
+
 type ModelClipsState = {
   /** Keyed by document, then by node: two tabs may hold the same model at different heads. */
   clips: Record<string, ClipsByNode>
   /** The bones of each rigged model, the same way and for the same reason. */
   bones: Record<string, ClipsByNode>
-  report: (documentId: string, nodeId: string, clips: readonly string[]) => void
+  /**
+   * How long each clip runs. Same reason as the names: the length lives in the GLB, so nothing
+   * that reads only the document can draw a block of the right width.
+   */
+  lengths: Record<string, LengthsByNode>
+  report: (
+    documentId: string,
+    nodeId: string,
+    clips: readonly string[],
+    lengths?: Readonly<Record<string, number>>,
+  ) => void
   reportBones: (documentId: string, nodeId: string, bones: readonly string[]) => void
   forget: (documentId: string) => void
 }
@@ -23,11 +36,16 @@ type ModelClipsState = {
 export const useModelClips = create<ModelClipsState>()(set => ({
   clips: {},
   bones: {},
-  report: (documentId, nodeId, clips) =>
+  lengths: {},
+  report: (documentId, nodeId, clips, lengths) =>
     set(state => ({
       clips: {
         ...state.clips,
         [documentId]: { ...state.clips[documentId], [nodeId]: clips },
+      },
+      lengths: {
+        ...state.lengths,
+        [documentId]: { ...state.lengths[documentId], [nodeId]: lengths ?? {} },
       },
     })),
   reportBones: (documentId, nodeId, bones) =>
@@ -42,9 +60,11 @@ export const useModelClips = create<ModelClipsState>()(set => ({
     set(state => {
       const { [documentId]: goneClips, ...clips } = state.clips
       const { [documentId]: goneBones, ...bones } = state.bones
+      const { [documentId]: goneLengths, ...lengths } = state.lengths
       void goneClips
       void goneBones
-      return { clips, bones }
+      void goneLengths
+      return { clips, bones, lengths }
     }),
 }))
 
@@ -62,6 +82,16 @@ export function clipsOfNode(
   nodeId: string,
 ): readonly string[] {
   return state.clips[documentId]?.[nodeId] ?? NO_CLIPS
+}
+
+/** How long one clip of a node runs, in seconds, or nothing while its file has not landed. */
+export function clipLengthOf(
+  state: ModelClipsState,
+  documentId: string,
+  nodeId: string,
+  clip: string,
+): number | null {
+  return state.lengths[documentId]?.[nodeId]?.[clip] ?? null
 }
 
 /** The bones a node's model brought, or none — a mesh has none, and neither has a loading model. */

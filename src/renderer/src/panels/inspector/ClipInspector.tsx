@@ -40,14 +40,14 @@ export function ClipInspector({ documentId, sequence, clip }: ClipInspectorProps
         <PropertyRow label={t('inspector.source')}>{name}</PropertyRow>
         {track && <PropertyRow label={t('inspector.track')}>{track.name}</PropertyRow>}
         <PropertyRow label={t('inspector.start')}>
-          {formatTimecode(clip.start, sequence.settings)}
+          {formatTimecode(clip.start, sequence.settings.fps)}
         </PropertyRow>
         <PropertyRow label={t('inspector.end')}>
-          {formatTimecode(clipEnd(clip), sequence.settings)}
+          {formatTimecode(clipEnd(clip), sequence.settings.fps)}
         </PropertyRow>
         <PropertyRow label={t('inspector.duration')}>{formatDuration(clip.duration)}</PropertyRow>
         <PropertyRow label={t('inspector.inPoint')}>
-          {formatTimecode(clip.inPoint, sequence.settings)}
+          {formatTimecode(clip.inPoint, sequence.settings.fps)}
         </PropertyRow>
       </PropertyGroup>
 

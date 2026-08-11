@@ -8,7 +8,8 @@ import { Toolbar } from '@/design/Toolbar'
 import { canRedo, canUndo } from '@/engines/core/history'
 import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
 import { movesToCommand } from '@/engines/scene/animation-commands'
-import { snapToFrame } from '@/engines/scene/animation-eval'
+import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
+import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { setDocumentTitle } from '@/app/dockview-api'
 import { useAddNode } from '@/hooks/useAddNode'
@@ -66,8 +67,9 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
   const store = useScenes.getState()
   const state = sceneOf(store, documentId)
   const at = snapToFrame(viewOf(useSceneViews.getState(), documentId).playhead, state.animation.fps)
+  const recording = animationViewOf(useAnimationViews.getState(), documentId).autoKey
 
-  const command = movesToCommand(state, moves, at)
+  const command = movesToCommand(state, moves, at, recording)
   if (command) store.runCommand(documentId, command)
 }
 
@@ -118,8 +120,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // nothing, which is what stops a near miss from undoing the picking that came before it.
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
       onTransform: moves => recordTransform(documentId, moves),
-      onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
+      onClips: (nodeId, clips, lengths) =>
+        useModelClips.getState().report(documentId, nodeId, clips, lengths),
       onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
+      onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onStats: (scene, selected) => setStats({ scene, selected }),
     })
 
@@ -159,6 +163,20 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setSpace(localFrame ? 'local' : 'world')
   }, [localFrame])
+
+  useEffect(() => {
+    engine.current?.setPoseMode(view.poseMode)
+    // A bone picked in pose mode has no meaning outside it: leaving the mode lets go of it, or
+    // the gizmo would keep holding a bone nothing can select any more.
+    if (!view.poseMode) {
+      engine.current?.setPickedBone(null)
+      useSceneViews.getState().setPickedBone(documentId, null)
+    }
+  }, [documentId, view.poseMode])
+
+  useEffect(() => {
+    engine.current?.setPickedBone(view.pickedBone)
+  }, [view.pickedBone])
 
   // Session state, pushed like the rest: the engine is rebuilt from it after a remount, which is
   // what keeps an orthographic view orthographic when a panel is detached.
@@ -241,6 +259,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return cycleDisplay()
         case 'scene.skeletons':
           return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
+        case 'scene.poseMode':
+          return useSceneViews.getState().setPoseMode(documentId, !view.poseMode)
         case 'scene.quad':
           return useSceneViews.getState().setQuad(documentId, !view.quad)
         case 'scene.quadEdges':
@@ -321,6 +341,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       'scene.space': localFrame,
       'scene.projection': view.projection === 'orthographic',
       'scene.skeletons': view.skeletons,
+      'scene.poseMode': view.poseMode,
       'scene.quad': view.quad,
       'scene.quadEdges': view.quadEdges,
     }

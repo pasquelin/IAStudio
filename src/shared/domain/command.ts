@@ -40,6 +40,7 @@ export type CommandId =
   | 'scene.quadEdges'
   | 'scene.display'
   | 'scene.skeletons'
+  | 'scene.poseMode'
   | 'scene.delete'
   | 'scene.undo'
   | 'scene.redo'
@@ -310,6 +311,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sceneSkeletons.title',
     helpKey: 'commands.sceneSkeletons.help',
     defaultBinding: 'KeyB',
+  }),
+  // `KeyP` as in pose, and next to `KeyB` for bones — the two go together at the hand.
+  command({
+    id: 'scene.poseMode',
+    scope: 'scene',
+    titleKey: 'commands.scenePoseMode.title',
+    helpKey: 'commands.scenePoseMode.help',
+    defaultBinding: 'KeyP',
   }),
   // `⌘G` as in every editor that groups: the key is taken by nothing else in this scope.
   command({

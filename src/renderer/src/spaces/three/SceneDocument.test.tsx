@@ -37,6 +37,8 @@ const setProjection = vi.fn()
 const setDisplayModes = vi.fn()
 const activePane = vi.fn(() => 0)
 const setSkeletons = vi.fn()
+const setPoseMode = vi.fn()
+const setPickedBone = vi.fn()
 const setQuadView = vi.fn()
 const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
@@ -68,6 +70,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setDisplayModes = setDisplayModes
     activePane = activePane
     setSkeletons = setSkeletons
+    setPoseMode = setPoseMode
+    setPickedBone = setPickedBone
     setQuadView = setQuadView
     setPaneViews = setPaneViews
     setPlayhead = setPlayhead
@@ -534,7 +538,7 @@ describe('SceneDocument and the timeline over the scene', () => {
   it('reports the clips too, and forgets both when the viewport goes', () => {
     const { unmount } = render(<SceneDocument documentId="doc-1" />)
     const options = built.at(-1)
-    options?.onClips?.('perso', ['walk'])
+    options?.onClips?.('perso', ['walk'], { walk: 2 })
     expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['walk'])
 
     // The names came out of files that viewport parsed; nothing outside it can answer for them.
@@ -542,12 +546,47 @@ describe('SceneDocument and the timeline over the scene', () => {
     expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual([])
   })
 
-  it('writes a plain move while no track is armed', () => {
+  it('writes a plain move while auto-key is off', () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
     render(<SceneDocument documentId="doc-1" />)
 
     built.at(-1)?.onTransform([{ id: 'box-1', transform: moved(3) }])
 
     expect(nodesOf('doc-1').find(node => node.id === 'box-1')?.transform.position.x).toBe(3)
+  })
+})
+
+describe('SceneDocument and the pose mode', () => {
+  it('turns the pose mode on with the bound key, and back off', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{p}')
+    expect(setPoseMode).toHaveBeenLastCalledWith(true)
+
+    await userEvent.keyboard('{p}')
+    expect(setPoseMode).toHaveBeenLastCalledWith(false)
+  })
+
+  it('holds the bone the viewport picked, so the gizmo can aim at it', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.keyboard('{p}')
+
+    await act(async () => built.at(-1)?.onSelectBone?.({ nodeId: 'perso', bone: 'Arm.L' }))
+
+    expect(viewOf(useSceneViews.getState(), 'doc-1').pickedBone).toEqual({
+      nodeId: 'perso',
+      bone: 'Arm.L',
+    })
+  })
+
+  it('lets go of the bone when the mode is left, so nothing keeps holding it', async () => {
+    render(<SceneDocument documentId="doc-1" />)
+    await userEvent.keyboard('{p}')
+    await act(async () => built.at(-1)?.onSelectBone?.({ nodeId: 'perso', bone: 'Arm.L' }))
+
+    await userEvent.keyboard('{p}')
+
+    expect(viewOf(useSceneViews.getState(), 'doc-1').pickedBone).toBeNull()
+    expect(setPickedBone).toHaveBeenLastCalledWith(null)
   })
 })

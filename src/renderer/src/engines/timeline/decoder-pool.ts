@@ -1,4 +1,4 @@
-import type { Us } from './timeline-state'
+import { usToSeconds, type Us } from '@shared/domain/time'
 
 /**
  * The only place microseconds meet mediabunny's float seconds.
@@ -40,14 +40,6 @@ export type DecoderPool = {
   openCount: () => number
   release: (assetId: string) => void
   dispose: () => void
-}
-
-export function usToSeconds(time: Us): number {
-  return time / 1_000_000
-}
-
-export function secondsToUs(value: number): Us {
-  return Math.round(value * 1_000_000)
 }
 
 export function createDecoderPool({

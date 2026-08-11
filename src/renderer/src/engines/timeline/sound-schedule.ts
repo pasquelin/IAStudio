@@ -1,7 +1,7 @@
+import { usToSeconds } from '@shared/domain/time'
 import { fromDb } from '../audio/audio-data'
 import { createRefCache } from '../core/ref-cache'
 import { audioChunksIn, type AudioChunk } from './audio'
-import { usToSeconds } from './decoder-pool'
 import {
   EMPTY_SEQUENCE,
   playsThrough,

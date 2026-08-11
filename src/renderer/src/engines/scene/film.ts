@@ -4,6 +4,7 @@
  * These two are pure on purpose: there is no WebGL under vitest, so the schedule of a film and
  * the way its pixels come back are the parts that can actually be held to account.
  */
+import { frameDuration, type Us } from '@shared/domain/time'
 
 /**
  * The instant of every frame of a film, first one at zero.
@@ -12,11 +13,12 @@
  * frames would end measurably late. A duration that is not a whole number of frames is rounded
  * UP, so the last moment of the timeline is shown rather than cut.
  */
-export function frameTimes(duration: number, fps: number): number[] {
+export function frameTimes(duration: Us, fps: number): Us[] {
   if (duration <= 0 || fps <= 0) return []
 
-  const count = Math.max(1, Math.round(duration * fps))
-  return Array.from({ length: count }, (_, index) => index / fps)
+  const frame = frameDuration(fps)
+  const count = Math.max(1, Math.round(duration / frame))
+  return Array.from({ length: count }, (_, index) => index * frame)
 }
 
 /**
@@ -49,7 +51,7 @@ export type FilmRequest = {
   width: number
   height: number
   fps: number
-  duration: number
+  duration: Us
 }
 
 /** Sizes that are not even are refused by H.264 encoders, so they are rounded here instead. */

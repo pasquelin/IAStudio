@@ -1,4 +1,5 @@
 import { clamp } from '@shared/numeric'
+import { maxOffsetFor, maxScrollTopFor } from './band'
 import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
 import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
 
@@ -30,12 +31,11 @@ export function clampScale(scale: number): number {
  * into unbounded emptiness loses the montage off the left edge.
  */
 export function maxOffset(state: SequenceState, scale: number, width: number): Us {
-  const span = Math.round(width / scale)
-  return Math.max(0, sequenceDuration(state) - Math.round(span / 2))
+  return maxOffsetFor(sequenceDuration(state), scale, width)
 }
 
 export function maxScrollTop(state: SequenceState, height: number): number {
-  return Math.max(0, tracksHeight(state) - (height - RULER_HEIGHT))
+  return maxScrollTopFor(tracksHeight(state), height, RULER_HEIGHT)
 }
 
 export function clampViewport(viewport: Viewport, state: SequenceState, size: Size): Viewport {

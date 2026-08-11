@@ -1,4 +1,5 @@
 import type { Vector3 } from './scene'
+import { SECOND, type Us } from './time'
 
 /**
  * What a track drives. Three for a node, and the same three for one bone of a rig — a bone is
@@ -9,13 +10,14 @@ export type TrackProperty = 'position' | 'rotation' | 'scale'
 export const TRACK_PROPERTIES: readonly TrackProperty[] = ['position', 'rotation', 'scale']
 
 /**
- * One value at one instant, in seconds from the start of the timeline.
+ * One value at one instant, in microseconds from the start of the timeline — the unit the
+ * montage counts in, so both bands share one ruler and one hit test.
  *
  * The value is a DELTA, never an absolute: tracks add up, so what a track holds is what it adds
  * to the pose underneath — nothing at all where it holds no key. It is what makes two tracks on
  * one object a legible thing rather than a fight over who writes last.
  */
-export type Keyframe = { time: number; value: Vector3 }
+export type Keyframe = { time: Us; value: Vector3 }
 
 /** Which object a track writes on, and which of its three values. */
 export type TrackTarget = {
@@ -33,11 +35,6 @@ export type AnimationTrack = {
   muted: boolean
   solo: boolean
   locked: boolean
-  /**
-   * Where the gizmo writes. Additive tracks make this necessary rather than nice: with no track
-   * armed, moving an object writes to its rest pose and the tracks drag it straight back.
-   */
-  armed: boolean
   target: TrackTarget
   /** Sorted by time. Nothing outside the commands may append to this. */
   keys: readonly Keyframe[]
@@ -49,8 +46,8 @@ export type AnimationTrack = {
  * into the document would put one undo entry per frame of playback.
  */
 export type AnimationTimeline = {
-  /** In seconds. What the head may not run past, and what a render would cover. */
-  duration: number
+  /** In microseconds. What the head may not run past, and what a render would cover. */
+  duration: Us
   fps: number
   tracks: readonly AnimationTrack[]
 }
@@ -58,7 +55,7 @@ export type AnimationTimeline = {
 export const ZERO: Vector3 = Object.freeze({ x: 0, y: 0, z: 0 })
 export const ONE: Vector3 = Object.freeze({ x: 1, y: 1, z: 1 })
 
-export const DEFAULT_DURATION = 5
+export const DEFAULT_DURATION: Us = 5 * SECOND
 export const DEFAULT_FPS = 25
 
 export const EMPTY_TIMELINE: AnimationTimeline = Object.freeze({

@@ -971,7 +971,9 @@
     "delete": "Delete",
     "deleteHint": "Remove whatever is selected from the scene",
     "skeletons": "Skeletons",
-    "skeletonsHint": "Shows the bones of rigged models, changing nothing of the scene"
+    "skeletonsHint": "Shows the bones of rigged models, changing nothing of the scene",
+    "poseMode": "Pose mode",
+    "poseModeHint": "Click a bone to pose it, instead of selecting objects"
   },
   "exportFormats": {
     "glb": "Binary glTF (.glb)",
@@ -990,7 +992,7 @@
     "free": "Perspective",
     "freeHint": "The view being flown: the only one that turns",
     "pane": "View {{number, number}}",
-    "paneHint": "Chooses what this quarter shows \u2014 a perspective, or an axis that does not turn",
+    "paneHint": "Chooses what this quarter shows — a perspective, or an axis that does not turn",
     "front": "Front",
     "back": "Back",
     "left": "Left",
@@ -1022,7 +1024,7 @@
     "solid": "Solid",
     "solidHint": "Plain clay on every surface: the shape, without the materials",
     "material": "Material preview",
-    "materialHint": "The materials under the studio light alone, with the scene\u2019s own lights out",
+    "materialHint": "The materials under the studio light alone, with the scene’s own lights out",
     "matcap": "Matcap",
     "matcapHint": "Lighting captured on a sphere: it is the relief that reads, not the colour",
     "density": "Density",
@@ -1482,14 +1484,14 @@
       "help": "Redraws the wireframe without the diagonals triangulation added. A GLB never holds quads: this is a reconstruction by angle, faithful except on strongly curved surfaces."
     },
     "sceneCounters": {
-    "title": "What the scene costs",
-    "triangles": "Triangles",
-    "vertices": "Vertices",
-    "draws": "Draw calls",
-    "textures": "Textures",
-    "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
-  },
-  "sceneDisplay": {
+      "title": "What the scene costs",
+      "triangles": "Triangles",
+      "vertices": "Vertices",
+      "draws": "Draw calls",
+      "textures": "Textures",
+      "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
+    },
+    "sceneDisplay": {
       "title": "Display",
       "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."
     },
@@ -1757,6 +1759,10 @@
     "sceneSkeletons": {
       "title": "Show skeletons",
       "help": "Draws the bones of every rigged model over the scene"
+    },
+    "scenePoseMode": {
+      "title": "Pose mode",
+      "help": "Switches between picking objects and picking the bones of a rig"
     }
   },
   "styles": {
@@ -2245,6 +2251,15 @@
     "renderHint": "Writes a video file of what the scene camera sees",
     "renderNeedsCamera": "Add a camera to the scene to render it",
     "bone": "Bone",
-    "wholeModel": "The whole model"
+    "wholeModel": "The whole model",
+    "autoKey": "Auto-key",
+    "autoKeyHint": "Moving an object writes a key instead of shifting its rest pose",
+    "keySubject": "Key {{name}}",
+    "keySubjectHint": "Keys every property of this object",
+    "foldHint": "Show or hide the animated properties",
+    "duration": "Duration",
+    "fps": "FPS",
+    "keyAll": "Key everything animated",
+    "keyAllHint": "Keys every animated object at the playhead"
   }
 }
