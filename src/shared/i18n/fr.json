@@ -2026,8 +2026,7 @@
       "json": "JSON",
       "text": "Texte",
       "video": "Vidéo"
-    },
-    "amount": "{{units}} UC"
+    }
   },
   "blend": {
     "normal": "Normal",
@@ -2114,7 +2113,8 @@
     "byte": "o",
     "kibibyte": "Kio",
     "mebibyte": "Mio",
-    "gibibyte": "Gio"
+    "gibibyte": "Gio",
+    "creative": "{{units}} UC"
   },
   "keys": {
     "Space": "Espace",

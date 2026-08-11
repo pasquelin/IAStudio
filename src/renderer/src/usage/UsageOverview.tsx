@@ -16,13 +16,13 @@ export function UsageOverview({ report }: { report: UsageReport }) {
       <section className="flex flex-wrap gap-8">
         <Figure
           label={t('usage.total')}
-          value={t('usage.amount', { units: formatUnits(report.units, locale) })}
+          value={t('units.creative', { units: formatUnits(report.units, locale) })}
         >
           {money && <span className={WINDOW_CAPTION}>≈ {money}</span>}
         </Figure>
         <Figure
           label={t('usage.discount')}
-          value={t('usage.amount', { units: formatUnits(report.discount, locale) })}
+          value={t('units.creative', { units: formatUnits(report.discount, locale) })}
         />
         <Figure label={t('usage.jobs')} value={formatUnits(report.jobs, locale)} />
       </section>
@@ -48,7 +48,7 @@ export function UsageOverview({ report }: { report: UsageReport }) {
                   cursor={false}
                   labelFormatter={date => formatDay(String(date), locale)}
                   formatter={(value: unknown) => [
-                    t('usage.amount', {
+                    t('units.creative', {
                       units: formatUnits(typeof value === 'number' ? value : 0, locale),
                     }),
                     t('usage.total'),
@@ -72,7 +72,7 @@ export function UsageOverview({ report }: { report: UsageReport }) {
               >
                 <span>{account.name}</span>
                 <span className="font-mono">
-                  {t('usage.amount', { units: formatUnits(account.units, locale) })}
+                  {t('units.creative', { units: formatUnits(account.units, locale) })}
                 </span>
               </li>
             ))}

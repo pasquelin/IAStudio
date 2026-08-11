@@ -1,9 +1,13 @@
 import type { UsageReport } from '@shared/domain/usage'
 
 /**
- * A month of spend, as the main process answers it. Beside the window rather than inside one
- * suite: `UsageWindow` asserts what the tabs show, `UsageOverview` what one of them says, and a
- * second copy of these fourteen fields would drift the day the report gains a fifteenth.
+ * A month of spend, as the main process answers it.
+ *
+ * Beside the window rather than inside one suite: three of them need it — `UsageWindow` asserts
+ * what the tabs show, `UsageOverview` what one of them says, `UsageActivities` what an empty
+ * month looks like — and the three copies had already drifted, in field order and in values,
+ * before this file existed. A fourth lives at `panels/usage/Usage.test.tsx`, on the other side
+ * of the window/panel boundary; it is noted, not moved.
  */
 export function report(overrides: Partial<UsageReport> = {}): UsageReport {
   return {

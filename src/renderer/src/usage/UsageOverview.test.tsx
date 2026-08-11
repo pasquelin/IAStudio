@@ -29,7 +29,12 @@ describe('the usage overview', () => {
     expect(screen.getByText('12 UC')).toBeInTheDocument()
   })
 
-  // The per-account list writes it too, and it was the fourth site nobody had counted.
+  /**
+   * The per-account list writes it too, and it was the fourth site nobody had counted. The
+   * FIFTH — the chart's tooltip formatter — is not reachable here: Recharts renders it only
+   * under a pointer over a laid-out canvas, and jsdom lays nothing out. Left uncovered on
+   * purpose rather than asserted through a mock of the chart.
+   */
   it('says it for every account that spent', () => {
     render(
       <UsageOverview
