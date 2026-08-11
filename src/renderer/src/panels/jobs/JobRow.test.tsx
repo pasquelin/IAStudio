@@ -4,7 +4,12 @@ import type { Job } from '@shared/domain/job'
 import { job as jobOf } from '@/stores/job-fixtures'
 import { JobRow } from './JobRow'
 
-/** The shared fixture, already finished — which is what this suite is about. */
+/**
+ * The shared fixture, already succeeded — which is what this suite is about.
+ *
+ * Overriding the status to a failing one is not the same suite: the factory then names an `error`
+ * code, and `JobDetail` (`JobRow.tsx:18`) draws the failure INSTEAD of the cost — never both.
+ */
 const job = (overrides: Partial<Job> = {}): Job =>
   jobOf({ id: 'job-1', targetId: 'model-1', label: 'Flux Fast', status: 'succeeded', ...overrides })
 

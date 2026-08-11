@@ -7,7 +7,12 @@ import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { JobsStatus } from './JobsStatus'
 
-/** The shared fixture, told the numbered label this suite reads the bar by. */
+/**
+ * The shared fixture, told the numbered label this suite reads the bar by.
+ *
+ * `progress` is named on every call, which — per the factory's own rule — opts out of carrying a
+ * succeeded job to 1: say it here, as the bar would show it.
+ */
 const job = (id: string, status: JobStatus, progress: number): Job =>
   jobOf({ id, status, progress, targetId: 'flux-dev', label: `Take ${id}` })
 
