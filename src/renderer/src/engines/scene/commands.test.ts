@@ -35,6 +35,7 @@ import {
   DEFAULT_SPRITE,
   EMPTY_SCENE,
   IDENTITY_TRANSFORM,
+  nodeById,
   type SceneState,
 } from './scene-state'
 import type { EnvironmentRef, Transform } from '@shared/domain/scene'
@@ -383,13 +384,13 @@ describe('reparentNode', () => {
     const command = reparentNode('a', 'b')
     const moved = command.apply(start)
 
-    expect(moved.nodes.find(node => node.id === 'a')?.parentId).toBe('b')
-    expect(command.revert(moved).nodes.find(node => node.id === 'a')?.parentId).toBeNull()
+    expect(nodeById(moved, 'a')?.parentId).toBe('b')
+    expect(nodeById(command.revert(moved), 'a')?.parentId).toBeNull()
   })
 
   it('brings a node back out to the scene', () => {
     const command = reparentNode('c', null)
-    expect(command.apply(start).nodes.find(node => node.id === 'c')?.parentId).toBeNull()
+    expect(nodeById(command.apply(start), 'c')?.parentId).toBeNull()
   })
 
   // Applied, it would close the tree on itself and every walk of it would run forever.
@@ -408,7 +409,7 @@ describe('reparentNode', () => {
     const [out, history] = run(start, emptyHistory<SceneState>(), command)
     const [back] = undo(out, history)
 
-    expect(back.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+    expect(nodeById(back, 'c')?.parentId).toBe('b')
   })
 })
 
@@ -431,7 +432,7 @@ describe('groupNodes', () => {
     const chosen = [mesh('b'), mesh('c', 'b')]
     const grouped = groupNodes(chosen).apply(start)
 
-    expect(grouped.nodes.find(node => node.id === 'c')?.parentId).toBe('b')
+    expect(nodeById(grouped, 'c')?.parentId).toBe('b')
   })
 
   it('is one entry in the history, whatever it moved', () => {
