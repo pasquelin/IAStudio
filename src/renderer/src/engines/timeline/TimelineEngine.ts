@@ -110,6 +110,13 @@ export type TimelineEngineDeps = {
   audioTime?: () => number | null
   /** Fires on both sides of a transport change, including a pause forced by the token. */
   onPlayingChange?: (playing: boolean) => void
+  /**
+   * Whether the frame just painted left a clip unshown because its media cannot be decoded.
+   *
+   * Reported on every seek rather than once per asset: the answer belongs to the playhead, and
+   * a message raised where a `.exr` sits has to fall again on the clip that follows it.
+   */
+  onUnreadable?: (unreadable: boolean) => void
 }
 
 /**
@@ -224,6 +231,7 @@ export class TimelineEngine {
 
     this.generation += 1
     const generation = this.generation
+    let unreadable = false
 
     for (const track of videoTracksByDepth(this.state)) {
       const sprite = this.spriteFor(track.id)
@@ -242,6 +250,7 @@ export class TimelineEngine {
       }
       if (!frame) {
         sprite.visible = false
+        if (this.pool.undecodable(clip.assetId)) unreadable = true
         continue
       }
 
@@ -253,6 +262,9 @@ export class TimelineEngine {
       this.fit(sprite)
     }
 
+    // One message for a playhead, not one per track: a clip that shows nothing owes its reason
+    // whatever the tracks under it managed to paint.
+    this.deps.onUnreadable?.(unreadable)
     this.draw()
   }
 

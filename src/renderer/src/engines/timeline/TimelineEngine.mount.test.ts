@@ -49,13 +49,15 @@ vi.mock('pixi.js', () => ({
 }))
 
 const { TimelineEngine } = await import('./TimelineEngine')
+const { clipFixture, sequenceWith, trackFixture } = await import('./timeline-fixtures')
 
-const engineFor = (host: HTMLElement) =>
+const engineFor = (host: HTMLElement, onUnreadable?: (unreadable: boolean) => void) =>
   new TimelineEngine({
     openSink: () => Promise.reject(new Error('no decoder in a test')),
     maxDecoders: 1,
     maxPictures: 1,
     owner: host.id,
+    onUnreadable,
   })
 
 describe('mounting a monitor', () => {
@@ -137,6 +139,34 @@ describe('mounting a monitor', () => {
     const listener = on.mock.calls.find(([event]) => event === 'resize')?.[1]
     expect(listener).toBeDefined()
     expect(off).toHaveBeenCalledWith('resize', listener)
+  })
+
+  /**
+   * `.exr`, `.tif` and `.tiff` are catalogued as pictures and Chromium decodes none of them.
+   * Before this, the clip was simply not painted and nothing on screen said why.
+   */
+  it('reports a clip whose media cannot be decoded', async () => {
+    const onUnreadable = vi.fn()
+    const engine = engineFor(host, onUnreadable)
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]))
+
+    await engine.seek(0)
+
+    expect(onUnreadable).toHaveBeenLastCalledWith(true)
+  })
+
+  it('takes the report back where the playhead leaves the clip', async () => {
+    const onUnreadable = vi.fn()
+    const engine = engineFor(host, onUnreadable)
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]))
+    await engine.seek(0)
+
+    await engine.seek(2_000_000)
+
+    // A message raised over an unreadable clip has to fall again on the gap that follows it.
+    expect(onUnreadable).toHaveBeenLastCalledWith(false)
   })
 
   it('draws nothing once it is disposed', async () => {

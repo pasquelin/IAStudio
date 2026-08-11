@@ -278,6 +278,38 @@ describe('decoder pool', () => {
     expect(open).toHaveBeenCalledTimes(1)
   })
 
+  /**
+   * `frameAt` answers `null` for a gap in a rush as much as for a `.exr` Chromium will not
+   * decode. Without this, the monitor cannot tell the two apart, and stays black without a word.
+   */
+  it('names the asset whose open failed, so the monitor can say why it shows nothing', async () => {
+    const open = vi.fn(async (assetId: string) => {
+      if (assetId === 'broken') throw new Error('undecodable')
+      return fakeSink(assetId)
+    })
+    const pool = createDecoderPool({ open, maxDecoders: 3, maxPictures: 2 })
+
+    await pool.frameAt('broken', 0)
+    await pool.frameAt('fine', 0)
+
+    expect(pool.undecodable('broken')).toBe(true)
+    expect(pool.undecodable('fine')).toBe(false)
+    // A position with no sample is not a broken asset: nothing was ever asked of this one.
+    expect(pool.undecodable('never-opened')).toBe(false)
+  })
+
+  it('stops calling an asset undecodable once it is released', async () => {
+    const open = vi.fn(async () => {
+      throw new Error('undecodable')
+    })
+    const pool = createDecoderPool({ open, maxDecoders: 3, maxPictures: 2 })
+
+    await pool.frameAt('a', 0)
+    pool.release('a')
+
+    expect(pool.undecodable('a')).toBe(false)
+  })
+
   it('releases one asset without touching the others', async () => {
     const sinks = new Map<string, ReturnType<typeof fakeSink>>()
     const pool = createDecoderPool({
