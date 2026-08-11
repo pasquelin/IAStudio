@@ -407,3 +407,28 @@ describe('two facet menus of the same bar', () => {
     expect(collisions).toEqual([])
   })
 })
+
+describe('the symbol of a creative unit', () => {
+  /**
+   * It never stands alone in a bundle. `usage.units` did — it held `UC` and `CU`, and four sites
+   * glued it to a number with a space written in the component, which left neither the order of
+   * the two halves nor what separates them to a translator. A symbol a caller has to assemble is
+   * an invitation to assemble it differently each time.
+   *
+   * Unlike the byte units next door (`units.kibibyte`), which a caller passes to `formatBytes`
+   * rather than concatenates: there the composing happens in one place, and that place is tested.
+   */
+  it.each(LANGUAGES.map(language => language.code))('never stands alone in %s', code => {
+    const alone = [...BUNDLES[code]].filter(([, value]) => /^(UC|CU)$/.test(value.trim()))
+
+    expect(alone.map(([key]) => key)).toEqual([])
+  })
+
+  // And the sentence that carries it holds its number, so the two arrive together or not at all.
+  it.each(LANGUAGES.map(language => language.code))('travels with its number in %s', code => {
+    const carrying = [...BUNDLES[code]].filter(([, value]) => /\b(UC|CU)\b/.test(value))
+
+    expect(carrying.length).toBeGreaterThan(0)
+    for (const [key, value] of carrying) expect(value, key).toContain('{{units}}')
+  })
+})

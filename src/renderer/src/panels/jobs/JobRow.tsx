@@ -33,7 +33,7 @@ function JobDetail({ job }: { job: Job }) {
   // AND keeps the decimals of a cheap call, which rounding would report as free.
   return (
     <span className="text-muted text-tiny">
-      {t('jobs.cost', { units: formatUnits(job.cost, i18n.language) })}
+      {t('units.creative', { units: formatUnits(job.cost, i18n.language) })}
     </span>
   )
 }

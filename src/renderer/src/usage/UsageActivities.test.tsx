@@ -1,27 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { UsageReport } from '@shared/domain/usage'
 import { WINDOW_CAPTION } from '@/design/window-styles'
+import { report } from './usage-fixtures'
 import { UsageActivities } from './UsageActivities'
-
-function report(overrides: Partial<UsageReport>): UsageReport {
-  return {
-    period: 31,
-    from: '2026-08-01',
-    to: '2026-08-09',
-    units: 0,
-    discount: 0,
-    jobs: 0,
-    daily: [],
-    accounts: [],
-    silent: [],
-    models: [],
-    actions: [],
-    assets: [],
-    price: null,
-    ...overrides,
-  }
-}
 
 /**
  * The table showed the names the API uses — `images-generation` in a French window, and `video`
@@ -33,7 +14,8 @@ function report(overrides: Partial<UsageReport>): UsageReport {
  */
 describe('the sentence a window says beside its figures', () => {
   it('dresses an empty period as every other window caption', () => {
-    render(<UsageActivities report={report({})} />)
+    // The shared fixture describes a month that spent; emptiness is what this case is about.
+    render(<UsageActivities report={report({ actions: [], assets: [] })} />)
 
     expect(screen.getByText('Aucune activité sur cette période.')).toHaveClass(WINDOW_CAPTION)
   })
