@@ -233,7 +233,7 @@ src/main/
 │   ├── cloud-backend.ts     les mêmes, du côté de la bibliothèque
 │   ├── sync-plan.ts         ce que deux côtés devraient faire l'un de l'autre
 │   ├── collector.ts         ce qu'une génération dépose dans le projet
-│   ├── auto-caption.ts      nommer une image d'après ce que l'API y voit
+│   ├── auto-caption.ts      nommer une image d'après ce que l’API y voit
 │   └── protocol.ts          le protocole scenario://
 ├── dictation/               la reconnaissance vocale : permissions, modèle, découpage, handlers
 ├── settings/                le store chiffré, son adaptateur, ses handlers
