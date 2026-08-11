@@ -17,9 +17,9 @@ function headerOf(node: HTMLElement | null): HTMLElement | null {
 
 /**
  * Every panel arrives through `import()`, so nothing of its own is on screen on the first tick.
- * A second — Testing Library's default — is not enough for the RUNNER, which transforms the
- * panel's subgraph on demand and took 2,6 s over the shelf here. That figure is the runner's,
- * not the studio's, where the chunk is already built.
+ * Three seconds — what `test-setup.ts` gives every awaited query — is not enough for the RUNNER,
+ * which transforms the panel's subgraph on demand and took 2,6 s over the shelf here. That figure
+ * is the runner's, not the studio's, where the chunk is already built.
  *
  * `BUDGET` is the case's own, and it has to be: `testTimeout: 15_000` in `vitest.config.ts` is
  * NOT inherited by the projects — measured, a case of this project dies at vitest's default

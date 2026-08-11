@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach, beforeAll } from 'vitest'
 import {
   handleRequest,
@@ -97,6 +97,26 @@ function polyfillWorker(): void {
   // that nothing in the studio reaches for.
   globalThis.Worker = InProcessWorker as unknown as typeof Worker
 }
+
+/**
+ * How long an awaited query may wait. Testing Library's own default is one second.
+ *
+ * That second is a budget for the RUNNER, not for the studio, and the runner shares this machine
+ * with whatever else builds on it. Measured: `ModelNodeFields.test.tsx` waits on a catalogue
+ * asked only once the model's schema has named its family — two round trips — and took 1035 ms in
+ * one full run and 1270 ms in another, while passing 15 times out of 15 on its own. Its failure
+ * cost more than a red test: the file it exercises carries 45 of the 46 covered statements that
+ * keep `src/renderer/src/panels/**` inside its coverage budget, so `develop` failed its gate
+ * twice with every test reported as passing.
+ *
+ * Three seconds is twice the worst reading, and a case is allowed fifteen (`vitest.config.ts`),
+ * so an expiry still reports as an expiry rather than killing the case. Raised here rather than
+ * per call: two suites had already bought their own patience by hand, which is how a default
+ * nobody set becomes a rule nobody can see.
+ */
+const AWAITED_QUERY_MS = 3000
+
+configure({ asyncUtilTimeout: AWAITED_QUERY_MS })
 
 // At module scope, not in `beforeAll`: a component rendered while a test file is imported
 // would already have asked for a context by then.

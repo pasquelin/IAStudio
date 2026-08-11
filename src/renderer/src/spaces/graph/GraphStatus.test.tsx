@@ -132,7 +132,7 @@ describe('asking the main process whether a graph compiles', () => {
     await waitFor(() => expect(compile).toHaveBeenCalledTimes(1))
 
     rerender(<Live graph={graphOf('text2')} />)
-    await waitFor(() => expect(compile).toHaveBeenCalledTimes(2), { timeout: 3000 })
+    await waitFor(() => expect(compile).toHaveBeenCalledTimes(2))
 
     answer(1, { ok: true, steps: 2 })
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('2 étapes'))
