@@ -1,5 +1,4 @@
-import { nodeIn } from '@/stores/graph-fixtures'
-import { useGraphs } from '@/stores/graphs'
+import { nodeIn, useGraphs } from '@/stores/graphs'
 import { GraphNodeInspector } from './GraphNodeInspector'
 
 /**
