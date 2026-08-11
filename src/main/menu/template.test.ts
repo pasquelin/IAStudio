@@ -1,8 +1,9 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
+import { APP_NAME } from '@shared/constants'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { LIGHT_ENTRIES, MESH_ENTRIES } from '@shared/domain/scene'
-import { TRANSLATIONS } from '@shared/i18n'
+import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
 
@@ -544,5 +545,69 @@ describe('exporting a sky', () => {
     largest?.click?.(...([] as never[] as [never, never, never]))
 
     expect(exportSkybox).toHaveBeenCalledWith({ size: 2048 })
+  })
+})
+
+/**
+ * A role draws its own label, and Electron writes those labels as English literals in
+ * `roleList` — "Cut", "Select All", `Hide ${app.name}`. No locale is consulted: an unlabelled
+ * role reads English on every platform, whatever the system or the studio is set to.
+ *
+ * Walked rather than listed: a sixteenth role added without a label would pass a list.
+ */
+describe('every native role', () => {
+  const rolesWithout = (
+    items: MenuItemConstructorOptions[],
+    labelled: (item: MenuItemConstructorOptions) => boolean,
+  ): string[] =>
+    items.flatMap(item => [
+      ...(item.role && !labelled(item) ? [item.role] : []),
+      ...(Array.isArray(item.submenu) ? rolesWithout(item.submenu, labelled) : []),
+    ])
+
+  /**
+   * Four shapes, because three branches only exist in some of them: `nativeHistory` is reached
+   * only by a window that edits no workspace — Settings, the splash — and `close` becomes `quit`
+   * off macOS. A single shape walked a menu that had neither, and passed while both shipped bare.
+   */
+  const SHAPES: Partial<MenuOptions>[] = [
+    { workspace: '3d', isMac: true },
+    { workspace: null, isMac: true },
+    { workspace: '3d', isMac: false },
+    { workspace: null, isMac: false },
+  ]
+
+  it('carries a label of ours, in every language and every shape of the menu', () => {
+    for (const { code } of LANGUAGES) {
+      for (const shape of SHAPES) {
+        const template = menuTemplate(options({ ...shape, language: code }))
+
+        expect(
+          rolesWithout(template, item => typeof item.label === 'string'),
+          `${code}, workspace ${shape.workspace}, mac ${shape.isMac}`,
+        ).toEqual([])
+      }
+    }
+  })
+
+  // A label read off the wrong bundle is worse than none: it would look deliberate.
+  it('reads its label from the language it was asked for', () => {
+    const french = menuTemplate(options({ language: 'fr' }))
+    const english = menuTemplate(options({ language: 'en' }))
+    const cutIn = (template: MenuItemConstructorOptions[]): string | undefined =>
+      submenuOf(template, TRANSLATIONS.fr.menu.edit)
+        .concat(submenuOf(template, TRANSLATIONS.en.menu.edit))
+        .find(item => item.role === 'cut')?.label
+
+    expect(cutIn(french)).toBe('Couper')
+    expect(cutIn(english)).toBe('Cut')
+  })
+
+  // The product name is pinned in one place; a bundle spelling it out would drift past it.
+  it('names the product in the entries that mention it', () => {
+    const app = submenuOf(menuTemplate(options()), APP_NAME)
+
+    expect(app.find(item => item.role === 'quit')?.label).toBe(`Quitter ${APP_NAME}`)
+    expect(app.find(item => item.role === 'hide')?.label).toBe(`Masquer ${APP_NAME}`)
   })
 })

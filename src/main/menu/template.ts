@@ -22,7 +22,7 @@ import {
   type CommandId,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
-import { TRANSLATIONS, type Language } from '@shared/i18n'
+import { TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
 import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
 import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
@@ -74,17 +74,33 @@ export type MenuOptions = {
 }
 
 /**
+ * A native role the studio labels itself.
+ *
+ * Electron writes role labels as English literals in `roleList` — "Cut", "Select All" — and
+ * consults no locale, so an unlabelled role reads English everywhere. The label is only a
+ * default there: `accelerator`, `registerAccelerator` and the click all derive from the role,
+ * which is why naming one changes nothing but the word.
+ *
+ * Keyed by the role itself rather than through a table: `menu.cut` IS the label of `cut`, so a
+ * role without a translation fails to compile instead of waiting for a test to say so.
+ */
+type LabelledRole = keyof Translations['menu'] & NonNullable<MenuItemConstructorOptions['role']>
+
+/**
  * The renderer console reaches `window.studio` directly: shipping DevTools in a packaged
  * build hands an attacker `setCredentials` through a self-XSS.
  */
-function developerItems(isDevelopment: boolean): MenuItemConstructorOptions[] {
+function developerItems(
+  isDevelopment: boolean,
+  roleItem: (role: LabelledRole) => MenuItemConstructorOptions,
+): MenuItemConstructorOptions[] {
   if (!isDevelopment) return []
   return [
     { type: 'separator' },
-    { role: 'toggleDevTools' },
+    roleItem('toggleDevTools'),
     // ⌘R is the image workspace's rulers, and `role: 'reload'` carries ⌘R implicitly: two items
     // of this very submenu would claim one key, and AppKit serves whichever it finds first.
-    { role: 'reload', accelerator: 'Shift+CmdOrCtrl+R' },
+    { ...roleItem('reload'), accelerator: 'Shift+CmdOrCtrl+R' },
   ]
 }
 
@@ -115,7 +131,15 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
 
   // Interpolated rather than spelled out in both bundles: `constants.test.ts` pins the product
   // name to one place, and a hard-coded copy here would drift past it unnoticed.
-  const aboutLabel = t.menu.about.replace('{{name}}', APP_NAME)
+  const named = (sentence: string): string => sentence.replace('{{name}}', APP_NAME)
+  const aboutLabel = named(t.menu.about)
+
+  // `named` rides along: only `hide` and `quit` carry a placeholder, and a sentence without one
+  // comes back untouched.
+  const roleItem = (role: LabelledRole): MenuItemConstructorOptions => ({
+    role,
+    label: named(t.menu[role]),
+  })
 
   // Opened by the main process rather than routed through a renderer: settings are a window
   // now, and which window is focused has nothing to do with it.
@@ -134,13 +158,13 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { type: 'separator' },
       settingsItem,
       { type: 'separator' },
-      { role: 'services' },
+      roleItem('services'),
       { type: 'separator' },
-      { role: 'hide' },
-      { role: 'hideOthers' },
-      { role: 'unhide' },
+      roleItem('hide'),
+      roleItem('hideOthers'),
+      roleItem('unhide'),
       { type: 'separator' },
-      { role: 'quit' },
+      roleItem('quit'),
     ],
   }
 
@@ -258,7 +282,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * `useShortcuts` decides: highlighted text keeps ⌘C, everything else is the scene's.
    */
   // Where no history exists, the platform keeps the keys — its own undo is the only one there is.
-  const nativeHistory: MenuItemConstructorOptions[] = [{ role: 'undo' }, { role: 'redo' }]
+  const nativeHistory: MenuItemConstructorOptions[] = [
+    { role: 'undo', label: t.commands.undo.title },
+    { role: 'redo', label: t.commands.redo.title },
+  ]
   const surface = scopeOfWorkspace(workspace)
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
@@ -277,10 +304,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           ]
         : nativeHistory),
       { type: 'separator' },
-      { role: 'cut', registerAccelerator: false },
-      { role: 'copy', registerAccelerator: false },
-      { role: 'paste', registerAccelerator: false },
-      { role: 'selectAll' },
+      { ...roleItem('cut'), registerAccelerator: false },
+      { ...roleItem('copy'), registerAccelerator: false },
+      { ...roleItem('paste'), registerAccelerator: false },
+      roleItem('selectAll'),
     ],
   }
 
@@ -442,7 +469,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,
-        { role: isMac ? 'close' : 'quit' },
+        roleItem(isMac ? 'close' : 'quit'),
       ],
     },
     editMenu,
@@ -474,7 +501,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('window.fullScreen'),
           click: () => actions.toggleFullScreen(),
         },
-        ...developerItems(isDevelopment),
+        ...developerItems(isDevelopment, roleItem),
       ],
     },
     { role: 'windowMenu', label: t.menu.window },
