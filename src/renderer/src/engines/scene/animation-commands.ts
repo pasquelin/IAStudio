@@ -78,6 +78,9 @@ export function addAnimationTrack(
           solo: false,
           locked: false,
           target,
+          // Captured as it is APPLIED, like everything else here: the pose to measure keys
+          // against is the one the object stands in now, not when the command was built.
+          rest: target.bone ? undefined : nodeById(state, target.nodeId)?.transform,
           keys: [],
         },
       ]),
@@ -229,18 +232,38 @@ export function keySubject(
 ): Command<SceneState> | null {
   const writes: Command<SceneState>[] = []
 
+  const moved: NodeMove[] = []
+
   for (const trackId of trackIds) {
     const track = trackById(state, trackId)
     if (!track || track.locked) continue
 
-    // What the track ALREADY stands at, which is what the viewport is showing. Between two keys
-    // that is the interpolated value, so keying there pins the pose instead of snapping it to a
-    // neutral — and a neutral is exactly what made the old button appear to do nothing.
+    const rest = track.rest
+    const pose = rest ? nodeById(state, track.target.nodeId)?.transform : undefined
+
+    if (rest && pose) {
+      // The movement made since this channel opened becomes the key, and the object goes back to
+      // the pose it is measured from. Without the second half the movement would be counted
+      // twice — once in the object, once in the key laid over it.
+      writes.push(setAnimationKey(trackId, time, deltaOf(rest, pose, track.target.property)))
+      moved.push({ id: track.target.nodeId, transform: rest })
+      continue
+    }
+
+    // A bone, whose rest pose only the renderer knows: it keeps what the channel already holds.
     writes.push(setAnimationKey(trackId, time, valueAt(track, time)))
   }
 
   if (writes.length === 0) return null
+  if (moved.length > 0) writes.push(moveNodes(dedupeMoves(moved)))
+
   return writes.length === 1 && writes[0] ? writes[0] : multi('key:subject', writes)
+}
+
+/** One entry per node: three channels of one object all ask it back to the same pose. */
+function dedupeMoves(moves: readonly NodeMove[]): NodeMove[] {
+  const byId = new Map(moves.map(move => [move.id, move]))
+  return [...byId.values()]
 }
 
 /**

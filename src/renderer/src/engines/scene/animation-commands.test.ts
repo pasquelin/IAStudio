@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { TrackTarget } from '@shared/domain/animation'
 import { SECOND } from '@shared/domain/time'
+import { poseAt } from './animation-eval'
 import {
   addAnimationTrack,
   recordingTracksFor,
+  keyNode,
   keySubject,
   moveAnimationKey,
   movesToCommand,
@@ -380,6 +382,82 @@ describe('sliding a key along its track', () => {
   it('puts the key back where it was', () => {
     const state = setAnimationKey('track-1', SECOND, vec(7)).apply(withTwoTracks())
     const command = moveAnimationKey('track-1', SECOND, 3 * SECOND)
+
+    expect(command.revert(command.apply(state))).toEqual(state)
+  })
+})
+
+describe('keying an object that was moved by hand', () => {
+  const REST = { position: vec(0), rotation: vec(0), scale: { x: 1, y: 1, z: 1 } }
+  const cube = (x: number): SceneNode => ({
+    id: 'cube',
+    parentId: null,
+    name: 'cube',
+    visible: true,
+    transform: { ...REST, position: vec(x) },
+    castShadow: false,
+    receiveShadow: false,
+    type: 'group',
+  })
+
+  /** The gesture that showed nothing: key, move the object, key again, press Play. */
+  const cubeAt = (x: number): SceneState => ({ ...EMPTY_SCENE, nodes: [cube(x)] })
+
+  const keyAt = (state: SceneState, time: number): SceneState => {
+    const command = keyNode(state, { nodeId: 'cube' }, time, NAMES, property => `t-${property}`)
+    if (!command) throw new Error('a node is always keyable')
+    return command.apply(state)
+  }
+
+  const NAMES = { position: 'Cube · Position', rotation: 'Cube · Rotation', scale: 'Cube · Scale' }
+
+  it('holds the movement made since the channel opened, not zero', () => {
+    const first = keyAt(cubeAt(0), 0)
+    // The object is dragged with nothing recording, which writes its POSITION.
+    const dragged = {
+      ...first,
+      nodes: [{ ...first.nodes[0]!, transform: { ...REST, position: vec(4) } }],
+    }
+
+    const second = keyAt(dragged, 2 * SECOND)
+    const position = second.animation.tracks.find(track => track.target.property === 'position')
+
+    expect(position?.keys.map(key => key.value.x)).toEqual([0, 4])
+  })
+
+  it('puts the object back on its rest pose, so the move is counted ONCE', () => {
+    const first = keyAt(cubeAt(0), 0)
+    const dragged = {
+      ...first,
+      nodes: [{ ...first.nodes[0]!, transform: { ...REST, position: vec(4) } }],
+    }
+
+    const second = keyAt(dragged, 2 * SECOND)
+
+    // Left at four, the viewport would show four PLUS the key's four at the second key.
+    expect(second.nodes[0]?.transform.position.x).toBe(0)
+  })
+
+  it('makes the two keys describe an actual movement, which is what Play shows', () => {
+    const first = keyAt(cubeAt(0), 0)
+    const dragged = {
+      ...first,
+      nodes: [{ ...first.nodes[0]!, transform: { ...REST, position: vec(4) } }],
+    }
+    const second = keyAt(dragged, 2 * SECOND)
+
+    const at = (time: number) =>
+      poseAt(second.nodes[0]!.transform, second.animation, 'cube', time).position.x
+
+    expect(at(0)).toBe(0)
+    expect(at(1 * SECOND)).toBeCloseTo(2, 5)
+    expect(at(2 * SECOND)).toBe(4)
+  })
+
+  it('reverts the whole thing — keys, channels and the pose — in one go', () => {
+    const state = cubeAt(0)
+    const command = keyNode(state, { nodeId: 'cube' }, 0, NAMES, property => `t-${property}`)
+    if (!command) throw new Error('a node is always keyable')
 
     expect(command.revert(command.apply(state))).toEqual(state)
   })

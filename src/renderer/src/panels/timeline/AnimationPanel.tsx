@@ -149,7 +149,15 @@ function AnimationBar({ documentId, anchor }: BarProps) {
         tooltip={TIP_TOP}
         variant="header"
         active={view.playing}
-        onClick={() => useSceneViews.getState().setPlaying(documentId, !view.playing)}
+        onClick={() => {
+          const views = useSceneViews.getState()
+          // Rewound first when the head is already at the end: pressing Play there would stop on
+          // the very frame it started, which reads as a button that does nothing.
+          if (!view.playing && view.playhead >= timeline.duration) {
+            views.setPlayhead(documentId, 0)
+          }
+          views.setPlaying(documentId, !view.playing)
+        }}
       />
       <Timecode time={view.playhead} fps={timeline.fps} />
 

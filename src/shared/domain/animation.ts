@@ -1,4 +1,4 @@
-import type { Vector3 } from './scene'
+import type { Transform, Vector3 } from './scene'
 import { SECOND, type Us } from './time'
 
 /**
@@ -36,6 +36,16 @@ export type AnimationTrack = {
   solo: boolean
   locked: boolean
   target: TrackTarget
+  /**
+   * The pose the object stood in when this channel was opened, and what every key is measured
+   * against.
+   *
+   * Without it, keying by hand cannot work at all: moving an object with nothing recording writes
+   * its POSITION, so a key posed afterwards would compare that position to itself and hold zero —
+   * two keys, no movement, and a Play that shows nothing. Held per channel rather than per node
+   * because a bone's rest pose lives in the file, not in the document.
+   */
+  rest?: Transform
   /** Sorted by time. Nothing outside the commands may append to this. */
   keys: readonly Keyframe[]
 }
