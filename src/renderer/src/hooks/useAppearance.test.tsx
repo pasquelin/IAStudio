@@ -6,6 +6,7 @@ import {
   type Density,
   type Theme,
 } from '@shared/domain/settings'
+import { AA_NORMAL_TEXT, contrastRatio, HEX_COLOR } from '@shared/domain/color'
 import { onPaletteChange } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
 import { useAppearance } from './useAppearance'
@@ -40,14 +41,18 @@ function stubMatchMedia(matches: boolean) {
   }
 }
 
-function withAppearance(theme: Theme, density: Density = 'comfortable') {
+function withAppearance(theme: Theme, density: Density = 'comfortable', accent?: string) {
   useSettings.setState({
     settings: {
       ...DEFAULT_SETTINGS,
-      appearance: { ...DEFAULT_SETTINGS.appearance, theme, density },
+      appearance: { ...DEFAULT_SETTINGS.appearance, theme, density, accent },
     },
   })
   return renderHook(() => useAppearance())
+}
+
+function published(name: string): string {
+  return document.documentElement.style.getPropertyValue(name)
 }
 
 const publishedTheme = (): string | undefined => document.documentElement.dataset['theme']
@@ -129,5 +134,39 @@ describe('following the system', () => {
 
     expect(publishedTheme()).toBe(THEME_ATTRIBUTE.light)
     expect(media.watchers()).toBe(0)
+  })
+})
+
+/**
+ * The accent a user picks overrides the fill inline, so the ink has to follow it there or the
+ * words keep the blue the studio shipped with while every button turns the chosen colour.
+ */
+describe('the accent a user picks', () => {
+  it('publishes an ink beside the fill', () => {
+    stubMatchMedia(true)
+    // The sheet is not loaded under jsdom, and the hook reads the chassis back off the root.
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#c62828')
+
+    expect(published('--color-accent')).toBe('#c62828')
+    expect(published('--color-accent-ink')).toMatch(HEX_COLOR)
+    expect(contrastRatio(published('--color-accent-ink'), '#2b2d30')).toBeGreaterThanOrEqual(
+      AA_NORMAL_TEXT,
+    )
+    expect(contrastRatio('#c62828', '#2b2d30')).toBeLessThan(AA_NORMAL_TEXT)
+  })
+
+  // Removed rather than blanked, like the fill above it: an empty value parses as nothing, and
+  // the theme's own ink never comes back.
+  it('takes the ink away again when nothing is picked', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#c62828')
+    expect(published('--color-accent-ink')).not.toBe('')
+
+    withAppearance('dark')
+
+    expect(published('--color-accent-ink')).toBe('')
+    expect(published('--color-accent')).toBe('')
   })
 })

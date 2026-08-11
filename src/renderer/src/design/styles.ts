@@ -199,7 +199,9 @@ export type StatusTone = 'muted' | 'accent' | 'success' | 'warning' | 'danger'
 
 export const TONE_TEXT: Record<StatusTone, string> = {
   muted: 'text-muted',
-  accent: 'text-accent',
+  // The ink, never the fill: this map only ever paints words, and the fill misses the contrast
+  // threshold on all three surfaces a status is read on.
+  accent: 'text-accent-ink',
   success: 'text-success',
   // What is waiting on the user, which is neither in flight nor wrong: an approval painted with
   // `accent` read as "running" beside the nodes that really were.

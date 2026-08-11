@@ -25,3 +25,60 @@ export function readColor(source: Record<string, unknown>, key: string, fallback
   const value = readString(source, key, fallback)
   return HEX_COLOR.test(value) ? value : fallback
 }
+
+const CHANNEL_WEIGHTS = [0.2126, 0.7152, 0.0722]
+
+function channels(colour: string): number[] {
+  return [1, 3, 5].map(at => parseInt(colour.slice(at, at + 2), 16))
+}
+
+/** Relative luminance, WCAG 2.x. Expects the `#rrggbb` shape above; anything else reads as black. */
+export function relativeLuminance(colour: string): number {
+  return channels(colour)
+    .map(value => value / 255)
+    .map(value => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4))
+    .reduce((sum, value, index) => sum + (CHANNEL_WEIGHTS[index] ?? 0) * value, 0)
+}
+
+/** The WCAG contrast ratio of two colours, from 1 (identical) to 21 (black on white). */
+export function contrastRatio(one: string, other: string): number {
+  const first = relativeLuminance(one)
+  const second = relativeLuminance(other)
+
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05)
+}
+
+/** What WCAG 1.4.3 asks of normal text — every size this studio writes falls under it. */
+export const AA_NORMAL_TEXT = 4.5
+
+function toHex(values: number[]): string {
+  return `#${values.map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * The same hue, moved until it can carry a word on `backdrop` — toward white on a dark one,
+ * toward black on a light one.
+ *
+ * A fill and an ink cannot be the same colour: the studio's own blue reads 3.23:1 as a word on
+ * the chassis, and lightening it to fix that would take white ON it from 4.28 to 3.01. So the
+ * sheet declares both, and the accent a user PICKS has to be given the same pair — otherwise
+ * choosing red repaints the buttons and leaves every accented word the blue it shipped with.
+ *
+ * Returns `accent` itself when it already clears the threshold, and the nearest endpoint when
+ * no step of the ramp does — white on a light backdrop never will, and a colour is better than
+ * nothing on a screen.
+ */
+export function inkFor(accent: string, backdrop: string, threshold = AA_NORMAL_TEXT): string {
+  if (!HEX_COLOR.test(accent) || !HEX_COLOR.test(backdrop)) return accent
+
+  const towardsWhite = relativeLuminance(backdrop) < 0.5
+  const from = channels(accent)
+  const target = towardsWhite ? 255 : 0
+
+  for (let step = 0; step <= 100; step++) {
+    const moved = toHex(from.map(value => value + (target - value) * (step / 100)))
+    if (contrastRatio(moved, backdrop) >= threshold) return moved
+  }
+
+  return towardsWhite ? '#ffffff' : '#000000'
+}

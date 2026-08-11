@@ -122,7 +122,7 @@ function NodeShell({
             title={t('inspector.isOutput')}
             aria-label={t('inspector.isOutput')}
             role="img"
-            className="text-accent shrink-0 self-center"
+            className="text-accent-ink shrink-0 self-center"
           >
             <UiIcon path={mdiExportVariant} size={12} />
           </span>

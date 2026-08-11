@@ -25,8 +25,8 @@ import { UiIcon } from './UiIcon'
 const MARKS: Record<Badge, { icon: string; tone: string }> = {
   'local-only': { icon: mdiHarddisk, tone: 'text-muted' },
   synced: { icon: mdiCloudSyncOutline, tone: 'text-muted' },
-  'to-push': { icon: mdiCloudUploadOutline, tone: 'text-accent' },
-  'to-pull': { icon: mdiCloudOutline, tone: 'text-accent' },
+  'to-push': { icon: mdiCloudUploadOutline, tone: 'text-accent-ink' },
+  'to-pull': { icon: mdiCloudOutline, tone: 'text-accent-ink' },
   conflict: { icon: mdiSourceBranch, tone: 'text-danger' },
   error: { icon: mdiAlertCircleOutline, tone: 'text-danger' },
   // Its twin is in a project this key does not open onto: nothing to do, but not settled either.

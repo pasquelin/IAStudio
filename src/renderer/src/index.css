@@ -25,6 +25,15 @@
   --color-elevated: #3c3f44;
   --color-border: #34363a;
   --color-accent: #3574f0;
+  /*
+   * The accent as INK, which the fill cannot be: #3574f0 carries 3.23:1 on the chassis, 4.07 on
+   * a panel and 3.76 on a surface — under the 4.5 WCAG 1.4.3 asks of normal text, on all three.
+   * Lightening `--color-accent` itself would fix the text and break the fill, white on it
+   * dropping from 4.28 to 3.01: an accented button is a surface, not a word.
+   *
+   * Restated darker in the light theme, where a lighter blue would be the wrong direction.
+   */
+  --color-accent-ink: #6193f3;
   --color-accent-soft: #2e436e;
   --color-danger: #ff715b;
   /*
@@ -47,7 +56,12 @@
   --color-create: #12b600;
   --color-create-hover: #0e9200;
   --color-text: #dfe1e5;
-  --color-muted: #868a91;
+  /*
+   * Raised from #868a91, which read 3.98:1 on the chassis — under 4.5, and the chassis is where
+   * the whole title bar rests. It stays under on `elevated`, a pairing nothing makes: a hovered
+   * control goes to `text`, never to this.
+   */
+  --color-muted: #91959b;
 
   /*
    * Marching ants — the outline of a selection, of a crop frame, of a shape being drawn. Two
@@ -76,7 +90,9 @@
   --color-monitor: #000000;
   /*
    * Untextured geometry. Its own token and not `--color-muted`, which is a TEXT colour: raising
-   * the contrast of a dimmed label would otherwise repaint every mesh in the scene.
+   * the contrast of a dimmed label would otherwise repaint every mesh in the scene. That is not
+   * a hypothesis — `muted` was raised for exactly that reason and this value stayed where it was,
+   * which is what having two tokens bought.
    */
   --color-mesh: #868a91;
   /*
@@ -274,12 +290,15 @@
   --color-surface: #f5f6f8;
   --color-elevated: #e4e6ea;
   --color-border: #c9cbd1;
+  /* Darker than the dark theme's, not lighter: the ink has to leave the background it sits on. */
+  --color-accent-ink: #2a5dc0;
   --color-accent-soft: #d3e1fb;
   --color-danger: #d0342c;
   --color-create: #12b600;
   --color-create-hover: #0e9200;
   --color-text: #1f2124;
-  --color-muted: #6b7078;
+  /* Lowered from #6b7078, which read 3.67:1 on this theme's chassis. Same reason as the dark. */
+  --color-muted: #5d6168;
 
   /*
    * The viewport stays a working space rather than becoming part of the page: here that means
