@@ -52,7 +52,7 @@ la largeur :
 outils, les recettes, une idée pour commencer, dans la même veine, ce que vous avez produit, les
 compteurs par type, ce que vous avez consommé, votre bibliothèque, vos documents, l’activité
 récente et les tâches en cours. Une bande est ce que le centre empile ; ce que portent les rails
-n’en est pas une. Le menu **Personnaliser cette section** ne les concerne donc pas.
+n’en est pas une. Le bouton **Masquer cette section** ne les concerne donc pas.
 
 ### Explorer, le fil sans fin
 
@@ -98,23 +98,18 @@ de la page ; un panneau posé sous une icône de rail, non — sinon l’icône 
 
 ### Ranger la page
 
-Une bande a son menu — **Personnaliser cette section** — quand ce menu a quelque chose à offrir.
+Un seul geste reste offert sur un titre de bande : **Masquer cette section**, un bouton qui
+apparaît au survol du titre. Les sections masquées sont comptées en bas de page — « 1 section
+masquée » — avec un bouton **Les réafficher**. Rien ne disparaît sans laisser de trace.
 
-| Entrée | Effet |
-|---|---|
-| **Monter** / **Descendre** | change l’ordre, qui est retenu |
-| **Masquer cette section** | la retire de la page |
+**Aujourd’hui, seul Explorer porte ce bouton.** La bannière est épinglée : c’est ce qui garantit
+que l’accueil n’est jamais une page blanche, quoi qu’on décoche, et elle ne réclame aucune clé
+API. Un contrôle qui ne pourrait que refuser ne s’affiche pas.
 
-Les sections masquées sont comptées en bas de page — « 1 section masquée » — avec un bouton
-**Les réafficher**. Rien ne disparaît sans laisser de trace.
-
-**Aujourd’hui, seul Explorer porte ce menu.** La bannière est épinglée — c’est ce qui garantit que
-l’accueil n’est jamais une page blanche, quoi qu’on décoche, et elle ne réclame aucune clé API —
-et elle ouvre la page, donc elle ne se déplace pas non plus : son menu ne pourrait que refuser, et
-un glyphe qui n’ouvre que sur des lignes grisées ne s’affiche pas.
-
-**Le réglage du nombre d’éléments a disparu avec les bandes qui le portaient.** Une étagère de
-panneau lit sa propre page ; une colonne n’a pas de barre où poser une telle ligne.
+**Le menu d’avant n’existe plus.** Le réglage du nombre d’éléments est parti avec les bandes qui
+le portaient — une étagère de panneau lit sa propre page, et une colonne n’a pas de barre où poser
+une telle ligne. **Monter** et **Descendre** sont partis avec l’avant-dernière : il ne reste au
+centre qu’une bannière épinglée en tête et un fil ancré en pied, et rien entre les deux à ranger.
 
 ### La colonne de gauche
 

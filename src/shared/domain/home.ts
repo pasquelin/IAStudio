@@ -126,81 +126,15 @@ export function visibleHomeSections(
     .map(setting => setting.id)
 }
 
-/** Which way a section is being moved. Positions are settings, not ids, so this is enough. */
-export type HomeMove = 'up' | 'down'
-
 /**
- * Where a section would land if it moved, or -1 when nothing is left to swap with.
- *
- * It steps over the sections that are not being drawn. Swapping with a hidden neighbour is a
- * write that changes the stored order and nothing on screen — an enabled row that does nothing,
- * which is exactly what `canMoveHomeSection` exists to prevent. Explore made it plain: it sits
- * last, behind bands that needed a project, so moving it up did nothing until one was open.
- *
- * `shown` absent means every section counts, which is what a caller with nothing hidden wants.
+ * The stored order is still reconciled and still read — the registry's own order decides what
+ * the centre stacks — but nothing moves a band any more, and that is a consequence rather than a
+ * decision: the centre holds two, the first is pinned to the top and the second anchored to the
+ * foot. `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with
+ * the six bands that left on 11 August. They are in the history at `HEAD~1` for the day a band
+ * comes back to the centre, and rewriting them then is cheaper than carrying rules no case can
+ * reach — which is what a coverage floor says out loud.
  */
-function neighbourOf(
-  sections: readonly HomeSectionSetting[],
-  from: number,
-  move: HomeMove,
-  shown?: readonly HomeSectionId[],
-): number {
-  // Walked as a slice rather than by index: the bounds are then the array's own, and there is
-  // no out-of-range case left to guard against.
-  const ahead =
-    move === 'up' ? [...sections.slice(0, from)].reverse() : [...sections.slice(from + 1)]
-
-  for (const candidate of ahead) {
-    // Nothing may be swapped past an anchored band either — that is how a section would end up
-    // under a feed that never ends.
-    if (anchored(candidate)) return -1
-    if (!shown || shown.includes(candidate.id)) return sections.indexOf(candidate)
-  }
-
-  return -1
-}
-
-/** Whether the menu may offer the move at all — a row that cannot act is disabled, not silent. */
-export function canMoveHomeSection(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-  move: HomeMove,
-  shown?: readonly HomeSectionId[],
-): boolean {
-  if (homeSectionOf(id)?.anchored === true) return false
-
-  const sections = homeSections(stored)
-  const from = sections.findIndex(setting => setting.id === id)
-  return from !== -1 && neighbourOf(sections, from, move, shown) !== -1
-}
-
-/**
- * The order after a section has been moved one place. Unchanged at either end: a section that
- * cannot move is a disabled row in the menu, never a write that quietly does nothing.
- */
-export function movedHomeSection(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-  move: HomeMove,
-  shown?: readonly HomeSectionId[],
-): HomeSectionSetting[] {
-  const sections = homeSections(stored)
-  if (homeSectionOf(id)?.anchored === true) return sections
-
-  const from = sections.findIndex(setting => setting.id === id)
-  if (from === -1) return sections
-
-  const to = neighbourOf(sections, from, move, shown)
-  if (to === -1) return sections
-
-  const moving = sections[from]
-  const displaced = sections[to]
-  if (!moving || !displaced) return sections
-
-  sections[to] = moving
-  sections[from] = displaced
-  return sections
-}
 
 /** One field of one section, rewritten. Both writes the menu offers are shaped like this. */
 function patchedHomeSection(

@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_HOME_SECTIONS,
   HOME_SECTIONS,
-  canMoveHomeSection,
   homeSections,
   hiddenHomeSections,
   homeSectionOf,
-  movedHomeSection,
   shownHomeSection,
   visibleHomeSections,
   type HomeContext,
@@ -126,36 +124,7 @@ describe('reading back a stored order', () => {
   })
 })
 
-describe('rearranging the home', () => {
-  /**
-   * Nothing can move today: the centre holds two bands, the first is pinned at the top and the
-   * second is anchored to the foot. Both rows of the menu are disabled, and that is the whole
-   * point of asking — a row that acts on nothing must say so rather than write an order nobody
-   * can see. The rules are kept whole for the day a band comes back to the centre.
-   */
-  it('refuses a move at either end of the column', () => {
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', 'up')).toBe(false)
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', 'down')).toBe(false)
-  })
-
-  it('leaves the order alone at either end', () => {
-    const first = HOME_SECTIONS[0]?.id ?? 'spotlight'
-    const last = HOME_SECTIONS.at(-1)?.id ?? 'explore'
-
-    expect(movedHomeSection(DEFAULT_HOME_SECTIONS, first, 'up').map(s => s.id)).toEqual(
-      DEFAULT_HOME_SECTIONS.map(s => s.id),
-    )
-    expect(movedHomeSection(DEFAULT_HOME_SECTIONS, last, 'down').map(s => s.id)).toEqual(
-      DEFAULT_HOME_SECTIONS.map(s => s.id),
-    )
-  })
-
-  it('keeps every section when the stored list predates one', () => {
-    const partial: HomeSectionSetting[] = [{ id: 'explore', visible: true }]
-
-    expect(movedHomeSection(partial, 'explore', 'up')).toHaveLength(HOME_SECTIONS.length)
-  })
-
+describe('hiding a band', () => {
   it('hides and shows a section, and offers the hidden ones back', () => {
     const hidden = shownHomeSection(DEFAULT_HOME_SECTIONS, 'explore', false)
 
@@ -181,31 +150,7 @@ describe('a band that never ends', () => {
     expect(homeSections(scrambled).at(-1)?.id).toBe('explore')
   })
 
-  it('cannot be moved, in either direction', () => {
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'up')).toBe(false)
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'down')).toBe(false)
-    expect(movedHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'up').at(-1)?.id).toBe('explore')
-  })
-
-  it('cannot be passed under either, since that is the same burial', () => {
-    const before = homeSections(DEFAULT_HOME_SECTIONS).at(-2)
-    expect(before).toBeDefined()
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, before?.id ?? 'spotlight', 'down')).toBe(false)
-  })
-
-  it('is anchored in the registry, which is what every rule above reads', () => {
+  it('is anchored in the registry, which is what that rule reads', () => {
     expect(homeSectionOf('explore')?.anchored).toBe(true)
-  })
-})
-
-/**
- * `shown` narrows a move to the bands actually on screen. Nothing exercises it from the studio
- * today — two bands, one pinned and one anchored — so it is held here on the registry's own
- * shape rather than on a case the home can produce.
- */
-describe('moving a band past the ones nobody is shown', () => {
-  it('refuses when the only neighbour on that side is not drawn', () => {
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'explore', 'up', ['spotlight'])).toBe(false)
-    expect(canMoveHomeSection(DEFAULT_HOME_SECTIONS, 'spotlight', 'down', ['explore'])).toBe(false)
   })
 })

@@ -50,8 +50,8 @@ Under the banner, the centre stacks two subjects only, and they are the two that
 **Everything else on the home is a panel**, held in its two columns: your projects, the tools,
 your recipes, an idea to start from, in the same vein, what you have made, the counters by kind,
 what you have spent, your library, your documents, the recent activity and the jobs running now.
-A band is what the centre stacks; what the rails hold is not one. The **Customise this section**
-menu therefore does not reach them.
+A band is what the centre stacks; what the rails hold is not one. The **Hide this section**
+button therefore does not reach them.
 
 ### Explore, the endless feed
 
@@ -96,23 +96,18 @@ standing under a rail icon cannot — the icon would open onto nothing.
 
 ### Tidying the page
 
-A band has its menu — **Customise this section** — when that menu has something to offer.
+One gesture is left on a band's heading: **Hide this section**, a button that appears when the
+heading is hovered. Hidden sections are counted at the foot of the page — "1 section hidden" —
+with a **Show them again** button. Nothing disappears without leaving a trace.
 
-| Entry | Effect |
-|---|---|
-| **Move up** / **Move down** | changes the order, which is remembered |
-| **Hide this section** | takes it off the page |
+**Today only Explore carries that button.** The banner is pinned: that is what keeps the home from
+ever being a blank page, whatever you untick, and it needs no API key. A control that could only
+refuse is not drawn at all.
 
-Hidden sections are counted at the foot of the page — "1 section hidden" — with a **Show them
-again** button. Nothing disappears without leaving a trace.
-
-**Today only Explore carries that menu.** The banner is pinned — which is what keeps the home from
-ever being a blank page, whatever you untick, and it needs no API key — and it opens the page, so
-it does not move either: its menu could only ever refuse, and a glyph opening onto nothing but
-greyed-out rows is not drawn at all.
-
-**The item count went with the bands that carried one.** A panel's shelf reads a page of its own,
-and a column has no bar to put such a row on.
+**The menu it used to be is gone.** The item count went with the bands that carried one — a
+panel's shelf reads a page of its own, and a column has no bar to put such a row on. **Move up**
+and **Move down** went with the last but one: the centre holds a banner pinned to the top and a
+feed anchored to the foot, with nothing between them to tidy.
 
 ### The left column
 

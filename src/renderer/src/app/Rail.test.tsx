@@ -157,6 +157,18 @@ describe('Rail', () => {
     })
   })
 
+  /**
+   * A lone group has nothing to be cut from. The home used to be the one surface with such a
+   * half; both of its columns are cut in two since 11 August, and the graph is where the case
+   * lives now — no placement gives it the upper right, so its rail draws the inspector alone.
+   */
+  it('draws no separator in a column with a single populated half', () => {
+    useLayouts.setState({ activeWorkspace: 'graph', home: false })
+    const { container } = render(<Rail side="right" />)
+
+    expect(marksOf(container)).toEqual(['Inspecteur'])
+  })
+
   // Generating without a model is impossible, so the icon is absent rather than dead: the rail
   // says what the section can do.
   it('offers no generator icon while no model is chosen', () => {

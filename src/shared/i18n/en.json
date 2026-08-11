@@ -2179,9 +2179,6 @@
       "title": "Create or explore. One click to what comes next.",
       "action": "Start creating"
     },
-    "customise": "Customise this section",
-    "moveUp": "Move up",
-    "moveDown": "Move down",
     "hide": "Hide this section",
     "hidden_one": "{{count, number}} section hidden",
     "hidden_many": "{{count, number}} sections hidden",
@@ -2228,8 +2225,6 @@
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the preferences, at the account section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens",
-    "moveUpHint": "Moves this section up one place on the home",
-    "moveDownHint": "Moves this section down one place on the home",
     "hideHint": "Takes the section off the home; a line at the foot of the page brings it back"
   },
   "animation": {

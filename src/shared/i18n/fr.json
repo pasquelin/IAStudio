@@ -2179,9 +2179,6 @@
       "title": "Créer ou explorer. Un clic vers la suite.",
       "action": "Commencer à créer"
     },
-    "customise": "Personnaliser cette section",
-    "moveUp": "Monter",
-    "moveDown": "Descendre",
     "hide": "Masquer cette section",
     "hidden_one": "{{count, number}} section masquée",
     "hidden_many": "{{count, number}} sections masquées",
@@ -2228,8 +2225,6 @@
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
     "spotlightConnectHint": "Ouvre les préférences, à la section du compte",
     "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère",
-    "moveUpHint": "Remonte cette section d’un cran sur l’accueil",
-    "moveDownHint": "Descend cette section d’un cran sur l’accueil",
     "hideHint": "Retire la section de l’accueil ; une ligne en bas de la page la rétablit"
   },
   "animation": {

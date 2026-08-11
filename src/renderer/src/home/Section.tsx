@@ -1,7 +1,7 @@
 import type { HomeSectionId } from '@shared/domain/home'
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { SectionMenu } from './SectionMenu'
+import { HideSection } from './HideSection'
 
 export type SectionProps = {
   /** Which section this is, so its heading can carry the menu that reorders and sizes it. */
@@ -46,10 +46,10 @@ export function Section({ id, title, actions, sticky = false, children }: Sectio
         <div className="ml-auto flex items-center gap-3">
           {actions}
 
-          {/* Revealed by hovering the band, and by focusing it: a settings glyph on every heading
-              would turn a page of work into a page of controls. */}
+          {/* Revealed by hovering the band, and by focusing it: a control on every heading would
+              turn a page of work into a page of controls. */}
           <span className="opacity-0 transition-opacity group-hover/section:opacity-100 focus-within:opacity-100">
-            <SectionMenu id={id} />
+            <HideSection id={id} />
           </span>
         </div>
       </header>

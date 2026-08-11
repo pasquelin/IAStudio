@@ -155,11 +155,11 @@ describe('the home', () => {
 
 describe('customising the home', () => {
   /**
-   * A titled band carries the menu when the menu has something to offer. The spotlight has no
-   * heading to hang one from — it is the page's opening banner — and the feed, which cannot be
-   * moved either, keeps its own because it can still be hidden.
+   * A titled band carries the control when there is a gesture left to offer. The spotlight has no
+   * heading to hang one from — it is the page's opening banner — and the feed keeps its own
+   * because it can still be hidden.
    */
-  it('carries a menu on every titled band that can still act', () => {
+  it('carries the hide button on every titled band that can still act', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
@@ -169,7 +169,7 @@ describe('customising the home', () => {
     // takes itself off the page, and it must take its heading and its menu with it.
     const headings = container.querySelectorAll('h2')
     expect(headings.length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Personnaliser cette section' })).toHaveLength(
+    expect(screen.getAllByRole('button', { name: 'Masquer cette section' })).toHaveLength(
       headings.length,
     )
   })
