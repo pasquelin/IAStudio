@@ -843,7 +843,7 @@ ports go together. `NodePorts.tsx` carries the rule in JSDoc, where it would be 
 It is the same split as `name` and `message` in the hardcoded-text guards: **a string that is also
 data is not a label**, and translating it breaks it as data.
 
-### Five guards, and what each one holds
+### The guards, and what each one holds
 
 They are not the same test, and treating them as one suggests a single thing is being watched.
 They share the tree without overlapping, and all of them run in `pnpm validate`.
@@ -855,6 +855,14 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
 | `main/no-hardcoded-text.test.ts`, § *the registries* | in `renderer`, `shared` or `preload`: a label written where a key is expected |
 | `main/no-hardcoded-text.test.ts`, § *the words nobody puts in a tag* | in all **four** trees, `main` included: a sentence bound to a name — `const message = 'This project could not be opened'` — that neither the tags nor the registry fields ever show |
+| `shared/licences.i18n.test.ts` | prose in a **displayed** field of `src/shared/licences.json`, which `pnpm licences:collect` generates and the Licences window renders verbatim. The `text` field is exempt: a licence is reproduced in the language its authors wrote it in |
+
+**The last one arrived on 11 August, and it closes a way none of the other four could see**: they
+all read the TypeScript tree, and that text is written in no `.ts` — `scripts/collect-licences.mjs`
+writes it into a JSON. Two English sentences reached French readers that way. **A generated file
+rendered verbatim is a way to the screen**, and the rule that follows holds for all of them: the
+script carries the fact (`unmodified: true`), the render carries the sentence, and the sentence
+comes from a bundle.
 
 **Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, none of the 23 fixture files in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. Coverage excludes exactly the same files (`vitest.config.ts`). It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
 
