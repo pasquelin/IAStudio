@@ -239,3 +239,129 @@ describe('the renderer', () => {
     expect(quiet.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toEqual([])
   })
 })
+
+/**
+ * Every module of the window, `.ts` included: the checks above read JSX, and a sentence bound to
+ * a name is not JSX.
+ */
+const MODULES: Record<string, string> = import.meta.glob(
+  ['./**/*.ts', './**/*.tsx', '!./**/*.test.ts', '!./**/*.test.tsx'],
+  { query: '?raw', import: 'default', eager: true },
+)
+
+/**
+ * A sentence, as opposed to a class list or a keyword. The capital is what tells them apart:
+ * `bg-surface flex size-full` holds spaces and lowercase words and is not a word anyone reads,
+ * while anything a user is shown starts the way a sentence starts.
+ */
+function readsLikeASentence(text: string): boolean {
+  return /^\p{Uppercase_Letter}\p{Lowercase_Letter}+\s+\p{Lowercase_Letter}/u.test(text.trim())
+}
+
+/**
+ * A `.ts` read as JSX is worse than useless: `const f = <T,>(x: T) => x` opens a tag, the parser
+ * drops into error recovery, and the declarations after it are never visited. Measured on three
+ * modules of this window — 99, 46 and 33 parse errors, and 55 declarations gone unseen.
+ *
+ * The reverse is harmless, which is what misled the first version of this check: a `.tsx` read as
+ * TypeScript recovers and finds the same things, measured beside the registry guard.
+ */
+function scriptKindOf(path: string): ts.ScriptKind {
+  return path.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+}
+
+function boundSentencesIn(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, scriptKindOf(path))
+  const findings: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    // `literalsIn` rather than the initializer alone: a ternary and a `&&` are what someone
+    // reaches for to park a second wording beside the first, and it already walks both.
+    if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
+      for (const text of literalsIn(node.initializer)) {
+        if (!readsLikeASentence(text)) continue
+        const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
+        findings.push(`${path}:${line + 1} ${text}`)
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return findings
+}
+
+/**
+ * The blind spot the three guards admit to: a string reaching the screen through a name. The JSX
+ * checks read what a tag holds, so `<p>{label}</p>` shows them an identifier and nothing else,
+ * and the registry check reads named fields, which a bare `const` is not.
+ *
+ * Catching it at the binding rather than at the render is what makes it checkable at all —
+ * following a name to the tag that draws it would take a check that reads the whole window
+ * at once, and this one reads a file.
+ *
+ * NARROW ON PURPOSE, and the shape it catches is the one somebody writes. A capital is what
+ * separates a sentence from a class list: `looksLikeSentence` above would flag
+ * `bg-surface flex size-full`, and a check that cries wolf is a check somebody turns off. So it
+ * does NOT see a lowercase phrase, a single capitalised word, an acronym, an object property or
+ * an array element — the last two being the registry guard's job. What it adds is the bare
+ * binding, which nothing else reads.
+ */
+describe('the words nobody puts in a tag', () => {
+  it('binds no sentence to a name anywhere in the window', () => {
+    const findings = Object.entries(MODULES).flatMap(([path, code]) => boundSentencesIn(path, code))
+
+    expect(findings).toEqual([])
+  })
+
+  // An empty result proves nothing unless the files were opened: pointed at a folder that does
+  // not exist, every assertion above stays green.
+  it('holds the whole window, modules and components alike', () => {
+    const paths = Object.keys(MODULES)
+
+    expect(paths.filter(path => path.endsWith('.tsx')).length).toBeGreaterThan(150)
+    expect(paths.filter(path => path.endsWith('.ts')).length).toBeGreaterThan(250)
+  })
+
+  it('would see a sentence parked in a constant', () => {
+    const found = boundSentencesIn('probe.tsx', "const label = 'Delete this project'")
+
+    expect(found).toHaveLength(1)
+  })
+
+  it('leaves class lists, keywords and identifiers alone', () => {
+    const quiet = [
+      "const styles = 'bg-surface flex size-full flex-col justify-center gap-2'",
+      "const mode = 'horizontal'",
+      "const channel = 'window:state'",
+      "const key = 'panels.assets'",
+      "const path = 'Contents/Resources/ffmpeg'",
+    ]
+
+    expect(quiet.flatMap((code, index) => boundSentencesIn(`probe${index}.ts`, code))).toEqual([])
+  })
+})
+
+/**
+ * What the widened check buys, measured rather than assumed: a `.ts` parsed as JSX loses the
+ * declarations that follow its first generic arrow, and a ternary hides a second wording.
+ */
+describe('what the binding check would have missed', () => {
+  it('reads a module whose generic arrow would open a tag in JSX', () => {
+    const code = "const identity = <T,>(value: T) => value\nconst label = 'Delete this project'"
+
+    expect(boundSentencesIn('probe.ts', code)).toHaveLength(1)
+  })
+
+  it('reads both sides of a ternary and of a guard', () => {
+    const behind = [
+      "const label = ok ? 'Loading your project' : 'Nothing to show'",
+      "const other = bad && 'Something went wrong'",
+    ]
+
+    expect(
+      behind.flatMap((code, index) => boundSentencesIn(`probe${index}.ts`, code)),
+    ).toHaveLength(3)
+  })
+})
