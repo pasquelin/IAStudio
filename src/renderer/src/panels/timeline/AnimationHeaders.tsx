@@ -1,8 +1,10 @@
 import { mdiChevronDown, mdiChevronRight, mdiDeleteOutline, mdiRhombus } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
+import type { TrackProperty } from '@shared/domain/animation'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { keySubject, removeAnimationTrack } from '@/engines/scene/animation-commands'
+import { keyNode, removeAnimationTrack } from '@/engines/scene/animation-commands'
+import { newId } from '@/helpers/ids'
 import type { AnimationRow, ChannelRow, ClipRow, SubjectRow } from '@/engines/scene/animation-rows'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
@@ -11,6 +13,23 @@ import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, viewOf } from '@/stores/scene-views'
 import { TRACK_FLAGS } from './track-flags'
+
+/** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
+function subjectOf(rowId: string): { nodeId: string; bone?: string } {
+  const cut = rowId.indexOf('/')
+  return cut === -1
+    ? { nodeId: rowId }
+    : { nodeId: rowId.slice(0, cut), bone: rowId.slice(cut + 1) }
+}
+
+/** What each channel is called, composed once so a created channel is named like an added one. */
+function channelNames(t: (key: string) => string, subject: string): Record<TrackProperty, string> {
+  return {
+    position: `${subject} · ${t('animation.position')}`,
+    rotation: `${subject} · ${t('animation.rotation')}`,
+    scale: `${subject} · ${t('animation.scale')}`,
+  }
+}
 
 export type AnimationHeadersProps = {
   documentId: string
@@ -73,10 +92,12 @@ function SubjectHeader({ documentId, row }: SubjectRowProps) {
 
   const key = (): void => {
     const store = useScenes.getState()
-    const command = keySubject(
+    const command = keyNode(
       sceneOf(store, documentId),
-      row.tracks.map(track => track.id),
+      subjectOf(row.id),
       playhead,
+      channelNames(t, row.name),
+      () => `track_${newId()}`,
     )
     if (command) store.runCommand(documentId, command)
   }

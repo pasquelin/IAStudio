@@ -110,7 +110,7 @@ export default defineConfig({
         // (a bone behind the camera, two bones projecting to the same spot).
         'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
           statements: -790,
-          branches: -410,
+          branches: -415,
         },
         // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
@@ -149,7 +149,7 @@ export default defineConfig({
         // non-passive listener no `userEvent` gesture reaches. What CAN be reached was, and is
         // — the drag of a key and of a block, the scrub, the picking, and every switch of the
         // header column, each in a test of its own.
-        'src/renderer/src/panels/**': { statements: -210, branches: -170 },
+        'src/renderer/src/panels/**': { statements: -215, branches: -175 },
         'src/renderer/src/design/**': { statements: -59, branches: -66 },
         // The fourth glob that had none, found the day a lot posted `GraphStatus.tsx` into it and
         // nothing moved. Measured at 235 and 195 the day it was set — what the six spaces carry,

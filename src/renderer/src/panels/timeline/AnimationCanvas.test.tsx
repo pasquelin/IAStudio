@@ -41,14 +41,14 @@ const modelWithClip = () => {
 
 const blockRows = () =>
   animationRows(timelineWith([]), {
-    nameOf: () => 'Perso',
+    nodes: [],
     expanded: new Set(),
     clips: [{ nodeId: 'perso', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
   })
 
 const keyRows = () =>
   animationRows(timelineWith([animationTrack('a', 'position', [key(1)])]), {
-    nameOf: () => 'Circle',
+    nodes: [{ id: 'cube', name: 'Circle' }],
     expanded: new Set(),
   })
 

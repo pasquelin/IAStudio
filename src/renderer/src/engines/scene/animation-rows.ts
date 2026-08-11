@@ -102,9 +102,20 @@ export type ClipBlock = {
   duration: Us
 }
 
+/** An object of the scene, as the sheet needs to name a line for it. */
+export type SheetNode = {
+  id: string
+  name: string
+}
+
 export type RowsOptions = {
-  /** What an object is called. The tracks carry composed names; a subject wants the plain one. */
-  nameOf: (nodeId: string) => string
+  /**
+   * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
+   * objects already exist, so a band that showed only those with a track made a person create
+   * something before they could see anything — which is the whole reason the old panel read as
+   * empty while a cube stood in the viewport.
+   */
+  nodes: readonly SheetNode[]
   /** Which subjects are unfolded. Absent from the set means folded, so a new one arrives folded. */
   expanded: ReadonlySet<string>
   /**
@@ -131,19 +142,26 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
     else grouped.set(key, [track])
   }
 
+  const named = new Map(options.nodes.map(node => [node.id, node.name]))
   const rows: AnimationRow[] = []
 
-  for (const [key, tracks] of grouped) {
-    const first = tracks[0]
-    if (!first) continue
+  /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
+  const order = [
+    ...options.nodes.map(node => node.id),
+    ...[...grouped.keys()].filter(key => !named.has(key)),
+  ]
+
+  for (const key of order) {
+    const tracks = grouped.get(key) ?? []
+    const bone = tracks[0]?.target.bone
+    const plain = named.get(bone ? (tracks[0]?.target.nodeId ?? key) : key) ?? key
 
     const expanded = options.expanded.has(key)
-    const plain = options.nameOf(first.target.nodeId)
 
     rows.push({
       kind: 'subject',
       id: key,
-      name: first.target.bone ? `${plain} · ${first.target.bone}` : plain,
+      name: bone ? `${plain} · ${bone}` : plain,
       height: SUBJECT_HEIGHT,
       expanded,
       keys: mergedKeys(tracks),

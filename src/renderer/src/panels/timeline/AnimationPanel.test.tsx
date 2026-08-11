@@ -1,7 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { canUndo } from '@/engines/core/history'
 import { cameraNode } from '@/engines/scene/node-factory'
 import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
@@ -36,86 +35,74 @@ describe('AnimationPanel', () => {
     useAnimationViews.setState({ views: {} })
   })
 
-  it('says what to do while no track has been added', () => {
+  it('shows the object of the scene straight away, with nothing to create first', () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
 
-    expect(screen.getByText(/Aucune piste/)).toBeInTheDocument()
-  })
-
-  it('adds a track for the picked object, one per property', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Échelle/ }))
-
-    expect(tracks().map(track => track.target.property)).toEqual(['position', 'scale'])
-    expect(tracks()[0]?.target.nodeId).toBe('cube-1')
-  })
-
-  it('offers no add button while nothing is picked, since a track needs a target', () => {
-    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube-1')], selectedIds: [] })
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    expect(screen.getByRole('button', { name: /Ajouter une piste Position/ })).toBeDisabled()
-  })
-
-  it('makes an added track undoable', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-
-    expect(canUndo(historyOf(useScenes.getState(), DOCUMENT))).toBe(true)
-  })
-
-  it('shows ONE line for the object, whatever its channel count', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Rotation/ }))
-
-    // The name the old column never had room to show.
     expect(screen.getByTestId('anim-subject-cube-1')).toHaveTextContent('cube-1')
-    expect(screen.queryByTestId('anim-channel-' + (tracks()[0]?.id ?? ''))).not.toBeInTheDocument()
   })
 
-  it('unfolds the channels under the object, and folds them back', async () => {
+  it('offers no button to add a track, because there is nothing to add', () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    const channel = () => screen.queryByTestId('anim-channel-' + (tracks()[0]?.id ?? ''))
+
+    expect(screen.queryByRole('button', { name: /Ajouter une piste/ })).not.toBeInTheDocument()
+  })
+
+  it('keys an object that holds no channel yet, creating the three it needs', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', {
+        name: /Poser une clé sur/,
+      }),
+    )
+
+    expect(tracks().map(track => track.target.property)).toEqual(['position', 'rotation', 'scale'])
+    expect(tracks().every(track => track.keys.length === 1)).toBe(true)
+  })
+
+  it('costs ONE undo for a key that had to open its channels', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', {
+        name: /Poser une clé sur/,
+      }),
+    )
+
+    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+  })
+
+  it('keys a scale at one, not zero — a neutral key must not flatten the object', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', {
+        name: /Poser une clé sur/,
+      }),
+    )
+
+    const scale = tracks().find(track => track.target.property === 'scale')
+    expect(scale?.keys[0]?.value).toEqual({ x: 1, y: 1, z: 1 })
+  })
+
+  it('unfolds the channels once they exist, and folds them back', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', {
+        name: /Poser une clé sur/,
+      }),
+    )
+
     const fold = () =>
       within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', { name: 'cube-1' })
+    const channel = () => screen.queryByTestId('anim-channel-' + (tracks()[0]?.id ?? ''))
 
     await userEvent.click(fold())
     expect(channel()).toBeInTheDocument()
 
     await userEvent.click(fold())
     expect(channel()).not.toBeInTheDocument()
-  })
-
-  it('keys every channel at once, which is what a pose is', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Échelle/ }))
-
-    await userEvent.click(screen.getByRole('button', { name: /sur tout ce qui est animé/ }))
-
-    expect(tracks()[0]?.keys).toHaveLength(1)
-    expect(tracks()[1]?.keys).toHaveLength(1)
-  })
-
-  it('keys a scale at one, not zero — a neutral key must not flatten the object', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Échelle/ }))
-    await userEvent.click(screen.getByRole('button', { name: /sur tout ce qui est animé/ }))
-
-    expect(tracks()[0]?.keys[0]?.value).toEqual({ x: 1, y: 1, z: 1 })
-  })
-
-  it('costs ONE undo for a key on three channels', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Rotation/ }))
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
-
-    await userEvent.click(screen.getByRole('button', { name: /sur tout ce qui est animé/ }))
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
   })
 
   it('records with auto-key, and keeps the switch off the undo stack', async () => {
@@ -126,17 +113,6 @@ describe('AnimationPanel', () => {
 
     expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).autoKey).toBe(true)
     expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
-  })
-
-  it('removes a channel from its own row, once unfolded', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-    await userEvent.click(
-      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', { name: 'cube-1' }),
-    )
-    await userEvent.click(screen.getByRole('button', { name: /Supprimer la piste/ }))
-
-    expect(tracks()).toHaveLength(0)
   })
 
   it('sets the duration and the rate, which nothing could reach before', async () => {
@@ -192,25 +168,21 @@ describe('AnimationPanel and the bones of a rig', () => {
     ])
   })
 
-  it('puts the track on the bone that is picked, never on the model', async () => {
+  it('keys the model itself, on its own line', async () => {
     useModelClips.setState({ bones: { [DOCUMENT]: { perso: ['spine', 'arm.L'] } } })
     render(<AnimationPanel documentId={DOCUMENT} />)
 
-    await userEvent.selectOptions(screen.getByLabelText('Os'), 'arm.L')
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Rotation/ }))
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-perso')).getByRole('button', {
+        name: /Poser une clé sur/,
+      }),
+    )
 
-    expect(tracks()[0]?.target).toEqual({ nodeId: 'perso', bone: 'arm.L', property: 'rotation' })
-  })
-
-  it('goes back to the model as a whole when the picker is cleared', async () => {
-    useModelClips.setState({ bones: { [DOCUMENT]: { perso: ['spine'] } } })
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    await userEvent.selectOptions(screen.getByLabelText('Os'), 'spine')
-    await userEvent.selectOptions(screen.getByLabelText('Os'), '')
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste Position/ }))
-
-    expect(tracks()[0]?.target).toEqual({ nodeId: 'perso', property: 'position' })
+    expect(tracks().map(track => track.target)).toEqual([
+      { nodeId: 'perso', property: 'position' },
+      { nodeId: 'perso', property: 'rotation' },
+      { nodeId: 'perso', property: 'scale' },
+    ])
   })
 })
 

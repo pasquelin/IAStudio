@@ -10,12 +10,15 @@ import {
   trackIdsOf,
 } from './animation-rows'
 
-const nameOf = (nodeId: string): string => (nodeId === 'cube' ? 'Circle' : nodeId)
+const CUBE = [{ id: 'cube', name: 'Circle' }]
 
 const key = (seconds: number) => ({ time: seconds * SECOND, value: { x: 0, y: 0, z: 0 } })
 
-const rowsOf = (tracks: Parameters<typeof timelineWith>[0], expanded: string[] = []) =>
-  animationRows(timelineWith(tracks), { nameOf, expanded: new Set(expanded) })
+const rowsOf = (
+  tracks: Parameters<typeof timelineWith>[0],
+  expanded: string[] = [],
+  nodes = CUBE,
+) => animationRows(timelineWith(tracks), { nodes, expanded: new Set(expanded) })
 
 describe('naming a subject', () => {
   it('is the node alone when no bone is addressed', () => {
@@ -52,6 +55,11 @@ describe('merging the keys of a subject', () => {
 })
 
 describe('laying out the sheet', () => {
+  it('gives a line to an object that holds no channel at all — nothing to create first', () => {
+    expect(rowsOf([])).toHaveLength(1)
+    expect(rowsOf([])[0]).toMatchObject({ kind: 'subject', name: 'Circle', keys: [] })
+  })
+
   it('gives one line per object, whatever its channel count', () => {
     const rows = rowsOf([
       animationTrack('a', 'position', []),
@@ -106,17 +114,18 @@ describe('laying out the sheet', () => {
     expect(rows[1]?.name).toBe('Circle · Hips')
   })
 
-  it('keeps subjects in the order their first track arrived, so rows never jump', () => {
-    const rows = rowsOf([
-      animationTrack('a', 'position', [], { target: { nodeId: 'zebra', property: 'position' } }),
-      animationTrack('b', 'position', [], { target: { nodeId: 'alpha', property: 'position' } }),
-    ])
+  it('keeps the objects in the order the scene holds them, so rows never jump', () => {
+    const nodes = [
+      { id: 'zebra', name: 'zebra' },
+      { id: 'alpha', name: 'alpha' },
+    ]
+    const rows = rowsOf([], [], nodes)
 
     expect(rows.map(row => row.id)).toEqual(['zebra', 'alpha'])
   })
 
-  it('answers nothing at all for a scene with no track', () => {
-    expect(rowsOf([])).toEqual([])
+  it('answers nothing at all for a scene with no object', () => {
+    expect(rowsOf([], [], [])).toEqual([])
   })
 })
 

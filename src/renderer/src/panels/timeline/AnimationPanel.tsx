@@ -2,14 +2,12 @@ import {
   mdiMovieOpenOutline,
   mdiPause,
   mdiPlay,
-  mdiPlus,
   mdiRecordCircleOutline,
   mdiRhombus,
   mdiSkipPrevious,
 } from '@mdi/js'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TRACK_PROPERTIES, type TrackProperty } from '@shared/domain/animation'
 import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
 import { EmptyState } from '@/design/EmptyState'
 import { NumberField } from '@/design/NumberField'
@@ -17,14 +15,9 @@ import { Timecode } from '@/design/Timecode'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
 import { clampPlayhead } from '@/engines/scene/animation-eval'
-import {
-  addAnimationTrack,
-  keySubject,
-  setTimelineSettings,
-} from '@/engines/scene/animation-commands'
+import { keySubject, setTimelineSettings } from '@/engines/scene/animation-commands'
 import { animationRows, type ClipBlock } from '@/engines/scene/animation-rows'
 import { cn } from '@/helpers/cn'
-import { newId } from '@/helpers/ids'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { selectedNodes } from '@/engines/scene/scene-state'
 import { bonesOfNode, useModelClips } from '@/stores/model-clips'
@@ -77,10 +70,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const expanded = useMemo(() => keySetOf(expandedList), [expandedList])
   const lengths = useModelClips(state => state.lengths[documentId])
   const rows = useMemo(() => {
-    // Indexed once rather than scanned per subject: a scene of a few thousand nodes turned this
-    // into a walk of the whole list for every line of the sheet.
     const byId = new Map(nodes.map(node => [node.id, node]))
-    const nameOf = (nodeId: string): string => byId.get(nodeId)?.name ?? nodeId
 
     // A block's width comes from the ENGINE: the length of a clip lives in the GLB, and a model
     // still loading has none — it simply has no block yet rather than a block of no width.
@@ -99,7 +89,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
       })
     }
 
-    return animationRows(timeline, { nameOf, expanded, clips })
+    return animationRows(timeline, { nodes, expanded, clips })
   }, [timeline, nodes, expanded, lengths])
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
@@ -141,22 +131,6 @@ function AnimationBar({ documentId, anchor }: BarProps) {
   // statement of intent than a picker two panels away, so it wins over what was chosen there.
   const bone = picked?.nodeId === anchor?.id ? (picked?.bone ?? chosen) : chosen
 
-  const addTrack = (property: TrackProperty): void => {
-    if (!anchor) return
-
-    // On the bone the picker names, when one is picked: a rig is corrected bone by bone, and a
-    // track on the model itself would move the whole character instead of its arm.
-    const target = bone ? { nodeId: anchor.id, bone, property } : { nodeId: anchor.id, property }
-    const subject = bone ? `${anchor.name} · ${bone}` : anchor.name
-
-    useScenes
-      .getState()
-      .runCommand(
-        documentId,
-        addAnimationTrack(target, `${subject} · ${t(`animation.${property}`)}`, `track_${newId()}`),
-      )
-  }
-
   const write = (settings: Partial<{ duration: Us; fps: number }>): void =>
     useScenes.getState().runCommand(documentId, setTimelineSettings(settings))
 
@@ -192,7 +166,7 @@ function AnimationBar({ documentId, anchor }: BarProps) {
 
       <div className="flex-1" />
 
-      <div className="flex w-28 items-center">
+      <div className="flex w-40 items-center">
         <NumberField
           label={t('animation.duration')}
           value={usToSeconds(timeline.duration)}
@@ -203,7 +177,7 @@ function AnimationBar({ documentId, anchor }: BarProps) {
           onChange={seconds => write({ duration: secondsToUs(seconds) })}
         />
       </div>
-      <div className="flex w-20 items-center">
+      <div className="flex w-32 items-center">
         <NumberField
           label={t('animation.fps')}
           value={timeline.fps}
@@ -232,18 +206,6 @@ function AnimationBar({ documentId, anchor }: BarProps) {
       )}
 
       <RenderButton documentId={documentId} />
-
-      {TRACK_PROPERTIES.map(property => (
-        <ToolButton
-          key={property}
-          icon={mdiPlus}
-          label={t('animation.addTrack', { property: t(`animation.${property}`) })}
-          tooltip={TIP_TOP}
-          variant="header"
-          disabled={!anchor}
-          onClick={() => addTrack(property)}
-        />
-      ))}
     </div>
   )
 }
