@@ -37,6 +37,7 @@ type Palette = {
   key: string
   keySelected: string
   block: string
+  beyond: string
   playhead: string
   muted: string
   rulerFont: string
@@ -69,6 +70,7 @@ function computePalette(): Palette {
     key: read('--color-muted'),
     keySelected: read('--color-accent'),
     block: read('--color-elevated'),
+    beyond: read('--color-scrim'),
     playhead: read('--color-accent'),
     muted: read('--color-muted'),
     rulerFont: root
@@ -144,6 +146,7 @@ export function paintAnimation(
   }
   paintRuler(context, { viewport: paint.viewport, width: size.width, fps: paint.fps, style })
 
+  paintBeyond(context, paint, size, palette)
   paintHead(context, paint, size, palette)
 }
 
@@ -196,6 +199,25 @@ function paintBlock(
 
   context.fillStyle = palette.block
   context.fillRect(left, top + BLOCK_INSET, Math.max(1, right - left), height - BLOCK_INSET * 2 - 1)
+}
+
+/**
+ * Dims whatever lies past the end of the band.
+ *
+ * A ruler graduated to seventeen seconds over a five-second scene says the scene is longer than
+ * it is, and there is nowhere for a key to go out there — the head is clamped to the duration.
+ */
+function paintBeyond(
+  context: CanvasRenderingContext2D,
+  paint: AnimationPaint,
+  size: Size,
+  palette: Palette,
+): void {
+  const end = timeToX(paint.duration, paint.viewport)
+  if (end >= size.width) return
+
+  context.fillStyle = palette.beyond
+  context.fillRect(Math.max(0, end), RULER_HEIGHT, size.width - Math.max(0, end), size.height)
 }
 
 function paintHead(
