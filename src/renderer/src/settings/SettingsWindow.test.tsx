@@ -126,6 +126,21 @@ describe('SettingsWindow', () => {
     ])
   })
 
+  // Written in `rem` until the 11th of August, this column answered the root element that the
+  // sheet never sizes: it held 16 px a level in both densities, alone among the studio's trees.
+  it('indents a sub-section by the density gauge rather than a fixed step', () => {
+    installFakeBridge()
+    render(<SettingsWindow />)
+
+    const entries = within(navigation()).getAllByRole('button')
+    const root = entries.find(entry => entry.textContent === 'Génération')
+    const child = entries.find(entry => entry.textContent === 'Vidéo')
+
+    expect(root?.style.paddingLeft).toContain('var(--sc-indent)')
+    expect(child?.style.paddingLeft).toContain('var(--sc-indent)')
+    expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
+  })
+
   it('shows the section the user picks, and only that one', async () => {
     installFakeBridge()
     render(<SettingsWindow />)

@@ -320,6 +320,11 @@
      not follow density either, so there is no second declaration below. */
   --sc-rail-inset: 14px;
   --sc-gutter: 6px;
+  /* One step of indentation, wherever a tree draws depth. Derived, so it follows density without
+     a second declaration below — and named, because `Tree` and the settings column had started to
+     spell the same two gutters out on their own. The layer stack walks a narrower step, one
+     gutter, and deliberately does not read this. */
+  --sc-indent: calc(var(--sc-gutter) * 2);
   --sc-header: 40px;
   /* The strip, not the tab: the tab sits inside it with 6px of air above and below, so this
      value is the pill's height plus that margin. */

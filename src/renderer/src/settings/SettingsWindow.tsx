@@ -52,7 +52,7 @@ function NavigationEntry({
         aria-current={active ? 'page' : undefined}
         {...HINT_RIGHT(t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint'))}
         onClick={() => onSelect(section.id)}
-        style={{ paddingLeft: `${0.75 + depth * 1}rem` }}
+        style={{ paddingLeft: `calc(var(--sc-indent) * ${depth + 1})` }}
         className={cn(
           'flex h-(--sc-control) w-full items-center gap-1.5 rounded-(--radius-sc-sm) pr-3 text-left text-xs',
           active ? 'bg-primary text-primary-content' : 'hover:bg-base-300',

@@ -43,6 +43,21 @@ function textSizeNames(): string[] {
   return [...BUILT_IN_TEXT_SIZE_NAMES, ...ladder]
 }
 
+/**
+ * The trees read `--sc-indent` and no longer spell its factor out, so the factor lives here alone.
+ * Written flat, it would need a second declaration under `[data-density]` and would drift from
+ * the gutter it is a multiple of — which is exactly how it arrived, as `12` in one file.
+ */
+describe('the indentation gauge', () => {
+  it('derives from the gutter rather than repeating a length', () => {
+    expect(stylesheet).toContain('--sc-indent: calc(var(--sc-gutter) * 2);')
+  })
+
+  it('is declared once, so density reaches it through the gutter', () => {
+    expect(stylesheet.match(/--sc-indent\s*:/g)).toHaveLength(1)
+  })
+})
+
 describe('color tokens', () => {
   it('are found at all, so the rule below cannot pass on an empty list', () => {
     expect(colorTokenNames()).toContain('panel')

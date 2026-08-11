@@ -169,8 +169,8 @@ describe('Tree', () => {
 
     const [root, child] = screen.getAllByRole('treeitem')
     // The factor is held too: it is what keeps a comfortable level at the 12 px it always was.
-    expect(root?.style.paddingLeft).toContain('var(--sc-gutter) * 2')
-    expect(child?.style.paddingLeft).toContain('var(--sc-gutter) * 2')
+    expect(root?.style.paddingLeft).toContain('var(--sc-indent)')
+    expect(child?.style.paddingLeft).toContain('var(--sc-indent)')
     expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
   })
 
