@@ -89,7 +89,8 @@ Either way, the studio settles two things:
 **Each end of a clip carries a handle**, a vertical bar, and the cursor there becomes a double
 arrow: that is the sign the edge can be grabbed. On a clip too narrow to hold them the handles
 disappear and the middle stays with the drag — otherwise a thin clip could not be moved at all.
-The **Hand** tool never shows that double arrow: it takes the whole surface to scroll.
+**Only the Selection tool shows that double arrow**: the **Hand** takes the whole surface to
+scroll and the **Blade** cuts where you click — neither trims, so neither promises it.
 
 **A lengthened clip grows over its neighbour** rather than stopping at it, the way DaVinci and
 Premiere do it: lengthening a shot means asking the next one to give way. `⌘Z` puts the whole

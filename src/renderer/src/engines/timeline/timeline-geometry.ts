@@ -2,6 +2,7 @@ import { placeRows, rowAtOffset, rowsHeight } from './band'
 import {
   clipEnd,
   snapToFrame,
+  trackById,
   CLIP_EDGES,
   type Clip,
   type ClipEdge,
@@ -125,9 +126,14 @@ export function edgeGrab(width: number): number {
  * The cursor over a point of the strip, as the CSS keyword — the same contract as the two other
  * `cursorFor` in the studio. Both edges and fade handles are pulled sideways, and the cursor is
  * the only sign either is live before a drag starts. Empty leaves the surface's own cursor.
+ *
+ * A locked track promises nothing: every edit on it is refused where it is applied, and an arrow
+ * offering a trim that will not happen is worse than no arrow at all.
  */
-export function cursorFor(target: HitTarget | null): string {
-  return target?.kind === 'edge' || target?.kind === 'fade' ? 'ew-resize' : ''
+export function cursorAt(state: SequenceState, viewport: Viewport, point: Point): string {
+  const target = hitTest(state, viewport, point)
+  if (target?.kind !== 'edge' && target?.kind !== 'fade') return ''
+  return trackById(state, target.trackId)?.locked ? '' : 'ew-resize'
 }
 
 export function snap(time: Us, context: SnapContext): Us {
@@ -151,7 +157,9 @@ export function hitTest(state: SequenceState, viewport: Viewport, point: Point):
 
   const { track } = row
   const top = RULER_HEIGHT + row.offset - viewport.scrollTop
-  const inBand = point.y - top <= FADE_BAND
+  // Exclusive, so the band ends exactly where the edge bar starts: inclusive left one row of
+  // pixels both painted as a grip and read as a fade, and a press there handed back a ramp.
+  const inBand = point.y - top < FADE_BAND
 
   for (const clip of track.clips) {
     const left = timeToX(clip.start, viewport)

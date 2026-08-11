@@ -91,8 +91,9 @@ Dans les deux cas, le studio décide de deux choses :
 **Chaque bout d’un clip porte une poignée**, une barre verticale, et le curseur y devient une
 double flèche : c’est le signe que le bord est attrapable. Sur un clip trop étroit pour les
 porter, les poignées disparaissent et le milieu reste au déplacement — sans quoi un clip mince
-ne pourrait plus être bougé du tout. L’outil **Main** ne montre jamais cette double flèche : il
-prend toute la surface pour faire défiler.
+ne pourrait plus être bougé du tout. **Seul l’outil Sélection montre cette double flèche** : la
+**Main** prend toute la surface pour faire défiler, et la **Lame** coupe là où l’on clique — ni
+l’une ni l’autre ne rogne, et leur curseur ne le promet donc pas.
 
 **Un clip allongé recouvre son voisin** plutôt que de buter dessus, comme dans DaVinci ou
 Premiere : allonger un plan, c’est demander au suivant de céder la place. `⌘Z` remet la piste

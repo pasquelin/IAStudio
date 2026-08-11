@@ -333,6 +333,16 @@ export function mediaDuration(asset: Asset | null): number | null {
   return duration !== undefined && duration > 0 ? duration : null
 }
 
+/**
+ * Whether the media has no length of its own — a picture, however it was generated. Not the same
+ * question as `mediaDuration` answering null, which also covers an asset nobody has probed yet:
+ * that one has a source whose length is merely unknown, and an edit treating the two alike would
+ * run a clip off the end of its own rush. A trim needs them apart; a drop does not.
+ */
+export function isTimeless(asset: Asset | null): boolean {
+  return asset !== null && PICTURES.includes(asset.type)
+}
+
 export type AssetQuery = {
   type?: AssetType
   /**

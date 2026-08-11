@@ -145,8 +145,8 @@ export function moveClip(clipId: string, toTrackId: string, start: Us): Command<
 }
 
 /**
- * Drags one edge of a clip. `mediaLength` is how long the source runs, or null for a still —
- * the command reads the sequence, and the catalogue is not part of it.
+ * Drags one edge of a clip. `media` says what is known of the source behind it — see
+ * `MediaExtent`; the command reads the sequence, and the catalogue is not part of it.
  *
  * A trim grows over its neighbour rather than stopping at it, the way DaVinci and Premiere do it
  * on their default tool: an editor lengthening a shot means the shot after it to give way.

@@ -520,6 +520,11 @@ bascule de l’un à l’autre.
 Ce que le studio fait quand une *tâche* échoue pour une raison qu’un nouvel essai peut réparer :
 réseau coupé, service occupé, trop de requêtes. Voir *Temporisation exponentielle*.
 
+**Rogner** *(montage)*
+Raccourcir ou allonger un *clip* par l’un de ses bouts, en tirant sur la poignée qui s’y trouve.
+Une vidéo s’arrête là où sa source s’arrête ; une image fixe n’a aucune source à dépasser, et ses
+deux bouts l’allongent.
+
 **Rogner** *(audio)*
 Ne garder que la portion sélectionnée d’un son, et jeter le reste.
 

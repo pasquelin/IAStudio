@@ -1,7 +1,7 @@
 import type { CommandId } from '@shared/domain/command'
 import { clamp } from '@shared/numeric'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
-import { mediaDuration, posterUrl } from '@shared/domain/asset'
+import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
 import { addClip, removeClip, splitClip, type MediaExtent } from '@/engines/timeline/commands'
 import {
   beginGesture,
@@ -12,7 +12,7 @@ import {
 import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import {
-  cursorFor,
+  cursorAt,
   hitTest,
   xToTime,
   type Point,
@@ -121,17 +121,14 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     return peaks.byAsset[clip.assetId] ?? null
   }, [])
 
-  // A trim stops where the media does, and only the catalogue knows how long that is.
-  const mediaLengths = useCallback(
+  // A trim stops where the media does, and only the catalogue knows how far that is.
+  const mediaExtents = useCallback(
     (assetId: string): MediaExtent => {
       const asset = byId.get(assetId) ?? null
       const length = mediaDuration(asset)
       if (length !== null) return length
-
-      // `mediaDuration` answers null for a still and for an asset nobody has probed. Only a
-      // picture has no source to run past; anything else has one whose length is merely not
-      // known yet, and a trim that guessed otherwise would run a clip off the end of its rush.
-      return asset?.type === 'image' ? 'still' : 'unknown'
+      // Null covers a picture and an asset nobody has probed; only the first has no source.
+      return isTimeless(asset) ? 'still' : 'unknown'
     },
     [byId],
   )
@@ -314,11 +311,12 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     if (!current) {
       // Written straight to the node, the way `CanvasEngine` does it: this component keeps
       // everything that moves with the pointer out of React, and a hover is no exception.
-      // Only the Selection tool trims. The hand moves the view and the blade cuts where it is
-      // pressed, so promising either a trim would be a cursor the press then refuses.
-      if (tool === 'select') {
-        event.currentTarget.style.cursor = cursorFor(hitTest(sequence, viewport, pointAt(event)))
-      }
+      // Always written, empty included — skipping the write would leave a stale `ew-resize`
+      // on the node after a tool change, where it would beat the hand's own class.
+      // Only Selection trims: the hand moves the view and the blade cuts where it is pressed,
+      // so promising either a trim would be a cursor the press then refuses.
+      event.currentTarget.style.cursor =
+        tool === 'select' ? cursorAt(sequence, viewport, pointAt(event)) : ''
       return
     }
 
@@ -332,7 +330,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       return
     }
 
-    const command = commandForGesture(current.gesture, current.base, viewport, point, mediaLengths)
+    const command = commandForGesture(current.gesture, current.base, viewport, point, mediaExtents)
     if (command) useSequences.getState().replace(documentId, command.apply(current.base))
   }
 
@@ -348,7 +346,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       current.base,
       viewport,
       pointAt(event),
-      mediaLengths,
+      mediaExtents,
     )
     if (!command) return
 

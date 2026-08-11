@@ -5,6 +5,7 @@ import {
   assetUrl,
   isAssetType,
   isSyncStatus,
+  isTimeless,
   mediaDuration,
   posterUrl,
   withoutSourcePath,
@@ -88,6 +89,20 @@ describe('how long the media runs', () => {
   it('calls an unprobed asset timeless too', () => {
     expect(mediaDuration(asset())).toBeNull()
     expect(mediaDuration(null)).toBeNull()
+  })
+
+  /**
+   * The distinction the answer above deliberately loses, and that a trim needs back: a picture
+   * has no source to run past, an unprobed rush has one whose length is merely not known yet.
+   */
+  it('tells a picture from an asset whose length is merely unknown', () => {
+    expect(isTimeless(asset({ type: 'image' }))).toBe(true)
+    expect(isTimeless(asset({ type: 'texture' }))).toBe(true)
+    expect(isTimeless(asset({ type: 'skybox' }))).toBe(true)
+
+    expect(isTimeless(asset({ type: 'video' }))).toBe(false)
+    expect(isTimeless(asset({ type: 'audio' }))).toBe(false)
+    expect(isTimeless(null)).toBe(false)
   })
 })
 

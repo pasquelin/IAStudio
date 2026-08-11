@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  cursorFor,
+  cursorAt,
   edgeGrab,
   EDGE_GRAB,
+  FADE_BAND,
   fadeHandleTime,
   hitTest,
   rowAt,
@@ -187,10 +188,8 @@ describe('hit testing', () => {
   })
 
   it('asks for a resize cursor on anything that trims, and for none on anything else', () => {
-    const on = (x: number) =>
-      cursorFor(
-        hitTest(stateWith([clip('a', 0, 1_000_000)]), viewport, { x, y: RULER_HEIGHT + 30 }),
-      )
+    const state = stateWith([clip('a', 0, 1_000_000)])
+    const on = (x: number) => cursorAt(state, viewport, { x, y: RULER_HEIGHT + 30 })
 
     expect(on(2)).toBe('ew-resize')
     expect(on(98)).toBe('ew-resize')
@@ -199,13 +198,43 @@ describe('hit testing', () => {
 
   it('asks for a resize cursor on a fade handle, which is dragged the same way', () => {
     const faded = { ...clip('a', 0, 1_000_000), fadeIn: 200_000, fadeOut: 0 }
-    const target = hitTest(stateWith([faded]), viewport, { x: 20, y: RULER_HEIGHT + 4 })
-    expect(cursorFor(target)).toBe('ew-resize')
+    expect(cursorAt(stateWith([faded]), viewport, { x: 20, y: RULER_HEIGHT + 4 })).toBe('ew-resize')
+  })
+
+  // Every edit on a locked track is refused where it is applied, so an arrow offering a trim
+  // that will not happen is worse than no arrow at all.
+  it('promises nothing on a locked track, whose edits are all refused anyway', () => {
+    const locked = sequenceWith([
+      trackFixture('V1', 'video', [clip('a', 0, 1_000_000)], {
+        locked: true,
+      }),
+    ])
+
+    expect(cursorAt(locked, viewport, { x: 2, y: RULER_HEIGHT + 30 })).toBe('')
+    expect(cursorAt(locked, viewport, { x: 98, y: RULER_HEIGHT + 30 })).toBe('')
   })
 
   it('leaves the surface its own cursor where there is nothing to trim', () => {
-    expect(cursorFor(null)).toBe('')
-    expect(cursorFor({ kind: 'ruler' })).toBe('')
+    const state = stateWith([clip('a', 0, 1_000_000)])
+
+    expect(cursorAt(state, viewport, { x: 50, y: 4 })).toBe('')
+    expect(cursorAt(state, viewport, { x: 50, y: 5_000 })).toBe('')
+  })
+
+  /**
+   * The band is exclusive at its foot and the bar starts there, so no row of pixels is both
+   * painted as a grip and read as a fade — a press on one used to hand back a ramp.
+   */
+  it('hands the first row of the bar to the trim, where the bar is painted', () => {
+    const faded = { ...clip('a', 0, 1_000_000), fadeIn: 0, fadeOut: 0 }
+    const state = stateWith([faded])
+
+    expect(hitTest(state, viewport, { x: 1, y: RULER_HEIGHT + FADE_BAND })).toMatchObject({
+      kind: 'edge',
+    })
+    expect(hitTest(state, viewport, { x: 1, y: RULER_HEIGHT + FADE_BAND - 1 })).toMatchObject({
+      kind: 'fade',
+    })
   })
 
   it('reads the track a point lands on, whatever the clip beneath it', () => {

@@ -311,6 +311,17 @@ describe('TimelineCanvas', () => {
     expect(clipsOf()[0]).toMatchObject({ start: 1_000_000, duration: 2_000_000 })
   })
 
+  // The strip takes every kind of asset, and a texture is as timeless as an image: reading the
+  // type alone rather than `isTimeless` refused this pull on two of the three kinds of picture.
+  it('lengthens a texture the same way, since a picture is a picture however it was made', () => {
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'texture', name: 'brick.png' })] })
+    layDown()
+
+    pullLeftEdgeTo(1_000_000)
+
+    expect(clipsOf()[0]).toMatchObject({ start: 1_000_000, duration: 2_000_000 })
+  })
+
   /**
    * `mediaDuration` answers null for a still AND for an asset nobody has probed yet, so without
    * telling them apart this pull would succeed here too — and the clip would then ask for more
