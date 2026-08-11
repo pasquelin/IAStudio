@@ -971,7 +971,9 @@
     "delete": "Delete",
     "deleteHint": "Remove whatever is selected from the scene",
     "skeletons": "Skeletons",
-    "skeletonsHint": "Shows the bones of rigged models, changing nothing of the scene"
+    "skeletonsHint": "Shows the bones of rigged models, changing nothing of the scene",
+    "poseMode": "Pose mode",
+    "poseModeHint": "Click a bone to pose it, instead of selecting objects"
   },
   "exportFormats": {
     "glb": "Binary glTF (.glb)",
@@ -1757,6 +1759,10 @@
     "sceneSkeletons": {
       "title": "Show skeletons",
       "help": "Draws the bones of every rigged model over the scene"
+    },
+    "scenePoseMode": {
+      "title": "Pose mode",
+      "help": "Switches between picking objects and picking the bones of a rig"
     }
   },
   "styles": {

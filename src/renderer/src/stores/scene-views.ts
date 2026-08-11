@@ -13,6 +13,10 @@ export type SceneView = {
   displays: readonly DisplayMode[]
   /** Whether the bones of every rigged model are drawn over it. Off, like every other overlay. */
   skeletons: boolean
+  /** Whether a click picks a bone rather than a mesh. Exclusive on purpose — see the renderer. */
+  poseMode: boolean
+  /** The bone the pose mode picked, which the gizmo holds. Never a node — see `TrackTarget`. */
+  pickedBone: { nodeId: string; bone: string } | null
   /** Four views instead of one — top, front, left, and the one being flown. */
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
@@ -28,6 +32,8 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   projection: 'perspective',
   displays: ['shaded'],
   skeletons: false,
+  poseMode: false,
+  pickedBone: null,
   quad: false,
   quadEdges: false,
   panes: DEFAULT_PANE_VIEWS,
@@ -48,6 +54,8 @@ export type SceneViewsState = {
   setProjection: (documentId: string, projection: ProjectionKind) => void
   setDisplay: (documentId: string, pane: number, display: DisplayMode) => void
   setSkeletons: (documentId: string, skeletons: boolean) => void
+  setPoseMode: (documentId: string, poseMode: boolean) => void
+  setPickedBone: (documentId: string, pickedBone: SceneView['pickedBone']) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
   setPaneView: (documentId: string, pane: number, view: PaneView) => void
@@ -78,6 +86,16 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
   setSkeletons: (documentId, skeletons) =>
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), skeletons } },
+    })),
+
+  setPoseMode: (documentId, poseMode) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), poseMode } },
+    })),
+
+  setPickedBone: (documentId, pickedBone) =>
+    set(state => ({
+      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), pickedBone } },
     })),
 
   setQuad: (documentId, quad) =>

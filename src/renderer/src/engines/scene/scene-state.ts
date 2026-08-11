@@ -71,7 +71,17 @@ export type SceneState = {
 }
 
 /** Where a node ended up, reported by whatever moved it — a gizmo drag moves a whole selection. */
-export type NodeMove = { id: string; transform: Transform }
+export type NodeMove = {
+  id: string
+  transform: Transform
+  /** A bone of that node's model, when the pose mode moved one rather than the node itself. */
+  bone?: string
+  /**
+   * Where the bone rested when it arrived. Carried with the move because that pose lives in the
+   * FILE, not in the document — only the renderer ever knew it.
+   */
+  rest?: Transform
+}
 
 /**
  * What a node without shadow flags means — a document written before they existed, which is

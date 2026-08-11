@@ -295,10 +295,13 @@ export function movesToCommand(
   const plain: NodeMove[] = []
 
   for (const move of moves) {
-    const tracks = recording ? recordingTracksFor(state, move.id) : []
-    const rest = nodeById(state, move.id)?.transform
+    const tracks = recording ? recordingTracksFor(state, move.id, move.bone) : []
+    const rest = move.rest ?? nodeById(state, move.id)?.transform
+
     if (tracks.length === 0 || !rest) {
-      plain.push(move)
+      // A bone has nowhere else to go: it is not a node, so there is no plain move to fall back
+      // on — an unrecorded bone drag is simply dropped, and the renderer puts it back.
+      if (!move.bone) plain.push(move)
       continue
     }
     keys.push(...recordMove(rest, move.transform, at, tracks))

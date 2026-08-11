@@ -110,7 +110,12 @@ function AnimationBar({ documentId, anchor }: BarProps) {
   const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
 
   const bones = useModelClips(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
-  const [bone, setBone] = useState('')
+  const picked = useSceneViews(state => viewOf(state, documentId).pickedBone)
+  const [chosen, setChosen] = useState('')
+
+  // The pose mode decides when it has picked one: clicking a bone in the viewport is a clearer
+  // statement of intent than a picker two panels away, so it wins over what was chosen there.
+  const bone = picked?.nodeId === anchor?.id ? (picked?.bone ?? chosen) : chosen
 
   const addTrack = (property: TrackProperty): void => {
     if (!anchor) return
@@ -190,7 +195,7 @@ function AnimationBar({ documentId, anchor }: BarProps) {
         <select
           aria-label={t('animation.bone')}
           value={bone}
-          onChange={event => setBone(event.target.value)}
+          onChange={event => setChosen(event.target.value)}
           className={cn(CONTROL, 'max-w-40 px-1')}
         >
           <option value="">{t('animation.wholeModel')}</option>

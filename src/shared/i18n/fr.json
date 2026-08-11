@@ -971,7 +971,9 @@
     "delete": "Supprimer",
     "deleteHint": "Retirer de la scène ce qui est sélectionné",
     "skeletons": "Squelettes",
-    "skeletonsHint": "Montre les os des modèles rigués, sans rien changer à la scène"
+    "skeletonsHint": "Montre les os des modèles rigués, sans rien changer à la scène",
+    "poseMode": "Mode pose",
+    "poseModeHint": "Cliquer un os pour le poser, au lieu de sélectionner les objets"
   },
   "exportFormats": {
     "glb": "glTF binaire (.glb)",
@@ -1757,6 +1759,10 @@
     "sceneSkeletons": {
       "title": "Afficher les squelettes",
       "help": "Dessine les os de chaque modèle rigué par-dessus la scène"
+    },
+    "scenePoseMode": {
+      "title": "Mode pose",
+      "help": "Bascule entre la sélection des objets et celle des os d’un rig"
     }
   },
   "styles": {
