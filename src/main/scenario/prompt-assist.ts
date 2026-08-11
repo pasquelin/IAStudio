@@ -102,7 +102,7 @@ export function createPromptAssist({
 }: PromptAssistDeps): PromptAssist {
   return {
     suggest: async ({ modelId, prompt, images, numResults }) => {
-      const references = images?.length ? await resolvePictures(images) : []
+      const references = images?.length ? await resolvePictures(images) : undefined
 
       const answer = await api().prompt({
         mode: MODE,
@@ -110,7 +110,7 @@ export function createPromptAssist({
         // An empty draft is no draft: sent as `""` it reads as an instruction to rewrite
         // nothing, where absent lets the API propose from the model's own examples.
         ...(prompt ? { prompt } : {}),
-        ...(references.length ? { images: references } : {}),
+        ...(references ? { images: references } : {}),
         ...(numResults ? { numResults: clampResults(numResults) } : {}),
       })
 
