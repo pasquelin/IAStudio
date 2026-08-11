@@ -58,19 +58,34 @@ function kindOf(input: ScenarioInput): FieldKind {
   }
 }
 
-function labelOf(input: ScenarioInput): string {
-  if (input.label) return input.label
-  // `numInferenceSteps` → `Num inference steps`: an API name stays readable instead of raw.
-  const spaced = input.name
+/** `numInferenceSteps` → `Num inference steps`: an API name stays readable instead of raw. */
+function humanize(text: string): string {
+  const spaced = text
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[_-]+/g, ' ')
     .toLowerCase()
   return spaced.charAt(0).toUpperCase() + spaced.slice(1)
 }
 
+function labelOf(input: ScenarioInput): string {
+  return input.label ?? humanize(input.name)
+}
+
+/**
+ * A choice reads as a phrase where it was written as one, and stays untouched everywhere else:
+ * `original_image` was shown with its underscore, in both languages, while the field ABOVE it had
+ * been humanised all along.
+ *
+ * Only letters and separators qualify. A digit means a code rather than a word — `mp3_44100_128`,
+ * `480p`, `1:1` — and humanising those would trade an odd label for a wrong one.
+ */
 function optionsOf(input: ScenarioInput): FieldDescriptor['options'] {
   if (!input.allowedValues?.length) return undefined
-  return input.allowedValues.map(value => ({ value: String(value), label: String(value) }))
+
+  return input.allowedValues.map(value => {
+    const text = String(value)
+    return { value: text, label: /^[a-zA-Z]+([_-][a-zA-Z]+)+$/.test(text) ? humanize(text) : text }
+  })
 }
 
 /**
