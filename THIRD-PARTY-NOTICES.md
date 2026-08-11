@@ -772,10 +772,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 Version: 1.52.3  
 Licence: MPL-2.0
 
-Corresponding sources:
+Corresponding sources, unmodified:
 
 ```
-https://github.com/Vanilagy/mediabunny — version 1.52.3, unmodified
+https://github.com/Vanilagy/mediabunny
 ```
 
 ```

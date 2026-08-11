@@ -40,7 +40,7 @@ export function LicencesWindow() {
               className="hover:bg-surface flex w-full cursor-pointer items-baseline gap-2 py-2 text-left"
             >
               <span className="text-body">{entry.name}</span>
-              <span className="text-muted text-tiny">{entry.version}</span>
+              <span className="text-muted text-tiny">{entry.version ?? t('licences.bundled')}</span>
               <span className="text-muted text-tiny ml-auto">{entry.spdx}</span>
             </button>
 
@@ -48,7 +48,10 @@ export function LicencesWindow() {
               <div className="pb-3">
                 {entry.sources && (
                   <p className="text-muted text-tiny pb-2">
-                    {t('licences.sources')} {entry.sources}
+                    {/* Two keys rather than one plus a word: the qualifier lands in a different
+                        place in each language, and a sentence cut in two cannot follow it. */}
+                    {entry.unmodified ? t('licences.sourcesUnmodified') : t('licences.sources')}{' '}
+                    {entry.sources}
                   </p>
                 )}
                 <pre className="bg-surface text-muted text-tiny max-h-72 overflow-auto rounded p-3 whitespace-pre-wrap">

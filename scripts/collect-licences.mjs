@@ -18,7 +18,7 @@ import { sourceArchives as FFMPEG_SOURCES, TARGETS as FFMPEG_TARGETS } from './f
 import { VAD as STT_VAD } from './fetch-stt.mjs'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in. Worth the novelty here — the
 // rule that decides who owes a source offer must be the one the tests check, not a twin of it.
-import { isCopyleft } from '../src/shared/domain/licence.ts'
+import { isCopyleft, NO_VERSION } from '../src/shared/domain/licence.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')
@@ -97,7 +97,7 @@ function repository(manifest) {
   // undefined so the copyleft guard below catches it rather than shipping an unusable offer.
   if (!/^https?:\/\//.test(url)) return undefined
 
-  return `${url} — version ${manifest.version}, unmodified`
+  return url
 }
 
 function collect(name) {
@@ -108,7 +108,8 @@ function collect(name) {
   const spdx = typeof manifest.license === 'string' ? manifest.license : 'UNKNOWN'
   const entry = { name, version: manifest.version, spdx, text: licenceText(root) }
 
-  return isCopyleft(spdx) ? { ...entry, sources: repository(manifest) } : entry
+  // What npm ships is what we redistribute: nothing here patches a package after install.
+  return isCopyleft(spdx) ? { ...entry, sources: repository(manifest), unmodified: true } : entry
 }
 
 /**
@@ -163,7 +164,7 @@ function fontLicences() {
     ['IBM Plex Mono', 'IBMPlex-OFL.txt', 'https://fonts.google.com/specimen/IBM+Plex+Mono'],
   ].map(([name, notice, sources]) => ({
     name,
-    version: 'shipped with the application',
+    // No version: a typeface file carries none, and the window says so in the reader's language.
     spdx: 'OFL-1.1',
     text: readFileSync(join(folder, notice), 'utf8').trim(),
     sources,
@@ -234,15 +235,26 @@ function dictationLicences() {
  * release page rather than the installed application, and for the EULA to point at.
  */
 function renderNotices(entries) {
-  const summary = entries.map(entry => `| ${entry.name} | ${entry.version} | ${entry.spdx} |`)
+  const summary = entries.map(
+    entry => `| ${entry.name} | ${entry.version ?? NO_VERSION} | ${entry.spdx} |`,
+  )
 
   const sections = entries.map(entry =>
     [
       `## ${entry.name}`,
       '',
-      `Version: ${entry.version}  `,
+      `Version: ${entry.version ?? NO_VERSION}  `,
       `Licence: ${entry.spdx}`,
-      ...(entry.sources ? ['', 'Corresponding sources:', '', '```', entry.sources, '```'] : []),
+      ...(entry.sources
+        ? [
+            '',
+            entry.unmodified ? 'Corresponding sources, unmodified:' : 'Corresponding sources:',
+            '',
+            '```',
+            entry.sources,
+            '```',
+          ]
+        : []),
       '',
       '```',
       entry.text,
