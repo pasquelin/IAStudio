@@ -77,13 +77,15 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const expanded = useMemo(() => keySetOf(expandedList), [expandedList])
   const lengths = useModelClips(state => state.lengths[documentId])
   const rows = useMemo(() => {
-    const nameOf = (nodeId: string): string =>
-      nodes.find(node => node.id === nodeId)?.name ?? nodeId
+    // Indexed once rather than scanned per subject: a scene of a few thousand nodes turned this
+    // into a walk of the whole list for every line of the sheet.
+    const byId = new Map(nodes.map(node => [node.id, node]))
+    const nameOf = (nodeId: string): string => byId.get(nodeId)?.name ?? nodeId
 
     // A block's width comes from the ENGINE: the length of a clip lives in the GLB, and a model
     // still loading has none — it simply has no block yet rather than a block of no width.
     const clips: ClipBlock[] = []
-    for (const node of nodes) {
+    for (const node of byId.values()) {
       if (node.type !== 'model') continue
       const ref = node.model.animation
       const seconds = ref ? (lengths?.[node.id]?.[ref.clip] ?? null) : null

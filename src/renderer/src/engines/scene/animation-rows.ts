@@ -20,7 +20,6 @@ export type SubjectRow = {
   /** Stable across a fold, and what the expanded set holds — see `subjectKey`. */
   id: string
   name: string
-  subject: Subject
   height: number
   expanded: boolean
   /** Every key of every channel, merged and deduplicated: what the folded line shows. */
@@ -145,7 +144,6 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
       kind: 'subject',
       id: key,
       name: first.target.bone ? `${plain} · ${first.target.bone}` : plain,
-      subject: { nodeId: first.target.nodeId, bone: first.target.bone },
       height: SUBJECT_HEIGHT,
       expanded,
       keys: mergedKeys(tracks),

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { keySubject, removeAnimationTrack } from '@/engines/scene/animation-commands'
-import type { AnimationRow } from '@/engines/scene/animation-rows'
+import type { AnimationRow, ChannelRow, ClipRow, SubjectRow } from '@/engines/scene/animation-rows'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
@@ -51,7 +51,7 @@ function HeaderRow({ documentId, row }: { documentId: string; row: AnimationRow 
 }
 
 /** A block names the clip it plays, and offers nothing else: it is driven from the inspector. */
-function ClipHeader({ row }: { row: Extract<AnimationRow, { kind: 'clip' }> }) {
+function ClipHeader({ row }: { row: ClipRow }) {
   return (
     <div
       className="flex items-center pr-1 pl-4"
@@ -65,10 +65,7 @@ function ClipHeader({ row }: { row: Extract<AnimationRow, { kind: 'clip' }> }) {
   )
 }
 
-type SubjectRowProps = {
-  documentId: string
-  row: Extract<AnimationRow, { kind: 'subject' }>
-}
+type SubjectRowProps = { documentId: string; row: SubjectRow }
 
 function SubjectHeader({ documentId, row }: SubjectRowProps) {
   const { t } = useTranslation()
@@ -135,10 +132,7 @@ function SubjectHeader({ documentId, row }: SubjectRowProps) {
   )
 }
 
-type ChannelRowProps = {
-  documentId: string
-  row: Extract<AnimationRow, { kind: 'channel' }>
-}
+type ChannelRowProps = { documentId: string; row: ChannelRow }
 
 function ChannelHeader({ documentId, row }: ChannelRowProps) {
   const { t } = useTranslation()

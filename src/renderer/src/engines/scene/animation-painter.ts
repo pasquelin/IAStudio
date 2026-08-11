@@ -117,9 +117,13 @@ export function keysOf(row: AnimationRow): readonly Us[] {
   return []
 }
 
-/** Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. */
+/**
+ * Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. A
+ * block draws no diamond at all, so nothing on its row can be grabbed by one.
+ */
 export function reachOf(row: AnimationRow): number {
-  return row.kind === 'subject' ? KEY_REACH : CHANNEL_REACH
+  if (row.kind === 'subject') return KEY_REACH
+  return row.kind === 'channel' ? CHANNEL_REACH : 0
 }
 
 export function paintAnimation(

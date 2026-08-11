@@ -1,6 +1,4 @@
 import { create } from 'zustand'
-import type { Us } from '@shared/domain/time'
-import { keyId } from '@/engines/scene/animation-painter'
 import type { Viewport } from '@/engines/timeline/timeline-geometry'
 import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
 
@@ -94,9 +92,4 @@ export function animationViewOf(
  */
 export function keySetOf(keys: readonly string[]): ReadonlySet<string> {
   return new Set(keys)
-}
-
-/** How a picked key is named, so a caller never composes the id by hand. */
-export function selectionId(rowId: string, time: Us): string {
-  return keyId(rowId, time)
 }
