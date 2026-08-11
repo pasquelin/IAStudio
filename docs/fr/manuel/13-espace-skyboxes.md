@@ -226,8 +226,7 @@ sélecteur de dossier pour six fichiers vides.
 
 ## Ce qui manque encore
 
-- **les boutons Régénérer et Réinitialiser** — annoncés dans les traductions, jamais posés dans le
-  panneau ;
+- **les boutons Régénérer et Réinitialiser** — le panneau ne les pose pas ;
 - **l’export en HDRI** — les six faces sortent en PNG, donc en 8 bits par canal : ce qui dépasse
   le blanc est écrêté. Pour un éclairage à forte dynamique, il n’y a pas encore de sortie ;
 - **l’import d’un `.hdr`** — le studio n’importe que les images ordinaires. Un `.exr` importé est

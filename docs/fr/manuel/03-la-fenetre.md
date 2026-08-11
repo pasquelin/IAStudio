@@ -25,12 +25,15 @@ Elle ne dit qu’une chose à la fois, celle qui compte à cet instant.
 | **Reprendre où vous en étiez** | un document était ouvert la dernière fois |
 | **_n_ générations en cours** | quelque chose tourne encore |
 | **Connecter une clé API** | aucune clé n’est enregistrée |
-| **Démarrer un projet** | aucun projet n’est ouvert |
-| **Tout est prêt** | le projet est ouvert et ne contient encore rien |
+| **Tout est prêt** | aucune des lignes ci-dessus ne s’applique, et le studio sait déjà à quoi s’en tenir |
 
-**Elle attend de savoir avant de conclure.** Lire les projets et les documents prend un instant ;
-la bannière ne s’affiche qu’une fois la réponse arrivée, plutôt que d’annoncer « démarrez un
-projet » puis de se corriger.
+**Il n’y a pas de carte « Démarrer un projet », et c’est délibéré** : créer un projet se demande
+déjà depuis le `+` du rail, la bande des outils, la liste des projets, l’écran qui s’affiche sans
+projet et le menu. Une bannière en haut de page l’aurait dit une fois de plus.
+
+**Elle attend de savoir avant de conclure.** Lire les projets et les documents prend un instant, et
+tant que la réponse n’est pas là, « rien n’est vrai » et « rien n’est encore su » se ressemblent :
+la bannière reste muette au lieu d’annoncer « Tout est prêt » puis de se corriger.
 
 ### Les bandes
 

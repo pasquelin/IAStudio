@@ -259,7 +259,7 @@ which is a different question.
 ### The Generation section has no buttons
 
 It does show the model, the prompt and the seed that produced the sky, read-only. But the two
-buttons the translations announce — **Regenerate** and **Reset** — are placed nowhere in the panel.
+buttons you would expect — **Regenerate** and **Reset** — are placed nowhere in the panel.
 
 Until then, you copy the prompt and the seed by hand into the **Generate** panel, which comes to the
 same thing in three more gestures.

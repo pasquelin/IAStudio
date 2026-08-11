@@ -25,12 +25,15 @@ It says one thing at a time, whichever matters right now.
 | **Pick up where you left off** | a document was open last time |
 | **_n_ generations running** | something is still working |
 | **Connect an API key** | no key is stored |
-| **Start a project** | no project is open |
-| **Ready when you are** | the project is open and still holds nothing |
+| **Ready when you are** | none of the rows above applies, and the studio already knows where it stands |
 
-**It waits to know before concluding.** Reading the projects and the documents takes a moment; the
-banner appears once the answer has landed, rather than announcing "start a project" and then
-correcting itself.
+**There is no "start a project" card, and that is deliberate**: creating a project is already on
+offer from the rail's `+`, the tools band, the project list, the screen shown with no project, and
+the menu. A banner across the top of the page would have said it once more.
+
+**It waits to know before concluding.** Reading the projects and the documents takes a moment, and
+until the answer lands, "nothing is true" and "nothing is known yet" look alike: the banner stays
+silent rather than announcing "Ready when you are" and then correcting itself.
 
 ### The bands
 

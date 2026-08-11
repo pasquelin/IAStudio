@@ -269,8 +269,8 @@ dans laquelle la carte est relue, ce qui est une autre question.
 ### La section Génération n’a pas ses boutons
 
 Elle affiche bien le modèle, le prompt et la graine qui ont produit le ciel, en lecture seule. Mais
-les deux boutons que les traductions annoncent — **Régénérer** et **Réinitialiser** — ne sont posés
-nulle part dans le panneau.
+les deux boutons attendus — **Régénérer** et **Réinitialiser** — ne sont posés nulle part dans le
+panneau.
 
 En attendant, on recopie le prompt et la graine à la main dans le panneau **Génération**, ce qui
 revient au même en trois gestes de plus.

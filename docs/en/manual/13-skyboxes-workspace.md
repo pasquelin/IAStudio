@@ -221,7 +221,7 @@ folder chooser for six empty files.
 
 ## What is still missing
 
-- **the Regenerate and Reset buttons** — announced in the translations, never placed in the panel;
+- **the Regenerate and Reset buttons** — the panel does not place them;
 - **HDRI export** — the six faces come out as PNG, so eight bits a channel: anything above white
   is clipped. For high dynamic range lighting there is no output yet;
 - **importing a `.hdr`** — the studio only imports ordinary images. An imported `.exr` is catalogued
