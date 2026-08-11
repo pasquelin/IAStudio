@@ -2,6 +2,7 @@ import { type CommandId, type CommandScope } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
 import { commandDescriptor, commandFor, heldCommandFor } from '@shared/domain/command'
+import { isTyping } from '@/helpers/typing'
 import { subscribeToCommands } from '@/services/command-bus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
 
@@ -17,16 +18,6 @@ export type ShortcutsOptions = {
 
 /** `KeyboardEvent.key` of the four modifiers, whichever side of the keyboard they came from. */
 const MODIFIER_KEYS: ReadonlySet<string> = new Set(['Alt', 'Control', 'Meta', 'Shift'])
-
-function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
-  return (
-    target.isContentEditable ||
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement
-  )
-}
 
 function holdsText(): boolean {
   const selection = window.getSelection()

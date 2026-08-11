@@ -3,7 +3,7 @@ import type { MotionId } from '@shared/domain/shortcut'
 import { fireEvent, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { publishCommand } from '@/services/command-bus'
 import { useHeldCommand, useShortcuts } from './useShortcuts'
 
@@ -50,6 +50,22 @@ describe('useShortcuts', () => {
     mount(onCommand)
     await userEvent.click(screen.getByLabelText('prompt'))
     await userEvent.keyboard('{g}')
+    expect(onCommand).not.toHaveBeenCalled()
+  })
+
+  // A dropdown types too, and the shared guard is the only thing that knows it — a copy local to
+  // this hook forgot it once already. Dispatched from the element rather than through focus, so
+  // what this pins is the guard and not what jsdom does with focus on a `<select>`.
+  it('ignores a key sent from a dropdown', () => {
+    const onCommand = vi.fn()
+    mount(onCommand)
+    // Attached, because an orphan element's events never reach the `window` listener under test —
+    // and removed after, because Testing Library's cleanup only owns what `render` created.
+    const dropdown = document.body.appendChild(document.createElement('select'))
+    onTestFinished(() => dropdown.remove())
+
+    fireEvent.keyDown(dropdown, { code: 'KeyG' })
+
     expect(onCommand).not.toHaveBeenCalled()
   })
 
