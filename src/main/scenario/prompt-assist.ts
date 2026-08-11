@@ -70,6 +70,13 @@ export type PromptAssistDeps = {
   api: () => PromptAssistApi
   /** The target model's fields, to narrow what the API proposes. Served warm by the registry. */
   fields: (modelId: string) => Promise<readonly FieldDescriptor[]>
+  /**
+   * Turns the local asset ids a form carries into the ids Scenario knows them by, sending what
+   * it has never seen — `AssetInputResolver.resolvePictures`, the same translator a generation
+   * goes through. Assistance is not a job, so nothing did it on the way, and the API answered on
+   * ids it could not resolve: a style read from no picture, worded as though it had seen one.
+   */
+  resolvePictures: (images: readonly string[]) => Promise<string[]>
 }
 
 export type PromptAssist = {
@@ -88,16 +95,22 @@ export type PromptAssist = {
  */
 const MODE = 'contextual-v2'
 
-export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAssist {
+export function createPromptAssist({
+  api,
+  fields,
+  resolvePictures,
+}: PromptAssistDeps): PromptAssist {
   return {
     suggest: async ({ modelId, prompt, images, numResults }) => {
+      const references = images?.length ? await resolvePictures(images) : []
+
       const answer = await api().prompt({
         mode: MODE,
         modelId,
         // An empty draft is no draft: sent as `""` it reads as an instruction to rewrite
         // nothing, where absent lets the API propose from the model's own examples.
         ...(prompt ? { prompt } : {}),
-        ...(images?.length ? { images } : {}),
+        ...(references.length ? { images: references } : {}),
         ...(numResults ? { numResults: clampResults(numResults) } : {}),
       })
 
@@ -116,11 +129,17 @@ export function createPromptAssist({ api, fields }: PromptAssistDeps): PromptAss
     },
 
     describeStyle: async images => {
-      const { description, synthesis } = await api().describeStyle({ images })
+      const { description, synthesis } = await api().describeStyle({
+        images: await resolvePictures(images),
+      })
       return { description, synthesis }
     },
 
-    caption: async images => [...(await api().caption({ images })).captions],
+    // No channel reaches this yet — resolved all the same, so the door cannot be opened onto the
+    // gap the other two just closed.
+    caption: async images => [
+      ...(await api().caption({ images: await resolvePictures(images) })).captions,
+    ],
   }
 }
 

@@ -37,13 +37,24 @@ function standingTwinOf(asset: Asset, activeOwnerId: string | null): string | un
  * model's own shape and neither says which of its keys is a picture — and because the graph is
  * about to make chaining two models the ordinary case.
  *
+ * Two doors, one translator, and they share the in-flight map below — a generation and a prompt
+ * assistance naming the same never-sent picture would otherwise both find no twin and both send
+ * the file, billed twice.
+ *
  * What deliberately does NOT come through here: a cost estimate, which is asked on every
  * keystroke and must not send a file up for a figure nobody is waiting on. The estimate of a
  * form holding a picture is therefore made without it, and `referenceImages` is priced
- * (`cost_impact: true`) — so it can read low. Prompt assistance has the same gap for another
- * reason: it is not a job, and it never reaches this. Both are written down in `docs/todo.md`.
+ * (`cost_impact: true`) — so it can read low. That one is written down in `docs/todo.md`.
  */
-export type AssetInputResolver = (body: Record<string, unknown>) => Promise<Record<string, unknown>>
+export type AssetInputResolver = {
+  /** A generation body, whose picture keys are the model's own and cannot be named in advance. */
+  resolveBody: (body: Record<string, unknown>) => Promise<Record<string, unknown>>
+  /**
+   * A bare list of pictures — what prompt assistance holds instead of a body. The gesture that
+   * reaches it is a click, never a keystroke, which is what makes the transfer expected.
+   */
+  resolvePictures: (images: readonly string[]) => Promise<string[]>
+}
 
 export function createAssetInputResolver({
   find,
@@ -78,12 +89,13 @@ export function createAssetInputResolver({
     return pending.finally(() => sending.delete(key))
   }
 
-  return async body => {
-    // Read once for the whole body: a switch mid-walk would judge two pictures of one run
-    // against two different projects.
-    const owner = activeOwnerId()
-
-    const remoteIdOf = async (localId: string): Promise<string> => {
+  /**
+   * Bound to an owner read once per call: a switch mid-walk would judge two pictures of one run
+   * against two different projects.
+   */
+  const remoteIdIn =
+    (owner: string | null) =>
+    async (localId: string): Promise<string> => {
       const asset = await find(localId)
       if (!asset) return localId
 
@@ -93,19 +105,27 @@ export function createAssetInputResolver({
       return await sendOnce(localId, owner)
     }
 
+  const isLocal = (value: string): boolean => value.startsWith(ASSET_ID_PREFIX)
+
+  const resolvePictures = async (images: readonly string[]): Promise<string[]> => {
+    const remoteIdOf = remoteIdIn(activeOwnerId())
+    const resolved: string[] = []
+
+    // One at a time, like the body walk: an upload is an unbounded file transfer nothing here
+    // paces, and it is what records a twin before the next lookup of the same id.
+    for (const image of images) resolved.push(isLocal(image) ? await remoteIdOf(image) : image)
+
+    return resolved
+  }
+
+  const resolveBody = async (body: Record<string, unknown>) => {
+    const remoteIdOf = remoteIdIn(activeOwnerId())
+
     const seen = new WeakSet<object>()
 
-    /**
-     * One value at a time, and the two reasons are worth keeping together: an upload is an
-     * unbounded file transfer that nothing in the studio paces — a picture list caps at ten —
-     * and being sequential is what makes the twin of an id recorded before the next lookup of
-     * it. Running siblings at once would need the in-flight map back, or the same file goes up
-     * twice and is billed twice.
-     */
+    /** One value at a time, for the reason `resolvePictures` gives above. */
     const rewrite = async (value: unknown): Promise<unknown> => {
-      if (typeof value === 'string') {
-        return value.startsWith(ASSET_ID_PREFIX) ? await remoteIdOf(value) : value
-      }
+      if (typeof value === 'string') return isLocal(value) ? await remoteIdOf(value) : value
 
       if (typeof value !== 'object' || value === null) return value
       // Only the envelope of a body is validated (`parseGenerationBody`), so what is walked here
@@ -137,4 +157,6 @@ export function createAssetInputResolver({
     for (const [key, value] of Object.entries(body)) resolved[key] = await rewrite(value)
     return resolved
   }
+
+  return { resolveBody, resolvePictures }
 }

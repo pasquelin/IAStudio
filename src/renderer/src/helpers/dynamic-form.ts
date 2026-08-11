@@ -88,8 +88,10 @@ export function groupFields(fields: readonly FieldDescriptor[]): [string, FieldD
 /**
  * The reference pictures a filled form carries, in the order the model declared them.
  *
- * Values are handed over as they stand — an asset id or a data URL — because the API takes
- * either, and the field cannot say which one the user gave it.
+ * Values are handed over as they stand — a local asset id or a data URL — because the field
+ * cannot say which one the user gave it. A local id is not one the API has ever heard of: the
+ * main process rewrites it on the way out, through the same translator a generation goes
+ * through (`main/scenario/asset-inputs.ts`), sending the file if it has never gone up.
  */
 export function referencePictures(
   fields: readonly FieldDescriptor[],
