@@ -5,11 +5,10 @@ import type {
   GraphState,
   GraphTransformVariables,
 } from '@shared/domain/graph'
-import { CONDITIONAL_PORT } from '@shared/domain/graph'
+import { CONDITIONAL_PORT, silentNodesOf } from '@shared/domain/graph'
 import { blockToCel } from '@shared/domain/branch'
 import { readString } from '@shared/guards'
 import { celVariableName, DEFAULT_OUTPUT_NAME, outputHandlesOf } from './handles'
-import { approvalsOf } from './approvals'
 import { conditionBlocksOf } from './conditions'
 import { planGraph, type GraphCache, type GraphPlanNode } from './plan'
 
@@ -153,21 +152,24 @@ export async function runGraph(
   }
 
   const byId = new Map(graph.nodes.map(node => [node.id, node]))
-  // The approvals that actually guard something. One dropped on the canvas and left unwired, or
-  // beaten to its node by a second one, compiles to no flow item at all — so it must not stop a
-  // local run either, and above all must not put a question the export would never ask.
-  const guarding = new Set(approvalsOf(graph).values())
 
   /**
-   * A node with nothing of its own to do: a sticky note, and an approval guarding nothing.
+   * A node with nothing of its own to do: a sticky note, and an approval guarding nothing. One
+   * dropped on the canvas and left unwired, or beaten to its node by a second one, compiles to no
+   * flow item at all — so it must not stop a local run either, and above all must not put a
+   * question the export would never ask.
+   *
+   * The same set the Run button reads (`isRunnable`), and that is the point of it living in
+   * `shared`: a bar that offers a run over nothing but silent nodes would be offering a run this
+   * engine then walks through without a word.
    *
    * Read where the queue is painted and again where the run dispatches, one predicate for the two:
    * badged `queued`, such a node would claim to be work that never comes. It is NOT a node that
    * says nothing all run — a stop paints it `idle`, and a provider that failed paints it `blocked`
    * through `stopAt`; what it has none of is a turn of its own.
    */
-  const inert = (node: GraphNode): boolean =>
-    node.type === 'stickyNote' || (node.type === 'approval' && !guarding.has(node.id))
+  const silent = silentNodesOf(graph)
+  const inert = (node: GraphNode): boolean => silent.has(node.id)
 
   const produced = new Map(cache)
   const settled = new Map<string, Promise<Outcome>>()

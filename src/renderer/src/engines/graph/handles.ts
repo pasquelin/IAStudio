@@ -6,15 +6,6 @@ import {
 } from '@shared/domain/graph'
 
 /**
- * The naming Scenario's converter reads, copied rather than invented.
- *
- * `workflow_converter.js` matches handle ids literally — it builds `` `${nodeId}-source-items` ``
- * to find a port — so a handle named any other way is a port the compiler cannot see.
- */
-export const handleId = (nodeId: string, side: 'source' | 'target', field: string): string =>
-  `${nodeId}-${side}-${field}`
-
-/**
  * The nth list a loop walks, which the converter finds by the regexp `/-input-(\d+)$/`.
  *
  * Not `handleId`: a loop's own ports are the one place the converter numbers instead of naming,
@@ -100,9 +91,9 @@ export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput)
   return accepted.some(type => type === offered || (ALSO_ACCEPTED[type] ?? []).includes(offered))
 }
 
-// Both live in `shared/domain/graph.ts`, where the READER can reach them without pulling the
+// All three live in `shared/domain/graph.ts`, where the READER can reach them without pulling the
 // engine into the opening chunk. Re-exported so the engine still has one door for its ports.
-export { inputHandleOf, inputHandlesOf } from '@shared/domain/graph'
+export { handleId, inputHandleOf, inputHandlesOf } from '@shared/domain/graph'
 
 /**
  * `Array.isArray` rather than `?? []`, here and on the input side: the type is what the editor

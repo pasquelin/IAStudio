@@ -5,8 +5,8 @@ import type {
   GraphNodeData,
   GraphState,
 } from '@shared/domain/graph'
+import { approvalsOf } from '@shared/domain/graph'
 import { digest, stableKey } from '@shared/hash'
-import { approvalsOf } from './approvals'
 import { DEFAULT_OUTPUT_NAME, inputHandlesOf, outputHandleOf } from './handles'
 
 /**

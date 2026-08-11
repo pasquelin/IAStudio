@@ -330,12 +330,40 @@ describe('running a graph document', () => {
    */
   it('refuses a graph whose nodes a run would all pass over', async () => {
     const jobs = installJobs()
-    installGraph(DOC, graphOf([noteNode('note1', 'à faire'), textNode('text1')], []))
+    installGraph(DOC, graphOf([noteNode('note1', 'à faire'), noteNode('note2', 'et ceci')], []))
 
     await useGraphRuns.getState().start(DOC)
 
     expect(jobs.submitted).toEqual([])
     expect(useGraphRuns.getState().runs[DOC]).toBeUndefined()
+  })
+
+  /**
+   * The other half of that same scenario, and the one a list of node TYPES could not carry: an
+   * approval guarding nobody compiles away, so the executor passes over it without a question —
+   * the button used to stay lit over a canvas holding nothing else.
+   */
+  it('refuses a graph whose only approval guards nobody', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, graphOf([noteNode('note1', 'à faire'), approvalNode('approval1')], []))
+
+    await useGraphRuns.getState().start(DOC)
+
+    expect(jobs.submitted).toEqual([])
+    expect(useGraphRuns.getState().runs[DOC]).toBeUndefined()
+  })
+
+  /**
+   * A text node reports `done` and files its value in the cache, so a run over one is not a run
+   * over nothing — which is why it is off the silent list the button reads.
+   */
+  it('runs a graph of a single text node', async () => {
+    installJobs()
+    installGraph(DOC, graphOf([textNode('text1')], []))
+
+    await useGraphRuns.getState().start(DOC)
+
+    expect(runOf(useGraphRuns.getState(), DOC).nodes['text1']?.status).toBe('done')
   })
 
   it('refuses a second run of the same document while the first is going', async () => {

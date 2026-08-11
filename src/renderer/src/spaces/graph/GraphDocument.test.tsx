@@ -37,6 +37,21 @@ const text: GraphNode = {
   },
 }
 
+const note: GraphNode = {
+  id: 'note1',
+  type: 'stickyNote',
+  position: { x: 0, y: 200 },
+  data: { content: 'à faire' },
+}
+
+/** Wired to nothing, which is the whole of what makes it silent. */
+const approval: GraphNode = {
+  id: 'approval1',
+  type: 'approval',
+  position: { x: 200, y: 200 },
+  data: {},
+}
+
 const model: GraphNode = {
   id: 'model1',
   type: 'model',
@@ -116,14 +131,29 @@ describe('a graph as a document', () => {
       const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
       expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
 
-      // A text node is read, never run: on its own it leaves the button exactly as it was.
-      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
+      // A note is drawn, never run: on its own it leaves the button exactly as it was.
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(note)))
       rerender(<GraphDocument documentId={DOCUMENT} />)
       expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
 
-      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(model)))
+      // A text node reports `done`, so it is a run — the same list the executor reads says so.
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(text)))
       rerender(<GraphDocument documentId={DOCUMENT} />)
       expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeEnabled()
+    })
+
+    /**
+     * The defect the one list closes: an approval wired to nothing compiles away, so the run walks
+     * past it without a question. Offered here, the button would flip to Stop and back over a
+     * canvas that reports nothing at all.
+     */
+    it('greys the button over an approval that guards nobody', () => {
+      const { rerender } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode(approval)))
+      rerender(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(screen.getByRole('button', { name: 'Exécuter le graphe (⌘Entrée)' })).toBeDisabled()
     })
   })
 
