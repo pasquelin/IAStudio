@@ -68,8 +68,16 @@ type Outcome =
   | { kind: 'skipped' }
   | { kind: 'stalled' }
 
-/** Whoever hands this back has just painted the node — `fail` red, `stopped` idle. */
+/**
+ * The two members that carry nothing, shared rather than rebuilt — as `ADMITTED` is in
+ * `rate-limiter.ts`.
+ *
+ * Handing one back does NOT paint the node: `fail` and `stopped` paint before returning `STALLED`,
+ * and a provider's own outcome travels up to `stopAt`, which paints there. Whoever ends a node's
+ * turn owes it one `report`, and that is the invariant to keep — not where the object came from.
+ */
 const STALLED: Extract<Outcome, { kind: 'stalled' }> = { kind: 'stalled' }
+const SKIPPED: Extract<Outcome, { kind: 'skipped' }> = { kind: 'skipped' }
 
 /** What a provider handed back when it handed back no values — what its readers inherit. */
 type Barren = Exclude<Outcome, { kind: 'produced' }>
@@ -90,11 +98,15 @@ const outputNames = (node: GraphNode): readonly string[] => {
   return declared.length > 0 ? declared : [DEFAULT_OUTPUT_NAME]
 }
 
-/** What the approvals in front of a node let through: the node itself, or what stops it. */
-type Gate = { kind: 'ready' } | Barren
-
-/** One node's incoming wires, read two ways: as a body's fields, and as a CEL expression's names. */
+/**
+ * One node's incoming wires, read two ways: as a body's fields, and as a CEL expression's names.
+ *
+ * Discriminated like everything it is returned beside, so `resolveInputs` and `reachOf` are asked
+ * the SAME question in the same words. Keyed off a bare `'kind' in inputs`, this file put three
+ * spellings on one fact — which is the whole reason `Reach` was taken out.
+ */
 type Resolved = {
+  kind: 'ready'
   values: Readonly<Record<string, readonly string[]>>
   variables: GraphTransformVariables
 }
@@ -158,7 +170,7 @@ export async function runGraph(
    */
   const skip = (id: string): Outcome => {
     report(id, { status: 'skipped' })
-    return { kind: 'skipped' }
+    return SKIPPED
   }
 
   const keep = (planned: GraphPlanNode, node: GraphNode, values: readonly string[]): Outcome => {
@@ -227,7 +239,7 @@ export async function runGraph(
           // did not choose, and nothing went wrong. Absent because it produced on none at all:
           // the wire names a port that does not exist, which is a graph read off a file rather
           // than a branch — red, not a quiet grey.
-          return Object.keys(upstream.values).length > 0 ? { kind: 'skipped' } : STALLED
+          return Object.keys(upstream.values).length > 0 ? SKIPPED : STALLED
         }
 
         carried.push(...through)
@@ -244,14 +256,14 @@ export async function runGraph(
       values[port] = carried
     }
 
-    return { values, variables }
+    return { kind: 'ready', values, variables }
   }
 
   /**
    * How far the approvals standing between this node and its providers let it get: given, never
    * asked because no branch reached them, or refused.
    */
-  const reachOf = async (planned: GraphPlanNode): Promise<Gate> => {
+  const reachOf = async (planned: GraphPlanNode): Promise<{ kind: 'ready' } | Barren> => {
     for (const id of planned.awaits) {
       const answer = await settledOn(id)
       // An approval on a branch nobody took was never asked, so what it guards was not refused —
@@ -266,10 +278,11 @@ export async function runGraph(
    * What a node does about a provider that handed it nothing: go grey, or go red.
    *
    * A `switch` with its return type written down, and that is the point — the two ternaries this
-   * replaces would have painted a FUTURE member of `Outcome` red in silence, reporting a failure
-   * where nothing had failed. Here it stops the build instead.
+   * replaces read a member of **`Reach`**, where a future one fell through to `blocked` in silence
+   * and painted red a node nothing had failed for. Here it stops the build instead. `Barren` and
+   * not `Outcome` as the parameter: narrowing stays with the caller, which needs `values` next.
    */
-  const stopAt = (barren: Barren, id: string): Outcome => {
+  const stopAt = (id: string, barren: Barren): Outcome => {
     switch (barren.kind) {
       case 'skipped':
         return skip(id)
@@ -424,7 +437,7 @@ export async function runGraph(
 
     if (gate.kind !== 'ready') {
       if (stopped(node.id)) return STALLED
-      return stopAt(gate, node.id)
+      return stopAt(node.id, gate)
     }
 
     const inputs = await resolveInputs(planned, node)
@@ -433,7 +446,7 @@ export async function runGraph(
     // on the wire leaves what it feeds idle, rather than reporting a failure nothing caused.
     if (stopped(node.id)) return STALLED
 
-    if ('kind' in inputs) return stopAt(inputs, node.id)
+    if (inputs.kind !== 'ready') return stopAt(node.id, inputs)
 
     // Read AFTER the inputs, for the same reason: a branch routes by PORT ORDER, which is out of
     // the hash, so swapping two of a branch's ports leaves every hash downstream identical while
