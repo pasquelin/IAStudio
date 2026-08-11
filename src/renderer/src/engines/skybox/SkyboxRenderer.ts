@@ -8,7 +8,6 @@ import {
 import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@shared/domain/skybox'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/GpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
-import { sameValues } from '@/helpers/objects'
 import { reportFailure } from '@/services/diagnostics'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -89,6 +88,9 @@ export class SkyboxRenderer {
    * What the last `apply` was given. Held by reference rather than copied: an edit replaces the
    * section it touches instead of writing into it (`skybox/commands.ts:31`), so a section that
    * did not move is still the same object.
+   *
+   * This makes `mount` before `apply` load-bearing — a renderer mounted afterwards is never told
+   * again what it already holds. `SkyboxDocument` declares the two effects in that order.
    */
   private applied: SkyboxContent | null = null
 
@@ -126,38 +128,34 @@ export class SkyboxRenderer {
   /**
    * The engine holds no truth: everything it shows comes back through here.
    *
-   * Each half is guarded on its own inputs, the way `setView` is. The document rebuilds its
-   * content on every frame of a drag, and unguarded this re-graded the picture into a 2048×1024
-   * float target two hundred times for a gesture that only moved the sun.
+   * Each section is skipped when it is the object already applied, as `SceneRenderer.syncNode`
+   * skips a node and `CanvasEngine.apply` skips a tree: an edit replaces the one section it
+   * touches (`skybox/commands.ts:31`), so the other three come back identical. Unguarded, one
+   * frame of the sun's colour re-graded the picture into the 2048×1024 float target.
    */
   apply(content: SkyboxContent): void {
     const previous = this.applied
     this.applied = content
 
-    if (!previous || !sameValues(previous.sun, content.sun)) {
+    if (previous?.sun !== content.sun) {
       this.sun = { elevation: content.sun.elevation, azimuth: content.sun.azimuth }
       this.applySun(content)
     }
 
-    if (!previous || previous.environment.intensity !== content.environment.intensity)
+    const environmentMoved = previous?.environment !== content.environment
+    if (environmentMoved) {
       this.environment?.setIntensity(content.environment.intensity)
+      this.backgroundWanted = content.environment.showBackground
+    }
 
-    this.backgroundWanted = content.environment.showBackground
-
-    const graded = !previous || !sameValues(previous.adjustments, content.adjustments)
+    const graded = previous?.adjustments !== content.adjustments
     if (graded) this.adjust.setAdjustments(content.adjustments)
 
-    // Before `syncView`, which reads the source through `syncProbes`, and before `regrade`,
-    // which would otherwise grade the picture this call is about to release.
-    const sourceMoved = previous?.source?.assetId !== content.source?.assetId
-    this.loadSource(content.source?.assetId ?? null)
+    // Before `syncView`, which reads the sky through `syncProbes`, and before `regrade`, which
+    // would otherwise grade the picture this call is about to release.
+    const skyMoved = this.loadSource(content.source?.assetId ?? null)
 
-    if (
-      !previous ||
-      sourceMoved ||
-      previous.environment.showBackground !== content.environment.showBackground
-    )
-      this.syncView()
+    if (environmentMoved || skyMoved) this.syncView()
 
     if (graded) this.regrade()
   }
@@ -268,8 +266,9 @@ export class SkyboxRenderer {
     }, PMREM_QUIET_MS)
   }
 
-  private loadSource(assetId: string | null): void {
-    if (assetId === this.sourceAssetId) return
+  /** Whether the sky moved. The fact is decided here, so `apply` reads it rather than guessing. */
+  private loadSource(assetId: string | null): boolean {
+    if (assetId === this.sourceAssetId) return false
 
     this.releaseSource()
     this.sourceAssetId = assetId
@@ -277,7 +276,7 @@ export class SkyboxRenderer {
     if (!assetId) {
       this.adjust.setSource(null)
       this.environment?.setTexture(null)
-      return
+      return true
     }
 
     void this.cache.acquire(assetId, SRGBColorSpace).then(texture => {
@@ -287,6 +286,8 @@ export class SkyboxRenderer {
       this.adjust.setSource(texture)
       this.regrade()
     })
+
+    return true
   }
 
   private releaseSource(): void {

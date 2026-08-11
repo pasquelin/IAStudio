@@ -82,6 +82,17 @@ const sunAt = (azimuth: number): SkyboxContent => {
   return content
 }
 
+/**
+ * One edit, shaped as `skybox/commands.ts:31` makes it: the section it touches is replaced and
+ * the other three come back as the same objects. Building a whole content instead would hand the
+ * engine four new sections and prove nothing about what a real drag costs.
+ */
+const edited = <K extends keyof SkyboxContent>(
+  content: SkyboxContent,
+  key: K,
+  section: SkyboxContent[K],
+): SkyboxContent => ({ ...content, [key]: section })
+
 describe('the renderer of a skybox', () => {
   let onSunChange: Mock<(angles: SphericalAngles) => void>
   let source: ReturnType<typeof fakeTextureSource>
@@ -333,27 +344,26 @@ describe('the renderer of a skybox', () => {
       expect(light.color).toBe(instance)
       expect(light.color.getHexString()).toBe('ff8800')
     })
-  })
 
-  /**
-   * A drag pushes one content object per frame, all four sections rebuilt. Measured before this
-   * guard: two hundred frames of the sun's colour cost two hundred grading passes into the
-   * 2048×1024 float target, plus two hundred of everything else the sun does not feed.
-   */
-  describe('the work a frame does not need', () => {
-    const draggedSun = (frames: number): SkyboxContent[] =>
-      Array.from({ length: frames }, (_unused, frame) => {
-        const content = skyOf('sky-1')
-        content.sun = { ...content.sun, color: `#ff00${frame.toString(16).padStart(2, '0')}` }
-        return content
-      })
+    const draggedSun = (sky: SkyboxContent, frames: number): SkyboxContent[] =>
+      Array.from({ length: frames }, (_unused, frame) =>
+        edited(sky, 'sun', {
+          ...sky.sun,
+          color: `#ff00${frame.toString(16).padStart(2, '0')}`,
+        }),
+      )
 
+    /**
+     * Measured before the guard: two hundred frames of the sun's colour cost two hundred grading
+     * passes into the 2048×1024 float target, and two hundred of everything else besides.
+     */
     it('grades nothing more for a drag that only moves the sun', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
       const gradedOnce = pipeline.renderTo.mock.calls.length
 
-      for (const frame of draggedSun(200)) renderer.apply(frame)
+      for (const frame of draggedSun(sky, 200)) renderer.apply(frame)
       await vi.advanceTimersByTimeAsync(0)
 
       expect(pipeline.renderTo).toHaveBeenCalledTimes(gradedOnce)
@@ -364,53 +374,42 @@ describe('the renderer of a skybox', () => {
 
     it('still recolours the sun on every frame of that drag', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
       const light = probes.group.parent?.children.find(child => child instanceof DirectionalLight)
 
-      for (const frame of draggedSun(3)) renderer.apply(frame)
+      for (const frame of draggedSun(sky, 3)) renderer.apply(frame)
 
       expect(light?.color.getHexString()).toBe('ff0002')
     })
 
     it('grades again as soon as an adjustment moves', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
-      const content = skyOf('sky-1')
-      content.adjustments = { ...content.adjustments, exposure: 1.7 }
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
+      const brighter = edited(sky, 'adjustments', { ...sky.adjustments, exposure: 1.7 })
 
-      await applied(renderer, content)
+      await applied(renderer, brighter)
 
-      expect(adjust.setAdjustments).toHaveBeenLastCalledWith(content.adjustments)
-    })
-
-    it('brings the probes back when the sky arrives after the first frame', async () => {
-      const renderer = mounted()
-      renderer.apply(createSkyboxContent())
-      expect(probes.group.visible).toBe(false)
-
-      await applied(renderer, skyOf('sky-1'))
-
-      expect(probes.group.visible).toBe(true)
+      expect(adjust.setAdjustments).toHaveBeenLastCalledWith(brighter.adjustments)
     })
 
     it('takes the backdrop away when the document turns it off', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
-      const content = skyOf('sky-1')
-      content.environment = { ...content.environment, showBackground: false }
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
 
-      renderer.apply(content)
+      renderer.apply(edited(sky, 'environment', { ...sky.environment, showBackground: false }))
 
       expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
     })
 
-    it('follows the environment intensity on its own', async () => {
+    it('follows the environment intensity once the sky is already up', async () => {
       const renderer = mounted()
-      await applied(renderer, skyOf('sky-1'))
-      const content = skyOf('sky-1')
-      content.environment = { ...content.environment, intensity: 0.25 }
+      const sky = skyOf('sky-1')
+      await applied(renderer, sky)
 
-      renderer.apply(content)
+      renderer.apply(edited(sky, 'environment', { ...sky.environment, intensity: 0.25 }))
 
       expect(environment.setIntensity).toHaveBeenLastCalledWith(0.25)
     })
@@ -613,6 +612,16 @@ describe('the test objects of a skybox', () => {
 
   it('shows them once a sky is placed', () => {
     mounted().apply(withSky())
+
+    expect(probes.group.visible).toBe(true)
+  })
+
+  /** And when the sky arrives on a later frame — the mirror of the removal below. */
+  it('shows them when the sky arrives after the document opened empty', () => {
+    const renderer = mounted()
+    renderer.apply(createSkyboxContent())
+
+    renderer.apply(withSky())
 
     expect(probes.group.visible).toBe(true)
   })
