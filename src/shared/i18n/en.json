@@ -964,6 +964,10 @@
   },
   "skyboxFaceSize": "{{size}} × {{size}}",
   "sceneViews": {
+    "free": "Perspective",
+    "freeHint": "The view being flown: the only one that turns",
+    "pane": "View {{number, number}}",
+    "paneHint": "Chooses what this quarter shows \u2014 a perspective, or an axis that does not turn",
     "front": "Front",
     "back": "Back",
     "left": "Left",

@@ -964,6 +964,10 @@
   },
   "skyboxFaceSize": "{{size}} × {{size}}",
   "sceneViews": {
+    "free": "Perspective",
+    "freeHint": "La vue qu\u2019on pilote : c\u2019est la seule qui tourne",
+    "pane": "Vue {{number, number}}",
+    "paneHint": "Choisit ce que ce quart montre \u2014 une perspective, ou un axe qui ne tourne pas",
     "front": "De face",
     "back": "De dos",
     "left": "De gauche",

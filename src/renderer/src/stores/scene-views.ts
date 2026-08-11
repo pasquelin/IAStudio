@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DisplayMode } from '@/engines/scene/scene-view'
+import { DEFAULT_PANE_VIEWS, type DisplayMode, type PaneView } from '@/engines/scene/scene-view'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
 export type SceneView = {
@@ -16,6 +16,8 @@ export type SceneView = {
   quad: boolean
   /** Whether the wireframe drops its triangulation diagonals. Never real quads — see the engine. */
   quadEdges: boolean
+  /** What each of the four views shows. Only a free one turns — see `PaneView`. */
+  panes: readonly PaneView[]
   /** Where the animation head stands, in seconds. Never in the document — see `AnimationTimeline`. */
   playhead: number
   playing: boolean
@@ -27,6 +29,7 @@ const DEFAULT_SCENE_VIEW: SceneView = {
   skeletons: false,
   quad: false,
   quadEdges: false,
+  panes: DEFAULT_PANE_VIEWS,
   playhead: 0,
   playing: false,
 }
@@ -46,6 +49,7 @@ export type SceneViewsState = {
   setSkeletons: (documentId: string, skeletons: boolean) => void
   setQuad: (documentId: string, quad: boolean) => void
   setQuadEdges: (documentId: string, quadEdges: boolean) => void
+  setPaneView: (documentId: string, pane: number, view: PaneView) => void
   setPlayhead: (documentId: string, playhead: number) => void
   setPlaying: (documentId: string, playing: boolean) => void
 }
@@ -84,6 +88,13 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
     set(state => ({
       views: { ...state.views, [documentId]: { ...viewOf(state, documentId), quadEdges } },
     })),
+
+  setPaneView: (documentId, pane, view) =>
+    set(state => {
+      const current = viewOf(state, documentId)
+      const panes = current.panes.map((held, index) => (index === pane ? view : held))
+      return { views: { ...state.views, [documentId]: { ...current, panes } } }
+    }),
 
   setPlayhead: (documentId, playhead) =>
     set(state => ({

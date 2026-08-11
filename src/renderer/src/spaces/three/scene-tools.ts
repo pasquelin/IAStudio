@@ -39,6 +39,7 @@ import {
   DISPLAY_MODES,
   VIEW_DIRECTIONS,
   type DisplayMode,
+  type PaneView,
   type ViewDirection,
 } from '@/engines/scene/scene-view'
 
@@ -50,6 +51,12 @@ const VIEW_ICONS: Record<ViewDirection, string> = {
   right: mdiArrowLeft,
   top: mdiArrowDownBold,
   bottom: mdiArrowUpBold,
+}
+
+/** What a view of the quad layout wears in its own menu. The free one is the studio's cube. */
+export const PANE_VIEW_ICONS: Record<PaneView, string> = {
+  free: mdiCubeOutline,
+  ...VIEW_ICONS,
 }
 
 const DISPLAY_ICONS: Record<DisplayMode, string> = {
