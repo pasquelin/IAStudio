@@ -327,3 +327,134 @@ describe('the registries', () => {
     expect(main.some(path => path.endsWith('job-manager.ts'))).toBe(true)
   })
 })
+
+const LOGICAL_OPERATORS = new Set([
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+])
+
+/** Both sides of a ternary and of a guard: parking a second wording beside the first is the move. */
+function literalsIn(expression: ts.Expression): string[] {
+  if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression))
+    return [expression.text]
+  if (ts.isConditionalExpression(expression))
+    return [...literalsIn(expression.whenTrue), ...literalsIn(expression.whenFalse)]
+  if (ts.isBinaryExpression(expression) && LOGICAL_OPERATORS.has(expression.operatorToken.kind))
+    return [...literalsIn(expression.left), ...literalsIn(expression.right)]
+  if (ts.isParenthesizedExpression(expression)) return literalsIn(expression.expression)
+  return []
+}
+
+/**
+ * A sentence, as opposed to a class list or a keyword. The capital is what tells them apart:
+ * `bg-surface flex size-full` holds spaces and lowercase words and is not a word anyone reads,
+ * while anything a user is shown starts the way a sentence starts.
+ */
+function readsLikeASentence(text: string): boolean {
+  return /^\p{Uppercase_Letter}\p{Lowercase_Letter}+\s+\p{Lowercase_Letter}/u.test(text.trim())
+}
+
+/**
+ * A `.ts` read as JSX is worse than useless: `const f = <T,>(x: T) => x` opens a tag, the parser
+ * drops into error recovery, and the declarations after it are never visited. Measured on three
+ * modules of the window — 99, 46 and 33 parse errors, and 55 declarations gone unseen.
+ */
+function scriptKindOf(path: string): ts.ScriptKind {
+  return path.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+}
+
+function boundSentencesIn(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, scriptKindOf(path))
+  const findings: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && node.initializer !== undefined) {
+      for (const text of literalsIn(node.initializer)) {
+        if (!readsLikeASentence(text)) continue
+        const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
+        findings.push(`${path}:${line + 1} ${text}`)
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return findings
+}
+
+/**
+ * The blind spot the other guards admit to: a string reaching the screen through a name. The JSX
+ * checks read what a tag holds, so `<p>{label}</p>` shows them an identifier and nothing else,
+ * and the registry check reads named fields, which a bare `const` is not.
+ *
+ * It ran on the WINDOW ONLY until now, through a glob relative to the renderer — so `shared/`,
+ * `preload/` and `main/` were seen by the registry check alone, which reads named fields and
+ * nothing else. A sentence bound to a name in any of those 204 files reached no guard at all.
+ * Measured before moving it: zero of them, today. The move is what keeps that true tomorrow.
+ *
+ * It lives here for the reason the registry check does: it reads the tree off the disk, and
+ * `src/shared` is compiled for the web too, where `node:fs` has no types and no business.
+ *
+ * NARROW ON PURPOSE, and the shape it catches is the one somebody writes. A capital separates a
+ * sentence from a class list: a check that cries wolf is a check somebody turns off. So it does
+ * NOT see a lowercase phrase, a single capitalised word, an acronym, an object property or an
+ * array element — the last two being the registry guard's job. What it adds is the bare binding.
+ */
+describe('the words nobody puts in a tag', () => {
+  const trees = ['renderer', 'shared', 'preload'].map(tree => join(MAIN, '..', tree))
+
+  const findingsOf = (): string[] =>
+    [MAIN, ...trees].flatMap(tree =>
+      sourceFiles(tree).flatMap(path =>
+        boundSentencesIn(relative(join(MAIN, '..'), path), readFileSync(path, 'utf8')),
+      ),
+    )
+
+  it('binds no sentence to a name anywhere in the project', () => {
+    expect(findingsOf()).toEqual([])
+  })
+
+  // An empty result proves nothing unless the files were opened: pointed at a folder that does
+  // not exist, every assertion above stays green. The four trees are counted, not assumed.
+  it('holds all four trees, modules and components alike', () => {
+    const counts = [MAIN, ...trees].map(tree => sourceFiles(tree).length)
+
+    expect(counts.every(count => count > 0)).toBe(true)
+    expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(700)
+  })
+
+  it('would see a sentence parked in a constant', () => {
+    expect(boundSentencesIn('probe.tsx', "const label = 'Delete this project'")).toHaveLength(1)
+  })
+
+  it('reads a module whose generic arrow would open a tag in JSX', () => {
+    const code = "const identity = <T,>(value: T) => value\nconst label = 'Delete this project'"
+
+    expect(boundSentencesIn('probe.ts', code)).toHaveLength(1)
+  })
+
+  it('reads both sides of a ternary and of a guard', () => {
+    const behind = [
+      "const label = ok ? 'Loading your project' : 'Nothing to show'",
+      "const other = bad && 'Something went wrong'",
+    ]
+
+    expect(
+      behind.flatMap((code, index) => boundSentencesIn(`probe${index}.ts`, code)),
+    ).toHaveLength(3)
+  })
+
+  it('leaves class lists, keywords and identifiers alone', () => {
+    const quiet = [
+      "const styles = 'bg-surface flex size-full flex-col justify-center gap-2'",
+      "const mode = 'horizontal'",
+      "const channel = 'window:state'",
+      "const key = 'panels.assets'",
+      "const path = 'Contents/Resources/ffmpeg'",
+    ]
+
+    expect(quiet.flatMap((code, index) => boundSentencesIn(`probe${index}.ts`, code))).toEqual([])
+  })
+})
