@@ -154,21 +154,24 @@ describe('salvaging the home section order', () => {
 
   it('drops a section this build no longer knows, keeping the rest of the order', () => {
     const sections = [
-      { id: 'tools', visible: true },
+      { id: 'spotlight', visible: true },
       { id: 'nether' },
-      { id: 'jobs', visible: false },
+      // A band of an older build: `tools` is a panel now, and its entry must not survive as a
+      // section nobody can draw.
+      { id: 'tools', visible: true },
+      { id: 'explore', visible: false },
     ]
 
     const salvaged = salvagePartialSettings(withTheme({ sections }))
 
     expect(salvaged.home?.sections).toEqual([
-      { id: 'tools', visible: true },
-      { id: 'jobs', visible: false },
+      { id: 'spotlight', visible: true },
+      { id: 'explore', visible: false },
     ])
   })
 
   it('keeps the other settings when the sections are not a list at all', () => {
-    const salvaged = salvagePartialSettings(withTheme({ enabled: false, sections: 'tools' }))
+    const salvaged = salvagePartialSettings(withTheme({ enabled: false, sections: 'spotlight' }))
 
     expect(salvaged.home?.sections ?? []).toEqual([])
     expect(salvaged.appearance?.theme).toBe('light')

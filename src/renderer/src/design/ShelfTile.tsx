@@ -31,7 +31,7 @@ export type ShelfTileProps = {
  *
  * The creations, the library and the recipes each draw the same square: a still, the model
  * underneath, a glyph when there is no picture. They had it three times, byte for byte, down to
- * the hover — which is exactly what `ShelfCard` above exists to prevent.
+ * the hover, and this is the one copy left.
  */
 export function ShelfTile({
   url,

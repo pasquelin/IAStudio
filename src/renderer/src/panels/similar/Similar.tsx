@@ -1,14 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
-import { Carousel } from '@/design/Carousel'
 import { cloudTileFace } from '@/helpers/cloud-tile'
+import { TIP_LEFT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
-import { RefusedSection } from '../RefusedSection'
-import { Section } from '../Section'
-import { ShelfTile, SHELF_TILE_SIZE } from '@/design/ShelfTile'
-import { useDeferredShelf } from '@/hooks/use-shelf'
+import { ShelfTile } from '@/design/ShelfTile'
+import { ShelfPanel } from '@/panels/shared/ShelfPanel'
+import { useShelf } from '@/hooks/use-shelf'
 
 /**
  * How many of the newest assets are looked at to find one to measure against.
@@ -21,10 +20,10 @@ import { useDeferredShelf } from '@/hooks/use-shelf'
 const REFERENCE_CANDIDATES = 10
 
 /**
- * What the band draws, when it has something to draw.
+ * What the panel draws, when it has something to draw.
  *
  * `null` is "nothing to measure against, or nothing that resembles it" — an ordinary answer,
- * and not the same thing as a refusal, which `useShelf` now reports on its own.
+ * and not the same thing as a refusal, which `useShelf` reports on its own.
  */
 type Lookalikes = { reference: CloudAsset; assets: readonly CloudAsset[] } | null
 
@@ -32,7 +31,7 @@ type Lookalikes = { reference: CloudAsset; assets: readonly CloudAsset[] } | nul
  * Published work in the vein of this account's latest asset.
  *
  * The likeness is the API's own — visual and semantic at once. WHICH asset it is measured
- * against is decided here and not in the main process: it is a choice this band makes, and the
+ * against is decided here and not in the main process: it is a choice this panel makes, and the
  * channel it calls answers for any asset one names.
  *
  * Inert, like the explore feed: these belong to other people.
@@ -40,35 +39,36 @@ type Lookalikes = { reference: CloudAsset; assets: readonly CloudAsset[] } | nul
 export function Similar() {
   const { t } = useTranslation()
   const owner = useSettings(activeOwnerId)
-  // Two requests, both below the fold on any window: spent when the band is reached.
-  const {
-    value: page,
-    state,
-    retry,
-    marker,
-  } = useDeferredShelf<Lookalikes>(null, lookalikes, `${owner}`)
-
-  if (state === 'refused')
-    return <RefusedSection id="similar" message={t('home.similar.refused')} onRetry={retry} />
-
-  if (!page) return marker
+  // Two requests behind one shelf, read again when the active key changes: another key is
+  // another library, and the reference the previous one named is nobody's here.
+  const { value: page, state, retry } = useShelf<Lookalikes>(null, lookalikes, `${owner}`)
 
   return (
-    <Section id="similar" title={t('home.similar.title', { name: page.reference.name })}>
-      <Carousel
-        items={page.assets}
-        itemWidth={SHELF_TILE_SIZE}
-        itemHeight={SHELF_TILE_SIZE}
-        label={t('home.sections.similar')}
+    <div className="flex h-full flex-col">
+      {page && (
+        // The reference is the whole of what this panel means, and the rail's title cannot carry
+        // it: a shelf of lookalikes with nothing named is a shelf of strangers.
+        <p className="text-muted text-tiny m-0 truncate px-2 pt-2">
+          {t('home.similar.title', { name: page.reference.name })}
+        </p>
+      )}
+
+      <ShelfPanel
+        tool="similar"
+        items={page?.assets ?? []}
+        state={state}
+        onRetry={retry}
         renderCard={asset => <Tile asset={asset} />}
+        empty={t('home.similar.none')}
+        refused={t('home.similar.refused')}
       />
-    </Section>
+    </div>
   )
 }
 
 /**
- * Two reads, and the failure of either is a refusal — which is `useShelf`'s to report now, so
- * this one lets it through instead of catching it into a state of its own.
+ * Two reads, and the failure of either is a refusal — which is `useShelf`'s to report, so this
+ * one lets it through instead of catching it into a state of its own.
  */
 async function lookalikes(): Promise<Lookalikes> {
   const bridge = getBridge()
@@ -80,7 +80,7 @@ async function lookalikes(): Promise<Lookalikes> {
 
   const assets = await bridge.cloud.similar(reference.id)
   // Settled here rather than at the render: a page then means there is something to draw, and
-  // the band has one way of saying nothing instead of two.
+  // the panel has one way of saying nothing instead of two.
   return assets.length === 0 ? null : { reference, assets }
 }
 
@@ -91,7 +91,8 @@ function Tile({ asset }: { asset: CloudAsset }) {
     <ShelfTile
       {...cloudTileFace(asset, FAVORITE_THUMBNAIL_WIDTH)}
       hint={asset.name}
-      label={t('home.sections.similar')}
+      label={t('panels.similar')}
+      tip={TIP_LEFT}
     />
   )
 }

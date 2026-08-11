@@ -28,6 +28,7 @@ export function ShelfPanel<T extends { id: string }>({
   onRetry,
   renderCard,
   empty,
+  refused,
 }: {
   tool: ToolId
   items: readonly T[]
@@ -36,11 +37,14 @@ export function ShelfPanel<T extends { id: string }>({
   renderCard: (item: T) => ReactNode
   /** Already translated: what this panel says when the read came back with nothing. */
   empty: string
+  /** Already translated, and optional: which read failed, when the panel knows better than
+   * the generic line — one that reads two channels can name the one that answers for both. */
+  refused?: string
 }) {
   const { t } = useTranslation()
 
   // A refusal is the one state worth offering to try again — `ready` covers "nothing to show".
-  if (state === 'refused') return <RefusedPanel tool={tool} onRetry={onRetry} />
+  if (state === 'refused') return <RefusedPanel tool={tool} message={refused} onRetry={onRetry} />
 
   return (
     <Collection

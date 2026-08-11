@@ -173,6 +173,8 @@ describe('the home and the workspaces arrange their zones apart', () => {
       secondary: null,
     })
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
+      // Its own upper half is untouched: what the home named is the lower one.
+      primary: null,
       secondary: 'projects',
     })
   })

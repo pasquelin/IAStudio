@@ -60,6 +60,12 @@ export type ToolId =
   | 'library'
   | 'documents'
   | 'activity'
+  | 'tools'
+  | 'spark'
+  | 'favorites'
+  | 'similar'
+  | 'usage'
+  | 'jobs'
 
 /**
  * The panels the UPPER HALF of the left column is reserved for: choosing a model, then filling
@@ -174,31 +180,48 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Video as in 3D, where an animation runs along the same line a montage does.
   { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
-  // The home's own six, and they serve it ALONE. It is a surface like the others now — two
-  // columns and a centre — rather than the one page in the studio that scrolls: what one opens
-  // on the left, what the open project holds on the right, the journal under it, and the centre
-  // kept for the two things that earn the width, the tools and the gallery.
+  // The home's own, and they serve it ALONE. It is a surface like the others — two columns and a
+  // centre — rather than the one page in the studio that scrolls, and the centre is kept for the
+  // two things that earn the width: what is put forward, and the gallery that pages as it is read.
   //
   // Each of them reads the studio rather than a document, which is exactly why none reaches a
   // workspace: a column beside an editor is for what acts on what is in front of you.
+  //
+  // The columns follow the rule every space follows: the left is what one produces with and what
+  // one browses, the right is what speaks ABOUT what is open. The home never had it applied — its
+  // panels arrived one at a time, six on the right against one on the left.
 
-  // The left column, where every space puts what one produces WITH. The home produces nothing,
-  // so it puts what one produces IN — and that is the first thing anyone comes to this screen
-  // for. The Explorer left the surface for it; the project's documents are listed on the right
-  // now, under the name that page always gave them.
+  // The upper left, which the home alone leaves for something other than generation: it makes no
+  // document, so the half goes to what it does instead — the list of everything the studio can
+  // start. Pinned as a band, and it stays the one panel that says something on a machine with no
+  // key, no project and no history.
+  { id: 'tools', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
+
+  // The lower left, where every space puts what one produces WITH and what one browses. The home
+  // produces nothing, so it puts what one produces IN — the projects, the first thing anyone
+  // comes to this screen for — then the recipes kept across them, the ideas to start from, and
+  // work in the vein of the last asset. `projects` stays declared first: it is what the half
+  // shows to everyone who never chose one.
   { id: 'projects', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  { id: 'spark', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  { id: 'favorites', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  { id: 'similar', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
 
   // The right column, in rail order: from the newest thing this project made to the files it
-  // was made into, by way of what the account holds outside it.
+  // was made into, by way of what the account holds outside it — and what it spent doing so,
+  // beside the counts, since both of those measure a consumption rather than list a thing.
   { id: 'creations', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
   { id: 'counts', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+  { id: 'usage', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
   { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
   { id: 'documents', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
 
   // The lower half, as the inspector takes it in the spaces, and for the same reason: what just
   // happened is read WHILE what it produced is looked at. A journal one has to switch away to is
-  // a journal nobody reads — which is what it was here, a band hidden by default.
+  // a journal nobody reads — which is what it was here, a band hidden by default. The jobs still
+  // running join it: both answer "what is going on now", and neither is worth a half of its own.
   { id: 'activity', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  { id: 'jobs', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
 ]
 
 /**

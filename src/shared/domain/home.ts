@@ -1,4 +1,3 @@
-import { clamp } from '../numeric'
 import { reconcileOrder } from './order'
 
 /**
@@ -10,13 +9,14 @@ import { reconcileOrder } from './order'
  */
 
 /**
- * A band of the page, and only that. Six ids left this union on 10 August for
- * `domain/tool.ts` — the projects, what was made, the counts, the library, the documents and
- * the journal became panels of the home's two columns. A section is what the CENTRE stacks;
- * anything the rails hold is a placement, and the two registries never name the same thing.
+ * A band of the page, and only that. Twelve ids left this union for `domain/tool.ts` — six on
+ * 10 August, the last six on 11 August. A section is what the CENTRE stacks; anything the rails
+ * hold is a placement, and the two registries never name the same thing.
+ *
+ * The two left are the two that earn the width: what the studio puts forward, and the feed that
+ * pages as it is scrolled. Everything else reads better in a column than across one.
  */
-export type HomeSectionId =
-  'spotlight' | 'tools' | 'favorites' | 'jobs' | 'usage' | 'similar' | 'spark' | 'explore'
+export type HomeSectionId = 'spotlight' | 'explore'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -35,8 +35,6 @@ export type HomeSectionEntry = {
    * empty — which is why `home.test.ts` demands that no pinned section need a key.
    */
   pinned?: boolean
-  /** How many items the section shows before the user says otherwise. */
-  defaultLimit?: number
   /**
    * Held at the foot of the page, and not movable.
    *
@@ -53,34 +51,15 @@ export type HomeSectionEntry = {
  */
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'spotlight', pinned: true },
-  { id: 'tools', pinned: true },
-  // Needs no key: a recipe is kept outside every project, and the shelf is the one place that
-  // still has something to show with nothing connected.
-  { id: 'favorites', defaultLimit: 12 },
-  { id: 'jobs', requiresApi: true, defaultLimit: 8 },
-  { id: 'similar', requiresApi: true },
-  { id: 'spark', requiresApi: true },
-  { id: 'usage', requiresApi: true, defaultLimit: 6 },
-  // No limit: it is the one band that does not end — the grid pages as it is scrolled, so a
-  // count would cap what the reader can reach rather than how much is drawn at once.
   { id: 'explore', requiresApi: true, anchored: true },
 ]
 
 export const HOME_SECTION_IDS: readonly HomeSectionId[] = HOME_SECTIONS.map(entry => entry.id)
 
-/**
- * How far a section's item count may be pushed. The same two numbers the section menu offers
- * and the settings refuse beyond, so a limit can no longer be raised on one side alone.
- */
-export const HOME_LIMIT_MIN = 3
-export const HOME_LIMIT_MAX = 48
-
 /** What the settings keep per section. The order of the array IS the order on screen. */
 export type HomeSectionSetting = {
   id: HomeSectionId
   visible: boolean
-  /** Absent takes the registry's default — a stored number outlives a changed default. */
-  limit?: number
 }
 
 export function homeSectionOf(id: unknown): HomeSectionEntry | null {
@@ -242,28 +221,9 @@ export function shownHomeSection(
   return patchedHomeSection(stored, id, { visible })
 }
 
-/** Clamped rather than refused: the menu offers a few values, and nothing else may reach here. */
-export function limitedHomeSection(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-  limit: number,
-): HomeSectionSetting[] {
-  const bounded = clamp(Math.round(limit), HOME_LIMIT_MIN, HOME_LIMIT_MAX)
-  return patchedHomeSection(stored, id, { limit: bounded })
-}
-
 /** Sections the user hid, so the home can offer them back without a trip to the preferences. */
 export function hiddenHomeSections(stored: readonly HomeSectionSetting[]): HomeSectionId[] {
   return homeSections(stored)
     .filter(setting => !setting.visible && homeSectionOf(setting.id)?.pinned !== true)
     .map(setting => setting.id)
-}
-
-/** How many items a section asks for, the stored number winning over the registry's default. */
-export function homeSectionLimit(
-  stored: readonly HomeSectionSetting[],
-  id: HomeSectionId,
-): number | undefined {
-  const setting = stored.find(candidate => candidate.id === id)
-  return setting?.limit ?? homeSectionOf(id)?.defaultLimit
 }

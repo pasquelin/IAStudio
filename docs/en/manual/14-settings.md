@@ -115,8 +115,8 @@ running, and what the models can do. Unticked, the studio goes straight to the w
 **This setting and the one above are independent.** "Open nothing" only concerns the project: the
 home still appears, offering to create one. To land directly in a workspace, untick this one.
 
-What is set **on the home itself**, and not here: which bands are shown, in which order, and how
-many items each one displays — see [The window](03-the-window.md#the-home-screen-before-anything-else).
+What is set **on the home itself**, and not here: which bands are shown and in which order — see
+[The window](03-the-window.md#the-home-screen-before-anything-else).
 
 ---
 

@@ -4,10 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { SHELF_OVERLAY } from '@/design/styles'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { settleHome } from '../home-fixtures'
-import { homeSections } from '@shared/domain/home'
+import { settleHome } from '@/home/home-fixtures'
 import { useFavorites } from '@/stores/favorites'
-import { useSettings } from '@/stores/settings'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { Favorites } from './Favorites'
@@ -43,36 +41,7 @@ beforeEach(() => {
   useFavorites.setState({ recipes: [], loaded: false })
 })
 
-describe('the recipes shelf', () => {
-  /**
-   * The count the section menu writes has to reach the screen. Four bands read it until they
-   * became panels on 10 August; the three left are now the only proof that the row does anything
-   * at all, and a menu offering "show 6" over an unchanged shelf is worse than no menu.
-   */
-  it('draws only as many as the section menu asks for', async () => {
-    const recipes = Array.from({ length: 5 }, (_, index) =>
-      recipe({ id: `favorite_${index}`, label: `Recette ${index}` }),
-    )
-    install(recipes)
-    useFavorites.setState({ recipes, loaded: true })
-    useSettings.setState(state => ({
-      settings: {
-        ...state.settings,
-        home: {
-          ...state.settings.home,
-          sections: homeSections(state.settings.home.sections).map(section =>
-            section.id === 'favorites' ? { ...section, limit: 3 } : section,
-          ),
-        },
-      },
-    }))
-    render(<Favorites />)
-
-    expect(await screen.findByText('Recette 0')).toBeInTheDocument()
-    expect(screen.getByText('Recette 2')).toBeInTheDocument()
-    expect(screen.queryByText('Recette 3')).not.toBeInTheDocument()
-  })
-
+describe('the recipes panel', () => {
   /** The still is a copy on disk, served outside every project — never a URL that expires. */
   it('draws each recipe from the still kept beside it', async () => {
     install([recipe()])
@@ -120,11 +89,15 @@ describe('the recipes shelf', () => {
     expect(corner.className).toContain(SHELF_OVERLAY)
   })
 
-  it('takes itself off when nothing has been pinned', async () => {
+  /**
+   * As a band it took itself off the page here. A panel may not: a window standing under a rail
+   * icon and drawing nothing reads as a fault, and this one is a shelf that is simply empty.
+   */
+  it('says that nothing has been pinned rather than drawing nothing', async () => {
     const { list } = install([])
-    const { container } = render(<Favorites />)
+    render(<Favorites />)
 
     await vi.waitFor(() => expect(list).toHaveBeenCalled())
-    expect(container).toBeEmptyDOMElement()
+    expect(await screen.findByText(/Aucune recette épinglée/)).toBeInTheDocument()
   })
 })

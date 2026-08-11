@@ -126,7 +126,7 @@ s’ouvrant**, sur leur première ligne. Vous n’avez rien à faire pour y entr
 pas au clavier non plus, et s’y arrêter donnerait un parcours qui semble bloqué.
 
 **Une ligne cochée dit ce que sa coche veut dire.** Certaines sont des alternatives — le mode
-d’un outil, le compte actif, la taille d’une bande de l’accueil : en cocher une décoche les
+d’un outil, le compte actif, la vue d’un quart de l’espace 3D : en cocher une décoche les
 autres. D’autres se règlent chacune pour soi, comme les deux cadenas d’un calque. Un lecteur
 d’écran annonce les premières comme des boutons radio et les secondes comme des cases à cocher.
 

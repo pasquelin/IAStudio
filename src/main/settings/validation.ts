@@ -17,7 +17,7 @@ import {
 import { ACCOUNT_NAME_MAX_LENGTH } from '@shared/domain/account'
 import { DICTATION_MODES } from '@shared/domain/dictation'
 import { isSignature } from '@shared/domain/shortcut'
-import { HOME_LIMIT_MAX, HOME_LIMIT_MIN, HOME_SECTION_IDS } from '@shared/domain/home'
+import { HOME_SECTION_IDS } from '@shared/domain/home'
 import { RECENT_PROJECTS_MAX } from '@shared/domain/project'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { SHADOW_MAP_SIZES, SHADOW_QUALITIES } from '@shared/domain/scene'
@@ -84,7 +84,6 @@ const general = z.object({
 const homeSection = z.object({
   id: z.enum(HOME_SECTION_IDS),
   visible: z.boolean(),
-  limit: z.number().int().min(HOME_LIMIT_MIN).max(HOME_LIMIT_MAX).optional(),
 })
 
 /*

@@ -35,34 +35,30 @@ the menu. A banner across the top of the page would have said it once more.
 until the answer lands, "nothing is true" and "nothing is known yet" look alike: the banner stays
 silent rather than announcing "Ready when you are" and then correcting itself.
 
-### The bands
+### The two bands
 
-Under the banner, one band per subject, in this order:
+Under the banner, the centre stacks two subjects only, and they are the two that need the width:
 
 | Band | What it shows | It needs |
 |---|---|---|
-| **Tools** | the seven workspaces, and the project gestures | nothing |
-| **Your recipes** | the settings you have pinned | nothing |
-| **Running now** | the generations under way | an API key |
-| **In the same vein** | public creations that look like your latest asset | an API key |
-| **An idea to start from** | prompt starting points written for your image model | an API key |
-| **What you have spent** | your units spent, in total and per model | an API key |
+| **Where you were** | the banner itself: resume, connect, or create | nothing |
 | **Explore** | what everyone has published, by kind | an API key |
 
 **A band that lacks what it needs is not greyed out: it is not there.** With no API key,
 **Explore** does not exist on this screen.
 
-**Six of the home's contents are not bands**, which is why they do not tidy away like them: your
-projects, what you have made, the counters by kind, your library, your documents and the recent
-activity are **panels**, held in the home's two columns. A band is what the centre stacks; what
-the rails hold is not one. The **Customise this section** menu therefore does not reach them.
+**Everything else on the home is a panel**, held in its two columns: your projects, the tools,
+your recipes, an idea to start from, in the same vein, what you have made, the counters by kind,
+what you have spent, your library, your documents, the recent activity and the jobs running now.
+A band is what the centre stacks; what the rails hold is not one. The **Customise this section**
+menu therefore does not reach them.
 
-### The four bands that look beyond your project
+### Explore, the endless feed
 
-**Explore** is the only one that is not about your account: it is the feed of what **everyone**
-has published, one category at a time — the studio's six kinds, as tabs. There is no "all" tab: a
-grid mixing sounds and pictures is a grid of grey rectangles, and the API cannot order them
-against each other anyway.
+**Explore** is the only surface of the home that is not about your account: it is the feed of what
+**everyone** has published, one category at a time — the studio's six kinds, as tabs. There is no
+"all" tab: a grid mixing sounds and pictures is a grid of grey rectangles, and the API cannot
+order them against each other anyway.
 
 - **it loads as you go down**: the feed pages while you scroll, and it has no end;
 - **it stays at the foot of the page, and does not move.** Ordering the bands is a preference;
@@ -70,27 +66,8 @@ against each other anyway.
 - **the tiles do nothing.** They belong to someone else, and the studio has no way to fetch one
   into your project — a button that can only refuse is worth less than no button.
 
-**In the same vein** starts from your **latest asset** — not from a choice, there is nothing to
-select — and looks for public creations that resemble it. The reference itself is removed from the
-results, where it would otherwise come first.
-
-**If the library does not answer, this band does not vanish**: it says so, and offers **Try
-again**. It is the only one that tells a refusal apart from an account with nothing alike — both
-used to arrive as an empty shelf, and only the first is worth offering another go.
-
-**An idea to start from** is the only band that calls nothing until you ask: it has a **Suggest an
-idea** button. That is deliberate — a home screen firing a round trip at every launch would spend
-the account's rate limit on a band nobody looked at. **It is free**: no creative unit is spent.
-Taking an idea opens the generator on the prompt **and** on the settings that go with it. With no
-image model chosen the band does not appear: the suggestion is written for a model, and without
-one it would propose into the void.
-
-**What you have spent** uses the same period as the consumption window, so the two can never
-disagree. It is a summary, not the window: the detail is under **Help ▸ Consumption…**.
-
-**Your recipes need nothing**, and that is deliberate: a recipe is kept outside every project and
-follows you from one to the next. It is the one band with something left to show when no folder
-is open.
+It is also the only band the menu can still hide: the banner is pinned, and a line at the foot of
+the page brings it back.
 
 ### Clicking a tile opens it
 
@@ -119,41 +96,80 @@ standing under a rail icon cannot — the icon would open onto nothing.
 
 ### Tidying the page
 
-Every band has its menu — **Customise this section**.
+A band has its menu — **Customise this section** — when that menu has something to offer.
 
 | Entry | Effect |
 |---|---|
 | **Move up** / **Move down** | changes the order, which is remembered |
 | **Hide this section** | takes it off the page |
-| **Show _n_ items** | from 3 to 48 |
 
-Hidden sections are counted at the foot of the page — "2 sections hidden" — with a **Show them
+Hidden sections are counted at the foot of the page — "1 section hidden" — with a **Show them
 again** button. Nothing disappears without leaving a trace.
 
-**Two bands cannot be hidden**: the banner and Tools. That is what keeps the home from ever being
-a blank page, whatever you untick — and neither of them needs an API key, without which the
-guarantee would not hold on a studio that is not connected.
+**Today only Explore carries that menu.** The banner is pinned — which is what keeps the home from
+ever being a blank page, whatever you untick, and it needs no API key — and it opens the page, so
+it does not move either: its menu could only ever refuse, and a glyph opening onto nothing but
+greyed-out rows is not drawn at all.
+
+**The item count went with the bands that carried one.** A panel's shelf reads a page of its own,
+and a column has no bar to put such a row on.
 
 ### The left column
 
-A narrow rail holding **Your projects**: the ones you opened recently, reopened with a click.
-That is the place the workspaces give the Explorer — here, what you keep an eye on while reading
-the page is the list of projects, not the contents of one. The open project's documents are
-listed in the right column, which has panels of its own.
+Cut in two, like every workspace's own, and for the same reason: above, what one produces with;
+below, what one browses.
+
+| Panel | Half | What it shows | It needs |
+|---|---|---|---|
+| **Tools** | 1st | the seven workspaces, and the project gestures | nothing |
+| **Your projects** | 2nd | the ones you opened recently, reopened with a click | nothing |
+| **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
+| **Your recipes** | 2nd | the settings you have pinned | nothing |
+| **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
+
+**The upper half is the one every workspace keeps for generation**, and the home generates
+nothing: it gives it to what the studio knows how to start. **Tools** is the one panel with
+something to say on a machine with no key, no project and no history.
+
+**Your recipes need nothing**, and that is deliberate: a recipe is kept outside every project and
+follows you from one to the next.
+
+**An idea to start from** calls nothing until you ask: it has a **Suggest an idea** button. That
+is deliberate — a home screen firing a round trip at every launch would spend the account's rate
+limit on a panel nobody looked at. **It is free**: no creative unit is spent. Taking an idea opens
+the generator on the prompt **and** on the settings that go with it. With no image model chosen
+the panel says what it is waiting for: the suggestion is written for a model, and without one it
+would propose into the void.
+
+**In the same vein** starts from your **latest asset** — not from a choice, there is nothing to
+select — and looks for public creations that resemble it. The reference, named at the head of the
+panel, is removed from the results where it would otherwise come first. If the library does not
+answer, the panel says so **in its own words** and offers **Try again**: it is the only one on the
+home that tells a refusal apart from an account with nothing alike.
+
+The open project's documents are listed in the right column, which has panels of its own.
 
 ### The right column
 
-Four panels in the upper half, one in the lower, and they read in that order: from what this
-project has just made to what there is inside it to open, by way of what your account holds
-outside it.
+Five panels in the upper half, two in the lower, and they read in that order: from what this
+project has just made to what there is inside it to open, by way of what it cost and of what your
+account holds outside it.
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
 | **What you have made** | 1st | this project's generations, the most recent first | an open project |
 | **By kind** | 1st | one number per asset kind; a kind that is not at zero leads to its part of the shelf | nothing |
+| **What you have spent** | 1st | your units spent, in total and per model | an API key |
 | **Your library** | 1st | what your account holds online | an API key |
 | **Your documents** | 1st | the project's documents, open or not | an open project |
 | **Recent activity** | 2nd | the studio's journal, with filters | nothing |
+| **Running now** | 2nd | the studio's generations, under way and finished | nothing |
+
+**What you have spent** uses the same period as the consumption window, so the two can never
+disagree. It is a summary, not the window: the detail is under **Help ▸ Consumption…**.
+
+**Running now** is the list the status bar's indicator already opens — the same one, somewhere
+else. It keeps finished generations for the session, so that what a run cost can be read there.
 
 **"It needs" does not mean here what it means for the bands.** A band missing what it needs
 disappears; **a panel stays**, and says what it lacks — its icon is in the rail, and an icon
@@ -373,7 +389,7 @@ Both keys **remap like any other**, under the *In the workspace bar* context of 
 **Home does not move**: it is not one workspace among the others, it covers them all, and it
 stays at the head.
 
-**The order follows everywhere.** The home screen's **Tools** band shows the same workspaces:
+**The order follows everywhere.** The home screen's **Tools** panel shows the same workspaces:
 reordering one without the other would leave two truths on the same screen. It is kept from one
 session to the next, along with your settings.
 
@@ -430,9 +446,9 @@ From top to bottom:
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace |
+| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; the home puts **Tools** there |
 | *separator* | |
-| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there |
+| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there, then its three shelves |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 **One separator per cut of the column, never one more.** The rail is the column's legend: it cuts
@@ -546,11 +562,12 @@ instead.
 > **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
 > workspace is a place that opens documents of a kind of its own; the home opens none — it opens
 > the others'. **The home has panels of its own, and this table does not list them**: it has two
-> columns of its own, holding six panels that exist nowhere else. On the left it puts **Your
+> columns of its own, holding twelve panels that exist nowhere else. On the left it puts **Your
 > projects** where the workspaces put the Explorer: the lower half. The logic is the same but for
 > one word — a workspace files what
 > you produce **with**, the home what you produce **in**, and that is the first thing anyone comes
-> to this screen for. With no generation to sit above it, the panel fills the whole column there.
+> to this screen for. With no generation to sit above it, the upper half goes to **Tools**: what
+> the studio knows how to start, in place of what it generates with.
 
 **The left column belongs to what produces**, and it is cut in two.
 

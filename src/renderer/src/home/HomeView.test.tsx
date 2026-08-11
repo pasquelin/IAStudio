@@ -52,23 +52,22 @@ describe('the home', () => {
   it('says something on a studio with no key, no project and no history', () => {
     render(<HomeView />)
 
-    // The one thing left to do, and the six ways in — never a blank page. Creating a project is
-    // not among them: the rail's + and the tools band already offer it, three times over.
+    // The one thing left to do — never a blank page. The ways in are the rails' now, and the
+    // spotlight is what the centre still opens on.
     expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
-    expect(screen.getByText('Outils')).toBeInTheDocument()
   })
 
   it('still fills the page when the user hid everything they are allowed to', () => {
     setSettings(DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: false })))
     render(<HomeView />)
 
-    expect(screen.getByText('Outils')).toBeInTheDocument()
+    expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
   })
 
   it('drops what needs a key rather than drawing it empty', () => {
     render(<HomeView />)
 
-    expect(screen.queryByText('En cours')).not.toBeInTheDocument()
+    expect(screen.queryByText('Explorer')).not.toBeInTheDocument()
   })
 
   it('points back at what was open, which is the one thing it still lists itself', () => {
@@ -98,11 +97,12 @@ describe('the home', () => {
   })
 
   /**
-   * Six bands became panels on 10 August: the shell stands them in the home's two columns, under
-   * rail icons like every other panel. Drawn here too, each would be the same store read twice on
-   * one screen, with two behaviours to keep in step — which is what they were.
+   * Twelve bands became panels — six on 10 August, six on 11: the shell stands them in the home's
+   * two columns, under rail icons like every other panel. Drawn here too, each would be the same
+   * store read twice on one screen, with two behaviours to keep in step — which is what they were.
    */
   it('draws none of the bands that became panels: the shell places those', () => {
+    setSettings(DEFAULT_HOME_SECTIONS, true)
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />)
@@ -115,6 +115,12 @@ describe('the home', () => {
       'Vos documents',
       'Activité récente',
       'Explorateur',
+      'Outils',
+      'Une idée pour commencer',
+      'Vos recettes',
+      'Dans la même veine',
+      'Ce que vous avez consommé',
+      'En cours',
     ]) {
       expect(screen.queryByText(title)).not.toBeInTheDocument()
     }
@@ -137,7 +143,7 @@ describe('the home', () => {
 
     useSettings.setState({ loaded: true })
     rerender(<HomeView />)
-    expect(screen.getByText('Outils')).toBeInTheDocument()
+    expect(screen.getByText('Connecter une clé API')).toBeInTheDocument()
   })
 
   it('ends on a way forward rather than on the last shelf', () => {
@@ -149,12 +155,12 @@ describe('the home', () => {
 
 describe('customising the home', () => {
   /**
-   * Every titled band carries the menu, pinned ones included: reordering is what all of them
-   * can do, and only hiding is refused. The spotlight is the exception and stays one — it is
-   * the page's opening banner, it has no heading to hang a menu from, and being moved out of
-   * first place is not something an opening banner does.
+   * A titled band carries the menu when the menu has something to offer. The spotlight has no
+   * heading to hang one from — it is the page's opening banner — and the feed, which cannot be
+   * moved either, keeps its own because it can still be hidden.
    */
-  it('carries a menu on every titled band', () => {
+  it('carries a menu on every titled band that can still act', () => {
+    setSettings(DEFAULT_HOME_SECTIONS, true)
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     const { container } = render(<HomeView />)
@@ -169,21 +175,20 @@ describe('customising the home', () => {
   })
 
   it('says how many sections are hidden, and takes them back', async () => {
-    // Every band but one shown, rather than the defaults: the count is what is under test, and a
-    // section hidden on a fresh install would make it read two.
     setSettings(
-      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'usage' })),
+      DEFAULT_HOME_SECTIONS.map(section => ({ ...section, visible: section.id !== 'explore' })),
+      true,
     )
     useProject.setState({ project: PROJECT, known: true })
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     render(<HomeView />)
 
-    expect(screen.queryByText('Ce que vous avez consommé')).not.toBeInTheDocument()
+    expect(screen.queryByText('Explorer')).not.toBeInTheDocument()
     expect(screen.getByText('1 section masquée')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Les réafficher' }))
 
     const written = useSettings.getState().settings.home.sections
-    expect(written.find(section => section.id === 'usage')?.visible).toBe(true)
+    expect(written.find(section => section.id === 'explore')?.visible).toBe(true)
   })
 })

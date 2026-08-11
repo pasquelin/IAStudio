@@ -123,7 +123,7 @@ first row. There is nothing to do to step in.
 either, and stopping on one would make the walk look stuck.
 
 **A ticked row says what its tick means.** Some are alternatives — a tool's mode, the active
-account, the size of a home band: ticking one unticks the rest. Others answer for themselves,
+account, the view of one quarter of the 3D space: ticking one unticks the rest. Others answer for themselves,
 like a layer's two padlocks. A screen reader announces the first kind as radio buttons and the
 second as checkboxes.
 

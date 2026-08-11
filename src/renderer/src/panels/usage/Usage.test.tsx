@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UsageReport } from '@shared/domain/usage'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
-import { expectSilent, settleHome } from '../home-fixtures'
+import { settleHome } from '@/home/home-fixtures'
 import { Usage } from './Usage'
 
 function report(overrides: Partial<UsageReport> = {}): UsageReport {
@@ -42,7 +42,7 @@ beforeEach(() => {
   useSettings.setState({ auth: { authenticated: true, ownerId: 'team_1' } })
 })
 
-describe('the usage band', () => {
+describe('the usage panel', () => {
   it('says what went, over the period the usage window itself opens on', async () => {
     // The two must not disagree: a home saying one figure and the window another is worse than
     // the home saying nothing.
@@ -61,12 +61,17 @@ describe('the usage band', () => {
     expect(screen.getByText('Seedream')).toBeInTheDocument()
   })
 
-  it('draws nothing at all before the report has landed', () => {
-    // An initial state is not an answer, and "0 units" is a claim this band has not verified.
+  /**
+   * As a band it read when it was scrolled to and drew nothing until then. A panel is mounted
+   * only once its half shows it, so there is nothing left to defer — and drawing nothing is not
+   * open to it either: it says there is nothing yet, which covers both a read in flight and a
+   * key that spent nothing.
+   */
+  it('says there is nothing to read yet rather than drawing nothing', () => {
     install(report())
-    const { container } = render(<Usage />)
+    render(<Usage />)
 
-    expectSilent(container)
+    expect(screen.getByText(/Rien de consommé sur la période/)).toBeInTheDocument()
   })
 
   /**

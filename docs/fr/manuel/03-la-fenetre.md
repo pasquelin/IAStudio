@@ -28,42 +28,38 @@ Elle ne dit qu’une chose à la fois, celle qui compte à cet instant.
 | **Tout est prêt** | aucune des lignes ci-dessus ne s’applique, et le studio sait déjà à quoi s’en tenir |
 
 **Il n’y a pas de carte « Démarrer un projet », et c’est délibéré** : créer un projet se demande
-déjà depuis le `+` du rail, la bande des outils, la liste des projets, l’écran qui s’affiche sans
+déjà depuis le `+` du rail, le panneau Outils, la liste des projets, l’écran qui s’affiche sans
 projet et le menu. Une bannière en haut de page l’aurait dit une fois de plus.
 
 **Elle attend de savoir avant de conclure.** Lire les projets et les documents prend un instant, et
 tant que la réponse n’est pas là, « rien n’est vrai » et « rien n’est encore su » se ressemblent :
 la bannière reste muette au lieu d’annoncer « Tout est prêt » puis de se corriger.
 
-### Les bandes
+### Les deux bandes
 
-Sous la bannière, une bande par sujet, dans cet ordre :
+Sous la bannière, le centre n’empile plus que deux sujets, et ce sont les deux qui ont besoin de
+la largeur :
 
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
-| **Outils** | les sept espaces, et les gestes de projet | rien |
-| **Vos recettes** | les réglages que vous avez épinglés | rien |
-| **En cours** | les générations en route | une clé API |
-| **Dans la même veine** | des créations publiques qui ressemblent à votre dernier asset | une clé API |
-| **Une idée pour commencer** | des départs de prompt écrits pour votre modèle d’image | une clé API |
-| **Ce que vous avez consommé** | vos unités dépensées, en tout et par modèle | une clé API |
+| **Où vous en étiez** | la bannière elle-même : reprendre, connecter, ou créer | rien |
 | **Explorer** | ce que tout le monde a publié, par type | une clé API |
 
 **Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
 **Explorer** n’existe pas sur cet écran.
 
-**Six contenus de l’accueil ne sont pas des bandes**, et c’est ce qui explique qu’ils ne se
-rangent pas comme elles : vos projets, ce que vous avez produit, les compteurs par type, votre
-bibliothèque, vos documents et l’activité récente sont des **panneaux**, logés dans les deux
-colonnes de l’accueil. Une bande est ce que le centre empile ; ce que portent les rails n’en est
-pas une. Le menu **Personnaliser cette section** ne les concerne donc pas.
+**Tout le reste de l’accueil est un panneau**, logé dans les deux colonnes : vos projets, les
+outils, les recettes, une idée pour commencer, dans la même veine, ce que vous avez produit, les
+compteurs par type, ce que vous avez consommé, votre bibliothèque, vos documents, l’activité
+récente et les tâches en cours. Une bande est ce que le centre empile ; ce que portent les rails
+n’en est pas une. Le menu **Personnaliser cette section** ne les concerne donc pas.
 
-### Les quatre bandes qui regardent au-delà de votre projet
+### Explorer, le fil sans fin
 
-**Explorer** est la seule qui ne parle pas de votre compte : c’est le fil de ce que **tout le
-monde** a publié, une catégorie à la fois — les six types du studio, en onglets. Pas d’onglet
-« tout » : une grille qui mêle des sons et des images est une grille de rectangles gris, et
-l’API ne sait de toute façon pas les ordonner les uns contre les autres.
+**Explorer** est la seule surface de l’accueil qui ne parle pas de votre compte : c’est le fil de
+ce que **tout le monde** a publié, une catégorie à la fois — les six types du studio, en onglets.
+Pas d’onglet « tout » : une grille qui mêle des sons et des images est une grille de rectangles
+gris, et l’API ne sait de toute façon pas les ordonner les uns contre les autres.
 
 - **elle se charge en descendant** : le fil pagine tant que vous scrollez, il n’a pas de fin ;
 - **elle reste en bas de page, et ne se déplace pas.** Ranger les bandes est une préférence ;
@@ -71,30 +67,8 @@ l’API ne sait de toute façon pas les ordonner les uns contre les autres.
 - **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre, et le studio n’a aucun
   moyen d’en rapatrier une — un bouton qui peut refuser vaut moins que pas de bouton.
 
-**Dans la même veine** part de votre **dernier asset** — pas d’un choix, il n’y a rien à
-sélectionner — et cherche des créations publiques qui lui ressemblent. La référence elle-même est
-retirée des résultats, où elle arriverait en tête.
-
-**Si la bibliothèque ne répond pas, cette bande ne s’efface pas** : elle le dit, et propose
-**Réessayer**. C’est la seule du lot à faire la différence entre un refus et un compte qui n’a
-rien de ressemblant — les deux arrivaient jusqu’ici comme une étagère vide, et seul le premier
-vaut qu’on repropose d’essayer.
-
-**Une idée pour commencer** est la seule bande qui n’appelle rien tant que vous ne le demandez
-pas : elle a un bouton **Proposez-moi une idée**. C’est délibéré — un accueil qui déclencherait un
-aller-retour à chaque lancement dépenserait la limite de débit du compte pour une bande que
-personne n’a regardée. **C’est gratuit** : aucune unité créative n’est consommée. Prendre une idée
-ouvre le générateur sur le prompt **et** sur les réglages qui vont avec. Sans modèle d’image
-choisi, la bande ne s’affiche pas : la proposition est écrite pour un modèle, et sans lui elle
-proposerait dans le vide.
-
-**Ce que vous avez consommé** reprend la période de la fenêtre de consommation, pour que les deux
-ne se contredisent jamais. C’est un résumé, pas la fenêtre : le détail est dans
-**Aide ▸ Consommation…**.
-
-**Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des
-projets, elle vous suit d’un projet à l’autre. C’est la seule bande qui ait encore quelque chose
-à montrer quand aucun dossier n’est ouvert.
+C’est aussi la seule bande que le menu puisse encore masquer : la bannière est épinglée, et une
+ligne en bas de page la rétablit.
 
 ### Cliquer une vignette l’ouvre
 
@@ -124,42 +98,83 @@ de la page ; un panneau posé sous une icône de rail, non — sinon l’icône 
 
 ### Ranger la page
 
-Chaque bande a son menu — **Personnaliser cette section**.
+Une bande a son menu — **Personnaliser cette section** — quand ce menu a quelque chose à offrir.
 
 | Entrée | Effet |
 |---|---|
 | **Monter** / **Descendre** | change l’ordre, qui est retenu |
 | **Masquer cette section** | la retire de la page |
-| **Afficher _n_ éléments** | de 3 à 48 |
 
-Les sections masquées sont comptées en bas de page — « 2 sections masquées » — avec un bouton
+Les sections masquées sont comptées en bas de page — « 1 section masquée » — avec un bouton
 **Les réafficher**. Rien ne disparaît sans laisser de trace.
 
-**Deux bandes ne se masquent pas** : la bannière et les Outils. C’est ce qui garantit que
-l’accueil n’est jamais une page blanche, quoi qu’on décoche — et ni l’une ni l’autre ne réclame
-de clé API, sans quoi la garantie ne tiendrait pas sur un studio non connecté.
+**Aujourd’hui, seul Explorer porte ce menu.** La bannière est épinglée — c’est ce qui garantit que
+l’accueil n’est jamais une page blanche, quoi qu’on décoche, et elle ne réclame aucune clé API —
+et elle ouvre la page, donc elle ne se déplace pas non plus : son menu ne pourrait que refuser, et
+un glyphe qui n’ouvre que sur des lignes grisées ne s’affiche pas.
+
+**Le réglage du nombre d’éléments a disparu avec les bandes qui le portaient.** Une étagère de
+panneau lit sa propre page ; une colonne n’a pas de barre où poser une telle ligne.
 
 ### La colonne de gauche
 
-Un rail étroit portant **Vos projets** : ceux que vous avez ouverts récemment, à rouvrir d’un
-clic. C’est la place que les espaces de travail donnent à l’Explorateur — ici, ce qu’on garde à
-l’œil pendant qu’on lit la page, c’est la liste des projets, pas le contenu de l’un d’eux. Les
-documents du projet ouvert, eux, sont listés dans la colonne de droite, qui a ses panneaux à
+Coupée en deux, comme celle de tous les espaces, et pour la même raison : en haut ce avec quoi on
+produit, en bas ce qu’on parcourt.
+
+| Panneau | Moitié | Ce qu’il montre | Il faut |
+|---|---|---|---|
+| **Outils** | 1re | les sept espaces, et les gestes de projet | rien |
+| **Vos projets** | 2de | ceux que vous avez ouverts récemment, à rouvrir d’un clic | rien |
+| **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
+| **Vos recettes** | 2de | les réglages que vous avez épinglés | rien |
+| **Dans la même veine** | 2de | des créations publiques qui ressemblent à votre dernier asset | une clé API |
+
+**La moitié haute est celle que les espaces réservent à la génération**, et l’accueil ne génère
+rien : il y met ce que le studio sait commencer. **Outils** est le seul panneau qui ait quelque
+chose à dire sur une machine sans clé, sans projet et sans historique.
+
+**Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des projets,
+elle vous suit de l’un à l’autre.
+
+**Une idée pour commencer** n’appelle rien tant que vous ne le demandez pas : elle a un bouton
+**Proposez-moi une idée**. C’est délibéré — un accueil qui déclencherait un aller-retour à chaque
+lancement dépenserait la limite de débit du compte pour un panneau que personne n’a regardé.
+**C’est gratuit** : aucune unité créative n’est consommée. Prendre une idée ouvre le générateur sur
+le prompt **et** sur les réglages qui vont avec. Sans modèle d’image choisi, le panneau dit ce
+qu’il attend : la proposition est écrite pour un modèle, et sans lui elle proposerait dans le vide.
+
+**Dans la même veine** part de votre **dernier asset** — pas d’un choix, il n’y a rien à
+sélectionner — et cherche des créations publiques qui lui ressemblent. La référence, nommée en tête
+du panneau, est retirée des résultats où elle arriverait première. Si la bibliothèque ne répond
+pas, le panneau le dit **dans ses propres mots** et propose **Réessayer** : c’est le seul de
+l’accueil à faire la différence entre un refus et un compte qui n’a rien de ressemblant.
+
+Les documents du projet ouvert, eux, sont listés dans la colonne de droite, qui a ses panneaux à
 elle.
 
 ### La colonne de droite
 
-Quatre panneaux en moitié haute, un en moitié basse, et ils se lisent dans cet ordre : de ce que
-ce projet vient de produire à ce qu’il y a dedans à ouvrir, en passant par ce que votre compte
-détient en dehors de lui.
+Cinq panneaux en moitié haute, deux en moitié basse, et ils se lisent dans cet ordre : de ce que
+ce projet vient de produire à ce qu’il y a dedans à ouvrir, en passant par ce qu’il a coûté et par
+ce que votre compte détient en dehors de lui.
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
 | **Ce que vous avez produit** | 1re | les générations de ce projet, la plus récente d’abord | un projet ouvert |
 | **Par type** | 1re | un nombre par type d’asset ; un type qui n’est pas à zéro mène à sa part de l’étagère | rien |
+| **Ce que vous avez consommé** | 1re | vos unités dépensées, en tout et par modèle | une clé API |
 | **Votre bibliothèque** | 1re | ce que votre compte détient en ligne | une clé API |
 | **Vos documents** | 1re | les documents du projet, ouverts ou non | un projet ouvert |
 | **Activité récente** | 2de | le journal du studio, filtrable | rien |
+| **En cours** | 2de | les générations du studio, en route et terminées | rien |
+
+**Ce que vous avez consommé** reprend la période de la fenêtre de consommation, pour que les deux
+ne se contredisent jamais. C’est un résumé, pas la fenêtre : le détail est dans
+**Aide ▸ Consommation…**.
+
+**En cours** est la liste que le voyant de la barre d’état ouvre déjà — la même, à un autre
+endroit. Elle garde les générations terminées le temps de la session, pour qu’on puisse y lire ce
+qu’une exécution a coûté.
 
 **« Il faut » ne veut pas dire la même chose ici que pour les bandes.** Une bande à qui il manque
 quelque chose disparaît ; **un panneau reste**, et dit ce qui lui manque — son icône est dans le
@@ -389,7 +404,7 @@ de l’[écran des raccourcis](15-raccourcis.md).
 **L’Accueil ne bouge pas** : il n’est pas un espace parmi les autres, il les couvre tous, et il
 reste en tête.
 
-**L’ordre suit partout.** La bande **Outils** de l’accueil montre les mêmes espaces : réordonner
+**L’ordre suit partout.** Le panneau **Outils** de l’accueil montre les mêmes espaces : réordonner
 l’un sans l’autre laisserait deux vérités sur le même écran. Il est retenu d’une session à
 l’autre, avec vos réglages.
 
@@ -447,9 +462,9 @@ De haut en bas :
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
 | *séparateur* | |
-| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces |
+| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; l’accueil y met **Outils** |
 | *séparateur* | |
-| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets** |
+| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets**, puis ses trois étagères |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
 
 **Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la
@@ -566,11 +581,12 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 > **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
 > espace est un endroit qui ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun —
 > il ouvre ceux des autres. **L’accueil a ses propres panneaux, et ce tableau ne les liste pas** :
-> il a ses deux colonnes à lui, avec six panneaux qui n’existent nulle part ailleurs. À gauche il
+> il a ses deux colonnes à lui, avec douze panneaux qui n’existent nulle part ailleurs. À gauche il
 > met **Vos projets**, à la place où les espaces mettent l’Explorateur : en moitié basse. La
 > logique est la même à un mot près — un espace y range ce **avec** quoi on produit, l’accueil ce
-> **dans** quoi on produit, et c’est la première chose qu’on vient y chercher. N’ayant pas de génération à mettre au-dessus, le panneau
-> occupe toute la colonne.
+> **dans** quoi on produit, et c’est la première chose qu’on vient y chercher. N’ayant pas de
+> génération à mettre au-dessus, il donne la moitié haute à **Outils** : ce que le studio sait
+> commencer, à défaut de ce avec quoi il génère.
 
 **La colonne de gauche est celle de ce qui produit**, et elle est coupée en deux.
 

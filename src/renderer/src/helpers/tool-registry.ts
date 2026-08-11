@@ -1,7 +1,9 @@
 import {
   mdiApplicationBracesOutline,
   mdiCloudOutline,
+  mdiCompareHorizontal,
   mdiCreationOutline,
+  mdiCurrencyUsd,
   mdiChartBoxOutline,
   mdiCubeScan,
   mdiFileDocumentMultipleOutline,
@@ -12,8 +14,12 @@ import {
   mdiHistory,
   mdiImageMultipleOutline,
   mdiLayersOutline,
+  mdiLightbulbOnOutline,
   mdiPaletteSwatchOutline,
+  mdiPinOutline,
+  mdiProgressClock,
   mdiShimmer,
+  mdiToolboxOutline,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
@@ -70,6 +76,18 @@ const ICONS: Record<ToolId, string> = {
   // The glyph the status bar already puts on the journal (`app/ActivityList.tsx`), which is the
   // same list: two ways into one thing must not wear two icons.
   activity: mdiHistory,
+  // The last six bands of the home, and their glyphs are chosen against the rail they land in
+  // rather than against each other: `spark` may not take the generator's, nor `favorites` the
+  // shelf's, since a rail where two glyphs mean two things is a rail one reads twice.
+  tools: mdiToolboxOutline,
+  spark: mdiLightbulbOnOutline,
+  favorites: mdiPinOutline,
+  similar: mdiCompareHorizontal,
+  usage: mdiCurrencyUsd,
+  // The same glyph the status bar's own flyout wears on this list (`panels/jobs/Jobs.tsx`),
+  // which is the same list: it is spelled out there rather than read from here, so that the
+  // first screen's chunk does not pull this table in behind it.
+  jobs: mdiProgressClock,
 }
 
 /**
