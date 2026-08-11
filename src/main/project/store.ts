@@ -152,15 +152,14 @@ async function readManifest(path: string): Promise<ManifestSource> {
 
 /**
  * Copies a legacy manifest under the hidden name, so the parc converges on its own rather than
- * on the next release. Called only once the body has been understood: the dotted file wins every
- * later open, so promoting one this build could not parse would bury the healthy copy beside it.
+ * on the next release. Called only once the body has been understood, and atomic: the dotted
+ * file wins every later open, whatever it holds, so a body this build could not parse — or one
+ * torn in half by a write — buries the healthy copy beside it.
  *
  * The old file is left where it is rather than deleted — a folder the user may be syncing is
  * not ours to tidy, and an older build of the studio still reads it.
  */
-async function migrateManifest(path: string, body: string): Promise<void> {
-  // Atomic like every other manifest write: a promotion torn in half would be the very burial
-  // this function exists to prevent, since the dotted file wins whatever it contains.
+async function promoteManifest(path: string, body: string): Promise<void> {
   await writeAtomic(join(path, MANIFEST_FILE), body).catch(() => undefined)
   await hideFromExplorer(join(path, MANIFEST_FILE))
 }
@@ -204,7 +203,7 @@ async function loadManifest(path: string): Promise<Manifest> {
     throw new ProjectOpenError('unreadable', error)
   }
 
-  if (source.legacy) await migrateManifest(path, source.body)
+  if (source.legacy) await promoteManifest(path, source.body)
 
   return manifest
 }
