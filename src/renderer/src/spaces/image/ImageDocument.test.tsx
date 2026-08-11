@@ -24,6 +24,7 @@ const setBrush = vi.fn()
 const applyCrop = vi.fn()
 const dropCrop = vi.fn()
 const mergeInto = vi.fn()
+const setLanguage = vi.fn()
 
 // jsdom has no WebGL context: the engine is exercised by hand, not here. What this covers is
 // that the document wires the bar to the right calls.
@@ -37,7 +38,7 @@ vi.mock('@/engines/canvas/CanvasEngine', () => {
       apply = vi.fn()
       dispose = vi.fn()
       setView = vi.fn()
-      setLanguage = vi.fn()
+      setLanguage = setLanguage
       setTool = setTool
       setBrush = setBrush
       loadInto = vi.fn(() => Promise.resolve())
@@ -59,6 +60,18 @@ describe('ImageDocument', () => {
     vi.clearAllMocks()
     useLayouts.setState({ activeWorkspace: 'image', home: false })
     useCanvases.setState({ states: {}, histories: {} })
+  })
+
+  /**
+   * The rulers are graduated by the engine, which has no way to ask what language the window is
+   * in — it is pushed, like the view. Left unpushed, the graduations keep the language they were
+   * mounted in while the inspector beside them changes, and that is a defect this very lot
+   * shipped once before the review caught it.
+   */
+  it('hands the engine the language its graduations are written in', () => {
+    render(<ImageDocument documentId="doc-1" />)
+
+    expect(setLanguage).toHaveBeenCalledWith('fr')
   })
 
   it('renders the shared toolbar with the image tools', () => {
