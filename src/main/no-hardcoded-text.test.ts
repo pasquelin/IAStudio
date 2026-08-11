@@ -57,6 +57,28 @@ function sourceFiles(directory: string, into: string[] = []): string[] {
  * could not be shared with an English studio — and a store carries one as its storage id.
  * `message` is absent for the same kind of reason: it names a worker's failure, never a screen.
  */
+/**
+ * One parse per file, however many guards read it. Two of them walk the same trees, and parsing
+ * 706 files twice took this file past the 15 s timeout the moment the machine was busy — 2.5 s
+ * when idle, and nothing in the result changed.
+ */
+const parsedByPath = new Map<string, ts.SourceFile>()
+
+function parsedFile(absolute: string, shown: string): ts.SourceFile {
+  const cached = parsedByPath.get(absolute)
+  if (cached !== undefined) return cached
+
+  const source = ts.createSourceFile(
+    shown,
+    readFileSync(absolute, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindOf(shown),
+  )
+  parsedByPath.set(absolute, source)
+  return source
+}
+
 const REGISTRY_FIELDS = new Set([
   'buttonLabel',
   'caption',
@@ -86,7 +108,11 @@ function isWords(text: string): boolean {
 }
 
 function registryFindingsIn(path: string, code: string): string[] {
-  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
+  return registryFindingsFrom(ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true))
+}
+
+function registryFindingsFrom(source: ts.SourceFile): string[] {
+  const path = source.fileName
   const findings: string[] = []
 
   const visit = (node: ts.Node): void => {
@@ -247,18 +273,29 @@ describe('the main process', () => {
  * It runs from here, of all places, because it reads the tree off the disk: `src/shared` is
  * compiled for the web as well, where `node:fs` has no types and no business being imported.
  */
+/**
+ * Reading and parsing every file of the project is not a unit test's usual budget: 2.5 s idle,
+ * and past the shared 15 s the moment a dozen other suites share the machine. Written here rather
+ * than raised for everyone — the rest of the file has no business taking this long.
+ */
+const WHOLE_PROJECT = 60_000
+
 describe('the registries', () => {
   const trees = ['renderer', 'shared', 'preload'].map(tree => join(MAIN, '..', tree))
 
-  it('name their words rather than writing them', () => {
-    const findings = trees.flatMap(tree =>
-      sourceFiles(tree).flatMap(path =>
-        registryFindingsIn(relative(join(MAIN, '..'), path), readFileSync(path, 'utf8')),
-      ),
-    )
+  it(
+    'name their words rather than writing them',
+    () => {
+      const findings = trees.flatMap(tree =>
+        sourceFiles(tree).flatMap(path =>
+          registryFindingsFrom(parsedFile(path, relative(join(MAIN, '..'), path))),
+        ),
+      )
 
-    expect(findings).toEqual([])
-  })
+      expect(findings).toEqual([])
+    },
+    WHOLE_PROJECT,
+  )
 
   // The check above read no `.tsx` at all until now, so a registry written beside the component
   // that renders it was invisible to all three guards — the renderer's own check only walks JSX,
@@ -365,7 +402,13 @@ function scriptKindOf(path: string): ts.ScriptKind {
 }
 
 function boundSentencesIn(path: string, code: string): string[] {
-  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, scriptKindOf(path))
+  return boundSentencesFrom(
+    ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, scriptKindOf(path)),
+  )
+}
+
+function boundSentencesFrom(source: ts.SourceFile): string[] {
+  const path = source.fileName
   const findings: string[] = []
 
   const visit = (node: ts.Node): void => {
@@ -408,13 +451,17 @@ describe('the words nobody puts in a tag', () => {
   const findingsOf = (): string[] =>
     [MAIN, ...trees].flatMap(tree =>
       sourceFiles(tree).flatMap(path =>
-        boundSentencesIn(relative(join(MAIN, '..'), path), readFileSync(path, 'utf8')),
+        boundSentencesFrom(parsedFile(path, relative(join(MAIN, '..'), path))),
       ),
     )
 
-  it('binds no sentence to a name anywhere in the project', () => {
-    expect(findingsOf()).toEqual([])
-  })
+  it(
+    'binds no sentence to a name anywhere in the project',
+    () => {
+      expect(findingsOf()).toEqual([])
+    },
+    WHOLE_PROJECT,
+  )
 
   // An empty result proves nothing unless the files were opened: pointed at a folder that does
   // not exist, every assertion above stays green. The four trees are counted, not assumed.
