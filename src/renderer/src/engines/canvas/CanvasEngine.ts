@@ -18,7 +18,7 @@ import { newId } from '@/helpers/ids'
 import { isTyping } from '@/helpers/typing'
 import { reportFailure } from '@/services/diagnostics'
 import { mountApplication } from '../core/mount'
-import { onPaletteChange, token } from '../core/palette'
+import { onPaletteChange, token, tokenAsFont } from '../core/palette'
 import { createAdjustFilter, type AdjustFilter } from './adjust-filter'
 import { captionSetIn, faceUrlOf, familyStack, type FaceRegistrar } from './canvas-fonts'
 import {
@@ -362,18 +362,11 @@ const FALLBACK_COLORS: OverlayColors = {
   scrim: '#00000099',
 }
 
-/** `--text-micro` at scale 1, for a canvas not yet in a document — as `FALLBACK_COLORS` is. */
-const FALLBACK_RULER_FONT = '9px system-ui, sans-serif'
+const RULER_FAMILY = 'system-ui, sans-serif'
 
-/**
- * The graduations' size follows `appearance.fontScale` like every other text; the family is the
- * overlay's own, no token names one. A shorthand missing its size is dropped whole by the
- * canvas, leaving the previous font in place — hence the fallback rather than an empty leader.
- */
-function readRulerFont(element: HTMLElement): string {
-  const size = token(element, '--text-micro')
-  return size ? `${size} system-ui, sans-serif` : FALLBACK_RULER_FONT
-}
+/** `--text-micro` at scale 1, for a canvas not yet in a document — as `FALLBACK_COLORS` is. */
+const RULER_FONT_SIZE = '9px'
+const FALLBACK_RULER_FONT = `${RULER_FONT_SIZE} ${RULER_FAMILY}`
 
 function readColors(element: HTMLElement): OverlayColors {
   const read = (part: keyof OverlayColors): string =>
@@ -1422,7 +1415,7 @@ export class CanvasEngine {
 
   private readPalette(canvas: HTMLCanvasElement): void {
     this.colors = readColors(canvas)
-    this.rulerFont = readRulerFont(canvas)
+    this.rulerFont = tokenAsFont(canvas, '--text-micro', RULER_FONT_SIZE, RULER_FAMILY)
     this.overlay.invalidate()
   }
 

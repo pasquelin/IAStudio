@@ -2,6 +2,12 @@
  * Studio tokens, read off a mounted element. The palette is declared once, in `index.css`; a hex
  * value copied into an engine would leave its viewport on the old grey the day the token changes,
  * and it would be the one surface in the application that never follows.
+ *
+ * **A token computed from another one has to be REGISTERED to be read here.** An unregistered
+ * custom property computes to its own text with variables substituted and nothing evaluated, so
+ * `--text-tiny` would answer `calc(11px * 1)` rather than `11px`. The ladder is declared
+ * `@property … syntax: '<length>'` in `index.css` for exactly this; a token added later in terms
+ * of another must be too, or its reader gets a string no canvas and no number will take.
  */
 
 /** An empty string means the token is missing — the caller decides what to fall back to. */
@@ -18,6 +24,23 @@ export function tokenAsHex(element: Element, name: string, fallback: number): nu
   if (!value.startsWith('#')) return fallback
   const parsed = Number.parseInt(value.slice(1), 16)
   return Number.isNaN(parsed) ? fallback : parsed
+}
+
+/**
+ * A canvas font shorthand whose SIZE is a token and whose family is the caller's — no token names
+ * a family for a canvas, and reading `--font-sans` would change the face a painter draws with.
+ *
+ * `fallbackSize` is the step at scale 1, for an element not yet in a document: a shorthand with
+ * no size is rejected whole by the 2D context, which then keeps the font it had, and nothing on
+ * screen says so.
+ */
+export function tokenAsFont(
+  element: Element,
+  name: string,
+  fallbackSize: string,
+  family: string,
+): string {
+  return `${token(element, name) || fallbackSize} ${family}`
 }
 
 type PaletteListener = () => void
