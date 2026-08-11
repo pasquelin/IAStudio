@@ -411,6 +411,10 @@ export type LogScope =
   | 'graph.export'
   | 'graph.publish'
   | 'graph.import'
+  // Not a document's: a render that threw and a stored layout React refused belong to the shell
+  // holding the documents, and both used to leave nothing behind in a packaged build.
+  | 'shell.render'
+  | 'shell.layout'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -440,6 +444,8 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'graph.export',
   'graph.publish',
   'graph.import',
+  'shell.render',
+  'shell.layout',
 ]
 
 /**

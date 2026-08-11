@@ -67,6 +67,21 @@ export function reportFailure(scope: LogScope, subject: string, error: unknown):
     .catch(() => {})
 }
 
+/**
+ * A render React could not finish.
+ *
+ * The blamed component stands as the subject rather than the whole stack: the message becomes a
+ * toast, and a toast is not where a stack is read. The deepest frame is the actionable line in
+ * it, and it is also what dedupes a component that throws on every re-render.
+ */
+export function reportRenderFailure(error: unknown, componentStack: string | undefined): void {
+  reportFailure('shell.render', blamedComponent(componentStack), error)
+}
+
+function blamedComponent(componentStack: string | undefined): string {
+  return componentStack?.match(/^\s*at (\S+)/m)?.[1] ?? 'an unnamed component'
+}
+
 const reported = new Set<string>()
 
 /** Lets a subject be reported again — the studio moved on, and a repeat would now be news. */

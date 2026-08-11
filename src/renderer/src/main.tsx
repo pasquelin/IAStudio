@@ -5,6 +5,7 @@ import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
 import { resolveLanguage } from '@shared/i18n'
 import { Application } from '@/app/Application'
+import { ROOT_ERROR_REPORTING } from '@/app/root-errors'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Failure } from '@/design/Failure'
 import { initI18n } from '@/i18n'
@@ -68,7 +69,7 @@ function Route({ hash }: { hash: string }) {
   return <Application />
 }
 
-createRoot(root).render(
+createRoot(root, ROOT_ERROR_REPORTING).render(
   <StrictMode>
     {/* Above the routes: the per-panel boundaries cover the docks, not the shell holding them.
         Renders only, and not this module's own evaluation — a throw there predates the

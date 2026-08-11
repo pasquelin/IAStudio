@@ -227,7 +227,8 @@
       "import": "Import",
       "library": "Bibliothèque",
       "document": "Document",
-      "project": "Projet"
+      "project": "Projet",
+      "shell": "Interface"
     },
     "projectNotAProject": "Ce dossier n’est pas un projet Scenario",
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
@@ -284,6 +285,8 @@
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
       "document.load": "Le document n’a pas pu être ouvert",
+      "shell.render": "Une partie de l’interface n’a pas pu s’afficher",
+      "shell.layout": "L’agencement enregistré d’un espace était illisible",
       "scene": {
         "render": "Rendu vidéo"
       }
