@@ -117,6 +117,58 @@
 }
 
 /*
+ * The ladder, declared as LENGTHS. Without this a painter reading `--text-tiny` off the root gets
+ * the token stream back — `calc(11px * 1)`, the literal text — because an unregistered custom
+ * property computes to its value with variables substituted and nothing else evaluated. Typed,
+ * it computes to `11px`, and to `15.4px` at scale 1.4; that is what the canvas rulers and the
+ * timeline read through `engines/core/palette.ts`.
+ *
+ * `initial-value` is the step at scale 1, so an unreadable `--sc-font-scale` falls to the size
+ * the studio shipped rather than to nothing at all. Laid-out text is unaffected: `font-size:
+ * var(--text-tiny)` resolved the same calc before.
+ */
+@property --text-micro {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 9px;
+}
+@property --text-mini {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 10px;
+}
+@property --text-tiny {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 11px;
+}
+@property --text-body {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 13px;
+}
+@property --text-xs {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 12px;
+}
+@property --text-sm {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 14px;
+}
+@property --text-base {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 16px;
+}
+@property --text-lg {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 18px;
+}
+
+/*
  * DaisyUI's own theme, fed the studio palette. Without it its components carry no colour at
  * all, and the "DaisyUI at the margins" rule — preferences, dialogs, API keys — has nothing
  * to stand on. The values repeat the tokens above on purpose: this is the token layer, the

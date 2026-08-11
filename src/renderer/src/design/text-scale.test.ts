@@ -18,6 +18,8 @@ const OFF_LADDER = /text-\[\d+px\]|\btext-(?:xl|[2-9]xl)\b/
 /** Line-height pairs are `--text-xs--line-height` and never match: the dash is not a letter. */
 const LADDER = [...stylesheet.matchAll(/--text-([a-z]+):\s*([^;]+);/g)]
 
+const REGISTERED = [...stylesheet.matchAll(/@property --text-([a-z]+)\s*\{([^}]+)\}/g)]
+
 describe('the text ladder of the studio', () => {
   it('finds the sources at all, so the rule below cannot pass on an empty list', () => {
     expect(WRITTEN_SOURCES.length).toBeGreaterThan(100)
@@ -33,6 +35,18 @@ describe('the text ladder of the studio', () => {
     const frozen = LADDER.filter(([, , value = '']) => !value.includes('--sc-font-scale'))
 
     expect(frozen.map(([, name]) => name)).toEqual([])
+  })
+
+  /**
+   * Unregistered, a custom property computes to its own text — a painter reading `--text-tiny`
+   * would get `calc(11px * 1)` and hand the canvas a shorthand it drops whole, leaving the
+   * previous font in place. Nothing on screen would say so.
+   */
+  it('declares every step a length, so a painter reads a size and not a calc', () => {
+    const registered = REGISTERED.map(([, name]) => name)
+
+    expect(registered).toEqual(expect.arrayContaining(LADDER.map(([, name]) => name)))
+    expect(REGISTERED.filter(([, , body = '']) => !body.includes("syntax: '<length>'"))).toEqual([])
   })
 
   it('is the only way a source sizes text', () => {

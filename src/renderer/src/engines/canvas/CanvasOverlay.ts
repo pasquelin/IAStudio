@@ -168,6 +168,11 @@ export type OverlayScene = {
   pointer: Point | null
   colors: OverlayColors
   /**
+   * The graduations' font, shorthand and ready to assign. Beside the colours rather than among
+   * them: it is read the same way, off the same element, but it is not one.
+   */
+  rulerFont: string
+  /**
    * Whether anything on screen is dashed. The frame loop keeps booking frames while it is true
    * and stops the moment it is not: ants that marched on an empty canvas would be a rAF running
    * for the life of the document, which the UI thread has better uses for.
@@ -367,7 +372,7 @@ function tracePath(context: OverlayContext, viewport: Viewport, outline: readonl
  * under them rather than over — a guide crossing its own ruler reads as a broken line.
  */
 function drawRulers(context: OverlayContext, scene: OverlayScene): void {
-  const { host, viewport, colors } = scene
+  const { host, viewport, colors, rulerFont } = scene
   const step = rulerStep(viewport.scale)
   const visible = visibleRect(viewport, host)
 
@@ -379,7 +384,7 @@ function drawRulers(context: OverlayContext, scene: OverlayScene): void {
   line(context, 0, crisp(RULER_SIZE), host.width, crisp(RULER_SIZE))
   line(context, crisp(RULER_SIZE), 0, crisp(RULER_SIZE), host.height)
 
-  context.font = '9px system-ui, sans-serif'
+  context.font = rulerFont
   context.textBaseline = 'top'
   context.textAlign = 'left'
   context.fillStyle = colors.rulerText

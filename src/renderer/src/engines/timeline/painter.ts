@@ -23,8 +23,9 @@ export type Size = { width: number; height: number }
 /** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
 const POSTER_RATIO = 16 / 9
 
-const CLIP_FONT = '11px ui-sans-serif, system-ui'
-const RULER_FONT = '10px ui-monospace, monospace'
+/** Only the size follows the preference; no token names a family the canvas should paint with. */
+const CLIP_FAMILY = 'ui-sans-serif, system-ui'
+const RULER_FAMILY = 'ui-monospace, monospace'
 
 export type PaintOptions = {
   /** What a clip is called. Absent falls back to its asset id, which is always available. */
@@ -45,6 +46,8 @@ type Palette = {
   playhead: string
   text: string
   muted: string
+  clipFont: string
+  rulerFont: string
 }
 
 let cached: Palette | null = null
@@ -75,6 +78,11 @@ function computePalette(): Palette {
   const root = typeof document === 'undefined' ? null : document.documentElement
   const read = (name: string): string => (root ? token(root, name) : '') || '#000'
 
+  // The step's value at scale 1 is the fallback, so a painter with no DOM keeps the size the
+  // studio shipped rather than losing the shorthand to an empty leading token.
+  const font = (name: string, atScaleOne: string, family: string): string =>
+    `${(root ? token(root, name) : '') || atScaleOne} ${family}`
+
   return {
     ruler: read('--color-chassis'),
     track: read('--color-panel'),
@@ -85,6 +93,8 @@ function computePalette(): Palette {
     playhead: read('--color-accent'),
     text: read('--color-text'),
     muted: read('--color-muted'),
+    clipFont: font('--text-tiny', '11px', CLIP_FAMILY),
+    rulerFont: font('--text-mini', '10px', RULER_FAMILY),
   }
 }
 
@@ -118,7 +128,7 @@ function paintRuler(
 
   const step = tickStep(viewport, state)
   const [from, to] = visibleRange(viewport, size.width)
-  context.font = RULER_FONT
+  context.font = palette.rulerFont
   context.textBaseline = 'middle'
 
   for (let time = Math.floor(from / step) * step; time <= to; time += step) {
@@ -294,7 +304,7 @@ export function paintTimeline(
 
   // Hoisted out of the clip loop: assigning `font` reparses the CSS shorthand and drops the
   // context's metrics cache, and at five hundred clips a frame that is not free.
-  context.font = CLIP_FONT
+  context.font = palette.clipFont
   context.textBaseline = 'top'
 
   for (const { track, offset } of trackRows(state)) {

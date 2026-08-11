@@ -79,6 +79,7 @@ function recorder(): { context: OverlayContext; calls: Call[] } {
     },
     set font(value: string) {
       style.font = value
+      calls.push({ op: 'font', args: [value] })
     },
   }
 
@@ -125,6 +126,7 @@ function scene(overrides: Partial<OverlayScene> = {}): OverlayScene {
     activeGuideId: null,
     pointer: null,
     colors: COLORS,
+    rulerFont: '9px system-ui, sans-serif',
     marching: false,
     tools: NO_TOOL,
     ...overrides,
@@ -191,6 +193,13 @@ describe('drawOverlay', () => {
 
     expect(opsOf(calls, 'fillRect')).toEqual([])
     expect(opsOf(calls, 'fillText')).toEqual([])
+  })
+
+  it('graduates with the font it was handed, never one written here', () => {
+    const { context, calls } = recorder()
+    drawOverlay(context, scene({ showRulers: true, rulerFont: '22px system-ui, sans-serif' }))
+
+    expect(opsOf(calls, 'font').map(args => args[0])).toContain('22px system-ui, sans-serif')
   })
 
   it('graduates the top band in document units', () => {

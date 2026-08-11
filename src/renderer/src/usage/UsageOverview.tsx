@@ -38,9 +38,10 @@ export function UsageOverview({ report }: { report: UsageReport }) {
                 <XAxis
                   dataKey="date"
                   tickFormatter={date => formatDay(date, locale)}
-                  tick={{ fontSize: 10 }}
-                  // The axis is drawn by the theme, not by a colour written here.
-                  className="fill-base-content/60"
+                  // Drawn by the theme, not by a colour or a size written here: SVG text inherits
+                  // both from the axis group, so the graduations follow `appearance.fontScale`
+                  // like the rest — a number in `tick` would be an attribute, and frozen.
+                  className="fill-base-content/60 text-mini"
                   interval="preserveStartEnd"
                 />
                 <Tooltip

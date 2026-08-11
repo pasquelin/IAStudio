@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { paintTimeline } from './painter'
+import { forgetPalette, paintTimeline } from './painter'
 import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
@@ -52,8 +52,23 @@ function spyContext() {
     ),
   }
 
+  // Every assignment kept, not just the last: the painter sets one font for the ruler and
+  // another for the clips, and reading the property back would only ever show the second.
+  const fonts: string[] = []
+  Object.defineProperty(context, 'font', {
+    get: () => fonts.at(-1) ?? '',
+    set: (value: string) => void fonts.push(value),
+  })
+
   // jsdom has no usable 2D context; the painter only ever calls these members.
-  return { context: context as unknown as CanvasRenderingContext2D, rects, texts, lines, images }
+  return {
+    context: context as unknown as CanvasRenderingContext2D,
+    rects,
+    texts,
+    lines,
+    images,
+    fonts,
+  }
 }
 
 describe('timeline painter', () => {
@@ -89,6 +104,32 @@ describe('timeline painter', () => {
     })
 
     expect(texts.map(entry => entry.text)).toContain('Soft pad')
+  })
+
+  it('sizes what it paints from the ladder, so the text preference reaches the canvas', () => {
+    document.documentElement.style.setProperty('--text-tiny', '22px')
+    document.documentElement.style.setProperty('--text-mini', '20px')
+    forgetPalette()
+
+    const { context, fonts } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    expect(fonts).toContain('22px ui-sans-serif, system-ui')
+    expect(fonts).toContain('20px ui-monospace, monospace')
+
+    document.documentElement.style.removeProperty('--text-tiny')
+    document.documentElement.style.removeProperty('--text-mini')
+    forgetPalette()
+  })
+
+  it('keeps the shipped size when no token answers, rather than a shorthand with no size', () => {
+    forgetPalette()
+
+    const { context, fonts } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    expect(fonts).toContain('11px ui-sans-serif, system-ui')
+    expect(fonts).toContain('10px ui-monospace, monospace')
   })
 
   it('graduates the ruler in timecode', () => {
