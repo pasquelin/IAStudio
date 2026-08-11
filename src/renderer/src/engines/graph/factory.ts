@@ -1,5 +1,11 @@
-import type { GraphHandleInput, GraphNode, GraphPosition, GraphState } from '@shared/domain/graph'
-import { APPROVAL_PORT } from '@shared/domain/graph'
+import {
+  APPROVAL_PORT,
+  CONDITIONAL_PORT,
+  type GraphHandleInput,
+  type GraphNode,
+  type GraphPosition,
+  type GraphState,
+} from '@shared/domain/graph'
 import type { Asset, AssetType } from '@shared/domain/asset'
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { defaultValues } from '@/helpers/dynamic-form'
@@ -35,9 +41,9 @@ export const CREATABLE_NODE_TYPES: readonly CreatableNodeType[] = [
  * port draws itself from its `name`, and the field stays free for whoever fills it by hand.
  */
 const conditionalInput = (id: string) => ({
-  id: handleId(id, 'source', 'conditional'),
-  name: 'conditional',
-  type: 'conditional',
+  id: handleId(id, 'source', CONDITIONAL_PORT),
+  name: CONDITIONAL_PORT,
+  type: CONDITIONAL_PORT,
 })
 
 /**

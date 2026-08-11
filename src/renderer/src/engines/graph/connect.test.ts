@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { EMPTY_GRAPH, type GraphNode, type GraphState } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  EMPTY_GRAPH,
+  type GraphNode,
+  type GraphState,
+} from '@shared/domain/graph'
 import type { FieldDescriptor } from '@shared/domain/model'
 import { canConnect, canDropConnection, edgeOf, refuseConnection } from './connect'
 import { createModelNode, createNode } from './factory'
-import { transformNode } from './graph-fixtures'
-import { outputHandlesOf } from './handles'
+import { branchNode, transformNode } from './graph-fixtures'
+import { handleId, outputHandlesOf } from './handles'
 
 const asset = (id: string, type: string): GraphNode => ({
   id,
@@ -52,6 +57,27 @@ describe('what the canvas may connect', () => {
     const mismatched = { ...feeding, target: 'sound1', targetHandle: 'sound1-target-image' }
 
     expect(refuseConnection(graph, mismatched)).toBe('type-mismatch')
+  })
+
+  /**
+   * The gesture the branch existed without: it ran perfectly and the canvas refused every wire
+   * into its condition, because the port is typed after its own ROLE. Whatever a branch is handed
+   * is what it passes on, so nothing about the payload is its to refuse.
+   */
+  it('joins any output to the condition of a branch', () => {
+    const steered: GraphState = {
+      ...graph,
+      nodes: [...graph.nodes, branchNode('if1', [])],
+    }
+    const into = (target: string, targetHandle: string) => ({
+      source: 'if1',
+      sourceHandle: handleId('if1', 'source', CONDITIONAL_PORT),
+      target,
+      targetHandle,
+    })
+
+    expect(refuseConnection(steered, into('image1', 'image1-target-image'))).toBeNull()
+    expect(refuseConnection(steered, into('sound1', 'sound1-target-image'))).toBeNull()
   })
 
   it('joins an output to a polymorphic input that names its type', () => {

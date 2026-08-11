@@ -1,4 +1,9 @@
-import type { GraphHandleInput, GraphHandleOutput, GraphNode } from '@shared/domain/graph'
+import {
+  CONDITIONAL_PORT,
+  type GraphHandleInput,
+  type GraphHandleOutput,
+  type GraphNode,
+} from '@shared/domain/graph'
 
 /**
  * The naming Scenario's converter reads, copied rather than invented.
@@ -43,7 +48,12 @@ export const celVariableName = (nodeId: string, output: string): string => `${no
 export const edgeId = (outputHandle: string, inputHandle: string): string =>
   `${outputHandle}--TO--${inputHandle}`
 
-/** Every type an input port accepts. A list means polymorphic; nothing means it takes anything. */
+/**
+ * Every type an input port DECLARES. A list means polymorphic; nothing means it takes anything.
+ *
+ * What it declares, not what it takes: a port that steers rather than feeds declares `conditional`
+ * and takes anything all the same. `typesConnect` holds that verdict, and holds it alone.
+ */
 export function acceptedTypes(handle: GraphHandleInput): readonly string[] {
   if (handle.type === undefined) return []
   return typeof handle.type === 'string' ? [handle.type] : handle.type
@@ -63,6 +73,19 @@ export function acceptedTypes(handle: GraphHandleInput): readonly string[] {
 const ALSO_ACCEPTED: Readonly<Record<string, readonly string[]>> = { prompt: ['text'] }
 
 /**
+ * A port that steers rather than feeds, which takes anything: `conditional` names a ROLE, not a
+ * payload. A branch computes nothing — it hands on what it received to the port its condition
+ * chose — so what it carries is not its to narrow, and typing the port after itself left the node
+ * executing perfectly while the canvas refused every wire into it.
+ *
+ * `conditional` and NOTHING else: a file is free to write `['image', 'conditional']`, and a port
+ * that names a payload beside its role is narrowing after all. Not a line of `ALSO_ACCEPTED`,
+ * which pairs one accepted type with a finite list of offered ones — "anything" is not a pair.
+ */
+const steers = (accepted: readonly string[]): boolean =>
+  accepted.length === 1 && accepted[0] === CONDITIONAL_PORT
+
+/**
  * Whether an output can feed an input.
  *
  * An untyped port on either side accepts anything: the studio must not refuse a connection the
@@ -72,7 +95,7 @@ const ALSO_ACCEPTED: Readonly<Record<string, readonly string[]>> = { prompt: ['t
 export function typesConnect(output: GraphHandleOutput, input: GraphHandleInput): boolean {
   const accepted = acceptedTypes(input)
   const offered = output.type
-  if (accepted.length === 0 || offered === undefined) return true
+  if (accepted.length === 0 || offered === undefined || steers(accepted)) return true
 
   return accepted.some(type => type === offered || (ALSO_ACCEPTED[type] ?? []).includes(offered))
 }

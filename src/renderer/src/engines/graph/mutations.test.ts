@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  CONDITIONAL_PORT,
   EMPTY_GRAPH,
   isReservedNodeId,
   type GraphNode,
@@ -7,6 +8,7 @@ import {
 } from '@shared/domain/graph'
 import { textNode as text, transformNode as transform } from './graph-fixtures'
 import { edgeOf } from './connect'
+import { handleId } from './handles'
 import {
   addNode,
   connect,
@@ -232,6 +234,51 @@ describe('swapping what a node is wired by', () => {
     const next = replaceNodePorts(fed, 'imageGenerator1', withoutMask)
 
     expect(next.edges.map(edge => edge.id)).toEqual(['a'])
+  })
+
+  /**
+   * A port that STEERS survives a change of model, and that is not a hole in the cut: whatever a
+   * branch hands on, the condition port takes — so a new model has nothing to say about it. Read
+   * as a payload type, this wire was cut in silence when the user swapped a model.
+   */
+  it('keeps a wire into a port that steers rather than feeds', () => {
+    const steering = {
+      id: handleId('imageGenerator1', 'source', CONDITIONAL_PORT),
+      name: CONDITIONAL_PORT,
+      type: CONDITIONAL_PORT,
+    }
+    // Narrowed on the type: spreading `data` off the bare union loses which arm it came from.
+    const withSteering = (node: GraphNode): GraphNode =>
+      node.type === 'model'
+        ? {
+            ...node,
+            data: { ...node.data, inputHandles: [...(node.data.inputHandles ?? []), steering] },
+          }
+        : node
+
+    const steered: GraphState = {
+      ...fed,
+      nodes: fed.nodes.map(node => (node.id === 'imageGenerator1' ? withSteering(node) : node)),
+      edges: [
+        ...fed.edges,
+        {
+          id: 'c',
+          source: 'imageGenerator1',
+          sourceHandle: steering.id,
+          target: 'text1',
+          targetHandle: 'text1-target-prompt',
+        },
+      ],
+    }
+
+    const kept: Partial<GraphNode['data']> = {
+      ...withoutMask,
+      inputHandles: [...(withoutMask.inputHandles ?? []), steering],
+    }
+
+    const next = replaceNodePorts(steered, 'imageGenerator1', kept)
+
+    expect(next.edges.map(edge => edge.id)).toEqual(['a', 'c'])
   })
 
   it('keeps what the new model still answers for', () => {
