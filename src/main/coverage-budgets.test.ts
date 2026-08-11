@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import manifest from '../../package.json'
 import {
   budgetsIn,
   carried,
@@ -200,5 +201,20 @@ describe('a glob that no longer matches anything', () => {
     const config = `thresholds: { 'src/a/**': { statements: -3, branches: -1 } }`
 
     expect(unmatched(slackOf(config, covered, ROOT), covered, ROOT)).toEqual([])
+  })
+})
+
+describe('the guard being wired at all', () => {
+  /**
+   * The lowest rung of the three, and the only one that can be held: `MAX_SLACK` and
+   * `LEAST_BUDGETS` each loosen a threshold, but dropping ` && pnpm coverage:slack` from
+   * `validate` removes the organ — every budget at once, gate still green, not a word said.
+   */
+  it('runs after the coverage it reads, inside validate', () => {
+    const { validate } = manifest.scripts
+
+    expect(validate).toContain('coverage:slack')
+    expect(validate.indexOf('coverage:slack')).toBeGreaterThan(validate.indexOf('test:coverage'))
+    expect(manifest.scripts['coverage:slack']).toContain('coverage-slack.mjs')
   })
 })

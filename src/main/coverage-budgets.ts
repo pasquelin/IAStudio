@@ -58,7 +58,8 @@ export const MAX_SLACK = 30
  * config declares today, this file's own budget included; a batch that genuinely removes one
  * lowers this line and says why, and a batch that adds one raises it.
  *
- * **Like `MAX_SLACK`, no test holds this number** — and this one is the easier of the two to
+ * **Like `MAX_SLACK`, no test holds this number** — the wiring itself IS held, one file over.
+ * And this one is the easier of the two to
  * lower, since the sentence above invites it. A case does check that the real config still
  * declares at least this many, so lowering it silently while the parser rots is what a review
  * has to catch.
