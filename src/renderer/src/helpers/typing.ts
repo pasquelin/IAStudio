@@ -14,8 +14,3 @@ export function isTyping(target: EventTarget | null): boolean {
     target instanceof HTMLSelectElement
   )
 }
-
-/** The same question about wherever the caret is, for a listener with no event in hand. */
-export function isTypingNow(): boolean {
-  return isTyping(document.activeElement)
-}
