@@ -59,7 +59,12 @@ const paintOf = (rows: Parameters<typeof paintAnimation>[1]['rows'], playhead = 
 const rowsOf = (
   tracks: Parameters<typeof timelineWith>[0],
   clips?: Parameters<typeof animationRows>[1]['clips'],
-) => animationRows(timelineWith(tracks), { nameOf: () => 'Circle', expanded: new Set(), clips })
+) =>
+  animationRows(timelineWith(tracks), {
+    nodes: [{ id: 'cube', name: 'Circle' }],
+    expanded: new Set(),
+    clips,
+  })
 
 describe('painting the animation band', () => {
   it('draws a diamond per key — four corners, closed', () => {
@@ -98,10 +103,11 @@ describe('painting the animation band', () => {
       rowsOf([], [{ nodeId: 'perso', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }]),
     )
 
-    // One second in, two hundred pixels wide, inset inside its row.
+    // One second in, two hundred pixels wide, inset inside its row — which sits under the
+    // subject line the cube always has.
     expect(rects).toContainEqual({
       x: 100,
-      y: RULER_HEIGHT + 2,
+      y: RULER_HEIGHT + SUBJECT_HEIGHT + 2,
       width: 200,
       height: CLIP_HEIGHT - 5,
     })

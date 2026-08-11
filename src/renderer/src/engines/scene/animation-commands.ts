@@ -1,4 +1,10 @@
-import type { AnimationTrack, Keyframe, TrackTarget } from '@shared/domain/animation'
+import {
+  TRACK_PROPERTIES,
+  type AnimationTrack,
+  type Keyframe,
+  type TrackProperty,
+  type TrackTarget,
+} from '@shared/domain/animation'
 import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Us } from '@shared/domain/time'
 import type { Command } from '../core/history'
@@ -173,6 +179,49 @@ export function removeAnimationKey(trackId: string, time: number): Command<Scene
  *
  * One command whatever the channel count, so a key costs one ⌘Z rather than three.
  */
+/**
+ * Keys an object that may hold no channel yet, creating the ones it lacks.
+ *
+ * This is `I → LocRotScale`: an object of a scene ALREADY EXISTS, so asking a person to create a
+ * "track" before they can key it is asking them to build the thing they are looking at. The old
+ * panel did exactly that, and read as empty with a cube standing in the viewport.
+ *
+ * Ids are minted here rather than inside `apply`, for the reason `addAnimationTrack` carries: a
+ * redo must name the same channels the undo took away.
+ */
+export function keyNode(
+  state: SceneState,
+  subject: { nodeId: string; bone?: string },
+  time: Us,
+  names: Readonly<Record<TrackProperty, string>>,
+  mintId: (property: TrackProperty) => string,
+): Command<SceneState> | null {
+  const held = recordingTracksFor(state, subject.nodeId, subject.bone)
+  const missing = TRACK_PROPERTIES.filter(
+    property => !held.some(track => track.target.property === property),
+  )
+
+  const opened: Command<SceneState>[] = missing.map(property =>
+    addAnimationTrack(
+      subject.bone
+        ? { nodeId: subject.nodeId, bone: subject.bone, property }
+        : { nodeId: subject.nodeId, property },
+      names[property],
+      mintId(property),
+    ),
+  )
+
+  // Applied first so the keys land on channels that exist: the state a command reads is the one
+  // the commands before it produced, and `keySubject` reads the tracks by id.
+  const opening = opened.reduce((current, command) => command.apply(current), state)
+  const ids = recordingTracksFor(opening, subject.nodeId, subject.bone).map(track => track.id)
+
+  const keys = keySubject(opening, ids, time)
+  if (!keys) return opened.length === 0 ? null : multi('key:node', opened)
+
+  return multi('key:node', [...opened, keys])
+}
+
 export function keySubject(
   state: SceneState,
   trackIds: readonly string[],

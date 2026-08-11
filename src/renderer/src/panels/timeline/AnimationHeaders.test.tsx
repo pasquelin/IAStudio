@@ -27,7 +27,7 @@ function withTwoChannels(): void {
 
 const rowsOf = (expanded: string[] = []) =>
   animationRows(timelineOf(), {
-    nameOf: () => 'Cube',
+    nodes: [{ id: 'cube-1', name: 'Cube' }],
     expanded: new Set(expanded),
   })
 
@@ -100,10 +100,11 @@ describe('the column beside the band', () => {
     expect(tracks().map(track => track.id)).toEqual(['t2'])
   })
 
-  it('shows nothing at all for a scene with no track', () => {
+  it('shows the object even before it holds a single channel', () => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube-1')] })
-    const { container } = headers()
+    headers()
 
-    expect(container.querySelectorAll('[data-testid^="anim-"]')).toHaveLength(0)
+    expect(screen.getByTestId('anim-subject-cube-1')).toHaveTextContent('Cube')
+    expect(screen.queryByTestId('anim-channel-t1')).not.toBeInTheDocument()
   })
 })
