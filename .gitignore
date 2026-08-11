@@ -17,6 +17,8 @@ docs/superpowers
 # Le dépôt ne publie que la DOC DU PROJET. Ce qui suit est du travail en cours ou de
 # l'état d'outillage : utile sur la machine, hors sujet pour qui clone le dépôt.
 docs/todo.md
+docs/todo-savoirs.md
+docs/todo-archive-*.md
 docs/plans/
 docs/design-system/
 docs/prompt-loop.md
