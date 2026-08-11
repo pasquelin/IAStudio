@@ -335,6 +335,87 @@ describe('the renderer of a skybox', () => {
     })
   })
 
+  /**
+   * A drag pushes one content object per frame, all four sections rebuilt. Measured before this
+   * guard: two hundred frames of the sun's colour cost two hundred grading passes into the
+   * 2048×1024 float target, plus two hundred of everything else the sun does not feed.
+   */
+  describe('the work a frame does not need', () => {
+    const draggedSun = (frames: number): SkyboxContent[] =>
+      Array.from({ length: frames }, (_unused, frame) => {
+        const content = skyOf('sky-1')
+        content.sun = { ...content.sun, color: `#ff00${frame.toString(16).padStart(2, '0')}` }
+        return content
+      })
+
+    it('grades nothing more for a drag that only moves the sun', async () => {
+      const renderer = mounted()
+      await applied(renderer, skyOf('sky-1'))
+      const gradedOnce = pipeline.renderTo.mock.calls.length
+
+      for (const frame of draggedSun(200)) renderer.apply(frame)
+      await vi.advanceTimersByTimeAsync(0)
+
+      expect(pipeline.renderTo).toHaveBeenCalledTimes(gradedOnce)
+      expect(adjust.setAdjustments).toHaveBeenCalledTimes(1)
+      expect(environment.setIntensity).toHaveBeenCalledTimes(1)
+      expect(environment.setBackgroundVisible).toHaveBeenCalledTimes(1)
+    })
+
+    it('still recolours the sun on every frame of that drag', async () => {
+      const renderer = mounted()
+      await applied(renderer, skyOf('sky-1'))
+      const light = probes.group.parent?.children.find(child => child instanceof DirectionalLight)
+
+      for (const frame of draggedSun(3)) renderer.apply(frame)
+
+      expect(light?.color.getHexString()).toBe('ff0002')
+    })
+
+    it('grades again as soon as an adjustment moves', async () => {
+      const renderer = mounted()
+      await applied(renderer, skyOf('sky-1'))
+      const content = skyOf('sky-1')
+      content.adjustments = { ...content.adjustments, exposure: 1.7 }
+
+      await applied(renderer, content)
+
+      expect(adjust.setAdjustments).toHaveBeenLastCalledWith(content.adjustments)
+    })
+
+    it('brings the probes back when the sky arrives after the first frame', async () => {
+      const renderer = mounted()
+      renderer.apply(createSkyboxContent())
+      expect(probes.group.visible).toBe(false)
+
+      await applied(renderer, skyOf('sky-1'))
+
+      expect(probes.group.visible).toBe(true)
+    })
+
+    it('takes the backdrop away when the document turns it off', async () => {
+      const renderer = mounted()
+      await applied(renderer, skyOf('sky-1'))
+      const content = skyOf('sky-1')
+      content.environment = { ...content.environment, showBackground: false }
+
+      renderer.apply(content)
+
+      expect(environment.setBackgroundVisible).toHaveBeenLastCalledWith(false)
+    })
+
+    it('follows the environment intensity on its own', async () => {
+      const renderer = mounted()
+      await applied(renderer, skyOf('sky-1'))
+      const content = skyOf('sky-1')
+      content.environment = { ...content.environment, intensity: 0.25 }
+
+      renderer.apply(content)
+
+      expect(environment.setIntensity).toHaveBeenLastCalledWith(0.25)
+    })
+  })
+
   describe('dragging inside the picture', () => {
     const grabbingTheSun = (button = 0): SkyboxRenderer => {
       const renderer = mounted()

@@ -8,6 +8,7 @@ import {
 import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@shared/domain/skybox'
 import { createGpuPipeline, type GpuPipeline } from '../gpu/GpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
+import { sameValues } from '@/helpers/objects'
 import { reportFailure } from '@/services/diagnostics'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -84,6 +85,13 @@ export class SkyboxRenderer {
   private sourceTexture: Texture | null = null
   private quiet: ReturnType<typeof setTimeout> | null = null
 
+  /**
+   * What the last `apply` was given. Held by reference rather than copied: an edit replaces the
+   * section it touches instead of writing into it (`skybox/commands.ts:31`), so a section that
+   * did not move is still the same object.
+   */
+  private applied: SkyboxContent | null = null
+
   constructor(private readonly options: SkyboxRendererOptions) {
     this.cache = createTextureCache(options.loadTexture, (assetId, error) =>
       reportFailure('skybox.source', assetId, error),
@@ -115,18 +123,43 @@ export class SkyboxRenderer {
     this.aimCamera()
   }
 
-  /** The engine holds no truth: everything it shows comes back through here. */
+  /**
+   * The engine holds no truth: everything it shows comes back through here.
+   *
+   * Each half is guarded on its own inputs, the way `setView` is. The document rebuilds its
+   * content on every frame of a drag, and unguarded this re-graded the picture into a 2048×1024
+   * float target two hundred times for a gesture that only moved the sun.
+   */
   apply(content: SkyboxContent): void {
-    this.sun = { elevation: content.sun.elevation, azimuth: content.sun.azimuth }
-    this.applySun(content)
+    const previous = this.applied
+    this.applied = content
 
-    this.environment?.setIntensity(content.environment.intensity)
+    if (!previous || !sameValues(previous.sun, content.sun)) {
+      this.sun = { elevation: content.sun.elevation, azimuth: content.sun.azimuth }
+      this.applySun(content)
+    }
+
+    if (!previous || previous.environment.intensity !== content.environment.intensity)
+      this.environment?.setIntensity(content.environment.intensity)
+
     this.backgroundWanted = content.environment.showBackground
 
-    this.adjust.setAdjustments(content.adjustments)
+    const graded = !previous || !sameValues(previous.adjustments, content.adjustments)
+    if (graded) this.adjust.setAdjustments(content.adjustments)
+
+    // Before `syncView`, which reads the source through `syncProbes`, and before `regrade`,
+    // which would otherwise grade the picture this call is about to release.
+    const sourceMoved = previous?.source?.assetId !== content.source?.assetId
     this.loadSource(content.source?.assetId ?? null)
-    this.syncView()
-    this.regrade()
+
+    if (
+      !previous ||
+      sourceMoved ||
+      previous.environment.showBackground !== content.environment.showBackground
+    )
+      this.syncView()
+
+    if (graded) this.regrade()
   }
 
   setFieldOfView(degrees: number): void {
