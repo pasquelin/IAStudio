@@ -64,6 +64,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
 
   usePlayback(documentId, view.playing, timeline.duration)
+  useHeadInsideBand(documentId, view.playhead, timeline.duration)
 
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector
   // would hand it a new snapshot every render and the subscription would never settle.
@@ -134,6 +135,13 @@ function AnimationBar({ documentId, anchor }: BarProps) {
   const write = (settings: Partial<{ duration: Us; fps: number }>): void =>
     useScenes.getState().runCommand(documentId, setTimelineSettings(settings))
 
+  // Typing is one gesture: a rate written digit by digit must cost one undo, not one per
+  // keystroke — which is what the field's own comment promises and what nothing was honouring.
+  const gesture = {
+    onGestureStart: () => useScenes.getState().beginGesture(documentId),
+    onGestureEnd: () => useScenes.getState().endGesture(documentId),
+  }
+
   return (
     <div className="border-border flex shrink-0 items-center gap-1.5 border-b px-1.5 py-1">
       <ToolButton
@@ -183,6 +191,7 @@ function AnimationBar({ documentId, anchor }: BarProps) {
           step={0.1}
           layout="inline"
           onChange={seconds => write({ duration: secondsToUs(seconds) })}
+          {...gesture}
         />
       </div>
       <div className="flex w-32 items-center">
@@ -194,6 +203,7 @@ function AnimationBar({ documentId, anchor }: BarProps) {
           step={1}
           layout="inline"
           onChange={fps => write({ fps })}
+          {...gesture}
         />
       </div>
 
@@ -311,6 +321,20 @@ function RenderButton({ documentId }: AnimationPanelProps) {
       onClick={() => void render()}
     />
   )
+}
+
+/**
+ * Pulls the head back inside the band when the band is shortened under it.
+ *
+ * Nothing else would: shortening is an edit of the document, the head is session state, and the
+ * two never meet. Left outside, the head sits where no key can stand, and Play stops on the frame
+ * it starts on — the very defect the rewind was added to close.
+ */
+function useHeadInsideBand(documentId: string, playhead: Us, duration: Us): void {
+  useEffect(() => {
+    if (playhead <= duration) return
+    useSceneViews.getState().setPlayhead(documentId, duration)
+  }, [documentId, playhead, duration])
 }
 
 /**
