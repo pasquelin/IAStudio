@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { useAssets } from '@/stores/assets'
@@ -27,16 +28,13 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job: Job = {
+const job: Job = jobOf({
   id: 'job-1',
-  kind: 'model',
   targetId: 'eleven-music-v2',
   label: 'ElevenLabs Music v2',
   status: 'succeeded',
-  progress: 1,
-  createdAt: '2026-08-07T10:00:00.000Z',
   assetIds: ['asset-1'],
-}
+})
 
 function openSequence(): void {
   installSequence('doc-1', sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')]))

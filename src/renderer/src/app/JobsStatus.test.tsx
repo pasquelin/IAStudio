@@ -3,21 +3,18 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Job, JobStatus } from '@shared/domain/job'
 import { STATUS_BUTTON } from '@/design/styles'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { JobsStatus } from './JobsStatus'
 
-function job(id: string, status: JobStatus, progress: number): Job {
-  return {
-    id,
-    kind: 'model',
-    targetId: 'flux-dev',
-    label: `Take ${id}`,
-    status,
-    progress,
-    createdAt: '2026-08-07T10:00:00.000Z',
-    assetIds: [],
-  }
-}
+/**
+ * The shared fixture, told the numbered label this suite reads the bar by.
+ *
+ * `progress` is named on every call, which — per the factory's own rule — opts out of carrying a
+ * succeeded job to 1: say it here, as the bar would show it.
+ */
+const job = (id: string, status: JobStatus, progress: number): Job =>
+  jobOf({ id, status, progress, targetId: 'flux-dev', label: `Take ${id}` })
 
 beforeEach(() => {
   useJobs.setState({ jobs: [] })

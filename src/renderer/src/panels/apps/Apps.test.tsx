@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Job } from '@shared/domain/job'
+import { job as jobOf } from '@/stores/job-fixtures'
 import type { WorkflowDescriptor, WorkflowSummary } from '@shared/domain/workflow'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useJobs } from '@/stores/jobs'
@@ -129,16 +130,12 @@ describe('Apps panel', () => {
   })
 
   it('runs it through the workflow channel, and puts the job in the bar', async () => {
-    const started: Job = {
-      id: 'job_1',
+    const started: Job = jobOf({
       kind: 'workflow',
       targetId: 'workflow_1',
       label: 'Background remover',
       status: 'queued',
-      progress: 0,
-      createdAt: '2026-08-09T10:00:00.000Z',
-      assetIds: [],
-    }
+    })
     const run = vi.fn(() => Promise.resolve(started))
     installFakeBridge({
       workflows: {

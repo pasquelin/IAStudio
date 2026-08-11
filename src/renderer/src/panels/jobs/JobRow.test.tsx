@@ -1,21 +1,17 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { Job } from '@shared/domain/job'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { JobRow } from './JobRow'
 
-function job(overrides: Partial<Job> = {}): Job {
-  return {
-    id: 'job-1',
-    kind: 'model',
-    targetId: 'model-1',
-    label: 'Flux Fast',
-    status: 'succeeded',
-    progress: 1,
-    createdAt: '2026-08-09T10:00:00Z',
-    assetIds: [],
-    ...overrides,
-  }
-}
+/**
+ * The shared fixture, already succeeded — which is what this suite is about.
+ *
+ * Overriding the status to a failing one is not the same suite: the factory then names an `error`
+ * code, and `JobDetail` (`JobRow.tsx:18`) draws the failure INSTEAD of the cost — never both.
+ */
+const job = (overrides: Partial<Job> = {}): Job =>
+  jobOf({ id: 'job-1', targetId: 'model-1', label: 'Flux Fast', status: 'succeeded', ...overrides })
 
 /**
  * The same figure was written two ways in the same window: the estimate under the Generate

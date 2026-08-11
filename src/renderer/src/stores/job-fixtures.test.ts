@@ -19,6 +19,18 @@ describe('job fixture', () => {
     expect(job({ status: 'succeeded' }).progress).toBe(1)
   })
 
+  /**
+   * The default was held by nothing: turned into `queued`, the whole suite stayed green — found by
+   * mutation. Every other test here names its status, so this is the only one that reads what a
+   * caller gets by naming none, and eight suites now build on it.
+   */
+  it('is a job still going when no status is named', () => {
+    expect(job()).toMatchObject({ status: 'running', progress: 0 })
+    // Not in `toMatchObject` above: it reads an absent key and a key set to `undefined` as two
+    // different things, and the factory leaves this one absent.
+    expect(job().finishedAt).toBeUndefined()
+  })
+
   it.each(OUTCOMES)('leaves a %s job at the progress it reached', status => {
     expect(job({ status, progress: 0.4 }).progress).toBe(0.4)
   })
