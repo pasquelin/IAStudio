@@ -4,6 +4,7 @@
  * file stops being trusted.
  */
 import { readAdjustments } from '@shared/domain/adjustments'
+import { readColor } from '@shared/domain/color'
 import { clampElevation, normalizeAzimuth } from '@shared/domain/angles'
 import {
   createSkyboxContent,
@@ -11,14 +12,7 @@ import {
   DEFAULT_SUN,
   type SkyboxContent,
 } from '@shared/domain/skybox'
-import {
-  isRecord,
-  readBoolean,
-  readColor,
-  readNumber,
-  readPositive,
-  readString,
-} from '@shared/guards'
+import { isRecord, readBoolean, readNumber, readPositive, readString } from '@shared/guards'
 
 function readSource(raw: unknown): SkyboxContent['source'] {
   if (!isRecord(raw)) return null

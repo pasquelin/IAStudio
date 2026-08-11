@@ -11,15 +11,15 @@ import {
 
 describe('reading a material back', () => {
   /**
-   * A hand-edited `.tex` is user territory, and `Color.set` answers a string it cannot read by
-   * logging and leaving the material as it was — so the mesh keeps the colour of whatever was
-   * open before, which reads as the file having been ignored.
+   * A hand-edited `.tex` is user territory, and `rgb(255,0,0)` is the interesting half of it: a
+   * colour three.js renders and the picker cannot show, so the swatch of the row would read black
+   * over a red material. `banana` is the other half, which nothing renders at all.
    *
    * `roughness` rides along on purpose: it proves the record was read field by field, rather than
    * the whole material having fallen back to the defaults, which is how such a test passes for
    * the wrong reason.
    */
-  it('takes the default for a colour that is not one, both slots', () => {
+  it('takes the default for a colour the picker could not show, both slots', () => {
     const read = readMaterial({ color: 'banana', emissive: 'rgb(255,0,0)', roughness: 0.25 })
 
     expect(read.color).toBe(DEFAULT_TEXTURE_MATERIAL.color)

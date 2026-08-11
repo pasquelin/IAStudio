@@ -50,11 +50,14 @@ describe('reading a sky back', () => {
     expect(parseSkybox({ sun: { intensity: 'loud' } }).sun.intensity).toBe(DEFAULT_SUN.intensity)
   })
 
-  // A string is not a colour: `Color.set('banana')` logs and leaves the light where it was, so
-  // the file would open on whatever sun the last document lit — with nothing on screen to say so.
-  it('takes the stored default for a sun colour that is not one', () => {
-    expect(parseSkybox({ sun: { color: 'banana' } }).sun.color).toBe(DEFAULT_SUN.color)
+  /*
+   * `#fff` is a colour to three.js and not to the picker, which answers `#000000` for it. Held in
+   * state, it would put three answers on screen for one value: a black swatch, the raw string in
+   * the text beside it, and a white sun. The default is the only one of the three that is true.
+   */
+  it('takes the stored default for a sun colour the picker could not show', () => {
     expect(parseSkybox({ sun: { color: '#fff' } }).sun.color).toBe(DEFAULT_SUN.color)
+    expect(parseSkybox({ sun: { color: 'banana' } }).sun.color).toBe(DEFAULT_SUN.color)
   })
 
   // A prompt credited to no model names a picture the panel cannot offer to make again.

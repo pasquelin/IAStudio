@@ -1,5 +1,6 @@
-import { isRecord, readBoolean, readColor, readNumber } from '../guards'
+import { isRecord, readBoolean, readNumber } from '../guards'
 import { clamp } from '../numeric'
+import { readColor } from './color'
 import { normalizeAzimuth } from './angles'
 
 /**
