@@ -239,3 +239,78 @@ describe('the renderer', () => {
     expect(quiet.flatMap((code, index) => findingsIn(`probe${index}.tsx`, code))).toEqual([])
   })
 })
+
+/**
+ * Every module of the window, `.ts` included: the checks above read JSX, and a sentence bound to
+ * a name is not JSX.
+ */
+const MODULES: Record<string, string> = import.meta.glob(
+  ['./**/*.ts', './**/*.tsx', '!./**/*.test.ts', '!./**/*.test.tsx'],
+  { query: '?raw', import: 'default', eager: true },
+)
+
+/**
+ * A sentence, as opposed to a class list or a keyword. The capital is what tells them apart:
+ * `bg-surface flex size-full` holds spaces and lowercase words and is not a word anyone reads,
+ * while anything a user is shown starts the way a sentence starts.
+ */
+function readsLikeASentence(text: string): boolean {
+  return /^\p{Uppercase_Letter}\p{Lowercase_Letter}+\s+\p{Lowercase_Letter}/u.test(text.trim())
+}
+
+function boundSentencesIn(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const findings: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer !== undefined &&
+      ts.isStringLiteral(node.initializer) &&
+      readsLikeASentence(node.initializer.text)
+    ) {
+      const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
+      findings.push(`${path}:${line + 1} ${node.initializer.text}`)
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return findings
+}
+
+/**
+ * The blind spot the three guards admit to: a string reaching the screen through a name. The JSX
+ * checks read what a tag holds, so `<p>{label}</p>` shows them an identifier and nothing else,
+ * and the registry check reads named fields, which a bare `const` is not.
+ *
+ * Catching it at the binding rather than at the render is what makes it checkable at all —
+ * following a name to the tag that draws it would take a check that reads the whole window
+ * at once, and this one reads a file.
+ */
+describe('the words nobody puts in a tag', () => {
+  it('binds no sentence to a name anywhere in the window', () => {
+    const findings = Object.entries(MODULES).flatMap(([path, code]) => boundSentencesIn(path, code))
+
+    expect(findings).toEqual([])
+  })
+
+  it('would see a sentence parked in a constant', () => {
+    const found = boundSentencesIn('probe.tsx', "const label = 'Delete this project'")
+
+    expect(found).toHaveLength(1)
+  })
+
+  it('leaves class lists, keywords and identifiers alone', () => {
+    const quiet = [
+      "const styles = 'bg-surface flex size-full flex-col justify-center gap-2'",
+      "const mode = 'horizontal'",
+      "const channel = 'window:state'",
+      "const key = 'panels.assets'",
+      "const path = 'Contents/Resources/ffmpeg'",
+    ]
+
+    expect(quiet.flatMap((code, index) => boundSentencesIn(`probe${index}.ts`, code))).toEqual([])
+  })
+})
