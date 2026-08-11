@@ -4,7 +4,7 @@ import type { Us } from './timeline-state'
  * The only place microseconds meet mediabunny's float seconds.
  *
  * A consumer GPU offers two to four hardware decoders: four tracks playing without a bound is
- * the collapse this pool exists to prevent, and `openCount` is what the status bar reports.
+ * the collapse this pool exists to prevent.
  */
 export type VideoSampleLike = {
   toVideoFrame: () => VideoFrame
@@ -30,6 +30,7 @@ export type DecoderPoolDeps = {
 
 export type DecoderPool = {
   frameAt: (assetId: string, time: Us) => Promise<VideoFrame | null>
+  /** Sinks held, both kinds together — decoders alone would not say what memory is spent. */
   openCount: () => number
   release: (assetId: string) => void
   dispose: () => void
@@ -58,7 +59,14 @@ export function createDecoderPool({
    */
   const sinks = new Map<string, Promise<SinkLike>>()
   const undecodable = new Set<string>()
-  /** Learned when an opening settles. Until then a sink is counted against the decoders. */
+  /**
+   * What has finished opening, and of those, which hold no decoder.
+   *
+   * Both are needed because a sink's kind is unknown until it settles. Counting an opening in
+   * flight against the decoders is what made a picture, slow to fetch and decode, evict the two
+   * rushes underneath it on every frame it took to arrive.
+   */
+  const settled = new Set<string>()
   const pictures = new Set<string>()
 
   const touch = (assetId: string, opening: Promise<SinkLike>): void => {
@@ -68,6 +76,7 @@ export function createDecoderPool({
 
   const forget = (assetId: string): void => {
     sinks.delete(assetId)
+    settled.delete(assetId)
     pictures.delete(assetId)
   }
 
@@ -79,11 +88,19 @@ export function createDecoderPool({
   /**
    * Two ceilings, because the two kinds are scarce for different reasons. Insertion order is
    * recency order, so dropping from the front drops the least recently used of the kind.
+   *
+   * Only settled sinks are counted and dropped: one still in flight has no known kind, and
+   * evicting for it costs a reopen of something that was already there. It is bounded a moment
+   * later, when it settles and calls this again — and an evicted opening was closed on arrival
+   * either way, so nothing is held longer than before.
    */
-  const evict = (): void => {
-    dropOldest(assetId => !pictures.has(assetId), sinks.size - pictures.size - maxDecoders)
-    dropOldest(assetId => pictures.has(assetId), pictures.size - maxPictures)
+  const evict = (keep?: string): void => {
+    const counted = (assetId: string): boolean => settled.has(assetId) && assetId !== keep
+    dropOldest(id => counted(id) && !pictures.has(id), decoders() - maxDecoders)
+    dropOldest(id => counted(id) && pictures.has(id), pictures.size - maxPictures)
   }
+
+  const decoders = (): number => settled.size - pictures.size
 
   const dropOldest = (counted: (assetId: string) => boolean, over: number): void => {
     let left = over
@@ -111,10 +128,12 @@ export function createDecoderPool({
 
     try {
       const sink = await opening
-      // Learned only here: until it settled, this one was counted as a decoder it never took.
-      if (!sink.holdsDecoder && sinks.has(assetId)) {
-        pictures.add(assetId)
-        evict()
+      // The kind is known only here, and `keep` spares this one: the caller is about to draw it,
+      // and handing back a sink this very call had closed would blank the track for a frame.
+      if (sinks.has(assetId)) {
+        settled.add(assetId)
+        if (!sink.holdsDecoder) pictures.add(assetId)
+        evict(assetId)
       }
       return sink
     } catch {
@@ -158,6 +177,7 @@ export function createDecoderPool({
     dispose: () => {
       for (const opening of sinks.values()) closeLater(opening)
       sinks.clear()
+      settled.clear()
       pictures.clear()
       undecodable.clear()
     },

@@ -90,13 +90,101 @@ describe('decoder pool', () => {
     expect(pool.openCount()).toBe(3)
   })
 
-  it('evicts a decoder rather than a picture when the decoders overflow', async () => {
-    const { sinks, pool } = poolOver(['v1', 'still', 'v2', 'v3'], ['still'], {
+  it('does not evict for a picture that is still opening', async () => {
+    // The measured shape of the bug: a picture takes a fetch and a decode to arrive, and `seek`
+    // is not awaited — so the frames that pass meanwhile found the pool one slot short and
+    // reopened both rushes, every one of them.
+    const sinks = new Map([
+      ['v1', fakeSink('v1')],
+      ['v2', fakeSink('v2')],
+      ['logo', fakeSink('logo', false)],
+    ])
+    let arrive = (): void => {}
+    const slow = new Promise<void>(resolve => (arrive = resolve))
+    const open = vi.fn(async (assetId: string) => {
+      if (assetId === 'logo') await slow
+      const sink = sinks.get(assetId)
+      if (!sink) throw new Error(`no sink for ${assetId}`)
+      return sink
+    })
+    const pool = createDecoderPool({ open, maxDecoders: 2, maxPictures: 4 })
+
+    for (const assetId of ['v1', 'v2']) await pool.frameAt(assetId, 0)
+    // Four frames pass while the picture is in flight, each asking for all three.
+    for (let frame = 0; frame < 4; frame += 1)
+      for (const assetId of ['v1', 'v2', 'logo']) void pool.frameAt(assetId, frame * 40_000)
+
+    arrive()
+    await Promise.resolve()
+
+    expect(open).toHaveBeenCalledTimes(3)
+    expect(sinks.get('v1')?.close).not.toHaveBeenCalled()
+  })
+
+  it('never hands back a sink it has just closed', async () => {
+    // The slow one is also the least recently used, so the eviction its own arrival triggers
+    // would pick it — and the caller would draw a sink closed a line earlier.
+    const stills = ['slow', 'p2', 'p3']
+    const sinks = new Map(stills.map(id => [id, fakeSink(id, false)]))
+    let arrive = (): void => {}
+    const held = new Promise<void>(resolve => (arrive = resolve))
+    const pool = createDecoderPool({
+      open: async (assetId: string) => {
+        if (assetId === 'slow') await held
+        const sink = sinks.get(assetId)
+        if (!sink) throw new Error(`no sink for ${assetId}`)
+        return sink
+      },
       maxDecoders: 2,
-      maxPictures: 4,
+      maxPictures: 2,
     })
 
-    for (const assetId of ['v1', 'still', 'v2', 'v3']) await pool.frameAt(assetId, 0)
+    const first = pool.frameAt('slow', 0)
+    for (const assetId of ['p2', 'p3']) await pool.frameAt(assetId, 0)
+    arrive()
+    await first
+
+    expect(sinks.get('slow')?.close).not.toHaveBeenCalled()
+    expect(sinks.get('p2')?.close).toHaveBeenCalled()
+  })
+
+  it('does not evict an opening that has not arrived, however old its place in the order', async () => {
+    // 'slow' sits at the front of the recency order and is still in flight. Dropping it there
+    // costs the fetch and the decode all over again on the very next frame.
+    const sinks = new Map([
+      ['slow', fakeSink('slow', false)],
+      ['v1', fakeSink('v1')],
+      ['v2', fakeSink('v2')],
+      ['v3', fakeSink('v3')],
+    ])
+    let arrive = (): void => {}
+    const held = new Promise<void>(resolve => (arrive = resolve))
+    const open = vi.fn(async (assetId: string) => {
+      if (assetId === 'slow') await held
+      const sink = sinks.get(assetId)
+      if (!sink) throw new Error(`no sink for ${assetId}`)
+      return sink
+    })
+    const pool = createDecoderPool({ open, maxDecoders: 2, maxPictures: 4 })
+
+    const first = pool.frameAt('slow', 0)
+    for (const assetId of ['v1', 'v2', 'v3']) await pool.frameAt(assetId, 0)
+
+    expect(sinks.get('slow')?.close).not.toHaveBeenCalled()
+    expect(sinks.get('v1')?.close).toHaveBeenCalled()
+
+    arrive()
+    await first
+    expect(open).toHaveBeenCalledTimes(4)
+  })
+
+  it('evicts a decoder rather than a picture when the decoders overflow', async () => {
+    // The picture is the least recently used of all, and is passed over all the same: what
+    // overflowed is the decoders, and it holds none.
+    const track = ['still', 'v1', 'v2', 'v3']
+    const { sinks, pool } = poolOver(track, ['still'], { maxDecoders: 2, maxPictures: 4 })
+
+    for (const assetId of track) await pool.frameAt(assetId, 0)
 
     expect(sinks.get('v1')?.close).toHaveBeenCalled()
     expect(sinks.get('still')?.close).not.toHaveBeenCalled()

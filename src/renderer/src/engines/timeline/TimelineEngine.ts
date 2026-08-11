@@ -256,7 +256,7 @@ export class TimelineEngine {
     this.draw()
   }
 
-  openDecoders(): number {
+  openSinks(): number {
     return this.pool.openCount()
   }
 

@@ -15,8 +15,9 @@ import { useBinding } from '@/stores/bindings'
 const MAX_DECODERS = 2
 
 /**
- * Pictures answer to memory rather than to silicon: four 4K bitmaps are of the same order as the
- * budget `image-cache` holds for the rest of the window.
+ * Pictures answer to memory rather than to silicon. Four per monitor, and a sequence mounts two —
+ * so eight 4K bitmaps at worst, against the 96 MB `image-cache` holds for the rest of the window.
+ * A reasoned number, not a measured one: measuring it wants the application running.
  */
 const MAX_PICTURES = 4
 

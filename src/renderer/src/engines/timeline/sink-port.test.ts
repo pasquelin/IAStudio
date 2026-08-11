@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  chooseSink,
   createStillSink,
   openAssetSink,
-  openSink,
   type SinkPort,
   type StillPicture,
 } from './sink-port'
@@ -89,7 +89,7 @@ describe('opening a sink', () => {
     const video = videoSink()
     const sources = port({ openVideo: vi.fn(async () => video) })
 
-    expect(await openSink('a', sources)).toBe(video)
+    expect(await chooseSink('a', sources)).toBe(video)
     expect(sources.openPicture).not.toHaveBeenCalled()
   })
 
@@ -97,7 +97,7 @@ describe('opening a sink', () => {
     const still = picture()
     const sources = port({ openPicture: vi.fn(async () => still) })
 
-    expect(await frameOf(await openSink('a', sources), 0)).toBe('frame 1')
+    expect(await frameOf(await chooseSink('a', sources), 0)).toBe('frame 1')
   })
 
   it('falls back to the picture when reading the container is refused', async () => {
@@ -107,7 +107,7 @@ describe('opening a sink', () => {
       openPicture: vi.fn(async () => still),
     })
 
-    expect(await frameOf(await openSink('a', sources), 0)).toBe('frame 1')
+    expect(await frameOf(await chooseSink('a', sources), 0)).toBe('frame 1')
   })
 
   it('falls back to the picture when the container refuses without ever awaiting', async () => {
@@ -120,14 +120,14 @@ describe('opening a sink', () => {
       openPicture: vi.fn(async () => still),
     })
 
-    expect(await frameOf(await openSink('a', sources), 0)).toBe('frame 1')
+    expect(await frameOf(await chooseSink('a', sources), 0)).toBe('frame 1')
   })
 
   it('reads the bytes once, and hands the same ones to both attempts', async () => {
     const bytes = new Blob()
     const sources = port({ read: vi.fn(async () => bytes) })
 
-    await openSink('a', sources)
+    await chooseSink('a', sources)
 
     expect(sources.read).toHaveBeenCalledTimes(1)
     expect(sources.openVideo).toHaveBeenCalledWith(bytes)
@@ -139,7 +139,7 @@ describe('opening a sink', () => {
       openPicture: vi.fn(() => Promise.reject(new Error('not an image'))),
     })
 
-    await expect(openSink('a', sources)).rejects.toThrow('not an image')
+    await expect(chooseSink('a', sources)).rejects.toThrow('not an image')
   })
 })
 

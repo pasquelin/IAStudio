@@ -47,10 +47,11 @@ export function createStillSink(picture: StillPicture): SinkLike {
  * A still is not a decoding failure. Demanding a video track of a picture threw, the pool wrote
  * the asset off as undecodable, and the program monitor stayed black over a clip that was there.
  *
- * Decided on the BYTES, where `isLocalPicture` decides on the catalogue row: a port is handed an
- * id and no catalogue, and giving it one would be handing the engine the store — invariant 4.
+ * Decided on the BYTES, where `isLocalPicture` (`shared/domain/asset.ts`) decides on the catalogue
+ * row. That is a choice, not a constraint — `TimelineCanvas` resolves the row in the component and
+ * passes the answer down. Here the bytes are already in hand, and they are what has to decode.
  */
-export async function openSink(assetId: string, port: SinkPort): Promise<SinkLike> {
+export async function chooseSink(assetId: string, port: SinkPort): Promise<SinkLike> {
   const blob = await port.read(assetId)
   return (await videoSinkOf(blob, port)) ?? createStillSink(await port.openPicture(blob))
 }
@@ -58,6 +59,10 @@ export async function openSink(assetId: string, port: SinkPort): Promise<SinkLik
 /**
  * A refusal is not a failure here: a picture is no container, and mediabunny throws on one.
  * `try` rather than `.catch`, which a synchronous throw would sail straight past.
+ *
+ * It swallows a truncated rush too, which then costs a picture decode before failing for good.
+ * Telling the two apart would mean trusting mediabunny's error to say which — and the visible
+ * outcome is the same either way, since the pool writes both off as undecodable.
  */
 async function videoSinkOf(blob: Blob, port: SinkPort): Promise<SinkLike | null> {
   try {
@@ -90,7 +95,11 @@ async function openVideo(blob: Blob): Promise<SinkLike | null> {
   return null
 }
 
-/** A second reserve of decoded pictures, beside `image-cache`: this one is bounded by the pool. */
+/**
+ * A second reserve of decoded pictures beside `image-cache`, which holds the very same URL for the
+ * clip's thumbnail. Not shared: `cachedImage` answers by callback with an `HTMLImageElement`, and
+ * the pool wants a promise of an `ImageBitmap`. So a 4K still on a track is decoded twice.
+ */
 async function openPicture(blob: Blob): Promise<StillPicture> {
   const bitmap = await createImageBitmap(blob)
   return { frame: () => new VideoFrame(bitmap, { timestamp: 0 }), close: () => bitmap.close() }
@@ -105,5 +114,5 @@ const browserPort: SinkPort = {
 
 /** What a monitor hands the engine: the choice above, over the port the window has. */
 export function openAssetSink(assetId: string): Promise<SinkLike> {
-  return openSink(assetId, browserPort)
+  return chooseSink(assetId, browserPort)
 }
