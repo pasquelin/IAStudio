@@ -84,8 +84,8 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
             key={entry.key}
             type="button"
             // The entry's own help, under the pointer: it is drawn under the label, and a
-            // narrow column truncates it before the button goes with it. Placed right, as
-            // everything in the left column is.
+            // narrow column truncates it before the button goes with it. Opening right, as
+            // everything in this column does — only the right column opens left.
             {...HINT_RIGHT(entry.help)}
             onClick={entry.onClick}
             className={cn(

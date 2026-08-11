@@ -62,13 +62,13 @@ Pas d’onglet « tout » : une grille qui mêle des sons et des images est une 
 gris, et l’API ne sait de toute façon pas les ordonner les uns contre les autres.
 
 - **elle se charge en descendant** : le fil pagine tant que vous scrollez, il n’a pas de fin ;
-- **elle reste en bas de page, et ne se déplace pas.** Ranger les bandes est une préférence ;
-  enterrer une section sous un fil sans fin n’en est pas une, et le menu ne peut pas l’exprimer ;
+- **elle reste en bas de page.** Elle y est ancrée : enterrer une section sous un fil sans fin
+  n’est pas une préférence, et rien dans l’interface ne permet de l’exprimer ;
 - **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre, et le studio n’a aucun
   moyen d’en rapatrier une — un bouton qui peut refuser vaut moins que pas de bouton.
 
-C’est aussi la seule bande que le menu puisse encore masquer : la bannière est épinglée, et une
-ligne en bas de page la rétablit.
+C’est aussi la seule bande qui puisse être masquée : la bannière est épinglée, et une ligne en
+bas de page rétablit ce qu’on a retiré.
 
 ### Cliquer une vignette l’ouvre
 

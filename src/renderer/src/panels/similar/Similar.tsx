@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
+import { QuietNote } from '@/design/QuietNote'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { cloudTileFace } from '@/helpers/cloud-tile'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { TIP_RIGHT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { ShelfTile } from '@/design/ShelfTile'
@@ -48,9 +49,9 @@ export function Similar() {
       {page && (
         // The reference is the whole of what this panel means, and the rail's title cannot carry
         // it: a shelf of lookalikes with nothing named is a shelf of strangers.
-        <p className="text-muted text-tiny m-0 truncate px-2 pt-2">
-          {t('home.similar.title', { name: page.reference.name })}
-        </p>
+        <div className="px-2 pt-2">
+          <QuietNote>{t('home.similar.title', { name: page.reference.name })}</QuietNote>
+        </div>
       )}
 
       <ShelfPanel
@@ -92,7 +93,7 @@ function Tile({ asset }: { asset: CloudAsset }) {
       {...cloudTileFace(asset, FAVORITE_THUMBNAIL_WIDTH)}
       hint={asset.name}
       label={t('panels.similar')}
-      tip={TIP_LEFT}
+      tip={TIP_RIGHT}
     />
   )
 }

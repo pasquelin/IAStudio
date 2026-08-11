@@ -61,13 +61,13 @@ button therefore does not reach them.
 order them against each other anyway.
 
 - **it loads as you go down**: the feed pages while you scroll, and it has no end;
-- **it stays at the foot of the page, and does not move.** Ordering the bands is a preference;
-  burying a section under an endless feed is not one, and the menu cannot express it;
+- **it stays at the foot of the page.** It is anchored there: burying a section under an endless
+  feed is not a preference, and nothing in the interface can express it;
 - **the tiles do nothing.** They belong to someone else, and the studio has no way to fetch one
   into your project — a button that can only refuse is worth less than no button.
 
-It is also the only band the menu can still hide: the banner is pinned, and a line at the foot of
-the page brings it back.
+It is also the only band that can be hidden: the banner is pinned, and a line at the foot of the
+page brings back what was taken off.
 
 ### Clicking a tile opens it
 

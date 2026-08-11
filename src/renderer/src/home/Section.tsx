@@ -4,7 +4,7 @@ import { cn } from '@/helpers/cn'
 import { HideSection } from './HideSection'
 
 export type SectionProps = {
-  /** Which section this is, so its heading can carry the menu that reorders and sizes it. */
+  /** Which section this is, so its heading can offer to take it off the page. */
   id: HomeSectionId
   title: string
   /**

@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { useOnScreen } from '@/hooks/useOnScreen'
+import { useCallback, useEffect, useState } from 'react'
 
 /**
  * Where a shelf's read has got to.
@@ -81,41 +80,4 @@ export function useShelf<T>(
   const retry = useCallback(() => setAttempt(count => count + 1), [])
 
   return { ...held, retry }
-}
-
-export type DeferredShelf<T> = Shelf<T> & {
-  /**
-   * What the band draws INSTEAD of its content while it holds nothing. Never `null` before the
-   * band has been seen — a band that renders nothing is a band nothing can scroll to, and its
-   * read would never happen — and always `null` afterwards, so a band with nothing to say costs
-   * no room: the home lays its sections out with a gap, and an empty marker still takes one.
-   */
-  marker: ReactNode
-}
-
-/**
- * A shelf that reads nothing until it has been scrolled to.
- *
- * Three things have to line up for that, and they were subtle enough that both bands using it
- * had copied them: the read must answer `undefined` while unseen, `seen` must be part of what
- * the shelf reads under (or the first read is the only one), and something must stay on screen
- * in place of the content. The marker is owned here rather than described to callers, because
- * two of those three are silent when forgotten — the band simply never loads.
- */
-export function useDeferredShelf<T>(
-  initial: T,
-  read: () => Promise<T> | undefined,
-  source: string,
-): DeferredShelf<T> {
-  const { ref, seen } = useOnScreen()
-  const shelf = useShelf(initial, () => (seen ? read() : undefined), `${source}/${seen}`)
-
-  return {
-    ...shelf,
-    // Held at `reading` until the band is reached, and this is not cosmetic: unseen, the read
-    // answers `undefined`, which is `ready`. A band that declares itself ready draws its content
-    // instead of the marker — and the marker is what makes it observed, so it would never load.
-    state: seen ? shelf.state : 'reading',
-    marker: seen ? null : <div ref={ref} aria-hidden />,
-  }
 }

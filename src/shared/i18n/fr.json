@@ -2186,6 +2186,7 @@
     "restore": "Les réafficher",
     "retry": "Réessayer",
     "refused": "Ce panneau n’a pas obtenu de réponse.",
+    "reading": "Lecture en cours…",
     "open": "Ouvrir « {{name}} »",
     "spark": {
       "noModel": "Choisissez un modèle d’image pour obtenir des départs écrits pour lui.",

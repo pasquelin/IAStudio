@@ -218,8 +218,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
 
   // The lower half, as the inspector takes it in the spaces, and for the same reason: what just
   // happened is read WHILE what it produced is looked at. A journal one has to switch away to is
-  // a journal nobody reads — which is what it was here, a band hidden by default. The jobs still
-  // running join it: both answer "what is going on now", and neither is worth a half of its own.
+  // a journal nobody reads — which is what it was here, a band hidden by default. The jobs join
+  // it: both answer "what has been going on", the journal in events and the jobs in runs, and
+  // neither is worth a half of its own. As a band it showed the running ones and vanished when
+  // there were none; the panel is the status bar's own list, finished runs and their cost kept.
   { id: 'activity', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
   { id: 'jobs', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
 ]

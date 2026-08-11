@@ -38,11 +38,16 @@ describe('Tools', () => {
   it('lays its entries out in one column, whatever the window is', () => {
     const { container } = render(<Tools />)
 
-    const responsive = [...container.querySelectorAll('[class]')].filter(node =>
-      /\b(sm|md|lg|xl):grid-cols/.test(node.className),
+    // Read off the attribute, not off `className`: on an `<svg>` that property is an
+    // `SVGAnimatedString`, and a regular expression tested against it can never match.
+    const classes = [...container.querySelectorAll('[class]')].map(
+      node => node.getAttribute('class') ?? '',
     )
 
-    expect(responsive).toEqual([])
+    // The anchor first: an empty panel would satisfy the assertion below on its own.
+    expect(classes.some(value => value.includes('grid-cols'))).toBe(false)
+    expect(classes.filter(value => /\b(sm|md|lg|xl):/.test(value))).toEqual([])
+    expect(screen.getAllByRole('button').length).toBeGreaterThan(3)
   })
 
   // It is the one panel that says something on a machine with no key, no project and no history.

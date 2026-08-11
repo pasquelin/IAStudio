@@ -246,10 +246,15 @@ function openEverywhereItSits(open: OpenByZone): OpenByZone {
 }
 
 /**
- * What an older store comes back as. The whole stored arrangement is read as the workspaces':
- * every version this runs for either predates the split — the home had no zones of its own to
- * arrange — or gave the home fewer halves than it has. It becomes theirs, and the home starts
- * on its default, which is both halves of both columns.
+ * What an older store comes back as, and the home starts on its default either way: every
+ * version this runs for gave it fewer halves than it has.
+ *
+ * The workspaces' own arrangement is where the care is, and the shape it was written in is what
+ * decides. **Version 9 is the line**: before it, one arrangement lay flat at the root — `open`,
+ * `sizes`, `splits`; from it, `partialize` writes `{ arrangements: { workspaces, home } }`, and
+ * reading THAT as the flat shape finds none of the three keys. It would answer the factory
+ * defaults, which is every column width and every chosen panel of all seven spaces lost without
+ * a word — the cost of a version bump that only meant to add a half to the home.
  */
 export function migrateTools(
   persisted: unknown,
@@ -257,9 +262,12 @@ export function migrateTools(
 ): { arrangements: Record<SurfaceFamily, Arrangement> } | undefined {
   if (!isRecord(persisted)) return undefined
 
+  const held: unknown = Reflect.get(persisted, 'arrangements')
+  const workspaces = isRecord(held) ? Reflect.get(held, 'workspaces') : persisted
+
   return {
     arrangements: {
-      workspaces: arrangementFrom(persisted, version),
+      workspaces: arrangementFrom(workspaces, version),
       home: DEFAULT_ARRANGEMENTS.home,
     },
   }

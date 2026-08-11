@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { QuietNote } from '@/design/QuietNote'
 import { DEFAULT_USAGE_PERIOD, type ModelSpend, type UsageReport } from '@shared/domain/usage'
 import { EmptyState } from '@/design/EmptyState'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -10,6 +11,9 @@ import { activeOwnerId, useSettings } from '@/stores/settings'
 import { formatUnits } from '@/usage/format'
 import { RefusedPanel } from '@/panels/shared/RefusedPanel'
 import { useShelf } from '@/hooks/use-shelf'
+
+/** How many models the summary names. Enough to see where the units went, few enough to glance. */
+const MOST_SPENT = 12
 
 /**
  * What the key has spent lately, and on what.
@@ -33,22 +37,29 @@ export function Usage() {
 
   if (state === 'refused') return <RefusedPanel tool="usage" onRetry={retry} />
 
-  // One empty state for two answers that look alike from here: the read has not landed, or the
-  // key spent nothing. Both say there is nothing to read yet, which is the whole of it.
-  if (!report) return <EmptyState icon={toolIcon('usage')} message={t('home.usage.none')} />
+  // A read still in flight is not an account that spent nothing, and this panel waits on the
+  // slowest aggregate of the six: saying "nothing spent" meanwhile is a claim it has not verified,
+  // and one it contradicts a second later.
+  if (!report) {
+    const message = state === 'reading' ? t('home.reading') : t('home.usage.none')
+    return <EmptyState icon={toolIcon('usage')} message={message} />
+  }
 
   return (
     <div className="flex flex-col gap-2 p-2">
-      <p className="text-muted text-tiny m-0">
+      <QuietNote>
         {t('home.usage.summary', {
           units: formatUnits(report.units, i18n.language),
           count: report.jobs,
           days: report.period,
         })}
-      </p>
+      </QuietNote>
 
+      {/* Bounded, and painted rather than virtualized: an account can spend on a hundred models
+          over a month, and a hundred rows in a narrow column is work the UI thread does for
+          nothing — what is read here is the top of the list. */}
       <ul className="m-0 flex list-none flex-col gap-2 p-0">
-        {report.models.map(model => (
+        {report.models.slice(0, MOST_SPENT).map(model => (
           <Spend key={model.modelId} model={model} />
         ))}
       </ul>

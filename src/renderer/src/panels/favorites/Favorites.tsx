@@ -5,7 +5,7 @@ import { favoriteThumbnailUrl, type FavoriteRecipe } from '@shared/domain/favori
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING, SHELF_OVERLAY } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { TIP_LEFT } from '@/helpers/tooltip'
+import { TIP_RIGHT } from '@/helpers/tooltip'
 import { assetIcon } from '@/helpers/workspaces'
 import { useFavorites } from '@/stores/favorites'
 import { useProject } from '@/stores/project'
@@ -54,7 +54,7 @@ function Tile({ recipe }: { recipe: FavoriteRecipe }) {
       fallbackIcon={assetIcon(recipe.type)}
       hint={recipe.generation.prompt || recipe.label}
       label={t('home.creations.recreate', { model: recipe.label })}
-      tip={TIP_LEFT}
+      tip={TIP_RIGHT}
       {...(hasProject ? { onClick: () => recreate(recipe.type, recipe.generation) } : {})}
       corner={<Unpin recipe={recipe} />}
     />
@@ -72,7 +72,7 @@ function Unpin({ recipe }: { recipe: FavoriteRecipe }) {
     <button
       type="button"
       onClick={() => void useFavorites.getState().unpin(recipe.id)}
-      {...TIP_LEFT(t('home.favorites.unpin', { name: recipe.label }))}
+      {...TIP_RIGHT(t('home.favorites.unpin', { name: recipe.label }))}
       className={cn(
         SHELF_OVERLAY,
         'text-muted hover:text-text top-1 right-1 size-6 focus-visible:opacity-100',

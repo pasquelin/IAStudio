@@ -1,13 +1,14 @@
 import { mdiCreationOutline } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { QuietNote } from '@/design/QuietNote'
 import type { PromptSuggestion } from '@shared/domain/prompt-assist'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
 import { BUTTON_BASE } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { openGeneratorOn } from '@/helpers/generation'
 import { toolIcon } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
@@ -59,12 +60,12 @@ export function Spark() {
 
   return (
     <div className="flex flex-col gap-2 p-2">
-      <Button {...HINT_LEFT(t('home.sparkAskHint'))} onClick={ask} disabled={asking}>
+      <Button {...HINT_RIGHT(t('home.sparkAskHint'))} onClick={ask} disabled={asking}>
         {t(asking ? 'home.spark.asking' : 'home.spark.ask')}
       </Button>
 
       {suggestions.length === 0 ? (
-        <p className="text-muted text-tiny m-0">{t('home.spark.help')}</p>
+        <QuietNote>{t('home.spark.help')}</QuietNote>
       ) : (
         suggestions.map(suggestion => (
           <Idea key={suggestion.text} suggestion={suggestion} modelId={modelId} />
@@ -85,7 +86,7 @@ function Idea({ suggestion, modelId }: IdeaProps) {
   return (
     <button
       type="button"
-      {...TIP_LEFT(t('home.spark.use', { prompt: suggestion.text }), false, suggestion.rationale)}
+      {...TIP_RIGHT(t('home.spark.use', { prompt: suggestion.text }), false, suggestion.rationale)}
       onClick={() => openGeneratorOn('image', modelId, suggestion.parameters)}
       // The docks' own button chrome, rather than a fourth hand-written copy of it — laid out
       // from the top, since an idea is two lines of prose beside a glyph.

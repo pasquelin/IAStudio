@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react'
+import { act, waitFor } from '@testing-library/react'
 import { expect } from 'vitest'
 import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
 import type { Project } from '@shared/domain/project'
@@ -45,13 +45,4 @@ export async function settled(read: { mock: { calls: readonly unknown[] } }): Pr
   await act(async () => {
     await new Promise(done => setTimeout(done, 0))
   })
-}
-
-/**
- * That a band drew nothing a reader can perceive — which is not the same as an empty container:
- * a deferred band leaves a hidden marker behind, and that marker is what its read waits on.
- */
-export function expectSilent(container: HTMLElement): void {
-  expect(container.textContent).toBe('')
-  expect(screen.queryByRole('region')).not.toBeInTheDocument()
 }

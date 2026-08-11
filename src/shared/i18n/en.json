@@ -2186,6 +2186,7 @@
     "restore": "Show them again",
     "retry": "Try again",
     "refused": "This panel did not get an answer.",
+    "reading": "Reading…",
     "open": "Open “{{name}}”",
     "spark": {
       "noModel": "Choose an image model to get starting points written for it.",
