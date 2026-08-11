@@ -17,8 +17,12 @@ export function ImportProgress() {
   if (entries.length === 0) return null
 
   return (
-    <div className="border-border border-b">
-      <ul>
+    <div className="border-border shrink-0 border-b">
+      {/* A row opens before the pool gate (`main/media/service.ts:138`), so a folder dropped
+          whole opens all of them at once and pushes the browser out of the panel. */}
+      {/* `pr-2` for the same reason `PANEL_SCROLL` carries it: on macOS the scrollbar is drawn
+          OVER the content, and here it would land on the button that dismisses a failed row. */}
+      <ul className="max-h-40 overflow-y-auto pr-2">
         {entries.map(entry => (
           <ImportProgressRow
             key={entry.assetId}
