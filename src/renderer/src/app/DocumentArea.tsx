@@ -1,5 +1,6 @@
 import { DockviewReact, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
+import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
@@ -31,7 +32,7 @@ export function DocumentArea() {
           // Dockview rethrows a layout it refuses from inside its own mount effect, where an
           // uncaught throw would take the window down on every launch. Forgotten, not kept:
           // nothing reloads it afterwards, so a kept one would fail again at every switch.
-          console.error(`Discarding an unreadable layout for the "${workspace}" workspace:`, error)
+          reportFailure('shell.layout', workspace, error)
           useLayouts.getState().forget(workspace)
         }
       }

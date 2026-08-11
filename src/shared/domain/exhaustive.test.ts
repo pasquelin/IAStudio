@@ -101,6 +101,7 @@ describe('the lists that stand for a union', () => {
       library: true,
       document: true,
       project: true,
+      shell: true,
     }
 
     expect(sorted(ACTIVITY_LEVELS)).toEqual(sorted(Object.keys(levels)))
@@ -137,6 +138,8 @@ describe('the lists that stand for a union', () => {
       'graph.export': true,
       'graph.publish': true,
       'graph.import': true,
+      'shell.render': true,
+      'shell.layout': true,
     }
 
     expect(sorted(LOG_SCOPES)).toEqual(sorted(Object.keys(all)))

@@ -6,8 +6,8 @@ import type { ActivityLog } from '@main/project/activity-log'
 import { parseLogEntry } from './validation'
 
 /**
- * Which part of the journal a renderer scope belongs to. A closed union on both sides, so a
- * ninth scope cannot be added without deciding where its failures are read.
+ * Which part of the journal a renderer scope belongs to. A closed union on both sides, so a new
+ * scope cannot be added without deciding where its failures are read.
  */
 const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'scene.model': 'document',
@@ -45,6 +45,8 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'graph.export': 'document',
   'graph.publish': 'document',
   'graph.import': 'document',
+  'shell.render': 'shell',
+  'shell.layout': 'shell',
 }
 
 /**

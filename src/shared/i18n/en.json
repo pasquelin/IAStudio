@@ -227,7 +227,8 @@
       "import": "Import",
       "library": "Library",
       "document": "Document",
-      "project": "Project"
+      "project": "Project",
+      "shell": "Interface"
     },
     "projectNotAProject": "This folder is not a Scenario project",
     "projectUnreadable": "This project’s manifest cannot be read: it was truncated or edited by hand",
@@ -284,6 +285,8 @@
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened",
+      "shell.render": "Part of the interface could not be drawn",
+      "shell.layout": "A workspace’s stored layout could not be read",
       "scene": {
         "render": "Video render"
       }

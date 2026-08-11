@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MAX_LOG_MESSAGE, type LogScope } from '@shared/ipc'
 import { bridgeWatchingLogs } from './fake-bridge'
-import { forgetReportedFailures, reportFailure } from './diagnostics'
+import { forgetReportedFailures, reportFailure, reportRenderFailure } from './diagnostics'
 
 /** The two halves of the rule, spelled out so a scope that changes side has to be moved here. */
 const GESTURES: readonly LogScope[] = [
@@ -20,6 +20,8 @@ const SPONTANEOUS: readonly LogScope[] = [
   'scene.texture',
   'canvas.layer',
   'font.face',
+  'shell.render',
+  'shell.layout',
 ]
 
 beforeEach(forgetReportedFailures)
@@ -152,5 +154,48 @@ describe('reportFailure', () => {
     reportFailure('scene.model', 'mesh-1', new Error('gone'))
 
     await expect(refused.catch(() => 'settled')).resolves.toBe('settled')
+  })
+})
+
+/** What React hands `onCaughtError`: a blank first line, then one indented frame per component. */
+const STACK =
+  '\n    at Inspector (http://localhost/src/panels/inspector/Inspector.tsx:117:3)\n    at Panel'
+
+describe('reportRenderFailure', () => {
+  // The deepest frame, not the outermost: the boundary that caught it is the one thing already
+  // visible on screen, and the component under it is what has to be fixed.
+  it('names the component React blamed, so the line says where the render broke', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportRenderFailure(new Error('cannot read properties of null'), STACK)
+
+    expect(bridge.report).toHaveBeenCalledWith({
+      level: 'error',
+      scope: 'shell.render',
+      message: 'Inspector: cannot read properties of null',
+    })
+  })
+
+  /**
+   * React omits the stack for a lazy chunk that never resolved, and in a production build the
+   * frames can come back empty. A report that threw on that would lose the crash it exists for.
+   */
+  it('still reports a crash React could not attribute', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportRenderFailure(new Error('boom'), undefined)
+
+    expect(bridge.entries()[0]?.message).toBe('an unnamed component: boom')
+  })
+
+  // A component that throws on render throws again on every re-render of its parent, and the
+  // boundary's retry button is one click away from doing exactly that.
+  it('says a given component once', () => {
+    const bridge = bridgeWatchingLogs()
+
+    reportRenderFailure(new Error('first'), STACK)
+    reportRenderFailure(new Error('second'), STACK)
+
+    expect(bridge.report).toHaveBeenCalledTimes(1)
   })
 })

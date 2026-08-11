@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, type ReactNode } from 'react'
 import { Failure } from './Failure'
 
 export type ErrorBoundaryProps = {
@@ -11,18 +11,13 @@ type ErrorBoundaryState = {
   failed: boolean
 }
 
-// A class: `getDerivedStateFromError` still has no hook equivalent in React 19.
+// A class: `getDerivedStateFromError` still has no hook equivalent in React 19. What it catches is
+// reported by the root, so this file stays presentation, as all of `design/` is.
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { failed: false }
 
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { failed: true }
-  }
-
-  override componentDidCatch(error: unknown, info: ErrorInfo): void {
-    // A render stack is renderer-local, and devtools is where it is read — unlike the API calls
-    // CLAUDE.md sends to the main log, which never appear here at all.
-    console.error('Render failed:', error, info.componentStack)
   }
 
   private readonly retry = (): void => {

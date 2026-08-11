@@ -1,5 +1,7 @@
 import { render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { forgetReportedFailures } from '@/services/diagnostics'
+import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { layoutShowing } from '@/stores/layout-fixtures'
 import { useLayouts } from '@/stores/layouts'
@@ -37,6 +39,7 @@ describe('DocumentArea', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     panels = {}
+    forgetReportedFailures()
     useDocuments.setState({ documents: {}, activeId: null })
     useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
   })
@@ -64,22 +67,26 @@ describe('DocumentArea', () => {
       fromJSON.mockImplementation(() => {
         throw new Error('dockview: root must be of type branch')
       })
-      vi.spyOn(console, 'error').mockImplementation(() => {})
     })
 
     // `clearAllMocks` above resets calls, not implementations: without this the throwing
-    // `fromJSON` and the muted console would follow the tests declared after this block.
+    // `fromJSON` would follow the tests declared after this block.
     afterEach(() => {
       fromJSON.mockReset()
-      vi.restoreAllMocks()
     })
 
-    it('says so on the console rather than dropping the arrangement in silence', () => {
+    // Installed here rather than in the hook: `vi.stubGlobal` outlives the block, and the tests
+    // declared after it are meant to run with no bridge at all.
+    it('records it in the log rather than dropping the arrangement in silence', () => {
+      const log = bridgeWatchingLogs()
+
       render(<DocumentArea />)
 
-      expect(vi.mocked(console.error).mock.calls.flat().join(' ')).toContain(
-        'Discarding an unreadable layout',
-      )
+      expect(log.report).toHaveBeenCalledWith({
+        level: 'error',
+        scope: 'shell.layout',
+        message: '3d: dockview: root must be of type branch',
+      })
     })
 
     it('forgets the layout, so the next launch is not the same launch', () => {
