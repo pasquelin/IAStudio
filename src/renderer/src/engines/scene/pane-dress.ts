@@ -30,10 +30,19 @@ export type PaneEye = {
 export type PaneMemory = {
   materials: WeakMap<Mesh, Material | Material[]>
   lights: WeakMap<Light, boolean>
+  /**
+   * What the scene is currently wearing.
+   *
+   * The scene holds ONE state at a time — the materials and the light switches are on the
+   * objects themselves — so a pass asking for what is already on has nothing to walk. Without
+   * this the traversal ran per pane and per frame, which on a still viewport in the plainest
+   * mode is a walk over every mesh sixty times a second to change nothing at all.
+   */
+  worn: { mode: DisplayMode; quads: boolean } | null
 }
 
 export function createPaneMemory(): PaneMemory {
-  return { materials: new WeakMap(), lights: new WeakMap() }
+  return { materials: new WeakMap(), lights: new WeakMap(), worn: null }
 }
 
 export function dressForPane(
@@ -44,6 +53,13 @@ export function dressForPane(
   memory: PaneMemory,
   eye: PaneEye,
 ): void {
+  // The layers are the camera's own and have to be set every pass; the scene's dress does not.
+  if (showsEdges(mode, quads)) eye.layers.enable(EDGE_LAYER)
+  else eye.layers.disable(EDGE_LAYER)
+
+  if (memory.worn?.mode === mode && memory.worn.quads === quads) return
+  memory.worn = { mode, quads }
+
   const substitute = substituteFor(mode, quads)
   const dark = hidesSceneLights(mode)
 
@@ -66,11 +82,6 @@ export function dressForPane(
 
     applyDisplayMode(object, mode)
   }
-
-  // The edges hang on their own layer, so which views show them is a per-camera answer rather
-  // than a second set of geometry.
-  if (showsEdges(mode, quads)) eye.layers.enable(EDGE_LAYER)
-  else eye.layers.disable(EDGE_LAYER)
 }
 
 /**

@@ -118,6 +118,42 @@ describe('dressing a view before it is drawn', () => {
     expect(dense.material).not.toBe(plain.material)
   })
 
+  /**
+   * The whole reason the memory carries what the scene wears: this runs per pane AND per frame,
+   * and a still viewport in the plainest mode must not walk every mesh sixty times a second.
+   */
+  it('walks nothing when the scene already wears what the view asks for', () => {
+    const mesh = cube()
+    let walked = 0
+    // A stand-in that counts: `traverse` is what the walk costs, whatever it then does.
+    const counting = new Proxy(mesh, {
+      get(target, key, receiver) {
+        if (key === 'traverse') walked += 1
+        return Reflect.get(target, key, receiver)
+      },
+    })
+
+    dressForPane([counting], 'shaded', false, materials, memory, eye())
+    const afterFirst = walked
+
+    dressForPane([counting], 'shaded', false, materials, memory, eye())
+    dressForPane([counting], 'shaded', false, materials, memory, eye())
+
+    expect(afterFirst).toBeGreaterThan(0)
+    expect(walked).toBe(afterFirst)
+  })
+
+  it('still answers for the camera it is handed, even when the scene does not change', () => {
+    const first = eye()
+    const second = eye()
+
+    dressForPane([cube()], 'both', false, materials, memory, first)
+    // Same mode, other camera: the scene is left alone but this view still has to show edges.
+    dressForPane([cube()], 'both', false, materials, memory, second)
+
+    expect(second.layers.isEnabled(EDGE_LAYER)).toBe(true)
+  })
+
   it('walks a model, which arrives as a tree rather than a mesh', () => {
     const model = new Object3D()
     const inside = cube()
