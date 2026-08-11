@@ -7,6 +7,7 @@ import {
   textLayer,
   type CanvasState,
   type Layer,
+  type TextLayer,
 } from './canvas-state'
 import { captionsSetIn, faceUrlOf, familyStack } from './canvas-fonts'
 
@@ -59,16 +60,24 @@ describe('the captions a landed face is still worth redrawing', () => {
   const landed = DEFAULT_FONT.family
   const holding = (...layers: Layer[]): CanvasState => ({ ...DEFAULT_CANVAS, layers })
 
+  // By identity, not by shape: the engine paints the very object this hands back, so a helper
+  // rebuilding its layers would satisfy `toEqual` while breaking the promise the name makes.
+  const expectExactly = (found: readonly TextLayer[], ...wanted: TextLayer[]): void => {
+    expect(found).toHaveLength(wanted.length)
+    wanted.forEach((layer, index) => expect(found[index]).toBe(layer))
+  }
+
   it('are the ones still set in that face', () => {
-    expect(captionsSetIn(holding(caption), landed)).toEqual([caption])
+    expectExactly(captionsSetIn(holding(caption), landed), caption)
   })
 
   // The face is fetched once for the family, so every caption set in it is waiting on that one
-  // file. Redrawing only the one that asked left the others in the generic for good.
+  // file. Redrawing only the one that asked left the others in the generic until someone edited
+  // them — `drawText` redraws on text, size, colour or font, and a neighbour's face is none.
   it('are all of them, not the one that asked', () => {
     const other = textLayer('u', 'Goodbye', { x: 0, y: 40 })
 
-    expect(captionsSetIn(holding(caption, other), landed)).toEqual([caption, other])
+    expectExactly(captionsSetIn(holding(caption, other), landed), caption, other)
   })
 
   // Groups nest, so `layers` is only the root of the stack. A caption filed in one is drawn like
@@ -76,14 +85,25 @@ describe('the captions a landed face is still worth redrawing', () => {
   it('are found however deep they are filed', () => {
     const filed = groupLayer('outer', 'Titles', [groupLayer('inner', 'Captions', [caption])])
 
-    expect(captionsSetIn(holding(filed), landed)).toEqual([caption])
+    expectExactly(captionsSetIn(holding(filed), landed), caption)
+  })
+
+  // A face is registered with the page under a family name and nothing else, so the one that lands
+  // draws for both. Deliberate, and the reason `source` is left out of the filter.
+  it('take in a caption set in the same family from another source', () => {
+    const installed = {
+      ...textLayer('u', 'Goodbye', { x: 0, y: 40 }),
+      font: { source: 'system', family: landed },
+    }
+
+    expectExactly(captionsSetIn(holding(caption, installed), landed), caption, installed)
   })
 
   it('leave out a caption refaced while the file was on its way', () => {
     const futura: FontRef = { source: 'system', family: 'Futura' }
     const refaced = { ...textLayer('u', 'Goodbye', { x: 0, y: 40 }), font: futura }
 
-    expect(captionsSetIn(holding(caption, refaced), landed)).toEqual([caption])
+    expectExactly(captionsSetIn(holding(caption, refaced), landed), caption)
   })
 
   it('are none when every caption was deleted while the file was on its way', () => {

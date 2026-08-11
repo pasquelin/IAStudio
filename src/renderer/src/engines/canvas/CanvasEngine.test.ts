@@ -2001,9 +2001,12 @@ describe('captions', () => {
   /**
    * The one fetch is shared, so the redraw has to be too. Every caption but the one that happened
    * to ask sat behind the early return, was drawn in the generic, and stayed there until someone
-   * retyped it — two fonts on screen for a document set in one.
+   * edited it — two fonts on screen for a document set in one.
    */
   it('redraws every caption in a family when its face lands, not only the one that asked', async () => {
+    // Surfaces are built in document order, and `layer-1` takes texture 0.
+    const FIRST_CAPTION = 1
+    const SECOND_CAPTION = 2
     let land = (): void => {}
     const onItsWay = new Promise<void>(resolve => {
       land = resolve
@@ -2024,8 +2027,7 @@ describe('captions', () => {
     land()
     await flushMicrotasks()
 
-    // `layer-1` owns texture 0, so the two captions own the next two, in document order.
-    expect(gpu.painted).toEqual([1, 2])
+    expect(gpu.painted).toEqual([FIRST_CAPTION, SECOND_CAPTION])
   })
 
   /**

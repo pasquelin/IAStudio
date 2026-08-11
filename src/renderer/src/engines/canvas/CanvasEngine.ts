@@ -1548,7 +1548,11 @@ export class CanvasEngine {
 
     // The face the caption asks for may not be in the page yet. Registered once, and the caption
     // drawn again when it lands — until then the browser has drawn it in the generic beside it.
-    void this.registerFace(layer)
+    // Caught here and not inside: the landing redraws every caption of the family, so one refusing
+    // to rasterize would strand the rest in the generic silently. Unhandled, it says nothing at all.
+    void this.registerFace(layer).catch(error =>
+      reportFailure('font.face', layer.font.family, error),
+    )
   }
 
   /**
@@ -1574,9 +1578,8 @@ export class CanvasEngine {
       return
     }
 
-    // Each caption is redrawn into its own surface, looked up now rather than closed over: the
-    // ones that did not ask have no surface in hand, and a layer gone since takes its surface
-    // with it. A dispose clears them all, so nothing is drawn into a destroyed texture.
+    // Looked up rather than held: only the caption that asked came with a surface. `reconcile`
+    // syncs every caption in the tree, so the guard below is the map's type, not a case in the wild.
     for (const caption of captionsSetIn(this.state, family)) {
       const surface = this.surfaces.get(caption.id)
       if (surface) this.drawText(surface, caption)

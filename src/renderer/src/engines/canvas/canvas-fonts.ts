@@ -45,7 +45,8 @@ export function faceUrlOf(font: FontRef): string | null {
  * Decided here rather than in the engine so that every way it can go is a plain test.
  *
  * All of them, not the one that asked: a face is fetched once per family, so every other caption
- * set in it was left in the generic — and only an edit to its own words ever brought it back.
+ * set in it was left in the generic until it was edited — `drawText` redraws a caption whose text,
+ * size, colour or font changed, and a face landing for a neighbour is none of those.
  */
 export function captionsSetIn(state: CanvasState | null, family: string): TextLayer[] {
   if (!state) return []
