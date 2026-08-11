@@ -6,9 +6,9 @@ import { useSkyboxes } from './skyboxes'
  * Puts a sky in front of a panel under test, history and save mark cleared.
  *
  * The fifth of the `install<X>` family, and it lives beside the stores for the reason
- * `installScene` gives: `engines/` must not reach for a store. `saved` is reset like the scene
- * and the texture do — a suite that opens a document has never saved it, and leaving the key
- * behind makes `hasUnsavedWork` answer for the previous case.
+ * `installScene` gives: `engines/` must not reach for a store. `saved` is cleared to match
+ * `installScene` and `installTexture` rather than `installCanvas`, which does not — no case
+ * here depends on it, and the point is that the five agree.
  */
 export function installSkybox(
   documentId: string,

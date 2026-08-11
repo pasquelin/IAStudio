@@ -151,10 +151,12 @@ describe('the skybox panel', () => {
   })
 
   /**
-   * The id is captured once, before the closures — a panel that re-read the front tab inside
-   * `onChange` would write into whichever document happened to be active at that moment.
+   * A FORM of code, not a scene anyone reaches: the id is captured once, above the closures, so
+   * a handler that re-read the front tab would write elsewhere. On screen the panel re-renders
+   * before a pointer gets anywhere, which is also why the front tab can be swapped here without
+   * the render reflowing — the case holds the capture, and nothing about switching tabs.
    */
-  it('writes into the sky it was rendered for, not into the one in front later', () => {
+  it('captures its document id rather than re-reading the front tab in a handler', () => {
     installSkybox('doc-1')
     render(<Skybox />)
 
