@@ -131,10 +131,12 @@ describe('the skybox panel', () => {
   })
 
   /**
-   * And CLOSES it: the store keeps its open gestures in a module-scope map that no teardown
-   * clears, so a panel that never ends one would collapse the next drag into the previous entry.
+   * And CLOSES it, which a second drag cannot prove: `beginGesture` resets the merge key, so a
+   * gesture left open is invisible until an edit arrives WITHOUT one — and that edit would then
+   * collapse into the drag before it. The map holding those keys is module-scope and no teardown
+   * clears it, so an unclosed gesture also outlives the case that opened it.
    */
-  it('ends the gesture, so the next drag is its own entry', () => {
+  it('ends the gesture, so an edit outside a drag is its own entry', () => {
     installSkybox('doc-1')
     render(<Skybox />)
     const slider = screen.getByLabelText('Élévation')
@@ -143,9 +145,7 @@ describe('the skybox panel', () => {
     fireEvent.change(slider, { target: { value: '0.2' } })
     fireEvent.pointerUp(slider)
 
-    fireEvent.pointerDown(slider)
     fireEvent.change(slider, { target: { value: '0.5' } })
-    fireEvent.pointerUp(slider)
 
     expect(historyOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(2)
   })
