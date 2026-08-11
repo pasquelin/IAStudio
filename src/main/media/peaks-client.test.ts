@@ -53,16 +53,22 @@ describe('the waveform client', () => {
     expect([...(await second)]).toEqual([2])
   })
 
-  it('tells the worker to stop when the ingest is cancelled', async () => {
+  // Cancelling one rush must not kill the one ingesting beside it, which is the whole point of
+  // carrying the id: the worker kills the ffmpeg it names, not the one it is running.
+  it('tells the worker to stop the cancelled run and only that one', async () => {
     const controller = new AbortController()
     const { port, sent } = fakePort()
-    const pending = createPeaksClient(port).compute({ ...run, signal: controller.signal })
+    const client = createPeaksClient(port)
+
+    const first = client.compute(run)
+    const second = client.compute({ ...run, signal: controller.signal })
 
     controller.abort()
-    expect(sent.some(message => isCancel(message))).toBe(true)
+    expect(sent.filter(isCancel)).toEqual([{ id: 2, cancel: true }])
 
     // The worker still answers — killing ffmpeg makes it fail — and that is what settles it.
-    pending.catch(() => {})
+    first.catch(() => {})
+    second.catch(() => {})
   })
 
   it('refuses to start a run that was cancelled before it was asked for', async () => {
@@ -99,15 +105,51 @@ describe('the waveform client', () => {
   })
 
   it('forgets a run the port refused to carry', async () => {
+    const controller = new AbortController()
+    let calls = 0
     const port: PeaksPort = {
       postMessage: () => {
+        calls += 1
         throw new Error('channel closed')
       },
       onMessage: () => {},
       onFailure: () => {},
     }
 
-    await expect(createPeaksClient(port).compute(run)).rejects.toThrow(/channel closed/)
+    await expect(
+      createPeaksClient(port).compute({ ...run, signal: controller.signal }),
+    ).rejects.toThrow(/channel closed/)
+
+    // Nothing was recorded, so nothing survives to be cancelled — and a listener that did
+    // survive would throw from inside the abort dispatch, where no caller ever hears it.
+    controller.abort()
+    expect(calls).toBe(1)
+  })
+
+  // One controller can cover a whole ingest: every run handed the same signal would pile a
+  // listener on it, and cancelling then tells the worker to kill runs that finished long ago.
+  it('stops listening to the signal once the worker has answered', async () => {
+    const controller = new AbortController()
+    const { port, sent, answer } = fakePort()
+    const pending = createPeaksClient(port).compute({ ...run, signal: controller.signal })
+
+    answer({ id: 1, ok: true, peaks: Float32Array.from([1]) })
+    await pending
+
+    controller.abort()
+    expect(sent.filter(message => isCancel(message))).toEqual([])
+  })
+
+  it('stops listening to the signal when the process dies', async () => {
+    const controller = new AbortController()
+    const { port, sent, fail } = fakePort()
+    const pending = createPeaksClient(port).compute({ ...run, signal: controller.signal })
+
+    fail(new Error('waveform process exited with code 1'))
+    await expect(pending).rejects.toThrow(/exited with code 1/)
+
+    controller.abort()
+    expect(sent.filter(message => isCancel(message))).toEqual([])
   })
 
   it('ignores an answer to a run already settled', async () => {
