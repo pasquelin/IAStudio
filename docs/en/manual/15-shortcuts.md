@@ -433,6 +433,11 @@ as long as the caret is in a text field, and takes over again the moment you lea
 The same holds for `⌘X`, `⌘C` and `⌘V`: in a field they work on the text; anywhere else, on what
 the workspace has selected.
 
+**One exception, and only one: `⌘Enter` runs the graph from the field you are writing in.** That is
+where the gesture starts — the prompt is typed into a node — and asking you to click away before
+running it would be the very friction this key exists to remove. No other shortcut crosses a text
+field: a command has to declare it to be heard there, and `⌘Enter` is the only one that does today.
+
 ---
 
 ## Changing a shortcut

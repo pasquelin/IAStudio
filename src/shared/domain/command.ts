@@ -141,6 +141,18 @@ export type CommandDescriptor = {
    * therefore has to carry a modifier, or it would swallow a letter.
    */
   held?: boolean
+  /**
+   * Heard while the focus sits in a text field, where every other tapped command is silent.
+   *
+   * Declared per command rather than deduced from the chord, because the chord is the wrong
+   * axis twice over: bindings are remappable, so a rule written on `Meta+…` follows the key
+   * instead of the command it opened the field for; and most ⌘ chords have no business firing
+   * from a field — `canvas.mergeDown` on ⌘E would flatten a layer while its name is being
+   * typed, and the ⌘Z reflex would undo the typing rather than the merge.
+   *
+   * It must carry a modifier for the same reason `held` must, or it would swallow a letter.
+   */
+  runsWhileTyping?: boolean
 }
 
 function command(descriptor: CommandDescriptor): CommandDescriptor {
@@ -844,6 +856,10 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
    * A chord rather than a bare letter, and unlike the five image commands that spend credit and
    * ship with nothing: this one is also the Stop, which has to be fast, and `Meta+Enter` is not
    * a key one lands on by accident. It fires nothing on a graph with no node — see `start`.
+   *
+   * It runs from inside a field because that is where the gesture starts: the prompt is typed
+   * into a node, and asking the user to click away before running it is the whole friction this
+   * key exists to remove.
    */
   command({
     id: 'graph.run',
@@ -851,6 +867,7 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.graphRun.title',
     helpKey: 'commands.graphRun.help',
     defaultBinding: 'Meta+Enter',
+    runsWhileTyping: true,
   }),
   command({
     id: 'graph.undo',
@@ -909,6 +926,11 @@ export function commandIn(scope: CommandScope, suffix: string): CommandId | null
 
 export function commandDescriptor(id: CommandId): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null
+}
+
+/** Whether a command is one of the few heard from inside a text field. */
+export function runsWhileTyping(id: CommandId): boolean {
+  return commandDescriptor(id)?.runsWhileTyping === true
 }
 
 export function commandsIn(scope: CommandScope): readonly CommandDescriptor[] {

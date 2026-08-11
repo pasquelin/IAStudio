@@ -441,6 +441,12 @@ que vous en sortez.
 Cela vaut aussi pour `⌘X`, `⌘C` et `⌘V` : dans un champ, ils travaillent sur le texte ; ailleurs,
 sur ce que l’espace a sélectionné.
 
+**Une exception, et une seule : `⌘Entrée` lance le graphe depuis le champ où vous écrivez.** C’est
+là que le geste commence — le prompt se tape dans un nœud — et vous demander de cliquer ailleurs
+avant de lancer serait la friction même que cette touche existe pour retirer. Aucun autre raccourci
+ne traverse un champ de saisie : une commande doit le déclarer pour y être entendue, et `⌘Entrée`
+est la seule à le faire aujourd’hui.
+
 ---
 
 ## Changer un raccourci

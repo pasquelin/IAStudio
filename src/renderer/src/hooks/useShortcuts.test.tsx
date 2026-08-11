@@ -26,6 +26,12 @@ const mount = (
     wrapper: Fixture,
   })
 
+/** The node editor, the one surface with a command declaring it runs while a field has focus. */
+const mountGraph = (onCommand: (command: CommandId) => void) =>
+  renderHook(() => useShortcuts({ scope: 'graph', enabled: true, onCommand }), {
+    wrapper: Fixture,
+  })
+
 describe('useShortcuts', () => {
   it('fires the command bound to the pressed physical key', async () => {
     const onCommand = vi.fn()
@@ -84,6 +90,59 @@ describe('useShortcuts', () => {
     selection?.removeAllRanges()
     fireEvent.keyDown(window, { code: 'KeyC', metaKey: true })
     expect(onCommand).toHaveBeenCalledWith('scene.copy')
+  })
+
+  /**
+   * The prompt is typed into a node and run from there: a field is where this gesture starts,
+   * and the guard above silenced it along with the letters. Dispatched from the field rather
+   * than through focus, so what this pins is the guard and not what jsdom does with focus.
+   */
+  it('fires a command that declares it runs while typing, from inside a field', () => {
+    const onCommand = vi.fn()
+    mountGraph(onCommand)
+
+    fireEvent.keyDown(screen.getByLabelText('prompt'), { code: 'Enter', metaKey: true })
+
+    expect(onCommand).toHaveBeenCalledWith('graph.run')
+  })
+
+  /**
+   * Why the rule is per command and not "⌘ wins from a field": ⌘E merges a layer down, and a
+   * layer is renamed in an `<input>` while its document stays the active tab. Firing it there
+   * would flatten the layer mid-rename, and the ⌘Z reflex undoes the typing, not the merge.
+   */
+  it.each(['KeyG', 'KeyD', 'KeyZ', 'KeyV', 'KeyC'])(
+    'leaves ⌘%s alone when the command has not declared it',
+    code => {
+      const onCommand = vi.fn()
+      mount(onCommand)
+
+      fireEvent.keyDown(screen.getByLabelText('prompt'), { code, metaKey: true })
+
+      expect(onCommand).not.toHaveBeenCalled()
+    },
+  )
+
+  // The same chord, away from any field, is the ordinary path and stays untouched.
+  it('fires that same command normally when nothing is being typed', () => {
+    const onCommand = vi.fn()
+    mountGraph(onCommand)
+
+    fireEvent.keyDown(window, { code: 'Enter', metaKey: true })
+
+    expect(onCommand).toHaveBeenCalledWith('graph.run')
+  })
+
+  // The motion branch now sits behind its own typing check rather than behind an early return:
+  // flying while writing in a field would be the regression that restructuring could cause.
+  it('registers no motion for a key typed into a field', () => {
+    const onMotionChange = vi.fn()
+    const { result } = mount(vi.fn(), true, onMotionChange)
+
+    fireEvent.keyDown(screen.getByLabelText('prompt'), { code: 'KeyW' })
+
+    expect([...result.current.heldMotion.current]).toEqual([])
+    expect(onMotionChange).not.toHaveBeenCalled()
   })
 
   /**

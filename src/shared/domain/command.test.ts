@@ -11,6 +11,7 @@ import {
   commandIn,
   commandsIn,
   conflicts,
+  runsWhileTyping,
 } from './command'
 
 function resolve(bundle: unknown, key: string): unknown {
@@ -183,5 +184,46 @@ describe('the keys the registry binds', () => {
   it('would refuse a letter written in place of a code', () => {
     expect(isSignature('KeyP')).toBe(true)
     expect(isSignature('P')).toBe(false)
+  })
+})
+
+describe('the commands heard from inside a text field', () => {
+  // The prompt is typed into a node and run from there; every other command yields to the field.
+  it('hears the one that runs a graph', () => {
+    expect(runsWhileTyping('graph.run')).toBe(true)
+  })
+
+  /**
+   * The list is short on purpose, and this is what keeps it short. Most ⌘ chords have no
+   * business firing from a field: `canvas.mergeDown` on ⌘E would flatten a layer while its name
+   * is being typed, and the ⌘Z reflex undoes the typing rather than the merge.
+   */
+  it('yields the destructive ⌘ chords to the field', () => {
+    expect(runsWhileTyping('canvas.mergeDown')).toBe(false)
+    expect(runsWhileTyping('canvas.deselect')).toBe(false)
+    expect(runsWhileTyping('scene.duplicate')).toBe(false)
+    expect(runsWhileTyping('scene.undo')).toBe(false)
+    expect(runsWhileTyping('scene.paste')).toBe(false)
+  })
+
+  // Adding a second one is a decision, and this makes it one rather than a line nobody reviewed.
+  it('holds exactly the commands that named themselves', () => {
+    const declared = COMMAND_REGISTRY.filter(descriptor => descriptor.runsWhileTyping)
+
+    expect(declared.map(descriptor => descriptor.id)).toEqual(['graph.run'])
+  })
+
+  /**
+   * A command heard over a field has to carry a modifier, for the reason a held one does: a bare
+   * letter would be swallowed on its way into the text.
+   */
+  it('binds every one of them to a chord rather than a bare key', () => {
+    const bare = COMMAND_REGISTRY.filter(
+      descriptor =>
+        descriptor.runsWhileTyping &&
+        (descriptor.defaultBinding === null || !descriptor.defaultBinding.includes('+')),
+    )
+
+    expect(bare.map(descriptor => descriptor.id)).toEqual([])
   })
 })
