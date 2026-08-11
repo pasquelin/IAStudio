@@ -1,6 +1,6 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { isFinished, JOB_STATUSES } from '@shared/domain/job'
+import { isFinished, JOB_STATUSES, type Job } from '@shared/domain/job'
 import { job } from './job-fixtures'
 
 const FINISHED = JOB_STATUSES.filter(isFinished)
@@ -94,19 +94,31 @@ const SUITES: Record<string, string> = import.meta.glob(['../**/*.test.ts', '../
  * Four keys rather than the whole shape: a suite is allowed to say LESS than the type — `label`
  * or `assetIds` left out — but no other object of the renderer carries `targetId` beside
  * `progress`. The submission targets that read `{ kind, id }` have neither.
+ *
+ * Typed `keyof Job` rather than `string[]`, as `plan.ts` types its own field list: renaming one
+ * of these in `Job` stops this file compiling instead of leaving the walk watching nothing.
  */
-const JOB_KEYS = ['kind', 'targetId', 'status', 'progress']
+const JOB_KEYS: readonly (keyof Job)[] = ['kind', 'targetId', 'status', 'progress']
 
-const KIND = (file: string): ts.ScriptKind =>
+/** Named as `no-hardcoded-text.test.ts` names it, so a grep finds both copies. */
+const scriptKindOf = (file: string): ts.ScriptKind =>
   file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
 
-/** The object literals of one file that carry all four keys at once. */
+/**
+ * The object literals of one file that carry all four keys at once, minus those handed straight
+ * to the factory.
+ *
+ * The exemption is what keeps the name honest: `job({ kind, targetId, status, progress })` USES
+ * the factory, and refusing it would read as "this object is forbidden" where the rule is "build
+ * it yourself and you are on your own". It is limited to the factory's own two names — see
+ * `isFactoryArgument`, and the test that hands the same literal to another function.
+ */
 function jobLiteralsIn(file: string, code: string): number {
-  const source = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, KIND(file))
+  const source = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, scriptKindOf(file))
   let found = 0
 
   const visit = (node: ts.Node): void => {
-    if (ts.isObjectLiteralExpression(node)) {
+    if (ts.isObjectLiteralExpression(node) && !isFactoryArgument(node)) {
       const named = new Set(
         node.properties
           .map(property => property.name)
@@ -122,6 +134,26 @@ function jobLiteralsIn(file: string, code: string): number {
   visit(source)
   return found
 }
+
+/**
+ * The two names the factory is called by: `job` where nothing collides, `jobOf` where a suite
+ * keeps a local wrapper of its own — the form `stores/image-generation.test.ts` settled on.
+ */
+const FACTORY_NAMES = new Set(['job', 'jobOf'])
+
+/**
+ * Handed straight TO THE FACTORY — the one call whose argument may name every key.
+ *
+ * Narrow on purpose: exempting any call at all would let `applyProgress({ …a whole job… })`
+ * through, and that is the seventh suite this guard exists to stop. An object literal whose
+ * parent is a call is always one of its arguments — it cannot be the callee — so the name is
+ * the only thing left to read.
+ */
+const isFactoryArgument = (node: ts.ObjectLiteralExpression): boolean =>
+  node.parent !== undefined &&
+  ts.isCallExpression(node.parent) &&
+  ts.isIdentifier(node.parent.expression) &&
+  FACTORY_NAMES.has(node.parent.expression.text)
 
 const suitesBuildingAJob = (): string[] =>
   Object.entries(SUITES)
@@ -151,13 +183,15 @@ describe('no suite of the renderer builds its own job', () => {
    */
   it('opened the suites to say so', () => {
     expect(Object.keys(SUITES).length).toBeGreaterThan(300)
-    // A count alone would survive a glob rewritten to match one folder. Naming a suite that
-    // converted its own literal in the lot this guard closes says the walk still reaches it.
+    // The floor is load-bearing, and these two do NOT replace it — they close what it alone
+    // misses. One per extension, because a glob narrowed to `.tsx` keeps a `.tsx` anchor green
+    // while 219 `.ts` suites go unread: measured by a reviewer, who built exactly that.
     expect(Object.keys(SUITES)).toContain('../app/JobsStatus.test.tsx')
+    expect(Object.keys(SUITES)).toContain('../helpers/generation.test.ts')
   })
 
-  /** And it can fail: the shape the lot removed, and the two near-misses it must not claim. */
-  it('would see one written out, and leaves a submission target alone', () => {
+  /** And it can fail: the shape the lot removed, and the near-misses it must not claim. */
+  it('would see one written out, and leaves the near-misses alone', () => {
     const built = `const j = { id: 'a', kind: 'model', targetId: 'm', status: 'succeeded', progress: 1 }`
     const target = `const t = { kind: 'model', id: 'model_flux' }`
     const partial = `const p = { kind: 'model', targetId: 'm', status: 'queued' }`
@@ -165,5 +199,24 @@ describe('no suite of the renderer builds its own job', () => {
     expect(jobLiteralsIn('probe.ts', built)).toBe(1)
     expect(jobLiteralsIn('probe.ts', target)).toBe(0)
     expect(jobLiteralsIn('probe.ts', partial)).toBe(0)
+  })
+
+  /**
+   * The two halves of the exemption, which is where a guard of this kind goes wrong: overriding
+   * every key through the factory is allowed, and the shape all six converted sites wrote — a
+   * literal nested in an array inside the argument — is still seen.
+   */
+  it('spares what goes through the factory, and still sees what hides in an array', () => {
+    const overridden = `job({ kind: 'model', targetId: 'm', status: 'failed', progress: 0.5 })`
+    const aliased = `jobOf({ kind: 'model', targetId: 'm', status: 'failed', progress: 0.5 })`
+    const nested = `useJobs.setState({ jobs: [{ kind: 'model', targetId: 'm', status: 'queued', progress: 0 }] })`
+    // The hole a reviewer measured on the first spelling: exempting ANY call let a whole job
+    // reach a function under test untouched — the seventh suite, walking straight through.
+    const elsewhere = `applyProgress({ kind: 'model', targetId: 'm', status: 'queued', progress: 0 })`
+
+    expect(jobLiteralsIn('probe.ts', overridden)).toBe(0)
+    expect(jobLiteralsIn('probe.ts', aliased)).toBe(0)
+    expect(jobLiteralsIn('probe.ts', nested)).toBe(1)
+    expect(jobLiteralsIn('probe.ts', elsewhere)).toBe(1)
   })
 })
