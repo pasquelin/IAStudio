@@ -141,8 +141,8 @@ qu’il attend : la proposition est écrite pour un modèle, et sans lui elle pr
 **Dans la même veine** part de votre **dernier asset** — pas d’un choix, il n’y a rien à
 sélectionner — et cherche des créations publiques qui lui ressemblent. La référence, nommée en tête
 du panneau, est retirée des résultats où elle arriverait première. Si la bibliothèque ne répond
-pas, le panneau le dit **dans ses propres mots** et propose **Réessayer** : c’est le seul de
-l’accueil à faire la différence entre un refus et un compte qui n’a rien de ressemblant.
+pas, le panneau le dit **dans ses propres mots** et propose **Réessayer**. Les autres panneaux
+distinguent aussi un refus d’un compte vide ; il est le seul à le dire avec ses mots à lui.
 
 Les documents du projet ouvert, eux, sont listés dans la colonne de droite, qui a ses panneaux à
 elle.
@@ -193,8 +193,9 @@ un résumé ne peut rien dire de ce qu’il a laissé de côté, alors que « qu
 demande précisément de filtrer.
 
 > **L’accueil peut être coupé.** **Préférences ▸ Général ▸ Afficher l’accueil** : décoché, le
-> studio va droit à l’espace que vous aviez quitté. L’ordre des bandes et celles que vous avez
-> masquées se règlent sur l’accueil lui-même, pas dans les préférences.
+> studio va droit à l’espace que vous aviez quitté. Ce que vous masquez se règle sur l’accueil
+> lui-même, pas dans les préférences — et il n’y a plus d’ordre à régler : les deux bandes ne se
+> déplacent pas.
 
 ---
 
@@ -459,7 +460,7 @@ De haut en bas :
 | *séparateur* | |
 | Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; l’accueil y met **Outils** |
 | *séparateur* | |
-| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets**, puis ses trois étagères |
+| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets**, l’assistance de prompt, puis ses deux étagères |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
 
 **Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la

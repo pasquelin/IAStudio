@@ -28,7 +28,7 @@ It says one thing at a time, whichever matters right now.
 | **Ready when you are** | none of the rows above applies, and the studio already knows where it stands |
 
 **There is no "start a project" card, and that is deliberate**: creating a project is already on
-offer from the rail's `+`, the tools band, the project list, the screen shown with no project, and
+offer from the rail's `+`, the tools panel, the project list, the screen shown with no project, and
 the menu. A banner across the top of the page would have said it once more.
 
 **It waits to know before concluding.** Reading the projects and the documents takes a moment, and
@@ -139,8 +139,8 @@ would propose into the void.
 **In the same vein** starts from your **latest asset** — not from a choice, there is nothing to
 select — and looks for public creations that resemble it. The reference, named at the head of the
 panel, is removed from the results where it would otherwise come first. If the library does not
-answer, the panel says so **in its own words** and offers **Try again**: it is the only one on the
-home that tells a refusal apart from an account with nothing alike.
+answer, the panel says so **in its own words** and offers **Try again**. The other panels tell a
+refusal from an empty account too; it is the only one that says it in words of its own.
 
 The open project's documents are listed in the right column, which has panels of its own.
 
@@ -188,8 +188,8 @@ can say nothing about what it left out, whereas "what went wrong" is exactly a q
 answer by filtering.
 
 > **The home can be skipped.** **Preferences ▸ General ▸ Show the home screen**: unticked, the
-> studio goes straight to the workspace you left. The order of the bands, and which ones you have
-> hidden, are set on the home itself, not in the preferences.
+> studio goes straight to the workspace you left. What you hide is set on the home itself, not in
+> the preferences — and there is no order left to set: the two bands do not move.
 
 ---
 
@@ -443,7 +443,7 @@ From top to bottom:
 | *separator* | |
 | The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; the home puts **Tools** there |
 | *separator* | |
-| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there, then its three shelves |
+| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there, the prompt help, then its two shelves |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 **One separator per cut of the column, never one more.** The rail is the column's legend: it cuts

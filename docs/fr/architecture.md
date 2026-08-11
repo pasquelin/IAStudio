@@ -582,7 +582,7 @@ frame et en reçoit une.
 
 **Ce qu'il n'ignore pas, c'est l'absence de frame.** Une position sans échantillon et un asset
 qu'on n'a jamais pu ouvrir rendent tous deux `null` ; `DecoderPool.undecodable(assetId)` les
-sépare, et c'est de là que vient le message « Ce clip n'a pas pu être affiché » du moniteur, porté
+sépare, et c'est de là que vient le message « Ce clip n’a pas pu être affiché » du moniteur, porté
 jusqu'à React par `onUnreadable`. Le moteur ne le rapporte que si **aucune** piste n'a peint :
 recouvrir une image correcte pour signaler celle du dessus serait un pire silence.
 
