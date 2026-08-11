@@ -35,3 +35,22 @@ export const NODE_LABEL_KEYS: Record<GraphNodeType, string | null> = {
 export const NODE_LABEL_KEY_LIST: readonly string[] = Object.values(NODE_LABEL_KEYS).flatMap(
   key => key ?? [],
 )
+
+/** The key naming a type, or the type itself — i18next hands a missing key straight back. */
+export const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
+
+/**
+ * What a node is CALLED, for its face and for the canvas's live region alike.
+ *
+ * Guarded rather than read off the declared `title?: string`: `parseNode` keeps `data` as the file
+ * wrote it, so a `.workflow.json` carrying `"title": 42` types as a string without being one. Two
+ * surfaces naming the same node have to name it the same way.
+ *
+ * Here rather than beside the faces, for the reason above: `panels/` names nodes too, and reaching
+ * into the canvas for it would drag fifteen React Flow components into the inspector's chunk.
+ */
+export const titleOf = (
+  data: Readonly<Record<string, unknown>>,
+  type: GraphNodeType,
+  t: (key: string) => string,
+): string => (typeof data.title === 'string' ? data.title : '') || t(labelOf(type))

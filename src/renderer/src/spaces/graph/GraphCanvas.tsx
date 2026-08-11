@@ -17,6 +17,7 @@ import type {
   GraphPublishResult,
 } from '@shared/domain/graph'
 import { canDropConnection } from '@/engines/graph/connect'
+import { nodeById } from '@shared/domain/graph'
 import type { PaletteEntry } from './palette'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
@@ -28,7 +29,8 @@ import {
   selectionAfter,
   toCanvasEdges,
 } from './adapter'
-import { GRAPH_NODE_TYPES, runLabelKey, titleOf } from './GraphNodes'
+import { GRAPH_NODE_TYPES, runLabelKey } from './GraphNodes'
+import { titleOf } from './node-labels'
 import { GraphMenu } from './GraphMenu'
 import { GraphStatus, shownVerdict, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
@@ -66,8 +68,8 @@ export type GraphCanvasProps = {
   canImport: boolean
   /** What each node is doing in the run under way, or in the last one. Absent means idle. */
   runs: Readonly<Record<string, GraphNodeRun>>
-  /** The node that spoke last, and what it said — read by the canvas's one live region. */
-  latest?: { node: string; run: GraphNodeRun }
+  /** The node that spoke last — its state comes from `runs`, so the two cannot disagree. */
+  latest?: string
   running: boolean
   /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
   onRun: () => void
@@ -160,20 +162,24 @@ export function GraphCanvas({
   // Composed rather than stored: the two halves are already translated, and a sentence built here
   // would be a screen string outside the bundles.
   const announcement = useMemo(() => {
+    if (!latest) return ''
+
+    const node = nodeById(graph, latest)
+    const run = runs[latest]
+    if (!node || !run) return ''
+
     /*
-     * `idle` and nothing else, though `SILENT_RUN_STATUSES` names two: `failed` has no sentence
-     * of its OWN, but `runLabelKey` resolves it to its reason, which does — and a failure is the
-     * one thing this region must never swallow. `idle` really has none: `bundles.test.ts` excludes
-     * it on the grounds that a node saying nothing needs no words, so announcing it would read
-     * `graphRun.idle` out loud. A stop puts every waiting node back to exactly that.
+     * A state with no sentence is not announced, and the test is the ABSENCE of a line rather than
+     * a list to keep in step: i18next hands a missing key straight back, so `said === key` is the
+     * question "does this have words". `idle` has none on purpose — `bundles.test.ts` excludes it
+     * because a node saying nothing needs none — and a Stop puts every waiting node back to it.
+     * A ninth state added without its line would go quiet here instead of reading its own key.
      */
-    if (!latest || latest.run.status === 'idle') return ''
+    const said = t(runLabelKey(run))
+    if (said === runLabelKey(run)) return ''
 
-    const node = graph.nodes.find(candidate => candidate.id === latest.node)
-    if (!node) return ''
-
-    return `${titleOf(node.data, node.type, t)} — ${t(runLabelKey(latest.run))}`
-  }, [graph.nodes, latest, t])
+    return `${titleOf(node.data, node.type, t)} — ${said}`
+  }, [graph, latest, runs, t])
 
   // Painted from the verdict the STATUS LINE is showing — its own rule, asked rather than
   // repeated: a set of nodes ringed under a sentence that is not about them is the one failure

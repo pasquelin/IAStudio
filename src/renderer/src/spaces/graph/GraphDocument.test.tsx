@@ -349,7 +349,7 @@ describe('a graph as a document', () => {
             [DOCUMENT]: {
               running: true,
               nodes: { [text.id]: { status: 'running' } },
-              latest: { node: text.id, run: { status: 'running' } },
+              latest: text.id,
               cache: new Map(),
             },
           },
@@ -378,8 +378,8 @@ describe('a graph as a document', () => {
           runs: {
             [DOCUMENT]: {
               running: false,
-              nodes: {},
-              latest: { node: text.id, run: { status: 'idle' } },
+              nodes: { [text.id]: { status: 'idle' } },
+              latest: text.id,
               cache: new Map(),
             },
           },
@@ -399,8 +399,8 @@ describe('a graph as a document', () => {
           runs: {
             [DOCUMENT]: {
               running: false,
-              nodes: {},
-              latest: { node: text.id, run: { status: 'failed', failure: 'no-model' } },
+              nodes: { [text.id]: { status: 'failed', failure: 'no-model' } },
+              latest: text.id,
               cache: new Map(),
             },
           },
@@ -433,8 +433,8 @@ describe('a graph as a document', () => {
           runs: {
             [DOCUMENT]: {
               running: false,
-              nodes: {},
-              latest: { node: text.id, run: { status: 'done' } },
+              nodes: { [text.id]: { status: 'done' } },
+              latest: text.id,
               cache: new Map(),
             },
           },
@@ -459,8 +459,10 @@ describe('a graph as a document', () => {
           runs: {
             [DOCUMENT]: {
               running: false,
-              nodes: {},
-              latest: { node: 'gone1', run: { status: 'done' } },
+              // The vanished node keeps a state, or the assertion would pass on the missing
+              // state rather than on the missing NODE — two guards, one test each.
+              nodes: { gone1: { status: 'done' } },
+              latest: 'gone1',
               cache: new Map(),
             },
           },

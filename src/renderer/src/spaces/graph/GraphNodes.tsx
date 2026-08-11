@@ -24,7 +24,7 @@ import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { readConditionBlocks } from '@/engines/graph/conditions'
 import { PROBLEM_KEY, RUN_STATE_KEY } from './adapter'
 import { useNodeDecision } from './node-decision'
-import { NODE_LABEL_KEYS } from './node-labels'
+import { labelOf, titleOf } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
 
 /** How each state reads. The colour itself stays in `design/styles.ts`, with the other tones. */
@@ -40,13 +40,12 @@ const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
 }
 
 /**
- * What a node says about the run it is in, in the header where its type would otherwise sit.
+ * The i18n key a run state reads under.
  *
- * A failure names its own reason: "failed" alone sends the user to the jobs panel for a node that
+ * A failure names its own REASON: "failed" alone sends the user to the jobs panel for a node that
  * never reached it — a loop, a missing model and a type this milestone cannot run yet all read
  * the same otherwise.
  */
-/** The i18n key a run state reads under — a failure names its reason, the rest name themselves. */
 export const runLabelKey = (run: GraphNodeRun): string =>
   run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
 
@@ -186,22 +185,6 @@ function asRun(value: unknown): GraphNodeRun | undefined {
   const failure = GRAPH_RUN_FAILURES.find(known => known === value.failure)
   return failure ? { status, failure } : undefined
 }
-
-/** The key naming a type, or the type itself — i18next hands a missing key straight back. */
-export const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
-
-/**
- * What a node is CALLED, for the face and for the canvas's live region alike.
- *
- * Through `asText` rather than the declared `title?: string`: `parseNode` keeps `data` as the file
- * wrote it, so a `.workflow.json` carrying `"title": 42` types as a string and is not one. Two
- * surfaces naming the same node have to name it the same way.
- */
-export const titleOf = (
-  data: Readonly<Record<string, unknown>>,
-  type: GraphNodeType,
-  t: (key: string) => string,
-): string => asText(data.title) || t(labelOf(type))
 
 /**
  * Memoised, like the rows of the collections: React Flow re-renders every mounted node on each

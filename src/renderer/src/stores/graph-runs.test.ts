@@ -122,7 +122,7 @@ describe('running a graph document', () => {
    * LAST. The canvas needs exactly that, and only the reporter knows it: without `latest` every
    * node had to carry its own live region, twenty of them announcing over each other.
    */
-  it('remembers which node spoke last, and what it said', async () => {
+  it('remembers which node spoke last', async () => {
     const jobs = installJobs()
     installGraph(DOC, chain())
 
@@ -130,18 +130,16 @@ describe('running a graph document', () => {
     await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
 
     // `running` is reported on the generator itself, after the text node it reads is done.
-    expect(runOf(useGraphRuns.getState(), DOC).latest).toEqual({
-      node: 'm1',
-      run: { status: 'running' },
-    })
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toBe('m1')
 
     jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
     await run
 
-    expect(runOf(useGraphRuns.getState(), DOC).latest).toEqual({
-      node: 'm1',
-      run: { status: 'done' },
-    })
+    const settled = runOf(useGraphRuns.getState(), DOC)
+
+    // The id ALONE, and its state read from `nodes` — the two cannot disagree by construction.
+    expect(settled.latest).toBe('m1')
+    expect(settled.latest && settled.nodes[settled.latest]).toEqual({ status: 'done' })
   })
 
   /**
