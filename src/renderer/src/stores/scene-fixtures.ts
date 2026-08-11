@@ -23,7 +23,9 @@ export function installScene(documentId: string, state: SceneState = createDefau
 /**
  * Reading half of `installScene`, in the shape a subscribed selector takes it.
  *
- * Prefixed because `graph-fixtures.ts`, next door, already publishes `nodeIn` for its own store.
+ * Prefixed because `stores/graphs.ts` already publishes `nodeIn` for its own store — and it does
+ * so from the SHIPPED side, where an editor's auto-import reaches first. The prefix is what keeps
+ * a suite from reading a graph where it meant to read a scene.
  */
 export const sceneNodeIn = (
   state: DocumentStoreState<SceneState>,

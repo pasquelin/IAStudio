@@ -1,23 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { GraphNode } from '@shared/domain/graph'
+import { textNode } from '@/engines/graph/graph-fixtures'
 import { installGraph } from './graph-fixtures'
 import { nodeIn, useGraphs } from './graphs'
 
 const DOCUMENT = 'graph-1'
 
-const TEXT: GraphNode = {
-  id: 'text1',
-  type: 'text',
-  position: { x: 0, y: 0 },
-  data: { value: 'a small grey rock' },
-}
-
-const OTHER: GraphNode = {
-  id: 'text2',
-  type: 'text',
-  position: { x: 40, y: 0 },
-  data: { value: 'a kingfisher' },
-}
+const TEXT = textNode('text1', 'a small grey rock')
+const OTHER = textNode('text2', 'a kingfisher')
 
 describe('nodeIn', () => {
   beforeEach(() => {
@@ -36,8 +25,8 @@ describe('nodeIn', () => {
   })
 
   /**
-   * A document the store never held reads as the empty graph, so this must answer `null` rather
-   * than reach into an absent map: it is what the inspector shows between two documents.
+   * A document the store never held reads as the empty graph, so this answers `null` rather than
+   * reach into an absent map: it is what the inspector shows between two documents.
    */
   it('answers null for a document the store never held', () => {
     expect(nodeIn(useGraphs.getState(), 'graph-404', 'text1')).toBeNull()
@@ -51,11 +40,27 @@ describe('nodeIn', () => {
     expect(nodeIn(useGraphs.getState(), DOCUMENT, undefined)).toBeNull()
   })
 
-  /** The id is read against the document asked for, not against whichever one was installed. */
-  it('reads the document the caller names', () => {
-    installGraph('graph-2', { nodes: [OTHER], edges: [], inputKeys: [] })
+  /**
+   * Two graphs have to stand at once for this to observe anything: `installGraph` REPLACES the
+   * whole map, so a second install leaves ONE document behind, and a reader that ignored
+   * `documentId` outright would answer this correctly. The first is put back by hand beside the
+   * second — the method `graph-fixtures.test.ts` set for the same question one floor up.
+   */
+  it('reads the document the caller names, not the only one installed', () => {
+    installGraph('graph-2', {
+      nodes: [textNode('text1', 'a kingfisher')],
+      edges: [],
+      inputKeys: [],
+    })
+    useGraphs.setState(state => ({
+      states: { ...state.states, [DOCUMENT]: { nodes: [TEXT, OTHER], edges: [], inputKeys: [] } },
+    }))
 
-    expect(nodeIn(useGraphs.getState(), 'graph-2', 'text1')).toBeNull()
-    expect(nodeIn(useGraphs.getState(), 'graph-2', 'text2')?.id).toBe('text2')
+    expect(nodeIn(useGraphs.getState(), 'graph-2', 'text1')?.data).toMatchObject({
+      value: 'a kingfisher',
+    })
+    expect(nodeIn(useGraphs.getState(), DOCUMENT, 'text1')?.data).toMatchObject({
+      value: 'a small grey rock',
+    })
   })
 })

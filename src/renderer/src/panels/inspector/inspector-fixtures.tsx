@@ -10,7 +10,7 @@ import { GraphNodeInspector } from './GraphNodeInspector'
  * with that surface. `stores/graph-fixtures.ts` would work — `stores/models.ts` reaches into
  * `panels/` in production — but nothing there stands up a panel, and this does nothing else.
  *
- * It renders NOTHING for an id the graph does not hold, where `Inspector.tsx:139` renders
+ * It renders NOTHING for an id the graph does not hold, where `Inspector.tsx:138` renders
  * `<Empty />`. The two differ, deliberately: an empty state under test is a thing to assert
  * around. No suite reaches that branch today — only this file's own test does.
  */
