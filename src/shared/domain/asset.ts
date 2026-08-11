@@ -432,6 +432,18 @@ export function posterUrl(asset: Asset): string | null {
   return isLocalPicture(asset) ? assetUrl(asset.id) : null
 }
 
+/**
+ * What a tile calls an asset: the model that made it, as scenario.com does — a grid of file
+ * names says what one already knows, and the name is still one hover away in the hint.
+ *
+ * Structural rather than `Asset`: the library and the explore band draw `CloudAsset`s, and the
+ * rule is the same on both sides of the wire. Four tiles had written it out; the fourth wrote
+ * `||` where the others did, which is the only reason nobody noticed.
+ */
+export function assetCaption(asset: { name: string; generation?: AssetGeneration }): string {
+  return asset.generation?.modelLabel || asset.name
+}
+
 /** `scenario://asset/<id>` → `<id>`. Anything else is not ours to serve. */
 export function assetIdFromUrl(url: string): string | null {
   return hostedIdFromUrl(url, ASSET_HOST)

@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
 import { Carousel } from '@/design/Carousel'
-import { assetIcon } from '@/helpers/workspaces'
+import { cloudTileFace } from '@/helpers/cloud-tile'
 import { getBridge } from '@/services/bridge'
 import { activeOwnerId, useSettings } from '@/stores/settings'
 import { RefusedSection } from '../RefusedSection'
@@ -89,9 +89,7 @@ function Tile({ asset }: { asset: CloudAsset }) {
 
   return (
     <ShelfTile
-      url={cloudPreviewUrl(asset, { width: FAVORITE_THUMBNAIL_WIDTH }) ?? undefined}
-      caption={asset.generation?.modelLabel || asset.name}
-      fallbackIcon={assetIcon(asset.type)}
+      {...cloudTileFace(asset, FAVORITE_THUMBNAIL_WIDTH)}
       hint={asset.name}
       label={t('home.sections.similar')}
     />

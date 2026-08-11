@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
-import { cloudPreviewUrl, type CloudAsset } from '@shared/domain/cloud-asset'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { FAVORITE_THUMBNAIL_WIDTH } from '@shared/domain/favorite'
+import { cloudTileFace } from '@/helpers/cloud-tile'
 import { TIP_LEFT } from '@/helpers/tooltip'
-import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
 import { useAssets } from '@/stores/assets'
@@ -97,11 +97,7 @@ function Tile({ asset, fetched }: { asset: CloudAsset; fetched: Asset | undefine
 
   return (
     <ShelfTile
-      // The thumbnail, never the asset's own URL: that one is signed, and a parameter appended
-      // to it invalidates the signature — the CDN answers 403.
-      url={cloudPreviewUrl(asset, { width: PREVIEW_WIDTH }) ?? undefined}
-      caption={asset.generation?.modelLabel || asset.name}
-      fallbackIcon={assetIcon(asset.type)}
+      {...cloudTileFace(asset, PREVIEW_WIDTH)}
       hint={asset.name}
       label={act?.label ?? asset.name}
       tip={TIP_LEFT}
