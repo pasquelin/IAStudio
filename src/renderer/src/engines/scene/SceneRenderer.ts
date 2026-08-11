@@ -66,8 +66,9 @@ import type { FontLibrary } from '../core/fonts'
 import { DEFAULT_FONT, isSameFont } from '@shared/domain/font'
 import { textGeometry } from './text-geometry'
 import { createGltfSource, type GltfSource } from './gltf-source'
-import { SceneAnimations, clipNamesOf, clipsOf } from './animation'
+import { SceneAnimations, clipLengthsOf, clipNamesOf, clipsOf } from './animation'
 import { drivenNodes, poseAt } from './animation-eval'
+import type { Us } from '@shared/domain/time'
 import { nearestBone, type ProjectedBone } from './bone-picking'
 import { evenSize, flipInto, frameTimes, type FilmRequest } from './film'
 import { EMPTY_TIMELINE, type AnimationTimeline } from '@shared/domain/animation'
@@ -119,7 +120,11 @@ export type SceneRendererOptions = {
    * What clips a model brought, once its file has landed. React cannot ask the cache: the names
    * live in the file, not in the document, and a panel offering a choice has to know them.
    */
-  onClips?: (nodeId: string, clips: readonly string[]) => void
+  onClips?: (
+    nodeId: string,
+    clips: readonly string[],
+    lengths: Readonly<Record<string, number>>,
+  ) => void
   /** The bones a rigged model brought, named. Same reason as `onClips`: they live in the file. */
   onBones?: (nodeId: string, bones: readonly string[]) => void
   /**
@@ -436,10 +441,13 @@ export class SceneRenderer {
    * Where the head stands, in seconds. Session state, so it arrives by a call of its own rather
    * than inside the document — playing would otherwise put one undo entry per frame.
    */
-  setPlayhead(time: number): void {
+  setPlayhead(time: Us): void {
     if (time === this.playhead) return
     this.playhead = time
     this.applyPoses()
+    // The clips of every imported model follow the head too, which is what puts them on the band
+    // rather than on real time — and what stops a render from writing a frozen character.
+    this.animations.seek(time)
     this.viewport.requestRender()
   }
 
@@ -1279,7 +1287,7 @@ export class SceneRenderer {
       // instance built from it.
       this.animations.add(node.id, holder, clipsOf(source))
       if (applied.type === 'model') this.animations.apply(node.id, applied.model.animation ?? null)
-      this.options.onClips?.(node.id, clipNamesOf(source))
+      this.options.onClips?.(node.id, clipNamesOf(source), clipLengthsOf(source))
       this.bindSkeleton(node.id, holder)
       this.options.onBones?.(node.id, this.bonesOf(holder))
       // The bones arrive a tick after the sync that laid the timeline over the scene, so a track

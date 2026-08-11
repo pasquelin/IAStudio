@@ -538,7 +538,7 @@ describe('SceneDocument and the timeline over the scene', () => {
   it('reports the clips too, and forgets both when the viewport goes', () => {
     const { unmount } = render(<SceneDocument documentId="doc-1" />)
     const options = built.at(-1)
-    options?.onClips?.('perso', ['walk'])
+    options?.onClips?.('perso', ['walk'], { walk: 2 })
     expect(clipsOfNode(useModelClips.getState(), 'doc-1', 'perso')).toEqual(['walk'])
 
     // The names came out of files that viewport parsed; nothing outside it can answer for them.

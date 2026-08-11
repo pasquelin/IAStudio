@@ -1,5 +1,6 @@
 import { AnimationMixer, LoopOnce, LoopRepeat, type AnimationClip, type Object3D } from 'three'
 import type { AnimationRef } from '@shared/domain/scene'
+import { usToSeconds, type Us } from '@shared/domain/time'
 
 /** The clips a loaded file brought, in the order it spells them. */
 export function clipsOf(source: Object3D): AnimationClip[] {
@@ -8,6 +9,13 @@ export function clipsOf(source: Object3D): AnimationClip[] {
 
 export function clipNamesOf(source: Object3D): string[] {
   return clipsOf(source).map(clip => clip.name)
+}
+
+/** How long each clip runs, by name — what a block on the band needs to be drawn its own width. */
+export function clipLengthsOf(source: Object3D): Record<string, number> {
+  const lengths: Record<string, number> = {}
+  for (const clip of clipsOf(source)) lengths[clip.name] = clip.duration
+  return lengths
 }
 
 type Player = {
@@ -118,4 +126,40 @@ export class SceneAnimations {
     }
     return moved
   }
+
+  /**
+   * Puts every clip where the scene's HEAD says, rather than where real time left it.
+   *
+   * This is what makes a clip a block on the band: before its start the model stands at the
+   * clip's first frame, after its end at the last one, and a render — which never advances real
+   * time at all — walks the clip frame by frame instead of writing the same pose a thousand
+   * times. A film of a walking character came out frozen for exactly that reason.
+   */
+  seek(playhead: Us): void {
+    for (const player of this.players.values()) {
+      const ref = player.bound
+      if (!ref) continue
+
+      const clip = player.clips.find(candidate => candidate.name === ref.clip)
+      if (!clip) continue
+
+      player.mixer.clipAction(clip).time = clipTimeAt(ref, clip.duration, playhead)
+      player.mixer.update(0)
+    }
+  }
+}
+
+/**
+ * Where inside a clip the head stands, in the seconds three counts in.
+ *
+ * Held apart from the mixer so it can be tested without one: everything that can go wrong here —
+ * a head before the block, a looping clip, a speed — is arithmetic.
+ */
+export function clipTimeAt(ref: AnimationRef, duration: number, playhead: Us): number {
+  const into = usToSeconds(Math.max(0, playhead - ref.start)) * ref.speed
+  if (duration <= 0) return 0
+
+  // A clip that loops wraps; one that does not holds its last frame, which is what
+  // `clampWhenFinished` promises the moment it finishes.
+  return ref.loop ? into % duration : Math.min(into, duration)
 }

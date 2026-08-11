@@ -26,6 +26,9 @@ const KEY_REACH = 4
 /** A channel's diamonds are drawn smaller than a subject's, as its row is shorter. */
 const CHANNEL_REACH = 3
 
+/** How far a block sits inside its row, so two stacked blocks do not read as one. */
+const BLOCK_INSET = 2
+
 type Palette = {
   ruler: string
   row: string
@@ -33,6 +36,7 @@ type Palette = {
   border: string
   key: string
   keySelected: string
+  block: string
   playhead: string
   muted: string
   rulerFont: string
@@ -64,6 +68,7 @@ function computePalette(): Palette {
     border: read('--color-border'),
     key: read('--color-muted'),
     keySelected: read('--color-accent'),
+    block: read('--color-elevated'),
     playhead: read('--color-accent'),
     muted: read('--color-muted'),
     rulerFont: root
@@ -106,7 +111,10 @@ function paintKey(
 }
 
 export function keysOf(row: AnimationRow): readonly Us[] {
-  return row.kind === 'subject' ? row.keys : row.track.keys.map(key => key.time)
+  if (row.kind === 'subject') return row.keys
+  if (row.kind === 'channel') return row.track.keys.map(key => key.time)
+  // A block holds no key: it is drawn as a bar — see `paintBlock`.
+  return []
 }
 
 /** Half a diamond's diagonal on that row, which a hit test needs as much as the paint does. */
@@ -151,6 +159,11 @@ function paintRows(
     context.fillStyle = palette.border
     context.fillRect(0, top + row.height - 1, size.width, 1)
 
+    if (row.kind === 'clip') {
+      paintBlock(context, row.start, row.duration, top, row.height, paint.viewport, palette)
+      continue
+    }
+
     const middle = top + row.height / 2
     const reach = reachOf(row)
 
@@ -162,6 +175,23 @@ function paintRows(
       paintKey(context, x, middle, reach, chosen ? palette.keySelected : palette.key)
     }
   }
+}
+
+/** A clip, as the bar it is: it has a length, which is the whole difference from a key. */
+function paintBlock(
+  context: CanvasRenderingContext2D,
+  start: Us,
+  duration: Us,
+  top: number,
+  height: number,
+  viewport: Viewport,
+  palette: Palette,
+): void {
+  const left = timeToX(start, viewport)
+  const right = timeToX(start + duration, viewport)
+
+  context.fillStyle = palette.block
+  context.fillRect(left, top + BLOCK_INSET, Math.max(1, right - left), height - BLOCK_INSET * 2 - 1)
 }
 
 function paintHead(

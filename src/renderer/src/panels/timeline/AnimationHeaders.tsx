@@ -45,10 +45,23 @@ export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
 }
 
 function HeaderRow({ documentId, row }: { documentId: string; row: AnimationRow }) {
-  return row.kind === 'subject' ? (
-    <SubjectHeader documentId={documentId} row={row} />
-  ) : (
-    <ChannelHeader documentId={documentId} row={row} />
+  if (row.kind === 'subject') return <SubjectHeader documentId={documentId} row={row} />
+  if (row.kind === 'channel') return <ChannelHeader documentId={documentId} row={row} />
+  return <ClipHeader row={row} />
+}
+
+/** A block names the clip it plays, and offers nothing else: it is driven from the inspector. */
+function ClipHeader({ row }: { row: Extract<AnimationRow, { kind: 'clip' }> }) {
+  return (
+    <div
+      className="flex items-center pr-1 pl-4"
+      style={{ height: row.height }}
+      data-testid={`anim-clip-${row.nodeId}`}
+    >
+      <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(row.name)}>
+        {row.name}
+      </span>
+    </div>
   )
 }
 

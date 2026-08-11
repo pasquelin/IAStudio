@@ -120,7 +120,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       // nothing, which is what stops a near miss from undoing the picking that came before it.
       onSelect: (ids, mode) => selectIn(documentId, ids, mode),
       onTransform: moves => recordTransform(documentId, moves),
-      onClips: (nodeId, clips) => useModelClips.getState().report(documentId, nodeId, clips),
+      onClips: (nodeId, clips, lengths) =>
+        useModelClips.getState().report(documentId, nodeId, clips, lengths),
       onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onStats: (scene, selected) => setStats({ scene, selected }),

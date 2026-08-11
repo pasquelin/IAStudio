@@ -22,7 +22,7 @@ import {
   keySubject,
   setTimelineSettings,
 } from '@/engines/scene/animation-commands'
-import { animationRows } from '@/engines/scene/animation-rows'
+import { animationRows, type ClipBlock } from '@/engines/scene/animation-rows'
 import { cn } from '@/helpers/cn'
 import { newId } from '@/helpers/ids'
 import { TIP_TOP } from '@/helpers/tooltip'
@@ -48,6 +48,9 @@ const FILM_HEIGHT = 1080
 const MIN_DURATION = 0.1
 const MAX_DURATION = 3_600
 
+/** A speed of zero would make a block infinitely long; the inspector never offers less. */
+const MIN_SPEED = 0.1
+
 const MIN_FPS = 1
 const MAX_FPS = 120
 
@@ -72,11 +75,30 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   // Both memos are keyed on identities zustand keeps stable; building either inside a selector
   // would hand it a new snapshot every render and the subscription would never settle.
   const expanded = useMemo(() => keySetOf(expandedList), [expandedList])
+  const lengths = useModelClips(state => state.lengths[documentId])
   const rows = useMemo(() => {
     const nameOf = (nodeId: string): string =>
       nodes.find(node => node.id === nodeId)?.name ?? nodeId
-    return animationRows(timeline, { nameOf, expanded })
-  }, [timeline, nodes, expanded])
+
+    // A block's width comes from the ENGINE: the length of a clip lives in the GLB, and a model
+    // still loading has none — it simply has no block yet rather than a block of no width.
+    const clips: ClipBlock[] = []
+    for (const node of nodes) {
+      if (node.type !== 'model') continue
+      const ref = node.model.animation
+      const seconds = ref ? (lengths?.[node.id]?.[ref.clip] ?? null) : null
+      if (!ref || seconds === null) continue
+
+      clips.push({
+        nodeId: node.id,
+        name: ref.clip,
+        start: ref.start,
+        duration: secondsToUs(seconds / Math.max(ref.speed, MIN_SPEED)),
+      })
+    }
+
+    return animationRows(timeline, { nameOf, expanded, clips })
+  }, [timeline, nodes, expanded, lengths])
 
   const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
 

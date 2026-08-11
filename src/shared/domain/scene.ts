@@ -7,6 +7,7 @@
  * from them instead of restated, so a geometry added without a menu entry fails to compile.
  */
 import type { FontRef } from './font'
+import type { Us } from './time'
 
 export type Vector3 = { x: number; y: number; z: number }
 
@@ -99,6 +100,15 @@ export type AnimationRef = {
   /** A multiplier, never a frame rate: the clip carries its own timing. */
   speed: number
   loop: boolean
+  /**
+   * Where the block sits on the scene's band, in MICROSECONDS — the unit that band counts in,
+   * unlike `time` just above, which is three's own clock inside the clip.
+   *
+   * It is what makes a clip a block one can move rather than something that simply runs: before
+   * the head reaches it the model stands at its rest pose, and the render walks it frame by
+   * frame instead of leaving it wherever real time happened to leave it.
+   */
+  start: Us
 }
 
 /** What a model animates like when nothing has been chosen: its first clip, stopped at the start. */
@@ -107,6 +117,7 @@ export const DEFAULT_ANIMATION: Omit<AnimationRef, 'clip'> = Object.freeze({
   time: 0,
   speed: 1,
   loop: true,
+  start: 0,
 })
 
 /**

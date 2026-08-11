@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, type PointerEvent } from 'react'
 import { snapToFrame, type Us } from '@shared/domain/time'
 import { moveAnimationKey } from '@/engines/scene/animation-commands'
-import { multi } from '@/engines/scene/commands'
+import { multi, setModelAnimation } from '@/engines/scene/commands'
 import { clampPlayhead } from '@/engines/scene/animation-eval'
 import { hitAnimation, type AnimationHit } from '@/engines/scene/animation-hit'
 import { paintAnimation, keyId } from '@/engines/scene/animation-painter'
 import { rowsHeight, maxOffsetFor, maxScrollTopFor } from '@/engines/timeline/band'
 import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { clampScale, scrollBy, zoomAt, ZOOM_STEP, type Size } from '@/engines/timeline/viewport'
-import type { AnimationRow } from '@/engines/scene/animation-rows'
+import { trackIdsOf, type AnimationRow } from '@/engines/scene/animation-rows'
 import { clamp } from '@shared/numeric'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation-view'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -21,7 +21,9 @@ export type AnimationCanvasProps = {
 
 /** What a press took hold of, so the move and the release know what they are continuing. */
 type Grab =
-  { kind: 'scrub' } | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
+  | { kind: 'scrub' }
+  | { kind: 'key'; rowId: string; trackIds: readonly string[]; from: Us; at: Us }
+  | { kind: 'block'; nodeId: string; grabbedAt: Us }
 
 /**
  * The animation band: the ruler, the rows and the keys, painted.
@@ -30,6 +32,15 @@ type Grab =
  * controls. Reimplementing focus and accessible names inside a canvas would be rebuilding the
  * browser; drawing a thousand diamonds in the DOM would be a scroll that stutters.
  */
+/** Slides a clip block along the band, keeping what it plays. */
+function moveBlock(documentId: string, nodeId: string, start: Us): void {
+  const store = useScenes.getState()
+  const node = sceneOf(store, documentId).nodes.find(candidate => candidate.id === nodeId)
+  if (node?.type !== 'model' || !node.model.animation) return
+
+  store.runCommand(documentId, setModelAnimation(nodeId, { ...node.model.animation, start }))
+}
+
 export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const grabbed = useRef<Grab | null>(null)
@@ -175,12 +186,19 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       return
     }
 
+    if (hit.kind === 'block') {
+      grabbed.current = { kind: 'block', nodeId: hit.nodeId, grabbedAt: hit.grabbedAt }
+      useAnimationViews.getState().setSelected(documentId, [])
+      return
+    }
+
     const row = latest.current.rows.find(candidate => candidate.id === hit.rowId)
     if (!row) return
 
     // Every channel of a folded subject moves together: the diamond it shows stands for all of
     // them, and moving only one of the three would silently tear a pose apart.
-    const trackIds = row.kind === 'subject' ? row.tracks.map(track => track.id) : [row.track.id]
+    const trackIds = trackIdsOf(row)
+    if (trackIds.length === 0) return
 
     grabbed.current = { kind: 'key', rowId: hit.rowId, trackIds, from: hit.time, at: hit.time }
     useAnimationViews.getState().setSelected(documentId, [keyId(hit.rowId, hit.time)])
@@ -198,6 +216,14 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     )
 
     if (grab.kind === 'scrub') return seek(at)
+
+    if (grab.kind === 'block') {
+      // Written straight through: a block has no preview of its own to draw, and `setModelAnimation`
+      // already coalesces a run of writes into one gesture — see `runCommand`.
+      const start = Math.max(0, at - grab.grabbedAt)
+      moveBlock(documentId, grab.nodeId, start)
+      return
+    }
 
     // The preview follows the pointer; the command is written once, on release — a drag must
     // cost one entry in the history, not one per pixel.

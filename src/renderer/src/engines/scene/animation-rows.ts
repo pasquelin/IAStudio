@@ -36,7 +36,27 @@ export type ChannelRow = {
   track: AnimationTrack
 }
 
-export type AnimationRow = SubjectRow | ChannelRow
+/**
+ * A clip a model brought, as a block on the band — Blender's NLA rather than its dope sheet.
+ *
+ * It has a LENGTH, unlike a key, which is why it is a row of its own rather than a channel: what
+ * it draws is a bar one drags, not a diamond.
+ */
+export type ClipRow = {
+  kind: 'clip'
+  id: string
+  name: string
+  height: number
+  nodeId: string
+  start: Us
+  /** How long the block runs on the band, at the speed it plays. */
+  duration: Us
+}
+
+export type AnimationRow = SubjectRow | ChannelRow | ClipRow
+
+/** A block is a bar, so it wants the room a bar reads in. */
+export const CLIP_HEIGHT = 24
 
 /**
  * Row heights, in pixels, and they are DERIVED from what the header column must hold rather
@@ -75,11 +95,24 @@ export function mergedKeys(tracks: readonly AnimationTrack[]): Us[] {
   return [...times].sort((left, right) => left - right)
 }
 
+/** A model playing a clip, as the document holds it and the engine measured it. */
+export type ClipBlock = {
+  nodeId: string
+  name: string
+  start: Us
+  duration: Us
+}
+
 export type RowsOptions = {
   /** What an object is called. The tracks carry composed names; a subject wants the plain one. */
   nameOf: (nodeId: string) => string
   /** Which subjects are unfolded. Absent from the set means folded, so a new one arrives folded. */
   expanded: ReadonlySet<string>
+  /**
+   * The clips on stage. They come from the ENGINE, not the timeline: a clip's length lives in the
+   * GLB, so nothing that reads only the document can know how long a block runs.
+   */
+  clips?: readonly ClipBlock[]
 }
 
 /**
@@ -132,10 +165,27 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
     }
   }
 
+  // Clips come after the keyed subjects, in one run: a block is a different kind of thing from a
+  // key, and interleaving the two would make the sheet read as though a clip had channels.
+  for (const clip of options.clips ?? []) {
+    rows.push({
+      kind: 'clip',
+      id: `clip:${clip.nodeId}`,
+      name: clip.name,
+      height: CLIP_HEIGHT,
+      nodeId: clip.nodeId,
+      start: clip.start,
+      duration: clip.duration,
+    })
+  }
+
   return rows
 }
 
 /** The row a click lands on, folded or not, so a caller never walks the list a second time. */
 export function trackIdsOf(row: AnimationRow): string[] {
-  return row.kind === 'subject' ? row.tracks.map(track => track.id) : [row.track.id]
+  if (row.kind === 'subject') return row.tracks.map(track => track.id)
+  if (row.kind === 'channel') return [row.track.id]
+  // A block drives no channel: it plays a clip the file brought.
+  return []
 }

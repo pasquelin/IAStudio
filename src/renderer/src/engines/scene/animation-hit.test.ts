@@ -3,7 +3,7 @@ import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timeline-geometry'
 import { animationTrack, timelineWith } from './animation-fixtures'
 import { hitAnimation, type HitContext } from './animation-hit'
-import { CHANNEL_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animation-rows'
+import { CHANNEL_HEIGHT, CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animation-rows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
 const viewport: Viewport = { scale: 100 / SECOND, offset: 0, scrollTop: 0 }
@@ -106,5 +106,43 @@ describe('pointing at the animation band', () => {
       rowId: 'cube',
       time: 2 * SECOND,
     })
+  })
+})
+
+describe('pointing at a clip block', () => {
+  const withBlock = (): HitContext => ({
+    rows: animationRows(timelineWith([]), {
+      nameOf: () => 'Perso',
+      expanded: new Set(),
+      clips: [{ nodeId: 'perso', name: 'Walk', start: 1 * SECOND, duration: 2 * SECOND }],
+    }),
+    viewport,
+    fps: 25,
+  })
+
+  /** The vertical middle of the block row, which is the only row here. */
+  const middle = RULER_HEIGHT + CLIP_HEIGHT / 2
+
+  it('finds the block, and says how far into it the pointer landed', () => {
+    expect(hitAnimation(withBlock(), { x: 150, y: middle })).toEqual({
+      kind: 'block',
+      rowId: 'clip:perso',
+      nodeId: 'perso',
+      grabbedAt: 0.5 * SECOND,
+    })
+  })
+
+  it('grabs at zero when the pointer lands on the very start of the block', () => {
+    const hit = hitAnimation(withBlock(), { x: 100, y: middle })
+    expect(hit?.kind === 'block' && hit.grabbedAt).toBe(0)
+  })
+
+  it('reads the row rather than the block once the pointer is past its end', () => {
+    // The block runs from one to three seconds; four is beyond it.
+    expect(hitAnimation(withBlock(), { x: 400, y: middle })?.kind).toBe('row')
+  })
+
+  it('reads the row rather than the block before its start', () => {
+    expect(hitAnimation(withBlock(), { x: 20, y: middle })?.kind).toBe('row')
   })
 })
