@@ -110,6 +110,54 @@ describe('project store', () => {
   })
 
   /**
+   * The migration copies what was understood, never what was merely read. Promoting a truncated
+   * legacy manifest would make the dotted copy win on every later open, and the healthy file
+   * beside it would never be read again — a project broken for good, on disk, by opening it.
+   */
+  it('does not promote a legacy manifest it could not parse', async () => {
+    const path = join(root, 'Truncated legacy')
+    await mkdir(path, { recursive: true })
+    await writeFile(join(path, 'project.json'), '{ "version": 1, "name"', 'utf8')
+
+    await expect(store.open(path)).rejects.toMatchObject({ reason: 'unreadable' })
+
+    expect(await exists(join(path, MANIFEST_FILE))).toBe(false)
+  })
+
+  // Valid JSON the schema still refuses. The bytes are readable, which is exactly what makes this
+  // the case a parse-only guard would wave through.
+  it('does not promote a legacy manifest the schema refuses', async () => {
+    const path = join(root, 'Nameless legacy')
+    await mkdir(path, { recursive: true })
+    await writeFile(join(path, 'project.json'), JSON.stringify({ version: 1 }), 'utf8')
+
+    await expect(store.open(path)).rejects.toMatchObject({ reason: 'unreadable' })
+
+    expect(await exists(join(path, MANIFEST_FILE))).toBe(false)
+  })
+
+  // A manifest from a newer studio is not broken, but this build did not understand it either.
+  // Leaving it under its old name costs nothing: the build that can read it will migrate it.
+  it('does not promote a legacy manifest written by a newer studio', async () => {
+    const path = join(root, 'Newer legacy')
+    await mkdir(path, { recursive: true })
+    await writeFile(
+      join(path, 'project.json'),
+      JSON.stringify({
+        version: MANIFEST_VERSION + 1,
+        name: 'Newer legacy',
+        createdAt: '2026-08-01T10:00:00.000Z',
+        updatedAt: '2026-08-01T10:00:00.000Z',
+      }),
+      'utf8',
+    )
+
+    await expect(store.open(path)).rejects.toMatchObject({ reason: 'too-new' })
+
+    expect(await exists(join(path, MANIFEST_FILE))).toBe(false)
+  })
+
+  /**
    * A manifest that exists but cannot be read is NOT a project made before the rename. Taking it
    * for one would read the stale copy beside it and write that over the real thing — the user's
    * own manifest, destroyed without a word. Only an absent file may fall back.
@@ -279,6 +327,32 @@ describe('project store', () => {
       const hidden = execFileMock.mock.calls.flatMap(([, args]) => args.slice(1))
       expect(hidden.some(path => path.endsWith('.index'))).toBe(true)
       expect(hidden.some(path => path.endsWith(MANIFEST_FILE))).toBe(true)
+    })
+
+    // The promoted copy is a file the studio just created, so it needs the attribute as much as
+    // one written by `create` — without it the Explorer shows the dotted manifest beside the old
+    // one, and the folder looks like it grew a stray file by being opened.
+    it('hides the manifest it migrates from the old name', async () => {
+      asWindows()
+      const path = join(root, 'Older project')
+      await mkdir(join(path, '.index'), { recursive: true })
+      await writeFile(
+        join(path, 'project.json'),
+        JSON.stringify({
+          version: 1,
+          name: 'Older project',
+          createdAt: '2026-08-01T10:00:00.000Z',
+          updatedAt: '2026-08-01T10:00:00.000Z',
+        }),
+        'utf8',
+      )
+
+      await store.open(path)
+
+      const hidden = execFileMock.mock.calls.flatMap(([, args]) => args.slice(1))
+      expect(hidden.filter(entry => entry.endsWith(MANIFEST_FILE))).toEqual([
+        join(path, MANIFEST_FILE),
+      ])
     })
 
     it('opens the project even when the attribute cannot be set', async () => {

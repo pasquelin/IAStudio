@@ -1,5 +1,5 @@
 import { execFile as execFileCallback } from 'node:child_process'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import { dirname, join } from 'node:path'
 import {
@@ -129,31 +129,39 @@ async function hideFromExplorer(path: string): Promise<void> {
   }
 }
 
+/** A manifest body, and whether it came from the name projects carried before the rename. */
+type ManifestSource = { body: string; legacy: boolean }
+
 /**
- * The manifest, under whichever name the folder carries it, migrated to the hidden one as it is
- * read. The dotted file wins when both are there: a project opened once since the rename keeps
- * the old one beside it, and the stale copy must not be what the studio believes.
+ * The manifest, under whichever name the folder carries it. The dotted file wins when both are
+ * there: a project opened once since the rename keeps the old one beside it, and the stale copy
+ * must not be what the studio believes.
+ */
+async function readManifest(path: string): Promise<ManifestSource> {
+  try {
+    return { body: await readFile(join(path, MANIFEST_FILE), 'utf8'), legacy: false }
+  } catch (error) {
+    // Only an ABSENT file means "made before the rename". Any other failure — permissions, a
+    // folder in its place, a sync placeholder — is a manifest that exists, and taking it for a
+    // missing one would read the stale copy beside it.
+    if (!isMissing(error)) throw error
+
+    return { body: await readFile(join(path, LEGACY_MANIFEST_FILE), 'utf8'), legacy: true }
+  }
+}
+
+/**
+ * Copies a legacy manifest under the hidden name, so the parc converges on its own rather than
+ * on the next release. Called only once the body has been understood, and atomic: the dotted
+ * file wins every later open, whatever it holds, so a body this build could not parse — or one
+ * torn in half by a write — buries the healthy copy beside it.
  *
  * The old file is left where it is rather than deleted — a folder the user may be syncing is
  * not ours to tidy, and an older build of the studio still reads it.
  */
-async function readManifest(path: string): Promise<string> {
-  try {
-    return await readFile(join(path, MANIFEST_FILE), 'utf8')
-  } catch (error) {
-    // Only an ABSENT file means "made before the rename". Any other failure — permissions, a
-    // folder in its place, a sync placeholder — is a manifest that exists, and taking it for a
-    // missing one would overwrite it with the stale copy beside it.
-    if (!isMissing(error)) throw error
-
-    const legacy = await readFile(join(path, LEGACY_MANIFEST_FILE), 'utf8')
-
-    // Best effort: a read-only folder still opens, it just migrates on the next writable one.
-    await writeFile(join(path, MANIFEST_FILE), legacy, 'utf8').catch(() => undefined)
-    await hideFromExplorer(join(path, MANIFEST_FILE))
-
-    return legacy
-  }
+async function promoteManifest(path: string, body: string): Promise<void> {
+  await writeAtomic(join(path, MANIFEST_FILE), body).catch(() => undefined)
+  await hideFromExplorer(join(path, MANIFEST_FILE))
 }
 
 /**
@@ -164,9 +172,9 @@ async function readManifest(path: string): Promise<string> {
  * a path they never typed, for a folder they picked with a dialog.
  */
 async function loadManifest(path: string): Promise<Manifest> {
-  let body: string
+  let source: ManifestSource
   try {
-    body = await readManifest(path)
+    source = await readManifest(path)
   } catch (error) {
     // No manifest under either name is a folder picked by mistake. Anything else — permissions,
     // a folder where the file belongs — is a project that exists and will not open.
@@ -175,7 +183,7 @@ async function loadManifest(path: string): Promise<Manifest> {
 
   let head: unknown
   try {
-    head = JSON.parse(body)
+    head = JSON.parse(source.body)
   } catch (error) {
     throw new ProjectOpenError('unreadable', error)
   }
@@ -188,11 +196,16 @@ async function loadManifest(path: string): Promise<Manifest> {
     throw new ProjectOpenError('too-new')
   }
 
+  let manifest: Manifest
   try {
-    return parseManifest(head)
+    manifest = parseManifest(head)
   } catch (error) {
     throw new ProjectOpenError('unreadable', error)
   }
+
+  if (source.legacy) await promoteManifest(path, source.body)
+
+  return manifest
 }
 
 export function createProjectStore({
