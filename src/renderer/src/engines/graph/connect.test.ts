@@ -64,7 +64,7 @@ describe('what the canvas may connect', () => {
    * into its condition, because the port is typed after its own ROLE. Whatever a branch is handed
    * is what it passes on, so nothing about the payload is its to refuse.
    */
-  it('drops any output into the condition of a branch', () => {
+  it('joins any output to the condition of a branch', () => {
     const steered: GraphState = {
       ...graph,
       nodes: [...graph.nodes, branchNode('if1', [])],

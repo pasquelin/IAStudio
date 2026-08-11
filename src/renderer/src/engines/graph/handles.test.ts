@@ -117,6 +117,18 @@ describe('whether an output can feed an input', () => {
     expect(typesConnect({ id: 'o', type: 'video' }, steering)).toBe(true)
   })
 
+  /**
+   * `conditional` and nothing else. A file is free to write `['image', 'conditional']`, and a port
+   * that names a payload beside its role is narrowing after all — read as steering, an imported
+   * generator would have taken a sound into its reference image.
+   */
+  it('does not let a port that names a payload beside its role take anything', () => {
+    const both = { id: 'i', type: ['image', CONDITIONAL_PORT] }
+
+    expect(typesConnect({ id: 'o', type: 'image' }, both)).toBe(true)
+    expect(typesConnect({ id: 'o', type: 'audio' }, both)).toBe(false)
+  })
+
   /** Widened one way here too: a conditional OUTPUT is not something a typed port takes. */
   it('does not let a conditional output feed a port that names a type', () => {
     expect(typesConnect({ id: 'o', type: CONDITIONAL_PORT }, { id: 'i', type: 'image' })).toBe(

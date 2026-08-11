@@ -124,7 +124,11 @@ export function transformNode(id: string, value = ''): GraphNode {
     data: {
       value,
       inputHandles: [
-        { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
+        {
+          id: handleId(id, 'source', CONDITIONAL_PORT),
+          name: CONDITIONAL_PORT,
+          type: CONDITIONAL_PORT,
+        },
         { id: handleId(id, 'source', 'text'), name: 'text' },
       ],
       outputHandles: [
@@ -147,7 +151,11 @@ export function forEachNode(id: string, kinds: readonly LoopListKind[] = ['image
     position: { x: 0, y: 0 },
     data: {
       inputHandles: [
-        { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
+        {
+          id: handleId(id, 'source', CONDITIONAL_PORT),
+          name: CONDITIONAL_PORT,
+          type: CONDITIONAL_PORT,
+        },
         ...kinds.map((kind, index) => ({
           id: loopInputId(id, index),
           name: `list${index}`,
@@ -172,7 +180,11 @@ export function forEachEndNode(id: string, parentNodeId?: string): GraphNode {
     data: {
       ...(parentNodeId === undefined ? {} : { parentNodeId }),
       inputHandles: [
-        { id: handleId(id, 'source', 'conditional'), name: 'conditional', type: 'conditional' },
+        {
+          id: handleId(id, 'source', CONDITIONAL_PORT),
+          name: CONDITIONAL_PORT,
+          type: CONDITIONAL_PORT,
+        },
       ],
     },
   }
