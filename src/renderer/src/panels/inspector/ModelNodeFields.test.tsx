@@ -1,10 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { GraphNode, GraphState } from '@shared/domain/graph'
+import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelQuery } from '@shared/domain/model'
 import { withQueries } from '@/app/query-fixtures'
-import { wire } from '@/engines/graph/graph-fixtures'
+import { textNode, wire } from '@/engines/graph/graph-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, useGraphs } from '@/stores/graphs'
@@ -62,9 +62,19 @@ const source: GraphNode = {
   },
 }
 
+/** The wire on the port the second model does not declare — the one a model swap must take. */
+const ON_MASK: GraphEdge = wire('imageGenerator1', 'mask', 'asset1', 'image')
+
+/**
+ * And one on a port BOTH models declare, so the suite can say which wire is left rather than that
+ * none is: an assertion on the empty list holds just as well when the cut took the whole graph, or
+ * when the fixture wired the two ends the wrong way round — `source` is the CONSUMER here.
+ */
+const ON_PROMPT: GraphEdge = wire('imageGenerator1', 'prompt', 'text1', 'prompt')
+
 const WIRED: GraphState = {
-  nodes: [generator, source],
-  edges: [wire('imageGenerator1', 'mask', 'asset1', 'image')],
+  nodes: [generator, source, textNode('text1')],
+  edges: [ON_MASK, ON_PROMPT],
   inputKeys: [],
 }
 
@@ -132,7 +142,7 @@ describe('a generator node in the inspector', () => {
     await userEvent.selectOptions(screen.getByLabelText('Modèle'), 'model_sdxl')
 
     await waitFor(() => expect(generatorNow()?.data).toMatchObject({ modelId: 'model_sdxl' }))
-    expect(state().edges).toEqual([])
+    expect(state().edges.map(edge => edge.id)).toEqual([ON_PROMPT.id])
   })
 
   it('rebuilds the ports from the new model rather than keeping the old ones', async () => {
@@ -159,7 +169,7 @@ describe('a generator node in the inspector', () => {
     useGraphs.getState().undo(DOCUMENT)
 
     expect(generatorNow()?.data).toMatchObject({ modelId: 'model_flux' })
-    expect(state().edges).toHaveLength(1)
+    expect(state().edges.map(edge => edge.id)).toEqual([ON_MASK.id, ON_PROMPT.id])
   })
 
   /** Opening a panel is not an edit: the form reports its body once at mount, and that is not one. */

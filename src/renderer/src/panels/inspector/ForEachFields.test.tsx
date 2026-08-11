@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { GraphEdge, GraphNode } from '@shared/domain/graph'
+import { CONDITIONAL_PORT, type GraphEdge, type GraphNode } from '@shared/domain/graph'
 import { edgeBetween } from '@/engines/graph/connect'
-import { forEachEndNode, forEachNode, textNode } from '@/engines/graph/graph-fixtures'
+import { forEachEndNode, forEachNode, textNode, wire } from '@/engines/graph/graph-fixtures'
 import { handleId, loopInputId, loopOutputId } from '@/engines/graph/handles'
 import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
@@ -23,6 +23,14 @@ const READS_ITEM: GraphEdge = edgeBetween(
   loopOutputId('forEach1', 0),
 )
 
+/**
+ * A wire on the port no list owns, so an edit of the lists can be asked what it LEFT rather than
+ * only that it emptied the graph. `conditional` steers rather than feeds, so no retyping of a list
+ * reaches it — and written the wrong way round, this one would be cut with the rest, which is the
+ * whole reason the assertions below name it.
+ */
+const STEERS: GraphEdge = wire('forEach1', CONDITIONAL_PORT, 'text1', 'prompt')
+
 beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [LOOP, END, TEXT], edges: [], inputKeys: [] })
 })
@@ -37,6 +45,9 @@ const outputs = (): readonly (string | undefined)[] =>
 
 const types = (): readonly (string | undefined)[] =>
   (nodeOf('forEach1')?.data.outputHandles ?? []).map(handle => handle.type)
+
+const edgeIds = (): readonly string[] =>
+  graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)
 
 const show = (id: string): void => {
   render(<LiveNodeInspector documentId={DOCUMENT} id={id} />)
@@ -86,11 +97,15 @@ describe('the lists a loop walks', () => {
    * from the gesture that caused it — which is why dropping a list cuts what read its item.
    */
   it('cuts the wire that read the item of a removed list', async () => {
-    installGraph(DOCUMENT, { nodes: [LOOP, END, TEXT], edges: [READS_ITEM], inputKeys: [] })
+    installGraph(DOCUMENT, {
+      nodes: [LOOP, END, TEXT],
+      edges: [READS_ITEM, STEERS],
+      inputKeys: [],
+    })
     show('forEach1')
     await userEvent.click(screen.getByRole('button', { name: /Supprimer cette liste/ }))
 
-    expect(graphOf(useGraphs.getState(), DOCUMENT).edges).toEqual([])
+    expect(edgeIds()).toEqual([STEERS.id])
   })
 
   /**
@@ -121,15 +136,15 @@ describe('the lists a loop walks', () => {
     )
     installGraph(DOCUMENT, {
       nodes: [forEachNode('forEach1', ['text']), END, TEXT],
-      edges: [feeds],
+      edges: [feeds, STEERS],
       inputKeys: [],
     })
     show('forEach1')
-    expect(graphOf(useGraphs.getState(), DOCUMENT).edges).toHaveLength(1)
+    expect(edgeIds()).toEqual([feeds.id, STEERS.id])
 
     await userEvent.selectOptions(screen.getByLabelText('Ce que cette liste contient'), 'image')
 
-    expect(graphOf(useGraphs.getState(), DOCUMENT).edges).toEqual([])
+    expect(edgeIds()).toEqual([STEERS.id])
   })
 
   /** And a wire the new kind still accepts stays: only what no longer connects is cut. */
@@ -151,7 +166,7 @@ describe('the lists a loop walks', () => {
     if (!first) throw new Error('no list to retype')
     await userEvent.selectOptions(first, 'text')
 
-    expect(graphOf(useGraphs.getState(), DOCUMENT).edges.map(edge => edge.id)).toEqual([feeds.id])
+    expect(edgeIds()).toEqual([feeds.id])
   })
 
   /** One entry, so ⌘Z never gives a list back without the port its item leaves by. */
