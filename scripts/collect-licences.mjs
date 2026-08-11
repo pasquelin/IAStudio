@@ -24,6 +24,13 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')
 const NOTICES = join(ROOT, 'THIRD-PARTY-NOTICES.md')
 
+/** `pnpm patch` keys these by `name@version`; the offer is about the package, so the name is enough. */
+const PATCHED = new Set(
+  Object.keys(
+    JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).pnpm?.patchedDependencies ?? {},
+  ).map(spec => spec.split('@').slice(0, -1).join('@')),
+)
+
 /**
  * Everything that reaches a user's disk: bundled by Vite, loaded at runtime, or shipped beside.
  * Not here on purpose: eslint, prettier, vitest, typescript, electron-builder and the `@types`
@@ -108,8 +115,12 @@ function collect(name) {
   const spdx = typeof manifest.license === 'string' ? manifest.license : 'UNKNOWN'
   const entry = { name, version: manifest.version, spdx, text: licenceText(root) }
 
-  // What npm ships is what we redistribute: nothing here patches a package after install.
-  return isCopyleft(spdx) ? { ...entry, sources: repository(manifest), unmodified: true } : entry
+  if (!isCopyleft(spdx)) return entry
+
+  // Read rather than asserted: the offer says we ship this very version untouched, and a patched
+  // dependency would make that false — silently, in a legal notice.
+  const sources = repository(manifest)
+  return PATCHED.has(name) ? { ...entry, sources } : { ...entry, sources, unmodified: true }
 }
 
 /**

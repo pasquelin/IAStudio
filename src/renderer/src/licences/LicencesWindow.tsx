@@ -48,8 +48,8 @@ export function LicencesWindow() {
               <div className="pb-3">
                 {entry.sources && (
                   <p className="text-muted text-tiny pb-2">
-                    {/* Two keys rather than one plus a word: the qualifier lands in a different
-                        place in each language, and a sentence cut in two cannot follow it. */}
+                    {/* Two literal calls, not `t(cond ? … : …)`: `known-keys` only follows a key
+                        it can read as a string literal, and would stop covering both. */}
                     {entry.unmodified ? t('licences.sourcesUnmodified') : t('licences.sources')}{' '}
                     {entry.sources}
                   </p>

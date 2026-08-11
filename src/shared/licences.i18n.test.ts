@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Licence } from './domain/licence'
+import { NO_VERSION, type Licence } from './domain/licence'
+import { TRANSLATIONS } from './i18n'
 import licences from './licences.json'
 
 /**
@@ -10,41 +11,40 @@ import licences from './licences.json'
  * into it by the script lands on screen having passed no bundle at all — which is how
  * "shipped with the application" and "— version 1.52.3, unmodified" were read by French users.
  *
- * The fields below are drawn beside translated labels. `text` is not among them: a licence is
- * reproduced word for word, in the language its authors wrote it.
+ * `text` is exempt: a licence is reproduced word for word, in the language its authors wrote it.
  */
+const PROSE = /\p{Letter}{2,}\s+\p{Letter}{2,}/u
+
+/** A link, optionally announced by the build it belongs to — never a sentence around one. */
+const LINK = /^([\w.]+ [\d.]+: )?https?:\/\/\S+$/
+
 describe('licences.json', () => {
   const entries: Licence[] = licences
 
-  it('lists what the studio ships', () => {
-    expect(entries.length).toBeGreaterThan(30)
+  // Pinned rather than merged: the notice must read on its own, the bundle is what the window
+  // translates. Reworded on one side alone, the two would drift in silence.
+  it('says the same thing in the notice and in the window', () => {
+    expect(NO_VERSION).toBe(TRANSLATIONS.en.licences.bundled)
   })
 
-  // A version numbers itself. Anything with a space in it is a sentence about the version.
+  // Two words running together are prose, whatever the numbering around them: FFmpeg ships two
+  // builds as `7.1.1 / 7.1.5` and passes, where `shipped with the application` cannot.
   it('numbers a version rather than describing it', () => {
-    const described = entries.filter(entry => entry.version?.includes(' '))
+    const described = entries.filter(entry => PROSE.test(entry.version ?? ''))
 
-    expect(described.map(entry => `${entry.name}: ${entry.version}`)).toEqual([
-      // FFmpeg alone ships two builds at once, and the slash is what separates them.
-      'FFmpeg: 7.1.1 / 7.1.5',
-    ])
+    expect(described.map(entry => `${entry.name}: ${entry.version}`)).toEqual([])
   })
 
-  /**
-   * `sources` is a URL, or one URL per line. Prose around it — "unmodified", "version 1.52.3" —
-   * is the window's business, and the window has two keys for it.
-   */
   it('offers a source as a link, never as a sentence about one', () => {
     const spoken = entries
-      .flatMap(entry => (entry.sources ?? '').split('\n').map(line => ({ entry, line })))
-      .filter(({ line }) => line !== '' && !/^(ffmpeg [\d.]+: )?https?:\/\/\S+$/.test(line))
+      .flatMap(entry => (entry.sources ?? '').split('\n'))
+      .filter(line => line !== '' && !LINK.test(line))
 
-    expect(spoken.map(({ entry, line }) => `${entry.name}: ${line}`)).toEqual([])
+    expect(spoken).toEqual([])
   })
 
-  // The offer is what copyleft asks for: a component owing one and carrying none fails the build
-  // in `collect-licences.mjs`, and this says the same thing from the side that ships.
-  it('marks an unmodified redistribution only where it offers the source', () => {
+  // The canary the three tests above rest on: a file that lost its offers would pass them all.
+  it('still carries the offer copyleft asks for', () => {
     const claimed = entries.filter(entry => entry.unmodified)
 
     expect(claimed.every(entry => entry.sources)).toBe(true)

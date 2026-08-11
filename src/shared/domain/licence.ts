@@ -8,33 +8,19 @@
  */
 export type Licence = {
   name: string
-  /**
-   * As the package numbers itself. Absent for what ships without a number of its own — the
-   * window then says so in the reader's language, which a sentence written here could not.
-   */
+  /** Absent where a component carries no number: the window then says so from a bundle. */
   version?: string
   /** SPDX identifier as the package declares it, or `UNKNOWN` when it declares none. */
   spdx: string
   /** Full licence text, so the window is the notice rather than a link to it. */
   text: string
-  /**
-   * Where the corresponding sources are — a URL, never a sentence about one. The window draws a
-   * translated label around it; prose written here would reach a French reader in English, and
-   * no guard reads a generated JSON.
-   */
+  /** Where the corresponding sources are — a URL, never a sentence about one. */
   sources?: string
-  /** Whether that source is the very version shipped, untouched — the offer copyleft asks for. */
+  /** Marks a source offered as the very version shipped, untouched. */
   unmodified?: boolean
 }
 
-/**
- * What `THIRD-PARTY-NOTICES.md` writes where a component has no version of its own.
- *
- * English, and rightly so: that file addresses whoever arrives from outside the repository. The
- * window says the same thing from a bundle, in the reader's language — `licences.bundled`. Here
- * so the script that writes the file and the test that reads it share one definition; the two
- * drifted the day a sentence lived in only one of them.
- */
+/** What the English notice writes for a component with no version — shared by its writer and its reader. */
 export const NO_VERSION = 'shipped with the application'
 
 /**
