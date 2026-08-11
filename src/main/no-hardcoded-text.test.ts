@@ -85,6 +85,46 @@ function isWords(text: string): boolean {
   return /\p{Letter}{2}/u.test(text)
 }
 
+/**
+ * Every module a file names in an import, an `export … from`, or a dynamic `import()`.
+ *
+ * The specifier as WRITTEN, never resolved: what this asks is which module a file says it needs,
+ * and a fixture is recognised by its name on either side of the alias.
+ */
+function importsOf(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
+  const named: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    const specifier =
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier
+        ? node.moduleSpecifier
+        : ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+          ? node.arguments[0]
+          : undefined
+
+    if (specifier && ts.isStringLiteral(specifier)) named.push(specifier.text)
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+
+  return named
+}
+
+/**
+ * A production file reaching for test material.
+ *
+ * `-fixtures` files are out of BOTH text guards and out of every coverage budget (`vitest.config.ts`),
+ * which is a decision — and its whole safety rests on nothing shipped importing one. Imported from
+ * production, such a file would put words on screen that no guard reads and no budget counts.
+ */
+function fixtureImportsIn(path: string, code: string): string[] {
+  return importsOf(path, code)
+    .filter(specifier => /-fixtures(\.[jt]sx?)?$/.test(specifier))
+    .map(specifier => `${path} imports ${specifier}`)
+}
+
 function registryFindingsIn(path: string, code: string): string[] {
   const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
   const findings: string[] = []
@@ -325,5 +365,43 @@ describe('the registries', () => {
 
     expect(main.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
     expect(main.some(path => path.endsWith('job-manager.ts'))).toBe(true)
+  })
+
+  /**
+   * The exemption's own safety net, and the reason it is written here rather than trusted.
+   *
+   * Stepping the fixtures over costs nothing only while nothing shipped reaches for one. A file
+   * named `*-fixtures.ts` that a panel imported would be invisible to both text guards AND absent
+   * from every coverage budget at once — three blind spots meeting on one file, none of which
+   * would say a word.
+   */
+  it('lets no shipped file reach for a fixture', () => {
+    const shipped = [MAIN, ...trees].flatMap(tree => sourceFiles(tree))
+    const found = shipped.flatMap(path =>
+      fixtureImportsIn(relative(join(MAIN, '..'), path), readFileSync(path, 'utf8')),
+    )
+
+    expect(found).toEqual([])
+  })
+
+  /** An empty result proves nothing unless the check can fail: three shapes, each of them seen. */
+  it('would see a fixture imported, named again, or awaited', () => {
+    const probe = [
+      "import { job } from '@/stores/job-fixtures'",
+      "export { job } from './job-fixtures'",
+      "const held = await import('../stores/job-fixtures')",
+    ]
+
+    expect(probe.flatMap(code => fixtureImportsIn('probe.ts', code))).toHaveLength(3)
+  })
+
+  it('leaves alone a module whose name merely holds the word', () => {
+    const quiet = [
+      "import { rows } from './fixtures-panel'",
+      "import { load } from './fixture'",
+      "import { job } from '@/stores/jobs'",
+    ]
+
+    expect(quiet.flatMap(code => fixtureImportsIn('probe.ts', code))).toEqual([])
   })
 })
