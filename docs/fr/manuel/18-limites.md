@@ -18,11 +18,11 @@ exactement où sont les bords.
 
 Trois catégories, à ne pas confondre :
 
-|                           |                                           |
-| ------------------------- | ----------------------------------------- |
-| **Pas encore fait**       | c’est prévu, ce sera là un jour           |
+|  |  |
+|---|---|
+| **Pas encore fait** | c’est prévu, ce sera là un jour |
 | **Volontairement absent** | ce ne sera pas fait, et il y a une raison |
-| **Défaut connu**          | ça marche mal, et c’est identifié         |
+| **Défaut connu** | ça marche mal, et c’est identifié |
 
 ---
 
@@ -31,30 +31,30 @@ Trois catégories, à ne pas confondre :
 **Ce chapitre a longtemps commencé par « trois documents sur six ne s’enregistrent pas ». Ce
 n’est plus vrai.** Les sept s’écrivent dans le dossier du projet et se rouvrent tels quels.
 
-| Document         | Extension | S’enregistre ?                                              |
-| ---------------- | --------- | ----------------------------------------------------------- |
-| Scène 3D         | `.scene`  | **oui**                                                     |
-| Matière          | `.tex`    | **oui**                                                     |
-| Image en calques | `.img`    | **oui**                                                     |
-| Séquence vidéo   | `.seq`    | **oui**                                                     |
-| Son édité        | `.aud`    | **oui**                                                     |
-| Ciel             | `.sky`    | **oui**                                                     |
-| Graphe           | `.graph`  | **oui** — ce qu’une exécution a produit ne s’enregistre pas |
+| Document | Extension | S’enregistre ? |
+|---|---|---|
+| Scène 3D | `.scene` | **oui** |
+| Matière | `.tex` | **oui** |
+| Image en calques | `.img` | **oui** |
+| Séquence vidéo | `.seq` | **oui** |
+| Son édité | `.aud` | **oui** |
+| Ciel | `.sky` | **oui** |
+| Graphe | `.graph` | **oui** — ce qu’une exécution a produit ne s’enregistre pas |
 
 **Ce qui ne s’enregistre pas, et c’est délibéré :**
 
 - **l’historique d’annulation** — rouvrir un document, c’est repartir sans `⌘Z` ;
 - **la façon dont on regarde** — zoom, cadrage, vue d’un ciel, sélection : c’est de l’état de
-  session, pas ce que le document _est_. Un document rouvert ne discute pas avec la fenêtre qui
+  session, pas ce que le document *est*. Un document rouvert ne discute pas avec la fenêtre qui
   l’ouvre ;
 - **en Audio, l’écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
 
 **Fermer un onglet demande maintenant.** Si le document a du travail non enregistré, le studio
-pose la question — Enregistrer, Ne pas enregistrer, Annuler — et _Annuler_ est ce que répond une
+pose la question — Enregistrer, Ne pas enregistrer, Annuler — et *Annuler* est ce que répond une
 touche `⎋` frappée sans lire.
 
 **Quitter aussi.** La fenêtre ne part plus en emportant du travail non enregistré : elle refuse
-le départ et pose la même question, une fois par document concerné. _Annuler_ à n'importe
+le départ et pose la même question, une fois par document concerné. *Annuler* à n'importe
 laquelle annule tout le départ, et **aucun document n'est fermé ni enregistré** — on retrouve le
 studio exactement comme on l'a laissé. Répondre à toutes ferme les onglets concernés sans
 quitter : le studio s'en va au geste suivant, quand il n'a plus rien à sauver.
@@ -83,12 +83,12 @@ ses calques — c’est un export, pas un enregistrement.
 
 Ils sont visibles dans la barre d’outils, en gris.
 
-| Outil                 | Groupe             |
-| --------------------- | ------------------ |
-| **Section** (`⇧S`)    | Cadre              |
-| **Découpe** (`S`)     | Cadre              |
-| **Plume**             | Dessin             |
-| **Texte sur chemin**  | Texte              |
+| Outil | Groupe |
+|---|---|
+| **Section** (`⇧S`) | Cadre |
+| **Découpe** (`S`) | Cadre |
+| **Plume** | Dessin |
+| **Texte sur chemin** | Texte |
 | **Commentaire** (`C`) | seul de son groupe |
 
 **Ils disent tous leur état par leur gris**, et c’est la seule chose qu’on leur demande tant qu’ils
@@ -137,7 +137,7 @@ Ce n’est pas un défaut : c’est un outil différent, qui porte bien son nom.
 
 ### L’historique s’arrête à 100
 
-La _pile d’annulation_ garde les **100 dernières** actions. Au-delà, les plus anciennes
+La *pile d’annulation* garde les **100 dernières** actions. Au-delà, les plus anciennes
 disparaissent définitivement.
 
 ### L’export aplatit, l’enregistrement non
@@ -185,7 +185,7 @@ retombe alors sur la police par défaut, et le journal dit laquelle a échoué.
 
 ### Le raccourci `S` fait deux choses à la fois
 
-Dans la vue 3D, `S` choisit l’outil **Redimensionner** _et_ fait reculer la caméra tant qu’on le
+Dans la vue 3D, `S` choisit l’outil **Redimensionner** *et* fait reculer la caméra tant qu’on le
 tient. Les deux tables de touches — les outils et le vol — sont lues sur le même appui.
 
 En pratique on le remarque peu : prendre l’outil recule la caméra d’un cheveu. Mais c’est un
@@ -216,12 +216,12 @@ se changent pas encore.
 
 Le moniteur Programme joue les pistes de son. Quatre bornes restent, toutes assumées :
 
-| Ce qui ne s’entend pas                               | Pourquoi                                                                              |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| **Le son d’une vidéo** posée sur une piste image     | seules les pistes de genre son sont ordonnancées                                      |
-| **Les fondus** d’un clip son                         | ils sont dessinés, saisissables et enregistrés, mais pas encore appliqués à la sortie |
-| **Le scrub** — déplacer la tête de lecture à la main | le son n’est planifié que par la boucle de lecture                                    |
-| **Le moniteur Source**                               | il monte le clip sélectionné sur une piste image, quel que soit son type              |
+| Ce qui ne s’entend pas | Pourquoi |
+|---|---|
+| **Le son d’une vidéo** posée sur une piste image | seules les pistes de genre son sont ordonnancées |
+| **Les fondus** d’un clip son | ils sont dessinés, saisissables et enregistrés, mais pas encore appliqués à la sortie |
+| **Le scrub** — déplacer la tête de lecture à la main | le son n’est planifié que par la boucle de lecture |
+| **Le moniteur Source** | il monte le clip sélectionné sur une piste image, quel que soit son type |
 
 **Et une dérive, non mesurée** : sur un montage long, l’image peut s’écarter du son. L’horloge de
 sortie prend la main dès qu’elle tourne, ce qui l’évite dans le cas courant — mais la toute
@@ -255,7 +255,7 @@ qu’il tient est **le montage**, pas le son : les coupes, les fondus, le gain, 
 d’origine. Ce qu’il ne garde pas, c’est l’**écoute A/B** — un document rouvert écoute la chaîne,
 jamais la source.
 
-L’espace sait aussi écrire un _asset_ directement, par **Appliquer** ou **Enregistrer comme
+L’espace sait aussi écrire un *asset* directement, par **Appliquer** ou **Enregistrer comme
 nouveau** : c’est ce qu’on fait quand le résultat doit servir ailleurs, pas continuer d’être édité.
 
 ---
@@ -306,7 +306,7 @@ du soleil se rouvrent telles quelles. Ce que le document ne garde pas : la vue e
 vision, qui disent comment on le regardait et non ce qu’il est.
 
 Les six faces d’un cube s’exportent depuis **Fichier › Exporter le ciel**, en 512, 1024 ou 2048.
-Ce qui manque encore est le _HDRI_ : les faces sortent en PNG, donc en 8 bits par canal, et ce qui
+Ce qui manque encore est le *HDRI* : les faces sortent en PNG, donc en 8 bits par canal, et ce qui
 dépasse le blanc est écrêté.
 
 ---
@@ -315,12 +315,12 @@ dépasse le blanc est écrêté.
 
 ### Ce qui s’importe
 
-| Type      | Extensions                                   |
-| --------- | -------------------------------------------- |
-| **Vidéo** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`   |
-| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg`         |
+| Type | Extensions |
+|---|---|
+| **Vidéo** | `mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v` |
+| **Audio** | `wav` `mp3` `aac` `flac` `m4a` `ogg` |
 | **Image** | `png` `jpg` `jpeg` `webp` `tif` `tiff` `exr` |
-| **3D**    | `glb`                                        |
+| **3D** | `glb` |
 
 ### Ce qui ne s’importe pas
 
@@ -328,7 +328,7 @@ dépasse le blanc est écrêté.
 - **les HDRI** — `.hdr`.
 
 Un `.exr` s’importe, mais il est catalogué comme **image**, pas comme ciel. Il fonctionne quand
-même comme source pour une _skybox_ : il faut simplement aller le chercher dans les images.
+même comme source pour une *skybox* : il faut simplement aller le chercher dans les images.
 
 **Trois formats s’importent sans jamais s’afficher dans un moniteur Vidéo** — `.exr`, `.tif` et
 `.tiff`. Le clip se pose sur une piste et garde sa durée, mais le moniteur annonce à la place de
@@ -432,7 +432,7 @@ affiché au-dessus. C’est une décision de métier, et elle ne changera pas.
 ### Vos identifiants ne s’afficheront jamais
 
 Il n’y a pas de bouton « voir ma clé API », et il n’y en aura pas. Une fois enregistrée, la clé
-est chiffrée par le _trousseau_ de votre système, et la partie du logiciel qui dessine l’écran
+est chiffrée par le *trousseau* de votre système, et la partie du logiciel qui dessine l’écran
 n’y a **structurellement** pas accès.
 
 Ce n’est pas une gêne à contourner : c’est ce qui garantit qu’une capture d’écran de vos réglages
