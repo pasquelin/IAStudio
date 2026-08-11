@@ -48,10 +48,11 @@ function renderField(props: Partial<Parameters<typeof NumberField>[0]> = {}) {
 }
 
 describe('NumberField', () => {
-  it('shows the value it was given', () => {
+  // In the reader's own separator, like the readout beside it: the two sit in the same panel.
+  it('shows the value it was given, written the way this reader writes one', () => {
     renderField({ value: 2.5 })
 
-    expect(screen.getByLabelText('Radius')).toHaveValue('2.5')
+    expect(screen.getByLabelText('Radius')).toHaveValue('2,5')
   })
 
   describe('arrow keys', () => {
@@ -84,6 +85,30 @@ describe('NumberField', () => {
     await userEvent.type(screen.getByLabelText('Radius'), '7')
 
     expect(onChange).toHaveBeenLastCalledWith(7)
+  })
+
+  /**
+   * The decimal key of a French numeric pad produces a comma, so `0,5` is what a hand types by
+   * default rather than by preference. `Number` read it as `NaN`, the field refuses non-finite
+   * values, and the gesture failed in silence: the old value came back on blur.
+   */
+  it('takes the separator the keyboard puts under the thumb', async () => {
+    const { onChange } = renderField({ value: 1, min: 0, step: 0.1 })
+
+    await userEvent.clear(screen.getByLabelText('Radius'))
+    await userEvent.type(screen.getByLabelText('Radius'), '0,5')
+
+    expect(onChange).toHaveBeenLastCalledWith(0.5)
+  })
+
+  // Both separators, in either language: a studio meets two keyboards more often than two locales.
+  it('takes the other one just as well', async () => {
+    const { onChange } = renderField({ value: 1, min: 0, step: 0.1 })
+
+    await userEvent.clear(screen.getByLabelText('Radius'))
+    await userEvent.type(screen.getByLabelText('Radius'), '0.5')
+
+    expect(onChange).toHaveBeenLastCalledWith(0.5)
   })
 
   // `Number('')` is 0: emitting it would crush the mesh to its minimum in the moment between
