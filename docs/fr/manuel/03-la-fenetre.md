@@ -309,6 +309,26 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > ceux qui le lisent disent *amont en échec*. **Il ne prend qu’un seul fil pour l’instant** :
 > assembler deux textes en une expression viendra avec les nœuds de logique.
 >
+> **Un graphe sort du studio par trois boutons, et y revient par un quatrième.** Ils sont dans la
+> même barre que **Exécuter**. Les deux qui font sortir sont grisés tant que le canevas ne porte
+> rien ; celui qui fait entrer l’est pendant une exécution.
+>
+> - **Exporter le graphe** l’écrit en `.workflow.json`, à l’endroit que vous choisissez — c’est le
+>   format que la webapp Scenario sait ouvrir, donc le chemin pour reprendre ailleurs ce qui a été
+>   dessiné ici.
+> - **Publier sur Scenario** ne passe pas par un fichier : la publication crée une **App de votre
+>   compte**, prête à être exécutée depuis le site. La ligne d’état en bas à gauche répond
+>   **Publié sur Scenario**, ou **Scenario l’a refusé — voir le journal** ; et le studio refuse
+>   lui-même, avant d’envoyer quoi que ce soit, un graphe qu’il n’aurait pas exporté.
+> - **Importer un graphe** ouvre un `.workflow.json` — le vôtre, ou celui d’une App publiée.
+>   **Il remplace ce qui est sur le canevas**, et c’est le seul de ces gestes qui détruise quelque
+>   chose : `⌘Z` le remet.
+>
+> **Ce que le studio ne sait pas encore créer, l’import l’apporte.** La palette pose cinq types de
+> nœuds ; le format en connaît quinze. Un branchement, une boucle, un découpage de texte arrivent
+> donc par un fichier, se dessinent sur le canevas, et le graphe s’exécute avec eux — ceux du
+> moins que le studio sait exécuter, les autres disant *non exécutable*.
+>
 > Ce qu’il ne sait **pas encore** : *créer* un nœud de logique ou de boucle. Un branchement
 > n’arrive que par l’import, et une boucle ne s’exécute pas du tout. Son chapitre viendra quand
 > il les saura.
