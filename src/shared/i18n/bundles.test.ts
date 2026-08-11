@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIVITY_LEVELS, ACTIVITY_TOPICS } from '../domain/activity'
+import { TRACK_PROPERTIES } from '../domain/animation'
+import { HOME_SECTION_IDS } from '../domain/home'
+import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
 import { STT_ERROR_CODES } from '../domain/dictation'
 import {
@@ -276,6 +279,12 @@ const DYNAMIC_KEYS: readonly string[] = [
   // already a literal. It is listed all the same: the check beside the table only proves every
   // tag HAS a key, and a key naming nothing would still read as itself on screen.
   ...TAG_LABEL_KEY_LIST,
+  // Three unions the interface composed without a net. Every value is translated today; what
+  // was missing is the check that says so the day a fourth is added — a value without its line
+  // shows the user the key itself.
+  ...TRACK_PROPERTIES.map(property => `animation.${property}`),
+  ...HOME_SECTION_IDS.map(id => `home.sections.${id}`),
+  ...[...new Set(TOOL_PLACEMENTS.map(placement => placement.id))].map(id => `panels.${id}`),
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),
