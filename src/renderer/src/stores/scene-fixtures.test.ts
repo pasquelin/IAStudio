@@ -19,14 +19,13 @@ describe('sceneNodeNow', () => {
 
   /**
    * Two scenes have to stand at once for this to be observable: with one installed, reading the
-   * wrong document finds nothing, which is what a missing node looks like too. And `installScene`
-   * REPLACES the whole map, so the first is put back beside the second by hand.
+   * wrong document finds nothing, which is what a missing node looks like too — and `installScene`
+   * replaces the whole map, so both are set at once rather than installed in turn.
    */
   it('reads the document it is given, not one of its own', () => {
-    installScene('scene-2', sceneOfOne('Colonne'))
-    useScenes.setState(state => ({
-      states: { ...state.states, [DOCUMENT]: sceneOfOne('Socle') },
-    }))
+    useScenes.setState({
+      states: { [DOCUMENT]: sceneOfOne('Socle'), 'scene-2': sceneOfOne('Colonne') },
+    })
 
     expect(sceneNodeNow('scene-2', 'box-1')?.name).toBe('Colonne')
     expect(sceneNodeNow(DOCUMENT, 'box-1')?.name).toBe('Socle')
@@ -46,10 +45,7 @@ describe('sceneNodeNow', () => {
     expect(sceneNodeNow('scene-404', 'box-1')).toBeNull()
   })
 
-  /**
-   * Read at call time, not at import time — the suites call it after an edit and expect the new
-   * value. A reader that closed over the state it was defined with would pass every test above.
-   */
+  /** Read at call time: the suites call it after an edit and expect the edited value. */
   it('reads the store as it stands at the call, not as it stood before', () => {
     const before = sceneNodeNow(DOCUMENT, 'box-1')
 

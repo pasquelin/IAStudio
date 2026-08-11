@@ -5,7 +5,7 @@ import { layerPort } from './layer-port'
 
 const DOCUMENT = 'doc-1'
 
-const transform = () => layerNow(DOCUMENT, 'layer-1')?.transform
+const transform = (documentId = DOCUMENT) => layerNow(documentId, 'layer-1')?.transform
 const entries = () => historyOf(useCanvases.getState(), DOCUMENT).past.length
 
 describe('layerPort', () => {
@@ -20,7 +20,7 @@ describe('layerPort', () => {
     port.endDrag()
 
     expect(transform()).toMatchObject({ x: 40, y: -12 })
-    expect(layerNow('doc-2', 'layer-1')?.transform.x).toBe(0)
+    expect(transform('doc-2')?.x).toBe(0)
   })
 
   /**

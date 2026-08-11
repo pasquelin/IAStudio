@@ -19,14 +19,13 @@ describe('layerNow', () => {
 
   /**
    * Two canvases have to stand at once for this to be observable: with one installed, reading the
-   * wrong document falls back to the default canvas, whose layer carries neither name. And
-   * `installCanvas` REPLACES the whole map, so the first is put back beside the second by hand.
+   * wrong document falls back to the default canvas, whose layer carries neither name — and
+   * `installCanvas` replaces the whole map, so both are set at once rather than installed in turn.
    */
   it('reads the document it is given, not one of its own', () => {
-    installCanvas('image-2', canvasOfOne('Sea'))
-    useCanvases.setState(state => ({
-      states: { ...state.states, [DOCUMENT]: canvasOfOne('Sky') },
-    }))
+    useCanvases.setState({
+      states: { [DOCUMENT]: canvasOfOne('Sky'), 'image-2': canvasOfOne('Sea') },
+    })
 
     expect(layerNow('image-2', 'layer-2')?.name).toBe('Sea')
     expect(layerNow(DOCUMENT, 'layer-2')?.name).toBe('Sky')
@@ -47,10 +46,7 @@ describe('layerNow', () => {
     expect(layerNow('image-404', 'layer-1')?.name).toBe('Background')
   })
 
-  /**
-   * Read at call time, not at import time — the suites call it after an edit and expect the new
-   * value. A reader that closed over the state it was defined with would pass every test above.
-   */
+  /** Read at call time: the suites call it after an edit and expect the edited value. */
   it('reads the store as it stands at the call, not as it stood before', () => {
     const before = layerNow(DOCUMENT, 'layer-2')
 

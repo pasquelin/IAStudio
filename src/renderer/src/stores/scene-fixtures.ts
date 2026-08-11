@@ -23,8 +23,7 @@ export function installScene(documentId: string, state: SceneState = createDefau
 /**
  * Reading half of `installScene`, in the shape a subscribed selector takes it.
  *
- * Named apart from the graph's `nodeIn` because the inspector suite installs both a graph and a
- * scene, and would otherwise import two readers under one name.
+ * Prefixed because `graph-fixtures.ts`, next door, already publishes `nodeIn` for its own store.
  */
 export const sceneNodeIn = (
   state: DocumentStoreState<SceneState>,
