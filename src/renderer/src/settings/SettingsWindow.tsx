@@ -20,9 +20,6 @@ import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
 import { WINDOW_CAPTION, WINDOW_HELP } from '@/design/window-styles'
 
-/** One step of indentation, two gutters wide — the step `design/Tree.tsx` walks. */
-const INDENT = 'var(--sc-gutter) * 2'
-
 /** Whether anything under a section is staged — its own settings, or a sub-section's. */
 function sectionIsStaged(touched: ReadonlySet<SettingPath>, section: SettingsSection): boolean {
   const ids = [section.id, ...section.children.map(child => child.id)]
@@ -55,7 +52,7 @@ function NavigationEntry({
         aria-current={active ? 'page' : undefined}
         {...HINT_RIGHT(t(staged ? 'settings.sectionStagedHint' : 'settings.sectionHint'))}
         onClick={() => onSelect(section.id)}
-        style={{ paddingLeft: `calc(${INDENT} * ${depth + 1})` }}
+        style={{ paddingLeft: `calc(var(--sc-indent) * ${depth + 1})` }}
         className={cn(
           'flex h-(--sc-control) w-full items-center gap-1.5 rounded-(--radius-sc-sm) pr-3 text-left text-xs',
           active ? 'bg-primary text-primary-content' : 'hover:bg-base-300',

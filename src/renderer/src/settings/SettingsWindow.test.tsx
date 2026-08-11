@@ -136,8 +136,8 @@ describe('SettingsWindow', () => {
     const root = entries.find(entry => entry.textContent === 'Génération')
     const child = entries.find(entry => entry.textContent === 'Vidéo')
 
-    expect(root?.style.paddingLeft).toContain('var(--sc-gutter) * 2')
-    expect(child?.style.paddingLeft).toContain('var(--sc-gutter) * 2')
+    expect(root?.style.paddingLeft).toContain('var(--sc-indent)')
+    expect(child?.style.paddingLeft).toContain('var(--sc-indent)')
     expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
   })
 
