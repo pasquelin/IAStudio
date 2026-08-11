@@ -89,7 +89,7 @@ const nodeOf = (id: string): GraphNode | null =>
  * second character overwrites the first.
  */
 function Live({ id }: { id: string }) {
-  const node = useGraphs(state => graphOf(state, DOCUMENT).nodes.find(entry => entry.id === id))
+  const node = useGraphs(state => nodeById(graphOf(state, DOCUMENT), id))
   return node ? <GraphNodeInspector documentId={DOCUMENT} node={node} /> : null
 }
 

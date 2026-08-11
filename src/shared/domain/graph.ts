@@ -577,11 +577,13 @@ export function namedLoopId(node: GraphNode): string | undefined {
 }
 
 /**
- * The node an id names, or `null`. Here rather than in the engine because the READER needs it —
- * the inspector asks for the selected node, and the opening chunk holds no engine.
+ * The node an id names, or `null`. Here for the reason `outputNodesOf` and `isRunnable` are: a
+ * total function over `GraphState` belongs beside `GraphState`, and this one is asked by the
+ * engine and by a panel both.
  *
  * `null` and not `undefined`, so it answers as `nodeById` does on the scene side
- * (`engines/scene/scene-state.ts`): one name across the studio must not mean two shapes.
+ * (`engines/scene/scene-state.ts`). The two never meet in one file — this buys a habit, not a
+ * substitution, and the ports next door still answer `undefined`.
  *
  * `id` may be missing, as `inputHandleOf` takes it: a selection reads `ids[0]`, and no node
  * answers to nothing anyway — the alternative is every caller widening it back with `?? ''`.

@@ -3,6 +3,7 @@ import {
   CONDITIONAL_PORT,
   EMPTY_GRAPH,
   isReservedNodeId,
+  nodeById,
   type GraphNode,
   type GraphState,
 } from '@shared/domain/graph'
@@ -284,7 +285,7 @@ describe('swapping what a node is wired by', () => {
   it('keeps what the new model still answers for', () => {
     const next = replaceNodePorts(fed, 'imageGenerator1', withoutMask)
 
-    expect(next.nodes.find(node => node.id === 'imageGenerator1')?.data).toMatchObject({
+    expect(nodeById(next, 'imageGenerator1')?.data).toMatchObject({
       modelId: 'model_sdxl',
     })
   })

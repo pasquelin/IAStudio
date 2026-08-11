@@ -15,8 +15,8 @@ describe('nodeById', () => {
     expect(nodeById(graph(node('a'), node('b')), 'b')?.id).toBe('b')
   })
 
-  // `null` and not `undefined`, so one name means one shape: `nodeById` on the scene side
-  // (`engines/scene/scene-state.ts`) already answers this way, and both are read by the inspector.
+  // `null` and not `undefined`, as `nodeById` on the scene side already answers
+  // (`engines/scene/scene-state.ts`). No file imports both — this is one habit, not one function.
   it('answers null rather than undefined when nothing carries the id', () => {
     expect(nodeById(graph(node('a')), 'b')).toBeNull()
     expect(nodeById(EMPTY_GRAPH, 'a')).toBeNull()
