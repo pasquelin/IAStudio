@@ -1,3 +1,4 @@
+import { reportFailure } from '@/services/diagnostics'
 import { settleUnsavedWork, unsavedDocumentIds } from './document-io'
 
 /**
@@ -9,8 +10,9 @@ import { settleUnsavedWork, unsavedDocumentIds } from './document-io'
  * the question asked after: once every document has been answered for, nothing is dirty and the
  * next attempt goes straight through.
  *
- * The guard covers the two ways the work goes without a tab being closed — quitting, and the
- * developer reload — because neither passes through `closeDocument`.
+ * It covers the ways the work goes with the window rather than with a tab — quitting, and the
+ * developer reload. It does not cover `refreshDocuments`, which drops documents on a project
+ * change without unloading anything, and which no `beforeunload` can see.
  */
 export function guardUnsavedWork(target: Window): () => void {
   // A second ⌘Q while the first question is still on screen would stack a dialog per press.
@@ -22,9 +24,13 @@ export function guardUnsavedWork(target: Window): () => void {
     if (asking) return
 
     asking = true
-    void settleUnsavedWork().finally(() => {
-      asking = false
-    })
+    void settleUnsavedWork()
+      // A write that throws — a project on a volume that went away — would otherwise close the
+      // dialog and say nothing, leaving every attempt to leave to replay the same silent scene.
+      .catch(error => reportFailure('document.close', '', error))
+      .finally(() => {
+        asking = false
+      })
   }
 
   target.addEventListener('beforeunload', refuse)

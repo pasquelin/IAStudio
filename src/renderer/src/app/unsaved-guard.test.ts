@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { CloseChoice } from '@shared/domain/document'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
@@ -100,6 +101,38 @@ describe('guardUnsavedWork', () => {
     await vi.waitFor(() => expect(unsavedDocumentIds()).toEqual([documentId]))
   })
 
+  // Cancelling the last question must leave the studio as it was. Answering document by document
+  // and closing as the answers came in threw away the ones answered before the cancel.
+  it('keeps every document when a later question is cancelled', async () => {
+    const answers: CloseChoice[] = ['discard', 'cancel']
+    installFakeBridge({
+      documents: { confirmClose: () => Promise.resolve(answers.shift() ?? 'cancel') },
+    })
+    arm(window)
+    const first = await openDirtyScene()
+    const second = await openDirtyScene()
+
+    leave(window)
+
+    await vi.waitFor(() => expect(answers).toEqual([]))
+    expect(unsavedDocumentIds().sort()).toEqual([first, second].sort())
+  })
+
+  // Cancelling stops the whole gesture, so the documents behind the cancelled one are not even
+  // asked about — a second dialog after "Cancel" would be the studio arguing with the answer.
+  it('asks nothing further once a question is cancelled', async () => {
+    const confirmClose = vi.fn(() => Promise.resolve<'cancel'>('cancel'))
+    installFakeBridge({ documents: { confirmClose } })
+    arm(window)
+    await openDirtyScene()
+    await openDirtyScene()
+
+    leave(window)
+
+    await vi.waitFor(() => expect(confirmClose).toHaveBeenCalledTimes(1))
+    expect(unsavedDocumentIds()).toHaveLength(2)
+  })
+
   // A dialog per keypress is the failure this guards against: the answer to the first is still
   // out when the second arrives.
   it('asks once however many times the gesture is repeated', async () => {
@@ -113,6 +146,27 @@ describe('guardUnsavedWork', () => {
     leave(window)
 
     await vi.waitFor(() => expect(confirmClose).toHaveBeenCalledTimes(1))
+  })
+
+  // A rejected write used to close the dialog and say nothing: no failure reported, and every
+  // later attempt to leave replayed the same silent scene.
+  it('reports a failed answer instead of swallowing it, and asks again next time', async () => {
+    const confirmClose = vi.fn(() => Promise.reject(new Error('volume gone')))
+    const report = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { confirmClose }, diagnostics: { report } })
+    arm(window)
+    await openDirtyScene()
+
+    leave(window)
+    await vi.waitFor(() =>
+      expect(report).toHaveBeenCalledWith(
+        expect.objectContaining({ level: 'error', scope: 'document.close' }),
+      ),
+    )
+
+    // The flag released, so the gesture is answerable again rather than stuck on the first try.
+    leave(window)
+    await vi.waitFor(() => expect(confirmClose).toHaveBeenCalledTimes(2))
   })
 
   it('stops refusing once it is taken off', async () => {
