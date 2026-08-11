@@ -293,9 +293,9 @@ describe('TitleBar', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
-  // Read back by its hover: `cn` drops the skin's `text-muted` under the `text-text` an active
-  // pill adds, so the whole string never survives into a rendered class list.
-  it('reads the bar skin rather than carrying its own copy', () => {
+  // What the DOM can answer for is the shade, not where it came from — that `TITLE_BAR_GHOST` is
+  // the only place it is written is held by `design/styles.test.ts`.
+  it('lights up in the half-opaque shade this bar answers with', () => {
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
     expect(pill('Image')).toHaveClass('hover:bg-elevated/60', 'hover:text-text')

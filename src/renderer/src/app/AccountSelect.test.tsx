@@ -143,8 +143,10 @@ describe('AccountSelect', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  // Read back by its hover: `cn` drops the skin's `text-muted` under this button's own `text-tiny`.
-  it('wears the same skin as the pills at the other end of the bar', () => {
+  // The hover only: `twMerge` files `text-tiny` under text COLOUR, so this button drops the skin's
+  // `text-muted` and rests on the inherited tone — the pills at the other end do not. Measured on
+  // `develop` as well: the lot that shared the skin did not open it. `DRIFT_LOG.md`, P0.
+  it('lights up in the half-opaque shade this bar answers with', () => {
     given([studio])
     render(<AccountSelect />)
 
