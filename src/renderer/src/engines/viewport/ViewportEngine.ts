@@ -239,6 +239,11 @@ export class ViewportEngine {
     return [this.controls, ...this.extras.map(pane => pane.controls)]
   }
 
+  /** Pane 0 is the main camera; the rest read one past their own index. */
+  private cameraOfPane(index: number): ViewportCamera | null {
+    return index === 0 ? this.camera : (this.extras[index - 1]?.camera ?? null)
+  }
+
   /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
   paneAtPointer(pointer: PointerPosition): number | null {
     const canvas = this.renderer?.domElement
@@ -282,9 +287,9 @@ export class ViewportEngine {
     if (this.layout === 'single') return
 
     const over = this.paneAtPointer(event)
-    const orbits = this.paneOrbits
-    for (const [index, orbit] of orbits.entries()) {
-      if (orbit) orbit.enabled = index === over
+    if (this.controls) this.controls.enabled = over === 0
+    for (const [index, pane] of this.extras.entries()) {
+      if (pane.controls) pane.controls.enabled = over === index + 1
     }
   }
 
@@ -463,8 +468,7 @@ export class ViewportEngine {
    * what keeps a pane from clearing the three beside it.
    */
   private renderPanes(renderer: WebGLRenderer): void {
-    const cameras = this.paneCameras
-    if (cameras.length < 2) {
+    if (this.extras.length === 0) {
       renderer.render(this.scene, this.camera)
       return
     }
@@ -474,9 +478,12 @@ export class ViewportEngine {
 
     renderer.setScissorTest(true)
     try {
-      for (const [index, camera] of cameras.entries()) {
-        const rect = this.rects[index]
-        if (!rect || rect.width === 0 || rect.height === 0) continue
+      // Walked by index rather than over `paneCameras`: that getter builds an array, and one
+      // built per frame is one allocation per frame for a list of four that never changes.
+      for (const [index, rect] of this.rects.entries()) {
+        if (rect.width === 0 || rect.height === 0) continue
+        const camera = this.cameraOfPane(index)
+        if (!camera) continue
 
         const { x, y, width, height: paneHeight } = glRect(rect, height, ratio)
         renderer.setViewport(x, y, width, paneHeight)
@@ -515,9 +522,10 @@ export class ViewportEngine {
     // `update` reports whether the camera actually moved: it keeps returning true while damping
     // settles, and false once it has — which is what ends the loop instead of running forever.
     // Every pane is asked: the one being dragged is not always the one that is still settling.
-    let settling = false
-    for (const orbit of this.paneOrbits) {
-      if (orbit !== null && orbit.enabled && orbit.update()) settling = true
+    // Walked field by field rather than over `paneOrbits`, which would allocate a list per frame.
+    let settling = this.controls?.enabled === true && this.controls.update()
+    for (const pane of this.extras) {
+      if (pane.controls?.enabled === true && pane.controls.update()) settling = true
     }
 
     this.renderPanes(renderer)
