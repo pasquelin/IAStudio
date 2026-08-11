@@ -47,8 +47,9 @@ type Interpolated = { key: string; given: readonly string[]; line: number }
 /**
  * The literals an expression can resolve to. A control that says two things writes a ternary —
  * `t(pinned ? 'inspector.pinned' : 'inspector.pin')` — and reading the outer node alone saw a
- * `ConditionalExpression`, took nothing, and moved on: 38 sites, one of them naming a key that
- * no bundle held.
+ * `ConditionalExpression`, took nothing, and moved on. Walking in adds 36 keys to what this
+ * guard reads, measured by running both versions over the same sources; one of them named a
+ * key no bundle held.
  *
  * The third copy of this walk, after both `no-hardcoded-text.test.ts`. Narrower on purpose: those
  * two hunt WORDS, so they join the parts of a template, while a key is one literal or none.
@@ -93,8 +94,10 @@ function keysIn(
   const lineOf = (node: ts.Node): number =>
     source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1
 
-  const take = (node: ts.Node, literal: ts.StringLiteral): void => {
-    keys.push({ key: literal.text, line: lineOf(node) })
+  // The literal's own line, not the call's: the two keys of a ternary spread over four lines
+  // would otherwise be reported at the same place, as if one of them were a duplicate.
+  const take = (literal: ts.StringLiteral): void => {
+    keys.push({ key: literal.text, line: lineOf(literal) })
   }
 
   const visit = (node: ts.Node): void => {
@@ -112,7 +115,7 @@ function keysIn(
           ? namesOf(second, source)
           : undefined
       for (const literal of literalsOf(first).filter(one => one.text.includes('.'))) {
-        take(node, literal)
+        take(literal)
         if (given !== undefined) filled.push({ key: literal.text, given, line: lineOf(node) })
       }
     }
@@ -121,7 +124,7 @@ function keysIn(
     // and four registries write `labelKey` that way.
     if (ts.isPropertyAssignment(node) && node.name.getText(source).endsWith('Key')) {
       for (const literal of literalsOf(node.initializer).filter(one => one.text.includes('.'))) {
-        take(node, literal)
+        take(literal)
       }
     }
 
@@ -151,7 +154,7 @@ function keysIn(
       keysUnder(node.initializer)
       return
     }
-    if (ts.isStringLiteral(node) && KEY_SHAPED.test(node.text)) take(node, node)
+    if (ts.isStringLiteral(node) && KEY_SHAPED.test(node.text)) take(node)
     ts.forEachChild(node, keysUnder)
   }
 
