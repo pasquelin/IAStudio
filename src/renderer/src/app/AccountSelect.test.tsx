@@ -142,4 +142,17 @@ describe('AccountSelect', () => {
     expect(open).toHaveBeenCalledWith('account')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
+
+  // The hover only: `twMerge` files `text-tiny` under text COLOUR, so this button drops the skin's
+  // `text-muted` and rests on the inherited tone — the pills at the other end do not. Measured on
+  // `develop` as well: the lot that shared the skin did not open it. `DRIFT_LOG.md`, P0.
+  it('lights up in the half-opaque shade this bar answers with', () => {
+    given([studio])
+    render(<AccountSelect />)
+
+    expect(screen.getByRole('button', { name: 'Compte Scenario' })).toHaveClass(
+      'hover:bg-elevated/60',
+      'hover:text-text',
+    )
+  })
 })
