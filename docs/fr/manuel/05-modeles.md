@@ -138,7 +138,7 @@ c’est l’étiquette d’origine, non traduite, qui part au catalogue — vous
 le filtre demande `First Frame`.
 
 Quelques exemples, selon l’espace : « Personnages », « Fantasy », « Dessin animé » pour l’image ;
-« Première image », « Montage vidéo » pour la vidéo ; « Multivue », « Mouvement » pour la 3D ;
+« Première image », « Édition vidéo » pour la vidéo ; « Multivue », « Mouvement » pour la 3D ;
 « Musique », « Texte vers voix » pour l’audio.
 
 Les sigles restent tels quels, faute d’avoir une traduction qui éclaire quoi que ce soit :

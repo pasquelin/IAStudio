@@ -4,10 +4,11 @@ import {
   FAMILY_TAGS,
   MODEL_FAMILIES,
   scopeOf,
+  tagLabel,
   TAGS_BY_FAMILY,
+  TAG_LABEL_KEY_LIST,
   TAG_LABEL_KEYS,
   tagOfFamily,
-  UNTRANSLATED_TAGS,
 } from './model'
 
 const OFFERED_TAGS = [...new Set(MODEL_FAMILIES.flatMap(family => TAGS_BY_FAMILY[family]))]
@@ -45,29 +46,25 @@ describe('the tags that name a family', () => {
  * forgotten here degrades silently back into English rather than failing.
  */
 describe('the tags a facet menu offers', () => {
-  it('either names every one of them or says it leaves it alone', () => {
-    const unaccounted = OFFERED_TAGS.filter(
-      tag => TAG_LABEL_KEYS[tag] === undefined && !UNTRANSLATED_TAGS.includes(tag),
-    )
-
-    expect(unaccounted).toEqual([])
+  it('has an answer for every one of them, a name or a deliberate silence', () => {
+    expect(OFFERED_TAGS.filter(tag => !(tag in TAG_LABEL_KEYS))).toEqual([])
   })
 
-  it('never both names a tag and leaves it alone', () => {
-    expect(UNTRANSLATED_TAGS.filter(tag => TAG_LABEL_KEYS[tag] !== undefined)).toEqual([])
-  })
-
-  // A key for a tag no menu offers is a translation nobody reads, and a bundle entry nobody
-  // removes: both lists are answers about the table above, so neither outlives it.
-  it('names no tag it does not offer, and leaves alone none it does not offer', () => {
+  // An entry for a tag no menu offers is a translation nobody reads and a bundle line nobody
+  // removes: the record answers about the table above, so it does not outlive it.
+  it('answers about no tag it does not offer', () => {
     expect(Object.keys(TAG_LABEL_KEYS).filter(tag => !OFFERED_TAGS.includes(tag))).toEqual([])
-    expect(UNTRANSLATED_TAGS.filter(tag => !OFFERED_TAGS.includes(tag))).toEqual([])
   })
 
-  it('gives each tag a key of its own', () => {
-    const keys = Object.values(TAG_LABEL_KEYS)
+  it('gives each named tag a key of its own', () => {
+    expect(new Set(TAG_LABEL_KEY_LIST).size).toBe(TAG_LABEL_KEY_LIST.length)
+  })
 
-    expect(new Set(keys).size).toBe(keys.length)
+  it('shows the publisher word wherever it named nothing, never a key', () => {
+    expect(tagLabel('PBR', () => 'unreachable')).toBe('PBR')
+    expect(tagLabel('Multiview', key => `<${key}>`)).toBe('<modelTags.multiview>')
+    // A tag the table has never heard of still has to read as something.
+    expect(tagLabel('Nano Banana Pro', () => 'unreachable')).toBe('Nano Banana Pro')
   })
 })
 

@@ -10,7 +10,6 @@ import {
   queryFrom,
   sortOptions,
   TAG_FACET,
-  tagLabel,
 } from './model-filters'
 
 const identity = (key: string): string => key
@@ -138,7 +137,6 @@ describe('model filters', () => {
     )
 
     expect(tag?.options).toContainEqual({ value: 'I2V', label: 'I2V' })
-    expect(tagLabel('PBR', identity)).toBe('PBR')
   })
 
   /**

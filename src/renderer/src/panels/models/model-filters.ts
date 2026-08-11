@@ -5,8 +5,8 @@ import {
   MODEL_PERIODS,
   MODEL_SORTS,
   PUBLISHERS_BY_FAMILY,
+  tagLabel,
   TAGS_BY_FAMILY,
-  TAG_LABEL_KEYS,
   type ModelFamily,
   type ModelPeriod,
   type ModelQuery,
@@ -27,16 +27,6 @@ export const PERIOD_FACET = 'period'
 
 /** Translates a key into user text. Taking it as an argument keeps this module renderless. */
 type Translate = (key: string) => string
-
-/**
- * A tag's name on screen. A tag with no key of its own is an acronym or a product name — `PBR`,
- * `Flux.1 LoRA` — and is shown as written, never as a raw key: the value doubles as its own
- * fallback, which is the one wording that is always true.
- */
-export function tagLabel(value: string, t: Translate): string {
-  const key = TAG_LABEL_KEYS[value]
-  return key === undefined ? value : t(key)
-}
 
 /** A family's own vocabulary — nothing where a surface browses every family at once. */
 function ownedBy(

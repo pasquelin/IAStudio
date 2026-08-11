@@ -17,7 +17,7 @@ import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
   MODEL_SORTS,
-  TAG_LABEL_KEYS,
+  TAG_LABEL_KEY_LIST,
 } from '../domain/model'
 import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
@@ -273,9 +273,9 @@ const DYNAMIC_KEYS: readonly string[] = [
     CAPABILITIES_BY_FAMILY[family].map(capability => `capabilities.${capability}`),
   ),
   // The facet menu reads these through a table rather than through a template, so a key here is
-  // already a literal. It is listed all the same: the check below only proves every tag HAS a
-  // key, and a key naming nothing would still read as itself on screen.
-  ...Object.values(TAG_LABEL_KEYS),
+  // already a literal. It is listed all the same: the check beside the table only proves every
+  // tag HAS a key, and a key naming nothing would still read as itself on screen.
+  ...TAG_LABEL_KEY_LIST,
   ...MODEL_PERIODS.map(period => `periods.${period}`),
   ...MODEL_SORTS.map(sort => `sorts.${sort}`),
   ...ACTIVITY_LEVELS.map(level => `activity.levels.${level}`),
@@ -327,5 +327,30 @@ describe('the keys the interface composes', () => {
     for (const key of DYNAMIC_KEYS) {
       expect(BUNDLES[code].get(key)?.trim() ?? '', `${key} is missing`).not.toBe('')
     }
+  })
+})
+
+/**
+ * Tag and Capability are two menus of the same bar, filtering on two different things — one the
+ * API matches as a tag, the other the registry applies. A `<select>` shows the chosen OPTION once
+ * it closes, never the facet it belongs to (`CollectionBar.tsx` says so where it draws one), so
+ * two menus wearing the same words leave a picked filter unreadable.
+ *
+ * The first translation of the tags walked straight into it: `Text to Image` became "Texte vers
+ * image", which is what `capabilities.txt2img` had said all along. Until then the tags were in
+ * English, and that — not any design — was the only thing telling the two menus apart.
+ */
+describe('two facet menus of the same bar', () => {
+  it.each(CODES)('never puts the same words in both, in %s', code => {
+    const capabilities = new Set(
+      MODEL_FAMILIES.flatMap(family =>
+        CAPABILITIES_BY_FAMILY[family].map(capability =>
+          BUNDLES[code].get(`capabilities.${capability}`),
+        ),
+      ),
+    )
+    const collisions = TAG_LABEL_KEY_LIST.filter(key => capabilities.has(BUNDLES[code].get(key)))
+
+    expect(collisions).toEqual([])
   })
 })
