@@ -58,18 +58,18 @@ describe('paneAt', () => {
 })
 
 describe('glRect', () => {
-  it('flips the origin to the bottom-left and scales to device pixels', () => {
-    expect(glRect({ x: 0, y: 0, width: 400, height: 300 }, 600, 1)).toEqual({
+  it('flips the origin to the bottom-left', () => {
+    expect(glRect({ x: 0, y: 0, width: 400, height: 300 }, 600)).toEqual({
       x: 0,
       y: 300,
       width: 400,
       height: 300,
     })
-    expect(glRect({ x: 400, y: 300, width: 400, height: 300 }, 600, 2)).toEqual({
-      x: 800,
+    expect(glRect({ x: 400, y: 300, width: 400, height: 300 }, 600)).toEqual({
+      x: 400,
       y: 0,
-      width: 800,
-      height: 600,
+      width: 400,
+      height: 300,
     })
   })
 })

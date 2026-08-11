@@ -512,7 +512,6 @@ export class ViewportEngine {
     }
 
     const height = renderer.domElement.clientHeight
-    const ratio = renderer.getPixelRatio()
 
     renderer.setScissorTest(true)
     try {
@@ -522,7 +521,7 @@ export class ViewportEngine {
         const camera = this.cameraOfPane(index)
         if (!camera) continue
 
-        const { x, y, width, height: paneHeight } = glRect(rect, height, ratio)
+        const { x, y, width, height: paneHeight } = glRect(rect, height)
         renderer.setViewport(x, y, width, paneHeight)
         renderer.setScissor(x, y, width, paneHeight)
         this.options.onPane?.(index, camera)
@@ -532,7 +531,7 @@ export class ViewportEngine {
       // In a `finally`, and both of them: a throw mid-pane would otherwise leave every later
       // frame — overlay included — clipped to whichever quarter failed.
       renderer.setScissorTest(false)
-      renderer.setViewport(0, 0, renderer.domElement.clientWidth * ratio, height * ratio)
+      renderer.setViewport(0, 0, renderer.domElement.clientWidth, height)
     }
   }
 
