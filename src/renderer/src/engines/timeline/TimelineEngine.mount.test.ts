@@ -58,6 +58,7 @@ const { clipFixture, sequenceWith, trackFixture } = await import('./timeline-fix
 const engineFor = (host: HTMLElement, onUnreadable?: (unreadable: boolean) => void) =>
   new TimelineEngine({
     openSink: () => Promise.reject(new Error('no decoder in a test')),
+    sound: { now: () => 0, resume: vi.fn(), load: () => Promise.reject(new Error('no output')) },
     maxDecoders: 1,
     maxPictures: 1,
     owner: host.id,

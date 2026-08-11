@@ -9,7 +9,12 @@ export type AudioChunk = {
   at: Us
   /** Where to read from inside the source. */
   sourceStart: Us
+  /** On the timeline. The source is read `speed` times faster, so it spends `duration × speed`. */
   duration: Us
+  /** How much faster than the timeline the source is read — a clip's own rate. */
+  speed: number
+  /** Decibels, as the clip carries them. Zero leaves the take as it was recorded. */
+  gain: number
 }
 
 /**
@@ -34,6 +39,8 @@ export function audioChunksIn(state: SequenceState, from: Us, to: Us): AudioChun
         at: start,
         sourceStart: sourceTimeAt(clip, start),
         duration: end - start,
+        speed: clip.speed,
+        gain: clip.gain,
       })
     }
   }
