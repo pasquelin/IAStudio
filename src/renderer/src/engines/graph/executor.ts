@@ -21,11 +21,11 @@ export type GraphRunPorts = {
    * job manager rewrites them on submission, and a second translator here would be a second
    * truth about the same thing.
    *
-   * `started` says the job manager has taken this one off its own queue, and it is what tells a
-   * node in flight from one merely submitted: this engine cannot see the queue — bounding it is
-   * the manager's business (step 2) — so painting `running` on the call would claim work that a
-   * semaphore may hold for minutes. Not calling it is allowed and means exactly that: still
-   * queued. Called more than once, it costs one repaint of a state already shown.
+   * `started` says the job is no longer waiting — neither behind the studio's own concurrency
+   * bound nor in Scenario's queue, the replica spelling both `queued`. It is what tells a node in
+   * flight from one merely submitted: this engine sees neither queue, so painting `running` on
+   * the call would claim work that may not begin for minutes. Not calling it is allowed and means
+   * exactly that: still waiting. Called twice, it costs one repaint of a state already shown.
    */
   generate: (
     modelId: string,
@@ -155,14 +155,13 @@ export async function runGraph(
   const guarding = new Set(approvalsOf(graph).values())
 
   /**
-   * A node that compiles to nothing and therefore says nothing all run long: a sticky note, which
-   * is a drawing, and an approval guarding nothing, which is a question about nothing.
+   * A node with nothing of its own to do: a sticky note, and an approval guarding nothing.
    *
-   * One predicate for the two, read where the queue is painted and again where the run dispatches:
-   * a node badged `queued` at the start and never spoken of again would sit there claiming to be
-   * work for the length of the run, which is the very lie this state was added to end.
+   * Read where the queue is painted and again where the run dispatches, one predicate for the two:
+   * badged `queued` and then never spoken of again, such a node would claim to be work for the
+   * length of the run — the very lie this state was added to end.
    */
-  const silent = (node: GraphNode): boolean =>
+  const inert = (node: GraphNode): boolean =>
     node.type === 'stickyNote' || (node.type === 'approval' && !guarding.has(node.id))
 
   const produced = new Map(cache)
@@ -313,8 +312,15 @@ export async function runGraph(
     }
   }
 
+  /**
+   * Whether the run is over. One reader of the signal, because there are now two questions asked
+   * of it — may this node go on, and may a late start still repaint it — and the day a stop stops
+   * being an `AbortSignal` alone, a second reading of it is what would be left behind.
+   */
+  const halted = (): boolean => signal?.aborted === true
+
   const stopped = (id: string): boolean => {
-    if (signal?.aborted !== true) return false
+    if (!halted()) return false
     report(id, { status: 'idle' })
     return true
   }
@@ -455,7 +461,7 @@ export async function runGraph(
     // Said before the first await, so every node the plan ordered wears it at once: the loop below
     // starts them all in one turn, and a node waiting on its providers used to show nothing at all
     // — on a graph of twenty, two badges and eighteen nodes that read as untouched.
-    if (!silent(node)) report(node.id, { status: 'queued' })
+    if (!inert(node)) report(node.id, { status: 'queued' })
 
     // Before the inputs, and both before the cache: a REFUSED approval outweighs a merely skipped
     // provider, and a result kept from a run somebody approved must not come back on a run they
@@ -501,7 +507,7 @@ export async function runGraph(
     // A note drawn on the canvas, or an approval nothing waits on: neither compiles to a thing to
     // run, so both pass without a word rather than stopping the graph, and neither has an output
     // to read either.
-    if (silent(node)) return { kind: 'produced', values: {} }
+    if (inert(node)) return { kind: 'produced', values: {} }
     // Asked only once what it guards has produced, which the inputs above are: an approval put to
     // the user before the picture exists is a question about nothing.
     if (node.type === 'approval') return decide(node)
@@ -513,12 +519,10 @@ export async function runGraph(
     if (modelId === undefined) return fail(node.id, 'no-model')
 
     // Nothing painted here: the node has worn `queued` since the top of this function, and what
-    // moves it on is the manager taking the job, not this engine handing one over.
-    //
-    // Ignored once a stop is in — `stopped` has painted this node idle already, and a start
-    // arriving behind it would repaint as work in progress a node the user has ended.
+    // moves it on is the job leaving the queue, not this engine handing one over. Ignored once a
+    // stop is in — a start arriving behind it would repaint a node the user has ended.
     const started = (): void => {
-      if (signal?.aborted !== true) report(node.id, { status: 'running' })
+      if (!halted()) report(node.id, { status: 'running' })
     }
 
     try {

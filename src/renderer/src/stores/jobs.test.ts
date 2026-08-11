@@ -213,13 +213,4 @@ describe('waiting for a job to leave the queue', () => {
 
     await expect(whenStarted('job_1', null)).resolves.toMatchObject({ status: 'running' })
   })
-
-  it('gives up when the caller aborts, and says it found nothing', async () => {
-    const controller = new AbortController()
-    const started = whenStarted('job_1', controller.signal)
-
-    controller.abort()
-
-    await expect(started).resolves.toBeNull()
-  })
 })

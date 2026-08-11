@@ -54,14 +54,19 @@ async function watch(
     approve?: (nodeId: string) => Promise<boolean>
     /** What the evaluator answers. A graph with no transform node never reaches it. */
     transform?: GraphRunPorts['transform']
+    /**
+     * A generator of the suite's own, for what `outputs` cannot say: when the job manager takes
+     * the job, and whether it takes it at all. Nothing lands in `submitted` then — a test that
+     * declares one is watching what a node SAYS, not what it sent.
+     */
+    generate?: GraphRunPorts['generate']
   } = {},
 ): Promise<Watched> {
   const submitted: Submitted[] = []
   const reported = new Map<string, GraphNodeRun[]>()
 
-  // Announces its start before answering, which is what a job manager that takes the job does. A
-  // stub that skipped it would leave every generator reading `queued` through its own success, and
-  // no suite here would be able to tell that from a node the queue really is holding.
+  // Announces its start before answering, as a job leaving the queue does: skipped, every
+  // generator here would read `queued` through its own success.
   const generate = vi.fn(
     async (modelId: string, body: Record<string, unknown>, started: () => void) => {
       submitted.push({ modelId, body })
@@ -73,7 +78,7 @@ async function watch(
   )
 
   const result = await runGraph(graph, options.cache, {
-    generate,
+    generate: options.generate ?? generate,
     // Refuses to answer rather than saying yes: a graph whose approvals a test did not think
     // about would otherwise sail through one, and the test would prove the opposite of that.
     approve:
@@ -141,22 +146,20 @@ describe('running a graph', () => {
   })
 
   /**
-   * The defect this state was added for: a run painted the two nodes it was on and left every
-   * other one looking untouched, so a graph of twenty read as eighteen nodes nobody had asked
-   * anything of. Asserted at the FIRST submission rather than at the end, because by then every
-   * node has spoken and the queue would prove nothing.
+   * Asserted at the FIRST submission and not at the end: by then every node has spoken anyway, and
+   * a run painting the queue on its way out would prove nothing about the wait it is meant to show.
    */
   it('says of every node that it is waiting, before the first submission', async () => {
-    const seen: string[] = []
+    const rounds: string[][] = []
     const reported = new Map<string, GraphNodeRun[]>()
 
     await runGraph(chain(), undefined, {
       generate: async (modelId, _body, started) => {
-        seen.push(...reported.keys())
+        rounds.push([...reported.keys()])
         started()
         return modelId === 'model_a' ? ['asset_1'] : ['asset_2']
       },
-      approve: () => Promise.resolve(true),
+      approve: nodeId => Promise.reject(new Error(`no answer declared for ${nodeId}`)),
       transform: noTransform,
       report: (nodeId, run) => {
         const held = reported.get(nodeId)
@@ -166,26 +169,18 @@ describe('running a graph', () => {
     })
 
     // The reader of the generator being submitted included: it is waiting on this very call.
-    expect(seen.slice(0, 3)).toEqual(['text1', 'm1', 'm2'])
+    expect(rounds[0]).toEqual(['text1', 'm1', 'm2'])
   })
 
   it('leaves a generator queued while the job manager has not taken it', async () => {
-    const graph = graphOf([modelNode('m1', {}, 'model_a')], [])
-    const reported = new Map<string, GraphNodeRun[]>()
-
-    await runGraph(graph, undefined, {
+    const watched = await watch(
+      graphOf([modelNode('m1', {}, 'model_a')], []),
+      {},
       // Never announces a start, which is a job held behind the manager's own bound.
-      generate: () => Promise.resolve(['asset_1']),
-      approve: () => Promise.resolve(true),
-      transform: noTransform,
-      report: (nodeId, run) => {
-        const held = reported.get(nodeId)
-        if (held) held.push(run)
-        else reported.set(nodeId, [run])
-      },
-    })
+      { generate: () => Promise.resolve(['asset_1']) },
+    )
 
-    expect(reported.get('m1')?.map(run => run.status)).toEqual(['queued', 'done'])
+    expect(statusesOf(watched, 'm1')).toEqual(['queued', 'done'])
   })
 
   it('drops the blanks a form carries for the fields nobody filled', async () => {
@@ -716,26 +711,21 @@ describe('stopping a run', () => {
    */
   it('ignores a start announced after the stop', async () => {
     const controller = new AbortController()
-    const graph = graphOf([modelNode('m1', {}, 'model_a')], [])
 
-    const reported = new Map<string, GraphNodeRun[]>()
-    await runGraph(graph, undefined, {
-      generate: async (_modelId, _body, started) => {
-        controller.abort()
-        started()
-        return ['asset_1']
+    const watched = await watch(
+      graphOf([modelNode('m1', {}, 'model_a')], []),
+      {},
+      {
+        signal: controller.signal,
+        generate: async (_modelId, _body, started) => {
+          controller.abort()
+          started()
+          return ['asset_1']
+        },
       },
-      approve: () => Promise.resolve(true),
-      transform: noTransform,
-      report: (nodeId, run) => {
-        const held = reported.get(nodeId)
-        if (held) held.push(run)
-        else reported.set(nodeId, [run])
-      },
-      signal: controller.signal,
-    })
+    )
 
-    expect(reported.get('m1')?.map(run => run.status)).toEqual(['queued', 'idle'])
+    expect(statusesOf(watched, 'm1')).toEqual(['queued', 'idle'])
   })
 })
 

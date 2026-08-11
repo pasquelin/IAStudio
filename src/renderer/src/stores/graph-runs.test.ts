@@ -42,8 +42,7 @@ function installJobs(initial: Partial<Job> = {}): {
   const submit = vi.fn(async (target: JobTarget, _body: Record<string, unknown>) => {
     count += 1
     submitted.push(target)
-    // `initial` is how a suite asks for a job the manager has taken but not started — the default
-    // is one already running, which is what every test written before the queue existed assumed.
+    // `initial` is how a suite asks for a job still waiting; the default is one already running.
     const entry = job({ id: `job_${count}`, targetId: target.id, ...initial })
     useJobs.setState(state => ({ jobs: [entry, ...state.jobs] }))
     return entry
@@ -146,6 +145,56 @@ describe('running a graph document', () => {
   })
 
   /**
+   * The manager polls every two seconds, so a short generation leaves the queue and settles on the
+   * SAME event: the wait for a start and the wait for a result answer in one turn. Painting the
+   * node as under way on the way past would announce a start for something already over.
+   */
+  it('never says a job started when it had already finished', async () => {
+    const jobs = installJobs({ status: 'queued', progress: 0 })
+    installGraph(DOC, chain())
+    const seen: string[] = []
+    const stop = useGraphRuns.subscribe(state => {
+      const run = runOf(state, DOC).nodes['m1']
+      if (run && seen.at(-1) !== run.status) seen.push(run.status)
+    })
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', progress: 1, assetIds: ['asset_local'] })
+    await run
+    stop()
+
+    expect(seen).toEqual(['queued', 'done'])
+  })
+
+  /**
+   * `latest` is the canvas's ONE live region, and a run now opens on as many `queued` reports as
+   * the plan has nodes. Moved onto those, it would announce a node the plan's order picked, to say
+   * that nothing has started.
+   */
+  it('does not move the live region onto a node that is merely waiting', async () => {
+    const jobs = installJobs({ status: 'queued', progress: 0 })
+    installGraph(DOC, chain())
+    // Read at every write rather than at the end: `latest` moves on and the state it pointed at
+    // is gone by the last one, which is where a version announcing the queue would look innocent.
+    const announced: string[] = []
+    const stop = useGraphRuns.subscribe(state => {
+      const run = runOf(state, DOC)
+      if (run.latest) announced.push(run.nodes[run.latest]?.status ?? 'none')
+    })
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+    stop()
+
+    expect(announced).not.toHaveLength(0)
+    expect(announced).not.toContain('queued')
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toBe('m1')
+  })
+
+  /**
    * `nodes` is a record, and a record remembers no order — so it cannot say which node spoke
    * LAST. The canvas needs exactly that, and only the reporter knows it: without `latest` every
    * node had to carry its own live region, twenty of them announcing over each other.
@@ -157,8 +206,7 @@ describe('running a graph document', () => {
     const run = useGraphRuns.getState().start(DOC)
     await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
 
-    // The generator is the last to have spoken by now: the text node it reads went queued then
-    // done while this one was still waiting on it.
+    // The generator: its job was taken straight away here, so `running` is the last thing said.
     expect(runOf(useGraphRuns.getState(), DOC).latest).toBe('m1')
 
     jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })

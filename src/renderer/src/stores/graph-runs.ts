@@ -167,11 +167,13 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               // user has already asked to stop paying for.
               if (controller.signal.aborted) cancelIfRunning(job.id)
 
-              // Watched beside the wait rather than awaited before it: the node is to be repainted
-              // WHILE this frame sits on the result, and awaiting the start first would have a job
-              // that finished between two polls resolve both at once, painting nothing.
+              // Watched beside the wait rather than awaited before it: the node is repainted WHILE
+              // this frame sits on the result. `isFinished` is what keeps that repaint honest — a
+              // job that ran and stopped between two polls (the interval is 2 s) leaves the queue
+              // and settles on the same event, and painting it as under way on the way past would
+              // announce a start for something already over.
               void whenStarted(job.id, controller.signal).then(taken => {
-                if (taken) started()
+                if (taken && !isFinished(taken.status)) started()
               })
 
               const settled = await whenSettled(job.id, controller.signal)
@@ -189,7 +191,11 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               patch(documentId, controller, held => ({
                 ...held,
                 nodes: { ...held.nodes, [nodeId]: run },
-                latest: nodeId,
+                // Every node the plan ordered goes `queued` in one turn at the start of a run, so
+                // moving the live region on those would have it announce the last of them — a node
+                // picked by the plan's order, saying that nothing has happened yet. It speaks for
+                // what a node DOES; waiting is what the badges say.
+                ...(run.status === 'queued' ? {} : { latest: nodeId }),
               })),
             signal: controller.signal,
           },

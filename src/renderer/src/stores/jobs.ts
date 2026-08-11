@@ -125,13 +125,17 @@ export const whenSettled = (jobId: string, signal: AbortSignal | null): Promise<
   whenJob(jobId, job => isFinished(job.status), signal)
 
 /**
- * Resolves when the job manager takes a job off its own queue, whatever it does next.
+ * Resolves when a job stops waiting, whatever it does next.
  *
- * The other half of what a chain of generations needs: submitting is not starting — the manager
- * holds a job behind its concurrency bound and its rate limiter — so a node painted as running on
- * submission claims work that has not begun. `succeeded` answers this too, deliberately: a job
- * that finished between two polls did leave the queue, and waiting for a `running` nobody observed
- * would leave the node reading as queued for the whole generation.
+ * The other half of what a chain of generations needs: submitting is not starting. `queued` covers
+ * both waits the studio has — its own concurrency bound (`job-manager.ts` holds the entry at
+ * `queued` while it sits in `pump`'s queue) and Scenario's, which `jobStatusOf` maps to the same
+ * word — so a caller painting work as under way on submission claims what may not begin for
+ * minutes.
+ *
+ * A terminal status answers this too, and the caller is what decides what to make of it: waiting
+ * on a `running` nobody observed would never resolve for a job that finished between two polls,
+ * and the wait would then only ever end on the abort.
  *
  * `null` on the same two counts as `whenSettled`: a job the replica no longer holds, and a caller
  * that has given up.
