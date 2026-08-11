@@ -1,3 +1,4 @@
+import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { isFinished, JOB_STATUSES } from '@shared/domain/job'
 import { job } from './job-fixtures'
@@ -69,5 +70,100 @@ describe('job fixture', () => {
 
   it('leaves a job that did not fail without a code', () => {
     expect(job({ status: 'succeeded' }).error).toBeUndefined()
+  })
+})
+
+/**
+ * Every suite of the renderer, as text. Read through Vite rather than `fs`, as
+ * `no-hardcoded-text.test.ts` does and for its reason: the renderer has no filesystem, and a
+ * test living here does not get one.
+ *
+ * One short of what the disk holds, always: `import.meta.glob` never yields the module that
+ * calls it. This file is therefore the one suite the walk does not read — measured, 361 against
+ * 362 on 2026-08-11 — and it builds no job of its own.
+ */
+const SUITES: Record<string, string> = import.meta.glob(['../**/*.test.ts', '../**/*.test.tsx'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
+/**
+ * What says "this object is a `Job`", and nothing else in the studio.
+ *
+ * Four keys rather than the whole shape: a suite is allowed to say LESS than the type — `label`
+ * or `assetIds` left out — but no other object of the renderer carries `targetId` beside
+ * `progress`. The submission targets that read `{ kind, id }` have neither.
+ */
+const JOB_KEYS = ['kind', 'targetId', 'status', 'progress']
+
+const KIND = (file: string): ts.ScriptKind =>
+  file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
+
+/** The object literals of one file that carry all four keys at once. */
+function jobLiteralsIn(file: string, code: string): number {
+  const source = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, KIND(file))
+  let found = 0
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isObjectLiteralExpression(node)) {
+      const named = new Set(
+        node.properties
+          .map(property => property.name)
+          .filter(name => name !== undefined)
+          .filter(ts.isIdentifier)
+          .map(name => name.text),
+      )
+      if (JOB_KEYS.every(key => named.has(key))) found += 1
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return found
+}
+
+const suitesBuildingAJob = (): string[] =>
+  Object.entries(SUITES)
+    .filter(([file, code]) => jobLiteralsIn(file, code) > 0)
+    .map(([file]) => file)
+
+/**
+ * The lock, and why it exists at all.
+ *
+ * Six suites used to build their own `Job`, and one of them published a terminal status with no
+ * `finishedAt` — a shape `settle` never writes. Converting them was one lot; the SIXTH escaped
+ * two successive inventories and was found by a reviewer, which is what says a list cannot hold
+ * this and a walk has to.
+ *
+ * The main process is out of reach on purpose, not by oversight: it cannot import a factory of
+ * the renderer, and `main/assets/collector.test.ts` still writes its own.
+ */
+describe('no suite of the renderer builds its own job', () => {
+  it('finds none', () => {
+    expect(suitesBuildingAJob()).toEqual([])
+  })
+
+  /**
+   * An empty result proves nothing unless the suites were opened. A floor rather than a tally,
+   * as `import-cycles.test.ts` keeps one: it will not notice a handful going missing, but it
+   * does notice a walk that stopped walking — which is how this check would watch nothing.
+   */
+  it('opened the suites to say so', () => {
+    expect(Object.keys(SUITES).length).toBeGreaterThan(300)
+    // A count alone would survive a glob rewritten to match one folder. Naming a suite that
+    // converted its own literal in the lot this guard closes says the walk still reaches it.
+    expect(Object.keys(SUITES)).toContain('../app/JobsStatus.test.tsx')
+  })
+
+  /** And it can fail: the shape the lot removed, and the two near-misses it must not claim. */
+  it('would see one written out, and leaves a submission target alone', () => {
+    const built = `const j = { id: 'a', kind: 'model', targetId: 'm', status: 'succeeded', progress: 1 }`
+    const target = `const t = { kind: 'model', id: 'model_flux' }`
+    const partial = `const p = { kind: 'model', targetId: 'm', status: 'queued' }`
+
+    expect(jobLiteralsIn('probe.ts', built)).toBe(1)
+    expect(jobLiteralsIn('probe.ts', target)).toBe(0)
+    expect(jobLiteralsIn('probe.ts', partial)).toBe(0)
   })
 })
