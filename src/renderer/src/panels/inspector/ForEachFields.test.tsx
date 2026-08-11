@@ -2,10 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphEdge, GraphNode } from '@shared/domain/graph'
-import { nodeById } from '@shared/domain/graph'
 import { forEachEndNode, forEachNode, textNode } from '@/engines/graph/graph-fixtures'
 import { loopInputId, loopOutputId } from '@/engines/graph/handles'
-import { installGraph } from '@/stores/graph-fixtures'
+import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
@@ -28,8 +27,7 @@ beforeEach(() => {
   installGraph(DOCUMENT, { nodes: [LOOP, END, TEXT], edges: [], inputKeys: [] })
 })
 
-const nodeOf = (id: string): GraphNode | null =>
-  nodeById(graphOf(useGraphs.getState(), DOCUMENT), id)
+const nodeOf = (id: string): GraphNode | null => nodeNow(DOCUMENT, id)
 
 const inputs = (): readonly string[] =>
   (nodeOf('forEach1')?.data.inputHandles ?? []).map(handle => handle.id)

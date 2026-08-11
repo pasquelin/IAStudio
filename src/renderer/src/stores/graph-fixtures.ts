@@ -1,6 +1,7 @@
-import { EMPTY_GRAPH, type GraphState } from '@shared/domain/graph'
+import { EMPTY_GRAPH, nodeById, type GraphNode, type GraphState } from '@shared/domain/graph'
+import type { DocumentStoreState } from './document-store'
 import { installDocument } from './document-fixtures'
-import { useGraphs } from './graphs'
+import { graphOf, useGraphs } from './graphs'
 
 /**
  * Puts a graph document in front of a panel under test, history cleared.
@@ -12,3 +13,20 @@ export function installGraph(documentId: string, state: GraphState = EMPTY_GRAPH
   useGraphs.setState({ states: { [documentId]: state }, histories: {}, saved: {} })
   installDocument(documentId, 'graph')
 }
+
+/** Reading half of `installGraph`, in the shape a subscribed selector takes it. */
+export const nodeIn = (
+  state: DocumentStoreState<GraphState>,
+  documentId: string,
+  id: string,
+): GraphNode | null => nodeById(graphOf(state, documentId), id)
+
+/**
+ * The same read for what a suite asserts BETWEEN renders, where there is no state to be handed.
+ *
+ * `null` covers two different accidents — a node the graph does not hold, and a document the
+ * store lost. `installGraph` REPLACES the whole map, so installing a second graph turns the
+ * first into the second accident silently.
+ */
+export const nodeNow = (documentId: string, id: string): GraphNode | null =>
+  nodeIn(useGraphs.getState(), documentId, id)

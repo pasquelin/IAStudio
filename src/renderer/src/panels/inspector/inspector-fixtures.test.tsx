@@ -2,8 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { nodeById, type GraphNode } from '@shared/domain/graph'
-import { installGraph } from '@/stores/graph-fixtures'
+import { type GraphNode } from '@shared/domain/graph'
+import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { updateNodeData } from '@/engines/graph/mutations'
 import { graphOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
@@ -93,7 +93,7 @@ describe('LiveNodeInspector', () => {
     await userEvent.type(screen.getByLabelText('Prompt'), '!')
 
     const dataIn = (documentId: string): GraphNode['data'] | undefined =>
-      nodeById(graphOf(useGraphs.getState(), documentId), 'text1')?.data
+      nodeNow(documentId, 'text1')?.data
 
     expect(dataIn('graph-2')).toMatchObject({ value: 'a kingfisher!' })
     expect(dataIn(DOCUMENT)).toMatchObject({ value: 'a small grey rock' })

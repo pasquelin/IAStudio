@@ -2,8 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphNode } from '@shared/domain/graph'
-import { nodeById } from '@shared/domain/graph'
-import { installGraph } from '@/stores/graph-fixtures'
+import { installGraph, nodeNow } from '@/stores/graph-fixtures'
 import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
@@ -80,8 +79,7 @@ beforeEach(() => {
   })
 })
 
-const nodeOf = (id: string): GraphNode | null =>
-  nodeById(graphOf(useGraphs.getState(), DOCUMENT), id)
+const nodeOf = (id: string): GraphNode | null => nodeNow(DOCUMENT, id)
 
 const show = (node: GraphNode): void => {
   render(<LiveNodeInspector documentId={DOCUMENT} id={node.id} />)
