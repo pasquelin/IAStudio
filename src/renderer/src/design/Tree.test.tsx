@@ -162,6 +162,18 @@ describe('Tree', () => {
     expect(selected).toHaveLength(2)
   })
 
+  // A pixel count would hold the same indent in both densities, next to a layer stack whose own
+  // step is a gauge. The two steps differ — one gutter there, two here — the reading does not.
+  it('indents each level by the density gauge rather than a pixel count', () => {
+    renderTree()
+
+    const [root, child] = screen.getAllByRole('treeitem')
+    // The factor is held too: it is what keeps a comfortable level at the 12 px it always was.
+    expect(root?.style.paddingLeft).toContain('var(--sc-gutter) * 2')
+    expect(child?.style.paddingLeft).toContain('var(--sc-gutter) * 2')
+    expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
+  })
+
   it('leaves the rows undraggable when nothing listens for a drop', () => {
     renderTree()
     expect(screen.getAllByRole('treeitem')[0]).not.toHaveAttribute('draggable', 'true')
