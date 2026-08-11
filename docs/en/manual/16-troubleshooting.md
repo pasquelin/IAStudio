@@ -160,9 +160,9 @@ the **Models** panel and take another.
 
 **What it means.** Something failed in a way the studio could not name.
 
-**What to do.** Try once more. If it happens again, set **Log detail** to "Everything"
-(Settings → Advanced), repeat the gesture, and open the **Developer tools** to read what is written.
-That is the only situation where that button is of any use.
+**What to do.** Try once more. If it happens again, open the **activity journal**: the line for the
+failure carries, in small type, the technical name of what failed and the error message. That is
+what to copy into a request for help.
 
 > **No error message from the service is shown to you as-is.** The studio translates them all into
 > one of these sentences. That is not laziness: a raw error message contains the request that
@@ -566,10 +566,19 @@ Three checks, in this order:
 
 ### The log
 
-Settings → **Advanced** → **Log detail**. Set it to "Everything", repeat the gesture that fails, then
-open the **Developer tools** (same section): the messages appear there.
+**The activity journal, the one on the status line, is the only trace readable from inside the
+application** — and it is what to attach when you ask for help. Every failure leaves a line there,
+with its time. **When the studio has a technical detail to give**, it writes it in small type under
+the message: that is the case for drawing failures, for refusals from the API and for failed
+uploads to the library. Project failures carry none — the path you picked in a dialog would teach
+nothing more. An open project keeps the line: it is written into the project and can be read back
+later.
 
-That is what to attach when you ask for help.
+> **Two settings in the Advanced section do not help here, and it is worth knowing before trying
+> them.** **Log detail** governs what the studio writes to *its own* internal log, which is only
+> readable from a terminal — not in the build you installed — and it changes nothing in what the
+> Activity panel shows. **Developer tools** opens nothing either: the console is refused outside a
+> development build, deliberately — see [chapter 14](14-settings.md#developer-tools).
 
 ### The settings file
 

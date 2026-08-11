@@ -626,6 +626,11 @@ How much the application says about what it is doing, in its log.
 "Everything" helps to understand a problem, and is chatty the rest of the time. This setting changes
 nothing about what the software does — only about what it says.
 
+**Do not confuse this log with the one on the status line.** This one is the studio's internal log,
+written to the terminal that launched it: **in the build you installed there is no terminal, so
+there is nothing to read**. The **Recent activity** panel does not depend on this setting — it gets
+its lines either way.
+
 ### Settings file
 
 **Button: Reveal.**
@@ -652,8 +657,14 @@ a problem.
 Opens the technical console of the embedded browser: the log messages, the errors, the internal
 state of the display.
 
-For troubleshooting only. **Nothing in there is needed to use the software** — and nothing you type
-in it is meant to be.
+**In the build you installed, this button opens nothing.** The console is refused at the window
+level itself, and that is a security decision: a compromised dependency calling it would otherwise
+reach the studio's internal functions. The button stays on screen, with no effect — and you are
+missing nothing, because **the activity journal already carries what a report needs**, technical
+detail included. See [When something goes wrong](16-troubleshooting.md#the-log).
+
+For troubleshooting only, in a development build. **Nothing in there is needed to use the
+software** — and nothing you type in it is meant to be.
 
 ### Reset everything
 
