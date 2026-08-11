@@ -5,11 +5,14 @@ import { describe, expect, it } from 'vitest'
  * Every component, as text. Read through Vite rather than through `fs`, like `tokens.test.ts`
  * reads the stylesheet: the renderer has no filesystem, and a test living here does not get one.
  */
-const COMPONENTS: Record<string, string> = import.meta.glob(['./**/*.tsx', '!./**/*.test.tsx'], {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-})
+const COMPONENTS: Record<string, string> = import.meta.glob(
+  ['./**/*.tsx', '!./**/*.test.tsx', '!./**/*-fixtures.tsx'],
+  {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  },
+)
 
 /**
  * Attributes whose value is read out — on screen or by a screen reader. `className`, `role` and
@@ -245,7 +248,16 @@ describe('the renderer', () => {
  * a name is not JSX.
  */
 const MODULES: Record<string, string> = import.meta.glob(
-  ['./**/*.ts', './**/*.tsx', '!./**/*.test.ts', '!./**/*.test.tsx'],
+  [
+    './**/*.ts',
+    './**/*.tsx',
+    '!./**/*.test.ts',
+    '!./**/*.test.tsx',
+    // Test material, like the main guard: a fixture builds what a suite asserts on and reaches no
+    // screen. Both guards say it, or the rule holds only where one happens to look.
+    '!./**/*-fixtures.ts',
+    '!./**/*-fixtures.tsx',
+  ],
   { query: '?raw', import: 'default', eager: true },
 )
 

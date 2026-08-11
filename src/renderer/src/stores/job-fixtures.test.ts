@@ -41,4 +41,21 @@ describe('job fixture', () => {
   it('applies the overrides it is given', () => {
     expect(job({ id: 'job_2', label: 'Veo' })).toMatchObject({ id: 'job_2', label: 'Veo' })
   })
+
+  /**
+   * A `failed` job the manager published always names its code: `settle` is reached from four
+   * places and each passes one. A fixture that omitted it would offer a shape production never
+   * holds — and a suite asserting `error === undefined` on it would be green against nothing.
+   */
+  it('names a failure code on a job that failed', () => {
+    expect(job({ status: 'failed' }).error).toBe('rejected')
+  })
+
+  it('keeps the code a caller names, rather than its own', () => {
+    expect(job({ status: 'failed', error: 'storage' }).error).toBe('storage')
+  })
+
+  it('leaves a job that did not fail without a code', () => {
+    expect(job({ status: 'succeeded' }).error).toBeUndefined()
+  })
 })

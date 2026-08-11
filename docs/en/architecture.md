@@ -843,7 +843,11 @@ They share the tree without overlapping, and all of them run in `pnpm validate`.
 | `shared/i18n/bundles.test.ts` | a key on one side and not the other, a diverging order, a blank value, an ASCII apostrophe in French, **a breaking space before `; : ! ?` or inside French quotation marks**, a lost interpolation hole — **and an English sentence copied into `fr.json`** |
 | `renderer/src/no-hardcoded-text.test.ts` | in a `.tsx`: text between tags, a literal in braces, one behind a ternary or an `&&`, and any attribute a human reads |
 | `main/no-hardcoded-text.test.ts`, § *the main process* | a word written into a native dialog or a menu `label` |
-| `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key belongs — **except in a `*-fixtures.ts`**, stepped over like the `*.test.ts`: a fixture builds the data a suite asserts on, none is imported by production code, and the label it carries is the one the API returns. Coverage draws the same line (`vitest.config.ts`) |
+| `main/no-hardcoded-text.test.ts`, § *the registries* | in a `.ts` of `renderer`, `shared` or `preload`: a label written where a key is expected |
+
+**Fixtures are out of EVERY sweep — `*-fixtures.ts` and `*-fixtures.tsx`, in both guards.** A fixture builds the data a suite asserts on and reaches no screen: measured, none of the 21 fixture files in `src/` is imported by production code. The label it carries is the one the API returns, not a word this studio writes. Coverage excludes exactly the same files (`vitest.config.ts`). It is a **decision**, taken on 11/08: forcing a fixture through a bundle key makes nothing truer and reads worse.
+
+**What the exclusion does not say**: nothing flags a file named `*-fixtures.ts` that one day becomes imported by production code. It would then be invisible to both guards AND absent from every coverage budget. None is today, and that is what remains to watch.
 
 **A guard that reads data can go blind without turning red**, which is what the *what the guards
 would catch* block of `bundles.test.ts` is for. Its eight checks run through four local helpers: a
