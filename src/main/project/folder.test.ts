@@ -2,8 +2,13 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { FSWatcher } from 'node:fs'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createFolderEditor, createFolderReader, watchProjectFolder } from './folder'
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import {
+  createFolderEditor,
+  createFolderReader,
+  watchProjectFolder,
+  type WatchOpener,
+} from './folder'
 
 async function project(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'scenario-folder-'))
@@ -65,23 +70,68 @@ describe('reading the project folder', () => {
 })
 
 describe('following the project folder', () => {
+  // `as`: a watcher these tests never listen to, and only `close` is ever called on it. Naming
+  // the cast once keeps the two fake openers from each carrying their own.
+  const deaf = (): FSWatcher =>
+    ({ close: () => undefined, on: () => undefined }) as unknown as FSWatcher
+
   const watches: { stop: () => void }[] = []
   afterEach(() => {
     for (const watch of watches) watch.stop()
     watches.length = 0
   })
 
-  // Writing one asset makes several events, and an export writes a folder of them. Real timers
-  // on purpose: the events come from the operating system, and a fake clock advances past a
-  // debounce that was never armed — which is a test that passes on a watcher doing nothing.
-  it('announces a burst once', async () => {
+  /**
+   * What only a real watcher can prove: that the platform's events reach us, and that a real
+   * stream of them still collapses into one announcement. The driven test next door picks its
+   * own clock, so it can never see two events landing further apart than the debounce.
+   *
+   * Real timers on purpose — a fake clock advances past a debounce that was never armed, which
+   * is a test that passes on a watcher doing nothing.
+   *
+   * The wait is wall time on a machine that may be building something else: four seconds of it
+   * turned `pnpm validate` red about once in twelve. It stays BELOW `TEST_TIMEOUT`
+   * (`vitest.config.ts`), or vitest kills the test first and the failure loses the one line that
+   * names what went wrong — which is how this defect stayed anonymous for four rounds.
+   */
+  it('announces what lands in the folder', async () => {
     const root = await project()
     const announce = vi.fn()
     watches.push(watchProjectFolder(root, announce))
 
     await writeFile(join(root, 'one.txt'), '')
     await writeFile(join(root, 'two.txt'), '')
-    await vi.waitFor(() => expect(announce).toHaveBeenCalled(), { timeout: 4000 })
+    await vi.waitFor(() => expect(announce).toHaveBeenCalled(), { timeout: 10_000 })
+
+    expect(announce).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * The debounce itself, with no operating system in the loop. Two events inside the window make
+   * one announcement, and the second is what clears the first one's timer.
+   *
+   * Driven rather than provoked, because whether two writes arrive as two events or as one is
+   * the platform's decision: when it coalesced them, `clearTimeout` was never reached and the
+   * coverage of this file moved by a statement and a branch between two identical runs.
+   */
+  it('collapses a burst into one announcement', () => {
+    vi.useFakeTimers()
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const announce = vi.fn()
+    let emit = (): void => undefined
+    const driven: WatchOpener = (_path, _options, listener) => {
+      emit = listener
+      return deaf()
+    }
+    watches.push(watchProjectFolder('/projects/demo', announce, driven))
+
+    emit()
+    emit()
+    // Well past the debounce, whatever it is set to: what is asserted is the collapse, not its
+    // duration — a test that pinned the delay would fail on every tuning of it.
+    vi.advanceTimersByTime(5000)
 
     expect(announce).toHaveBeenCalledTimes(1)
   })
@@ -97,7 +147,7 @@ describe('following the project folder', () => {
     const fake = (_path: string, options: { recursive?: boolean }) => {
       opened.push(options)
       if (options.recursive) throw new Error('not supported')
-      return { close: () => undefined, on: () => undefined } as unknown as FSWatcher
+      return deaf()
     }
 
     const watch = watchProjectFolder('/projects/demo', vi.fn(), fake)
