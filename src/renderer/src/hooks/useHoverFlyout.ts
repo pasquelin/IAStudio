@@ -42,15 +42,15 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
     setOpen(true)
   }, [cancel])
 
-  // Deliberately NOT clearing `asked`: the pointer wandering off the rows and back is one
-  // gesture, and forgetting mid-walk would hand the focus back to the opener under the user.
+  // A menu that was asked for is not the pointer's to close. Walking it with the arrows and
+  // moving the mouse off the bar is one gesture, not two: closing on the grace period would end
+  // the walk 220 ms after a movement that touched nothing, and hand the focus back to the opener.
+  // It closes the way a menu closes — a choice, `Escape`, `Tab`, or a press outside.
   const leave = useCallback(() => {
+    if (asked) return
     cancel()
-    timer.current = setTimeout(() => {
-      setOpen(false)
-      setAsked(false)
-    }, GRACE)
-  }, [cancel])
+    timer.current = setTimeout(() => setOpen(false), GRACE)
+  }, [asked, cancel])
 
   const ask = useCallback(() => {
     cancel()

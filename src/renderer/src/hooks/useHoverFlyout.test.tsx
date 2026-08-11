@@ -97,6 +97,19 @@ describe('useHoverFlyout', () => {
       expect(result.current.asked).toBe(true)
     })
 
+    // The walk it is holding would otherwise end 220 ms after a mouse moved off a bar nobody
+    // touched, with the focus thrown back to the opener.
+    it('does not let the grace period close a menu that was asked for', () => {
+      const { result } = renderHook(() => useHoverFlyout(3))
+      act(() => result.current.open())
+
+      act(() => result.current.wrapProps.onPointerLeave())
+      act(() => vi.advanceTimersByTime(AFTER_GRACE))
+
+      expect(result.current.showing).toBe(true)
+      expect(result.current.asked).toBe(true)
+    })
+
     it('forgets it was asked for once it is closed', () => {
       const { result } = renderHook(() => useHoverFlyout(3))
       act(() => result.current.open())

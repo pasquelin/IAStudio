@@ -51,6 +51,10 @@ export function MenuButton({
         {...button}
         ref={setAnchor}
         tooltip={tooltip}
+        // Announced before it opens, as `AccountSelect` does on the same mounting: a menu that
+        // takes the focus without a reader having said it was coming is a jump out of nowhere.
+        aria-haspopup={menu && flyout.hasFlyout ? 'menu' : undefined}
+        aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
         onClick={() => {
           onClick?.()
           if (opensOnClick) flyout.open()
@@ -61,10 +65,11 @@ export function MenuButton({
         <Flyout
           anchor={anchor}
           role={menu ? 'menu' : undefined}
-          // Only once it was asked for, and only over real rows: hovering into a menu must not
-          // take the focus, and the arrows find nothing in a flyout that holds sliders.
-          onKeyClose={menu && flyout.asked ? flyout.close : undefined}
-          onDismiss={flyout.asked ? flyout.close : undefined}
+          // Only once it was asked for: a menu the pointer crossed must not take the focus.
+          // No `menu` guard needed — `useMenuKeys` finds its rows by role and does nothing
+          // over a flyout that holds sliders.
+          onKeyClose={flyout.asked ? flyout.close : undefined}
+          onDismiss={flyout.close}
           {...flyout.flyoutProps}
         >
           {rows(flyout.close)}
