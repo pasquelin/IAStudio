@@ -215,6 +215,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
 
   const running = useGraphRuns(state => runOf(state, documentId).running)
   const runs = useGraphRuns(state => runOf(state, documentId).nodes)
+  const latest = useGraphRuns(state => runOf(state, documentId).latest)
 
   /** One button for the pair, so what it does is read off what the graph is doing right now. */
   const onRun = useCallback(() => {
@@ -322,6 +323,7 @@ export function GraphDocument({ documentId }: { documentId: string }) {
         published && (published.result.ok || published.of === graph) ? published.result : null
       }
       runs={runs}
+      latest={latest}
       running={running}
     />
   )

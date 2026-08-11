@@ -24,7 +24,7 @@ import { HINT_BOTTOM } from '@/helpers/tooltip'
 import { readConditionBlocks } from '@/engines/graph/conditions'
 import { PROBLEM_KEY, RUN_STATE_KEY } from './adapter'
 import { useNodeDecision } from './node-decision'
-import { NODE_LABEL_KEYS } from './node-labels'
+import { labelOf, titleOf } from './node-labels'
 import { InputPorts, OutputPorts } from './NodePorts'
 
 /** How each state reads. The colour itself stays in `design/styles.ts`, with the other tones. */
@@ -40,20 +40,26 @@ const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
 }
 
 /**
- * What a node says about the run it is in, in the header where its type would otherwise sit.
+ * The i18n key a run state reads under.
  *
- * A failure names its own reason: "failed" alone sends the user to the jobs panel for a node that
+ * A failure names its own REASON: "failed" alone sends the user to the jobs panel for a node that
  * never reached it — a loop, a missing model and a type this milestone cannot run yet all read
  * the same otherwise.
  */
+export const runLabelKey = (run: GraphNodeRun): string =>
+  run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
+
+/**
+ * No `role="status"` here, and that is the point: one per node meant twenty live regions on a
+ * graph of twenty, all announcing at once. The canvas carries ONE, which says what changed last —
+ * this badge is read by the eye, and by anyone walking the node.
+ */
 function RunBadge({ run }: { run: GraphNodeRun }) {
   const { t } = useTranslation()
-  const key = run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
+  const key = runLabelKey(run)
 
   return (
-    <span role="status" className={cn('shrink-0 text-[10px]', TONE_TEXT[RUN_TONE[run.status]])}>
-      {t(key)}
-    </span>
+    <span className={cn('shrink-0 text-[10px]', TONE_TEXT[RUN_TONE[run.status]])}>{t(key)}</span>
   )
 }
 
@@ -180,9 +186,6 @@ function asRun(value: unknown): GraphNodeRun | undefined {
   return failure ? { status, failure } : undefined
 }
 
-/** The key naming a type, or the type itself — i18next hands a missing key straight back. */
-const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
-
 /**
  * Memoised, like the rows of the collections: React Flow re-renders every mounted node on each
  * frame of a pan, and a graph is the one surface of the studio holding dozens of them at once.
@@ -201,7 +204,7 @@ function nodeOf(
 
     return (
       <NodeShell
-        title={asText(fields.title) || t(labelOf(drawn))}
+        title={titleOf(fields, drawn, t)}
         kind={type}
         run={asRun(fields[RUN_STATE_KEY])}
         output={fields.isOutput === true && canBeOutput(drawn)}

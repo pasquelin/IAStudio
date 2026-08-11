@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Background,
   BackgroundVariant,
@@ -16,6 +17,7 @@ import type {
   GraphPublishResult,
 } from '@shared/domain/graph'
 import { canDropConnection } from '@/engines/graph/connect'
+import { nodeById } from '@shared/domain/graph'
 import type { PaletteEntry } from './palette'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
@@ -27,7 +29,8 @@ import {
   selectionAfter,
   toCanvasEdges,
 } from './adapter'
-import { GRAPH_NODE_TYPES } from './GraphNodes'
+import { GRAPH_NODE_TYPES, runLabelKey } from './GraphNodes'
+import { titleOf } from './node-labels'
 import { GraphMenu } from './GraphMenu'
 import { GraphStatus, shownVerdict, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
@@ -65,6 +68,8 @@ export type GraphCanvasProps = {
   canImport: boolean
   /** What each node is doing in the run under way, or in the last one. Absent means idle. */
   runs: Readonly<Record<string, GraphNodeRun>>
+  /** The node that spoke last — its state comes from `runs`, so the two cannot disagree. */
+  latest?: string
   running: boolean
   /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
   onRun: () => void
@@ -110,6 +115,7 @@ export function GraphCanvas({
   canExport,
   canImport,
   runs,
+  latest,
   running,
   onRun,
   onExport,
@@ -151,6 +157,29 @@ export function GraphCanvas({
   }, [])
 
   const compiled = useGraphCompile(graph)
+  const { t } = useTranslation()
+
+  // Composed rather than stored: the two halves are already translated, and a sentence built here
+  // would be a screen string outside the bundles.
+  const announcement = useMemo(() => {
+    if (!latest) return ''
+
+    const node = nodeById(graph, latest)
+    const run = runs[latest]
+    if (!node || !run) return ''
+
+    /*
+     * A state with no sentence is not announced, and the test is the ABSENCE of a line rather than
+     * a list to keep in step: i18next hands a missing key straight back, so `said === key` is the
+     * question "does this have words". `idle` has none on purpose — `bundles.test.ts` excludes it
+     * because a node saying nothing needs none — and a Stop puts every waiting node back to it.
+     * A ninth state added without its line would go quiet here instead of reading its own key.
+     */
+    const said = t(runLabelKey(run))
+    if (said === runLabelKey(run)) return ''
+
+    return `${titleOf(node.data, node.type, t)} — ${said}`
+  }, [graph, latest, runs, t])
 
   // Painted from the verdict the STATUS LINE is showing — its own rule, asked rather than
   // repeated: a set of nodes ringed under a sentence that is not about them is the one failure
@@ -266,6 +295,12 @@ export function GraphCanvas({
             />
             {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
             <GraphStatus result={compiled} published={published} />
+            {/* The one region that NAMES A NODE — the status line above is a live region too, and
+                says what the graph as a whole would compile to. A node's badge is read by walking
+                it; what CHANGES is announced here, or twenty nodes would announce at once. */}
+            <p role="status" aria-live="polite" className="sr-only">
+              {announcement}
+            </p>
           </ReactFlow>
         </NodeDecisionProvider>
       </div>

@@ -118,6 +118,54 @@ describe('running a graph document', () => {
   })
 
   /**
+   * `nodes` is a record, and a record remembers no order — so it cannot say which node spoke
+   * LAST. The canvas needs exactly that, and only the reporter knows it: without `latest` every
+   * node had to carry its own live region, twenty of them announcing over each other.
+   */
+  it('remembers which node spoke last', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, chain())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    // `running` is reported on the generator itself, after the text node it reads is done.
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toBe('m1')
+
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    const settled = runOf(useGraphRuns.getState(), DOC)
+
+    // The id ALONE, and its state read from `nodes` — the two cannot disagree by construction.
+    expect(settled.latest).toBe('m1')
+    expect(settled.latest && settled.nodes[settled.latest]).toEqual({ status: 'done' })
+  })
+
+  /**
+   * `nodes` is wiped when a run starts, for a reason the comment beside it gives: a node left
+   * green reads as a result THIS run produced. `latest` is the same fact in another shape — kept,
+   * the live region would still be announcing a run whose badges have just been wiped.
+   */
+  it('drops what the previous run said when a new one starts', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, chain())
+
+    const first = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await first
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toBeDefined()
+
+    // Read BEFORE awaiting: the second run reuses the cache and reports again straight away, so
+    // what is being pinned here is the wipe at the start, not a state that outlives it.
+    const second = useGraphRuns.getState().start(DOC)
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toBeUndefined()
+
+    await second
+  })
+
+  /**
    * The keyboard is why this lives in the store: the bar greys its button on an empty graph, and
    * a key pressed over the canvas goes nowhere near the bar.
    */

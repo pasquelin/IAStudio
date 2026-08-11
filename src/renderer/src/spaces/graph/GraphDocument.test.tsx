@@ -11,6 +11,8 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { runOf, useGraphRuns } from '@/stores/graph-runs'
 import { graphOf, useGraphs } from '@/stores/graphs'
+import { installGraph } from '@/stores/graph-fixtures'
+import { parseGraph } from '@/engines/graph/serialize'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useSelection } from '@/stores/selection'
@@ -332,6 +334,144 @@ describe('a graph as a document', () => {
       rerender(<GraphDocument documentId={DOCUMENT} />)
 
       expect(screen.getByRole('button', { name: 'Importer un graphe' })).toBeDisabled()
+    })
+
+    /**
+     * ONE live region for the canvas, not one per node: twenty nodes reporting meant twenty of
+     * them announcing over each other. What is announced is the node that spoke LAST, which a
+     * record of states cannot say on its own — hence `latest` beside `nodes`.
+     */
+    it('announces the node that spoke last, from a single live region', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: true,
+              nodes: { [text.id]: { status: 'running' } },
+              latest: text.id,
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      // React Flow keeps a live region of its own for keyboard moves; ours is the one that names
+      // a node. What matters is that there is exactly ONE of ours, whatever the node count.
+      const ours = container.querySelectorAll('p[role="status"][aria-live]')
+
+      expect(ours).toHaveLength(1)
+      expect(ours[0]?.textContent).toBe('Texte — en cours')
+    })
+
+    /**
+     * `idle` is the ONE state with no sentence of its own — `bundles.test.ts` excludes it, on the
+     * grounds that a node saying nothing needs no words. Announcing it would read `graphRun.idle`
+     * out loud, and a Stop puts every waiting node back to exactly that.
+     */
+    it('says nothing rather than reading a key out loud on a stopped node', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: { [text.id]: { status: 'idle' } },
+              latest: text.id,
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe('')
+    })
+
+    /** A failure is the one thing this region must never swallow — and it reads as its REASON. */
+    it('announces a failure by the reason it names', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: { [text.id]: { status: 'failed', failure: 'no-model' } },
+              latest: text.id,
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe(
+        'Texte — sans modèle',
+      )
+    })
+
+    /**
+     * `parseNode` keeps `data` as the file wrote it, so an imported `"title": 42` types as a
+     * string without being one. The face guards it; this region has to guard it the same way, or
+     * two surfaces name the same node differently.
+     */
+    it('names a node whose imported title is not text as its type', () => {
+      // Through `parseGraph`, which is the real path of a file: written as a literal, `title: 42`
+      // would not compile — the type says `string`, and that is exactly the claim under test.
+      const imported = parseGraph({
+        nodes: [{ id: text.id, type: 'text', position: { x: 0, y: 0 }, data: { title: 42 } }],
+        edges: [],
+      })
+
+      act(() => installGraph(DOCUMENT, imported))
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: { [text.id]: { status: 'done' } },
+              latest: text.id,
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe(
+        'Texte — terminé',
+      )
+    })
+
+    /**
+     * The run state outlives the graph — an import replaces every node while `latest` still names
+     * one of the old ones. Announcing its state would name a node nobody can find on the canvas.
+     */
+    it('says nothing of a node the graph no longer holds', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              // The vanished node keeps a state, or the assertion would pass on the missing
+              // state rather than on the missing NODE — two guards, one test each.
+              nodes: { gone1: { status: 'done' } },
+              latest: 'gone1',
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe('')
     })
 
     /**

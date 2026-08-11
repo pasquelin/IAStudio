@@ -16,6 +16,17 @@ export type DocumentRun = {
    * LOCAL asset ids, which mean nothing outside the open project — see `GraphCache`.
    */
   cache: GraphCache
+  /**
+   * The node that spoke LAST — an id, and its state is read from `nodes`.
+   *
+   * Kept here rather than derived in the canvas because only the reporter knows the ORDER: a
+   * record remembers no such thing. Without it every node had to carry its own live region, which
+   * is twenty of them talking over each other on a graph of twenty.
+   *
+   * The id ALONE, and that is the fix of a bug already paid: carrying the run beside it made a
+   * `latest` that disagrees with `nodes` writable, and `start` promptly wrote one.
+   */
+  latest?: string
 }
 
 const IDLE: DocumentRun = { running: false, nodes: {}, cache: new Map() }
@@ -122,8 +133,14 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
       pending.set(documentId, asked)
 
       // Cleared rather than kept: a node left green from the previous run, beside one the graph
-      // has since made unreachable, reads as a result this run produced.
-      patch(documentId, controller, held => ({ ...held, running: true, nodes: {} }))
+      // has since made unreachable, reads as a result this run produced. `latest` goes with them,
+      // or the live region keeps announcing a run whose badges have all just been wiped.
+      patch(documentId, controller, held => ({
+        ...held,
+        running: true,
+        nodes: {},
+        latest: undefined,
+      }))
 
       try {
         /**
@@ -165,6 +182,7 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               patch(documentId, controller, held => ({
                 ...held,
                 nodes: { ...held.nodes, [nodeId]: run },
+                latest: nodeId,
               })),
             signal: controller.signal,
           },
