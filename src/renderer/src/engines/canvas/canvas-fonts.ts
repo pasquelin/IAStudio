@@ -1,5 +1,5 @@
 import { embeddedFontOf, embeddedFontUrl, type FontRef } from '@shared/domain/font'
-import type { Layer, TextLayer } from './canvas-state'
+import { layerById, type CanvasState, type TextLayer } from './canvas-state'
 
 /**
  * What a canvas needs of a typeface, which is not what the 3D workspace needs of the same one.
@@ -43,13 +43,20 @@ export function faceUrlOf(font: FontRef): string | null {
  * Read out of the state rather than closed over: the layer may have been retyped in another face
  * or deleted entirely while the file was on its way, and what the document holds now is what
  * decides. Decided here rather than in the engine so that every way it can go is a plain test.
+ *
+ * Filed in a group, a caption used to be missed entirely and stayed in the generic until someone
+ * edited it: `drawText` only redraws a wording that changed.
  */
 export function captionSetIn(
-  state: { layers: readonly Layer[] } | null,
+  state: CanvasState | null,
   id: string,
   family: string,
 ): TextLayer | null {
-  const found = state?.layers.find(layer => layer.id === id)
+  if (!state) return null
+
+  // The family alone, not `isSameFont`: a face is registered with the page under a family name,
+  // so a caption moved from the shipped Lato to an installed one is drawn by the face that landed.
+  const found = layerById(state, id)
   if (found?.kind !== 'text' || found.font.family !== family) return null
 
   return found
