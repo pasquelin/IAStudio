@@ -48,6 +48,8 @@ export type AudioChunk = {
   speed: number
   /** Decibels, as the clip carries them. Zero leaves the take as it was recorded. */
   gain: number
+  /** The whole clip's ramps, not the slice's: a slice may begin inside a fade. */
+  fade: ClipFade
 }
 
 /**
@@ -61,8 +63,9 @@ export function audioChunksIn(state: SequenceState, from: Us, to: Us): AudioChun
     if (track.kind !== 'audio' || !playsThrough(state, track)) continue
 
     for (const clip of track.clips) {
+      const finish = clipEnd(clip)
       const start = Math.max(clip.start, from)
-      const end = Math.min(clipEnd(clip), to)
+      const end = Math.min(finish, to)
       if (end <= start) continue
 
       chunks.push({
@@ -74,6 +77,12 @@ export function audioChunksIn(state: SequenceState, from: Us, to: Us): AudioChun
         duration: end - start,
         speed: clip.speed,
         gain: clip.gain,
+        fade: {
+          from: clip.start,
+          to: finish,
+          risenAt: clip.start + clip.fadeIn,
+          fallsFrom: finish - clip.fadeOut,
+        },
       })
     }
   }
