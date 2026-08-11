@@ -33,7 +33,8 @@ const configure = vi.fn()
 const setSnapping = vi.fn()
 const setSpace = vi.fn()
 const setProjection = vi.fn()
-const setDisplayMode = vi.fn()
+const setDisplayModes = vi.fn()
+const activePane = vi.fn(() => 0)
 const setSkeletons = vi.fn()
 const setQuadView = vi.fn()
 const setPlayhead = vi.fn()
@@ -62,7 +63,8 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setSnapping = setSnapping
     setSpace = setSpace
     setProjection = setProjection
-    setDisplayMode = setDisplayMode
+    setDisplayModes = setDisplayModes
+    activePane = activePane
     setSkeletons = setSkeletons
     setQuadView = setQuadView
     setPlayhead = setPlayhead
@@ -378,20 +380,31 @@ describe('how the scene is looked at', () => {
     await userEvent.hover(screen.getByRole('button', { name: /Rendu/ }))
     await userEvent.click(await screen.findByRole('menuitemradio', { name: /^Filaire/ }))
 
-    expect(setDisplayMode).toHaveBeenCalledWith('wireframe')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['wireframe'])
   })
 
   it('cycles through the three modes on the bound key', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
     await userEvent.keyboard('{z}')
-    expect(setDisplayMode).toHaveBeenLastCalledWith('wireframe')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['wireframe'])
 
     await userEvent.keyboard('{z}')
-    expect(setDisplayMode).toHaveBeenLastCalledWith('both')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['both'])
 
     await userEvent.keyboard('{z}')
-    expect(setDisplayMode).toHaveBeenLastCalledWith('shaded')
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded'])
+  })
+
+  /** Four views, four answers: the key lands on the one the pointer is over, and on no other. */
+  it('changes only the view the pointer is over', async () => {
+    activePane.mockReturnValue(2)
+    render(<SceneDocument documentId="doc-1" />)
+
+    await userEvent.keyboard('{z}')
+
+    expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded', 'shaded', 'wireframe'])
+    expect(viewOf(useSceneViews.getState(), 'doc-1').displays[0]).toBe('shaded')
   })
 
   // Session state, per document: two scenes side by side are two points of view.

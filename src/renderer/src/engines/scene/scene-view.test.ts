@@ -1,5 +1,6 @@
 import {
   BoxGeometry,
+  Layers,
   LineBasicMaterial,
   LineSegments,
   Material,
@@ -14,6 +15,7 @@ import {
   applyDisplayMode,
   applyWireOverlay,
   directionOf,
+  EDGE_LAYER,
   isDisplayMode,
   isViewDirection,
   viewPosition,
@@ -173,6 +175,17 @@ describe('applyWireOverlay', () => {
 
     applyWireOverlay(mesh, false, line)
     expect(mesh.children).toHaveLength(0)
+  })
+
+  /** Which views draw the edges is a per-camera answer, and a layer is what makes it one. */
+  it('hangs the edges on the layer a camera opts into', () => {
+    const { mesh } = meshTree()
+
+    applyWireOverlay(mesh, true, line)
+    const edges = mesh.children.find(child => child instanceof LineSegments)
+
+    expect(edges?.layers.test(new Layers())).toBe(false)
+    expect(edges?.layers.isEnabled(EDGE_LAYER)).toBe(true)
   })
 
   // Applied twice, it would otherwise stack a second set of edges on the first.

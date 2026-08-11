@@ -135,6 +135,14 @@ function materialsOf(mesh: Mesh): readonly Material[] {
 export const OVERLAY_NAME = 'wireframe-overlay'
 
 /**
+ * The layer the overlays hang on, so a camera decides for itself whether it draws them.
+ *
+ * Here rather than beside the renderer: whoever builds the edges is who has to place them, and
+ * the two spellings drifting apart would show the edges in every view or in none.
+ */
+export const EDGE_LAYER = 1
+
+/**
  * The edges drawn over a shaded mesh, for the one mode a material cannot express.
  *
  * Built on demand and thrown away with the mode: a `WireframeGeometry` is its own buffer, and
@@ -160,6 +168,7 @@ export function applyWireOverlay(object: Object3D, on: boolean, material: Materi
   for (const mesh of meshes) {
     const edges = new LineSegments(new WireframeGeometry(mesh.geometry), material)
     edges.name = OVERLAY_NAME
+    edges.layers.set(EDGE_LAYER)
     // Decoration, and kept out of everything that reads the scene as content. The ray above all:
     // a line is met within a whole world unit of itself, so left pickable the overlay wraps every
     // edge in a halo that size, and a click into the void beside a cube would select the cube.

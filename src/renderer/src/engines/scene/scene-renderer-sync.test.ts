@@ -214,4 +214,40 @@ describe('a scene told what changed', () => {
       expect(nodeIdOf(stray, known)).toBeNull()
     })
   })
+
+  /**
+   * Four views on an unmounted renderer, which is all this file can reach — jsdom gives no WebGL
+   * context, so the cameras exist but nothing draws through them. What is checked is what the
+   * engine answers about itself; where the side views land is the viewport's own suite.
+   */
+  describe('four views', () => {
+    it('opens and closes the layout, and says which it is in', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+
+      expect(renderer.quadView()).toBe(false)
+      renderer.setQuadView(true)
+      expect(renderer.quadView()).toBe(true)
+      // Nothing has pointed anywhere, so every command still lands on the main view.
+      expect(renderer.activePane()).toBe(0)
+
+      renderer.setQuadView(false)
+      expect(renderer.quadView()).toBe(false)
+
+      renderer.dispose()
+    })
+
+    it('takes one display mode per view, and ignores a list it already holds', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1')] })
+
+      renderer.setDisplayModes(['shaded', 'wireframe', 'both', 'shaded'])
+      renderer.setDisplayModes(['shaded', 'wireframe', 'both', 'shaded'])
+      renderer.setDisplayModes(['shaded'])
+
+      // The edges are geometry: asked for by any view, they are built; asked for by none, freed.
+      expect(freedGeometries).toHaveBeenCalled()
+
+      renderer.dispose()
+    })
+  })
 })

@@ -37,6 +37,12 @@ export type ViewportEngineOptions = {
   /** Drawn after the scene with `autoClear` off — trihedrons and other screen-space overlays. */
   onOverlay?: (renderer: WebGLRenderer) => void
   /**
+   * Called just before each pane is drawn, so whoever owns the scene can say how THIS view shows
+   * it. The one seam that makes a per-view display mode possible: `overrideMaterial` and a
+   * camera's layers are read at render time, so a pane's answer only has to hold for its own pass.
+   */
+  onPane?: (index: number, camera: ViewportCamera) => void
+  /**
    * Filmic tone mapping. Off by default because it changes how every existing colour lands,
    * and the scene editor was built and reviewed without it; a viewport that judges an HDR
    * environment turns it on.
@@ -97,6 +103,8 @@ export class ViewportEngine {
   private controls: OrbitControls | null = null
   private observer: ResizeObserver | null = null
   private layout: PaneLayout = 'single'
+  /** Pane 0 until a pointer says otherwise, which is the only pane a single layout has. */
+  private active = 0
   /**
    * The views beside the main one, which is always pane 0 and always the one that was already
    * there. Empty in a single layout, so every viewport that never asks for four draws exactly
@@ -217,6 +225,7 @@ export class ViewportEngine {
     if (layout === this.layout) return
     this.layout = layout
 
+    if (layout === 'single') this.active = 0
     const wanted = paneCount(layout) - 1
     while (this.extras.length > wanted) this.disposeExtra()
     while (this.extras.length < wanted) this.extras.push(this.createExtra())
@@ -242,6 +251,14 @@ export class ViewportEngine {
   /** Pane 0 is the main camera; the rest read one past their own index. */
   private cameraOfPane(index: number): ViewportCamera | null {
     return index === 0 ? this.camera : (this.extras[index - 1]?.camera ?? null)
+  }
+
+  /**
+   * The pane the pointer was last over. What a command acts on: pressing a display key means
+   * "this view", the way every modelling package reads it — the pointer says which one.
+   */
+  get activePane(): number {
+    return this.active
   }
 
   /** Which pane a pointer is over, or `null` when it is off the surface entirely. */
@@ -287,22 +304,27 @@ export class ViewportEngine {
     if (this.layout === 'single') return
 
     const over = this.paneAtPointer(event)
+    if (over !== null) this.active = over
     if (this.controls) this.controls.enabled = over === 0
     for (const [index, pane] of this.extras.entries()) {
       if (pane.controls) pane.controls.enabled = over === index + 1
     }
   }
 
-  /** Where each pane sits, and what that does to the cameras that draw into them. */
-  private layOutPanes(): void {
+  /**
+   * Where each pane sits, and what that does to the cameras that draw into them. Hands back the
+   * main pane's rectangle, which is what the caller sizing the main camera needs.
+   */
+  private layOutPanes(): PaneRect {
     const canvas = this.renderer?.domElement
-    if (!canvas) return
-
-    const { clientWidth, clientHeight } = canvas
-    this.rects = paneRects(this.layout, clientWidth, clientHeight)
+    const width = canvas?.clientWidth ?? 0
+    const height = canvas?.clientHeight ?? 0
+    this.rects = paneRects(this.layout, width, height)
 
     for (const [index, pane] of this.extras.entries()) {
-      // Pane 0 is the main camera's, so an extra reads the rect one past its own index.
+      // Pane 0 is the main camera's, so an extra reads the rect one past its own index. A pane
+      // with no height is a viewport that has not been mounted yet: its frustum would come out
+      // as a division by zero, and a camera holding NaN never draws again.
       const rect = this.rects[index + 1]
       if (!rect || rect.height === 0) continue
 
@@ -314,6 +336,8 @@ export class ViewportEngine {
       pane.camera.left = -half * aspect
       pane.camera.updateProjectionMatrix()
     }
+
+    return this.rects[0] ?? { x: 0, y: 0, width, height }
   }
 
   /** Makes its own canvas: React must never own it — see the engine invariants in CLAUDE.md. */
@@ -450,11 +474,11 @@ export class ViewportEngine {
     if (clientWidth === 0 || clientHeight === 0) return
 
     this.renderer.setSize(clientWidth, clientHeight, false)
-    this.layOutPanes()
     // The main camera follows its own pane, not the canvas: in a quad layout that is a quarter
-    // of it, and an aspect taken from the whole surface stretches every one of the four.
-    const main = this.rects[0] ?? { x: 0, y: 0, width: clientWidth, height: clientHeight }
-    this.perspective.aspect = main.height === 0 ? 1 : main.width / main.height
+    // of it, and an aspect taken from the whole surface stretches every one of the four. Both
+    // sides of the ratio are non-zero — the guard above turned back a surface with no height.
+    const main = this.layOutPanes()
+    this.perspective.aspect = main.width / main.height
     this.perspective.updateProjectionMatrix()
     this.fitProjection()
     this.requestRender()
@@ -469,6 +493,7 @@ export class ViewportEngine {
    */
   private renderPanes(renderer: WebGLRenderer): void {
     if (this.extras.length === 0) {
+      this.options.onPane?.(0, this.camera)
       renderer.render(this.scene, this.camera)
       return
     }
@@ -481,13 +506,13 @@ export class ViewportEngine {
       // Walked by index rather than over `paneCameras`: that getter builds an array, and one
       // built per frame is one allocation per frame for a list of four that never changes.
       for (const [index, rect] of this.rects.entries()) {
-        if (rect.width === 0 || rect.height === 0) continue
         const camera = this.cameraOfPane(index)
         if (!camera) continue
 
         const { x, y, width, height: paneHeight } = glRect(rect, height, ratio)
         renderer.setViewport(x, y, width, paneHeight)
         renderer.setScissor(x, y, width, paneHeight)
+        this.options.onPane?.(index, camera)
         renderer.render(this.scene, camera)
       }
     } finally {

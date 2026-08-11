@@ -28,7 +28,11 @@ import { DEFAULT_SETTINGS, type Settings } from '@shared/domain/settings'
 import type { SelectionMode } from '@/helpers/selection'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
-import { ViewportEngine, type ProjectionKind } from '../viewport/ViewportEngine'
+import {
+  ViewportEngine,
+  type ProjectionKind,
+  type ViewportCamera,
+} from '../viewport/ViewportEngine'
 import {
   canReceiveShadow,
   type ModelNode,
@@ -75,6 +79,7 @@ import {
 import {
   applyDisplayMode,
   applyWireOverlay,
+  EDGE_LAYER,
   directionOf,
   framingPlacement,
   viewPosition,
@@ -198,6 +203,7 @@ export class SceneRenderer {
   private readonly viewport = new ViewportEngine({
     onFrame: delta => this.advance(delta),
     onOverlay: renderer => this.viewHelper?.render(renderer),
+    onPane: (index, camera) => this.dressPane(index, camera),
     // Only here: the texture and skybox viewports show what they show without any light told to
     // cast, so a depth pass per frame would buy them nothing.
     shadows: true,
@@ -259,7 +265,8 @@ export class SceneRenderer {
   private selectedIds: readonly string[] = []
   /** Empty until mounted: the palette is only readable once a styled canvas exists. */
   private meshColor = ''
-  private display: DisplayMode = 'shaded'
+  /** One mode per pane, main view first. A single-view scene reads index 0 and nothing else. */
+  private displays: DisplayMode[] = ['shaded']
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
@@ -530,6 +537,11 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  /** Which view the pointer is over — what a display command acts on. */
+  activePane(): number {
+    return this.viewport.activePane
+  }
+
   quadView(): boolean {
     return this.viewport.paneLayout === 'quad'
   }
@@ -592,16 +604,44 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
-  /** Surfaces, edges, or both. Session state: nothing of the document moves. */
-  setDisplayMode(mode: DisplayMode): void {
-    if (mode === this.display) return
-    this.display = mode
+  /**
+   * Surfaces, edges, or both — one answer PER VIEW, main one first. Session state: nothing of
+   * the document moves.
+   *
+   * The edges are built as soon as any view asks for them and hidden from the views that did
+   * not: a `WireframeGeometry` per mesh is its own buffer, and building one set per pane would
+   * cost the scene four times its geometry to show the same edges.
+   */
+  setDisplayModes(modes: readonly DisplayMode[]): void {
+    if (modes.length === this.displays.length && modes.every((m, i) => m === this.displays[i])) {
+      return
+    }
+    this.displays = [...modes]
 
+    const anyEdges = modes.includes('both')
     for (const object of this.objects.values()) {
-      applyDisplayMode(object, mode)
-      applyWireOverlay(object, mode === 'both', this.wireMaterial)
+      applyWireOverlay(object, anyEdges, this.wireMaterial)
     }
     this.viewport.requestRender()
+  }
+
+  /**
+   * How THIS view shows the scene, set while its pass is about to run.
+   *
+   * A traversal per pane rather than `scene.overrideMaterial`: an override paints everything the
+   * renderer draws, gizmo and grid included, and a manipulator drawn as a wireframe is a
+   * manipulator nobody can grab. Only the document's own objects are walked — the gizmo, the
+   * grid and the trihedron are siblings, never in `objects`.
+   */
+  private dressPane(index: number, camera: ViewportCamera): void {
+    const mode = this.displays[index] ?? this.displays[0] ?? 'shaded'
+
+    for (const object of this.objects.values()) applyDisplayMode(object, mode)
+
+    // The edges hang on their own layer, so which panes show them is a per-camera answer rather
+    // than a second set of geometry.
+    if (mode === 'both') camera.layers.enable(EDGE_LAYER)
+    else camera.layers.disable(EDGE_LAYER)
   }
 
   /**
@@ -888,7 +928,7 @@ export class SceneRenderer {
       this.viewport.scene.add(object)
       // A node built while a display mode is on has to arrive in it, or it would be the one
       // object in the scene still drawn shaded.
-      if (this.display !== 'shaded') this.applyDisplay(object)
+      if (this.displays.includes('both')) this.applyDisplay(object)
     } else {
       // Only what an edit actually changed: rebuilding a geometry or recompiling a shader on
       // every move of the gizmo would cost the drag its frame rate.
@@ -945,7 +985,7 @@ export class SceneRenderer {
         applyGeometry(object, node.geometry)
         // The edges were built from the shape that just went: rebuilt, or they outline a mesh
         // that no longer exists.
-        if (this.display === 'both') this.applyDisplay(object)
+        if (this.displays.includes('both')) this.applyDisplay(object)
       }
 
       const material = standardMaterialOf(object)
@@ -1047,7 +1087,7 @@ export class SceneRenderer {
     // Same reason as a model landing into a wireframe scene: the edges were built from the shape
     // that was there before the face arrived — an empty one at first, the previous words after an
     // edit — and outline a mesh that no longer exists until they are built again.
-    if (this.display !== 'shaded') this.applyDisplay(object)
+    if (this.displays.includes('both')) this.applyDisplay(object)
     this.viewport.requestRender()
   }
 
@@ -1091,7 +1131,7 @@ export class SceneRenderer {
       )
       // Same reason, same place: what the file brought was not there when the mode was applied,
       // and a model landing into a wireframe scene would be the one thing still drawn shaded.
-      if (this.display !== 'shaded') this.applyDisplay(holder)
+      if (this.displays.includes('both')) this.applyDisplay(holder)
       // A dense model is what makes a click cost a frame — measured in `scene-picking.bench.ts`.
       // Off the UI thread, and after the render: the viewport shows the file before the tree.
       this.viewport.requestRender()
@@ -1128,8 +1168,9 @@ export class SceneRenderer {
   }
 
   private applyDisplay(object: Object3D): void {
-    applyDisplayMode(object, this.display)
-    applyWireOverlay(object, this.display === 'both', this.wireMaterial)
+    // The mode itself lands per pane, at render time; what an arriving object needs here is its
+    // edges, which are geometry rather than a flag.
+    applyWireOverlay(object, this.displays.includes('both'), this.wireMaterial)
   }
 
   /** What a light's shadow is sized against: the settings for the map, the grid for the reach. */

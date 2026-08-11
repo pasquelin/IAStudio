@@ -241,6 +241,101 @@ describe('a viewport', () => {
       expect(ndc?.y).toBeCloseTo(0)
     })
 
+    /** The seam a per-view display mode hangs on: each pane is announced before its own pass. */
+    it('says which pane is about to be drawn, before drawing it', () => {
+      const dressed: number[] = []
+      const engine = atRest({ onPane: index => dressed.push(index) })
+
+      engine.setLayout('quad')
+      dressed.length = 0
+      drawFrames()
+
+      expect(dressed).toEqual([0, 1, 2, 3])
+    })
+
+    it('announces the one pane of a single layout too', () => {
+      const dressed: number[] = []
+      const engine = atRest({ onPane: index => dressed.push(index) })
+
+      dressed.length = 0
+      engine.requestRender()
+      drawFrames()
+
+      expect(dressed).toEqual([0])
+    })
+
+    it('takes the active pane back to the first when the layout closes', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH - 10, HOST_HEIGHT - 10))
+      expect(engine.activePane).toBe(3)
+
+      engine.setLayout('single')
+      expect(engine.activePane).toBe(0)
+    })
+
+    /** A viewport that only looks around has no orbit to hand over, in four views as in one. */
+    it('adds views without orbits to a viewport that has none', () => {
+      const engine = mounted({ controls: 'none' })
+
+      engine.setLayout('quad')
+
+      expect(engine.paneCameras).toHaveLength(4)
+      expect(engine.paneOrbits).toEqual([null, null, null, null])
+    })
+
+    it('leaves the orbits alone when the pointer is off the surface', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const canvas = engine.canvas
+      if (!canvas) throw new Error('mounted with no canvas')
+
+      canvas.dispatchEvent(pointerAt(10, 10))
+      canvas.dispatchEvent(pointerAt(HOST_WIDTH + 50, 10))
+
+      // Off the surface arms nobody, and the pane last used keeps the drag it was given.
+      expect(engine.paneOrbits.map(orbit => orbit?.enabled)).toEqual([false, false, false, false])
+      expect(engine.activePane).toBe(0)
+    })
+
+    it('asks for four views before it is mounted without building anything', () => {
+      const engine = new ViewportEngine()
+      engines.push(engine)
+
+      engine.setLayout('quad')
+
+      // Four cameras, no orbit: an orbit needs the canvas the mount has not made yet.
+      expect(engine.paneCameras).toHaveLength(4)
+      expect(engine.paneOrbits.slice(1)).toEqual([null, null, null])
+      expect(engine.paneAtPointer(pointerAt(0, 0))).toBeNull()
+      expect(engine.pointerNdcOf(pointerAt(0, 0))).toBeNull()
+    })
+
+    it('asks for the layout it already has without rebuilding anything', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const first = engine.paneCameras[1]
+
+      engine.setLayout('quad')
+
+      expect(engine.paneCameras[1]).toBe(first)
+    })
+
+    it('gives every added orbit back when it goes away', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const orbits = engine.paneOrbits.slice(1)
+
+      engine.dispose()
+
+      // Disposed controls answer no gesture; what this guards is that they were disposed at all.
+      expect(orbits.every(orbit => orbit !== null)).toBe(true)
+      expect(engine.paneCameras).toHaveLength(1)
+    })
+
     it('answers no pane for a pointer off the surface', () => {
       const engine = mounted()
       engine.setLayout('quad')

@@ -25,7 +25,7 @@ import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
-import { useSceneViews, viewOf } from '@/stores/scene-views'
+import { displayOfPane, useSceneViews, viewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -158,8 +158,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   }, [view.projection])
 
   useEffect(() => {
-    engine.current?.setDisplayMode(view.display)
-  }, [view.display])
+    engine.current?.setDisplayModes(view.displays)
+  }, [view.displays])
 
   useEffect(() => {
     engine.current?.setSkeletons(view.skeletons)
@@ -186,6 +186,21 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     })
   }, [documentId, active])
 
+  /**
+   * Which view a display command lands on: the one the pointer is over, as every modelling
+   * package reads it. The engine is asked rather than React tracking it — the pointer is the
+   * viewport's own business, and a second tally here is a second answer free to disagree.
+   */
+  const paneInHand = useCallback(() => engine.current?.activePane() ?? 0, [])
+
+  const cycleDisplay = useCallback(() => {
+    const pane = paneInHand()
+    const displays = viewOf(useSceneViews.getState(), documentId).displays
+    useSceneViews
+      .getState()
+      .setDisplay(documentId, pane, nextDisplayMode(displayOfPane(displays, pane)))
+  }, [documentId, paneInHand])
+
   // Single dispatch: the toolbar and the keyboard both resolve to a `CommandId` first, so a new
   // tool is declared once in `SCENE_TOOLS` and handled once here.
   const run = useCallback(
@@ -210,7 +225,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         case 'scene.space':
           return setLocalFrame(current => !current)
         case 'scene.display':
-          return useSceneViews.getState().setDisplay(documentId, nextDisplayMode(view.display))
+          return cycleDisplay()
         case 'scene.skeletons':
           return useSceneViews.getState().setSkeletons(documentId, !view.skeletons)
         case 'scene.quad':
@@ -252,7 +267,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return store.redo(documentId)
       }
     },
-    [documentId, view],
+    [documentId, view, cycleDisplay],
   )
 
   /** A flyout row: the Add rows name a node kind, the others a side to stand at or a way to draw. */
@@ -260,11 +275,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     (toolId: string, modeId: string) => {
       if (toolId === 'view' && isViewDirection(modeId)) return engine.current?.viewFrom(modeId)
       if (toolId === 'display' && isDisplayMode(modeId)) {
-        return useSceneViews.getState().setDisplay(documentId, modeId)
+        return useSceneViews.getState().setDisplay(documentId, paneInHand(), modeId)
       }
       addNodeOf(modeId)
     },
-    [documentId, addNodeOf],
+    [documentId, addNodeOf, paneInHand],
   )
 
   useShortcuts({
@@ -304,7 +319,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     return SCENE_TOOLS.map(tool => ({
       ...tool,
       shortcut: tool.command ? label(bindingOf(tool.command, bindings)) : undefined,
-      activeMode: tool.id === 'display' ? view.display : undefined,
+      activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
       disabled: tool.command ? unavailable[tool.command] : undefined,
       pressed: tool.command ? pressed[tool.command] : undefined,
     }))
