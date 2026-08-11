@@ -623,7 +623,7 @@ is shown.
 | **Duration** and **FPS** | how long the timeline runs, and at what rate |
 | **Bone** | on a rigged model: the bone the next track will drive, or **The whole model** |
 | **Add a Position / Rotation / Scale track** | adds the track to the selected object |
-| **Key everything animated** | one key on every animated object, where the playhead stands |
+| **Key everything animated** | the same gesture, on every track at once |
 | **Render to video** | see below — greyed out until a camera is in the scene |
 
 **Each line carries its own**, to the left of the band:
@@ -631,11 +631,16 @@ is shown.
 | On a line's header | What it does |
 |---|---|
 | the chevron | **Show or hide the animated properties** |
-| **Key *(the name)*** | one key on every property of that object |
+| **Key *(the name)*** | records the movement made since, on every property of that object |
 | **Mute** / **Solo** / **Lock** | the three switches a track carries, as in Video |
 | **Remove track *(the name)*** | on a property line, takes it away with its keys |
 
-**The playhead is grabbed and dragged** along the ruler, and **keys are dragged** along their line.
+**The playhead is grabbed and dragged** along the ruler, and **keys are dragged** along their
+line. **Past the duration the band is dimmed**: the head goes no further, and no key can be laid out
+there — a clip block still can. A ruler graduated to seventeen seconds over a five-second scene would say the
+scene is longer than it is.
+
+**Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 
 **With no track at all, the band says so** rather than staying blank: "No track yet. Select an
 object, then add the track to animate."
@@ -655,6 +660,27 @@ video montage, where the clip on top hides the one below.
 >
 > **A bone with no track is a case apart**: it has no rest pose to fall back to, so the drag is
 > simply dropped and the bone returns where it was.
+
+### Keying by hand
+
+Auto-key is not compulsory. The gesture, in order:
+
+1. **add the track** — it keeps the pose the object stands in at that moment, and every key of
+   its own is measured against it;
+2. **set a key** at the start;
+3. **move the object**, then **set a key** where you want it on the timeline.
+
+> **The Inspector's numbers go back to the reference pose, not the object on screen.** The key
+> holds the movement you just made, and the object's **stored** position returns to its
+> reference: without that the movement would count **twice** — once in the object, once in
+> the key laid over it — and playback would show double the motion you meant. In the view,
+> though, **nothing moves**: what you see is always the reference plus the key, which is
+> where you just put it.
+
+**A bone track does not work that way.** It has no reference pose — a bone's lives in the
+model's file, not in the document. Setting a key there **pins what the track already holds**
+at that instant, and nothing springs back. To animate a bone, go through auto-key and pose
+mode rather than through these three steps.
 
 ### Writing a video
 

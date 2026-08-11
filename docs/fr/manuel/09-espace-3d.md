@@ -640,7 +640,7 @@ change que ce qui est montré.
 | **Durée** et **Images/s** | la longueur de la timeline, et sa cadence |
 | **Os** | sur un modèle rigué : l’os que la prochaine piste animera, ou **Le modèle entier** |
 | **Ajouter une piste Position / Rotation / Échelle** | ajoute la piste à l’objet sélectionné |
-| **Poser une clé sur tout ce qui est animé** | une clé sur chaque objet animé, à la position de la tête |
+| **Poser une clé sur tout ce qui est animé** | le même geste, sur toutes les pistes à la fois |
 | **Rendre en vidéo** | voir plus bas — grisé tant qu’aucune caméra n’est dans la scène |
 
 **Chaque ligne porte les siens**, à gauche de la bande :
@@ -648,12 +648,16 @@ change que ce qui est montré.
 | Sur l’en-tête d’une ligne | Ce qu’il fait |
 |---|---|
 | le chevron | **Afficher ou masquer les propriétés animées** |
-| **Poser une clé sur *(le nom)*** | une clé sur toutes les propriétés de cet objet |
+| **Poser une clé sur *(le nom)*** | enregistre le déplacement fait depuis, sur toutes les propriétés de cet objet |
 | **Rendre muette** / **Écouter seule** / **Verrouiller** | les trois interrupteurs d’une piste, comme en Vidéo |
 | **Supprimer la piste *(le nom)*** | sur une ligne de propriété, la retire avec ses clés |
 
 **La tête de lecture s’attrape et se déplace** sur la règle graduée, et **les clés se déplacent**
-sur leur ligne.
+sur leur ligne. **Au-delà de la durée, la bande est assombrie** : la tête ne va pas plus loin, et aucune clé ne
+s’y pose — un bloc de clip, lui, s’y dépose encore. Une règle graduée jusqu’à dix-sept secondes sur une scène qui en dure cinq
+dirait que la scène est plus longue qu’elle ne l’est.
+
+**Lire quand la tête est déjà au bout rembobine** au lieu de s’arrêter sur l’image où l’on est.
 
 **Sans aucune piste, la bande le dit** plutôt que de rester vide : « Aucune piste. Sélectionnez un
 objet, puis ajoutez la piste à animer. »
@@ -675,6 +679,27 @@ celui du dessous.
 >
 > **Un os sans piste est un cas à part** : il n’a pas de pose de repos où retomber, donc le geste
 > est simplement abandonné et l’os revient où il était.
+
+### Poser les clés à la main
+
+L’enregistrement automatique n’est pas obligatoire. Le geste, dans l’ordre :
+
+1. **ajoutez la piste** — elle retient la pose où l’objet se tient à cet instant, et c’est contre
+   elle que toutes ses clés se mesureront ;
+2. **posez une clé** au départ ;
+3. **déplacez l’objet**, puis **posez une clé** à l’endroit voulu de la timeline.
+
+> **Les chiffres de l’Inspecteur reviennent à la pose de référence, pas l’objet à l’écran.** La
+> clé retient le déplacement que vous venez de faire, et la position **enregistrée** de l’objet
+> repart de sa référence : sans cela le déplacement compterait **deux fois** — une fois dans
+> l’objet, une fois dans la clé posée par-dessus — et la lecture montrerait le double du mouvement
+> voulu. Dans la vue, en revanche, **rien ne bouge** : ce que vous voyez est toujours la référence
+> plus la clé, donc l’endroit où vous venez de le poser.
+
+**Une piste d’os ne travaille pas ainsi.** Elle n’a pas de pose de référence — celle d’un os vit
+dans le fichier du modèle, pas dans le document. Y poser une clé **fige ce que la piste tient
+déjà** à cet instant, et rien ne revient en place. Pour animer un os, passez donc par
+l’enregistrement automatique et le mode pose plutôt que par ces trois étapes.
 
 ### Sortir une vidéo
 
