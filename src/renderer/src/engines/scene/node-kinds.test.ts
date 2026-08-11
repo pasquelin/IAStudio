@@ -31,9 +31,10 @@ describe('ADD_ENTRIES', () => {
 })
 
 describe('NODE_KINDS', () => {
-  // Every leaf the two panel components compose from the namespace, not a chosen few: `visible`,
-  // `addHint` and `removeHint` were composed by `NodeList` and `NodeActions` while this list named
-  // only the other four, so removing `meshes.visible` from both bundles left the whole suite green.
+  // Every leaf the panel composes from the namespace, not a chosen few. `NodeList` draws `visible`
+  // and `empty`, `NodeActions` draws `add`, `addHint`, `remove` and `removeHint`, and `node-panel`
+  // draws `noDocument` — while this list named four of the seven, so removing `meshes.visible`
+  // from both bundles left the whole suite green.
   it('names a namespace whose panel strings exist', () => {
     const leaves = ['empty', 'noDocument', 'add', 'remove', 'visible', 'addHint', 'removeHint']
 
