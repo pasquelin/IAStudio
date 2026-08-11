@@ -125,7 +125,8 @@ export const whenSettled = (jobId: string, signal: AbortSignal | null): Promise<
   whenJob(jobId, job => isFinished(job.status), signal)
 
 /**
- * Resolves when a job stops waiting, whatever it does next.
+ * Resolves when a job stops waiting, whatever it does next — named for that and not for a start,
+ * because a terminal status answers it too and a caller told "started" would believe otherwise.
  *
  * The other half of what a chain of generations needs: submitting is not starting. `queued` covers
  * both waits the studio has — its own concurrency bound (`job-manager.ts` holds the entry at
@@ -140,7 +141,7 @@ export const whenSettled = (jobId: string, signal: AbortSignal | null): Promise<
  * `null` on the same two counts as `whenSettled`: a job the replica no longer holds, and a caller
  * that has given up.
  */
-export const whenStarted = (jobId: string, signal: AbortSignal | null): Promise<Job | null> =>
+export const whenLeftQueue = (jobId: string, signal: AbortSignal | null): Promise<Job | null> =>
   whenJob(jobId, job => job.status !== 'queued', signal)
 
 function whenJob(

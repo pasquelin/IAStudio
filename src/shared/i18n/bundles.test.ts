@@ -290,7 +290,7 @@ const DYNAMIC_KEYS: readonly string[] = [
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
   ...INGEST_STAGES.map(stage => `ingest.${stage}`),
-  // A third pipeline, painted node by node on the graph canvas. Two of the five states have no
+  // A third pipeline, painted node by node on the graph canvas. Two of the eight states have no
   // line and never will: `idle` is a node saying nothing, and `failed` is never shown on its own
   // — a failure always names its reason, which is the second union below.
   ...GRAPH_RUN_STATUSES.filter(status => !SILENT_RUN_STATUSES.includes(status)).map(

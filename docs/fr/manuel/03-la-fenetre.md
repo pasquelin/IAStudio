@@ -269,7 +269,7 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > leur réponse : le bouton redevient **Exécuter** dès la pression, y compris si le service ne
 > donne plus jamais de nouvelles de l’une d’elles.
 >
-> **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en cours*, *terminé*,
+> **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en file*, *en cours*, *terminé*,
 > *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,
 > ou la raison pour laquelle il n’a rien produit : *boucle*, *sans modèle*, *non exécutable*,
 > *branche sans sortie* — la branche choisie n’a aucun port par où partir —, *échec*,
@@ -277,6 +277,15 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > mais « ça n’arrivera
 > pas » : ce dont il dépend a échoué, donc il ne partira jamais de cette exécution. Relancer après
 > avoir changé le prompt du dernier nœud ne relance **que** lui.
+>
+> ***En file* est l’état de départ de tous.** Presser **Exécuter** les fait tous passer là d’un
+> coup : c’est ce qui distingue un nœud qui attend son tour d’un nœud que l’exécution n’a pas
+> retenu. Un nœud y reste tant que ce dont il dépend n’a pas fini — puis, s’il génère, tant que
+> la génération elle-même attend son tour, car le studio ne lance qu’un nombre borné de
+> générations à la fois (**Réglages ▸ Génération ▸ Générations simultanées**) et le service a sa
+> propre file.
+> **Deux nœuds seulement ne l’affichent jamais** : une *Note*, qui n’entre dans aucune exécution,
+> et une *Approbation* que rien ne relie à un nœud à valider, donc qui n’est jamais posée.
 >
 > **Un nœud *Si / Sinon* choisit une branche, et une seule.** Sa condition est évaluée sur ce que
 > son fil d’entrée lui apporte, et ce qu’il a reçu part par la branche choisie — les autres ne

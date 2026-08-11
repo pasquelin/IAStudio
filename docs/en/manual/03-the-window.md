@@ -260,7 +260,7 @@ It does not carry the file name. It carries the **seven workspaces**:
 > button turns back to **Run** the moment you press it, even if the service never says another
 > word about one of them.
 >
-> **Every node says where it stands**, in the corner of its header: *running*, *done*,
+> **Every node says where it stands**, in the corner of its header: *queued*, *running*, *done*,
 > *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
 > produced nothing: *loop*, *no model*, *not runnable*, *branch with no output* — the branch it
 > chose has no port to leave by —, *failed*, *invalid expression*, and
@@ -268,6 +268,14 @@ It does not carry the file name. It carries the **seven workspaces**:
 > does not mean "it is coming", but "it is not": something it depends on failed, so it will never
 > leave in this run. Running it again after changing the last node's prompt runs **only** that
 > node.
+>
+> ***Queued* is where they all start.** Pressing **Run** moves every one of them there at once:
+> that is what tells a node waiting its turn from a node the run left out. A node stays there
+> while what it depends on is still going — then, if it generates, while the generation itself
+> waits its turn, since the studio only ever runs a bounded number at a time (**Settings ▸
+> Generation ▸ Concurrent generations**) and the service has a queue of its own. **Only two nodes never show
+> it**: a *Note*, which takes no part in a run, and an *Approval* with nothing wired to it to
+> approve, which is therefore never put.
 >
 > **An *If / Else* node picks one branch, and only one.** Its condition is evaluated over what its
 > incoming wire carries, and what it received leaves by the branch that was chosen — the others get

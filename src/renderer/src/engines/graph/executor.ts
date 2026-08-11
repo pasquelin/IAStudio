@@ -21,11 +21,15 @@ export type GraphRunPorts = {
    * job manager rewrites them on submission, and a second translator here would be a second
    * truth about the same thing.
    *
-   * `started` says the job is no longer waiting — neither behind the studio's own concurrency
-   * bound nor in Scenario's queue, the replica spelling both `queued`. It is what tells a node in
-   * flight from one merely submitted: this engine sees neither queue, so painting `running` on
-   * the call would claim work that may not begin for minutes. Not calling it is allowed and means
-   * exactly that: still waiting. Called twice, it costs one repaint of a state already shown.
+   * `started` says the work has begun — neither behind the studio's own concurrency bound nor in
+   * Scenario's queue, the replica spelling both `queued`. It is what tells a node in flight from
+   * one merely submitted: this engine sees neither queue, so painting `running` on the call would
+   * claim work that may not begin for minutes.
+   *
+   * **Never calling it is allowed**, and does not mean the node was still waiting: a generation
+   * that ran and stopped between two of the host's readings never had a start to announce. What
+   * it means is only that nothing here is to be repainted. Called twice, it costs one repaint of
+   * a state already shown.
    */
   generate: (
     modelId: string,
@@ -158,8 +162,9 @@ export async function runGraph(
    * A node with nothing of its own to do: a sticky note, and an approval guarding nothing.
    *
    * Read where the queue is painted and again where the run dispatches, one predicate for the two:
-   * badged `queued` and then never spoken of again, such a node would claim to be work for the
-   * length of the run — the very lie this state was added to end.
+   * badged `queued`, such a node would claim to be work that never comes. It is NOT a node that
+   * says nothing all run — a stop paints it `idle`, and a provider that failed paints it `blocked`
+   * through `stopAt`; what it has none of is a turn of its own.
    */
   const inert = (node: GraphNode): boolean =>
     node.type === 'stickyNote' || (node.type === 'approval' && !guarding.has(node.id))

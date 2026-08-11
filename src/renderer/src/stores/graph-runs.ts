@@ -4,7 +4,7 @@ import { isFinished } from '@shared/domain/job'
 import type { GraphCache } from '@/engines/graph/plan'
 import { getBridge } from '@/services/bridge'
 import { graphOf, useGraphs } from './graphs'
-import { useJobs, whenSettled, whenStarted } from './jobs'
+import { useJobs, whenSettled, whenLeftQueue } from './jobs'
 
 /** What one graph document is doing, and what it has to show for the runs before this one. */
 export type DocumentRun = {
@@ -172,7 +172,7 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               // job that ran and stopped between two polls (the interval is 2 s) leaves the queue
               // and settles on the same event, and painting it as under way on the way past would
               // announce a start for something already over.
-              void whenStarted(job.id, controller.signal).then(taken => {
+              void whenLeftQueue(job.id, controller.signal).then(taken => {
                 if (taken && !isFinished(taken.status)) started()
               })
 

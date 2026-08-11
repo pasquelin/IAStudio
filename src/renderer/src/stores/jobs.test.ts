@@ -3,7 +3,7 @@ import type { Job } from '@shared/domain/job'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
 import { job } from './job-fixtures'
-import { useJobs, whenSettled, whenStarted } from './jobs'
+import { useJobs, whenSettled, whenLeftQueue } from './jobs'
 
 describe('jobs store', () => {
   beforeEach(() => {
@@ -188,7 +188,7 @@ describe('waiting for a job to leave the queue', () => {
   })
 
   it('waits while the job is still queued, and answers when it starts', async () => {
-    const started = whenStarted('job_1', null)
+    const started = whenLeftQueue('job_1', null)
 
     useJobs.getState().apply({ id: 'job_1', status: 'running', progress: 0.1 })
 
@@ -201,7 +201,7 @@ describe('waiting for a job to leave the queue', () => {
    * read as queued for the whole generation and then jump to done.
    */
   it('answers for a job that went straight to its result', async () => {
-    const started = whenStarted('job_1', null)
+    const started = whenLeftQueue('job_1', null)
 
     useJobs.getState().apply({ id: 'job_1', status: 'succeeded', progress: 1, assetIds: ['a1'] })
 
@@ -211,6 +211,6 @@ describe('waiting for a job to leave the queue', () => {
   it('answers straight away for one that had already started', async () => {
     useJobs.setState({ jobs: [job({ id: 'job_1', status: 'running' })] })
 
-    await expect(whenStarted('job_1', null)).resolves.toMatchObject({ status: 'running' })
+    await expect(whenLeftQueue('job_1', null)).resolves.toMatchObject({ status: 'running' })
   })
 })
