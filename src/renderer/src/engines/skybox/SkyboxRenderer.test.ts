@@ -616,12 +616,17 @@ describe('the test objects of a skybox', () => {
     expect(probes.group.visible).toBe(true)
   })
 
-  /** And when the sky arrives on a later frame — the mirror of the removal below. */
+  /**
+   * And when it arrives on a later frame. Placing a sky is its own edit — `setSource`
+   * (`skybox/commands.ts:73`) replaces that section and leaves the other three where they were,
+   * so nothing but the sky itself tells the probes to look again.
+   */
   it('shows them when the sky arrives after the document opened empty', () => {
     const renderer = mounted()
-    renderer.apply(createSkyboxContent())
+    const empty = createSkyboxContent()
+    renderer.apply(empty)
 
-    renderer.apply(withSky())
+    renderer.apply(edited(empty, 'source', { assetId: 'sky-1' }))
 
     expect(probes.group.visible).toBe(true)
   })
@@ -639,9 +644,10 @@ describe('the test objects of a skybox', () => {
   /** And they go again when the sky is taken away — the empty state comes back with them. */
   it('hides them again when the sky is removed', () => {
     const renderer = mounted()
-    renderer.apply(withSky())
+    const sky = withSky()
+    renderer.apply(sky)
 
-    renderer.apply(createSkyboxContent())
+    renderer.apply(edited(sky, 'source', null))
 
     expect(probes.group.visible).toBe(false)
   })
