@@ -299,25 +299,27 @@ describe('swapping what a node is wired by', () => {
       withoutMask,
     )
 
-    expect(next.edges.some(edge => edge.id === 'c')).toBe(true)
+    expect(next.edges.map(edge => edge.id)).toEqual(['a', 'c'])
+  })
+
+  /** Another node reading one of this one's output ports — the handle is what each case varies. */
+  const consumedAt = (targetHandle: string): GraphState => ({
+    ...fed,
+    edges: [
+      ...fed.edges,
+      {
+        id: 'd',
+        source: 'other1',
+        sourceHandle: 'other1-source-image',
+        target: 'imageGenerator1',
+        targetHandle,
+      },
+    ],
   })
 
   /** The node feeds others too, and its output survives the swap: those edges must not be cut. */
   it('keeps an edge that reads the output the node still publishes', () => {
-    const consumed: GraphState = {
-      ...fed,
-      edges: [
-        ...fed.edges,
-        {
-          id: 'd',
-          source: 'other1',
-          sourceHandle: 'other1-source-image',
-          target: 'imageGenerator1',
-          targetHandle: 'imageGenerator1-target-image',
-        },
-      ],
-    }
-
+    const consumed = consumedAt('imageGenerator1-target-image')
     const next = replaceNodePorts(consumed, 'imageGenerator1', withoutMask)
 
     expect(next.edges.map(edge => edge.id)).toEqual(['a', 'd'])
@@ -332,14 +334,14 @@ describe('swapping what a node is wired by', () => {
    * connection with. Checked on the id alone, a model swap that keeps a port's name while
    * changing what it takes left a wire the editor would no longer draw.
    *
-   * And retyping is not a reason on its own: the port next door is retyped as well, into a type
-   * its wire still offers, so it keeps it — which an assertion on an empty graph could not say.
+   * And retyping is not a reason on its own: the port next door is retyped as well, into the very
+   * type its wire offers, and keeps it.
    */
-  it('cuts the edge the retyped port no longer takes, and only that one', () => {
+  it('cuts the edge one retyped port now refuses, and keeps the one another still takes', () => {
     const retyped: Partial<GraphNode['data']> = {
       inputHandles: [
         { id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'image' },
-        { id: 'imageGenerator1-source-mask', name: 'mask', type: 'prompt' },
+        { id: 'imageGenerator1-source-mask', name: 'mask', type: 'text' },
       ],
       outputHandles: [{ id: 'imageGenerator1-target-image', name: 'output', type: 'image' }],
     }
@@ -408,19 +410,7 @@ describe('swapping what a node is wired by', () => {
 
   /** And the other way round, so the rule is the contract rather than the one case that needed it. */
   it('judges the inputs alone when the patch redeclares only those', () => {
-    const consumed: GraphState = {
-      ...fed,
-      edges: [
-        ...fed.edges,
-        {
-          id: 'd',
-          source: 'other1',
-          sourceHandle: 'other1-source-image',
-          target: 'imageGenerator1',
-          targetHandle: 'imageGenerator1-target-gone',
-        },
-      ],
-    }
+    const consumed = consumedAt('imageGenerator1-target-gone')
     const inputsOnly: Partial<GraphNode['data']> = {
       inputHandles: [{ id: 'imageGenerator1-source-prompt', name: 'prompt', type: 'prompt' }],
     }
