@@ -8,6 +8,7 @@ import {
   type JobProgress,
   type JobStatus,
   type JobTarget,
+  settlementOf,
 } from '@shared/domain/job'
 import type { ActivityReport } from '@main/project/activity-log'
 import { failureOf } from './client'
@@ -364,14 +365,14 @@ export function createJobManager({
     workspaces?: WorkspaceId[],
   ): void => {
     entry.job.status = status
-    entry.job.finishedAt = now()
+    // Assigned onto the job rather than replacing it: a poll in flight holds this very object.
+    Object.assign(entry.job, settlementOf(status, now()))
     entry.body = {}
     // Released with the body, and for the same reason: the SDK client behind it holds an HTTP
     // agent and its sockets, and a finished job would keep a switched-away account's alive for
     // the rest of the session. `execute` holds its own reference, and `cancel` returns before
     // this on a finished job.
     entry.account = null
-    if (status === 'succeeded') entry.job.progress = 1
     if (error !== undefined) entry.job.error = error
     emit(entry)
     journal(entry.job, status, workspaces)

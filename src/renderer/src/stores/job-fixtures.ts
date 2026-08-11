@@ -1,5 +1,5 @@
 import type { JobFailure } from '@shared/domain/failure'
-import { isFinished, type Job } from '@shared/domain/job'
+import { isFinished, type Job, settlementOf } from '@shared/domain/job'
 
 /** What `settle` writes when the API turned a generation down — the commonest of its four codes. */
 const DEFAULT_FAILURE: JobFailure = 'rejected'
@@ -30,7 +30,6 @@ export function job(overrides: Partial<Job> = {}): Job {
   const built: Job = { ...RUNNING, ...overrides }
   if (!isFinished(built.status)) return built
 
-  const completes = built.status === 'succeeded' && !('progress' in overrides)
   // A failed job always carries its code: `settle` is reached from four places and every one of
   // them names one. Without it, the fixture would offer a shape the manager never publishes —
   // which is the class of lie this factory exists to end.
@@ -38,8 +37,11 @@ export function job(overrides: Partial<Job> = {}): Job {
 
   return {
     ...built,
-    finishedAt: 'finishedAt' in overrides ? overrides.finishedAt : built.createdAt,
-    progress: completes ? 1 : built.progress,
+    // The manager's own rule, asked rather than copied: a second spelling of it here is exactly
+    // how this pair drifted before. `createdAt` stands in for the clock the manager reads.
+    ...settlementOf(built.status, built.createdAt),
+    ...('finishedAt' in overrides ? { finishedAt: overrides.finishedAt } : {}),
+    ...('progress' in overrides ? { progress: built.progress } : {}),
     ...(failed ? { error: DEFAULT_FAILURE } : {}),
   }
 }
