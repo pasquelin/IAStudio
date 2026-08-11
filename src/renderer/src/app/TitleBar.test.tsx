@@ -2,12 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import { BAR_GHOST } from '@/design/styles'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useSettings } from '@/stores/settings'
 import { TitleBar } from './TitleBar'
-
-const BAR_GHOST_HOVER = BAR_GHOST.split(' ').filter(one => one.startsWith('hover:'))
 
 /** `classList`, never `className`: `FOCUS_RING` already carries a `focus-visible:ring-accent`. */
 function pill(name: string): HTMLElement {
@@ -296,11 +293,11 @@ describe('TitleBar', () => {
     expect(write).not.toHaveBeenCalled()
   })
 
-  // Read back by its hover: `cn` drops the skin's `text-muted` wherever a caller adds a `text-*`
-  // of its own, so the whole string never survives into a rendered class list.
+  // Read back by its hover: `cn` drops the skin's `text-muted` under the `text-text` an active
+  // pill adds, so the whole string never survives into a rendered class list.
   it('reads the bar skin rather than carrying its own copy', () => {
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
-    for (const state of BAR_GHOST_HOVER) expect(pill('Image').className).toContain(state)
+    expect(pill('Image')).toHaveClass('hover:bg-elevated/60', 'hover:text-text')
   })
 })

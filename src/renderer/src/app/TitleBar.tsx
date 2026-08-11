@@ -5,7 +5,7 @@ import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
-import { BAR_GHOST, FOCUS_RING } from '@/design/styles'
+import { TITLE_BAR_GHOST, FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { bindingOf, commandFor } from '@shared/domain/command'
 import { signatureOf } from '@shared/domain/shortcut'
@@ -264,7 +264,7 @@ function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
         reorder.onMenu({ x: event.clientX, y: event.clientY })
       }}
       className={cn(
-        BAR_GHOST,
+        TITLE_BAR_GHOST,
         'gap-2 px-3 py-1',
         current && 'bg-elevated text-text',
         // A ring rather than a fill: `accent-soft` sits at 1.03:1 on the light chassis, and it

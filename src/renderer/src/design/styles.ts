@@ -48,10 +48,11 @@ export const STATUS_BUTTON = cn(
  * buttons. Gauge, padding and the active state stay with the caller — a pill is as wide as its
  * word, the account trigger is capped.
  *
- * Written once because the two sit in the same bar and are read together: the hover was already
- * spelled out twice, and a copy is one end of the bar drifting away from the other.
+ * Its own hover, half-opaque, is what makes it the title bar's and not a toolbar's: `ToolButton`
+ * lights up at full `elevated`, and a bar of destinations that answered as loudly as a tool would
+ * read as a strip of tools.
  */
-export const BAR_GHOST = cn(
+export const TITLE_BAR_GHOST = cn(
   'flex cursor-pointer items-center rounded-(--radius-sc-md) border-none',
   'text-muted bg-transparent transition-colors',
   'hover:bg-elevated/60 hover:text-text',
