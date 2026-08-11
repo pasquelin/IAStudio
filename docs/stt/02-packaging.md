@@ -14,9 +14,22 @@ Dans `mac.extendInfo` de `electron-builder.yml`. Sans elle, macOS **tue le proce
 accès au micro, au lieu d'afficher un refus. Ce n'est pas une permission : c'est ce que le
 système exige pour seulement *demander*.
 
-Elle n'est pas localisée. Une chaîne d'`Info.plist` a besoin d'un `InfoPlist.strings` par langue,
-qu'electron-builder n'assemble pas ; la phrase est donc en anglais, langue de repli d'un bundle
-non localisé.
+**Elle est localisée depuis le 11 août**, et le paragraphe qui suit disait l'inverse. Une chaîne
+d'`Info.plist` a besoin d'un `InfoPlist.strings` par langue — electron-builder n'a pas de
+fonctionnalité de localisation, mais il sait **placer** les fichiers : `mac.extraResources` copie
+`build/lproj/` vers `Contents/Resources/`, et macOS lit le `.lproj` de la langue du lecteur.
+
+« Il n'assemble pas » était vrai ; « donc ce n'est pas localisable » ne l'était pas.
+
+La valeur de `mac.extendInfo` reste la phrase anglaise : c'est le repli pour toute langue sans
+`.lproj`. Les deux doivent rester identiques mot pour mot, sinon la même phrase existe en deux
+versions selon le chemin qui la sert.
+
+**Ce qui est vérifié, et ce qui ne l'est pas.** Le placement dans le bundle se prouve par
+`pnpm exec electron-builder --dir` puis `ls`. Que macOS affiche bien la phrase française **n'est
+pas vérifié** : il faudrait une build signée et un déclenchement réel de la permission, et le
+projet n'a pas de certificat Apple — voir `ADR-04`. Livré comme une assurance, pas comme un
+correctif mesuré.
 
 ### `com.apple.security.device.audio-input`
 
