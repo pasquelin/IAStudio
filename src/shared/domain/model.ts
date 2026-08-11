@@ -285,6 +285,66 @@ export const TAGS_BY_FAMILY: Record<ModelFamily, readonly string[]> = {
 }
 
 /**
+ * The i18n key naming each tag on screen, or `null` where the publisher's own word is what it
+ * shows — the acronyms, and one product name, which a translation would only obscure.
+ *
+ * What a tag is CALLED is not what it is MATCHED as: the value above travels to the API exactly
+ * as written, and this only names it. That is what lets a French studio read "Depuis un texte"
+ * while the request still carries `Text to Image`.
+ *
+ * One record with a nullable value rather than two lists that answer each other, the shape
+ * `NODE_LABEL_KEYS` settled on: two lists can disagree — name a tag and leave it alone at once —
+ * and a tag added upstairs then has three places to be entered instead of one.
+ *
+ * The keys are written here rather than built from the value: `Flux.1 LoRA` holds a dot, and a
+ * dot is how i18next spells a level of nesting.
+ */
+export const TAG_LABEL_KEYS: Record<string, string | null> = {
+  'Text to Image': 'modelTags.textToImage',
+  'Image to Image': 'modelTags.imageToImage',
+  editing: 'modelTags.editing',
+  'Post Processing': 'modelTags.postProcessing',
+  characters: 'modelTags.characters',
+  fantasy: 'modelTags.fantasy',
+  cartoon: 'modelTags.cartoon',
+  tool: 'modelTags.tool',
+  Video: 'modelTags.video',
+  'First Frame': 'modelTags.firstFrame',
+  'Last Frame': 'modelTags.lastFrame',
+  'Video Editing': 'modelTags.videoEditing',
+  'Image to 3D': 'modelTags.imageTo3d',
+  'Text to 3D': 'modelTags.textTo3d',
+  '3D to 3D': 'modelTags.threeDToThreeD',
+  Multiview: 'modelTags.multiview',
+  Motion: 'modelTags.motion',
+  Audio: 'modelTags.audio',
+  Music: 'modelTags.music',
+  'Text to Music': 'modelTags.textToMusic',
+  'Text to Speech': 'modelTags.textToSpeech',
+  'Flux.1 LoRA': null,
+  T2V: null,
+  I2V: null,
+  V2V: null,
+  PBR: null,
+  TTS: null,
+}
+
+/** Every key the record names, for the guard that checks the bundles carry them. */
+export const TAG_LABEL_KEY_LIST: readonly string[] = Object.values(TAG_LABEL_KEYS).flatMap(
+  key => key ?? [],
+)
+
+/**
+ * A tag's name on screen, given something that translates a key. The value stands in as its own
+ * label wherever nobody named it, which is the one wording that is always true — and never a raw
+ * key, which reads like a bug.
+ */
+export function tagLabel(value: string, translate: (key: string) => string): string {
+  const key = TAG_LABEL_KEYS[value]
+  return key === undefined || key === null ? value : translate(key)
+}
+
+/**
  * Who built the model, as a tag. NOT `authorId`: every public model carries the same opaque
  * one — Scenario's — and no endpoint resolves it to a name, so their own "Author" menu cannot
  * be reading it either. The publisher lives in the tags; filtering by one is an ordinary tag

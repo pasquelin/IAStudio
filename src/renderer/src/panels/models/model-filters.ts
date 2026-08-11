@@ -5,6 +5,7 @@ import {
   MODEL_PERIODS,
   MODEL_SORTS,
   PUBLISHERS_BY_FAMILY,
+  tagLabel,
   TAGS_BY_FAMILY,
   type ModelFamily,
   type ModelPeriod,
@@ -91,11 +92,10 @@ export function facetsFor(
 
   const tags = ownedBy(TAGS_BY_FAMILY, narrowed)
   if (tags.length) {
-    // Tags are the publishers' own words — untranslated on purpose, and matched as written.
     facets.push({
       key: TAG_FACET,
       label: t('models.tag'),
-      options: tags.map(value => ({ value, label: value })),
+      options: tags.map(value => ({ value, label: tagLabel(value, t) })),
     })
   }
 
