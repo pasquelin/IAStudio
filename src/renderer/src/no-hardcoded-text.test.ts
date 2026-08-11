@@ -36,6 +36,10 @@ const SPOKEN_ATTRIBUTES = new Set([
   'summary',
   'title',
   'tooltip',
+  // `Figure` reads it out beside its `label`, which was already here: the left half of the same
+  // component was guarded and the right half was not, and that is the shortest way back for a
+  // unit glued to a number — the defect the batch beside this line removed.
+  'value',
 ])
 
 /**
