@@ -1,7 +1,9 @@
+import { mdiChevronDown } from '@mdi/js'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Flyout } from '@/design/Flyout'
 import { MenuRow } from '@/design/MenuRow'
+import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, HINT_TOP } from '@/helpers/tooltip'
 import { PANE_VIEWS, type PaneView } from '@/engines/scene/scene-view'
@@ -35,7 +37,9 @@ export function ScenePaneGrid({ views, onView }: ScenePaneGridProps) {
         {[0, 1, 2, 3].map(pane => (
           // Right-aligned, not left: the space keeps its tool rail down the left edge, and a
           // label in that corner is a label behind the toolbar.
-          <div key={pane} className="flex min-w-0 justify-end p-1.5">
+          // `items-start` as well as `justify-end`: a flex child stretches by default, and the
+          // label came out as a black column with one letter per line.
+          <div key={pane} className="flex min-w-0 items-start justify-end p-1.5">
             <PaneMenu
               view={views[pane] ?? 'free'}
               onView={chosen => onView(pane, chosen)}
@@ -76,10 +80,14 @@ function PaneMenu({
         className={cn(
           // Pointer events back on: the grid above turns them off so a drag reaches the canvas.
           'text-muted hover:text-text bg-panel/80 pointer-events-auto cursor-pointer',
-          'text-mini rounded-(--radius-sc-sm) border-none px-1.5 py-0.5',
+          'text-mini flex items-center gap-1.5 whitespace-nowrap',
+          'rounded-(--radius-sc-sm) border-none px-1.5 py-0.5',
         )}
       >
         {t(`sceneViews.${view}`)}
+        {/* The chevron is what says "this opens": a bare word reads as a caption, and the menu
+            went unnoticed for exactly that reason. */}
+        <UiIcon path={mdiChevronDown} size={12} />
       </button>
 
       {open && (

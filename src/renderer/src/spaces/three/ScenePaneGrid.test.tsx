@@ -54,6 +54,25 @@ describe('the four views and their seams', () => {
     expect(screen.getByRole('button', { name: /Vue 1/ })).toHaveClass('pointer-events-auto')
   })
 
+  /** A bare word reads as a caption: the chevron is what says the label opens something. */
+  it('shows that the label opens a menu', () => {
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+
+    expect(screen.getByRole('button', { name: /Vue 1/ }).querySelector('svg')).not.toBeNull()
+  })
+
+  /**
+   * A flex child stretches by default, and the label came out as a black column with one letter
+   * per line — which is what a viewport four rectangles wide showed on screen.
+   */
+  it('keeps its label on one line rather than stretching it down the pane', () => {
+    render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
+
+    const button = screen.getByRole('button', { name: /Vue 1/ })
+    expect(button).toHaveClass('whitespace-nowrap')
+    expect(button.parentElement).toHaveClass('items-start')
+  })
+
   /** The space keeps its tool rail down the left edge: a label in that corner sits behind it. */
   it('keeps its labels out of the corner the toolbar occupies', () => {
     render(<ScenePaneGrid views={DEFAULT_PANE_VIEWS} onView={vi.fn()} />)
