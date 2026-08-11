@@ -21,8 +21,8 @@ describe('job fixture', () => {
 
   /**
    * The default was held by nothing: turned into `queued`, the whole suite stayed green — found by
-   * mutation. It is the shape a caller gets by naming no status, and every rule below keys off it:
-   * unnamed means still going, undated, at the progress it reached.
+   * mutation. Every other test here names its status, so this is the only one that reads what a
+   * caller gets by naming none, and eight suites now build on it.
    */
   it('is a job still going when no status is named', () => {
     expect(job()).toMatchObject({ status: 'running', progress: 0 })

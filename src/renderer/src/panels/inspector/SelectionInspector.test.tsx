@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
-import { job as jobFixture } from '@/stores/job-fixtures'
+import { job as jobOf } from '@/stores/job-fixtures'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture, sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import { useAssets } from '@/stores/assets'
@@ -28,7 +28,7 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-const job: Job = jobFixture({
+const job: Job = jobOf({
   id: 'job-1',
   targetId: 'eleven-music-v2',
   label: 'ElevenLabs Music v2',

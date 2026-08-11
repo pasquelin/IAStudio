@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
+import { job } from '@/stores/job-fixtures'
 import { useJobs } from '@/stores/jobs'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
@@ -74,18 +75,7 @@ describe('the spotlight while the studio is still opening', () => {
   /** What is already true is said at once: a running job does not wait on the key either. */
   it('reports what is true whatever else is still on its way', () => {
     useJobs.setState({
-      jobs: [
-        {
-          id: 'job_1',
-          kind: 'model',
-          targetId: 'flux_2',
-          label: 'a boulder',
-          status: 'running',
-          progress: 0.4,
-          createdAt: '2026-08-09T09:00:00.000Z',
-          assetIds: [],
-        },
-      ],
+      jobs: [job({ targetId: 'flux_2', label: 'a boulder', progress: 0.4 })],
     })
     render(<Spotlight />)
 
