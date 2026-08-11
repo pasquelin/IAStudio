@@ -133,6 +133,35 @@ describe('guardUnsavedWork', () => {
     expect(unsavedDocumentIds()).toHaveLength(2)
   })
 
+  it('writes the work when the answer is to save it', async () => {
+    const write = vi.fn(() => Promise.resolve())
+    installFakeBridge({ documents: { confirmClose: () => Promise.resolve('save'), write } })
+    arm(window)
+    await openDirtyScene()
+
+    leave(window)
+
+    await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(1))
+    expect(unsavedDocumentIds()).toEqual([])
+  })
+
+  // A write that refuses must leave the tab where it was: closing anyway would lose the work the
+  // dialog had just promised to keep.
+  it('keeps the document when the save it promised refuses', async () => {
+    installFakeBridge({
+      documents: {
+        confirmClose: () => Promise.resolve('save'),
+        write: () => Promise.reject(new Error('read-only volume')),
+      },
+    })
+    arm(window)
+    const documentId = await openDirtyScene()
+
+    leave(window)
+
+    await vi.waitFor(() => expect(unsavedDocumentIds()).toEqual([documentId]))
+  })
+
   // A dialog per keypress is the failure this guards against: the answer to the first is still
   // out when the second arrives.
   it('asks once however many times the gesture is repeated', async () => {
@@ -167,6 +196,19 @@ describe('guardUnsavedWork', () => {
     // The flag released, so the gesture is answerable again rather than stuck on the first try.
     leave(window)
     await vi.waitFor(() => expect(confirmClose).toHaveBeenCalledTimes(2))
+  })
+
+  // No bridge means no dialog, and the answer a missing dialog gives is the one that loses
+  // nothing: the work stays exactly where it was.
+  it('keeps the work when there is nothing to ask with', async () => {
+    installFakeBridge({})
+    arm(window)
+    const documentId = await openDirtyScene()
+    Reflect.deleteProperty(globalThis, 'studio')
+
+    leave(window)
+
+    await vi.waitFor(() => expect(unsavedDocumentIds()).toEqual([documentId]))
   })
 
   it('stops refusing once it is taken off', async () => {
