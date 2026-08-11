@@ -30,6 +30,16 @@ describe('the journal, drawn', () => {
     expect(screen.getByText(/moss\.png/)).toBeInTheDocument()
   })
 
+  // Hours and minutes, not one or the other: the shape of the kept formatter was asserted
+  // nowhere, so dropping half of it left every test green.
+  it('stamps each line with the time of day', () => {
+    useActivity.setState({ entries: [entry()] })
+
+    render(<ActivityList />)
+
+    expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeInTheDocument()
+  })
+
   /**
    * The half nobody could guess: an App produces what it produces whichever space launched it,
    * so a run started in 3D can leave a picture in the Image shelf. The line stores ids and says

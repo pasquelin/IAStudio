@@ -14,6 +14,7 @@ import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
 import { chipSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
+import { kept } from '@/helpers/format'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useActivity, visibleActivity } from '@/stores/activity'
 import { HINT_TOP } from '@/helpers/tooltip'
@@ -36,10 +37,9 @@ const TINTS: Record<ActivityLevel, string> = {
 }
 
 /**
- * One formatter per language, kept.
- *
- * `toLocaleTimeString` with an options object builds a fresh `Intl.DateTimeFormat` on every
- * call — 48 µs against 4, which a list of two hundred lines pays on the UI thread.
+ * Kept, like every `Intl` formatter here: `toLocaleTimeString` with an options object builds a
+ * fresh one on every call — 48 µs against 4, which a list of two hundred lines pays on the UI
+ * thread.
  */
 const FORMATTERS = new Map<string, Intl.DateTimeFormat>()
 
@@ -47,12 +47,11 @@ function timeOf(at: string, language: string): string {
   const stamp = new Date(at)
   if (Number.isNaN(stamp.getTime())) return ''
 
-  const held = FORMATTERS.get(language)
-  const formatter =
-    held ?? new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' })
-  if (!held) FORMATTERS.set(language, formatter)
-
-  return formatter.format(stamp)
+  return kept(
+    FORMATTERS,
+    language,
+    () => new Intl.DateTimeFormat(language, { hour: '2-digit', minute: '2-digit' }),
+  ).format(stamp)
 }
 
 /**

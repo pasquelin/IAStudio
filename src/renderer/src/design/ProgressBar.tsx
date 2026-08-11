@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
+import { formatPercent } from '@/helpers/format'
 import { clamp } from '@shared/numeric'
 
 export type ProgressBarProps = {
@@ -11,12 +13,14 @@ export type ProgressBarProps = {
 
 /** A native `<progress>` cannot be themed to the studio's tokens across platforms, hence a div. */
 export function ProgressBar({ ratio, label, className }: ProgressBarProps) {
-  const percent = Math.round(clamp(ratio, 0, 1) * 100)
+  const { i18n } = useTranslation()
+  const held = clamp(ratio, 0, 1)
+  const percent = Math.round(held * 100)
 
   return (
     <div
       role="progressbar"
-      aria-label={`${label} ${percent}%`}
+      aria-label={`${label} ${formatPercent(held, i18n.language)}`}
       aria-valuenow={percent}
       aria-valuemin={0}
       aria-valuemax={100}

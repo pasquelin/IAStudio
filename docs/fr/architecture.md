@@ -773,13 +773,21 @@ pas gratuit.
 
 ### Ce qui est traduit va plus loin que les phrases
 
-Six choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
+Sept choses passent par les bundles sans en avoir l’air, et chacune répond à un défaut constaté :
 
 - **les noms de touches** — `Espace`, `Suppr`, `Début` ne sont pas des libellés anglais laissés en
   place : l’écran des raccourcis les résout comme le reste ;
 - **les unités et les dates** — `formatBytes` calcule une taille mais **ne la nomme pas** : le
   nom de l’unité est fourni par l’appelant, parce que `Mio` et `MiB` sont la même taille dans deux
   langues et que les abréviations avaient fini par vivre en français dans un fichier de calcul ;
+- **le signe pourcent** — `formatPercent`, dans le même fichier : le français pose une insécable
+  avant le signe et une virgule décimale, l’anglais ni l’une ni l’autre. Trois sites l’écrivaient
+  à la main, deux à la française, et cette espace partait telle quelle vers un lecteur anglais.
+  **Aucune garde i18n ne pouvait la voir** — un signe n’est pas un mot, donc aucun bundle ne le
+  porte. `no-composed-percent.test.ts` refuse les deux façons de le composer, le gabarit et la
+  concaténation, et **exempte les longueurs CSS par leur nom** — `width`, `left`, `top`… : une
+  longueur est lue par le moteur de rendu, qui n’a pas de langue. **Ce qu’elle ne voit pas** : un
+  pourcentage écrit d’un bloc, `'42%'`, qu’aucune interpolation ne trahit ;
 - **les nombres écrits DANS une phrase** — `{{count, number}}` plutôt que `{{count}}` : un millier
   s’écrit « 4 000 » d’un côté de la Manche et « 4,000 » de l’autre, et l’espace du français est une
   insécable étroite. Le formateur d’i18next est `Intl.NumberFormat`, rien à configurer. Le compte

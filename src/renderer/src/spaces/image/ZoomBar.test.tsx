@@ -18,13 +18,20 @@ function mount(scale: number) {
 
 describe('zoomLabel', () => {
   it('reads in whole percents from 100% up', () => {
-    expect(zoomLabel(1)).toBe('100 %')
-    expect(zoomLabel(12.5)).toBe('1250 %')
+    expect(zoomLabel(1, 'en')).toBe('100%')
+    expect(zoomLabel(12.5, 'en')).toBe('1250%')
   })
 
   // Below 100% every editor keeps a decimal: 3% and 3.7% are different framings of a large canvas.
   it('keeps one decimal below 100%', () => {
-    expect(zoomLabel(0.037)).toBe('3.7 %')
+    expect(zoomLabel(0.037, 'en')).toBe('3.7%')
+  })
+
+  // The separator is the language's, not the bar's: French writes U+00A0 before the sign, and a
+  // comma between the digits — the hand-written version printed `3.7 %` to a French reader.
+  it('punctuates the way the language does', () => {
+    expect(zoomLabel(0.5, 'fr')).toBe('50\u00a0%')
+    expect(zoomLabel(0.037, 'fr')).toBe('3,7\u00a0%')
   })
 })
 

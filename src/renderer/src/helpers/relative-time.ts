@@ -5,6 +5,7 @@
  * reader has to do. Below a minute it says "just now" rather than "0 seconds ago", which is the
  * one case the formatter gets wrong on its own.
  */
+import { kept } from './format'
 
 const MINUTE = 60
 const HOUR = 60 * MINUTE
@@ -23,21 +24,8 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['minute', MINUTE],
 ]
 
-/**
- * One formatter per language, kept — for the same reason `ActivityList` keeps its own: building
- * an `Intl` formatter costs about ten times what using one does, and a shelf formats a date per
- * card on every render.
- */
+/** Kept, like every `Intl` formatter here: a shelf formats a date per card on every render. */
 const FORMATTERS = new Map<string, Intl.RelativeTimeFormat>()
-
-function formatterFor(language: string): Intl.RelativeTimeFormat {
-  const held = FORMATTERS.get(language)
-  if (held) return held
-
-  const formatter = new Intl.RelativeTimeFormat(language, { numeric: 'auto' })
-  FORMATTERS.set(language, formatter)
-  return formatter
-}
 
 /**
  * `null` for a date that is not one — a hand-edited settings file reaches here, and a card
@@ -48,7 +36,11 @@ export function timeAgo(at: string, language: string, now: number = Date.now()):
   if (Number.isNaN(stamp)) return null
 
   const elapsed = Math.max(0, Math.round((now - stamp) / 1000))
-  const formatter = formatterFor(language)
+  const formatter = kept(
+    FORMATTERS,
+    language,
+    () => new Intl.RelativeTimeFormat(language, { numeric: 'auto' }),
+  )
 
   for (const [unit, seconds] of UNITS) {
     if (elapsed >= seconds) return formatter.format(-Math.floor(elapsed / seconds), unit)

@@ -1,23 +1,15 @@
 /**
- * One formatter per shape and language, kept — as `ActivityList` keeps its own.
+ * One formatter per shape and language, kept — the shared `kept` holds them.
  *
  * Building an `Intl` formatter per call costs 48 µs against 4, which a hundred-line log and a
- * hundred-and-twenty-point axis would both pay on the UI thread.
+ * hundred-and-twenty-point axis would both pay on the UI thread. Those two surfaces are what
+ * the figure was measured on; the cache moved, the reason did not.
  */
+import { kept } from '@/helpers/format'
 import { clamp } from '@shared/numeric'
 
 const NUMBERS = new Map<string, Intl.NumberFormat>()
 const DATES = new Map<string, Intl.DateTimeFormat>()
-
-/** Keys name the shape as well as the language, so two shapes never share an entry. */
-function kept<T>(cache: Map<string, T>, key: string, build: () => T): T {
-  const held = cache.get(key)
-  if (held) return held
-
-  const built = build()
-  cache.set(key, built)
-  return built
-}
 
 /**
  * Compute Units, grouped for reading.

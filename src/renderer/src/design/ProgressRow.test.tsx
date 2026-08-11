@@ -13,7 +13,10 @@ const row = (props: Partial<Parameters<typeof ProgressRow>[0]> = {}) =>
 describe('ProgressRow', () => {
   it('names the bar after what it measures, for anyone reading by screen reader', () => {
     row({ ratio: 0.42 })
-    expect(screen.getByLabelText('A001 42%')).toBeInTheDocument()
+    // The name carries U+00A0 before the sign — French typography, from the language rather than
+    // from the bar. Written as a plain space because `getByLabelText` normalises whitespace; the
+    // separator itself is asserted where it is produced, in `helpers/format.test.ts`.
+    expect(screen.getByLabelText('A001 42 %')).toBeInTheDocument()
   })
 
   it('draws no bar for a stage with nothing to measure', () => {

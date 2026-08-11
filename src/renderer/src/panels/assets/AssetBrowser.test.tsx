@@ -110,7 +110,7 @@ describe('AssetBrowser', () => {
     render(<AssetBrowser />)
 
     // Named after the asset it prepares, not after its id: the row below says the same name.
-    expect(screen.getByLabelText('A001 50%')).toBeInTheDocument()
+    expect(screen.getByLabelText('A001 50 %')).toBeInTheDocument()
     expect(screen.getByText('Proxy…')).toBeInTheDocument()
   })
 

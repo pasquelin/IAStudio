@@ -6,6 +6,7 @@ import { Flyout } from '@/design/Flyout'
 import { ProgressBar } from '@/design/ProgressBar'
 import { UiIcon } from '@/design/UiIcon'
 import { STATUS_BUTTON } from '@/design/styles'
+import { formatPercent } from '@/helpers/format'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { Jobs } from '@/panels/jobs/Jobs'
 import { useJobs } from '@/stores/jobs'
@@ -31,7 +32,7 @@ function summarize(jobs: readonly Job[]): Summary {
  * full list is one click away.
  */
 export function JobsStatus() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const jobs = useJobs(state => state.jobs)
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const [open, setOpen] = useState(false)
@@ -59,7 +60,7 @@ export function JobsStatus() {
         {count > 0 && (
           <>
             <ProgressBar ratio={ratio} label={label} className="w-12" />
-            <span>{`${Math.round(ratio * 100)} %`}</span>
+            <span>{formatPercent(ratio, i18n.language)}</span>
           </>
         )}
         <UiIcon path={mdiChevronUp} size={12} />
