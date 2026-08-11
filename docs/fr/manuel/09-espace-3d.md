@@ -600,36 +600,81 @@ laissée, pas au début.
 
 **Un modèle sans séquence n’affiche pas la section** — plutôt qu’un menu vide.
 
+**La séquence choisie se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur
+une ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
+jamais mêlés à elles : un bloc et une clé ne sont pas de même nature, et les entrelacer ferait
+lire la bande comme si un clip avait des propriétés.
+
 ### Voir le squelette
 
 Un modèle rigué porte des **os**. La touche **B**, ou le bouton en forme d’os de la barre d’outils,
-les dessine par-dessus la scène. Ils ne se cliquent pas : les os d’un rig traversent chaque maille
-qu’ils pilotent, et un clic tomberait sur un trait plutôt que sur le modèle.
+les dessine par-dessus la scène.
+
+**Pour en attraper un, passez en mode pose** — touche **P**, ou le bouton **Mode pose**. Le clic
+cesse alors de choisir des objets et choisit des os.
+
+> **Un os ne s’attrape pas comme le reste, et c’est pour cela qu’il faut un mode.** Un os n’a pas
+> de volume : ce qu’on voit est un trait entre deux points, et les os d’un rig traversent chaque
+> maille qu’ils pilotent. Viser à travers la scène tomberait sur le segment le plus proche de
+> l’œil, pas sur l’os voulu. Le studio les projette donc à l’écran et prend **le plus proche du
+> pointeur**, qu’il soit devant ou derrière une épaule. Visez donc l’articulation elle-même
+> plutôt que le membre qu’elle pilote.
 
 ### Poser vos propres mouvements
 
 Sélectionnez un objet, puis ajoutez une piste depuis la barre de la timeline : **Position**,
-**Rotation** ou **Échelle**. Si l’objet est un modèle rigué, le menu **Os** apparaît à côté : la
-piste porte alors sur cet os-là, ce qui est la façon de corriger un bras sans déplacer tout le
-personnage.
+**Rotation** ou **Échelle**. Si l’objet est un modèle rigué, le menu **Os** apparaît à côté — il
+s’ouvre sur **Le modèle entier**, et choisir un os fait porter la piste sur lui seul, ce qui est
+la façon de corriger un bras sans déplacer tout le personnage.
 
-| Geste | Effet |
+**La bande se lit par sujet, pas par piste.** Une ligne par objet — ou par os — et ses propriétés
+animées **repliées dessous**. La ligne repliée montre toutes les clés de l’objet, celles de ses
+trois propriétés confondues ; la déplier les sépare. **Replier ne perd jamais une clé**, cela ne
+change que ce qui est montré.
+
+| Contrôle de la barre | Ce qu’il fait |
 |---|---|
-| **+ Position / Rotation / Échelle** | ajoute une piste sur l’objet sélectionné |
-| **◆** | pose une clé là où est la tête de lecture, ou retire celle qui s’y trouve |
-| **●** | **arme** la piste : le gizmo écrit dedans au lieu de déplacer l’objet |
-| **🔇 / 🎧 / 🔒** | rend la piste muette, l’écoute seule, la verrouille |
-| **🗑** | supprime la piste, avec ses clés |
+| **Revenir au début** | ramène la tête de lecture à zéro |
+| **Lire** / **Mettre en pause** | joue la timeline |
+| **Enregistrement automatique** | bouger un objet **pose une clé** au lieu de déplacer sa pose de repos |
+| **Durée** et **Images/s** | la longueur de la timeline, et sa cadence |
+| **Os** | sur un modèle rigué : l’os que la prochaine piste animera, ou **Le modèle entier** |
+| **Ajouter une piste Position / Rotation / Échelle** | ajoute la piste à l’objet sélectionné |
+| **Poser une clé sur tout ce qui est animé** | une clé sur chaque objet animé, à la position de la tête |
+| **Rendre en vidéo** | voir plus bas — grisé tant qu’aucune caméra n’est dans la scène |
+
+**Chaque ligne porte les siens**, à gauche de la bande :
+
+| Sur l’en-tête d’une ligne | Ce qu’il fait |
+|---|---|
+| le chevron | **Afficher ou masquer les propriétés animées** |
+| **Poser une clé sur *(le nom)*** | une clé sur toutes les propriétés de cet objet |
+| **Rendre muette** / **Écouter seule** / **Verrouiller** | les trois interrupteurs d’une piste, comme en Vidéo |
+| **Supprimer la piste *(le nom)*** | sur une ligne de propriété, la retire avec ses clés |
+
+**La tête de lecture s’attrape et se déplace** sur la règle graduée, et **les clés se déplacent**
+sur leur ligne.
+
+**Sans aucune piste, la bande le dit** plutôt que de rester vide : « Aucune piste. Sélectionnez un
+objet, puis ajoutez la piste à animer. »
 
 **Les pistes s’additionnent.** Deux pistes de position sur un même objet ajoutent leurs
 déplacements ; deux pistes d’échelle **multiplient** les leurs — deux fois deux font quatre, ce qui
 est ce qu’on veut en les empilant. C’est différent d’un montage vidéo, où le clip du dessus cache
 celui du dessous.
 
-> **Pourquoi armer une piste.** Comme les pistes s’ajoutent à la pose de l’objet, déplacer un objet
-> au gizmo sans piste armée écrit sa **pose de repos** — et les pistes se rajoutent par-dessus à
-> l’image suivante, si bien que l’objet revient sous la main. Armez la piste, et le geste devient
-> une clé sur elle.
+> **Pourquoi l’enregistrement automatique change tout — et ce qu’il exige.** Comme les pistes
+> s’ajoutent à la pose de l’objet, déplacer un objet au gizmo l’enregistrement éteint écrit sa
+> **pose de repos** — et les pistes se rajoutent par-dessus à l’image suivante, si bien que
+> l’objet revient sous la main. Allumez-le, et le même geste pose une clé là où est la tête.
+>
+> **Mais il faut que la piste existe déjà.** L’enregistrement n’écrit que dans les pistes de
+> l’objet — ou de l’os — que vous bougez ; s’il n’y en a aucune, le geste retombe sur la pose de
+> repos, et vous retrouvez exactement le problème qu’il devait résoudre. **Ajoutez la piste
+> d’abord, allumez ensuite.**
+>
+> **Un os sans piste est un cas à part** : il n’a pas de pose de repos où retomber, donc le geste
+> est simplement abandonné et l’os revient où il était.
 
 ### Sortir une vidéo
 

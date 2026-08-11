@@ -162,6 +162,8 @@ l’écran des raccourcis.
 | **Affichage** | `Z` | fait défiler rendu, filaire, rendu et filaire |
 | **Quatre vues** | `⇧Q` | partage le viewport en quatre : la vue en cours, dessus, face, profil |
 | **Arêtes en quads** | `⇧W` | en filaire, efface les diagonales que la triangulation a ajoutées |
+| **Afficher les squelettes** | `B` | dessine les os de chaque modèle rigué par-dessus la scène |
+| **Mode pose** | `P` | le clic choisit alors les **os** d’un rig au lieu des objets |
 | **Cadrer la sélection** | `F` | rapproche la caméra pour que l’objet remplisse la vue |
 | **Supprimer** | `Suppr` | retire tout ce qui est sélectionné. `⌘Z` le fait revenir |
 
@@ -215,7 +217,7 @@ La vitesse et l’accélération se règlent dans les [réglages](14-reglages.md
 
 | Geste | Effet |
 |---|---|
-| **Clic gauche** | choisit l’objet sous le curseur |
+| **Clic gauche** | choisit l’objet sous le curseur — ou l’**os** le plus proche, en mode pose (`P`) |
 | **Clic droit maintenu + souris** | tourne la tête, sur place |
 | **Molette** | avance ou recule |
 | **Clic sur une poignée + glisser** | applique l’outil en cours |
@@ -519,8 +521,9 @@ figées pour l’instant. Voir [Ce qui n’existe pas encore](18-limites.md).
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |
 | `O` |  |  | Projection |  |  |  |  |
 | `Z` |  |  | Affichage |  |  |  |  |
+| `B` |  |  | Afficher les squelettes |  |  |  |  |
 | `V` |  |  | Sélectionner |  |  | Changer de vue |  |
-| `P` |  |  |  |  |  | Sondes de lumière |  |
+| `P` |  |  | Mode pose |  |  | Sondes de lumière |  |
 | `G` |  |  | Déplacer |  |  |  |  |
 | `R` |  |  | Pivoter |  |  |  |  |
 | `S` |  |  | Redimensionner *(et reculer)* | Couper le clip |  |  |  |
