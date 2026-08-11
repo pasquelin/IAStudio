@@ -3,7 +3,8 @@ import { canvasOf, historyOf, useCanvases } from './canvases'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { addLayer, renameLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
-import { DEFAULT_CANVAS, layerById } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { layerNow } from './canvas-fixtures'
 
 const layer = layerFixture()
 
@@ -43,8 +44,8 @@ describe('canvases store', () => {
   it('keeps a rename out of the other documents', () => {
     const { runCommand } = useCanvases.getState()
     runCommand('doc-1', renameLayer('layer-1', 'Sky'))
-    expect(layerById(canvasOf(useCanvases.getState(), 'doc-1'), 'layer-1')?.name).toBe('Sky')
-    expect(layerById(canvasOf(useCanvases.getState(), 'doc-2'), 'layer-1')?.name).toBe('Background')
+    expect(layerNow('doc-1', 'layer-1')?.name).toBe('Sky')
+    expect(layerNow('doc-2', 'layer-1')?.name).toBe('Background')
   })
 
   /**

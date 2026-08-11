@@ -3,7 +3,7 @@ import type { Transform, Vector3 } from '@shared/domain/scene'
 import type { Command } from '../core/history'
 import { moveNodes, multi } from './commands'
 import { deltaOf, withKey, withoutKey } from './animation-eval'
-import type { NodeMove, SceneState } from './scene-state'
+import { nodeById, type NodeMove, type SceneState } from './scene-state'
 
 /**
  * Edits of the timeline, on the pattern of the sequence's own track commands: what a command
@@ -228,7 +228,7 @@ export function movesToCommand(
 
   for (const move of moves) {
     const armed = armedTracksFor(state, move.id)
-    const rest = state.nodes.find(node => node.id === move.id)?.transform
+    const rest = nodeById(state, move.id)?.transform
     if (armed.length === 0 || !rest) {
       plain.push(move)
       continue

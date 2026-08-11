@@ -10,7 +10,6 @@ import { lightNodeFixture, meshNode, spriteNodeFixture } from '@/engines/scene/s
 import {
   DEFAULT_MATERIAL,
   IDENTITY_TRANSFORM,
-  nodeById,
   type SceneNode,
   type SceneState,
 } from '@/engines/scene/scene-state'
@@ -23,7 +22,7 @@ import { installGraph } from '@/stores/graph-fixtures'
 import { useSelection } from '@/stores/selection'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { useModelClips } from '@/stores/model-clips'
-import { installScene } from '@/stores/scene-fixtures'
+import { installScene, sceneNodeNow } from '@/stores/scene-fixtures'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
@@ -52,9 +51,7 @@ function turned(x: number, y: number, z: number): Transform {
   return { ...IDENTITY_TRANSFORM, rotation: { x, y, z } }
 }
 
-function nodeInStore(id: string): SceneNode | null {
-  return nodeById(sceneOf(useScenes.getState(), 'doc-1'), id)
-}
+const nodeInStore = (id: string): SceneNode | null => sceneNodeNow('doc-1', id)
 
 const entries = () => historyOf(useScenes.getState(), 'doc-1').past.length
 
