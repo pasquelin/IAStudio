@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import stylesheet from '../index.css?raw'
+import { cn } from '@/helpers/cn'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -64,6 +65,27 @@ describe('the text ladder of the studio', () => {
 
     expect(registered).toEqual(expect.arrayContaining(LADDER.map(([, name]) => name)))
     expect(malformed.map(([, name]) => name)).toEqual([])
+  })
+
+  /**
+   * `tailwind-merge` reads a font size by its t-shirt shape, so the four steps Tailwind does not
+   * ship looked like text COLOURS: `cn('text-muted', 'text-tiny')` returned the size alone, and
+   * ten sites — `CONTROL` among them — handed out a token that never reached the DOM. Derived
+   * from the sheet rather than listed, so a ninth step cannot be added silently frozen.
+   */
+  it('lets a step and a colour survive each other in one call', () => {
+    const eaten = LADDER.map(([, name]) => name).filter(
+      step => cn('text-muted', `text-${step}`) !== `text-muted text-${step}`,
+    )
+
+    expect(eaten).toEqual([])
+  })
+
+  it('still lets one step replace another, and one colour replace another', () => {
+    expect(cn('text-tiny', 'text-body')).toBe('text-body')
+    expect(cn('text-muted', 'text-accent')).toBe('text-accent')
+    // Alignment and wrapping share the prefix and none of the meaning.
+    expect(cn('text-tiny', 'text-left')).toBe('text-tiny text-left')
   })
 
   it('is the only way a source sizes text', () => {
