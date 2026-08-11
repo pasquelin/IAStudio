@@ -1,11 +1,13 @@
 import { defined, isRecord } from '@shared/guards'
 import {
+  ACTIVITY_MESSAGES,
   ACTIVITY_RETENTION,
+  ACTIVITY_SCOPE_PREFIX,
   isActivityLevel,
-  isActivityMessageKey,
   isActivityTopic,
   type ActivityDraft,
   type ActivityEntry,
+  type ActivityMessageKey,
   type ActivityParams,
   type ActivityQuery,
 } from '@shared/domain/activity'
@@ -23,6 +25,7 @@ import {
   type MediaProbe,
 } from '@shared/domain/asset'
 import { isPbrChannel } from '@shared/domain/texture'
+import { LOG_SCOPES } from '@shared/ipc'
 import type { SqliteDriver, SqlRow, SqlValue } from './sqlite'
 
 /**
@@ -361,6 +364,21 @@ function activityParams(row: SqlRow): ActivityParams | undefined {
 }
 
 /**
+ * Every key a stored line may name. Scopes are resolved against `LOG_SCOPES` here rather than in
+ * the domain: the list lives at the boundary, which depends on the domain and not the reverse —
+ * and the main process may read it, as `diagnostics/validation.ts` already does. Checking only
+ * the prefix would let a scope retired since read as itself on screen.
+ */
+const KNOWN_MESSAGE_KEYS = new Set<string>([
+  ...ACTIVITY_MESSAGES.map(name => `activity.${name}`),
+  ...LOG_SCOPES.map(scope => `${ACTIVITY_SCOPE_PREFIX}${scope}`),
+])
+
+function knownMessageKey(value: string): value is ActivityMessageKey {
+  return KNOWN_MESSAGE_KEYS.has(value)
+}
+
+/**
  * One row, read back. `level` and `topic` are closed unions in the domain and free strings in
  * SQLite: a line written by a build that knew one more of either is read as an ordinary line
  * rather than taking the panel down with it.
@@ -380,7 +398,7 @@ function activityOf(row: SqlRow): ActivityEntry {
     at: text(row, 'at'),
     level: isActivityLevel(level) ? level : 'info',
     topic: isActivityTopic(topic) ? topic : 'library',
-    messageKey: isActivityMessageKey(messageKey) ? messageKey : 'activity.unknownMessage',
+    messageKey: knownMessageKey(messageKey) ? messageKey : 'activity.unknownMessage',
     ...defined({ params, detail, assetId }),
   }
 }

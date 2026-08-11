@@ -213,7 +213,7 @@
     "cancel": "Annuler la tâche"
   },
   "activity": {
-    "unknownMessage": "Événement enregistré par une version antérieure",
+    "unknownMessage": "Entrée écrite par une version antérieure",
     "open": "Afficher le journal",
     "openHint": "Ouvre le journal — et marque comme lu tout ce qui s’y trouve",
     "none": "Rien à signaler.",

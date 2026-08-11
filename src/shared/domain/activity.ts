@@ -107,21 +107,7 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
  */
 export type ActivityMessageKey = `activity.${ActivityMessage}` | `activity.scope.${string}`
 
-const SCOPE_PREFIX = 'activity.scope.'
-
-/**
- * A line read back from the catalogue names a key that was written by whatever version wrote it,
- * so a renamed key comes back naming nothing. Checked like `level` and `topic` beside it.
- *
- * The scope prefix is accepted whole: those keys are the renderer's own failures, and turning
- * every one of them into `unknownMessage` on reopening would empty the journal of its crashes.
- */
-export function isActivityMessageKey(value: unknown): value is ActivityMessageKey {
-  if (typeof value !== 'string') return false
-  return (
-    value.startsWith(SCOPE_PREFIX) || ACTIVITY_MESSAGES.some(name => `activity.${name}` === value)
-  )
-}
+export const ACTIVITY_SCOPE_PREFIX = 'activity.scope.'
 
 /**
  * The values a message key interpolates. Strings, numbers, and lists of ids — what goes in has
