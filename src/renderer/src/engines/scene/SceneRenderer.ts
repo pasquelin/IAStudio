@@ -364,6 +364,10 @@ export class SceneRenderer {
 
     this.buildViewHelper()
 
+    // On move, not only on press: `TransformControls` listens on this canvas too and was added
+    // first, so it sees a press before this file does — and would grab with the camera of the
+    // view one has just left.
+    canvas.addEventListener('pointermove', this.onPointerMove)
     canvas.addEventListener('pointerdown', this.onPointerDown)
     canvas.addEventListener('contextmenu', this.onContextMenu)
     window.addEventListener('pointerup', this.onPointerUp)
@@ -589,6 +593,29 @@ export class SceneRenderer {
   /** Which view the pointer is over — what a display command acts on. */
   activePane(): number {
     return this.viewport.activePane
+  }
+
+  /**
+   * The camera one is working through: the view under the pointer, whichever it is.
+   *
+   * Only the AXIS of a side view is locked. Selecting, dragging a handle and framing are the
+   * work itself, and a layout where three quarters can be looked at but not worked in is three
+   * quarters of a viewport wasted.
+   */
+  private cameraInHand(): ViewportCamera {
+    return this.viewport.paneCameras[this.viewport.activePane] ?? this.viewport.camera
+  }
+
+  /**
+   * Hands the gizmo to the view being worked in.
+   *
+   * `TransformControls` casts its grab ray from the camera it holds, and sizes its handles in
+   * that camera's screen space. Left on the main one, a handle dragged in a side view answers to
+   * a ray starting somewhere else entirely.
+   */
+  private aimGizmo(): void {
+    const camera = this.cameraInHand()
+    if (this.gizmo && this.gizmo.camera !== camera) this.gizmo.camera = camera
   }
 
   /**
@@ -847,6 +874,7 @@ export class SceneRenderer {
     this.stopPaletteWatch = null
 
     const canvas = this.viewport.canvas
+    canvas?.removeEventListener('pointermove', this.onPointerMove)
     canvas?.removeEventListener('pointerdown', this.onPointerDown)
     canvas?.removeEventListener('contextmenu', this.onContextMenu)
     window.removeEventListener('pointerup', this.onPointerUp)
@@ -1459,6 +1487,10 @@ export class SceneRenderer {
     this.viewport.requestRender()
   }
 
+  private readonly onPointerMove = (): void => {
+    this.aimGizmo()
+  }
+
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
       this.flying = true
@@ -1494,11 +1526,16 @@ export class SceneRenderer {
     if (!pressed || Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > CLICK_SLOP)
       return
 
+    this.aimGizmo()
+
     const ndc = this.viewport.pointerNdcOf(event)
     if (!ndc) return
 
     this.pointer.set(ndc.x, ndc.y)
-    this.raycaster.setFromCamera(this.pointer, this.viewport.camera)
+    // The camera of the view under the pointer, never the main one: a ray cast from elsewhere
+    // meets whatever stands in ITS way, so a click in a side view picked something the pointer
+    // was nowhere near — which made every view but the first one inert.
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
     // that the ray actually meets. Both they and the light carry the node's id.

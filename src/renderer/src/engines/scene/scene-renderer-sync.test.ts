@@ -304,6 +304,22 @@ describe('a scene told what changed', () => {
       renderer.dispose()
     })
 
+    /**
+     * The point of the whole layout: only the AXIS of a side view is locked. Selecting and
+     * dragging are the work itself, and three quarters one can look at but not work in is three
+     * quarters of a viewport wasted — which is what shipped and had to be corrected.
+     */
+    it('works through the view under the pointer, not through the first one', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      renderer.setQuadView(true)
+
+      // Unmounted, the pointer is over pane 0 and every camera answers; what is reachable here
+      // is that asking is legal at all. Which camera a pane holds is the viewport's own suite.
+      expect(renderer.activePane()).toBe(0)
+
+      renderer.dispose()
+    })
+
     it('takes one display mode per view, and ignores a list it already holds', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
       renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1')] })

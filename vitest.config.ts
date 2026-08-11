@@ -100,10 +100,12 @@ export default defineConfig({
         // from the render loop, neither of which exists without a WebGL context. The rules they
         // apply do NOT live there — `pane-dress.ts`, `pane-materials.ts` and `panes.ts` were
         // split out for exactly this reason and are covered whole, as is every camera swap in
-        // `ViewportEngine`. What remains is the wiring between them.
+        // `ViewportEngine`. What remains is the wiring between them — and the wiring grew again
+        // when the picking and the gizmo started following the view under the pointer, which is
+        // reachable only from a canvas that draws.
         'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
           statements: -790,
-          branches: -361,
+          branches: -367,
         },
         // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the
