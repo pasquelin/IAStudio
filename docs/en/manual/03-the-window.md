@@ -298,22 +298,28 @@ It does not carry the file name. It carries the **seven workspaces**:
 > expression*, and whatever reads it reads *upstream failed*. **It takes one wire for now**:
 > assembling two texts in one expression comes with the logic nodes.
 >
-> **A graph leaves the studio by three buttons, and comes back by one of them.** They sit in the
-> same bar as **Run**. The two that send out are greyed out while the canvas holds nothing; the
-> one that brings in is greyed out while a run is under way.
+> **A graph leaves the studio by two of these buttons, and comes back by the third.** They sit in
+> the same bar as **Run**. The two that send out are greyed out while the canvas holds nothing;
+> the one that brings in is greyed out while a run is under way.
 >
 > - **Export the graph** writes it as a `.workflow.json`, wherever you choose — the format
 >   Scenario's webapp opens, so the way to pick up elsewhere what was drawn here.
 > - **Publish to Scenario** goes through no file: it creates an **App on your account**, ready to
->   run from the site. The status line at the bottom left answers **Published to Scenario**, or
->   **Scenario refused it — see the journal**; and the studio refuses on its own, before sending
->   anything, a graph it would not have exported.
+>   run from the site. The status line at the bottom left answers **Published to Scenario** when it
+>   went through. Otherwise it gives the reason, and there are two kinds: **Scenario refused it —
+>   see the journal** when the API says no, or one of the sentences you already know — *No output
+>   marked*, *The graph does not compile*… — when it is **the studio refusing to send**, before any
+>   call. That is the very verdict the line shows while you wire: publishing asks nothing more than
+>   what it was already announcing. **Export refuses nothing** — a graph that would not publish is
+>   written to a file all the same.
 > - **Import a graph** opens a `.workflow.json` — yours, or a published App's. **It replaces what
->   is on the canvas**, and it is the only one of these gestures that destroys anything: `⌘Z`
->   brings it back.
+>   is on the canvas**, and it is the only one of these gestures that destroys anything. `⌘Z`
+>   brings the previous graph back — **but not the states of its last run**: those are forgotten on
+>   import, and for good reason. Node ids look alike from one graph to the next (`text1`,
+>   `imageGenerator1`), so an imported node would wear the result of a node that is not it.
 >
-> **What the studio cannot create yet, an import brings in.** The palette places five node types;
-> the format knows fifteen. A branch, a loop, a text split therefore arrive by file, draw
+> **What the studio cannot create yet, an import brings in.** The palette places six node types —
+> five inputs, plus the four generators, which all place the same one; the format knows fifteen. A branch, a loop, a text split therefore arrive by file, draw
 > themselves on the canvas, and the graph runs with them — those of them the studio knows how to
 > run, the others saying *not runnable*.
 >
