@@ -149,7 +149,19 @@ export default defineConfig({
         // non-passive listener no `userEvent` gesture reaches. What CAN be reached was, and is
         // — the drag of a key and of a block, the scrub, the picking, and every switch of the
         // header column, each in a test of its own.
-        'src/renderer/src/panels/**': { statements: -215, branches: -175 },
+        //
+        // LOWERED, for the first time, back to what the glob measures. Three raises in one
+        // evening — 147, 165, 210, 215 — had left the folder ONE branch under its budget, which
+        // is the worst place to be: a batch landing in that branch fails the gate for what it
+        // posts while what ate the room merged clean. That is what cost an hour of instruction
+        // on 11 August. `Skybox.tsx` had no test at all and carried 26 statements and 12
+        // branches of the total; covering it is what made the room to come back down.
+        //
+        // At the measured value there is no slack at all, like `engines/graph/**` and `app/**`
+        // already sit. So RED AFTER A REBASE IS NOT A REGRESSION OF THE BATCH THAT SEES IT: it
+        // means code landed here uncovered, from wherever. Cover it, or raise this — but raise
+        // it as a decision that says what it grants and why, never as a number pushed up.
+        'src/renderer/src/panels/**': { statements: -191, branches: -163 },
         'src/renderer/src/design/**': { statements: -59, branches: -66 },
         // The fourth glob that had none, found the day a lot posted `GraphStatus.tsx` into it and
         // nothing moved. Measured at 235 and 195 the day it was set — what the six spaces carry,
