@@ -227,6 +227,13 @@ Votre projet est un dossier sur votre disque. Votre compte Scenario, lui, a sa p
 bibliothèque, en ligne. Les deux existent séparément, et **rien ne circule entre eux sans que
 vous le demandiez**.
 
+> **« Demander » ne veut pas dire « demander depuis cette étagère ».** Deux gestes faits
+> ailleurs envoient une image sans passer par les boutons ci-dessous : **lancer une génération**
+> qui porte une image de référence, et cliquer sur **Décrire le style des références** dans le
+> générateur (chapitre 6). Dans les deux cas l’API doit voir l’image pour répondre, donc le
+> studio l’envoie une fois, et son badge passe à **Synchronisé**. Rien n’est envoyé pendant que
+> vous tapez.
+
 ### Ce que le badge d’une vignette raconte
 
 Une petite marque dit où en est un asset vis-à-vis de la bibliothèque :

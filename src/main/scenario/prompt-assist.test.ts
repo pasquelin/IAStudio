@@ -24,10 +24,10 @@ const unusedStyle = (): Promise<never> => Promise.reject(new Error('unused'))
 const unusedCaption = (): Promise<never> => Promise.reject(new Error('unused'))
 
 /**
- * Stands in for `AssetInputResolver.resolvePictures`. It rewrites rather than passes through, so
+ * Stands in for `AssetInputResolver.resolvePictureIds`. It rewrites rather than passes through, so
  * a request reaching the API with a local id shows up here as a failing expectation.
  */
-const resolvePictures = (images: readonly string[]): Promise<string[]> =>
+const resolvePictureIds = (images: readonly string[]): Promise<string[]> =>
   Promise.resolve(images.map(image => (image.startsWith('asset_') ? `remote-of-${image}` : image)))
 
 function assist(answer: RemotePrompts, fields: readonly FieldDescriptor[] = FIELDS) {
@@ -40,7 +40,7 @@ function assist(answer: RemotePrompts, fields: readonly FieldDescriptor[] = FIEL
   }
   return {
     prompt,
-    assist: createPromptAssist({ api: () => api, fields: async () => fields, resolvePictures }),
+    assist: createPromptAssist({ api: () => api, fields: async () => fields, resolvePictureIds }),
   }
 }
 
@@ -123,7 +123,7 @@ describe('createPromptAssist', () => {
       fields: async () => {
         throw new Error('withdrawn')
       },
-      resolvePictures,
+      resolvePictureIds,
     })
 
     await expect(subject.suggest({ modelId: MODEL })).resolves.toEqual([
@@ -187,7 +187,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures: () => Promise.reject(new Error('the API does not accept image/tiff')),
+        resolvePictureIds: () => Promise.reject(new Error('the API does not accept image/tiff')),
       })
 
       await expect(subject.suggest({ modelId: MODEL, images: ['asset_one'] })).rejects.toThrow(
@@ -198,7 +198,7 @@ describe('createPromptAssist', () => {
 
     // Nothing to translate, and the transfer must not be reached for on an empty list.
     it('does not resolve pictures when there are none', async () => {
-      const resolve = vi.fn(resolvePictures)
+      const resolve = vi.fn(resolvePictureIds)
       const subject = createPromptAssist({
         api: () => ({
           prompt: async () => ({ prompts: [] }),
@@ -207,7 +207,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures: resolve,
+        resolvePictureIds: resolve,
       })
 
       await subject.suggest({ modelId: MODEL, images: [] })
@@ -254,7 +254,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures,
+        resolvePictureIds,
       })
 
       await expect(subject.translate('un rocher moussu')).resolves.toEqual({
@@ -277,7 +277,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures,
+        resolvePictureIds,
       })
 
       await expect(subject.translate('a mossy boulder')).resolves.toEqual({
@@ -301,7 +301,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures,
+        resolvePictureIds,
       })
 
       await expect(subject.describeStyle(['asset_one'])).resolves.toEqual({
@@ -323,7 +323,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures,
+        resolvePictureIds,
       })
 
       await subject.describeStyle(['asset_one', 'data:image/png;base64,iVBOR', 'asset_two'])
@@ -343,7 +343,7 @@ describe('createPromptAssist', () => {
           caption: unusedCaption,
         }),
         fields: async () => FIELDS,
-        resolvePictures: () => Promise.reject(new Error('offline')),
+        resolvePictureIds: () => Promise.reject(new Error('offline')),
       })
 
       await expect(subject.describeStyle(['asset_one'])).rejects.toThrow('offline')
@@ -352,10 +352,15 @@ describe('createPromptAssist', () => {
   })
 
   describe('caption', () => {
-    // No channel reaches this yet: an assurance, so the door cannot be opened onto the gap the
-    // other two just closed.
-    it('sends the ids the API knows, not the ids the form carries', async () => {
+    /**
+     * The one caller captions assets that have already gone up — `Describable.remoteAssetId` in
+     * `assets/auto-caption.ts` — so its ids are the API's own and nothing here can rewrite them.
+     * Asked all the same: it runs per arriving asset, and a catalogue hop each would be paid on
+     * every import for a rewrite that cannot happen.
+     */
+    it('sends the ids it is given without asking the catalogue about them', async () => {
       const caption = vi.fn(async () => ({ captions: ['a mossy boulder'] }))
+      const resolve = vi.fn(resolvePictureIds)
       const subject = createPromptAssist({
         api: () => ({
           prompt: async () => ({ prompts: [] }),
@@ -364,11 +369,12 @@ describe('createPromptAssist', () => {
           caption,
         }),
         fields: async () => FIELDS,
-        resolvePictures,
+        resolvePictureIds: resolve,
       })
 
       await expect(subject.caption(['asset_one'])).resolves.toEqual(['a mossy boulder'])
-      expect(caption).toHaveBeenCalledWith({ images: ['remote-of-asset_one'] })
+      expect(caption).toHaveBeenCalledWith({ images: ['asset_one'] })
+      expect(resolve).not.toHaveBeenCalled()
     })
   })
 })

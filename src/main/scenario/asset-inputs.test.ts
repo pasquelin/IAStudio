@@ -214,14 +214,14 @@ describe('createAssetInputResolver', () => {
   })
 })
 
-describe('resolvePictures', () => {
+describe('resolvePictureIds', () => {
   it('rewrites every local id of a list, in the order it was given', async () => {
     const { resolve } = resolverOver([
       asset('asset_a', { remoteAssetId: 'asset_ra' }),
       asset('asset_b', { remoteAssetId: 'asset_rb' }),
     ])
 
-    await expect(resolve.resolvePictures(['asset_a', 'asset_b'])).resolves.toEqual([
+    await expect(resolve.resolvePictureIds(['asset_a', 'asset_b'])).resolves.toEqual([
       'asset_ra',
       'asset_rb',
     ])
@@ -230,10 +230,24 @@ describe('resolvePictures', () => {
   it('sends a picture the account has never seen, then names the twin it became', async () => {
     const { resolve, push } = resolverOver([asset('asset_local')])
 
-    await expect(resolve.resolvePictures(['asset_local'])).resolves.toEqual([
+    await expect(resolve.resolvePictureIds(['asset_local'])).resolves.toEqual([
       'remote-of-asset_local',
     ])
     expect(push).toHaveBeenCalledWith('asset_local')
+  })
+
+  /**
+   * The hole this door does NOT close, pinned so it cannot be lost: both vocabularies share the
+   * `asset_` prefix, so an id no row answers to is indistinguishable from one pasted from the
+   * webapp. Drop a picture on the form, delete it from the assets panel, then click — the local
+   * id goes out and the API answers as though no reference had been given. Written down in
+   * `docs/todo.md` under 6.2.
+   */
+  it('lets an id the catalogue no longer answers to go out as it stands', async () => {
+    const { resolve, push } = resolverOver([])
+
+    await expect(resolve.resolvePictureIds(['asset_deleted'])).resolves.toEqual(['asset_deleted'])
+    expect(push).not.toHaveBeenCalled()
   })
 
   // What the form hands over is either kind, and the field cannot say which — see
@@ -241,7 +255,7 @@ describe('resolvePictures', () => {
   it('leaves a data URL as it stands, without asking the catalogue', async () => {
     const { resolve, find, push } = resolverOver([])
 
-    await expect(resolve.resolvePictures(['data:image/png;base64,iVBOR'])).resolves.toEqual([
+    await expect(resolve.resolvePictureIds(['data:image/png;base64,iVBOR'])).resolves.toEqual([
       'data:image/png;base64,iVBOR',
     ])
     expect(find).not.toHaveBeenCalled()
@@ -257,7 +271,7 @@ describe('resolvePictures', () => {
     }
     const resolve = createAssetInputResolver({ find, push, activeOwnerId: () => null })
 
-    await expect(resolve.resolvePictures(['asset_local'])).rejects.toThrow('image/tiff')
+    await expect(resolve.resolvePictureIds(['asset_local'])).rejects.toThrow('image/tiff')
   })
 
   // The two doors share one in-flight map, which is the whole reason they are one translator:
@@ -267,7 +281,7 @@ describe('resolvePictures', () => {
 
     const [body, pictures] = await Promise.all([
       resolve.resolveBody({ image: 'asset_local' }),
-      resolve.resolvePictures(['asset_local']),
+      resolve.resolvePictureIds(['asset_local']),
     ])
 
     expect(body).toEqual({ image: 'remote-of-asset_local' })
@@ -282,7 +296,7 @@ describe('resolvePictures', () => {
       'this-project',
     )
 
-    await expect(resolve.resolvePictures(['asset_local'])).resolves.toEqual([
+    await expect(resolve.resolvePictureIds(['asset_local'])).resolves.toEqual([
       'remote-of-asset_local',
     ])
     expect(push).toHaveBeenCalledWith('asset_local')

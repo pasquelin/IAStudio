@@ -26,20 +26,19 @@ function standingTwinOf(asset: Asset, activeOwnerId: string | null): string | un
 }
 
 /**
- * Rewrites the local asset ids a generation body carries into the ids Scenario knows them by.
+ * Rewrites the local asset ids a form carries into the ids Scenario knows them by, sending what
+ * has never gone up.
  *
  * The two vocabularies look alike and are not: the collector stamps a row with a fresh
  * `asset_<uuid>` and files the API's own id under `remoteAssetId`, so what a drop target hands
  * to a form is an identifier the API has never heard of. Left alone, a generation with a
  * reference picture is submitted, paid for, and answers as though no reference had been given.
  *
- * Done here rather than in whatever asks for the run, because both endpoints take a body of the
- * model's own shape and neither says which of its keys is a picture — and because the graph is
- * about to make chaining two models the ordinary case.
- *
- * Two doors, one translator, and they share the in-flight map below — a generation and a prompt
- * assistance naming the same never-sent picture would otherwise both find no twin and both send
- * the file, billed twice.
+ * Two doors, one translator, because the callers hold two shapes and only one of them can be
+ * walked blind: a generation body is of the model's own shape and nothing says which of its keys
+ * is a picture, whereas prompt assistance holds a bare list and knows every entry is one. They
+ * share the in-flight map below — a generation and an assistance naming the same never-sent
+ * picture would otherwise both find no twin and both send the file, billed twice.
  *
  * What deliberately does NOT come through here: a cost estimate, which is asked on every
  * keystroke and must not send a file up for a figure nobody is waiting on. The estimate of a
@@ -53,7 +52,7 @@ export type AssetInputResolver = {
    * A bare list of pictures — what prompt assistance holds instead of a body. The gesture that
    * reaches it is a click, never a keystroke, which is what makes the transfer expected.
    */
-  resolvePictures: (images: readonly string[]) => Promise<string[]>
+  resolvePictureIds: (images: readonly string[]) => Promise<string[]>
 }
 
 export function createAssetInputResolver({
@@ -97,6 +96,11 @@ export function createAssetInputResolver({
     (owner: string | null) =>
     async (localId: string): Promise<string> => {
       const asset = await find(localId)
+      // Unanswered means "already the API's own", which is what an id pasted from the webapp is —
+      // and both vocabularies share the `asset_` prefix, so nothing here can tell that apart from
+      // a local id whose row was deleted while the form still held it. That one goes out as it
+      // stands and is answered as though no reference had been given. Written down in
+      // `docs/todo.md` under 6.2 rather than guessed at from the id's shape.
       if (!asset) return localId
 
       const standing = standingTwinOf(asset, owner)
@@ -107,7 +111,7 @@ export function createAssetInputResolver({
 
   const isLocal = (value: string): boolean => value.startsWith(ASSET_ID_PREFIX)
 
-  const resolvePictures = async (images: readonly string[]): Promise<string[]> => {
+  const resolvePictureIds = async (images: readonly string[]): Promise<string[]> => {
     const remoteIdOf = remoteIdIn(activeOwnerId())
     const resolved: string[] = []
 
@@ -123,7 +127,7 @@ export function createAssetInputResolver({
 
     const seen = new WeakSet<object>()
 
-    /** One value at a time, for the reason `resolvePictures` gives above. */
+    /** One value at a time, for the reason `resolvePictureIds` gives above. */
     const rewrite = async (value: unknown): Promise<unknown> => {
       if (typeof value === 'string') return isLocal(value) ? await remoteIdOf(value) : value
 
@@ -158,5 +162,5 @@ export function createAssetInputResolver({
     return resolved
   }
 
-  return { resolveBody, resolvePictures }
+  return { resolveBody, resolvePictureIds }
 }

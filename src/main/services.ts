@@ -731,7 +731,7 @@ export function createServices(settings: SettingsStore): Services {
     // Through the registry rather than the API: the generator just described the model to draw
     // the form, so the descriptors are warm and no round trip is spent narrowing the answer.
     fields: async modelId => (await models.describe(modelId)).fields,
-    resolvePictures: assetInputs.resolvePictures,
+    resolvePictureIds: assetInputs.resolvePictureIds,
   })
 
   /**
