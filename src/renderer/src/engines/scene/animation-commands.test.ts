@@ -462,3 +462,87 @@ describe('keying an object that was moved by hand', () => {
     expect(command.revert(command.apply(state))).toEqual(state)
   })
 })
+
+describe('dragging an object that is already keyed', () => {
+  const REST = { position: vec(0), rotation: vec(0), scale: { x: 1, y: 1, z: 1 } }
+  const cube = (x: number): SceneNode => ({
+    id: 'cube',
+    parentId: null,
+    name: 'cube',
+    visible: true,
+    transform: { ...REST, position: vec(x) },
+    castShadow: false,
+    receiveShadow: false,
+    type: 'group',
+  })
+
+  const NAMES = { position: 'Cube · Position', rotation: 'Cube · Rotation', scale: 'Cube · Scale' }
+
+  /** A cube keyed at zero and again at two seconds, four units along. */
+  function animated(): SceneState {
+    const start = { ...EMPTY_SCENE, nodes: [cube(0)] }
+    const first = keyNode(start, { nodeId: 'cube' }, 0, NAMES, p => `t-${p}`)?.apply(start)
+    if (!first) throw new Error('a node is always keyable')
+
+    const dragged = { ...first, nodes: [cube(4)] }
+    return keyNode(dragged, { nodeId: 'cube' }, 2 * SECOND, NAMES, p => `t-${p}`)!.apply(dragged)
+  }
+
+  const poseOf = (state: SceneState, time: number) =>
+    poseAt(state.nodes[0]!.transform, state.animation, 'cube', time).position.x
+
+  it('records the drag even with the switch OFF, since the object is already animated', () => {
+    const state = animated()
+    // Dropped at nine, at the instant the second key stands on.
+    const command = movesToCommand(
+      state,
+      [{ id: 'cube', transform: { ...REST, position: vec(9) } }],
+      2 * SECOND,
+      false,
+    )
+    if (!command) throw new Error('one node moved')
+
+    // Where it was dropped, not nine plus the four the key already added.
+    expect(poseOf(command.apply(state), 2 * SECOND)).toBe(9)
+  })
+
+  it('leaves the earlier key where it was, so one drag edits one instant', () => {
+    const state = animated()
+    const command = movesToCommand(
+      state,
+      [{ id: 'cube', transform: { ...REST, position: vec(9) } }],
+      2 * SECOND,
+      false,
+    )
+
+    expect(poseOf(command!.apply(state), 0)).toBe(0)
+  })
+
+  it('still moves an UNKEYED object rather than keying it behind your back', () => {
+    const plain = { ...EMPTY_SCENE, nodes: [cube(0)] }
+    const command = movesToCommand(
+      plain,
+      [{ id: 'cube', transform: { ...REST, position: vec(5) } }],
+      0,
+      false,
+    )
+
+    const after = command!.apply(plain)
+    expect(after.nodes[0]?.transform.position.x).toBe(5)
+    expect(after.animation.tracks).toEqual([])
+  })
+
+  it('records an object whose channels exist but hold no key only when asked', () => {
+    const start = { ...EMPTY_SCENE, nodes: [cube(0)] }
+    const opened = addAnimationTrack(target('cube'), 'Cube position', 'track-1').apply(start)
+    const move = [{ id: 'cube', transform: { ...REST, position: vec(5) } }]
+
+    // Empty channels are not an animation yet: the switch still decides.
+    expect(
+      movesToCommand(opened, move, 0, false)!.apply(opened).nodes[0]?.transform.position.x,
+    ).toBe(5)
+    expect(
+      movesToCommand(opened, move, 0, true)!.apply(opened).nodes[0]?.transform.position.x,
+    ).toBe(0)
+  })
+})

@@ -367,7 +367,16 @@ export function movesToCommand(
   const plain: NodeMove[] = []
 
   for (const move of moves) {
-    const tracks = recording ? recordingTracksFor(state, move.id, move.bone) : []
+    // An object that is ALREADY keyed records whatever the switch says.
+    //
+    // What the viewport shows is the rest pose PLUS what the keys add, so moving a keyed object
+    // without recording writes the rest pose — and the object lands short of where it was
+    // dropped, by exactly the value of the key standing at that instant. Nobody drags an object
+    // meaning that. The switch decides whether an UNKEYED object starts being animated; once it
+    // is, a drag is an edit of the animation.
+    const held = recordingTracksFor(state, move.id, move.bone)
+    const keyed = held.some(track => track.keys.length > 0)
+    const tracks = recording || keyed ? held : []
     const rest = move.rest ?? nodeById(state, move.id)?.transform
 
     if (tracks.length === 0 || !rest) {
