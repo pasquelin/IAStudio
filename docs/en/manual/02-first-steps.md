@@ -192,7 +192,7 @@ the project's shelf — and on your disk, in `assets/img/`.
 size, its weight, the model that made it, the prompt you wrote, and the *seed* that will let you
 come back to it.
 
-The **Reveal in file manager** button, in the inspector, opens the folder it sits in. That is
+The **Show in the file manager** button, in the inspector, opens the folder it sits in. That is
 where you take it from to send it to anyone.
 
 > **To retouch it**, move to the **Image** workspace: the `+` button on the left rail opens a

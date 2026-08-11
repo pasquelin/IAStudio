@@ -469,7 +469,7 @@ texture** ouvre la liste ; **Retirer la texture** la vide.
 | **Angle** | l’ouverture du cône — projecteur seulement |
 | **Pénombre** | la douceur du bord du cône — projecteur seulement |
 | **Cible** | vers quoi elle pointe |
-| **Couleur du ciel** / **du sol** | hémisphérique seulement |
+| **Couleur du ciel** / **Couleur du sol** | hémisphérique seulement |
 
 ### Ombres
 

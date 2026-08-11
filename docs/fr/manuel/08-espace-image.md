@@ -314,7 +314,7 @@ dessous. Vous peignez sur celui qui est **actif** — cliquez sur son nom pour l
 |---|---|
 | **Ajouter un calque** | le bouton **+** du panneau — il se pose au-dessus de la pile |
 | **Supprimer le calque** | le bouton de suppression — le dernier calque ne peut pas être supprimé |
-| **Masquer / afficher** | l’œil, à gauche du nom |
+| **Afficher ou masquer** | l’œil, à gauche du nom |
 | **Réordonner** | les boutons de pile, ou le glisser-déposer |
 
 Un calque masqué est **estompé et barré** : on voit d’un coup d’œil ce qui est caché.

@@ -443,7 +443,7 @@ Snapping is switched on in the **scene's toolbar** (the `M` key); these three se
 | Setting | Range | Starts at | What it does |
 |---|---|---|---|
 | **Move step** | 0.1 to 10 m, in 0.1 | **0.5 m** | how far an object advances in one step |
-| **Rotate step** | 1° to 90°, in 1 | **15°** | the angle of one rotation step |
+| **Turn step** | 1° to 90°, in 1 | **15°** | the angle of one rotation step |
 | **Scale step** | 0.05 to 1, in 0.05 | **0.1** | how far the scale advances in one step |
 
 **15° is the classic value**: twenty-four positions in a full turn, including every round angle —
