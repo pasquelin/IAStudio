@@ -43,7 +43,7 @@ describe('ImportProgress', () => {
 
     const list = screen.getByRole('list')
 
-    expect(list).toHaveClass('max-h-40', 'overflow-y-auto')
+    expect(list).toHaveClass('max-h-40', 'overflow-y-auto', 'pr-2')
     expect(list.querySelectorAll('li')).toHaveLength(200)
   })
 })
