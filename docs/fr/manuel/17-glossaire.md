@@ -348,10 +348,10 @@ d’une rue, on change un vêtement.
 **Job** → voir *Tâche*.
 
 **Journal d’activité**
-La liste de ce que le studio a fait et raté, ouverte depuis la *ligne d’état*. Quatre sujets —
-génération, import, bibliothèque, document — et trois niveaux : information, avertissement,
-échec. Un échec y ajoute une **bulle** dans le coin de la fenêtre, qui ne disparaît que si on la
-ferme. Voir [Quand ça coince](16-depannage.md).
+La liste de ce que le studio a fait et raté, ouverte depuis la *ligne d’état*. Six sujets —
+génération, import, bibliothèque, document, projet, interface — et trois niveaux : information,
+avertissement, échec. Un échec y ajoute une **bulle** dans le coin de la fenêtre, qui ne
+disparaît que si on la ferme. Voir [Quand ça coince](16-depannage.md).
 
 ---
 

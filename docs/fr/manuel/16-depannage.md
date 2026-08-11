@@ -20,9 +20,11 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 | « Impossible d’importer « … » », « « … » est illisible » | Import |
 | « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête » | Bibliothèque |
 | « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué », « Le fichier n’a pas pu être montré » | Document |
+| « Ce dossier n’est pas un projet Scenario », « Le projet n’a pas pu être créé dans ce dossier », « Ce fichier n’a pas pu être ouvert par le système » | Projet |
+| « Une partie de l’interface n’a pas pu s’afficher », « L’agencement enregistré d’un espace était illisible » | Interface |
 
-Filtrez par **niveau** — information, avertissement, échec — ou par **sujet**, et **Tout
-afficher** relâche les filtres.
+Filtrez par **niveau** — information, avertissement, échec — ou par **sujet**. Chaque rangée
+commence par un bouton **Tout** qui la relâche.
 
 Le volet se referme de trois façons : un clic à côté, `Échap`, ou le passage à une autre
 application. Recliquer l’icône marche aussi. C’est vrai de la barre des générations à sa gauche.
@@ -195,9 +197,18 @@ pu se dessiner.
 **Quoi faire.** **Réessayer** d’abord. Si l’écran revient au même état, fermez la fenêtre et
 rouvrez-la.
 
-> **Ces deux écrans ne disent pas ce qui a échoué**, et c’est délibéré : le détail technique est
-> dans la console, et il ne sert qu’à qui peut le corriger. Si vous voulez le voir avant de
-> signaler le problème : Réglages → Avancé → **Outils de développement**.
+> **Ces deux écrans ne disent pas ce qui a échoué**, et c’est délibéré : le détail technique ne
+> sert qu’à qui peut le corriger.
+>
+> **Mais la panne laisse une trace, elle** — et le journal est le seul endroit où la lire. Il en
+> garde une ligne sous le sujet **Interface** — « Une partie de l’interface n’a pas pu
+> s’afficher » — suivie, en petit, du nom technique de la zone fautive et du message d’erreur.
+> C’est ce qu’il faut recopier dans un signalement.
+>
+> **Un projet ouvert la garde** : elle est écrite dans le projet et se relit plus tard. Sans
+> projet ouvert, elle s’affiche mais ne survit pas à la session. Et **elle n’est écrite qu’une
+> fois par zone fautive** : si **Réessayer** échoue à nouveau au même endroit, aucune ligne ne
+> s’ajoute.
 >
 > **Ce qui est enregistré sur le disque est en sécurité.** Un plantage d’affichage ne touche ni
 > vos assets, ni les documents déjà écrits.
@@ -619,6 +630,7 @@ installation neuve.
 | `⌘Z` sans effet | activer le bon onglet |
 | Canvas 3D noir | fermer et rouvrir l’onglet |
 | Panneaux en désordre | Affichage → Réinitialiser la disposition |
+| Un espace est revenu tout seul à sa disposition par défaut | son agencement enregistré était illisible : il a été jeté plutôt que gardé — le journal le dit sous **Interface**. Réorganisez-le, le nouvel agencement est réenregistré |
 | Travail perdu à la fermeture d’un onglet | seuls `.scene` et `.tex` s’enregistrent — [voir les limites](18-limites.md) |
 
 ---

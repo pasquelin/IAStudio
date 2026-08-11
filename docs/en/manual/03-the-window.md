@@ -746,7 +746,11 @@ showing nothing until something breaks leaves the user with nowhere to look **be
 
 **One click opens the list and marks everything read** — opening it is reading it. Two filters
 wait there: the **level** (information, warning, failure) and the **topic** (generation, import,
-library, document, project). A **Show everything** button releases them.
+library, document, project, interface). Each row starts with an **All** button that releases it.
+
+**Interface is the studio itself** rather than what it holds: a panel that could not be drawn, or
+a workspace whose stored layout became unreadable. Those failures have no document to belong to —
+[see chapter 16](16-troubleshooting.md).
 
 **To close it**: a click outside, `Esc`, or switching to another application — clicking the icon
 again works too. That holds for both panels of the status line, and for anything that floats over

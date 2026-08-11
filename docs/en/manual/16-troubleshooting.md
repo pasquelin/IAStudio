@@ -20,9 +20,11 @@ names the object involved and says what failed.
 | "Could not import \"…\"", "\"…\" is unreadable" | Import |
 | "Could not send \"…\"", "The tags of \"…\" did not reach the library", "The Scenario API refused a request" | Library |
 | "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed", "The file could not be shown" | Document |
+| "This folder is not a Scenario project", "The project could not be created in this folder", "The system could not open this file" | Project |
+| "Part of the interface could not be drawn", "A workspace’s stored layout could not be read" | Interface |
 
-Filter by **level** — information, warning, failure — or by **topic**, and **Show everything**
-releases the filters.
+Filter by **level** — information, warning, failure — or by **topic**. Each row starts with an
+**All** button that releases it.
 
 The panel closes three ways: a click beside it, `Escape`, or switching to another application.
 Clicking the icon again works too. The same holds for the generations bar to its left.
@@ -172,14 +174,14 @@ That is the only situation where that button is of any use.
 ## When part of the screen breaks down
 
 Two messages that do not come from the service, but from the studio itself. They appear **in
-place of** what should have been drawn, with a **Retry** button.
+place of** what should have been drawn, with a **Try again** button.
 
 ### "This panel ran into an error."
 
 **What it means.** One panel failed to draw. The rest of the window — your documents, your other
 panels, your running generations — **carries on working normally**.
 
-**What to do.** Click **Retry**: the panel rebuilds itself. Nine times out of ten it comes back.
+**What to do.** Click **Try again**: the panel rebuilds itself. Nine times out of ten it comes back.
 
 **What you do not lose**: nothing. A panel is a view onto data that lives elsewhere.
 
@@ -187,12 +189,20 @@ panels, your running generations — **carries on working normally**.
 
 **What it means.** The same thing, one notch up: the whole window could not be drawn.
 
-**What to do.** **Retry** first. If the screen returns to the same state, close the window and
+**What to do.** **Try again** first. If the screen returns to the same state, close the window and
 open it again.
 
-> **Neither screen says what failed**, and that is deliberate: the technical detail is in the
-> console, and it only serves someone who can act on it. If you want to see it before reporting
-> the problem: Settings → Advanced → **Developer tools**.
+> **Neither screen says what failed**, and that is deliberate: the technical detail only serves
+> someone who can act on it.
+>
+> **The failure does leave a trace, though** — and the journal is the only place to read it. It
+> keeps a line for it under the **Interface** topic — "Part of the interface could not be drawn" —
+> followed, in small type, by the technical name of the area at fault and the error message. That
+> is what to copy into a report.
+>
+> **An open project keeps it**: the line is written into the project and can be read back later.
+> With no project open, it appears but does not outlive the session. And **it is written once per
+> area at fault**: if **Try again** fails at the same place, no new line is added.
 >
 > **What is saved on disk is safe.** A drawing crash touches neither your assets nor documents
 > already written.
@@ -591,10 +601,11 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 | "Video preparation unavailable" although `which ffmpeg` finds one | run `ffmpeg -version`: the binary exists but no longer starts |
 | "The keychain did not give your accounts back" | unlock the keychain, then start again — nothing was lost |
 | "This asset has nowhere to go" | open a document able to receive it, with `+` on the left rail |
-| "This panel ran into an error" | click **Retry** — the rest of the window is fine |
+| "This panel ran into an error" | click **Try again** — the rest of the window is fine |
 | `⌘Z` has no effect | activate the right tab |
 | Black 3D canvas | close and reopen the tab |
 | Panels in disorder | View → Reset layout |
+| A workspace came back to its default arrangement on its own | its stored layout could not be read, so it was dropped rather than kept — the journal says so under **Interface**. Rearrange it: the new arrangement is stored again |
 | Work lost when closing a tab | only `.scene` and `.tex` save — [see the limits](18-limits.md) |
 
 ---
