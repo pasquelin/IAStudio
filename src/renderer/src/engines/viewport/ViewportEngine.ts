@@ -78,19 +78,27 @@ export type ProjectionKind = 'perspective' | 'orthographic'
 export type ViewportCamera = PerspectiveCamera | OrthographicCamera
 
 /**
- * One of the views beside the main one.
- *
- * Orthographic without an option: these exist to be looked through straight down an axis, and a
- * perspective camera aimed at a side shows converging edges — which is the one thing the side
- * views are there to rule out.
+ * One of the views beside the main one. It carries both cameras, exactly as the main one does:
+ * a quarter set to a side is flat — converging edges are the one thing a side view rules out —
+ * but a quarter set free is a second perspective, which is a layout the user may ask for.
  */
-type ExtraPane = { camera: OrthographicCamera; controls: OrbitControls | null }
+type ExtraPane = {
+  perspective: PerspectiveCamera
+  orthographic: OrthographicCamera
+  projection: ProjectionKind
+  controls: OrbitControls | null
+}
 
 /**
  * How tall a pane's frustum is by default, before anything frames a selection into it. Half a
  * dozen studio units: a primitive dropped at the origin lands inside it rather than filling it.
  */
 const EXTRA_PANE_HEIGHT = 6
+
+/** The camera an added view is currently drawing through. */
+function cameraOf(pane: ExtraPane): ViewportCamera {
+  return pane.projection === 'perspective' ? pane.perspective : pane.orthographic
+}
 
 export class ViewportEngine {
   readonly scene = new Scene()
@@ -253,7 +261,7 @@ export class ViewportEngine {
 
   /** Every camera that draws, main one first. What a caller aims, and what a picker picks with. */
   get paneCameras(): readonly ViewportCamera[] {
-    return [this.camera, ...this.extras.map(pane => pane.camera)]
+    return [this.camera, ...this.extras.map(pane => cameraOf(pane))]
   }
 
   /** The orbit of each pane, main one first — `null` where a viewport was built without controls. */
@@ -263,7 +271,8 @@ export class ViewportEngine {
 
   /** Pane 0 is the main camera; the rest read one past their own index. */
   private cameraOfPane(index: number): ViewportCamera | null {
-    return index === 0 ? this.camera : (this.extras[index - 1]?.camera ?? null)
+    const pane = this.extras[index - 1]
+    return index === 0 ? this.camera : pane ? cameraOf(pane) : null
   }
 
   /**
@@ -284,21 +293,53 @@ export class ViewportEngine {
   }
 
   private createExtra(): ExtraPane {
-    const camera = new OrthographicCamera()
-    camera.near = this.options.near ?? 0.1
-    camera.far = this.options.far ?? 1000
+    const near = this.options.near ?? 0.1
+    const far = this.options.far ?? 1000
+
+    const orthographic = new OrthographicCamera()
+    orthographic.near = near
+    orthographic.far = far
+    const perspective = new PerspectiveCamera(this.options.fieldOfView ?? 60, 1, near, far)
+    const pane: ExtraPane = {
+      perspective,
+      orthographic,
+      projection: 'orthographic',
+      controls: null,
+    }
 
     const canvas = this.renderer?.domElement
-    if (this.options.controls === 'none' || !canvas) return { camera, controls: null }
+    if (this.options.controls === 'none' || !canvas) return pane
 
-    const controls = new OrbitControls(camera, canvas)
+    const controls = new OrbitControls(orthographic, canvas)
     controls.enableDamping = true
     controls.addEventListener('change', this.requestRender)
     // Only the pane under the pointer listens — see `armPaneUnderPointer`. Four live orbits on
     // one canvas would each answer the same drag, and the three off-screen ones would answer it
     // invisibly.
     controls.enabled = false
-    return { camera, controls }
+    pane.controls = controls
+    return pane
+  }
+
+  /**
+   * Which camera an added view draws through. The controls follow: an orbit left on the camera
+   * that is no longer drawn turns something nobody sees.
+   */
+  setPaneProjection(index: number, kind: ProjectionKind): void {
+    if (index === 0) return this.setProjection(kind)
+
+    const pane = this.extras[index - 1]
+    if (!pane || pane.projection === kind) return
+
+    const previous = pane.projection === 'perspective' ? pane.perspective : pane.orthographic
+    pane.projection = kind
+    const next = kind === 'perspective' ? pane.perspective : pane.orthographic
+    next.position.copy(previous.position)
+    next.quaternion.copy(previous.quaternion)
+    if (pane.controls) pane.controls.object = next
+
+    this.layOutPanes()
+    this.requestRender()
   }
 
   private disposeExtra(): void {
@@ -343,11 +384,13 @@ export class ViewportEngine {
 
       const aspect = rect.width / rect.height
       const half = this.extraHeight / 2
-      pane.camera.top = half
-      pane.camera.bottom = -half
-      pane.camera.right = half * aspect
-      pane.camera.left = -half * aspect
-      pane.camera.updateProjectionMatrix()
+      pane.orthographic.top = half
+      pane.orthographic.bottom = -half
+      pane.orthographic.right = half * aspect
+      pane.orthographic.left = -half * aspect
+      pane.orthographic.updateProjectionMatrix()
+      pane.perspective.aspect = aspect
+      pane.perspective.updateProjectionMatrix()
     }
 
     return this.rects[0] ?? { x: 0, y: 0, width, height }

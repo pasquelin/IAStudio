@@ -95,14 +95,15 @@ export default defineConfig({
         // no jsdom run reaches at all — the only case the comment above allows a budget to grow
         // for. What it schedules and how its pixels come back are covered apart, in `film.ts`.
         //
-        // Raised again, by eight, for the four-view layout: what is left uncovered is
-        // `SceneRenderer.setQuadView` placing real cameras and `dressPane` running from the
-        // render loop, neither of which exists without a WebGL context. The rules they apply do
-        // NOT live there — `pane-dress.ts`, `pane-materials.ts` and `panes.ts` were split out for
-        // exactly this reason and are covered whole. What remains is the wiring between them.
+        // Raised again, by eight then by three, for the four-view layout: what is left
+        // uncovered is `SceneRenderer.placePanes` aiming real cameras and `dressPane` running
+        // from the render loop, neither of which exists without a WebGL context. The rules they
+        // apply do NOT live there — `pane-dress.ts`, `pane-materials.ts` and `panes.ts` were
+        // split out for exactly this reason and are covered whole, as is every camera swap in
+        // `ViewportEngine`. What remains is the wiring between them.
         'src/renderer/src/engines/{scene,skybox,viewport,texture,gpu}/**': {
           statements: -790,
-          branches: -358,
+          branches: -361,
         },
         // Tight, like `main/assets` and for the same reason: nothing here needs a GPU, a network
         // or a DOM, so what is uncovered is what nobody got round to. Nearly all of it is the

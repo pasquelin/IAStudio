@@ -29,6 +29,7 @@ import { displayOfPane, useSceneViews, viewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
+import { ScenePaneGrid } from './ScenePaneGrid'
 import { SCENE_TOOLS } from './scene-tools'
 
 /**
@@ -176,6 +177,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.setQuadView(view.quad)
   }, [view.quad])
+
+  useEffect(() => {
+    engine.current?.setPaneViews(view.panes)
+  }, [view.panes])
 
   // The head is session state React owns; the engine is told where it stands, never the reverse.
   useEffect(() => {
@@ -347,6 +352,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
       <div ref={host} className="absolute inset-0" />
       <SceneCounters scene={stats.scene} selected={stats.selected} />
+      {view.quad && (
+        <ScenePaneGrid
+          views={view.panes}
+          onView={(pane, chosen) => useSceneViews.getState().setPaneView(documentId, pane, chosen)}
+        />
+      )}
       <Toolbar
         className={PANE_TOOLBAR}
         tools={tools}

@@ -28,6 +28,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     activePane = vi.fn(() => 0)
     setSkeletons = vi.fn()
     setQuadView = vi.fn()
+    setPaneViews = vi.fn()
     setPlayhead = vi.fn()
     viewFrom = vi.fn()
     frameSelection = vi.fn()

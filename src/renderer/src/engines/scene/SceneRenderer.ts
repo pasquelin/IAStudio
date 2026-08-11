@@ -82,11 +82,13 @@ import { createPaneMaterials, type PaneMaterials } from './pane-materials'
 import { statsOf, type SceneStats } from './scene-stats'
 import {
   applyWireOverlay,
+  DEFAULT_PANE_VIEWS,
   showsEdges,
   directionOf,
   framingPlacement,
   viewPosition,
   type DisplayMode,
+  type PaneView,
   type ViewDirection,
 } from './scene-view'
 import BvhWorker from './bvh.worker?worker'
@@ -177,13 +179,6 @@ function isBone(object: Object3D): boolean {
 
 /** Where a normalised view stands when the camera already sits on its target and has no distance. */
 const DEFAULT_VIEW_DISTANCE = 8
-
-/**
- * The three sides a quad view opens on, in the order the panes read: top-right looks down,
- * bottom-left from the front, bottom-right from the left. The fourth pane is the main view,
- * which keeps whatever angle it was already at.
- */
-const QUAD_SIDES: readonly ViewDirection[] = ['top', 'front', 'left']
 
 /**
  * How far a side view stands off its target. Distance changes nothing an orthographic camera
@@ -283,6 +278,8 @@ export class SceneRenderer {
   private displays: DisplayMode[] = ['shaded']
   /** Whether the edges are rebuilt as quads. Never real quads — see `applyWireOverlay`. */
   private quadEdges = false
+  /** What each view shows. The main one is free until something says otherwise. */
+  private paneViews: PaneView[] = [...DEFAULT_PANE_VIEWS]
 
   /** One line material for every overlay: they all draw the same edges in the same colour. */
   private readonly wireMaterial = new LineBasicMaterial()
@@ -535,22 +532,37 @@ export class SceneRenderer {
    */
   setQuadView(on: boolean): void {
     this.viewport.setLayout(on ? 'quad' : 'single')
-    if (!on) return
+    if (on) this.placePanes()
+  }
 
+  /**
+   * What each view shows: a side, or a camera free to turn.
+   *
+   * Only a free view orbits. A side view exists BECAUSE it does not turn — a top view one drag
+   * away from being an almost-top view answers no question at all — so its rotation is locked
+   * while panning and zooming stay: those move where one looks from, never the direction.
+   */
+  setPaneViews(views: readonly PaneView[]): void {
+    this.paneViews = [...views]
+    if (this.quadView()) this.placePanes()
+  }
+
+  private placePanes(): void {
     const target = this.viewport.orbit?.target ?? this.pivot.position
     this.viewport.setPaneHeight(this.sceneHeight())
-    const cameras = this.viewport.paneCameras.slice(1)
-    const orbits = this.viewport.paneOrbits.slice(1)
 
-    for (const [index, direction] of QUAD_SIDES.entries()) {
-      const camera = cameras[index]
-      if (!camera) continue
+    for (const [index, view] of this.paneViews.entries()) {
+      this.viewport.setPaneProjection(index, view === 'free' ? 'perspective' : 'orthographic')
 
-      const { x, y, z } = viewPosition(direction, target, SIDE_VIEW_DISTANCE)
+      // Read AFTER the projection is set: swapping it hands the pane a different camera object.
+      const camera = this.viewport.paneCameras[index]
+      const orbit = this.viewport.paneOrbits[index]
+      if (orbit) orbit.enableRotate = view === 'free'
+      if (!camera || view === 'free') continue
+
+      const { x, y, z } = viewPosition(view, target, SIDE_VIEW_DISTANCE)
       camera.position.set(x, y, z)
       camera.lookAt(target)
-
-      const orbit = orbits[index]
       if (orbit) {
         orbit.target.copy(target)
         orbit.update()

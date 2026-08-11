@@ -32,6 +32,28 @@ export function isViewDirection(value: string): value is ViewDirection {
   return VIEW_DIRECTIONS.some(direction => direction === value)
 }
 
+/**
+ * What one view of a quad layout shows: a side, or a camera free to turn.
+ *
+ * `free` is the only one that orbits — an axis view exists precisely because it does NOT turn,
+ * and a top view one drag away from being an almost-top view answers no question at all. Panning
+ * and zooming stay: those move where one looks from, never the direction.
+ */
+export type PaneView = 'free' | ViewDirection
+
+export const PANE_VIEWS: readonly PaneView[] = ['free', ...VIEW_DIRECTIONS]
+
+export function isPaneView(value: string): value is PaneView {
+  return value === 'free' || isViewDirection(value)
+}
+
+/**
+ * What the four views open on: the one being flown, then the three sides a modelling package
+ * shows around it. Every one of them can be changed afterwards — two perspectives and two sides
+ * is a layout the user is entitled to.
+ */
+export const DEFAULT_PANE_VIEWS: readonly PaneView[] = ['free', 'top', 'front', 'left']
+
 /** Unit vectors, in the studio's Y-up right-handed frame: front looks down −Z, from +Z. */
 const AXES: Record<ViewDirection, [number, number, number]> = {
   front: [0, 0, 1],

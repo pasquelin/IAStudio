@@ -38,6 +38,7 @@ const setDisplayModes = vi.fn()
 const activePane = vi.fn(() => 0)
 const setSkeletons = vi.fn()
 const setQuadView = vi.fn()
+const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
@@ -68,6 +69,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     activePane = activePane
     setSkeletons = setSkeletons
     setQuadView = setQuadView
+    setPaneViews = setPaneViews
     setPlayhead = setPlayhead
     viewFrom = viewFrom
     frameSelection = frameSelection

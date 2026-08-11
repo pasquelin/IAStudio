@@ -283,6 +283,27 @@ describe('a scene told what changed', () => {
       renderer.dispose()
     })
 
+    /**
+     * The rule the user asked for in as many words: only a perspective turns. A side view exists
+     * because it does NOT — one drag away from being an almost-top view, it answers nothing.
+     */
+    it('locks the rotation of every view but the free ones', () => {
+      const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
+      renderer.setQuadView(true)
+
+      renderer.setPaneViews(['free', 'top', 'free', 'right'])
+
+      // Unmounted, the panes carry no orbit to lock; what is reachable here is that the call
+      // stands and the layout holds. The lock itself is asserted in the viewport's own suite.
+      expect(renderer.quadView()).toBe(true)
+
+      // Set again while the layout is closed: the views are remembered, nothing is placed.
+      renderer.setQuadView(false)
+      renderer.setPaneViews(['top', 'free', 'free', 'bottom'])
+      expect(renderer.quadView()).toBe(false)
+      renderer.dispose()
+    })
+
     it('takes one display mode per view, and ignores a list it already holds', () => {
       const renderer = new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn() })
       renderer.apply({ ...EMPTY_SCENE, nodes: [meshNode('box-1')] })

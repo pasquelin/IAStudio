@@ -1,4 +1,4 @@
-import { ACESFilmicToneMapping, NoToneMapping, OrthographicCamera } from 'three'
+import { ACESFilmicToneMapping, NoToneMapping, OrthographicCamera, PerspectiveCamera } from 'three'
 import type * as ThreeModule from 'three'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ViewportEngine } from './ViewportEngine'
@@ -371,6 +371,74 @@ describe('a viewport', () => {
       engine.setPaneHeight(0)
       engine.setPaneHeight(40)
       expect(side.top).toBe(20)
+    })
+
+    /** A second perspective is a layout the user may ask for, so a pane carries both cameras. */
+    it('swaps a pane between the two projections, keeping its placement', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const flat = engine.paneCameras[1]
+      if (!(flat instanceof OrthographicCamera)) throw new Error('an added view starts flat')
+      flat.position.set(1, 2, 3)
+
+      engine.setPaneProjection(1, 'perspective')
+
+      const deep = engine.paneCameras[1]
+      expect(deep).toBeInstanceOf(PerspectiveCamera)
+      expect(deep?.position.toArray()).toEqual([1, 2, 3])
+      // The orbit follows, or it would turn a camera nothing draws.
+      expect(engine.paneOrbits[1]?.object).toBe(deep)
+    })
+
+    it('leaves a pane alone when it already draws through that projection', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+      const first = engine.paneCameras[1]
+
+      engine.setPaneProjection(1, 'orthographic')
+
+      expect(engine.paneCameras[1]).toBe(first)
+    })
+
+    it('sends the main pane through the projection swap that owns the gizmo', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+
+      engine.setPaneProjection(0, 'orthographic')
+
+      expect(engine.paneCameras[0]).toBe(engine.orthographic)
+    })
+
+    it('has no projection to swap on a pane that does not exist', () => {
+      const engine = mounted()
+
+      // No quad layout, so pane 2 is nobody: the call stands rather than throwing.
+      engine.setPaneProjection(2, 'perspective')
+
+      expect(engine.paneCameras).toHaveLength(1)
+    })
+
+    it('swaps a projection on a viewport built without controls', () => {
+      const engine = mounted({ controls: 'none' })
+      engine.setLayout('quad')
+
+      engine.setPaneProjection(1, 'perspective')
+
+      expect(engine.paneCameras[1]).toBeInstanceOf(PerspectiveCamera)
+    })
+
+    it('sizes both cameras of an added view to its own quarter', () => {
+      const engine = mounted()
+      engine.setLayout('quad')
+
+      engine.setPaneProjection(1, 'perspective')
+      engine.setPaneHeight(20)
+      const deep = engine.paneCameras[1]
+      if (!(deep instanceof PerspectiveCamera)) throw new Error('the pane was set to perspective')
+
+      // A quarter of the host, so the ratio is the host's — what matters is that it was set at
+      // all: a perspective left at 1 stretches everything it draws.
+      expect(deep.aspect).toBeCloseTo(HOST_WIDTH / HOST_HEIGHT)
     })
 
     it('answers no pane for a pointer off the surface', () => {
