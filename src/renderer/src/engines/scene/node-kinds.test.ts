@@ -31,12 +31,17 @@ describe('ADD_ENTRIES', () => {
 })
 
 describe('NODE_KINDS', () => {
+  // Every leaf the panel composes from the namespace, not a chosen few. `NodeList` draws `visible`
+  // and `empty`, `NodeActions` draws `add`, `addHint`, `remove` and `removeHint`, and `node-panel`
+  // draws `noDocument` — while this list named four of the seven, so removing `meshes.visible`
+  // from both bundles left the whole suite green.
   it('names a namespace whose panel strings exist', () => {
+    const leaves = ['empty', 'noDocument', 'add', 'remove', 'visible', 'addHint', 'removeHint']
+
     for (const { namespace } of Object.values(NODE_KINDS)) {
-      expect(i18next.exists(`${namespace}.empty`)).toBe(true)
-      expect(i18next.exists(`${namespace}.noDocument`)).toBe(true)
-      expect(i18next.exists(`${namespace}.add`)).toBe(true)
-      expect(i18next.exists(`${namespace}.remove`)).toBe(true)
+      for (const leaf of leaves) {
+        expect(i18next.exists(`${namespace}.${leaf}`), `${namespace}.${leaf} is missing`).toBe(true)
+      }
     }
   })
 
