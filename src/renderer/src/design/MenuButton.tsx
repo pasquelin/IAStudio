@@ -62,16 +62,7 @@ export function MenuButton({
       />
 
       {flyout.showing && (
-        <Flyout
-          anchor={anchor}
-          role={menu ? 'menu' : undefined}
-          // Only once it was asked for: a menu the pointer crossed must not take the focus.
-          // No `menu` guard needed — `useMenuKeys` finds its rows by role and does nothing
-          // over a flyout that holds sliders.
-          onKeyClose={flyout.asked ? flyout.close : undefined}
-          onDismiss={flyout.close}
-          {...flyout.flyoutProps}
-        >
+        <Flyout anchor={anchor} role={menu ? 'menu' : undefined} {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}

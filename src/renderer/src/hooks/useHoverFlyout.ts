@@ -12,8 +12,17 @@ export type HoverFlyout = {
   asked: boolean
   /** Goes on the button's wrapper. */
   wrapProps: { onPointerEnter: () => void; onPointerLeave: () => void }
-  /** Goes on the menu itself — without it, reaching the rows closes them. */
-  flyoutProps: { onPointerEnter: () => void; onPointerLeave: () => void }
+  /**
+   * Goes on the menu itself — without it, reaching the rows closes them. It carries the menu's
+   * manners too, so every mounting gets the same ones rather than three lines of policy each:
+   * dismissal always, and the keyboard only once the menu was asked for.
+   */
+  flyoutProps: {
+    onPointerEnter: () => void
+    onPointerLeave: () => void
+    onDismiss: () => void
+    onKeyClose: (() => void) | undefined
+  }
   /** For a button whose only job is its menu: hovering is not a keyboard gesture. */
   open: () => void
   close: () => void
@@ -66,12 +75,19 @@ export function useHoverFlyout(rowCount: number): HoverFlyout {
 
   useEffect(() => cancel, [cancel])
 
+  const askedFor = hasFlyout && open && asked
+
   return {
     hasFlyout,
     showing: hasFlyout && open,
-    asked: hasFlyout && open && asked,
+    asked: askedFor,
     wrapProps: { onPointerEnter: enter, onPointerLeave: leave },
-    flyoutProps: { onPointerEnter: enter, onPointerLeave: leave },
+    flyoutProps: {
+      onPointerEnter: enter,
+      onPointerLeave: leave,
+      onDismiss: close,
+      onKeyClose: askedFor ? close : undefined,
+    },
     open: ask,
     close,
   }

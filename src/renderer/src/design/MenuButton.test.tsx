@@ -80,8 +80,8 @@ describe('MenuButton', () => {
       expect(typing).toHaveFocus()
     })
 
-    it('closes on Escape once it was asked for', async () => {
-      await userEvent.click(bar())
+    it('closes on Escape, asked for or merely hovered into', async () => {
+      await userEvent.hover(bar())
 
       await userEvent.keyboard('{Escape}')
 
@@ -99,20 +99,21 @@ describe('MenuButton', () => {
     })
 
     /**
-     * One caller's flyout holds sliders rather than rows. `useMenuKeys` finds its rows by their
-     * role, so the arrows would find none — but `Tab` would still close the panel and swallow
-     * the press, which is what makes the guard worth its line.
+     * One caller's flyout holds sliders rather than rows. The walk installs all the same and
+     * finds nothing to walk: the focus stays on the button, and `Tab` walks on into the panel
+     * rather than closing it — which is what a panel of sliders owes a keyboard.
      */
-    it('stays out of a flyout whose contents are not rows', async () => {
+    it('leaves a flyout of sliders to the ordinary tab order', async () => {
       const button = bar({
         menu: false,
         rows: () => <input type="range" aria-label="Size" />,
       })
       await userEvent.click(button)
+      expect(button).toHaveFocus()
 
       await userEvent.keyboard('{Tab}')
 
-      expect(screen.getByLabelText('Size')).toBeInTheDocument()
+      expect(screen.getByLabelText('Size')).toHaveFocus()
     })
 
     // A pointer wandering off the bar must not end a walk the keyboard is holding.

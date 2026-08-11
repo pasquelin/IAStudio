@@ -75,6 +75,22 @@ describe('AccountSelect', () => {
     )
   })
 
+  // The same mounting as the toolbar's menus, so the same manners: they come with the props
+  // `useHoverFlyout` hands the surface, not from three lines rewritten per caller.
+  it('walks its rows with the arrows, and closes on Escape', async () => {
+    given([studio, client])
+    render(<AccountSelect />)
+    await openMenu()
+
+    expect(screen.getByRole('menuitemradio', { name: /Studio/ })).toHaveFocus()
+
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitemradio', { name: /Client X/ })).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
   it('switches to the account that was picked', async () => {
     const activate = vi.fn((): Promise<AccountsResult> => Promise.resolve({ accounts: [] }))
     installFakeBridge({ accounts: { activate } })
