@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bindingOf, COMMAND_REGISTRY } from './command'
+import { bindingOf, commandFor, COMMAND_REGISTRY } from './command'
 import {
   acceleratorOf,
   DEFAULT_MOTION,
@@ -38,6 +38,37 @@ describe('signatureOf', () => {
     expect(signatureOf(event('KeyZ', { metaKey: true }))).not.toBe(
       signatureOf(event('KeyZ', { metaKey: true, shiftKey: true })),
     )
+  })
+
+  /**
+   * The keypad's Enter is its own position, and every binding is spelled `Enter`: the two
+   * commands below simply did not answer it. Folded rather than bound twice, so a remap of
+   * either one moves both.
+   */
+  it('reads the keypad Enter as the Enter it shares its meaning with', () => {
+    expect(signatureOf(event('NumpadEnter'))).toBe('Enter')
+    expect(signatureOf(event('NumpadEnter', { metaKey: true }))).toBe('Meta+Enter')
+  })
+
+  it('fires the commands bound to Enter from the keypad', () => {
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'canvas', {})).toBe('canvas.cropApply')
+    expect(commandFor(signatureOf(event('NumpadEnter', { metaKey: true })), 'graph', {})).toBe(
+      'graph.run',
+    )
+  })
+
+  it('follows a remap of Enter, having no second spelling of its own', () => {
+    const moved = { 'canvas.cropApply': 'KeyJ' }
+    expect(commandFor(signatureOf(event('NumpadEnter')), 'canvas', moved)).toBeNull()
+    expect(commandFor(signatureOf(event('KeyJ')), 'canvas', moved)).toBe('canvas.cropApply')
+  })
+
+  /**
+   * With Num Lock off this key is `End`, so a command on `Digit1` would fire on a keypress
+   * meant to move. Only keys whose meaning survives the lock are folded.
+   */
+  it('leaves the keypad digits on their own positions', () => {
+    expect(signatureOf(event('Numpad1'))).toBe('Numpad1')
   })
 })
 
