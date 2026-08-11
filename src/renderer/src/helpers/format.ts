@@ -39,6 +39,40 @@ export function formatPercent(ratio: number, language: string, fractionDigits: n
   ).format(ratio)
 }
 
+const DECIMALS = new Map<string, Intl.NumberFormat>()
+
+/**
+ * A number, written the way the reader writes one.
+ *
+ * `toFixed` is not a formatter, it is a rounder that happens to return a string — and the string
+ * it returns is always English: `0.52` where French reads `0,52`. Every number the studio drew
+ * outside this file went out that way.
+ *
+ * `least` is what a slider needs and a readout does not: a handle dragged past 1,20 must not
+ * shorten to 1,2 and back, while a coordinate of exactly 1 has no business reading 1,00.
+ *
+ * Grouped, unlike `formatPercent` right above — and it is a decision rather than a default:
+ * `1 048 576 Gio` and a scene's triangle count are read, not aimed at, and the studio already
+ * groups those through `toLocaleString`. The one place it could bite is a readout in a field
+ * sized for four characters; no slider in the registry reaches a thousand today.
+ */
+export function formatDecimal(
+  value: number,
+  language: string,
+  fractionDigits: number,
+  least: number = 0,
+): string {
+  return kept(
+    DECIMALS,
+    `decimal:${fractionDigits}:${least}:${language}`,
+    () =>
+      new Intl.NumberFormat(language, {
+        maximumFractionDigits: fractionDigits,
+        minimumFractionDigits: least,
+      }),
+  ).format(value)
+}
+
 /** The four the studio ever reaches: an asset larger than a tebibyte is not a thing it makes. */
 export type ByteUnit = 'byte' | 'kibibyte' | 'mebibyte' | 'gibibyte'
 
@@ -50,7 +84,11 @@ export const BYTE_UNITS: readonly ByteUnit[] = ['byte', 'kibibyte', 'mebibyte', 
  * The unit is named by the caller rather than written here: `Mio` and `MiB` are the same size
  * in two languages, and the abbreviations lived in this file in French only.
  */
-export function formatBytes(bytes: number, unitName: (unit: ByteUnit) => string): string {
+export function formatBytes(
+  bytes: number,
+  unitName: (unit: ByteUnit) => string,
+  language: string,
+): string {
   let value = bytes
   let unit: ByteUnit = 'byte'
 
@@ -60,6 +98,9 @@ export function formatBytes(bytes: number, unitName: (unit: ByteUnit) => string)
     unit = next
   }
 
-  const rounded = value < 10 && unit !== 'byte' ? value.toFixed(1) : Math.round(value)
-  return `${rounded} ${unitName(unit)}`
+  // One decimal below ten, none above: `1,5 Mio` says something `2 Mio` does not, and `847,3 Mio`
+  // says nothing `847 Mio` did not. Kept even when it is a zero — a download counter refreshing
+  // from `1 Gio` to `1,1 Gio` would jump a character wide under a `tabular-nums` column.
+  const digits = value < 10 && unit !== 'byte' ? 1 : 0
+  return `${formatDecimal(value, language, digits, digits)} ${unitName(unit)}`
 }

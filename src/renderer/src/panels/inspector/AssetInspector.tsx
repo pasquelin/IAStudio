@@ -55,7 +55,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
         )}
         {asset.bytes !== undefined && (
           <PropertyRow label={t('inspector.size')}>
-            {formatBytes(asset.bytes, unit => t(`units.${unit}`))}
+            {formatBytes(asset.bytes, unit => t(`units.${unit}`), i18n.language)}
           </PropertyRow>
         )}
         <PropertyRow label={t('inspector.created')}>

@@ -10,6 +10,7 @@ import {
   type SettingDescriptor,
 } from '@shared/domain/settings-registry'
 import { UiIcon } from '@/design/UiIcon'
+import { formatDecimal } from '@/helpers/format'
 import { HINT_LEFT, TIP_LEFT } from '@/helpers/tooltip'
 import { useToken } from '@/hooks/useToken'
 import { SettingLine } from './SettingLine'
@@ -186,7 +187,8 @@ function Control({
   value: SettingValue | undefined
   onChange: (value: SettingValue | undefined) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const decimals = decimalsOf(descriptor.step)
 
   switch (descriptor.kind) {
     case 'choice':
@@ -249,7 +251,9 @@ function Control({
             }}
           />
           <span className={cn(WINDOW_CAPTION, 'w-10 text-right tabular-nums')}>
-            {typeof value === 'number' ? value.toFixed(decimalsOf(descriptor.step)) : ''}
+            {typeof value === 'number'
+              ? formatDecimal(value, i18n.language, decimals, decimals)
+              : ''}
           </span>
         </div>
       )

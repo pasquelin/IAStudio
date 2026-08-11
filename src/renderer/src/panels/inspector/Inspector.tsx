@@ -143,7 +143,7 @@ function NodeSelection({ ownerId, ids }: { ownerId: string; ids: readonly string
  * for a selection of twelve is how someone regenerates the wrong thing.
  */
 function AssetSelection({ ids }: { ids: readonly string[] }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const byId = useAssets(assetsById)
 
   // Keyed rather than filtered: a selection of a handful against a catalogue of thousands was
@@ -160,7 +160,7 @@ function AssetSelection({ ids }: { ids: readonly string[] }) {
       <PropertyRow label={t('inspector.count')}>{assets.length}</PropertyRow>
       {total > 0 && (
         <PropertyRow label={t('inspector.size')}>
-          {formatBytes(total, unit => t(`units.${unit}`))}
+          {formatBytes(total, unit => t(`units.${unit}`), i18n.language)}
         </PropertyRow>
       )}
     </PropertyGroup>

@@ -19,7 +19,7 @@ import { HINT_TOP } from '@/helpers/tooltip'
  * started the session may be behind a panel, in another workspace, or scrolled past.
  */
 export function DictationStatus() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const dictation = useDictation()
 
   if (!dictation.enabled) return null
@@ -34,7 +34,7 @@ export function DictationStatus() {
   }
 
   if (dictation.state === 'modelMissing') {
-    const size = formatBytes(STT_MODEL_BYTES, unit => t(`units.${unit}`))
+    const size = formatBytes(STT_MODEL_BYTES, unit => t(`units.${unit}`), i18n.language)
     return (
       <button
         type="button"
@@ -49,7 +49,7 @@ export function DictationStatus() {
   }
 
   if (dictation.state === 'downloadingModel' && dictation.download) {
-    const bytes = (value: number) => formatBytes(value, unit => t(`units.${unit}`))
+    const bytes = (value: number) => formatBytes(value, unit => t(`units.${unit}`), i18n.language)
     const label = t('dictation.downloading', {
       done: bytes(dictation.download.received),
       total: bytes(dictation.download.total),

@@ -287,7 +287,7 @@ describe('the controls a kind brings with it', () => {
     })
     render(rowFor('appearance.fontScale'))
 
-    expect(screen.getByText('1.20')).toBeInTheDocument()
+    expect(screen.getByText('1,20')).toBeInTheDocument()
   })
 
   it('clamps to the declared maximum rather than sending a value zod would refuse', () => {

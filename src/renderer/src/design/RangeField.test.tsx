@@ -35,7 +35,7 @@ describe('RangeField', () => {
   it('reads out both ends, so a span can be written down', () => {
     renderField({ min: 0.25, max: 0.75 })
 
-    expect(screen.getByText('0.25–0.75')).toBeInTheDocument()
+    expect(screen.getByText('0,25–0,75')).toBeInTheDocument()
   })
 
   it('names each handle apart, which is all a screen reader has to tell them by', () => {
