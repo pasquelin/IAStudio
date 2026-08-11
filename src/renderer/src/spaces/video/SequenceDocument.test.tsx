@@ -21,7 +21,7 @@ vi.mock('@/engines/timeline/TimelineEngine', () => ({
     play = play
     pause = pause
     playing = vi.fn(() => false)
-    openDecoders = vi.fn(() => 0)
+    openSinks = vi.fn(() => 0)
     dispose = vi.fn()
   },
 }))

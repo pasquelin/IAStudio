@@ -4,7 +4,7 @@ import type { Us } from './timeline-state'
  * The only place microseconds meet mediabunny's float seconds.
  *
  * A consumer GPU offers two to four hardware decoders: four tracks playing without a bound is
- * the collapse this pool exists to prevent, and `openCount` is what the status bar reports.
+ * the collapse this pool exists to prevent.
  */
 export type VideoSampleLike = {
   toVideoFrame: () => VideoFrame
@@ -14,15 +14,23 @@ export type VideoSampleLike = {
 export type SinkLike = {
   getSample: (seconds: number) => Promise<VideoSampleLike | null>
   close: () => void
+  /**
+   * Whether this sink holds a hardware decoder. A still picture holds a bitmap and none, and
+   * counting it against the decoder budget evicted a rush that did need one.
+   */
+  holdsDecoder: boolean
 }
 
 export type DecoderPoolDeps = {
   open: (assetId: string) => Promise<SinkLike>
   maxDecoders: number
+  /** Pictures hold no decoder, so they answer to their own ceiling: memory, not silicon. */
+  maxPictures: number
 }
 
 export type DecoderPool = {
   frameAt: (assetId: string, time: Us) => Promise<VideoFrame | null>
+  /** Sinks held, both kinds together — decoders alone would not say what memory is spent. */
   openCount: () => number
   release: (assetId: string) => void
   dispose: () => void
@@ -36,7 +44,11 @@ export function secondsToUs(value: number): Us {
   return Math.round(value * 1_000_000)
 }
 
-export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): DecoderPool {
+export function createDecoderPool({
+  open,
+  maxDecoders,
+  maxPictures,
+}: DecoderPoolDeps): DecoderPool {
   /**
    * Insertion order is recency order: re-inserting on every use is what makes a Map an LRU.
    *
@@ -47,10 +59,25 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
    */
   const sinks = new Map<string, Promise<SinkLike>>()
   const undecodable = new Set<string>()
+  /**
+   * What has finished opening, and of those, which hold no decoder.
+   *
+   * Both are needed because a sink's kind is unknown until it settles. Counting an opening in
+   * flight against the decoders is what made a picture, slow to fetch and decode, evict the two
+   * rushes underneath it on every frame it took to arrive.
+   */
+  const settled = new Set<string>()
+  const pictures = new Set<string>()
 
   const touch = (assetId: string, opening: Promise<SinkLike>): void => {
     sinks.delete(assetId)
     sinks.set(assetId, opening)
+  }
+
+  const forget = (assetId: string): void => {
+    sinks.delete(assetId)
+    settled.delete(assetId)
+    pictures.delete(assetId)
   }
 
   /** Closes whenever it finishes opening. A failed open is `sinkFor`'s business, not ours. */
@@ -58,14 +85,33 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
     void opening.then(sink => sink.close()).catch(() => {})
   }
 
-  const evict = (): void => {
-    while (sinks.size > maxDecoders) {
-      const oldest = sinks.keys().next()
-      if (oldest.done) return
+  /**
+   * Two ceilings, because the two kinds are scarce for different reasons. Insertion order is
+   * recency order, so dropping from the front drops the least recently used of the kind.
+   *
+   * Only settled sinks are counted and dropped: one still in flight has no known kind, and
+   * evicting for it costs a reopen of something that was already there. It is bounded a moment
+   * later, when it settles and calls this again — and an evicted opening was closed on arrival
+   * either way, so nothing is held longer than before.
+   */
+  const evict = (keep?: string): void => {
+    const counted = (assetId: string): boolean => settled.has(assetId) && assetId !== keep
+    dropOldest(id => counted(id) && !pictures.has(id), decoders() - maxDecoders)
+    dropOldest(id => counted(id) && pictures.has(id), pictures.size - maxPictures)
+  }
 
-      const opening = sinks.get(oldest.value)
-      sinks.delete(oldest.value)
+  const decoders = (): number => settled.size - pictures.size
+
+  const dropOldest = (counted: (assetId: string) => boolean, over: number): void => {
+    let left = over
+    for (const assetId of [...sinks.keys()]) {
+      if (left <= 0) return
+      if (!counted(assetId)) continue
+
+      const opening = sinks.get(assetId)
+      forget(assetId)
       if (opening) closeLater(opening)
+      left -= 1
     }
   }
 
@@ -81,11 +127,19 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
     }
 
     try {
-      return await opening
+      const sink = await opening
+      // The kind is known only here, and `keep` spares this one: the caller is about to draw it,
+      // and handing back a sink this very call had closed would blank the track for a frame.
+      if (sinks.has(assetId)) {
+        settled.add(assetId)
+        if (!sink.holdsDecoder) pictures.add(assetId)
+        evict(assetId)
+      }
+      return sink
     } catch {
       // Remembered, not retried: reopening a broken asset sixty times a second is a stutter,
       // and the clip shows a placeholder either way.
-      sinks.delete(assetId)
+      forget(assetId)
       undecodable.add(assetId)
       return null
     }
@@ -115,7 +169,7 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
 
     release: assetId => {
       const opening = sinks.get(assetId)
-      sinks.delete(assetId)
+      forget(assetId)
       if (opening) closeLater(opening)
       undecodable.delete(assetId)
     },
@@ -123,6 +177,8 @@ export function createDecoderPool({ open, maxDecoders }: DecoderPoolDeps): Decod
     dispose: () => {
       for (const opening of sinks.values()) closeLater(opening)
       sinks.clear()
+      settled.clear()
+      pictures.clear()
       undecodable.clear()
     },
   }

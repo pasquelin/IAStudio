@@ -551,6 +551,18 @@ de quoi l'arrêter, et l'acquisition suivante coupe le précédent. Deux lecteur
 scrubbing se met à saccader sans raison visible. La timeline et la forme d'onde de l'espace Audio
 le prennent tous les deux au même endroit.
 
+**Ce qu'un moniteur affiche vient d'un sink, et le sink est choisi par le moteur.**
+`engines/timeline/sink-port.ts` ouvre un `VideoSampleSink` mediabunny là où l'asset porte une piste
+vidéo, et un sink d'image fixe partout ailleurs — celui-ci rend la même frame à toute position, une
+image n'ayant pas de temps à elle. `TimelineEngine.seek` ignore la différence : il demande une
+frame et en reçoit une.
+
+Les sinks ouverts sont bornés par le `DecoderPool`, une LRU par moteur, et il tient **deux
+plafonds plutôt qu'un** — parce que les deux genres sont rares pour des raisons différentes. Un
+sink vidéo occupe un décodeur matériel, dont un GPU grand public n'offre que deux à quatre ; un
+sink d'image n'en tient aucun, il tient un bitmap, et répond donc à un plafond de mémoire.
+Confondre les deux faisait évincer un rush pour un logo posé au-dessus.
+
 ---
 
 ## Une génération, de bout en bout

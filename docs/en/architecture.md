@@ -531,6 +531,18 @@ the means to stop, and the next acquisition cuts the previous one off. Two activ
 scrubbing starts stuttering for no visible reason. The timeline and the Audio workspace's waveform
 both take it from the same place.
 
+**What a monitor shows comes from a sink, and the engine picks which one.**
+`engines/timeline/sink-port.ts` opens a mediabunny `VideoSampleSink` where the asset carries a
+video track, and a still-picture sink everywhere else — that one answers the same frame at every
+position, a picture having no time of its own. `TimelineEngine.seek` never sees the difference: it
+asks for a frame and gets one.
+
+Open sinks are bounded by the `DecoderPool`, one LRU per engine, and it holds **two ceilings
+rather than one** — because the two kinds are scarce for different reasons. A video sink takes a
+hardware decoder, of which a consumer GPU offers only two to four; a still sink takes none, it
+holds a bitmap, and so answers to a memory ceiling instead. Conflating the two evicted a rush for
+a logo laid over it.
+
 ---
 
 ## Generation, end to end
