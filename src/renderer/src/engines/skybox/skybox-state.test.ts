@@ -51,11 +51,11 @@ describe('reading a sky back', () => {
   })
 
   /*
-   * `#fff` is a colour to three.js and not to the picker, which answers `#000000` for it. Held in
-   * state, it would put three answers on screen for one value: a black swatch, the raw string in
-   * the text beside it, and a white sun. The default is the only one of the three that is true.
+   * Two classes, and only the second is a defect on its own: `#fff` renders and the control
+   * normalises it, so refusing it buys one spelling rather than two; `banana` is the one three.js
+   * refuses, where the sun silently keeps the colour it already had.
    */
-  it('takes the stored default for a sun colour the picker could not show', () => {
+  it('takes the stored default for a sun colour this studio would not have written', () => {
     expect(parseSkybox({ sun: { color: '#fff' } }).sun.color).toBe(DEFAULT_SUN.color)
     expect(parseSkybox({ sun: { color: 'banana' } }).sun.color).toBe(DEFAULT_SUN.color)
   })

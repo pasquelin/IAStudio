@@ -1,13 +1,18 @@
 import { readString } from '../guards'
 
 /**
- * A colour as this studio writes them, and the only shape it can be trusted about: `#rrggbb`.
+ * A colour as this studio writes them: `#rrggbb`, what `<input type="color">` reports and the
+ * only notation any of its own code has ever stored.
  *
- * The reason is the control, not three.js. `Color.set` honours `red`, `rgb(255,0,0)` and `#fff`
- * without a word — measured — while `<input type="color">` coerces every one of them to
- * `#000000`. A document holding one of those opens on three disagreeing answers: the swatch of
- * `ColorField` shows black, the text beside it shows the raw string, and the render shows the
- * colour three understood. Six digits is what makes those three agree.
+ * The shape is a consistency rule, not a rescue — and the difference matters, because two
+ * plausible rescues were measured and neither holds. three.js renders `red`, `rgb(255,0,0)`,
+ * `hsl(0,100%,50%)` and `#fff` without a word; Chromium 150 normalises all four to `#rrggbb` in
+ * the swatch. What the shape buys is that the file, the control and the render carry the SAME
+ * string, and that documents obey the rule `main/settings/validation.ts` already imposed on the
+ * accent — where six digits are load-bearing, `tokenAsHex` reading `#fff` as `0xfff`.
+ *
+ * What it also catches is the class three.js refuses outright — `banana`, `ffffff`, `#ff00` — for
+ * which `Color.set` logs and leaves the material at its previous colour, silently.
  */
 export const HEX_COLOR = /^#[0-9a-f]{6}$/i
 

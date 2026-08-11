@@ -8,18 +8,20 @@ describe('readColor', () => {
   })
 
   /*
-   * These four are colours to three.js — `red`, `rgb()` and `#fff` all render — and none of them
-   * survives `<input type="color">`, which answers `#000000` for each. Refusing them is what
-   * keeps the swatch, the text beside it and the render saying the same thing.
+   * All four render, and Chromium normalises all four in the swatch — measured, and it is why
+   * this is a consistency rule rather than a rescue. Refused so that the file, the control and
+   * the render carry one spelling: `red` in state against `#ff0000` in the control is one colour
+   * under two strings, and nothing downstream compares them as colours.
    */
-  it('refuses a colour the picker could not show', () => {
+  it('refuses a colour written in another notation', () => {
     expect(readColor({ color: '#fff' }, 'color', '#ffffff')).toBe('#ffffff')
     expect(readColor({ color: 'red' }, 'color', '#ffffff')).toBe('#ffffff')
     expect(readColor({ color: 'rgb(255,0,0)' }, 'color', '#ffffff')).toBe('#ffffff')
     expect(readColor({ color: 'hsl(0,100%,50%)' }, 'color', '#ffffff')).toBe('#ffffff')
   })
 
-  // And the ones three.js refuses too, where it logs and leaves the material as it was.
+  // The class three.js refuses outright: `Color.set` logs and leaves the material at whatever
+  // colour it already had, which is the one case with nothing on screen to report it.
   it('refuses a string that is no colour to anyone', () => {
     expect(readColor({ color: 'banana' }, 'color', '#ffffff')).toBe('#ffffff')
     expect(readColor({ color: 'ffffff' }, 'color', '#ffffff')).toBe('#ffffff')
@@ -42,11 +44,27 @@ describe('readColor', () => {
 })
 
 describe('HEX_COLOR', () => {
-  // The shape is read by zod in the main process as well as by the readers here, and a `g` or a
-  // missing anchor would widen both at once.
-  it('anchors both ends, so a colour cannot merely contain one', () => {
+  /*
+   * Both ends, and each end needs its own case: every string that fails the tail also fails the
+   * head, so a test built on trailing rubbish alone leaves `^` free to be dropped. It was — the
+   * first version of this file asserted `'#ffcc88 and more'` and `'rgb(#ffcc88)'`, and removing
+   * `^` kept all 7036 tests green.
+   */
+  it('refuses a colour with anything BEFORE it', () => {
+    expect(HEX_COLOR.test('url(#ff0000')).toBe(false)
+    expect(HEX_COLOR.test(' #ff0000')).toBe(false)
+    expect(HEX_COLOR.test('red#ff0000')).toBe(false)
+    expect(HEX_COLOR.test('\n#ff0000')).toBe(false)
+  })
+
+  it('refuses a colour with anything AFTER it', () => {
     expect(HEX_COLOR.test('#ffcc88 and more')).toBe(false)
-    expect(HEX_COLOR.test('rgb(#ffcc88)')).toBe(false)
+    expect(HEX_COLOR.test('#ffcc8899')).toBe(false)
+  })
+
+  // The shape is read by zod in the main process as well as by the readers here: a `g` would
+  // widen both at once, and asymmetrically — only the second call of each pair.
+  it('carries no flag but case-insensitivity', () => {
     expect(HEX_COLOR.flags).toBe('i')
   })
 })
