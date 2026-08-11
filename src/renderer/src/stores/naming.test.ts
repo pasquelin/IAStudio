@@ -18,6 +18,13 @@ const EXPORTED = /^export (?:const|function|type|let) (\w+)/gm
 const exportsOf = (source: string): string[] =>
   [...source.matchAll(EXPORTED)].map(match => match[1] ?? '')
 
+const bareNodeExports = (sources: Record<string, string>): string[] =>
+  Object.entries(sources).flatMap(([path, source]) =>
+    exportsOf(source)
+      .filter(name => name.startsWith('node'))
+      .map(name => `${path}: ${name}`),
+  )
+
 /**
  * `node` is the word of TWO domains here, and each store publishes its own reader of one:
  * `nodeById` exists for a scene (`engines/scene/scene-state.ts`) and for a graph
@@ -31,13 +38,18 @@ const exportsOf = (source: string): string[] =>
  */
 describe('what a store exports about a node', () => {
   it('names the domain the node belongs to', () => {
-    const bare = Object.entries(STORES).flatMap(([path, source]) =>
-      exportsOf(source)
-        .filter(name => name.startsWith('node'))
-        .map(name => `${path}: ${name}`),
-    )
+    expect(bareNodeExports(STORES)).toEqual([])
+  })
 
-    expect(bare).toEqual([])
+  /*
+   * The rule proven on a name that breaks it, and it is not ceremony: asserting only that nothing
+   * was found lets the predicate itself rot — narrow it to a word no file carries and the empty
+   * list still comes back green. This is the case that makes the emptiness above mean something.
+   */
+  it('would say so of a store that broke it', () => {
+    const offender = { './zz.ts': 'export const nodeIn = 1\nexport const graphNodeIn = 2\n' }
+
+    expect(bareNodeExports(offender)).toEqual(['./zz.ts: nodeIn'])
   })
 
   /*
