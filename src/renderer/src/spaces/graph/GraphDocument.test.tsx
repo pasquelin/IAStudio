@@ -164,7 +164,7 @@ describe('a graph as a document', () => {
 
     it('sends the same to the publication', () => {
       const publish = vi.fn((_graph: GraphState, _name: string): Promise<GraphPublishResult> =>
-        Promise.resolve({ ok: false, problem: 'empty' }),
+        Promise.resolve({ ok: false, problem: 'empty', nodes: [] }),
       )
       installFakeBridge({ workflows: { publish } })
       withOneNode()
@@ -194,11 +194,77 @@ describe('a graph as a document', () => {
       expect(await screen.findByText('Publié sur Scenario')).toBeInTheDocument()
     })
 
+    /**
+     * A verdict is kept beside the graph it judged, so a stale one can be dropped by derivation.
+     * Only a REFUSAL goes stale: it names nodes of a graph the user has since changed. A success
+     * names a workflow that now EXISTS on the account, and this line is its only trace anywhere —
+     * dropping it because a node moved a pixel would erase the record of a write.
+     */
+    it('keeps saying it published after the graph is edited', async () => {
+      installFakeBridge({
+        workflows: {
+          publish: (): Promise<GraphPublishResult> =>
+            Promise.resolve({ ok: true, workflowId: 'workflow_1' }),
+        },
+      })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
+      expect(await screen.findByText('Publié sur Scenario')).toBeInTheDocument()
+
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode({ ...text, id: 'text2' })))
+
+      expect(screen.getByText('Publié sur Scenario')).toBeInTheDocument()
+    })
+
+    it('drops a refusal once the graph it was about has changed', async () => {
+      installFakeBridge({
+        workflows: {
+          publish: (): Promise<GraphPublishResult> =>
+            Promise.resolve({ ok: false, problem: 'refused', nodes: [] }),
+        },
+      })
+      withOneNode()
+
+      render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
+      expect(await screen.findByText(/Scenario l’a refusé/)).toBeInTheDocument()
+
+      act(() => useGraphs.getState().runCommand(DOCUMENT, addGraphNode({ ...text, id: 'text2' })))
+
+      expect(screen.queryByText(/Scenario l’a refusé/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * The line says WHICH refusal, the nodes say WHERE — and they must be the SAME refusal. The
+     * publication takes the line while there is one, so it has to take the paint with it, or the
+     * canvas rings a set of nodes the sentence beside them is not about.
+     */
+    it('rings the nodes the publication refused, not the compile’s', async () => {
+      installFakeBridge({
+        workflows: {
+          publish: (): Promise<GraphPublishResult> =>
+            Promise.resolve({ ok: false, problem: 'loop-two-ends', nodes: ['text1'] }),
+        },
+      })
+      withOneNode()
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Publier sur Scenario' }))
+      await screen.findByText('Deux fins ferment la même boucle')
+
+      expect(canvasNode(container, 'text1')?.querySelector('[role="img"]')).toHaveAttribute(
+        'aria-label',
+        'Le refus porte sur ce nœud',
+      )
+    })
+
     it('says on the canvas that Scenario refused it', async () => {
       installFakeBridge({
         workflows: {
           publish: (): Promise<GraphPublishResult> =>
-            Promise.resolve({ ok: false, problem: 'refused' }),
+            Promise.resolve({ ok: false, problem: 'refused', nodes: [] }),
         },
       })
       withOneNode()

@@ -29,7 +29,7 @@ import {
 } from './adapter'
 import { GRAPH_NODE_TYPES } from './GraphNodes'
 import { GraphMenu } from './GraphMenu'
-import { GraphStatus, useGraphCompile } from './GraphStatus'
+import { GraphStatus, shownVerdict, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
 import { NodeDecisionProvider } from './node-decision'
 import { ViewportBridge } from './ViewportBridge'
@@ -152,9 +152,18 @@ export function GraphCanvas({
 
   const compiled = useGraphCompile(graph)
 
+  // Painted from the verdict the STATUS LINE is showing — its own rule, asked rather than
+  // repeated: a set of nodes ringed under a sentence that is not about them is the one failure
+  // this whole lot exists to prevent.
+  const shown = shownVerdict(compiled, published)
+
+  // A new Set per verdict, never per frame: `canvasNodesOf` hands a node back by reference when
+  // nothing about it moved, and a fresh Set on every render would defeat that.
+  const problems = useMemo(() => new Set(shown && !shown.ok ? shown.nodes : []), [shown])
+
   const nodes = useMemo(
-    () => canvasNodesOf(graph, selectedNodes, runs),
-    [graph, selectedNodes, runs],
+    () => canvasNodesOf(graph, selectedNodes, runs, problems),
+    [graph, selectedNodes, runs, problems],
   )
   const edges = useMemo(() => toCanvasEdges(graph, selectedEdges), [graph, selectedEdges])
 

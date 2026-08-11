@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Connection } from '@xyflow/react'
 import type { CommandId } from '@shared/domain/command'
-import type { GraphPublishResult } from '@shared/domain/graph'
+import type { GraphPublishResult, GraphState } from '@shared/domain/graph'
 import { isRunnable, type GraphPosition } from '@shared/domain/graph'
 import {
   addGraphNode,
@@ -42,7 +42,19 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const canExport = graph.nodes.length > 0
   // Held here rather than in the bar: a write on the account must leave a mark on the screen, and
   // the canvas already has the one line that says what the graph would export.
-  const [published, setPublished] = useState<GraphPublishResult | null>(null)
+  /**
+   * The publication's verdict, WITH the graph it was given — so a stale one can be dropped by
+   * derivation rather than by an effect writing state, which the lint refuses and rightly.
+   *
+   * Only a REFUSAL goes stale, and that is the whole distinction: it names nodes of a graph the
+   * user has since changed, and painting them would accuse the wrong ones. A success names a
+   * workflow that now exists on the account — moving a node one pixel does not un-create it, and
+   * this line is the only trace of that write anywhere on the screen.
+   */
+  const [published, setPublished] = useState<{
+    of: GraphState
+    result: GraphPublishResult
+  } | null>(null)
   /**
    * Held here, not in the global selection: that one carries a single kind at a time, so clicking
    * a thumbnail in the asset shelf — which shares this space's screen — would unhighlight the node
@@ -226,15 +238,15 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   }, [documentId, graph, title])
 
   /**
-   * The graph as an App of the account. Nothing is painted on the way back yet — the code the
-   * publication answers with is the compile's own vocabulary, and where it goes on the screen is
-   * the same question the compile already asks; the journal carries the API's sentence meanwhile.
+   * The graph as an App of the account. The code it answers with is the compile's own vocabulary,
+   * so it is painted the same way: the status line says which refusal, and the nodes it names are
+   * ringed on the canvas. The journal carries the API's own sentence meanwhile.
    */
   const onPublish = useCallback(() => {
     setPublished(null)
     void getBridge()
       ?.workflows.publish(graph, title)
-      .then(setPublished)
+      .then(result => setPublished({ of: graph, result }))
       .catch(error => reportFailure('graph.publish', documentId, error))
   }, [documentId, graph, title])
 
@@ -306,7 +318,9 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onPublish={onPublish}
       onImport={onImport}
       canImport={!running}
-      published={published}
+      published={
+        published && (published.result.ok || published.of === graph) ? published.result : null
+      }
       runs={runs}
       running={running}
     />

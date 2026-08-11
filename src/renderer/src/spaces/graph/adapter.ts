@@ -23,15 +23,27 @@ export type CanvasNode = Node<Record<string, unknown>>
  */
 export const RUN_STATE_KEY = 'runState'
 
+/**
+ * Where "the compiler refuses BECAUSE of this node" rides down, beside the run state and never
+ * inside it: a refusal is not a failed run — nothing has run — and folding it into `GraphNodeRun`
+ * would paint a node red under a status it never reached.
+ *
+ * Written on every node, a sticky note included, though a note can never be named by one: it
+ * compiles to nothing, so no refusal reaches it. A key that appears and disappears is a key every
+ * reader has to guard, and the note draws its own shell rather than `NodeShell`.
+ */
+export const PROBLEM_KEY = 'compileProblem'
+
 const canvasNodeOf = (
   node: GraphNode,
   selected: boolean,
   run: GraphNodeRun | undefined,
+  problem: boolean,
 ): CanvasNode => ({
   id: node.id,
   type: node.type,
   position: node.position,
-  data: { ...node.data, [RUN_STATE_KEY]: run },
+  data: { ...node.data, [RUN_STATE_KEY]: run, [PROBLEM_KEY]: problem },
   selected,
   ...(node.width === undefined ? {} : { width: node.width }),
   ...(node.height === undefined ? {} : { height: node.height }),
@@ -45,7 +57,7 @@ const canvasNodeOf = (
  */
 const CACHE = new WeakMap<
   GraphNode,
-  { selected: boolean; run: GraphNodeRun | undefined; canvas: CanvasNode }
+  { selected: boolean; run: GraphNodeRun | undefined; problem: boolean; canvas: CanvasNode }
 >()
 
 /**
@@ -63,15 +75,23 @@ export function canvasNodesOf(
   graph: GraphState,
   selected: ReadonlySet<string>,
   runs: Readonly<Record<string, GraphNodeRun>> = {},
+  problems: ReadonlySet<string> = new Set(),
 ): CanvasNode[] {
   return graph.nodes.map(node => {
     const isSelected = selected.has(node.id)
     const run = runs[node.id]
+    const problem = problems.has(node.id)
     const cached = CACHE.get(node)
-    if (cached && cached.selected === isSelected && cached.run === run) return cached.canvas
+    if (
+      cached &&
+      cached.selected === isSelected &&
+      cached.run === run &&
+      cached.problem === problem
+    )
+      return cached.canvas
 
-    const canvas = canvasNodeOf(node, isSelected, run)
-    CACHE.set(node, { selected: isSelected, run, canvas })
+    const canvas = canvasNodeOf(node, isSelected, run, problem)
+    CACHE.set(node, { selected: isSelected, run, problem, canvas })
     return canvas
   })
 }

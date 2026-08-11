@@ -10,8 +10,8 @@ import type { GraphEdge, GraphNode, GraphState } from '@shared/domain/graph'
 import {
   namedLoopId,
   outputNodesOf,
-  type GraphCompileProblem,
   type GraphCompileResult,
+  type GraphRefusal,
 } from '@shared/domain/graph'
 import { messageOf } from '@shared/guards'
 import type { ScenarioInput } from './schema'
@@ -235,6 +235,24 @@ function reachedFrom(
 }
 
 /**
+ * The ends to blame for that loop: the one the converter RETAINS, plus every read end that is not
+ * it. In node order, so the retained one comes first.
+ *
+ * Not every end naming the loop — a spare end NOTHING reads misroutes nothing, which the block
+ * below says in as many words, and painting it would send the user to delete a node that is not
+ * the fault. `index === 0` is the retained one: `firstEnd` is filled in this very order.
+ */
+const endsToBlame = (
+  graph: GraphState,
+  named: string,
+  read: ReadonlySet<string>,
+): readonly string[] =>
+  graph.nodes
+    .filter(node => namedLoopId(node) === named)
+    .map(node => node.id)
+    .filter((id, index) => index === 0 || read.has(id))
+
+/**
  * How a loop and its end can be paired so the converter reads a WIRE differently from the screen.
  *
  * **Neither of the two is refused by `validateWorkflowFlow`**, which is the whole reason this
@@ -252,7 +270,7 @@ function reachedFrom(
  * - an end naming a node the graph no longer holds: the lookup answers nothing and the wire is
  *   simply dropped, which is the same as drawing no wire.
  */
-function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-ends' | undefined {
+function loopPairingProblem(graph: GraphState): GraphRefusal | undefined {
   const consumers = consumersByProvider(graph)
   const read: { end: string; names: string }[] = []
   const firstEnd = new Map<string, string>()
@@ -286,19 +304,31 @@ function loopPairingProblem(graph: GraphState): 'loop-end-outside' | 'loop-two-e
    */
   for (const entry of read) {
     if (!loops.has(entry.names)) continue
-    if (firstEnd.get(entry.names) !== entry.end) return 'loop-two-ends'
+    // EVERY end naming that loop, in node order — so the kept one comes first. The fault is the
+    // PAIR: shown only the spare, a user cannot see which of the two the converter will obey.
+    // Read off the nodes rather than off `firstEnd`, whose `get` can only be `undefined` on a
+    // branch nothing can reach — and an unreachable branch is one no test can ever cover.
+    if (firstEnd.get(entry.names) !== entry.end)
+      return {
+        problem: 'loop-two-ends',
+        nodes: endsToBlame(graph, entry.names, new Set(read.map(other => other.end))),
+      }
   }
 
   // An end that does not close what it names, either because that is no loop at all or because the
   // end is not downstream of it. Measured both ways: the wire leaving it lands on the named node
   // instead of its own provider, or is dropped and the reader falls back to its form.
-  for (const entry of read) {
-    if (!graph.nodes.some(node => node.id === entry.names)) continue
+  // ALL of them, not the first found: stopping at one sends the user round the same hunt for every
+  // misplaced end a file carries, one four-hundred-millisecond debounce at a time.
+  const misplaced = read
+    .filter(entry => graph.nodes.some(node => node.id === entry.names))
     // Reachability alone, and NOT "is the named node a loop": the harness showed the second test
     // never firing on its own. An end downstream of what it names resolves to it either way, loop
     // or not — and an end that is not downstream is misrouted whatever it named.
-    if (!reachedFrom(consumers, entry.names).has(entry.end)) return 'loop-end-outside'
-  }
+    .filter(entry => !reachedFrom(consumers, entry.names).has(entry.end))
+    .map(entry => entry.end)
+
+  if (misplaced.length > 0) return { problem: 'loop-end-outside', nodes: misplaced }
 
   return undefined
 }
@@ -316,9 +346,10 @@ export function refuseFlow(
   graph: GraphState,
   flow: readonly WorkflowEditorFlowItem[],
   report: (message: string) => void,
-): GraphCompileProblem | null {
-  // "Nothing is marked as an output" is the one cause of an empty flow the user can act on.
-  if (outputNodesOf(graph).length === 0) return 'no-output'
+): GraphRefusal | null {
+  // "Nothing is marked as an output" is the one cause of an empty flow the user can act on, and
+  // the one refusal with no node to point at: what is wrong is that NO node carries the mark.
+  if (outputNodesOf(graph).length === 0) return { problem: 'no-output', nodes: [] }
 
   // Before anything read off the flow, because the conversion is exactly what hides it: these
   // graphs convert and validate without a word, and the flow that comes out has a wire the graph
@@ -326,7 +357,10 @@ export function refuseFlow(
   const pairing = loopPairingProblem(graph)
   if (pairing) return pairing
 
-  if (flow.length === 0) return 'empty'
+  // The marked outputs, which are where to look: they are marked and the flow still came back
+  // empty, so nothing reaches them.
+  if (flow.length === 0)
+    return { problem: 'empty', nodes: outputNodesOf(graph).map(node => node.id) }
 
   try {
     // Copied because the validator takes a mutable array. It reads only — checked in
@@ -337,7 +371,8 @@ export function refuseFlow(
     // The sentence names a node and what is wrong with it, which is worth keeping — in the
     // journal, where a developer reads it. The screen gets the code.
     report(messageOf(error))
-    return 'invalid'
+    // The sentence names the node; parsing English prose to find it would break on its wording.
+    return { problem: 'invalid', nodes: [] }
   }
 
   return null
@@ -354,5 +389,5 @@ export function compileGraph(
   const flow = toEditorFlow(graph, getModel)
   const problem = refuseFlow(graph, flow, report)
 
-  return problem ? { ok: false, problem } : { ok: true, steps: flow.length }
+  return problem ? { ok: false, ...problem } : { ok: true, steps: flow.length }
 }

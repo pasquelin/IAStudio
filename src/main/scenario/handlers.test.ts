@@ -630,6 +630,8 @@ describe('scenario handlers', () => {
       await expect(invoke(CHANNELS.workflowsPublish, withInput, 'Heroes')).resolves.toEqual({
         ok: false,
         problem: 'no-output',
+        // Nothing to point at, and that IS the refusal: no node carries the mark.
+        nodes: [],
       })
       expect(create).not.toHaveBeenCalled()
     })

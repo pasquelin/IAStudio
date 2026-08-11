@@ -248,6 +248,13 @@ It does not carry the file name. It carries the **seven workspaces**:
 > and a wire ends up plugged somewhere other than where it is drawn. The studio refuses them
 > itself, because nothing else would say so.
 >
+> **And the refusal shows WHERE.** The nodes at fault are ringed in red on the canvas, with a
+> warning pip reading "the refusal is about this node" — the line says *what*, the nodes say
+> *where*. Two refusals have nobody to point at, and that is right: *no output marked* is an
+> absence, and *the graph does not compile* comes from Scenario's validator, whose sentence names
+> the node in English, in the journal. Selecting a ringed node gives it back its selection border;
+> the pip stays.
+>
 > **Stop hands control back at once**, without waiting for the API to answer on the generations
 > already sent. They are told to cancel, but the run does not stay parked on their answer: the
 > button turns back to **Run** the moment you press it, even if the service never says another

@@ -257,6 +257,13 @@ Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** 
 > Scenario — et pourtant un fil s'y retrouve branché ailleurs que là où il est dessiné. Le studio
 > les refuse lui-même, parce que personne d'autre ne le dirait.
 >
+> **Et le refus montre OÙ.** Les nœuds en cause sont cerclés de rouge sur la toile, avec une
+> pastille d'alerte qui dit « le refus porte sur ce nœud » — la ligne dit *quoi*, les nœuds disent
+> *où*. Deux refus n'ont personne à montrer, et c'est normal : *aucune sortie marquée* est une
+> absence, et *le graphe ne compile pas* vient du validateur de Scenario, dont la phrase nomme le
+> nœud en anglais, dans le journal. Sélectionner un nœud cerclé lui rend sa bordure de sélection ;
+> la pastille, elle, reste.
+>
 > **Arrêter rend la main tout de suite**, sans attendre que l’API réponde sur les générations
 > déjà lancées. L’annulation leur est bien envoyée, mais l’exécution ne reste pas suspendue à
 > leur réponse : le bouton redevient **Exécuter** dès la pression, y compris si le service ne

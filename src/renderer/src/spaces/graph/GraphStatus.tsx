@@ -85,12 +85,29 @@ function StatusLine({ ok, children }: { ok: boolean; children: ReactNode }) {
  * wiring rather than as a 400 at the far end of an export. Nothing is sent anywhere yet — the
  * export lands with step 9 — so what it buys today is the refusals a user cannot guess: "nothing
  * is marked as an output", and the two about a loop and its end, which no other source can emit
- * at all. `validateWorkflowFlow` accepts those two graphs, and this line is their only channel.
+ * at all — `validateWorkflowFlow` accepts those two graphs without a word.
+ *
+ * No longer their ONLY channel: a refusal also names the nodes at fault, which the canvas paints
+ * and each blamed node says in words. This line says WHICH refusal; the nodes say WHERE. The two
+ * must therefore show one verdict and not two, which is why `GraphCanvas` paints from whichever
+ * of the two this component is about to render.
  *
  * `published` takes the line over when there is one, and it is deliberate: a publication is a
  * WRITE on the user's account, and the one thing it must never be is silent. It stays until the
- * next attempt rather than fading, so a refusal cannot be missed by looking away.
+ * graph itself changes — `GraphDocument` keeps it beside the graph it judged — rather than
+ * fading, so a refusal cannot be missed by looking away.
  */
+/**
+ * Which of the two verdicts the screen is about — the publication's while there is one.
+ *
+ * Exported because the CANVAS paints from it: said once here and once there, the two would drift,
+ * and a drift means nodes ringed in red under a sentence that is not about them.
+ */
+export const shownVerdict = (
+  result: GraphCompileResult | null,
+  published: GraphPublishResult | null | undefined,
+): GraphCompileResult | GraphPublishResult | null => published ?? result
+
 export function GraphStatus({
   result,
   published,
@@ -100,21 +117,22 @@ export function GraphStatus({
 }) {
   const { t } = useTranslation()
 
-  if (published) {
-    const said = published.ok
-      ? t('graphPublish.done')
-      : published.problem === 'refused'
-        ? t('graphPublish.refused')
-        : t(`graphCompile.problem.${published.problem}`)
+  // Through the very rule the canvas paints by, rather than beside it.
+  const shown = shownVerdict(result, published)
 
-    return <StatusLine ok={published.ok}>{said}</StatusLine>
+  if (!shown) return null
+  if (shown.ok) {
+    // A publication says it published; a compile counts what it would send.
+    const done =
+      'steps' in shown ? t('graphCompile.steps', { count: shown.steps }) : t('graphPublish.done')
+
+    return <StatusLine ok>{done}</StatusLine>
   }
 
-  if (!result) return null
+  const said =
+    shown.problem === 'refused'
+      ? t('graphPublish.refused')
+      : t(`graphCompile.problem.${shown.problem}`)
 
-  const label = result.ok
-    ? t('graphCompile.steps', { count: result.steps })
-    : t(`graphCompile.problem.${result.problem}`)
-
-  return <StatusLine ok={result.ok}>{label}</StatusLine>
+  return <StatusLine ok={false}>{said}</StatusLine>
 }

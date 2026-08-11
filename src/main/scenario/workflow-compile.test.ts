@@ -91,11 +91,18 @@ describe('the refusal a compile and a publication share', () => {
   const oneStep = toEditorFlow(graphOf([output]))
 
   it('names the output nobody marked, whatever the flow holds', () => {
-    expect(refuseFlow(graphOf([modelNode('m1', false)]), oneStep, vi.fn())).toBe('no-output')
+    expect(refuseFlow(graphOf([modelNode('m1', false)]), oneStep, vi.fn())).toEqual({
+      problem: 'no-output',
+      nodes: [],
+    })
   })
 
   it('names an empty flow on a graph that does have an output', () => {
-    expect(refuseFlow(graphOf([output]), [], vi.fn())).toBe('empty')
+    // The marked output IS the node to look at: it is marked, and nothing reaches it.
+    expect(refuseFlow(graphOf([output]), [], vi.fn())).toEqual({
+      problem: 'empty',
+      nodes: ['m1'],
+    })
   })
 
   it('accepts a flow the validator does not refuse', () => {
@@ -106,7 +113,11 @@ describe('the refusal a compile and a publication share', () => {
   it('journals the validator’s sentence and answers a code', () => {
     const report = vi.fn()
 
-    expect(refuseFlow(graphOf([output]), [{ id: 'm1', type: 'nonsense' }], report)).toBe('invalid')
+    // No node named: the validator's sentence names one, in English prose nothing here parses.
+    expect(refuseFlow(graphOf([output]), [{ id: 'm1', type: 'nonsense' }], report)).toEqual({
+      problem: 'invalid',
+      nodes: [],
+    })
     expect(report).toHaveBeenCalled()
   })
 })
@@ -543,7 +554,7 @@ describe('what a graph is refused for', () => {
       [wire('m1', 'prompt', 'text1', 'prompt')],
     )
 
-    expect(compile(graph).result).toEqual({ ok: false, problem: 'no-output' })
+    expect(compile(graph).result).toEqual({ ok: false, problem: 'no-output', nodes: [] })
   })
 
   /**
@@ -558,13 +569,17 @@ describe('what a graph is refused for', () => {
       data: { value: 'a knight', isOutput: true },
     }
 
-    expect(compile(graphOf([marked])).result).toEqual({ ok: false, problem: 'no-output' })
+    expect(compile(graphOf([marked])).result).toEqual({
+      ok: false,
+      problem: 'no-output',
+      nodes: [],
+    })
   })
 
   it('refuses a generator with no model, and says why in the journal', () => {
     const { result, report } = compile(graphOf([modelNode('m1', true, null)]))
 
-    expect(result).toEqual({ ok: false, problem: 'invalid' })
+    expect(result).toEqual({ ok: false, problem: 'invalid', nodes: [] })
     // The sentence is the SDK's own English, written for whoever calls it. It belongs in the
     // journal; the screen gets the code beside it.
     expect(report).toHaveBeenCalledWith(expect.stringContaining('modelId'))
@@ -584,7 +599,11 @@ describe('what a graph is refused for', () => {
       data: { isOutput: true },
     }
 
-    expect(compile(graphOf([end])).result).toEqual({ ok: false, problem: 'empty' })
+    expect(compile(graphOf([end])).result).toEqual({
+      ok: false,
+      problem: 'empty',
+      nodes: ['forEachEnd1'],
+    })
   })
 
   it('says nothing to the journal about a graph that compiles', () => {
@@ -674,7 +693,11 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
       ],
     )
 
-    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-end-outside' })
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-end-outside',
+      nodes: ['e1'],
+    })
   })
 
   /**
@@ -690,7 +713,66 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
       [...edges, wire('e2', 'results', 'm1', 'image'), wire('reader', 'prompt', 'e2', 'results')],
     )
 
-    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-end-outside' })
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-end-outside',
+      nodes: ['e2'],
+    })
+  })
+
+  /**
+   * The refusal names the ends AT FAULT, and a spare end nobody reads is not one of them: this
+   * file refuses to refuse that graph at all, on the grounds that it misroutes nothing. Blaming
+   * it anyway would send the user to delete the one end that is innocent.
+   */
+  it('leaves an unread end out of the ones it blames', () => {
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [...nodes, end('e2', 'L'), end('e3', 'L'), modelNode('reader2', true)],
+      [...edges, wire('reader2', 'prompt', 'e2', 'results')],
+    )
+
+    // `e3` names the loop and is read by nobody — so `endsToBlame` leaves it out, where naming
+    // every end of the loop would have put it in.
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-two-ends',
+      nodes: ['e1', 'e2'],
+    })
+  })
+
+  /**
+   * Every misplaced end at once, not the first found: one refusal per debounce would send the user
+   * round the same hunt for each of them.
+   */
+  it('names every end that fails to close what it names, not just the first', () => {
+    // Each end names a DIFFERENT node, and neither is a loop — so the two-ends rule above, which
+    // speaks first and only over real loops, cannot answer for this graph.
+    const { nodes, edges } = paired()
+    const graph = graphOf(
+      [
+        ...nodes,
+        modelNode('other', true),
+        modelNode('other2', true),
+        end('e2', 'other'),
+        end('e3', 'other2'),
+        modelNode('reader', true),
+        modelNode('reader2', true),
+      ],
+      [
+        ...edges,
+        wire('e2', 'results', 'm1', 'image'),
+        wire('e3', 'results', 'm1', 'image'),
+        wire('reader', 'prompt', 'e2', 'results'),
+        wire('reader2', 'prompt', 'e3', 'results'),
+      ],
+    )
+
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-end-outside',
+      nodes: ['e2', 'e3'],
+    })
   })
 
   /**
@@ -710,7 +792,12 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
       ],
     )
 
-    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-two-ends' })
+    // The kept end FIRST, then the spare: which of the two the converter obeys is the whole point.
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-two-ends',
+      nodes: ['e1', 'e2'],
+    })
   })
 
   /**
@@ -747,7 +834,11 @@ describe('a loop and its end, paired so the converter reads them otherwise', () 
       [...edges, wire('reader', 'prompt', 'e1', 'results')],
     )
 
-    expect(compile(graph).result).toEqual({ ok: false, problem: 'loop-two-ends' })
+    expect(compile(graph).result).toEqual({
+      ok: false,
+      problem: 'loop-two-ends',
+      nodes: ['e0', 'e1'],
+    })
     // The same two ends the other way round compile to a flow identical to the graph without the
     // spare one — which is why counting ends refused a graph that compiles.
     expect(

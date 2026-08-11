@@ -45,7 +45,9 @@ describe('what the canvas says of a graph it would export', () => {
    * read in the same glance as a job that failed, and one that would is a note beside the canvas.
    */
   it('paints a refusal in the same red as a failure, and a verdict as an aside', () => {
-    const { rerender } = render(<GraphStatus result={{ ok: false, problem: 'no-output' }} />)
+    const { rerender } = render(
+      <GraphStatus result={{ ok: false, problem: 'no-output', nodes: [] }} />,
+    )
 
     expect(screen.getByRole('status')).toHaveClass(TONE_TEXT.danger)
     expect(screen.getByRole('status')).toHaveTextContent('Aucune sortie marquée')
@@ -72,7 +74,10 @@ describe('what the canvas says of a graph it has just published', () => {
     expect(line).toHaveClass('absolute', 'bottom-2', 'left-2')
 
     rerender(
-      <GraphStatus result={{ ok: true, steps: 3 }} published={{ ok: false, problem: 'refused' }} />,
+      <GraphStatus
+        result={{ ok: true, steps: 3 }}
+        published={{ ok: false, problem: 'refused', nodes: [] }}
+      />,
     )
 
     expect(screen.getByRole('status')).toHaveTextContent('Scenario l’a refusé')
@@ -80,7 +85,7 @@ describe('what the canvas says of a graph it has just published', () => {
   })
 
   it('says a compile problem the publication ran into in the words the canvas already uses', () => {
-    render(<GraphStatus result={null} published={{ ok: false, problem: 'no-output' }} />)
+    render(<GraphStatus result={null} published={{ ok: false, problem: 'no-output', nodes: [] }} />)
 
     expect(screen.getByRole('status')).toHaveTextContent('Aucune sortie marquée')
   })
@@ -135,7 +140,7 @@ describe('asking the main process whether a graph compiles', () => {
     // Flushed rather than awaited on a `waitFor`: a stale answer that DOES land paints on the
     // next microtask, and a `waitFor` asserting what is already true would pass before it.
     await act(async () => {
-      answer(0, { ok: false, problem: 'invalid' })
+      answer(0, { ok: false, problem: 'invalid', nodes: [] })
     })
 
     expect(screen.getByRole('status')).toHaveTextContent('2 étapes')

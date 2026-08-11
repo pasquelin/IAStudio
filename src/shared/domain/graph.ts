@@ -629,7 +629,9 @@ export const GRAPH_COMPILE_PROBLEMS: readonly GraphCompileProblem[] = [
  * "nothing reaches an output", and cannot act on a 403.
  */
 export type GraphPublishResult =
-  { ok: true; workflowId: string } | { ok: false; problem: GraphCompileProblem | 'refused' }
+  | { ok: true; workflowId: string }
+  /** One more problem than the compile has: `refused` is the API's own no, and points at nobody. */
+  | ({ ok: false } & GraphRefusal<GraphCompileProblem | 'refused'>)
 
 /**
  * What compiling a graph answers.
@@ -638,5 +640,21 @@ export type GraphPublishResult =
  * keystroke would clone the workflow for a number. The export builds its own — `refuseFlow` is
  * what the two share, so one question keeps one answer.
  */
-export type GraphCompileResult =
-  { ok: true; steps: number } | { ok: false; problem: GraphCompileProblem }
+/**
+ * A refusal and the nodes it points at.
+ *
+ * `nodes` names the ones at fault, as `GraphPlan.cycle` names a cycle's — and it is EMPTY where no
+ * node is: `no-output` is an absence, and `invalid` comes from the validator, whose sentence names
+ * the node in English prose the studio does not parse. Empty means "nowhere to point", never
+ * "nothing wrong".
+ *
+ * Written once and composed by both results below, rather than spelled out at each of them: the
+ * canvas paints from whichever of the two the status line is showing, so the day they disagree on
+ * their shape is the day one of the two stops being paintable.
+ */
+export type GraphRefusal<Problem = GraphCompileProblem> = {
+  problem: Problem
+  nodes: readonly string[]
+}
+
+export type GraphCompileResult = { ok: true; steps: number } | ({ ok: false } & GraphRefusal)
