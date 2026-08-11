@@ -515,6 +515,16 @@ picture enters a sky.
 *description* of a node separate from its three.js instantiation — so a scene serialises without
 dragging the renderer along, and rebuilds from that serialisation alone.
 
+And once the three object exists, **it is mutated, never replaced**: `.set` rather than a `new`.
+Those writes arrive on every frame of an inspector drag, and the cost is not theoretical —
+replacing a material risks recompiling its shader program, replacing a colour throws away the
+instance three is holding. Ten colour writes follow the rule, and `three-sync.ts`,
+`TextureRenderer.ts` and `SkyboxRenderer.ts` each carry it as a comment, next to what it guards.
+
+**One exception, and it is deliberate**: `ViewportEngine` does replace the scene background object,
+because that field accepts `null` — a `.set` could not clear it, and the background is only
+repainted on mount, on a theme change or when a sky is removed — never per frame.
+
 Playback goes through a **single token**, `playbackToken` — a module value in
 `engines/timeline/playback.ts`, not a manager: whoever wants to play acquires it and hands over
 the means to stop, and the next acquisition cuts the previous one off. Two active players is how
