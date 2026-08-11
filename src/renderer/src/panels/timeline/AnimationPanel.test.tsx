@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cameraNode } from '@/engines/scene/node-factory'
@@ -7,6 +7,8 @@ import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
+import { setTimelineSettings } from '@/engines/scene/animation-commands'
+import { SECOND } from '@shared/domain/time'
 import { installScene } from '@/stores/scene-fixtures'
 import { useModelClips } from '@/stores/model-clips'
 import { useSceneViews } from '@/stores/scene-views'
@@ -246,5 +248,110 @@ describe('writing the film', () => {
     await userEvent.click(screen.getByRole('button', { name: /Rendre en vidéo/ }))
 
     expect(cancel).toHaveBeenCalledWith('render_1')
+  })
+})
+
+describe('a head left outside the band', () => {
+  beforeEach(() => {
+    withSelectedCube()
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  const shorten = (seconds: number): void => {
+    useScenes.getState().runCommand(DOCUMENT, setTimelineSettings({ duration: seconds * SECOND }))
+  }
+
+  it('is pulled back in when the band is shortened under it', () => {
+    useSceneViews.getState().setPlayhead(DOCUMENT, 4 * SECOND)
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    act(() => shorten(2))
+
+    // Left at four, the head would stand where no key can, and Play would stop on the frame it
+    // starts on — the very defect the rewind was added to close.
+    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(2 * SECOND)
+  })
+
+  it('leaves a head that already fits exactly where it is', () => {
+    useSceneViews.getState().setPlayhead(DOCUMENT, 1 * SECOND)
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    act(() => shorten(3))
+
+    expect(useSceneViews.getState().views[DOCUMENT]?.playhead).toBe(1 * SECOND)
+  })
+})
+
+describe('typing a duration', () => {
+  beforeEach(() => {
+    withSelectedCube()
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  it('costs ONE undo for a number typed digit by digit', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+
+    const field = screen.getByLabelText(/Images\/s/)
+    await userEvent.click(field)
+    await userEvent.keyboard('{Backspace}{Backspace}120')
+    await userEvent.tab()
+
+    expect(timelineOf().fps).toBe(120)
+    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+  })
+})
+
+/**
+ * The request this whole panel answers, in the words it was made in: "a timeline like video and
+ * audio, seeing my objects on a track, and setting keyframes". One case per clause, so a change
+ * that quietly walks away from it fails here rather than at the next screenshot.
+ */
+describe('the request, clause by clause', () => {
+  beforeEach(() => {
+    withSelectedCube()
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  it('« voir mes objets » — every object of the scene has its line, unprompted', () => {
+    installScene(DOCUMENT, {
+      ...EMPTY_SCENE,
+      nodes: [meshNode('cube-1'), meshNode('sphere-1')],
+      selectedIds: [],
+    })
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    expect(screen.getByTestId('anim-subject-cube-1')).toBeInTheDocument()
+    expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
+  })
+
+  it('« comme vidéo et audio » — the band carries a ruler in timecode', () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    expect(screen.getByText('00:00:00:00')).toBeInTheDocument()
+  })
+
+  it('« mettre des points clés » — one press keys the object, whatever it held before', async () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    await userEvent.click(
+      within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', {
+        name: /Poser une clé sur/,
+      }),
+    )
+
+    expect(tracks()).toHaveLength(3)
+    expect(tracks().every(track => track.keys.length === 1)).toBe(true)
+  })
+
+  it('nothing asks to CREATE anything before the objects can be seen', () => {
+    render(<AnimationPanel documentId={DOCUMENT} />)
+
+    expect(screen.queryByRole('button', { name: /Ajouter une piste/ })).not.toBeInTheDocument()
+    // And the word the montage uses has no place here: an object of a scene exists already.
+    expect(screen.queryByText(/Aucune piste/)).not.toBeInTheDocument()
   })
 })

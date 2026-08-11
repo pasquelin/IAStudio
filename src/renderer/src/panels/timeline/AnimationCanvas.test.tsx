@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ANIMATION } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
+import { setTimelineSettings } from '@/engines/scene/animation-commands'
 import { animationRows } from '@/engines/scene/animation-rows'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
@@ -164,5 +165,50 @@ describe('scrubbing and picking on the band', () => {
     press(canvas(), 'pointerdown', 100, 4_000)
 
     expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual([])
+  })
+})
+
+describe('following a duration that changes', () => {
+  beforeEach(() => {
+    installScene(DOCUMENT, EMPTY_SCENE)
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({
+      views: { [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false } },
+    })
+  })
+
+  const playhead = () => useSceneViews.getState().views[DOCUMENT]?.playhead
+
+  const lengthen = (seconds: number): void => {
+    const store = useScenes.getState()
+    store.runCommand(DOCUMENT, setTimelineSettings({ duration: seconds * SECOND }))
+  }
+
+  it('holds the head inside the band it had at the start', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyRows()} />)
+
+    press(canvas(), 'pointerdown', 900, 4)
+    expect(playhead()).toBe(5 * SECOND)
+  })
+
+  it('lets the head go further once the band is made longer', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyRows()} />)
+
+    act(() => lengthen(20))
+    press(canvas(), 'pointerdown', 900, 4)
+
+    // Nine hundred pixels is nine seconds, which a twenty-second band holds.
+    expect(playhead()).toBe(9 * SECOND)
+  })
+
+  it('pulls the head back in when the band is made shorter', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyRows()} />)
+    act(() => lengthen(20))
+    press(canvas(), 'pointerdown', 900, 4)
+
+    act(() => lengthen(3))
+    press(canvas(), 'pointerdown', 900, 4)
+
+    expect(playhead()).toBe(3 * SECOND)
   })
 })
