@@ -73,7 +73,7 @@ une autre, inspirée d’elle.
    **Image vers image** ;
 3. choisissez un modèle dans ce qui reste ;
 4. dans le formulaire, un champ **image** apparaît : donnez-lui votre image de départ ;
-5. écrivez ce que vous voulez obtenir, et réglez **strength** si le modèle le propose :
+5. écrivez ce que vous voulez obtenir, et réglez l’**Intensité** si le modèle la propose :
    **0 = presque inchangée, 1 = méconnaissable**. Commencez vers 0,5 ;
 6. **Générer**.
 
