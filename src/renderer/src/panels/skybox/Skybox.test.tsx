@@ -2,23 +2,20 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
-import { installDocument } from '@/stores/document-fixtures'
+import { installDocument, installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
+import { installSkybox } from '@/stores/skybox-fixtures'
 import { historyOf, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { Skybox } from './Skybox'
 
-/** One sky in front, its content posed as the store holds it — `states` keyed by document. */
-function open(content: Partial<SkyboxContent> = {}): void {
-  installDocument('doc-1', 'skyboxes')
-  useSkyboxes.setState({
-    states: { 'doc-1': { ...createSkyboxContent(), ...content } },
-    histories: {},
-  })
-}
+const sky = (content: Partial<SkyboxContent> = {}): SkyboxContent => ({
+  ...createSkyboxContent(),
+  ...content,
+})
 
 beforeEach(() => {
   useDocuments.setState({ documents: {}, activeId: null })
-  useSkyboxes.setState({ states: {}, histories: {} })
+  useSkyboxes.setState({ states: {}, histories: {}, saved: {} })
 })
 
 describe('the skybox panel', () => {
@@ -32,27 +29,14 @@ describe('the skybox panel', () => {
     expect(screen.getByText('Ouvrez une skybox pour la régler.')).toBeInTheDocument()
   })
 
-  /**
-   * The other half of that guard cannot be reached, and it is not dead code: `skyboxOf` is
-   * `states[id] ?? defaultState` (`stores/document-store.ts`), so a tab in front always has a
-   * content — even one the store has never written. `!content` is what TYPE-CHECKING needs,
-   * since the selector must return `null` for the no-tab case rather than derive a fresh object
-   * per render, which is the re-render loop `ActivityList` was once caught in.
-   */
+  // A tab in front with nothing written for it still grades: `skyboxOf` falls back to the default.
   it('falls back to the default sky for a tab the store has never written', () => {
     installDocument('doc-1', 'skyboxes')
 
     render(<Skybox />)
 
-    expect(screen.getByLabelText('Élévation')).toBeInTheDocument()
-  })
-
-  it('offers the sun once a sky is open', () => {
-    open()
-
-    render(<Skybox />)
-
-    expect(screen.getByLabelText('Élévation')).toBeInTheDocument()
+    const written = createSkyboxContent().sun.elevation
+    expect(screen.getByLabelText('Élévation')).toHaveValue(String(written))
   })
 
   /**
@@ -60,7 +44,7 @@ describe('the skybox panel', () => {
    * knows, and a section that disappeared would read as "this build lost the panel".
    */
   it('leaves what produced the sky blank when nothing did', async () => {
-    open()
+    installSkybox('doc-1')
     render(<Skybox />)
 
     await userEvent.click(screen.getByRole('button', { name: /Génération/ }))
@@ -71,25 +55,44 @@ describe('the skybox panel', () => {
   })
 
   it('names what produced the sky, so a result can be traced back', async () => {
-    open({
-      generation: { modelId: 'model_sky', modelLabel: 'Scenario Skybox Flux.1', prompt: 'dusk' },
-    })
+    installSkybox(
+      'doc-1',
+      sky({
+        generation: { modelId: 'model_sky', modelLabel: 'Scenario Skybox Flux.1', prompt: 'dusk' },
+      }),
+    )
     render(<Skybox />)
 
     await userEvent.click(screen.getByRole('button', { name: /Génération/ }))
 
     expect(screen.getByLabelText('Modèle')).toHaveValue('Scenario Skybox Flux.1')
     expect(screen.getByLabelText('Prompt')).toHaveValue('dusk')
-    // The seed is the one field a generation may omit, and zero is a seed like any other.
-    expect(screen.getByLabelText('Graine')).toHaveValue('')
   })
 
-  /**
-   * What the panel is for: every control is a uniform, so a slider moved has to reach the
-   * document rather than a local state the next render would drop.
-   */
+  // Zero is a seed like any other, and `??` on a number is where that gets lost.
+  it('writes the seed out even when it is zero', async () => {
+    installSkybox(
+      'doc-1',
+      sky({ generation: { modelId: 'model_sky', modelLabel: 'Flux', prompt: 'dusk', seed: 0 } }),
+    )
+    render(<Skybox />)
+
+    await userEvent.click(screen.getByRole('button', { name: /Génération/ }))
+
+    expect(screen.getByLabelText('Graine')).toHaveValue('0')
+  })
+
+  // Every control is a uniform: what the document holds is what the control shows.
+  it('shows the values the document holds', () => {
+    installSkybox('doc-1', sky({ sun: { ...createSkyboxContent().sun, elevation: 0.7 } }))
+
+    render(<Skybox />)
+
+    expect(screen.getByLabelText('Élévation')).toHaveValue('0.7')
+  })
+
   it('writes a moved control into the document it belongs to', () => {
-    open()
+    installSkybox('doc-1')
     render(<Skybox />)
 
     fireEvent.change(screen.getByLabelText('Élévation'), { target: { value: '0.4' } })
@@ -99,7 +102,7 @@ describe('the skybox panel', () => {
 
   // The three families of control write through three different commands; one each.
   it('writes the environment and the grading the same way', () => {
-    open()
+    installSkybox('doc-1')
     render(<Skybox />)
 
     fireEvent.click(screen.getByLabelText('Afficher le fond'))
@@ -115,7 +118,7 @@ describe('the skybox panel', () => {
    * and closes it on pointer-up, and the store collapses what happens between.
    */
   it('groups a drag into a single gesture', () => {
-    open()
+    installSkybox('doc-1')
     render(<Skybox />)
     const slider = screen.getByLabelText('Élévation')
 
@@ -127,14 +130,37 @@ describe('the skybox panel', () => {
     expect(historyOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(1)
   })
 
-  it('writes the seed out when the generation carried one', async () => {
-    open({
-      generation: { modelId: 'model_sky', modelLabel: 'Flux', prompt: 'dusk', seed: 0 },
-    })
+  /**
+   * And CLOSES it: the store keeps its open gestures in a module-scope map that no teardown
+   * clears, so a panel that never ends one would collapse the next drag into the previous entry.
+   */
+  it('ends the gesture, so the next drag is its own entry', () => {
+    installSkybox('doc-1')
+    render(<Skybox />)
+    const slider = screen.getByLabelText('Élévation')
+
+    fireEvent.pointerDown(slider)
+    fireEvent.change(slider, { target: { value: '0.2' } })
+    fireEvent.pointerUp(slider)
+
+    fireEvent.pointerDown(slider)
+    fireEvent.change(slider, { target: { value: '0.5' } })
+    fireEvent.pointerUp(slider)
+
+    expect(historyOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(2)
+  })
+
+  /**
+   * The id is captured once, before the closures — a panel that re-read the front tab inside
+   * `onChange` would write into whichever document happened to be active at that moment.
+   */
+  it('writes into the sky it was rendered for, not into the one in front later', () => {
+    installSkybox('doc-1')
     render(<Skybox />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Génération/ }))
+    installDocuments({ 'doc-1': 'skyboxes', 'doc-2': 'skyboxes' }, 'doc-2')
+    fireEvent.change(screen.getByLabelText('Élévation'), { target: { value: '0.4' } })
 
-    expect(screen.getByLabelText('Graine')).toHaveValue('0')
+    expect(skyboxOf(useSkyboxes.getState(), 'doc-1').sun.elevation).toBeCloseTo(0.4)
   })
 })
