@@ -102,19 +102,20 @@ function polyfillWorker(): void {
  * How long an awaited query may wait. Testing Library's own default is one second.
  *
  * That second is a budget for the RUNNER, not for the studio, and the runner shares this machine
- * with whatever else builds on it. Measured: `ModelNodeFields.test.tsx` waits on a catalogue
- * asked only once the model's schema has named its family — two round trips — and took 1035 ms in
- * one full run and 1270 ms in another, while passing 15 times out of 15 on its own. Its failure
- * cost more than a red test: the file it exercises carries 45 of the 46 covered statements that
- * keep `src/renderer/src/panels/**` inside its coverage budget, so `develop` failed its gate
- * twice with every test reported as passing.
+ * with whatever else builds on it. Measured on `ModelNodeFields.test.tsx`, which waits on a
+ * catalogue asked only once the model's schema has named its family — two round trips: the case
+ * takes 136 to 181 ms on a quiet machine, passes 15 times out of 15 on its own, and took 1035 ms
+ * then 1270 ms inside full runs under six concurrent sessions. Seven times its own cost is what
+ * the load did to it, against a ceiling of seven.
  *
- * Three seconds is twice the worst reading, and a case is allowed fifteen (`vitest.config.ts`),
- * so an expiry still reports as an expiry rather than killing the case. Raised here rather than
- * per call: two suites had already bought their own patience by hand, which is how a default
- * nobody set becomes a rule nobody can see.
+ * Three seconds is twice the worst reading. It buys tolerance, not speed: a satisfied wait
+ * returns at once, so a green run pays nothing — measured, 102 s against 113 s. What it costs is
+ * +2,00 s per expiry, on 462 waiting sites across 63 files.
+ *
+ * Raised here rather than per call: two suites had already bought their own patience by hand,
+ * which is how a default nobody set becomes a rule nobody can see.
  */
-const AWAITED_QUERY_MS = 3000
+export const AWAITED_QUERY_MS = 3000
 
 configure({ asyncUtilTimeout: AWAITED_QUERY_MS })
 
