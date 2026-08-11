@@ -16,6 +16,14 @@ export type DocumentRun = {
    * LOCAL asset ids, which mean nothing outside the open project — see `GraphCache`.
    */
   cache: GraphCache
+  /**
+   * The node that spoke LAST, and what it said — what a single live region announces.
+   *
+   * Kept here rather than derived in the canvas because only the reporter knows the ORDER: `nodes`
+   * is a record, and a record remembers no such thing. Without it every node had to carry its own
+   * live region, which is twenty of them talking over each other on a graph of twenty.
+   */
+  latest?: { node: string; run: GraphNodeRun }
 }
 
 const IDLE: DocumentRun = { running: false, nodes: {}, cache: new Map() }
@@ -165,6 +173,7 @@ export const useGraphRuns = create<GraphRunsState>()((set, get) => {
               patch(documentId, controller, held => ({
                 ...held,
                 nodes: { ...held.nodes, [nodeId]: run },
+                latest: { node: nodeId, run },
               })),
             signal: controller.signal,
           },

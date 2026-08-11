@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Background,
   BackgroundVariant,
@@ -27,7 +28,7 @@ import {
   selectionAfter,
   toCanvasEdges,
 } from './adapter'
-import { GRAPH_NODE_TYPES } from './GraphNodes'
+import { GRAPH_NODE_TYPES, labelOf, runLabelKey } from './GraphNodes'
 import { GraphMenu } from './GraphMenu'
 import { GraphStatus, shownVerdict, useGraphCompile } from './GraphStatus'
 import { GraphToolbar } from './GraphToolbar'
@@ -65,6 +66,8 @@ export type GraphCanvasProps = {
   canImport: boolean
   /** What each node is doing in the run under way, or in the last one. Absent means idle. */
   runs: Readonly<Record<string, GraphNodeRun>>
+  /** The node that spoke last, and what it said — read by the canvas's one live region. */
+  latest?: { node: string; run: GraphNodeRun }
   running: boolean
   /** Runs the graph, or stops the run — the bar draws whichever of the two applies. */
   onRun: () => void
@@ -110,6 +113,7 @@ export function GraphCanvas({
   canExport,
   canImport,
   runs,
+  latest,
   running,
   onRun,
   onExport,
@@ -151,6 +155,20 @@ export function GraphCanvas({
   }, [])
 
   const compiled = useGraphCompile(graph)
+  const { t } = useTranslation()
+
+  // Composed rather than stored: the two halves are already translated, and a sentence built here
+  // would be a screen string outside the bundles.
+  const announcement = useMemo(() => {
+    if (!latest) return ''
+
+    const node = graph.nodes.find(candidate => candidate.id === latest.node)
+    if (!node) return ''
+
+    const name = node.data.title || t(labelOf(node.type))
+
+    return `${name} — ${t(runLabelKey(latest.run))}`
+  }, [graph.nodes, latest, t])
 
   // Painted from the verdict the STATUS LINE is showing — its own rule, asked rather than
   // repeated: a set of nodes ringed under a sentence that is not about them is the one failure
@@ -266,6 +284,12 @@ export function GraphCanvas({
             />
             {menuAt && <GraphMenu at={menuAt} onClose={() => setMenuAt(null)} onAdd={onAdd} />}
             <GraphStatus result={compiled} published={published} />
+            {/* ONE live region for the whole canvas, as the workspace bar carries one for its own
+                gesture. A node's badge is read by walking it; what CHANGES is announced here, or
+                twenty nodes would announce over one another. */}
+            <p role="status" aria-live="polite" className="sr-only">
+              {announcement}
+            </p>
           </ReactFlow>
         </NodeDecisionProvider>
       </div>

@@ -76,6 +76,22 @@ describe('a node the compiler refuses', () => {
     })
 
     expect(screen.getByRole('img', { name: 'Le refus porte sur ce nœud' })).toBeTruthy()
-    expect(screen.getByRole('status').textContent).toBe('sans modèle')
+    expect(screen.getByText('sans modèle')).toBeTruthy()
+  })
+
+  /**
+   * A node's state is READ, never announced: one live region per node meant twenty of them talking
+   * over each other on a graph of twenty. The canvas carries the one that speaks — this badge is
+   * plain text, found by walking the node.
+   */
+  it('states what it is doing without claiming a live region of its own', () => {
+    const { container } = draw({
+      value: 'a knight',
+      [RUN_STATE_KEY]: { status: 'running' },
+    })
+
+    expect(screen.getByText('en cours')).toBeTruthy()
+    expect(container.querySelector('[role="status"]')).toBeNull()
+    expect(container.querySelector('[aria-live]')).toBeNull()
   })
 })

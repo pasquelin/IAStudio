@@ -118,6 +118,33 @@ describe('running a graph document', () => {
   })
 
   /**
+   * `nodes` is a record, and a record remembers no order — so it cannot say which node spoke
+   * LAST. The canvas needs exactly that, and only the reporter knows it: without `latest` every
+   * node had to carry its own live region, twenty of them announcing over each other.
+   */
+  it('remembers which node spoke last, and what it said', async () => {
+    const jobs = installJobs()
+    installGraph(DOC, chain())
+
+    const run = useGraphRuns.getState().start(DOC)
+    await vi.waitFor(() => expect(jobs.submitted).toHaveLength(1))
+
+    // `running` is reported on the generator itself, after the text node it reads is done.
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toEqual({
+      node: 'm1',
+      run: { status: 'running' },
+    })
+
+    jobs.settle('job_1', { status: 'succeeded', assetIds: ['asset_local'] })
+    await run
+
+    expect(runOf(useGraphRuns.getState(), DOC).latest).toEqual({
+      node: 'm1',
+      run: { status: 'done' },
+    })
+  })
+
+  /**
    * The keyboard is why this lives in the store: the bar greys its button on an empty graph, and
    * a key pressed over the canvas goes nowhere near the bar.
    */

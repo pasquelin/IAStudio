@@ -335,6 +335,60 @@ describe('a graph as a document', () => {
     })
 
     /**
+     * ONE live region for the canvas, not one per node: twenty nodes reporting meant twenty of
+     * them announcing over each other. What is announced is the node that spoke LAST, which a
+     * record of states cannot say on its own — hence `latest` beside `nodes`.
+     */
+    it('announces the node that spoke last, from a single live region', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: true,
+              nodes: { [text.id]: { status: 'running' } },
+              latest: { node: text.id, run: { status: 'running' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      // React Flow keeps a live region of its own for keyboard moves; ours is the one that names
+      // a node. What matters is that there is exactly ONE of ours, whatever the node count.
+      const ours = container.querySelectorAll('p[role="status"][aria-live]')
+
+      expect(ours).toHaveLength(1)
+      expect(ours[0]?.textContent).toBe('Texte — en cours')
+    })
+
+    /**
+     * The run state outlives the graph — an import replaces every node while `latest` still names
+     * one of the old ones. Announcing its state would name a node nobody can find on the canvas.
+     */
+    it('says nothing of a node the graph no longer holds', () => {
+      withOneNode()
+      act(() =>
+        useGraphRuns.setState({
+          runs: {
+            [DOCUMENT]: {
+              running: false,
+              nodes: {},
+              latest: { node: 'gone1', run: { status: 'done' } },
+              cache: new Map(),
+            },
+          },
+        }),
+      )
+
+      const { container } = render(<GraphDocument documentId={DOCUMENT} />)
+
+      expect(container.querySelector('p[role="status"][aria-live]')?.textContent).toBe('')
+    })
+
+    /**
      * The run cache is keyed by NODE ID and outlives the graph, and the ids collide almost always
      * — `text1`, `imageGenerator1`, the webapp's convention and ours. Left in place, an imported
      * node wears the previous graph's verdict without ever having run.

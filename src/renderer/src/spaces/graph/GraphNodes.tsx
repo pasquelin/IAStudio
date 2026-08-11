@@ -46,14 +46,21 @@ const RUN_TONE: Record<GraphRunStatus, StatusTone> = {
  * never reached it — a loop, a missing model and a type this milestone cannot run yet all read
  * the same otherwise.
  */
+/** The i18n key a run state reads under — a failure names its reason, the rest name themselves. */
+export const runLabelKey = (run: GraphNodeRun): string =>
+  run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
+
+/**
+ * No `role="status"` here, and that is the point: one per node meant twenty live regions on a
+ * graph of twenty, all announcing at once. The canvas carries ONE, which says what changed last —
+ * this badge is read by the eye, and by anyone walking the node.
+ */
 function RunBadge({ run }: { run: GraphNodeRun }) {
   const { t } = useTranslation()
-  const key = run.status === 'failed' ? `graphRun.failure.${run.failure}` : `graphRun.${run.status}`
+  const key = runLabelKey(run)
 
   return (
-    <span role="status" className={cn('shrink-0 text-[10px]', TONE_TEXT[RUN_TONE[run.status]])}>
-      {t(key)}
-    </span>
+    <span className={cn('shrink-0 text-[10px]', TONE_TEXT[RUN_TONE[run.status]])}>{t(key)}</span>
   )
 }
 
@@ -181,7 +188,7 @@ function asRun(value: unknown): GraphNodeRun | undefined {
 }
 
 /** The key naming a type, or the type itself — i18next hands a missing key straight back. */
-const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
+export const labelOf = (type: GraphNodeType): string => NODE_LABEL_KEYS[type] ?? type
 
 /**
  * Memoised, like the rows of the collections: React Flow re-renders every mounted node on each
