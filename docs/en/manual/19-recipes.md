@@ -30,7 +30,8 @@ right gesture made in the wrong workspace.
 Before the recipes, one rule that runs through all of them.
 
 **Double-clicking an asset does not open a tab.** It sends the asset into the tab **already open
-in front of you**. With no tab, nothing happens, and nothing says so.
+in front of you** — failing that, into a document open **elsewhere**, switching workspace on the
+way. If there is nowhere at all, a message says so: "This asset has nowhere to go".
 
 So in every recipe below, the order is **always** the same:
 
@@ -52,12 +53,14 @@ Remember those three lines and nothing will block you.
 
 1. **Image** workspace;
 2. **Models** panel, on the left: click a thumbnail;
-3. **Generate** panel, which takes its place: write your sentence in the **prompt**;
+3. click the **Generate** icon in the left rail — choosing a model does not open the panel for
+   you — then write your sentence in the **prompt**;
 4. **Generate**. The status line, bottom right, follows the progress;
 5. the result arrives in the **Assets** panel, and in `assets/img/` on your disk.
 
-**The catch.** The Generate button is greyed out until a project is open. The message "Open a
-project to generate." appears above the form.
+**The catch.** With no project open there is **neither form nor button**: the panel shows "Open a
+project to generate." instead. It is not a greyed-out button, it is the whole panel waiting for a
+folder.
 
 ---
 
@@ -67,7 +70,8 @@ This is called **image to image**: you give a starting picture, the model return
 inspired by it.
 
 1. **Image** workspace;
-2. in the **Models** panel, open **More filters** → **Capability** → tick **Image to image**;
+2. in the **Models** panel, the **Capability** filter is visible without unfolding anything →
+   tick **Image to image**;
 3. choose a model from what remains;
 4. in the form, an **image** field appears: give it your starting picture;
 5. write what you want to end up with, and set **strength** if the model offers it:
@@ -92,8 +96,9 @@ shows the open workspace's family.
 **Cut out** and **Vectorize** work exactly the same way, with their own settings sub-sections:
 **Background removal** and **Vectorization**.
 
-An upscaler is otherwise a model like any other: nothing stops you from finding it in the Models
-panel and handing it a picture by hand.
+**Do not look for it in the Image workspace's Models panel**: that panel only ever lists its own
+workspace's family, and an upscaler is not part of it — you could look for a long time. The
+**Image ▸ Enlarge** menu is the way in.
 
 ---
 
@@ -135,8 +140,10 @@ flat.
 4. **Inspector** → **Preview** section: choose the shape — **sphere**, box, cylinder, plane or
    torus knot. The **sphere** shows the light best, the **plane** shows the pattern's repetition
    best;
-5. **Inspector** → **Material** section: set roughness, metalness, relief and emission. If the
-   material looks uniformly average, the **remap** is what to open — see below;
+5. **Inspector**: the **Material** section sets roughness and metalness; **Relief** and
+   **Emission** are two neighbouring sections, not its contents. If the
+   material looks uniformly average, it is the **ranges** — "Roughness range", "Metalness range" —
+   that need adjusting; they sit in the Material section, under the two settings;
 6. **Channels** panel: drop a picture onto the thumbnail of each channel you want to fill — and
    for **height**, **normal**, **occlusion** and **roughness**, the thumbnail's menu computes them
    from another channel, at no cost;
@@ -150,7 +157,7 @@ deliberate. To aim at normals or roughness, drop onto **their thumbnail** in the
 ## Make a still picture move
 
 1. **Video** workspace;
-2. **Models** panel → **More filters** → **Capability** → **Image to video**;
+2. **Models** panel → **Capability** filter, visible without unfolding anything → **Image to video**;
 3. pick a model, give it your picture, describe the motion you want;
 4. **Generate** — allow longer than for a picture: a few minutes is normal;
 5. the clip arrives in **Assets**.
@@ -195,8 +202,11 @@ goes up, `Q` goes down, left `⇧` speeds up.
 
 1. **Video** workspace;
 2. the **+** button on the left rail: a fresh sequence;
-3. **drag** your first clip from the shelf, on the left, onto a picture track;
-4. drag the second **right after it** — it sticks to the first one's edge on its own;
+3. **drag** your first clip from the shelf — in Video it sits in the **right column**, the bottom
+   strip being taken by the timeline — onto a picture track;
+4. drag the second **right after it**: it lands on the nearest frame, but **it does not stick to
+   the first one's edge**. Release too early and it covers its neighbour; edge snapping only comes
+   into play when you move a clip already laid down;
 5. `Space` to play, `Home` to go back to the start.
 
 **To cut:** place the playhead, press `S`. To delete a clip: select it, `Del`.
@@ -213,7 +223,8 @@ was — tracks, clips, fades and gains. What does not come back is the undo hist
 1. **Audio** workspace, the **+** button, then **double-click** your sound;
 2. drag the region's edges to **trim**;
 3. set a **fade in** and a **fade out**;
-4. the listen button compares against the original, before your edits.
+4. the **A/B** tool compares against the original, before your edits — it is a tool of its own,
+   not the play button.
 
 **The catch.** Nothing is written until you ask for it, and **swapping takes wipes your
 settings**: cuts are measured against the take that received them.
@@ -222,7 +233,8 @@ settings**: cuts are measured against the take that received them.
 
 ## Put an asset where it belongs
 
-The table to remember. There are **only five** possible drops, and double-click obeys a
+The table of the commonest drops. **Nine** surfaces accept an asset; the [Assets](07-assets.md)
+chapter lists them all, and double-click obeys a
 different rule again.
 
 | You want… | The gesture | You need, in front of you |
@@ -233,7 +245,7 @@ different rule again.
 | a picture as sky | drag onto the **sky preview** | a sky tab |
 | a 3D object in a scene | drag onto the **3D view** | a scene tab |
 
-A texture, for its part, accepts **only** drag and drop: double-clicking one does nothing.
+A texture double-clicks like the rest: it then lands as the base colour of the open material.
 
 ---
 
@@ -245,7 +257,7 @@ A texture, for its part, accepts **only** drag and drop: double-clicking one doe
 2. choose your files. Accepted formats: video (`mp4` `mov` `mkv` `webm` `avi` `mxf` `m4v`),
    audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif` `tiff`
    `exr`), 3D (`glb`);
-3. a banner follows each file: Probing, Fingerprint, Proxy, Waveform, Ready.
+3. a banner follows each file: Probing, Fingerprinting, Proxy, Waveform, Ready.
 
 **What you need to know, and it has real consequences: the file is not copied.** The studio
 creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
@@ -323,7 +335,7 @@ on screen says so at the moment you try.
 |---|---|---|
 | **find the history** of a reopened document | the undo stack is empty | only the state is saved, not the gestures that led to it |
 | **import an `.hdr`**, an `.obj` or an `.fbx` | it is refused | on the 3D side, only `.glb` comes in |
-| **cut out or vectorize** a picture | the Models panel opens, and no more | there is no way to choose the model |
+| **cut out or vectorize** a picture | **Settings ▸ Generation** opens on the right section | the model is chosen there, once and for all |
 | **export a video** | no button | video export is not written — a picture does go out with `⇧⌘E` |
 | **undo a crop** | the size comes back, the cropped pixels do not | the history does not keep the whole picture from before |
 

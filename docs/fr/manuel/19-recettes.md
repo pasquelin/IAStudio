@@ -29,7 +29,8 @@ geste juste, fait dans le mauvais espace.
 Avant les recettes, une règle qui les traverse toutes.
 
 **Le double-clic sur un asset n’ouvre pas d’onglet.** Il envoie l’asset dans l’onglet **déjà
-ouvert devant vous**. S’il n’y a pas d’onglet, il ne se passe rien, et rien ne le dit.
+ouvert devant vous** — et à défaut dans un document ouvert **ailleurs**, en changeant d’espace.
+S’il n’y en a nulle part, un message le dit : « Cet asset n’a nulle part où aller ».
 
 Donc, dans toutes les recettes qui suivent, l’ordre est **toujours** le même :
 
@@ -51,12 +52,14 @@ Retenez ces trois lignes et vous ne serez bloqué nulle part.
 
 1. espace **Image** ;
 2. panneau **Modèles**, à gauche : cliquez une vignette ;
-3. panneau **Génération**, qui prend sa place : écrivez votre phrase dans le **prompt** ;
+3. cliquez l’icône **Génération** du rail gauche — choisir un modèle n’ouvre pas le panneau à
+   votre place — puis écrivez votre phrase dans le **prompt** ;
 4. **Générer**. La ligne d’état, en bas à droite, suit l’avancement ;
 5. le résultat arrive dans le panneau **Assets**, et dans `assets/img/` sur votre disque.
 
-**Le piège.** Le bouton Générer est gris tant qu’aucun projet n’est ouvert. Le message
-« Ouvrez un projet pour générer. » s’affiche au-dessus du formulaire.
+**Le piège.** Sans projet ouvert, il n’y a **ni formulaire ni bouton** : le panneau affiche à la
+place « Ouvrez un projet pour générer. » Ce n’est pas un bouton grisé, c’est le panneau entier qui
+attend un dossier.
 
 ---
 
@@ -66,7 +69,7 @@ C’est ce qu’on appelle **image vers image** : vous donnez une image de dépa
 une autre, inspirée d’elle.
 
 1. espace **Image** ;
-2. dans le panneau **Modèles**, ouvrez **Plus de filtres** → **Capacité** → cochez
+2. dans le panneau **Modèles**, le filtre **Capacité** est visible sans rien déplier → cochez
    **Image vers image** ;
 3. choisissez un modèle dans ce qui reste ;
 4. dans le formulaire, un champ **image** apparaît : donnez-lui votre image de départ ;
@@ -92,8 +95,9 @@ ici, il ne montre que la famille de l’espace ouvert.
 **Détourer** et **Vectoriser** marchent exactement pareil, avec leur propre sous-section de
 réglages : **Détourage** et **Vectorisation**.
 
-Un agrandisseur reste par ailleurs un modèle comme un autre : rien n’empêche de le chercher dans
-le panneau Modèles et de lui donner une image à la main.
+**Ne le cherchez pas dans le panneau Modèles de l’espace Image** : ce panneau ne liste que la
+famille de son espace, et un agrandisseur n’en fait pas partie — vous pourriez chercher longtemps.
+C’est le menu **Image ▸ Agrandir** qui y mène.
 
 ---
 
@@ -137,8 +141,10 @@ Une *matière* (ou *texture*) n’est pas une image : c’est une surface qu’o
 4. **Inspecteur** → section **Aperçu** : choisissez la forme — **sphère**, cube, cylindre, plan ou
    nœud de tore. La **sphère** montre le mieux la lumière, le **plan** montre le mieux la
    répétition du motif ;
-5. **Inspecteur** → section **Matériau** : réglez rugosité, métal, relief et émission. Si la
-   matière paraît uniformément moyenne, c’est le **remappage** qu’il faut ouvrir — voir plus bas ;
+5. **Inspecteur** : la section **Matériau** règle la rugosité et le métal ; **Relief** et
+   **Émission** sont deux sections voisines, pas son contenu. Si la matière paraît uniformément
+   moyenne, ce sont les **plages** — « Plage de rugosité », « Plage de métal » — qu’il faut
+   reprendre ; elles sont dans la section Matériau, sous les deux réglages ;
 6. panneau **Canaux** : déposez une image sur la vignette de chaque canal que vous voulez remplir —
    et pour la **hauteur**, la **normale**, l’**occlusion** et la **rugosité**, le menu de la vignette
    les calcule depuis un autre canal, sans rien dépenser ;
@@ -153,7 +159,7 @@ Canaux.
 ## Faire bouger une image fixe
 
 1. espace **Vidéo** ;
-2. panneau **Modèles** → **Plus de filtres** → **Capacité** → **Image vers vidéo** ;
+2. panneau **Modèles** → filtre **Capacité**, visible sans rien déplier → **Image vers vidéo** ;
 3. choisissez un modèle, donnez-lui votre image, décrivez le mouvement voulu ;
 4. **Générer** — comptez plus longtemps que pour une image : quelques minutes est normal ;
 5. le clip arrive dans les **Assets**.
@@ -199,8 +205,11 @@ lettre). `E` monte, `Q` descend, `⇧` gauche accélère.
 
 1. espace **Vidéo** ;
 2. bouton **+** du rail gauche : une séquence neuve ;
-3. **glissez** votre premier clip depuis l’étagère, à gauche, sur une piste image ;
-4. glissez le second **juste après** — il colle tout seul au bord du premier ;
+3. **glissez** votre premier clip depuis l’étagère — en Vidéo elle est dans la **colonne de
+   droite**, la bande basse étant prise par la timeline — sur une piste image ;
+4. glissez le second **juste après** : il se cale sur l’image la plus proche, mais **il ne colle
+   pas au bord du premier**. Lâchez-le trop tôt et il recouvre son voisin ; l’aimantation aux bords
+   ne joue que lorsqu’on déplace un clip déjà posé ;
 5. `Espace` pour lire, `Début` pour revenir au commencement.
 
 **Pour couper :** placez la tête de lecture, appuyez sur `S`. Pour supprimer un clip :
@@ -220,7 +229,8 @@ final.
 1. espace **Audio**, bouton **+**, puis **double-cliquez** votre son ;
 2. tirez les bords de la région pour **rogner** ;
 3. posez un **fondu d’entrée** et un **fondu de sortie** ;
-4. le bouton d’écoute compare avec l’original, avant vos retouches.
+4. l’outil **A/B** compare avec l’original, avant vos retouches — c’est un outil à lui seul, pas
+   le bouton de lecture.
 
 **Le piège.** Rien n’est écrit tant que vous ne le demandez pas, et **changer de prise efface vos
 réglages** : les coupes se mesurent sur la prise qui les a reçues.
@@ -229,8 +239,9 @@ réglages** : les coupes se mesurent sur la prise qui les a reçues.
 
 ## Poser un asset là où il faut
 
-Le tableau à retenir. Il n’y a **que cinq** dépôts possibles, et le double-clic obéit à une
-autre règle encore.
+Le tableau des dépôts les plus courants. Il y a **neuf** surfaces qui acceptent un asset ; le
+chapitre [Les assets](07-assets.md) les liste toutes, et le double-clic obéit à une autre règle
+encore.
 
 | Vous voulez… | Le geste | Il faut, devant vous |
 |---|---|---|
@@ -240,7 +251,8 @@ autre règle encore.
 | une image en ciel | glisser sur l’**aperçu du ciel** | un onglet ciel |
 | un objet 3D dans une scène | glisser sur la **vue 3D** | un onglet scène |
 
-Une texture, elle, n’accepte **que** le glisser-déposer : la double-cliquer ne fait rien.
+Une texture se double-clique comme les autres : elle se pose alors en couleur de base de la
+matière ouverte.
 
 ---
 
@@ -252,7 +264,7 @@ Une texture, elle, n’accepte **que** le glisser-déposer : la double-cliquer n
 2. choisissez vos fichiers. Formats acceptés : vidéo (`mp4` `mov` `mkv` `webm` `avi` `mxf`
    `m4v`), audio (`wav` `mp3` `aac` `flac` `m4a` `ogg`), image (`png` `jpg` `jpeg` `webp` `tif`
    `tiff` `exr`), 3D (`glb`) ;
-3. un bandeau suit chaque fichier : Analyse, Empreinte, Proxy, Waveform, Prêt.
+3. un bandeau suit chaque fichier : Analyse, Empreinte, Proxy, Forme d’onde, Prêt.
 
 **Ce qu’il faut savoir, et qui a des conséquences réelles : le fichier n’est pas copié.** Le
 studio crée un **lien** vers l’endroit où il se trouve. Déplacer, renommer ou supprimer
@@ -333,7 +345,7 @@ encore, et rien à l’écran ne le dit sur le moment.
 |---|---|---|
 | **retrouver l’historique** d’un document rouvert | la pile d’annulation est vide | seul l’état est enregistré, pas les gestes qui y ont mené |
 | **importer un `.hdr`**, un `.obj` ou un `.fbx` | il est refusé | seul le `.glb` entre, côté 3D |
-| **détourer ou vectoriser** une image | le panneau Modèles s’ouvre, et rien de plus | il manque le moyen de choisir le modèle |
+| **détourer ou vectoriser** une image | les **Réglages ▸ Génération** s’ouvrent sur la section voulue | le modèle se choisit là, une fois pour toutes |
 | **exporter une vidéo** | aucun bouton | l’export vidéo n’est pas écrit — l’image, elle, sort par `⇧⌘E` |
 | **annuler un recadrage** | la taille revient, les pixels rognés non | l’historique ne garde pas l’image d’avant en entier |
 
