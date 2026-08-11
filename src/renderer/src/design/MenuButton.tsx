@@ -59,6 +59,14 @@ export function MenuButton({
           onClick?.()
           if (opensOnClick) flyout.open()
         }}
+        // The APG gesture for a menu button, and the only way into a mode group: there the click
+        // arms the tool rather than opening, so `opensOnClick` is false and hovering — which no
+        // keyboard does — was the sole opener. Enter goes on arming, untouched.
+        onKeyDown={event => {
+          if (!flyout.hasFlyout || !event.altKey || event.key !== 'ArrowDown') return
+          event.preventDefault()
+          flyout.open()
+        }}
       />
 
       {flyout.showing && (

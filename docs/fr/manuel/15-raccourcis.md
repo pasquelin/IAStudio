@@ -122,6 +122,11 @@ s’ouvrant**, sur leur première ligne. Vous n’avez rien à faire pour y entr
 | `Échap` | ferme, et rend le focus là où il était |
 | `Tab` | ferme aussi — un menu n’est pas un endroit où l’on tabule |
 
+**Pour ouvrir le menu d’un bouton qui en porte un : `⌥↓`.** La plupart des menus s’ouvrent d’un
+clic, mais pas ceux des **groupes d’outils** de la barre — là, le clic arme l’outil, et le menu
+ne s’ouvrait qu’au survol de la souris. `⌥↓` est le chemin du clavier ; `Entrée` continue d’armer
+l’outil, comme le clic.
+
 **Les lignes grisées sont sautées.** Une ligne qu’on ne peut pas choisir à la souris ne se prend
 pas au clavier non plus, et s’y arrêter donnerait un parcours qui semble bloqué.
 

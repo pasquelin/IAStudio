@@ -1,7 +1,7 @@
 import { mdiPencil } from '@mdi/js'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TIP_TOP } from '@/helpers/tooltip'
 import { MenuButton, type MenuButtonProps } from './MenuButton'
 
@@ -68,6 +68,49 @@ describe('MenuButton', () => {
       await userEvent.keyboard('{ArrowDown}')
 
       expect(row('Gomme')).toHaveFocus()
+    })
+
+    /**
+     * A mode group arms its tool on click, so its menu never opens that way — hovering was the
+     * only opener, and no keyboard hovers. `Alt+ArrowDown` is the gesture APG names for it.
+     */
+    it('opens a group whose click arms a mode instead', async () => {
+      const button = bar({ opensOnClick: false })
+      button.focus()
+
+      await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
+
+      expect(row('Pinceau')).toHaveFocus()
+    })
+
+    it('leaves Enter to arming the tool, which is what a click does there', async () => {
+      const onClick = vi.fn()
+      const button = bar({ opensOnClick: false, onClick })
+      button.focus()
+
+      await userEvent.keyboard('{Enter}')
+
+      expect(onClick).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
+    })
+
+    /** The bare arrow belongs to whoever walks the bar; taking it would trade one gesture away. */
+    it('ignores the arrow without Alt', async () => {
+      const button = bar({ opensOnClick: false })
+      button.focus()
+
+      await userEvent.keyboard('{ArrowDown}')
+
+      expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
+    })
+
+    it('opens nothing on a button that has no menu', async () => {
+      const button = bar({ rowCount: 1, opensOnClick: false })
+      button.focus()
+
+      await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
+
+      expect(screen.queryByRole('menuitem', { name: 'Pinceau' })).not.toBeInTheDocument()
     })
 
     it('leaves the focus alone when the pointer merely crossed the bar', async () => {

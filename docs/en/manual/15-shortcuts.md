@@ -119,6 +119,10 @@ first row. There is nothing to do to step in.
 | `Escape` | closes, and hands focus back where it was |
 | `Tab` | closes too — a menu is not somewhere you tab through |
 
+**To open a button's menu: `⌥↓`.** Most menus open on a click, but not those of the toolbar's
+**tool groups** — there the click arms the tool, and the menu only opened under the pointer.
+`⌥↓` is the keyboard's way in; `Enter` goes on arming the tool, exactly as the click does.
+
 **Greyed rows are stepped over.** A row the mouse cannot choose cannot be taken from the keyboard
 either, and stopping on one would make the walk look stuck.
 
