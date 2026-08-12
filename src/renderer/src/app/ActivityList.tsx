@@ -21,7 +21,7 @@ import { UiIcon } from '@/design/UiIcon'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { cn } from '@/helpers/cn'
-import { kept } from '@/helpers/format'
+import { formatList, kept } from '@/helpers/format'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useActivity, visibleActivity } from '@/stores/activity'
 import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
@@ -76,7 +76,11 @@ function timeOf(at: string, language: string): string {
  * is left as it is rather than dropped — a shelf missing from a sentence reads as a bug, an
  * untranslated one reads as a shelf.
  */
-function namedParams(params: ActivityParams | undefined, t: TFunction): ActivityParams | undefined {
+function namedParams(
+  params: ActivityParams | undefined,
+  t: TFunction,
+  language: string,
+): ActivityParams | undefined {
   if (!params) return params
 
   const named: Record<string, string | number> = {}
@@ -85,18 +89,21 @@ function namedParams(params: ActivityParams | undefined, t: TFunction): Activity
     named[name] =
       typeof value === 'string' || typeof value === 'number'
         ? value
-        : value.map(id => (isWorkspaceId(id) ? t(workspaceLabelKey(id)) : id)).join(', ')
+        : formatList(
+            value.map(id => (isWorkspaceId(id) ? t(workspaceLabelKey(id)) : id)),
+            language,
+          )
   }
   return named
 }
 
 export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
       <span className="text-text text-tiny break-words">
-        {t(entry.messageKey, namedParams(entry.params, t))}
+        {t(entry.messageKey, namedParams(entry.params, t, i18n.language))}
       </span>
       {entry.detail && (
         <span className="text-muted/70 text-mini font-mono break-all">{entry.detail}</span>
@@ -155,13 +162,14 @@ function FilterMenu<T extends string>({
   icon?: (value: T) => string
   onChange: (values: T[]) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
 
   // The names rather than a count: "Level: warning" is what the reader wants back, and a count
   // would make them open the menu to learn what they had chosen. Truncation handles the long tail.
   // Joined the way this file's other enumeration is (`namedParams`), rather than through a key
   // both bundles spell the same — a separator that translates nothing is a promise it cannot keep.
-  const chosen = active.length === 0 ? t('activity.all') : active.map(label).join(', ')
+  const chosen =
+    active.length === 0 ? t('activity.all') : formatList(active.map(label), i18n.language)
 
   const summary = t('activity.filters.summary', { facet, choice: chosen })
 

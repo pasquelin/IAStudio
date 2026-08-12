@@ -6,6 +6,7 @@ import {
   formatDecimal,
   formatPercent,
   kept,
+  formatList,
   type ByteUnit,
 } from './format'
 
@@ -105,5 +106,34 @@ describe('keeping a slider steady', () => {
   it('keeps the zeros a step implies', () => {
     expect(formatDecimal(1.2, 'fr', { digits: 2, least: 2 })).toBe('1,20')
     expect(formatDecimal(1, 'fr', { digits: 2, least: 2 })).toBe('1,00')
+  })
+})
+
+describe('a list of names, joined by the language', () => {
+  /*
+   * The whole point, and the reason `join(', ')` was a defect rather than a shortcut: the word
+   * between the last two items differs per language, and no component can know it.
+   */
+  it('writes the conjunction French writes', () => {
+    expect(formatList(['Image', '3D'], 'fr')).toBe('Image et 3D')
+    expect(formatList(['Image', '3D', 'Vidéo'], 'fr')).toBe('Image, 3D et Vidéo')
+  })
+
+  it('writes the one English writes, which is not the same word or the same comma', () => {
+    expect(formatList(['Image', '3D'], 'en')).toBe('Image and 3D')
+    expect(formatList(['Image', '3D', 'Video'], 'en')).toBe('Image, 3D, and Video')
+  })
+
+  // One name is not a list, and no separator belongs anywhere near it.
+  it('leaves a single name alone, and answers nothing for none', () => {
+    expect(formatList(['Image'], 'fr')).toBe('Image')
+    expect(formatList([], 'fr')).toBe('')
+  })
+
+  // `conjunction`, never `disjunction`: these lists are things ALL true at once. An "ou" would
+  // tell the reader the studio is unsure which shelf its picture landed in.
+  it('joins with an "and", never an "or"', () => {
+    expect(formatList(['a', 'b'], 'fr')).not.toContain('ou')
+    expect(formatList(['a', 'b'], 'en')).not.toContain(' or ')
   })
 })

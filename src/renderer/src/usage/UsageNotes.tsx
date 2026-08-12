@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { UsageReport } from '@shared/domain/usage'
+import { formatList } from '@/helpers/format'
 
 /**
  * The three things a figure on this screen does not say on its own.
@@ -9,8 +10,11 @@ import type { UsageReport } from '@shared/domain/usage'
  * reads as a complete one.
  */
 export function UsageNotes({ report }: { report: UsageReport }) {
-  const { t } = useTranslation()
-  const silent = report.silent.map(account => account.name).join(', ')
+  const { t, i18n } = useTranslation()
+  const silent = formatList(
+    report.silent.map(account => account.name),
+    i18n.language,
+  )
 
   return (
     <footer className="border-base-300 text-base-content/60 text-tiny flex flex-col gap-2 border-t pt-3">

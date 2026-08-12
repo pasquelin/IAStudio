@@ -14,6 +14,28 @@ export function kept<T>(cache: Map<string, T>, key: string, build: () => T): T {
   return built
 }
 
+const LISTS = new Map<string, Intl.ListFormat>()
+
+/**
+ * A list of names, joined the way the reader's language joins one.
+ *
+ * `join(', ')` is the same mistake `formatPercent` was written against, one level up: the word
+ * between the last two items belongs to the language, not to the component. French writes
+ * "Image et 3D", English "Image and 3D", and three call sites each wrote a bare comma — so every
+ * reader of every language got the enumeration of none of them.
+ *
+ * `conjunction`, never `disjunction`: all three sites list things that are ALL true at once —
+ * the shelves a generation landed in, the filters in force, the accounts that answered nothing.
+ * An "or" there would say the studio is unsure which.
+ */
+export function formatList(items: readonly string[], language: string): string {
+  return kept(
+    LISTS,
+    language,
+    () => new Intl.ListFormat(language, { style: 'long', type: 'conjunction' }),
+  ).format(items)
+}
+
 const PERCENTS = new Map<string, Intl.NumberFormat>()
 
 /**

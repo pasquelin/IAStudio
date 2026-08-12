@@ -59,7 +59,8 @@ describe('the journal, drawn', () => {
 
     render(<ActivityList />)
 
-    expect(screen.getByText('2 assets générés dans Image, 3D')).toBeInTheDocument()
+    // "et", not a bare comma: the word between the last two belongs to the reader's language.
+    expect(screen.getByText('2 assets générés dans Image et 3D')).toBeInTheDocument()
   })
 
   // An id nothing names is left as it is: a shelf missing from the sentence reads as a bug,
@@ -154,7 +155,7 @@ describe('the filters of the journal', () => {
 
     render(<ActivityList />)
 
-    expect(menuFor('Niveau', 'Avertissement, Échec')).toBeInTheDocument()
+    expect(menuFor('Niveau', 'Avertissement et Échec')).toBeInTheDocument()
   })
 
   /**
