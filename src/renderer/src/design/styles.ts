@@ -66,9 +66,15 @@ export function rowSkin(selected: boolean, disabled = false): string {
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
-    // Named, and paired with `data-selected` on the same element: `Row` reads both to lift its
+    // Named, and paired with `data-selected` on the SAME element: `Row` reads both to lift its
     // subtitle out of `muted`, which carries 3.25:1 on `accent-soft` and 3.51 on `elevated` in
-    // the dark theme. A refused row takes no group — its background does not answer either.
+    // the dark theme.
+    //
+    // A refused row takes no group, because its background does not answer a pointer either —
+    // and a row that is refused WHILE selected therefore keeps the muted subtitle on
+    // `accent-soft`. That case is real (`Models.tsx` can hold a pick the plan no longer allows)
+    // and it is left alone knowingly: `opacity-40` is already on it, and WCAG 1.4.3 exempts a
+    // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
     selected ? 'bg-accent-soft' : 'hover:bg-elevated',
     // After the hover, which it undoes: a refused line that still lights up under the pointer

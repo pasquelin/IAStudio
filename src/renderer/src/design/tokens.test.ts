@@ -99,10 +99,10 @@ const THEMES = [
 /**
  * The three surfaces this rule covers — the ones a word sits on at rest.
  *
- * NOT every surface a word is read on, and the difference is measured: a selected list row is
- * `bg-accent-soft` (`rowSkin`) and its subtitle stays `text-muted`, which reads 3.25:1 there;
- * `elevated` under a hover is 3.51. Both are below the threshold and neither is held here,
- * because raising them moves the selection colour itself — a palette decision, not a swap.
+ * NOT every surface a word is read on, and the difference is measured: `muted` reads 3.25:1 on
+ * `bg-accent-soft` and 3.51 on `bg-elevated` in the dark theme. Raising the token would move the
+ * selection colour itself, so those two are answered a row at a time instead — `Row` lifts its
+ * subtitle to `text` on exactly those states, and the rule below holds THAT pair.
  */
 const READING_SURFACES = ['chassis', 'panel', 'surface']
 
