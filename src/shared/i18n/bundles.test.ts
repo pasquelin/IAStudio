@@ -647,9 +647,25 @@ describe('how far back a listing reaches', () => {
  * A space named in the middle of a sentence — `l'espace Ciels`, `the Skies space`. French puts
  * the name after the word and English before it, which is why this reads as two alternatives
  * rather than one shape.
+ *
+ * The capital is what carries the whole distinction, and it is why this is not case-insensitive:
+ * `l'espace de travail` is ordinary French, and a rule that read `de` as a claimed name would
+ * fail on the words the bar itself uses. The price is that `l'espace ciels`, in lower case,
+ * walks past — a wrong name written as a common noun reads as prose, and prose is not a claim.
  */
 const NAMED_SPACE =
   /l['’]espace\s+(\p{Lu}[\p{L}\d]*)|\bthe\s+(\p{Lu}[\p{L}\d]*)\s+(?:space|workspace)\b/gu
+
+/**
+ * Names that follow this shape without meaning a workspace — a colour space, `the Lab space`.
+ * Empty today, and measured so: the pattern matches nothing in either bundle but the sentence
+ * this batch fixed.
+ *
+ * It exists so the day a colour space is written that way has an answer other than widening the
+ * pattern until it says nothing — a guard that refuses something true is a guard its next reader
+ * disarms.
+ */
+const NOT_A_WORKSPACE: ReadonlySet<string> = new Set<string>()
 
 describe('a space a sentence points at', () => {
   /**
@@ -658,17 +674,18 @@ describe('a space a sentence points at', () => {
    * invented in the very commit that wrote the sentence. A reader following the hint looked for
    * something that is not on their screen.
    *
-   * What this reads is ONE phrasing, the one that claims a name. A sentence that names the same
-   * surface some other way — `the montage`, `the audio editor`, the five siblings of that hint —
-   * says nothing this can check, and is not meant to: they name what the reader lands IN, which
-   * the bar does not label.
+   * **This reads ONE phrasing, the one that claims a name**, and the test is named for that
+   * rather than for the rule a reader might hope it holds. A sentence naming the same surface
+   * some other way — `the montage`, `the audio editor` — says nothing this can check. Two of the
+   * five siblings of that hint do exactly that, and stay unchecked here.
    */
-  it.each(CODES)('calls it what the bar calls it, in %s', code => {
+  it.each(CODES)('never claims a space name the bar does not carry, in %s', code => {
     const named = new Set(WORKSPACE_IDS.map(id => BUNDLES[code].get(`workspaces.${id}`)))
     const invented = [...BUNDLES[code]].flatMap(([key, value]) =>
       [...value.matchAll(NAMED_SPACE)]
-        .map(match => match[1] ?? match[2])
-        .filter(claimed => !named.has(claimed))
+        // One alternative matches, the other stays undefined — `flatMap` drops it.
+        .flatMap(match => match[1] ?? match[2] ?? [])
+        .filter(claimed => !named.has(claimed) && !NOT_A_WORKSPACE.has(claimed))
         .map(claimed => ({ key, claimed })),
     )
 
