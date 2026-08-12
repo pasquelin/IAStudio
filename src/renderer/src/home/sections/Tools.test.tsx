@@ -77,6 +77,10 @@ describe('Tools', () => {
     expect(tile).toHaveClass('rounded-(--radius-sc-md)')
     expect(tile).not.toHaveClass('rounded-(--radius-sc-sm)')
 
+    // The fill fades and the words with it: `transition-colors` is on the tile AND on the help,
+    // the property not being inherited. Held on both, or one of the two snaps.
+    expect(tile).toHaveClass('transition-colors')
+
     // By the clamp and not by `.text-muted`: the icon wears that too, and it is drawn first.
     const help = tile?.querySelector('.line-clamp-2')
     expect(help).toHaveClass('text-muted', 'group-hover/row:text-text', 'transition-colors')
