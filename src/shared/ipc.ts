@@ -328,8 +328,6 @@ export type SaveAudioRequest = {
  * conversion — which on a 4K picture is megabytes copied twice for nothing.
  */
 export type SavePictureRequest = {
-  /** The asset to overwrite. Absent creates a new one instead. */
-  replaces?: string
   name: string
   /** The picture this one was edited from, so the two stay traceable to each other. */
   derivedFrom?: string
@@ -833,11 +831,14 @@ export type StudioBridge = {
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
     /**
-     * Writes an edited picture back, the same way: over its source when `replaces` is set,
-     * beside it otherwise. What ⌘S calls once the document itself is on disk.
+     * Puts an edited picture into the project, as a NEW asset beside the one it came from.
      *
-     * The kind is the overwritten asset's own — a texture channel edited as a picture stays a
-     * texture channel, which is what keeps it on the right shelf and under the right badge.
+     * Always a new one, like `saveTexture` and for a related reason: a document's base layer is
+     * sourced from the asset it was opened from, so overwriting that asset would feed the
+     * flattened stack back into the layer it was flattened from.
+     *
+     * The kind and the channel are the source's own, read from the catalogue — a texture channel
+     * edited as a picture stays a channel, which keeps it on the right shelf.
      */
     savePicture: (request: SavePictureRequest) => Promise<Asset>
     /**

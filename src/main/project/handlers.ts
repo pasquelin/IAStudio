@@ -234,12 +234,6 @@ export function registerProjectHandlers({
     // with a file that is not one.
     if (!isPngBytes(png)) throw new Error('expected a PNG payload')
 
-    if (request.replaces) {
-      // The kind is the overwritten asset's own — `replaceBytes` keeps it, which is what leaves
-      // an edited texture channel a texture channel rather than filing it as a plain picture.
-      return withoutSourcePath(await assets.replaceBytes(request.replaces, png, PNG_EXTENSION))
-    }
-
     // A picture saved beside its source inherits what the source IS: its kind, and the channel
     // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
     // the reason `saveTexture` gives — the kind is what the folder and the extension follow.

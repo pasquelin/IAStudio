@@ -653,7 +653,12 @@ describe('project handlers', () => {
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 
-    it('overwrites the asset it was edited from, keeping its identity', async () => {
+    /**
+     * Always a new asset, like `saveTexture`: a document's base layer is sourced from the asset
+     * it was opened from, so overwriting that asset would feed the flattened stack back into the
+     * layer it was flattened from.
+     */
+    it('never overwrites, whatever the caller sends', async () => {
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets }))
 
@@ -663,15 +668,11 @@ describe('project handlers', () => {
         png: PNG_BASE64,
       })
 
-      expect(assets.replaceBytes).toHaveBeenCalledWith(
-        'asset-1',
-        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-        '.png',
-      )
-      expect(assets.importFromBytes).not.toHaveBeenCalled()
+      expect(assets.replaceBytes).not.toHaveBeenCalled()
+      expect(assets.importFromBytes).toHaveBeenCalled()
     })
 
-    it('files a new one beside its source when nothing is to be replaced', async () => {
+    it('files it beside its source', async () => {
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets }))
 

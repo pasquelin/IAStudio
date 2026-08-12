@@ -231,17 +231,10 @@ describe('the opening chunk', () => {
    * A budget rather than a ban — the list is allowed to shrink, never to grow, and a third entry
    * means something on the first screen reached further than it needed.
    */
-  /**
-   * The three are registries and a placer, and each imports nothing of its own — that is what
-   * makes them harmless here. `audio-hosts` joined them when ⌘S grew a second half: the take a
-   * save writes back lives in an `AudioDocument`'s state, and `document-io` reaches it the way
-   * it already reaches the canvas's pixels.
-   */
-  it('pulls only these three neighbours out of the editors folders', () => {
+  it('pulls only these two neighbours out of the editors folders', () => {
     const { files } = GRAPH
 
     expect([...files].filter(path => path.startsWith('./spaces/')).sort()).toEqual([
-      './spaces/audio/audio-hosts.ts',
       './spaces/image/canvas-hosts.ts',
       './spaces/image/place-asset.ts',
     ])

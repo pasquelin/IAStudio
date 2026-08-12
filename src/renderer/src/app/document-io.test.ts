@@ -22,7 +22,6 @@ import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
 import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
 import { addLayer } from '@/engines/canvas/commands'
-import { holdAudio } from '@/spaces/audio/audio-hosts'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
@@ -36,7 +35,6 @@ import { setSunAngles } from '@/engines/skybox/commands'
 import { useAudioEdits } from '@/stores/audio-edits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
-import { createSkyboxContent } from '@shared/domain/skybox'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import {
@@ -194,13 +192,14 @@ describe('saveDocument', () => {
   })
 
   /**
-   * The second half of ⌘S: the document holds the layers, the asset holds a flat picture of
-   * them. Before this, the grid kept showing the generation while the document had moved on.
+   * ⌘S writes the document and NOTHING else, and that is a decision the engine forces.
+   *
+   * A document's base layer carries `source: <assetId>`, and `CanvasEngine` reloads any pixel
+   * layer that has one from `assetUrl(source)` when its surface is born. Overwriting that asset
+   * with the flattened stack would feed the flattened picture back into the layer it was
+   * flattened from, and the upper layers would be drawn over it again at every reopen.
    */
   describe('the asset behind the document', () => {
-    const PNG = 'iVBORw0KGgo='
-
-    /** An image tab linked to an asset, with an engine that hands back a flattened picture. */
     const openLinkedImage = async (): Promise<{ documentId: string; release: () => void }> => {
       const created = await useDocuments
         .getState()
@@ -211,136 +210,44 @@ describe('saveDocument', () => {
       const release = holdCanvas(created.id, () => ({
         pixelSnapshots: () => Promise.resolve([]),
         restoreSnapshot: () => Promise.resolve(),
-        snapshot: () => Promise.resolve(PNG),
+        snapshot: () => Promise.resolve('iVBORw0KGgo='),
       }))
       return { documentId: created.id, release }
     }
 
-    it('rewrites the asset with the flattened stack', async () => {
+    it('leaves the asset alone, however linked the document is', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
         documents: { write: () => Promise.resolve() },
         assets: { savePicture },
-      })
-      const { documentId, release } = await openLinkedImage()
-
-      await saveDocument(documentId)
-      release()
-
-      expect(savePicture).toHaveBeenCalledWith({
-        replaces: 'asset-1',
-        name: 'Gemini 3.1',
-        png: PNG,
-      })
-    })
-
-    /**
-     * The order is the guarantee. The document carries the layers and the history; the asset
-     * only a flat picture. Writing the asset first and failing on the document would leave a
-     * thumbnail up to date in front of work that is gone.
-     */
-    it('writes the document before it touches the asset', async () => {
-      const order: string[] = []
-      installFakeBridge({
-        documents: {
-          write: () => {
-            order.push('document')
-            return Promise.resolve()
-          },
-        },
-        assets: {
-          savePicture: () => {
-            order.push('asset')
-            return Promise.resolve(picture())
-          },
-        },
-      })
-      const { documentId, release } = await openLinkedImage()
-
-      await saveDocument(documentId)
-      release()
-
-      expect(order).toEqual(['document', 'asset'])
-    })
-
-    /**
-     * The file is written, which is the point of ⌘S. What is behind is the thumbnail, and the
-     * next save catches it up — so the failure is journalled rather than thrown at a caller
-     * that would have to guess which half went through.
-     */
-    it('keeps the document saved when the asset refuses, and says so', async () => {
-      const { entries } = bridgeWatchingLogs({
-        documents: { write: () => Promise.resolve() },
-        assets: { savePicture: () => Promise.reject(new Error('disk full')) },
       })
       const { documentId, release } = await openLinkedImage()
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
-      expect(entries()).toHaveLength(1)
-      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+      expect(savePicture).not.toHaveBeenCalled()
     })
 
     /**
-     * An engine whose GPU context is not up yet extracts nothing. `capture` has already refused
-     * the case where no engine holds the document at all — this is the one that gets past it,
-     * and the document must still reach the disk.
+     * The take is a REPLAYABLE chain over a decoded source: baking it into that source would
+     * leave the chain in the document and apply it a second time on the next open — normalized
+     * twice, trimmed twice, with the pre-edit audio nowhere. The editor's own toolbar offers
+     * both writes, where a hand asks for them.
      */
-    it('writes the document alone when the picture cannot be extracted yet', async () => {
-      const savePicture = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({
-        documents: { write: () => Promise.resolve() },
-        assets: { savePicture },
-      })
+    it('leaves a take alone too, chain and all', async () => {
+      const saveAudio = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({ documents: { write: () => Promise.resolve() }, assets: { saveAudio } })
+
       const created = await useDocuments
         .getState()
-        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+        .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
       if (!created) throw new Error('expected a document')
-
-      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
-      const release = holdCanvas(created.id, () => ({
-        pixelSnapshots: () => Promise.resolve([]),
-        restoreSnapshot: () => Promise.resolve(),
-        snapshot: () => Promise.resolve(null),
-      }))
+      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
 
       await expect(saveDocument(created.id)).resolves.toBe(true)
-      release()
 
-      expect(savePicture).not.toHaveBeenCalled()
-    })
-
-    it('touches no asset for a document that edits none', async () => {
-      const savePicture = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({
-        documents: { write: () => Promise.resolve() },
-        assets: { savePicture },
-      })
-
-      await saveDocument(await openScene())
-      expect(savePicture).not.toHaveBeenCalled()
-    })
-
-    /**
-     * A scene is not a mesh, a montage renders in minutes, and a sky's adjustments are meant to
-     * stay undoable. The three refuse by having no `flatten` at all, which is the decision read
-     * off the table rather than an `if` written somewhere else.
-     */
-    it('touches no asset for a kind that cannot be flattened, even when one is linked', async () => {
-      const savePicture = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({
-        documents: { write: () => Promise.resolve() },
-        assets: { savePicture },
-      })
-      const created = await useDocuments
-        .getState()
-        .create('skyboxes', { title: 'Dusk', sourceAssetId: 'asset-sky' })
-      if (!created) throw new Error('expected a document')
-      useSkyboxes.getState().ensure(created.id, createSkyboxContent)
-
-      await saveDocument(created.id)
-      expect(savePicture).not.toHaveBeenCalled()
+      expect(saveAudio).not.toHaveBeenCalled()
     })
   })
 
@@ -487,53 +394,6 @@ describe('saveDocument', () => {
 
       await restoreDocument('doc-1')
       await expect(saveDocumentAs('doc-1')).resolves.toBe(false)
-    })
-  })
-
-  /**
-   * A take goes back through its own channel: PCM rather than base64, and `saveAudio` probes the
-   * bytes because an edited take is rarely the length it was.
-   */
-  describe('the take behind an audio document', () => {
-    it('writes the rendered take over the asset it was opened from', async () => {
-      const saveAudio = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({ documents: { write: () => Promise.resolve() }, assets: { saveAudio } })
-
-      const created = await useDocuments
-        .getState()
-        .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
-      if (!created) throw new Error('expected a document')
-      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
-
-      const wav = new Uint8Array([1, 2, 3])
-      const release = holdAudio(created.id, () => ({ rendered: () => wav }))
-      await saveDocument(created.id)
-      release()
-
-      expect(saveAudio).toHaveBeenCalledWith({
-        replaces: 'asset-take',
-        name: 'pad.wav',
-        wav,
-      })
-    })
-
-    // The chain is replayed in a worker; a save landing before it answers writes the document
-    // alone, and the next one catches the take up.
-    it('writes the document alone while the chain is still being replayed', async () => {
-      const saveAudio = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({ documents: { write: () => Promise.resolve() }, assets: { saveAudio } })
-
-      const created = await useDocuments
-        .getState()
-        .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
-      if (!created) throw new Error('expected a document')
-      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
-
-      const release = holdAudio(created.id, () => ({ rendered: () => null }))
-      await expect(saveDocument(created.id)).resolves.toBe(true)
-      release()
-
-      expect(saveAudio).not.toHaveBeenCalled()
     })
   })
 
