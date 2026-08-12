@@ -145,13 +145,55 @@ describe('dropping a project from the shelf', () => {
     useSettings.setState(state => ({
       settings: {
         ...state.settings,
-        storage: { ...state.settings.storage, recentProjects: [SUMMER, WINTER] },
+        storage: {
+          ...state.settings.storage,
+          recentProjects: [SUMMER, WINTER],
+          lastProject: undefined,
+        },
       },
     }))
   })
 
   it('writes the shelf back without the folder it was handed', async () => {
     const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().forget(SUMMER.path)
+
+    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
+  })
+
+  /**
+   * `startup: 'lastProject'` is the default, so a removal that left the pointer behind was undone
+   * by the next launch: the project reopened, `withRecentProject` put it back at the top, and
+   * nothing anywhere said why the row had returned.
+   */
+  it('clears the startup pointer when it named the folder being dropped', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, lastProject: SUMMER.path },
+      },
+    }))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().forget(SUMMER.path)
+
+    expect(write).toHaveBeenCalledWith({
+      storage: { recentProjects: [WINTER], lastProject: undefined },
+    })
+  })
+
+  // …and leaves it alone otherwise: dropping one project must not stop another from reopening.
+  it('leaves the startup pointer alone when it names another project', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, lastProject: WINTER.path },
+      },
+    }))
     installFakeBridge({ settings: { write } })
 
     await useProject.getState().forget(SUMMER.path)

@@ -22,6 +22,12 @@ const MARGIN = 8
  * anchor. Everything else is shared — the rows are `MenuRow`, the surface is the same token, and
  * it portals to the document root for the same reason (a menu drawn inside a panel is clipped by
  * the panel's own overflow).
+ *
+ * **The portal does not detach it from what raised it.** React bubbles synthetic events through
+ * the React tree, not the DOM one, so every press here still reaches the element the menu was
+ * opened over — which in a `Collection` is a cell that opens a project on a single click. The
+ * menu therefore stops its own presses: it is a surface of its own, and nothing chosen in it is
+ * also a press on what lies underneath.
  */
 export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
   const menu = useRef<HTMLDivElement | null>(null)
@@ -56,7 +62,14 @@ export function ContextMenu({ at, onClose, children }: ContextMenuProps) {
       ref={place}
       role="menu"
       className={cn(MENU_SURFACE, 'min-w-44')}
-      onContextMenu={event => event.preventDefault()}
+      onPointerDown={event => event.stopPropagation()}
+      onClick={event => event.stopPropagation()}
+      onContextMenu={event => {
+        event.preventDefault()
+        // Or the host that opened this menu takes the press for a fresh right-click and
+        // re-anchors the open menu under the pointer, which is how one tries to dismiss it.
+        event.stopPropagation()
+      }}
     >
       {children}
     </div>,

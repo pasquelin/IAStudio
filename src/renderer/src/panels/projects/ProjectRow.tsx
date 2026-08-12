@@ -65,6 +65,9 @@ export const ProjectRow = memo(function ProjectRow({ project }: ProjectRowProps)
           </span>
         }
       />
+      {/* The date lives in the tooltip otherwise, and a tooltip is hover-only: a keyboard walking
+          the shelf with the arrows would never reach the answer it exists to give. */}
+      {when && <span className="sr-only">{t('home.projects.openedAt', { when })}</span>}
       {menuAt && <ProjectMenu path={project.path} at={menuAt} onClose={closeMenu} />}
     </div>
   )

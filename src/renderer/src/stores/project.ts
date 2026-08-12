@@ -155,18 +155,26 @@ export const useProject = create<ProjectState>()((set, get) => ({
     } catch {
       // Forgotten here rather than by whoever clicked: an opening can fail from anywhere, and a
       // list that only forgets when the home asked it keeps offering a folder nothing can open.
-      await get().forget(path)
+      // Swallowed on the way: this is already the failing path, and `open` answers `false`
+      // whether or not the shelf could be written.
+      await get()
+        .forget(path)
+        .catch(() => {})
       return false
     }
   },
 
   forget: async path => {
-    const bridge = getBridge()
-    if (!bridge) return
+    const { settings, write } = useSettings.getState()
 
-    const recent = useSettings.getState().settings.storage.recentProjects
-    await bridge.settings.write({
-      storage: { recentProjects: withoutRecentProject(recent, path) },
+    await write({
+      storage: {
+        recentProjects: withoutRecentProject(settings.storage.recentProjects, path),
+        // Cleared with it when it named this folder: `startup: 'lastProject'` is the default, so
+        // the next launch would reopen the project, record it through `withRecentProject`, and
+        // put the row the user just removed back at the top without a word.
+        ...(settings.storage.lastProject === path ? { lastProject: undefined } : {}),
+      },
     })
   },
 

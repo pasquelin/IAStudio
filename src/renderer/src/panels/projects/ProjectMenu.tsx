@@ -4,6 +4,7 @@ import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { useProject } from '@/stores/project'
 
 export type ProjectMenuProps = {
@@ -26,26 +27,36 @@ export type ProjectMenuProps = {
 export function ProjectMenuRows({ path, onClose }: ProjectMenuProps) {
   const { t } = useTranslation()
 
-  const choose =
-    (run: () => void): (() => void) =>
-    () => {
-      run()
-      onClose()
-    }
-
+  // The menu is gone by the time either answer comes, so a failure travels to the journal rather
+  // than nowhere — as the asset menu's own reveal does. Both can genuinely fail: the main process
+  // refuses a path that is not absolute, and the settings write can be refused by the disk.
   return (
     <>
       <MenuRow
         label={t('home.projects.reveal')}
         icon={mdiFolderOpenOutline}
         tip={HINT_RIGHT(t('home.projects.revealHint'))}
-        onSelect={choose(() => void getBridge()?.project.revealFolder(path))}
+        onSelect={() => {
+          void getBridge()
+            ?.project.revealFolder(path)
+            .then(shown => {
+              if (!shown) reportFailure('project.reveal', path, new Error('folder not found'))
+            })
+            .catch(error => reportFailure('project.reveal', path, error))
+          onClose()
+        }}
       />
       <MenuRow
         label={t('home.projects.forget')}
         icon={mdiPlaylistRemove}
         tip={HINT_RIGHT(t('home.projects.forgetHint'))}
-        onSelect={choose(() => void useProject.getState().forget(path))}
+        onSelect={() => {
+          void useProject
+            .getState()
+            .forget(path)
+            .catch(error => reportFailure('project.forget', path, error))
+          onClose()
+        }}
       />
     </>
   )

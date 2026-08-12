@@ -85,6 +85,24 @@ describe('the projects panel', () => {
     expect(screen.getByRole('menuitem', { name: 'Retirer de la liste' })).toBeInTheDocument()
     expect(open).not.toHaveBeenCalled()
   })
+
+  /**
+   * The same trap through the right-click, which is the gesture that has no button to hide
+   * behind: `ContextMenu` portals to `body`, but React bubbles synthetic events through the
+   * REACT tree, so the press was reaching the cell and opening the project being dropped.
+   */
+  it('does not open the project when a row of its context menu is chosen', async () => {
+    const open = vi.fn(() => Promise.resolve(true))
+    const forget = vi.fn(() => Promise.resolve())
+    useProject.setState({ open, forget })
+    render(<Projects />)
+
+    await userEvent.pointer({ target: screen.getByText('Summer'), keys: '[MouseRight]' })
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Retirer de la liste' }))
+
+    expect(forget).toHaveBeenCalledWith('/projects/summer')
+    expect(open).not.toHaveBeenCalled()
+  })
 })
 
 describe('the room a project row is given', () => {

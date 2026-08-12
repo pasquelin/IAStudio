@@ -1,4 +1,5 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RecentProject } from '@shared/domain/project'
 import { Collection } from '@/design/Collection'
@@ -24,7 +25,9 @@ export function Projects() {
   const { t } = useTranslation()
   const recent = useSettings(state => state.settings.storage.recentProjects)
 
-  const items: Card[] = recent.map(entry => ({ ...entry, id: entry.path }))
+  // Held, or every render of the home hands each row a project of a new identity and `ProjectRow`
+  // is memoised against nothing.
+  const items: Card[] = useMemo(() => recent.map(entry => ({ ...entry, id: entry.path })), [recent])
 
   return (
     <Collection

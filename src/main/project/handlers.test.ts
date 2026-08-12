@@ -47,6 +47,8 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
       remove: vi.fn(async () => undefined),
     },
     reveal: vi.fn(),
+    // Present by default: a folder that has gone is the case a test says so itself.
+    exists: vi.fn(() => true),
     folder: {
       list: vi.fn(async () => []),
       rename: vi.fn(async () => true),
@@ -269,9 +271,30 @@ describe('project handlers', () => {
       const injected = deps(catalog)
       registerProjectHandlers(injected)
 
-      await invoke(CHANNELS.projectRevealFolder, '/elsewhere/summer')
+      await expect(invoke(CHANNELS.projectRevealFolder, '/elsewhere/summer')).resolves.toBe(true)
 
       expect(injected.reveal).toHaveBeenCalledWith('/elsewhere/summer')
+      expect(injected.record).not.toHaveBeenCalled()
+    })
+
+    /**
+     * `showItemInFolder` answers nothing and no-ops in silence, and the shelf lists folders last
+     * seen days ago — so a row that reveals a folder gone from the disk was the one gesture of
+     * this file that did nothing and explained nothing.
+     */
+    it('says so in the journal rather than showing nothing, when the folder has gone', async () => {
+      const injected = deps(catalog)
+      injected.exists = vi.fn(() => false)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectRevealFolder, '/elsewhere/summer')).resolves.toBe(false)
+
+      expect(injected.reveal).not.toHaveBeenCalled()
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.projectNotRevealed',
+      })
     })
 
     // A relative path would resolve against wherever Electron was launched from, which is the

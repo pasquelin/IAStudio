@@ -26,6 +26,10 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'assets.reveal',
   // A double-click is a gesture too: refusing the same asset twice must say so twice.
   'assets.open',
+  // Both rows of the home's project menu: chosen again precisely because the first attempt
+  // said nothing, and a shelf whose row does nothing twice in silence reads as a dead menu.
+  'project.reveal',
+  'project.forget',
   // A drop is a gesture: dropping the same cloud picture twice must say so twice, which is the
   // very defect `feat/documents-erreurs` fixed for the others.
   'texture.channel',

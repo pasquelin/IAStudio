@@ -42,6 +42,12 @@ export type ProjectHandlerDeps = {
   documents: DocumentFiles
   /** `shell.showItemInFolder`, injected rather than imported: it needs a live app. */
   reveal: (file: string) => void
+  /**
+   * Whether a path is still there. Injected like everything else that touches the disk, and
+   * needed because `reveal` answers nothing: a folder the shelf still lists but the disk has
+   * lost would otherwise be a menu row that does nothing and explains nothing.
+   */
+  exists: (path: string) => boolean
   /** The project folder: read one level at a time, and the two gestures that write to it. */
   folder: FolderReader & FolderEditor
   /**
@@ -61,6 +67,7 @@ export function registerProjectHandlers({
   newAssetId,
   documents,
   reveal,
+  exists,
   folder,
   openInSystem,
   askUser,
@@ -106,7 +113,16 @@ export function registerProjectHandlers({
   // `projectOpen` already applies to a path the renderer names — showing a folder opens nothing
   // and reads nothing, so this asks no more of the caller than opening it would.
   handle(CHANNELS.projectRevealFolder, async (_event, path) => {
-    reveal(parseProjectPath(path))
+    const folderPath = parseProjectPath(path)
+    // Asked before showing, because `showItemInFolder` no-ops in silence on a path that has
+    // gone — and the shelf lists folders that were last seen days ago.
+    if (!exists(folderPath)) {
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotRevealed' })
+      return false
+    }
+
+    reveal(folderPath)
+    return true
   })
 
   // All three answer whether it happened, and all three say why in the journal when it did not:

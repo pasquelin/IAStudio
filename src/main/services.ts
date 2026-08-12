@@ -179,6 +179,8 @@ export type Services = {
   pickFolder: () => Promise<string | null>
   /** Shows a file in the OS file manager, so the path never leaves this process. */
   reveal: (file: string) => void
+  /** Whether a path is still there — `reveal` above answers nothing for one that has gone. */
+  exists: (path: string) => boolean
   /** The project folder: read one level at a time, and the two gestures that write to it. */
   folder: FolderReader & FolderEditor
   /** Hands a file to the system. The one place the studio launches a third-party application. */
@@ -893,6 +895,7 @@ export function createServices(settings: SettingsStore): Services {
     // options is how two flows start behaving differently.
     pickFolder: () => pickPath('folder'),
     reveal: file => shell.showItemInFolder(file),
+    exists: existsSync,
     folder: {
       ...createFolderReader(() => project.path()),
       ...createFolderEditor(
