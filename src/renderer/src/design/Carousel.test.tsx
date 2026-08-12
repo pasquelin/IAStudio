@@ -118,7 +118,7 @@ describe('the page dots', () => {
     // 3200 px of rail over a 640 px viewport.
     const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
     expect(dots).toHaveLength(5)
-    expect(dots[0]).toHaveAttribute('aria-current', 'true')
+    expect(dots[0]).toHaveAttribute('aria-current', 'page')
   })
 
   it('scrolls to the page it names', async () => {
@@ -131,8 +131,8 @@ describe('the page dots', () => {
 
   /**
    * Which page is current is said by the WIDTH as well as by the fill, and that is not decoration:
-   * `text` and `muted` sit 2.30:1 apart on the dark theme, under the 3:1 WCAG 1.4.11 asks of a
-   * state. Colour alone would leave the current page told at a ratio nothing else makes up for.
+   * the two fills are too close to tell a state apart, which `tokens.test.ts` measures against the
+   * stylesheet rather than restating here. Colour alone would leave the current page unsaid.
    */
   it('says which page is current by its width, not by its fill alone', async () => {
     renderCarousel(cards(500))
@@ -141,8 +141,9 @@ describe('the page dots', () => {
 
     expect(dots[0]).toHaveClass('w-4')
     expect(dots[1]).toHaveClass('w-1.5')
-    // Both change, so the fill and the width have to fade together rather than one snapping.
-    expect(dots[0]).toHaveClass('transition-all')
+    // The two properties named, so the focus ring's shadow is not faded in along with them.
+    expect(dots[0]).toHaveClass('transition-[background-color,width]')
+    expect(dots[0]?.className).not.toContain('transition-all')
   })
 
   /** `bg-muted/40` read 1.99:1 on a panel: a control saying how many pages there are. */

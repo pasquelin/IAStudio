@@ -207,13 +207,20 @@ export function Carousel<T extends { id: string }>({
               key={page}
               type="button"
               {...TIP_BOTTOM(t('carousel.page', { number: page + 1 }))}
-              aria-current={page === position.page ? 'true' : undefined}
+              // `page` rather than `true`: this is the nominal case of the value, and the three
+              // other sources in the studio that carry the attribute already write it.
+              aria-current={page === position.page ? 'page' : undefined}
               onClick={() => scrollToPage(page)}
-              // Which page is current is said by the WIDTH, not by the colour alone: `text` and
-              // `muted` sit 2.30:1 apart, under the 3:1 WCAG 1.4.11 asks of a state. `transition-all`
-              // and not `-colors`, or the dot would snap wide while its fill faded.
+              // Which page is current is said by the WIDTH, not by the fill alone — the two fills
+              // are too close to tell a state apart, which `tokens.test.ts` measures. Hovering an
+              // unread dot therefore gives it the current one's fill and only the width still
+              // separates them, which is the point of having a second signal at all.
+              //
+              // The two properties named rather than `transition-all`, which would also fade in
+              // the focus ring's shadow — the one thing that must appear at once.
               className={cn(
-                'h-1.5 cursor-pointer rounded-full border-none p-0 transition-all',
+                'h-1.5 cursor-pointer rounded-full border-none p-0',
+                'transition-[background-color,width]',
                 page === position.page ? 'bg-text w-4' : 'bg-muted hover:bg-text w-1.5',
                 FOCUS_RING,
               )}
