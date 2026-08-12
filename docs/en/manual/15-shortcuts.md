@@ -119,11 +119,16 @@ first row. There is nothing to do to step in.
 | `Escape` | closes, and hands focus back where it was |
 | `Tab` | closes too — a menu is not somewhere you tab through |
 
-**To open a tool group's menu: `⌥↓`.** Other menus open on a click, and so on `Enter`, but not
-those of the toolbar's **groups**: there the click arms the tool, and the menu only opened under
-the pointer. `⌥↓` is the keyboard's way in; `Enter` goes on arming the tool, exactly as the click
-does. Like the walking keys above, `⌥↓` belongs to the button rather than the registry: it cannot
-be changed.
+**To open a tool group's menu: `⌥↓`.** Most menus open on a click, and so on `Enter`. A group
+**with a tool armed** is the exception: there the click picks the tool, and the menu only opened
+under the pointer. `⌥↓` is the keyboard's way in; `Enter` goes on arming the tool, exactly as the
+click does.
+
+A group that arms nothing — 3D's **Add**, which is only a list of actions — opens on a click like
+any other menu: there is no tool to pick in its place.
+
+Like the walking keys above, `⌥↓` belongs to the button rather than the registry: it cannot be
+changed.
 
 **Greyed rows are stepped over.** A row the mouse cannot choose cannot be taken from the keyboard
 either, and stopping on one would make the walk look stuck.
