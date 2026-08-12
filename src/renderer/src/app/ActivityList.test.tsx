@@ -140,6 +140,22 @@ describe('the filters of the journal', () => {
     expect(menuFor('Niveau', 'Échec')).toHaveClass('w-auto')
   })
 
+  // jsdom lays nothing out, so the row is asserted where it is written — `min-w-0` with it,
+  // since without it neither name truncates and the pair pushes past the panel.
+  it('stands its two families on one row, each free to shrink', () => {
+    render(<ActivityList />)
+
+    const button = menuFor('Niveau', 'Tout')
+    // `ToolButton` is `shrink-0`; `min-w-0` alone leaves that in place and the pair still
+    // overflows. `cn` merges the pair down to the one that wins, so this reads the outcome.
+    expect(button).toHaveClass('min-w-0', 'shrink')
+    expect(button).not.toHaveClass('shrink-0')
+
+    const row = button.closest('div.flex')
+    expect(row).not.toHaveClass('flex-col')
+    expect(row?.querySelectorAll('button')).toHaveLength(2)
+  })
+
   // The summary is TEXT on the button, not only its accessible name: read by the eye, it is what
   // replaces the eleven chips.
   it('draws the choice, and does not merely name it', () => {

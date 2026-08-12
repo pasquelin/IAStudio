@@ -17,6 +17,7 @@ import { UpdateStatus } from './UpdateStatus'
 import { Rail } from './Rail'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { AccountSelect } from './AccountSelect'
+import { ProjectSelect } from './ProjectSelect'
 import { TitleBar } from './TitleBar'
 import {
   isHorizontal,
@@ -59,7 +60,14 @@ export function Shell() {
         onWorkspace={setActiveWorkspace}
         home={home}
         onHome={homeEnabled ? () => setHome(true) : undefined}
-        actions={<AccountSelect />}
+        // Local then remote: the folder everything is written into, then the key it is
+        // generated on. The pair is the studio's "where am I" in one corner.
+        actions={
+          <>
+            <ProjectSelect />
+            <AccountSelect />
+          </>
+        }
       />
 
       {/* One frame for both surfaces, and now the same shape on each: two columns of panels

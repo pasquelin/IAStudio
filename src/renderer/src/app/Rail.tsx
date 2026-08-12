@@ -128,6 +128,11 @@ function RailGroup({ zone }: { zone: ToolZone }) {
   // re-run on every write.
   const { show, close } = useTools.getState()
 
+  // The rule `halvesOf` makes for halves, applied to the group itself: an empty flex child still
+  // eats one of the rail's gaps, and the home's left rail has two such zones — a hole where its
+  // icons used to be. No surface declares a `top` placement at all.
+  if (tools.length === 0) return null
+
   return (
     <div className="flex flex-col items-center gap-2">
       {halvesOf(tools).map(([slot, inSlot], index) => {

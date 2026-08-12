@@ -47,7 +47,6 @@ export const TOOL_ENTRIES: Record<ToolId, ToolEntry> = {
   library: { load: () => import('@/panels/library'), role: null },
   documents: { load: () => import('@/panels/documents'), role: null },
   activity: { load: () => import('@/panels/activity'), role: null },
-  tools: { load: () => import('@/panels/tools'), role: null },
   spark: { load: () => import('@/panels/spark'), role: null },
   favorites: { load: () => import('@/panels/favorites'), role: null },
   similar: { load: () => import('@/panels/similar'), role: null },

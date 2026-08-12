@@ -40,7 +40,6 @@
     "library": "Your library",
     "documents": "Your documents",
     "activity": "Recent activity",
-    "tools": "Tools",
     "spark": "An idea to start from",
     "favorites": "Your recipes",
     "similar": "In the same vein",
@@ -1008,6 +1007,10 @@
     "open": "Open project",
     "defaultName": "New project",
     "openHint": "Opens a project folder already made, with what it holds",
+    "switch": "Project: {{name}}",
+    "switchHint": "Open another project from this machine, or create one",
+    "useHint": "Closes the open project and opens this one in its place",
+    "currentHint": "This project is already open",
     "createHint": "Pick a folder on disk: everything the studio produces is written there"
   },
   "auth": {
@@ -1029,7 +1032,7 @@
     "active": "In use",
     "use": "Use this account",
     "none": "No account yet. Add an API key to reach the Scenario library.",
-    "switch": "Scenario account",
+    "switch": "Scenario account: {{name}}",
     "switchHint": "Pick the API key to generate on, or add one",
     "manage": "Manage accounts…",
     "notConnected": "Not connected",
@@ -2099,6 +2102,7 @@
   "home": {
     "sections": {
       "spotlight": "Where you were",
+      "tools": "Tools",
       "explore": "Explore"
     },
     "title": "Home",

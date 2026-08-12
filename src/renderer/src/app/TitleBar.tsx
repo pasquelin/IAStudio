@@ -103,7 +103,10 @@ export function TitleBar({
       <nav
         aria-label={t('workspaces.navigation')}
         style={CLICKABLE}
-        className="flex items-center gap-2"
+        // The row that gives ground. The actions at the other end are the only way to switch key
+        // or project from the chrome, and nothing here scrolls: at the window's minimum width,
+        // with the text scale raised, the pills would otherwise push them off the edge.
+        className="flex min-w-0 items-center gap-2 overflow-hidden"
       >
         {onHome && (
           <BarButton
@@ -175,7 +178,7 @@ export function TitleBar({
       </p>
 
       {actions !== undefined && (
-        <div style={CLICKABLE} className="ml-auto flex items-center gap-2">
+        <div style={CLICKABLE} className="ml-auto flex shrink-0 items-center gap-2">
           {actions}
         </div>
       )}

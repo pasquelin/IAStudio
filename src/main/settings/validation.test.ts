@@ -156,9 +156,10 @@ describe('salvaging the home section order', () => {
     const sections = [
       { id: 'spotlight', visible: true },
       { id: 'nether' },
-      // A band of an older build: `tools` is a panel now, and its entry must not survive as a
-      // section nobody can draw.
+      // A band of an older build that IS one again: `tools` came back to the centre on 12 August,
+      // so its entry is salvaged where `projects` — still a panel — would be dropped.
       { id: 'tools', visible: true },
+      { id: 'projects', visible: true },
       { id: 'explore', visible: false },
     ]
 
@@ -166,6 +167,7 @@ describe('salvaging the home section order', () => {
 
     expect(salvaged.home?.sections).toEqual([
       { id: 'spotlight', visible: true },
+      { id: 'tools', visible: true },
       { id: 'explore', visible: false },
     ])
   })

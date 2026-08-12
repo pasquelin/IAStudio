@@ -10,8 +10,8 @@ import { useSettings } from '@/stores/settings'
  *
  * It was a menu — move up, move down, hide, and a count of items. The count went with the bands
  * that carried one, since a panel's shelf reads a page of its own; the two moves went when the
- * centre came down to two bands, one pinned to the top and one anchored to the foot. A menu of
- * one row is a button, and a button says what it does rather than what it is.
+ * centre came down to bands that are all either pinned or anchored, so nothing has anywhere to
+ * move. A menu of one row is a button, and a button says what it does rather than what it is.
  *
  * Nothing at all on a pinned band: its heading offers no gesture, and a glyph that can only
  * refuse is worse than none.

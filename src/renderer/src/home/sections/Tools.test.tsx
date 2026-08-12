@@ -31,11 +31,16 @@ describe('Tools', () => {
   })
 
   /**
-   * The panel stands in a 320-pixel column, and Tailwind's breakpoints answer to the WINDOW: a
-   * `sm:` or `lg:` grid here would cut that column in two on any screen wide enough to matter,
-   * which is what the band it came from did on purpose.
+   * The band takes the centre, which is NOT the window: two columns of panels and two rails take
+   * a third of it away without moving a breakpoint. So the grid tracks its own container —
+   * `auto-fill` on a minimum — and a `sm:` or `lg:` rule here would count cells against a width
+   * this band never has.
+   *
+   * The minimum is wrapped in `min(…, 100%)`, and that is the half a track floor gets wrong: the
+   * centre is clamped at `MIN_CENTER` = 240 and `HomeView` hides its horizontal overflow, so a
+   * bare `minmax(240px, …)` clips the tail of every entry instead of narrowing.
    */
-  it('lays its entries out in one column, whatever the window is', () => {
+  it('lays its entries out against the centre rather than against the window', () => {
     const { container } = render(<Tools />)
 
     // Read off the attribute, not off `className`: on an `<svg>` that property is an
@@ -44,13 +49,16 @@ describe('Tools', () => {
       node => node.getAttribute('class') ?? '',
     )
 
-    // The anchor first: an empty panel would satisfy the assertion below on its own.
-    expect(classes.some(value => value.includes('grid-cols'))).toBe(false)
     expect(classes.filter(value => /\b(sm|md|lg|xl):/.test(value))).toEqual([])
+
+    // Both groups, and the anchor matters: an empty band would satisfy the rule above alone.
+    const grids = classes.filter(value => value.includes('grid-cols-[repeat(auto-fill'))
+    expect(grids).toHaveLength(2)
+    for (const grid of grids) expect(grid).toContain('minmax(min(240px,100%),1fr)')
     expect(screen.getAllByRole('button').length).toBeGreaterThan(3)
   })
 
-  // It is the one panel that says something on a machine with no key, no project and no history.
+  // It is the one band that says something on a machine with no key, no project and no history.
   it('offers a way in with nothing connected and no project open', () => {
     settleHome(null)
     render(<Tools />)

@@ -25,7 +25,6 @@ import { definition as skybox } from '@/panels/skybox'
 import { definition as spark } from '@/panels/spark'
 import { definition as styles } from '@/panels/styles'
 import { definition as timeline } from '@/panels/timeline'
-import { definition as tools } from '@/panels/tools'
 import { definition as usage } from '@/panels/usage'
 import { definition as view } from '@/panels/view'
 import { isKnownTool, TOOL_ENTRIES, toolDefinition } from './tool-components'
@@ -60,7 +59,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   library,
   documents,
   activity,
-  tools,
   spark,
   favorites,
   similar,

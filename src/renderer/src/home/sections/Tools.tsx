@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/design/UiIcon'
 import { FOCUS_RING } from '@/design/styles'
 import { cn } from '@/helpers/cn'
-import { HINT_RIGHT } from '@/helpers/tooltip'
+import { HINT_TOP } from '@/helpers/tooltip'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useWorkspaces } from '@/hooks/useWorkspaces'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
-import { enterWorkspace } from '@/home/open'
+import { enterWorkspace } from '../open'
+import { Section } from '../Section'
 
 type Entry = {
   key: string
@@ -20,13 +21,12 @@ type Entry = {
 
 /**
  * What the studio can do, grouped by what one is about to do rather than by where the code
- * lives. It is the one panel that works on a machine with no key, no project and no history,
- * which is why it holds the home's upper left — the half every other surface keeps for
- * generation, and the home has nothing to generate.
+ * lives. It is the one band that works on a machine with no key, no project and no history,
+ * which is why it is pinned.
  *
- * One column, always: these entries are read down, and Tailwind's breakpoints answer to the
- * window rather than to the panel, so a `sm:` grid here would cut a 320-pixel column in two on
- * any screen wide enough to be worth having.
+ * It spent a day as a panel in the home's upper left and came back: ten entries in two groups
+ * read ACROSS in a grid, and a 320-pixel column stacked them into a ladder taller than the
+ * screen. The width is the whole point of the band.
  */
 export function Tools() {
   const { t } = useTranslation()
@@ -64,29 +64,35 @@ export function Tools() {
   ]
 
   return (
-    <div className="flex flex-col gap-2 p-2">
-      <Group title={t('home.tools.createGroup')} entries={create} />
-      {/* Named for what it holds, not for the state the studio is in: these three entries are
-          about projects whether one is open or not. */}
-      <Group title={t('home.tools.projectGroup')} entries={manage} />
-    </div>
+    <Section id="tools" title={t('home.sections.tools')}>
+      <div className="flex flex-col gap-3">
+        <Group title={t('home.tools.createGroup')} entries={create} />
+        {/* Named for what it holds, not for the state the studio is in: these three entries are
+            about projects whether one is open or not. */}
+        <Group title={t('home.tools.projectGroup')} entries={manage} />
+      </div>
+    </Section>
   )
 }
 
 function Group({ title, entries }: { title: string; entries: readonly Entry[] }) {
   return (
-    <div className="bg-surface flex flex-col gap-2 rounded-(--radius-sc-lg) p-2">
+    <div className="bg-surface flex flex-col gap-2 rounded-(--radius-sc-lg) p-3">
       <h3 className="text-muted text-mini m-0 font-semibold tracking-wider uppercase">{title}</h3>
 
-      <div className="flex flex-col gap-2">
+      {/* Tracks the CENTRE rather than the window: Tailwind's breakpoints answer to the viewport,
+          and the panel columns beside this band take a third of it without moving one.
+          `min(…,100%)` is what keeps the floor from becoming an overflow: the centre is clamped
+          at `MIN_CENTER` = 240, which leaves this grid ~168, and the page hides its overflow. */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))] gap-2">
         {entries.map(entry => (
           <button
             key={entry.key}
             type="button"
-            // The entry's own help, under the pointer: it is drawn under the label, and a
-            // narrow column truncates it before the button goes with it. Opening right, as
-            // everything in this column does — only the right column opens left.
-            {...HINT_RIGHT(entry.help)}
+            // The entry's own help, under the pointer: it is drawn under the label, and a narrow
+            // cell clamps it before the button goes with it. Opening up, as the band's own
+            // controls do — the page scrolls, and a tip below the last row opens off screen.
+            {...HINT_TOP(entry.help)}
             onClick={entry.onClick}
             className={cn(
               'hover:bg-elevated flex cursor-pointer items-start gap-2.5 text-left',

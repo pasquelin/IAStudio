@@ -2,6 +2,7 @@ import type { FC } from 'react'
 import type { HomeSectionId } from '@shared/domain/home'
 import { Explore } from './sections/Explore'
 import { Spotlight } from './sections/Spotlight'
+import { Tools } from './sections/Tools'
 
 /**
  * What draws each section. A `Record` rather than a list, so a section added to the shared
@@ -9,5 +10,6 @@ import { Spotlight } from './sections/Spotlight'
  */
 export const HOME_COMPONENTS: Record<HomeSectionId, FC> = {
   spotlight: Spotlight,
+  tools: Tools,
   explore: Explore,
 }

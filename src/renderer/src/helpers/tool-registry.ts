@@ -19,7 +19,6 @@ import {
   mdiPinOutline,
   mdiProgressClock,
   mdiShimmer,
-  mdiToolboxOutline,
   mdiTuneVariant,
   mdiVideoVintage,
   mdiWeatherPartlyCloudy,
@@ -76,10 +75,11 @@ const ICONS: Record<ToolId, string> = {
   // The glyph the status bar already puts on the journal (`app/ActivityList.tsx`), which is the
   // same list: two ways into one thing must not wear two icons.
   activity: mdiHistory,
-  // The last six bands of the home, and their glyphs are chosen against the rail they land in
-  // rather than against each other: `spark` may not take the generator's, nor `favorites` the
-  // shelf's, since a rail where two glyphs mean two things is a rail one reads twice.
-  tools: mdiToolboxOutline,
+  // The last bands of the home to become panels, and their glyphs are chosen against the rail
+  // they land in rather than against each other: `spark` may not take the generator's, nor
+  // `favorites` the shelf's, since a rail where two glyphs mean two things is a rail one reads
+  // twice. `tools` went the other way on 12 August — back to the centre, where a band wears no
+  // glyph at all.
   spark: mdiLightbulbOnOutline,
   favorites: mdiPinOutline,
   similar: mdiCompareHorizontal,
