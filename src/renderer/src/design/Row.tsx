@@ -55,8 +55,14 @@ export function Row({
         <p
           {...tip(title, false, hint)}
           className={cn(
-            'truncate text-xs leading-tight',
-            muted ? 'text-muted line-through' : 'text-text',
+            'truncate text-xs leading-tight transition-colors',
+            // A hidden layer is DIMMED, not disabled: it is still selected, renamed and dragged,
+            // so the exemption WCAG 1.4.3 grants a disabled control does not cover it. Lifted on
+            // the same two states as the subtitle below — 3.51:1 on `elevated`, 3.25 on
+            // `accent-soft` — and the strike-through is what goes on saying it is hidden.
+            muted
+              ? 'text-muted group-hover/row:text-text group-data-selected/row:text-text line-through'
+              : 'text-text',
           )}
         >
           {title}
