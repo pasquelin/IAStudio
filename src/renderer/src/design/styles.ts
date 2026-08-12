@@ -67,8 +67,8 @@ export function rowSkin(selected: boolean, disabled = false): string {
   return cn(
     'rounded-(--radius-sc-sm)',
     // Named, and paired with `data-selected` on the SAME element: `Row` reads both to lift its
-    // subtitle out of `muted`, which carries 3.25:1 on `accent-soft` and 3.51 on `elevated` in
-    // the dark theme.
+    // title and its subtitle out of `muted`, which carries 3.25:1 on `accent-soft` and 3.51 on
+    // `elevated` in the dark theme.
     //
     // A refused row takes no group, because its background does not answer a pointer either —
     // and a row that is refused WHILE selected therefore keeps the muted subtitle on

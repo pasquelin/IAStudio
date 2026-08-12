@@ -14,7 +14,7 @@ export type RowProps = {
   leading?: ReactNode
   /** After the title, pushed to the end. */
   actions?: ReactNode
-  /** Struck through and dimmed: a hidden layer, an invisible mesh. */
+  /** Struck through, and dimmed AT REST only: a hidden layer, an invisible mesh. */
   muted?: boolean
   /**
    * A sentence added under the name in its tooltip — why the row is refused, typically. The
@@ -55,8 +55,15 @@ export function Row({
         <p
           {...tip(title, false, hint)}
           className={cn(
-            'truncate text-xs leading-tight',
-            muted ? 'text-muted line-through' : 'text-text',
+            'truncate text-xs leading-tight transition-colors',
+            // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a
+            // scene node still selected and dragged, so the exemption WCAG 1.4.3 grants a disabled
+            // control does not cover either. Lifted on the same two states as the subtitle below —
+            // 3.51:1 on `elevated`, 3.25 on `accent-soft` — and the strike-through, with the
+            // crossed-out eye beside it, is what goes on saying the row is hidden.
+            muted
+              ? 'text-muted group-hover/row:text-text group-data-selected/row:text-text line-through'
+              : 'text-text',
           )}
         >
           {title}

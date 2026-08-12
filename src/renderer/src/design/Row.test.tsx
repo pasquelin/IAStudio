@@ -49,6 +49,27 @@ describe('Row', () => {
     expect(screen.getByText('Cube').className).toContain('text-muted')
   })
 
+  /**
+   * A hidden layer is DIMMED, not disabled — still selectable, renamable, draggable — so its name
+   * has to clear AA on the fills the row takes: `muted` reads 3.51:1 on `elevated` and 3.25 on
+   * `accent-soft`. The strike-through goes on saying what the pale colour used to say alone.
+   *
+   * The subtitle got this at iteration 8 and the title did not, four lines apart, under a comment
+   * quoting these very numbers.
+   */
+  it('lifts a muted title on the same two states as the subtitle, keeping the strike', () => {
+    render(<Row icon={mdiCube} title="Cube" muted />)
+
+    expect(screen.getByText('Cube')).toHaveClass(
+      'group-hover/row:text-text',
+      'group-data-selected/row:text-text',
+      'line-through',
+      // The fill fades under it; without this the word would snap while its background fades.
+      // Held here because nothing else does: the subtitle carries its own, four lines below.
+      'transition-colors',
+    )
+  })
+
   it('leaves a row that is not muted in the reading colour', () => {
     render(<Row icon={mdiCube} title="Cube" />)
 
