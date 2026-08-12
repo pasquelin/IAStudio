@@ -109,13 +109,14 @@ const READING_SURFACES = ['chassis', 'panel', 'surface']
 /**
  * The inks this rule holds. `accent` is absent because it is a fill, see below.
  *
- * The other four are absent for a different reason, and it is not that they pass. Measured on the
- * LIGHT theme: `danger` 3.68 on the chassis, `warning` 3.27 there and 4.11 on a surface, `success`
- * 3.71, `create` 2.01 — the last one below even the 3:1 that WCAG 1.4.11 asks of a glyph. Raising
- * any of them is a palette decision nobody has taken, and a rule stretched over what it was never
- * asked to cover is a rule that gets loosened the next time it goes red.
+ * The four status hues joined on 2026-08-12, when the palette decision they were waiting on was
+ * taken: on the LIGHT theme they read 3.68, 3.27, 3.71 and 2.01 on the chassis — the last below
+ * even the 3:1 WCAG 1.4.11 asks of a glyph — and each was moved toward black until it cleared.
+ * `create` is held here although it also fills, because two sources write `text-create` — and a
+ * green that carries a word at 4.5 carries the rail's white glyph well past the 3:1 of 1.4.11.
+ * `create-hover` is NOT: it is the darker state of that fill, and no source writes a word in it.
  */
-const INKS = ['text', 'muted', 'accent-ink']
+const INKS = ['text', 'muted', 'accent-ink', 'danger', 'warning', 'success', 'create']
 
 describe('the contrast of the inks', () => {
   for (const theme of THEMES) {
@@ -134,6 +135,22 @@ describe('the contrast of the inks', () => {
       expect(failing).toEqual([])
     })
   }
+
+  /**
+   * `error` is daisyUI's name for the red the studio calls `danger`, and the two are declared
+   * apart — unlike `warning` and `success`, which are one variable serving both. Held equal here
+   * rather than measured twice: a settings pane writing `text-error` and a job row writing
+   * `text-danger` would otherwise drift into two reds, and only one of them would be covered above.
+   */
+  it('keeps daisyUI red and the studio red the same colour, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      // Read as a colour first, so two missing names cannot agree with each other.
+      expect(tokens.danger).toMatch(/^#[0-9a-f]{6}$/)
+      expect(tokens.error).toBe(tokens.danger)
+    }
+  })
 
   /**
    * `accent` is the FILL — a button's background, the playhead, a ring. Lightening it to clear
