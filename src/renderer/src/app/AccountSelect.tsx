@@ -1,14 +1,10 @@
-import { mdiChevronDown, mdiCloudOutline, mdiCogOutline } from '@mdi/js'
-import { useState } from 'react'
+import { mdiCloudOutline, mdiCogOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { Flyout } from '@/design/Flyout'
 import { MenuRow } from '@/design/MenuRow'
 import { Separator } from '@/design/Separator'
-import { TITLE_BAR_GHOST } from '@/design/styles'
-import { UiIcon } from '@/design/UiIcon'
+import { TitleBarSelect } from '@/design/TitleBarSelect'
 import { cn } from '@/helpers/cn'
-import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
-import { useHoverFlyout } from '@/hooks/useHoverFlyout'
+import { HINT_RIGHT } from '@/helpers/tooltip'
 import { activeAccount, useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
 
@@ -18,7 +14,7 @@ import { useSettings } from '@/stores/settings'
  * A switch, never a form: keys are typed in the settings alone. And a switch of accounts only,
  * not of projects — an API key carries its own Scenario project, which the API exposes no way
  * to list or to choose. What it changes is the remote library; the open local project is the
- * user's disk and stays exactly as it is.
+ * user's disk and stays exactly as it is, and `ProjectSelect` beside it is what moves that.
  */
 export function AccountSelect() {
   const { t } = useTranslation()
@@ -28,28 +24,14 @@ export function AccountSelect() {
   const authenticated = useSettings(state => state.auth.authenticated)
   const openSection = useSettings(state => state.openSection)
 
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
-  // One row per account, plus the way out to the settings. With no account that leaves a single
-  // row, and `useHoverFlyout` rightly refuses to call one row a menu: the button acts directly
-  // instead, which is the one thing left to do anyway.
-  const flyout = useHoverFlyout(accounts.length + 1)
-
   const active = activeAccount(accounts)
   const manage = (): void => openSection('account')
 
+  const name = active?.name ?? t('accounts.notConnected')
+
   return (
-    <div {...flyout.wrapProps} className="contents">
-      <button
-        ref={setAnchor}
-        type="button"
-        {...TIP_BOTTOM(t('accounts.switch'), false, t('accounts.switchHint'))}
-        // Only when there is one: with nothing stored the button opens the settings outright,
-        // and announcing a menu it will never show sends a screen reader looking for it.
-        aria-haspopup={flyout.hasFlyout ? 'menu' : undefined}
-        aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
-        onClick={flyout.hasFlyout ? flyout.open : manage}
-        className={cn(TITLE_BAR_GHOST, 'text-tiny h-(--sc-control) max-w-44 gap-1.5 px-2')}
-      >
+    <TitleBarSelect
+      leading={
         <span
           aria-hidden
           className={cn(
@@ -57,12 +39,21 @@ export function AccountSelect() {
             authenticated ? 'bg-success' : 'bg-muted',
           )}
         />
-        <span className="truncate">{active?.name ?? t('accounts.notConnected')}</span>
-        <UiIcon path={mdiChevronDown} size={12} />
-      </button>
-
-      {flyout.showing && (
-        <Flyout anchor={anchor} placement="below" role="menu" {...flyout.flyoutProps}>
+      }
+      label={name}
+      // The name CONTAINS what the eye reads (WCAG 2.5.3). It said « Compte Scenario » alone
+      // until 12 August, so the button answered to a phrase written nowhere on it — and someone
+      // driving by voice could not ask for the account whose name they were looking at.
+      name={t('accounts.switch', { name })}
+      hint={t('accounts.switchHint')}
+      // One row per account, plus the way out to the settings. With no account that leaves a
+      // single row, and `TitleBarSelect` rightly refuses to call one row a menu: the button acts
+      // directly instead, which is the one thing left to do anyway.
+      rowCount={accounts.length + 1}
+      width="max-w-44"
+      onAct={manage}
+      rows={close => (
+        <>
           {accounts.map(account => (
             <MenuRow
               key={account.id}
@@ -72,7 +63,7 @@ export function AccountSelect() {
               tick="one-of"
               tip={HINT_RIGHT(t('accounts.useHint'))}
               onSelect={() => {
-                flyout.close()
+                close()
                 void activate(account.id)
               }}
             />
@@ -85,12 +76,12 @@ export function AccountSelect() {
             icon={mdiCogOutline}
             tip={HINT_RIGHT(t('accounts.manageHint'))}
             onSelect={() => {
-              flyout.close()
+              close()
               manage()
             }}
           />
-        </Flyout>
+        </>
       )}
-    </div>
+    />
   )
 }

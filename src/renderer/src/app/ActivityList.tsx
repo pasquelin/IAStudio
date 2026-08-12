@@ -184,7 +184,10 @@ function FilterMenu<T extends string>({
     <MenuButton
       icon={mdiFilterVariant}
       // `ToolButton` is square by gauge; a label needs the width back. `ZoomBar` does the same.
-      className="w-auto px-1.5"
+      // The other two undo what makes the pair overflow side by side: `ToolButton` is `shrink-0`
+      // so neither would ever give ground, and a flex item floors at its content width even once
+      // it can — both are needed before the `truncate` below does anything.
+      className="w-auto min-w-0 shrink px-1.5"
 
       // The accessible name IS the visible text: `ToolButton` names itself from `label`, and a
       // name that did not contain what the eye reads breaks WCAG 2.5.3.
@@ -249,7 +252,9 @@ export function ActivityList() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-border flex flex-col gap-1.5 border-b p-1">
+      {/* Stacked, each took the panel's whole width to say it was filtering nothing, which reads
+          as two fields waiting to be filled rather than as two filters that are off. */}
+      <div className="border-border flex items-center gap-1.5 border-b p-1">
         <FilterMenu
           facet={t('activity.filters.levels')}
           values={ACTIVITY_LEVELS}

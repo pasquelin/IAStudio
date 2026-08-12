@@ -200,9 +200,11 @@ describe('the home', () => {
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
-    // Four dividers: one per column, and the cut between the two halves of each. The zones that
-    // would carry a fifth — the montage and the asset strip — are absent.
-    expect(handles()).toHaveLength(4)
+    // Three dividers: one per column, plus the cut between the two halves of the right one. The
+    // left column has a single half since 12 August — what filled its upper one went back to the
+    // centre — and a lone panel has nothing to be dragged against. The zones that would carry a
+    // fourth, the montage and the asset strip, are absent.
+    expect(handles()).toHaveLength(3)
   })
 
   /**
@@ -215,8 +217,8 @@ describe('the home', () => {
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
-    // The upper left, which is the half no space gives to anything but generation.
-    expect(screen.getByLabelText('Outils')).toBeInTheDocument()
+    // The lower left, and the only half this column has: the upper one is empty here, so nothing
+    // stands above the projects.
     expect(screen.getByLabelText('Vos projets')).toBeInTheDocument()
     expect(screen.getByLabelText('Ce que vous avez produit')).toBeInTheDocument()
     expect(screen.getByLabelText('Activité récente')).toBeInTheDocument()

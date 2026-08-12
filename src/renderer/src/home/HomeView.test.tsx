@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import { DEFAULT_HOME_SECTIONS } from '@shared/domain/home'
+import {
+  DEFAULT_HOME_SECTIONS,
+  HOME_SECTION_IDS,
+  homeSectionOf,
+  type HomeSectionId,
+} from '@shared/domain/home'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
@@ -14,6 +19,14 @@ const POSTER_DOCUMENT: DocumentDescriptor = {
   kind: 'image',
   title: 'Poster',
   workspace: 'image',
+}
+
+/** What each band's heading reads, so a drawn heading can be traced back to its entry. Keyed on
+ * the union: a band added without a line here fails to compile. */
+const SECTION_TITLES: Record<HomeSectionId, string> = {
+  spotlight: 'Où vous en étiez',
+  tools: 'Outils',
+  explore: 'Explorer',
 }
 
 const PROJECT = {
@@ -100,6 +113,9 @@ describe('the home', () => {
    * Twelve bands became panels — six on 10 August, six on 11: the shell stands them in the home's
    * two columns, under rail icons like every other panel. Drawn here too, each would be the same
    * store read twice on one screen, with two behaviours to keep in step — which is what they were.
+   *
+   * Eleven of them, since 12 August: « Outils » came back to the centre, where it is read across
+   * rather than stacked in a 320-pixel column. It is a band again, so it is not on this list.
    */
   it('draws none of the bands that became panels: the shell places those', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
@@ -115,7 +131,6 @@ describe('the home', () => {
       'Vos documents',
       'Activité récente',
       'Explorateur',
-      'Outils',
       'Une idée pour commencer',
       'Vos recettes',
       'Dans la même veine',
@@ -158,6 +173,11 @@ describe('customising the home', () => {
    * A titled band carries the control when there is a gesture left to offer. The spotlight has no
    * heading to hang one from — it is the page's opening banner — and the feed keeps its own
    * because it can still be hidden.
+   *
+   * « Outils » is the third case, and the reason this walks the headings one by one rather than
+   * counting them: it is titled AND pinned, so its heading offers nothing. A glyph that can only
+   * refuse is worse than none — and whether a band is pinned is read off the registry here, as
+   * `HideSection` reads it, so a fourth pinned band cannot pass by not being named « Outils ».
    */
   it('carries the hide button on every titled band that can still act', () => {
     setSettings(DEFAULT_HOME_SECTIONS, true)
@@ -165,13 +185,19 @@ describe('customising the home', () => {
     useDocuments.setState({ stored: [POSTER_DOCUMENT] })
     const { container } = render(<HomeView />)
 
-    // Counted off what is actually drawn, not off the registry: a section whose shelf is empty
-    // takes itself off the page, and it must take its heading and its menu with it.
-    const headings = container.querySelectorAll('h2')
-    expect(headings.length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: 'Masquer cette section' })).toHaveLength(
-      headings.length,
-    )
+    // Read off what is actually drawn, not off the registry: a section whose shelf is empty takes
+    // itself off the page, and it must take its heading and its button with it.
+    const headings = [...container.querySelectorAll('h2')]
+    expect(headings.map(node => node.textContent)).toEqual(['Outils', 'Explorer'])
+
+    for (const heading of headings) {
+      const id = HOME_SECTION_IDS.find(
+        candidate => SECTION_TITLES[candidate] === heading.textContent,
+      )
+      const header = heading.parentElement
+      const hide = header && within(header).queryByRole('button', { name: 'Masquer cette section' })
+      expect(Boolean(hide)).toBe(homeSectionOf(id)?.pinned !== true)
+    }
   })
 
   it('says how many sections are hidden, and takes them back', async () => {

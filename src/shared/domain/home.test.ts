@@ -92,6 +92,10 @@ describe('reading back a stored order', () => {
    * The settings of anyone who ran the studio before 11 August name twelve bands that are panels
    * now. Nothing migrates them: they are dropped on the way in, which is what keeps a panel from
    * being listed as a band nobody can draw.
+   *
+   * Eleven of the twelve, since 12 August: `tools` came back to the centre, so a stored line
+   * naming it is a band again — which is the other half of the same rule, and the reason this
+   * reads the registry rather than a list written here.
    */
   it('drops the ids that became panels, without touching the rest', () => {
     const fromDisk: { id: string; visible: boolean }[] = [
@@ -106,8 +110,8 @@ describe('reading back a stored order', () => {
 
     expect(kept).not.toContain('projects')
     expect(kept).not.toContain('byMode')
-    expect(kept).not.toContain('tools')
     expect(kept).not.toContain('usage')
+    expect(kept).toContain('tools')
     expect(kept).toContain('spotlight')
     // The ones it never knew about arrive at their designed place rather than being lost.
     expect(kept).toHaveLength(HOME_SECTIONS.length)

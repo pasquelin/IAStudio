@@ -60,7 +60,6 @@ export type ToolId =
   | 'library'
   | 'documents'
   | 'activity'
-  | 'tools'
   | 'spark'
   | 'favorites'
   | 'similar'
@@ -190,12 +189,10 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The columns follow the rule every space follows: the left is what one produces with and what
   // one browses, the right is what speaks ABOUT what is open. The home never had it applied — its
   // panels arrived one at a time, six on the right against one on the left.
-
-  // The upper left, which the home alone leaves for something other than generation: it makes no
-  // document, so the half goes to what it does instead — the list of everything the studio can
-  // start. Pinned as a band, and it stays the one panel that says something on a machine with no
-  // key, no project and no history.
-  { id: 'tools', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
+  //
+  // Its upper left is EMPTY, and stays so: the list of what the studio can start went back to the
+  // centre, where a grid reads it across instead of a 320-pixel column stacking it. The half is
+  // not to be filled with the next panel to hand — `tool.test.ts` holds it empty.
 
   // The lower left, where every space puts what one produces WITH and what one browses. The home
   // produces nothing, so it puts what one produces IN — the projects, the first thing anyone

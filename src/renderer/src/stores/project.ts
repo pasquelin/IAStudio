@@ -26,9 +26,15 @@ type ProjectState = {
   openPicked: () => Promise<void>
   createPicked: () => Promise<void>
   /**
-   * Opens a known folder — what the home's shelf of recent projects clicks through to. Answers
-   * whether it worked: a folder moved or deleted since it was last opened is the ordinary case
-   * for that shelf, and the entry has to go rather than fail again on the next click.
+   * Opens a known folder — what the home's shelf of recent projects and the title bar's menu
+   * click through to. Answers whether it worked: a folder moved or deleted since it was last
+   * opened is the ordinary case for that shelf, and the entry has to go rather than fail again
+   * on the next click.
+   *
+   * The folder already open is answered `true` without being reopened. Here rather than in
+   * whichever surface noticed, for the same reason the forgetting below is: both lists offer the
+   * open project as a row, and reopening it tears down every panel's state and reloads the
+   * catalogue to land on the folder already in front.
    */
   open: (path: string) => Promise<boolean>
 }
@@ -91,7 +97,7 @@ async function pickedProject(
  * The open project is owned by the main process; this is the renderer's replica, refreshed by
  * broadcast so every window agrees on which project is open.
  */
-export const useProject = create<ProjectState>()(set => ({
+export const useProject = create<ProjectState>()((set, get) => ({
   project: null,
   known: false,
 
@@ -132,6 +138,8 @@ export const useProject = create<ProjectState>()(set => ({
   open: async path => {
     const bridge = getBridge()
     if (!bridge) return false
+    // Already in front: the tick on the row said so, and choosing it means "yes, still".
+    if (path === get().project?.path) return true
 
     try {
       set({ project: await bridge.project.open(path), known: true })

@@ -127,7 +127,6 @@ describe('the home', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
-      ['tools', 'left', 'primary'],
       ['projects', 'left', 'secondary'],
       ['spark', 'left', 'secondary'],
       ['favorites', 'left', 'secondary'],
@@ -147,14 +146,22 @@ describe('the home', () => {
    * left is what one produces with and what one browses, the right is what speaks about what is
    * open. Its panels arrived one at a time, six on the right against one on the left, until the
    * last six bands came down from the centre.
+   *
+   * Its left column has NO upper half, and it is the only surface of which that is true: the one
+   * panel that held it went back to the centre, where a grid reads it across rather than stacking
+   * it. The half is left empty rather than filled with the next panel to hand — this holds that,
+   * so a filler lands as a decision rather than as a drift.
    */
   it('reads its two columns the way every space reads its own', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
     const inZone = (zone: ToolZone): number =>
       served.filter(placement => placement.zone === zone).length
 
-    expect(inZone('left')).toBe(5)
+    expect(inZone('left')).toBe(4)
     expect(inZone('right')).toBe(7)
+    expect(
+      served.filter(placement => placement.zone === 'left' && placement.slot === 'primary'),
+    ).toEqual([])
     expect(served.filter(placement => placement.zone === 'bottom')).toEqual([])
   })
 
@@ -164,7 +171,7 @@ describe('the home', () => {
    */
   it('keeps its panels to itself, and takes none of the workspaces', () => {
     const home = ['projects', 'creations', 'counts', 'library', 'documents', 'activity']
-    for (const id of [...home, 'tools', 'spark', 'favorites', 'similar', 'usage', 'jobs']) {
+    for (const id of [...home, 'spark', 'favorites', 'similar', 'usage', 'jobs']) {
       expect(placementsOf(id)).toHaveLength(1)
       for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
     }

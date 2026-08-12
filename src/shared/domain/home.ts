@@ -13,10 +13,13 @@ import { reconcileOrder } from './order'
  * 10 August, the last six on 11 August. A section is what the CENTRE stacks; anything the rails
  * hold is a placement, and the two registries never name the same thing.
  *
- * The two left are the two that earn the width: what the studio puts forward, and the feed that
- * pages as it is scrolled. Everything else reads better in a column than across one.
+ * `tools` came back from that list on 12 August, and it is the one that did: a list of ten things
+ * the studio can start is read ACROSS, in a grid, and a 320-pixel column turned it into a ladder
+ * nobody scans. The three left are the three that earn the width — what the studio puts forward,
+ * what it can start, and the feed that pages as it is scrolled. Everything else reads better in
+ * a column.
  */
-export type HomeSectionId = 'spotlight' | 'explore'
+export type HomeSectionId = 'spotlight' | 'tools' | 'explore'
 
 export type HomeSectionEntry = {
   id: HomeSectionId
@@ -51,6 +54,9 @@ export type HomeSectionEntry = {
  */
 export const HOME_SECTIONS: readonly HomeSectionEntry[] = [
   { id: 'spotlight', pinned: true },
+  // Pinned for the same promise the spotlight carries, and it is the stronger half of it: this
+  // is the one band that says something on a machine with no key, no project and no history.
+  { id: 'tools', pinned: true },
   { id: 'explore', requiresApi: true, anchored: true },
 ]
 
@@ -128,12 +134,12 @@ export function visibleHomeSections(
 
 /**
  * The stored order is still reconciled and still read — the registry's own order decides what
- * the centre stacks — but nothing moves a band any more, and that is a consequence rather than a
- * decision: the centre holds two, the first is pinned to the top and the second anchored to the
- * foot. `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with
- * the six bands that left on 11 August. They are in the history at `HEAD~1` for the day a band
- * comes back to the centre, and rewriting them then is cheaper than carrying rules no case can
- * reach — which is what a coverage floor says out loud.
+ * the centre stacks — but nothing moves a band any more, and that is a consequence rather than
+ * a decision: every band is either pinned or anchored, so none of them has anywhere to go.
+ * `movedHomeSection`, `canMoveHomeSection` and the `shown` narrowing they took went with the six
+ * bands that left on 11 August, and `tools` coming back on the 12th did not bring them with it —
+ * it arrived pinned. The day a MOVABLE band lands, rewriting them from the history is cheaper
+ * than having carried rules no case can reach, which is what a coverage floor says out loud.
  */
 
 /** One field of one section, rewritten. Both writes the menu offers are shaped like this. */

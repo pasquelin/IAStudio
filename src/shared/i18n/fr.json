@@ -40,7 +40,6 @@
     "library": "Votre bibliothèque",
     "documents": "Vos documents",
     "activity": "Activité récente",
-    "tools": "Outils",
     "spark": "Une idée pour commencer",
     "favorites": "Vos recettes",
     "similar": "Dans la même veine",
@@ -1008,6 +1007,10 @@
     "open": "Ouvrir un projet",
     "defaultName": "Nouveau projet",
     "openHint": "Ouvre un dossier de projet déjà créé, avec ce qu’il contient",
+    "switch": "Projet : {{name}}",
+    "switchHint": "Ouvrir un autre projet de cette machine, ou en créer un",
+    "useHint": "Ferme le projet ouvert et ouvre celui-ci à sa place",
+    "currentHint": "Ce projet est déjà ouvert",
     "createHint": "Choisir un dossier sur le disque : tout ce que le studio produit y sera écrit"
   },
   "auth": {
@@ -1029,7 +1032,7 @@
     "active": "Utilisé",
     "use": "Utiliser ce compte",
     "none": "Aucun compte pour l’instant. Ajoutez une clé API pour accéder à la bibliothèque Scenario.",
-    "switch": "Compte Scenario",
+    "switch": "Compte Scenario : {{name}}",
     "switchHint": "Choisir la clé API sur laquelle générer, ou en ajouter une",
     "manage": "Gérer les comptes…",
     "notConnected": "Non connecté",
@@ -2099,6 +2102,7 @@
   "home": {
     "sections": {
       "spotlight": "Où vous en étiez",
+      "tools": "Outils",
       "explore": "Explorer"
     },
     "title": "Accueil",

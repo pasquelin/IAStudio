@@ -85,22 +85,27 @@ describe('Rail', () => {
       expect(createPicked).toHaveBeenCalled()
     })
 
-    // The upper half is what every space keeps for generation, and the home generates nothing:
-    // it gives it to what the studio can start instead. The cut is drawn, and what one browses
-    // stacks under it.
-    it('cuts the left rail: what the studio can do above, what one browses below', () => {
+    // The upper half is what every space keeps for generation, and the home generates nothing.
+    // It held what the studio can start until 12 August, when that went back to the centre — so
+    // the half is EMPTY, and an empty half never reaches the rail: one group, and no cut to draw.
+    // The only separator left is the one under the button that makes a project.
+    it('leaves the left rail uncut: the home has nothing in its upper half', () => {
       const { container } = render(<Rail side="left" />)
 
       expect(marksOf(container)).toEqual([
         'Nouveau projet',
-        'separator',
-        'Outils',
         'separator',
         'Vos projets',
         'Une idée pour commencer',
         'Vos recettes',
         'Dans la même veine',
       ])
+
+      // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
+      // a childless flex item still eats one of the rail's gaps.
+      expect(
+        [...container.querySelectorAll('div')].filter(node => node.childElementCount === 0),
+      ).toEqual([])
     })
 
     /**
@@ -158,9 +163,9 @@ describe('Rail', () => {
   })
 
   /**
-   * A lone group has nothing to be cut from. The home used to be the one surface with such a
-   * half; both of its columns are cut in two since 11 August, and the graph is where the case
-   * lives now — no placement gives it the upper right, so its rail draws the inspector alone.
+   * A lone group has nothing to be cut from. Two surfaces have such a column: the home's left,
+   * since what filled its upper half went back to the centre — the case just above — and the
+   * graph, which no placement gives an upper right, so its rail draws the inspector alone.
    */
   it('draws no separator in a column with a single populated half', () => {
     useLayouts.setState({ activeWorkspace: 'graph', home: false })

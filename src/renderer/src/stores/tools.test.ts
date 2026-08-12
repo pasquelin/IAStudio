@@ -173,8 +173,8 @@ describe('the home and the workspaces arrange their zones apart', () => {
       secondary: null,
     })
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
-      // Its own upper half is untouched: what the home named is the lower one.
-      primary: null,
+      // The lower half is the only one this column HAS: naming the upper one would leave the
+      // zone reporting itself open with nothing to draw, so the default does not name it.
       secondary: 'projects',
     })
   })

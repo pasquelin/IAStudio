@@ -96,10 +96,10 @@ export const DEFAULT_SPLIT = 240
  * exist so the generator stays visible WHILE the Explorer is read, and a half that starts closed
  * would be that arrangement withheld until someone goes looking for it in the rail.
  *
- * The home names the two columns it has and no band. Both halves of both, since 11 August: its
- * upper left was a lone empty half until the tools moved into it, and a half left closed there
- * would be the one panel that says something with no key connected, withheld until somebody went
- * looking for it in the rail.
+ * The home names the two columns it has and no band, and every half those columns HAVE. Its upper
+ * left is not one: no placement serves it, and naming it would leave the zone reporting itself
+ * open — `isZoneOpen` reads the key, not what the key resolves to — so closing the lower half
+ * would take the column off the screen while it went on reserving 320 px against the other one.
  */
 export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
@@ -108,7 +108,7 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     bottom: { primary: null },
   },
   home: {
-    left: { primary: null, secondary: null },
+    left: { secondary: null },
     right: { primary: null, secondary: null },
   },
 }
@@ -402,7 +402,12 @@ export const useTools = create<ToolsState>()(
       name: 'scenario-studio:tools',
       // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
       // would reach a tool no version knows, which `isKnownTool` drops — a blank half where a
-      // panel used to be. Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
+      // panel used to be. `shownTool` substituting the half's first tool is NOT a reason to skip
+      // the bump: it substitutes from the placements, and a half whose last placement is what
+      // just left has nothing to offer. That is version 12 exactly — `tools` went back to the
+      // centre, and a stored `left: { primary: 'tools' }` whose other half the user had closed
+      // resolved to two nulls, which `Edge` reads as no left column at all.
+      // Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
       // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
       // cut that strip in two and knew a `jobs` panel, which the status line carries now, and
       // 6 had the generation panels on the right, where everything else sits today, 7 named
@@ -412,8 +417,8 @@ export const useTools = create<ToolsState>()(
       // home a left column and nothing else; it has two now, and a stored arrangement naming
       // only the first would withhold the right one from everyone who had ever opened the app.
       // 10 left the home's upper left closed, which is where the tools moved on 11 August: the
-      // same withholding, one half further in.
-      version: 11,
+      // same withholding, one half further in. 11 named that half; it has none now.
+      version: 12,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.
