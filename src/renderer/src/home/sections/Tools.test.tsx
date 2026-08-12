@@ -58,6 +58,30 @@ describe('Tools', () => {
     expect(screen.getAllByRole('button').length).toBeGreaterThan(3)
   })
 
+  /**
+   * The tile wears the studio's one answer to "the pointer is here" rather than its own, and its
+   * help is lifted with it: `muted` reads 3.51:1 on `elevated`, the fill the hover brings.
+   *
+   * Asserted on the class rather than on a rendered colour because jsdom computes no utility —
+   * what a test can hold here is that the tile opens the group and the help reads from it.
+   */
+  it('lights up like a list row, and lifts its help with it', () => {
+    render(<Tools />)
+
+    const tile = screen.getAllByRole('button')[0]
+    expect(tile).toHaveClass('group/row', 'hover:bg-elevated')
+
+    // The radius `rowSkin` brings is the one a LINE takes; a tile of the home is wider and keeps
+    // its own. Held because two arbitrary `rounded-(…)` would coexist if `twMerge` read them as
+    // two groups, and the tile would then carry both.
+    expect(tile).toHaveClass('rounded-(--radius-sc-md)')
+    expect(tile).not.toHaveClass('rounded-(--radius-sc-sm)')
+
+    // By the clamp and not by `.text-muted`: the icon wears that too, and it is drawn first.
+    const help = tile?.querySelector('.line-clamp-2')
+    expect(help).toHaveClass('text-muted', 'group-hover/row:text-text', 'transition-colors')
+  })
+
   // It is the one band that says something on a machine with no key, no project and no history.
   it('offers a way in with nothing connected and no project open', () => {
     settleHome(null)

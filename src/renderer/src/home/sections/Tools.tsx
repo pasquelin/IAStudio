@@ -1,7 +1,7 @@
 import { mdiCogOutline, mdiFolderOpenOutline, mdiFolderPlusOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/design/UiIcon'
-import { FOCUS_RING } from '@/design/styles'
+import { rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { workspaceLabelKey } from '@/helpers/workspaces'
@@ -94,16 +94,24 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
             // controls do — the page scrolls, and a tip below the last row opens off screen.
             {...HINT_TOP(entry.help)}
             onClick={entry.onClick}
+            // `rowSkin` rather than the hover and the focus ring written out again — the same
+            // answer to "the pointer is here" as every list row. Its radius is overridden below:
+            // a tile of the home is wider than a line and takes the larger one.
             className={cn(
-              'hover:bg-elevated flex cursor-pointer items-start gap-2.5 text-left',
+              rowSkin(false),
+              'flex cursor-pointer items-start gap-2.5 text-left',
               'rounded-(--radius-sc-md) border-none bg-transparent p-2 transition-colors',
-              FOCUS_RING,
             )}
           >
             <UiIcon path={entry.icon} size={18} className="text-muted mt-0.5 shrink-0" />
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="text-text truncate text-xs leading-normal">{entry.label}</span>
-              <span className="text-muted text-tiny line-clamp-2 leading-snug">{entry.help}</span>
+              {/* Lifted under the pointer, as a list row's subtitle is: `muted` reads 3.51:1 on
+                  `elevated`, the fill this tile takes on hover. `transition-colors` here too —
+                  the property does not inherit, so the fill would fade while the words snapped. */}
+              <span className="text-muted group-hover/row:text-text text-tiny line-clamp-2 leading-snug transition-colors">
+                {entry.help}
+              </span>
             </span>
           </button>
         ))}
