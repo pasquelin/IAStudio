@@ -41,7 +41,9 @@ export function UsageOverview({ report }: { report: UsageReport }) {
                   // Drawn by the theme, not by a colour or a size written here: SVG text inherits
                   // both from the axis group, so the graduations follow `appearance.fontScale`
                   // like the rest — a number in `tick` would be an attribute, and frozen.
-                  className="fill-base-content/60 text-mini"
+                  // `/70` and not `/60`: composed on this window's own surfaces, 60 % reads 4.20,
+                  // 4.30 and 3.86 on the light theme — a graduation is a word, and owes 4.5.
+                  className="fill-base-content/70 text-mini"
                   interval="preserveStartEnd"
                 />
                 <Tooltip

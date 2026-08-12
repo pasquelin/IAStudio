@@ -118,7 +118,7 @@ describe('the page dots', () => {
     // 3200 px of rail over a 640 px viewport.
     const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
     expect(dots).toHaveLength(5)
-    expect(dots[0]).toHaveAttribute('aria-current', 'true')
+    expect(dots[0]).toHaveAttribute('aria-current', 'page')
   })
 
   it('scrolls to the page it names', async () => {
@@ -127,6 +127,33 @@ describe('the page dots', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Page 3' }))
 
     expect(scrollTo).toHaveBeenCalledWith({ left: 640 * 2 })
+  })
+
+  /**
+   * Which page is current is said by the WIDTH as well as by the fill, and that is not decoration:
+   * the two fills are too close to tell a state apart, which `tokens.test.ts` measures against the
+   * stylesheet rather than restating here. Colour alone would leave the current page unsaid.
+   */
+  it('says which page is current by its width, not by its fill alone', async () => {
+    renderCarousel(cards(500))
+
+    const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
+
+    expect(dots[0]).toHaveClass('w-4')
+    expect(dots[1]).toHaveClass('w-1.5')
+    // The two properties named, so the focus ring's shadow is not faded in along with them.
+    expect(dots[0]).toHaveClass('transition-[background-color,width]')
+    expect(dots[0]?.className).not.toContain('transition-all')
+  })
+
+  /** `bg-muted/40` read 1.99:1 on a panel: a control saying how many pages there are. */
+  it('carries an opaque fill on the pages not being read', async () => {
+    renderCarousel(cards(500))
+
+    const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
+
+    expect(dots[1]).toHaveClass('bg-muted')
+    expect(dots[1]?.className).not.toContain('bg-muted/')
   })
 })
 

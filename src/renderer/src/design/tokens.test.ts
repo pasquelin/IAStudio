@@ -125,17 +125,64 @@ const READING_SURFACES = ['chassis', 'panel', 'surface']
  */
 const INKS = ['text', 'muted', 'accent-ink', 'danger', 'warning', 'success', 'create']
 
-/** `text-muted/70`, `text-base-content/60` — an ink and the opacity it is written at. */
-const ALPHA_INK = /\btext-(base-content|muted|text)\/(\d{1,3})\b/g
-
 /**
- * Where each vocabulary is read. daisyUI's `base-*` belongs to the app windows — settings, usage —
- * and the studio's own surfaces to the docks; `CLAUDE.md` draws that boundary and this follows it.
+ * Where each token is read — **the single table both rules below derive from**, so a token cannot
+ * be captured without a background to compose it on, nor given one nothing captures.
+ *
+ * It was two lists that had to be edited together, which `CLAUDE.md` documented as a trap rather
+ * than closing: completing one without the other left the sweep green in silence. Deriving the
+ * spellings from the keys makes that impossible to write.
+ *
+ * The vocabulary decides the background, and that is the design-system boundary: daisyUI's
+ * `base-*` belongs to the app windows — settings, usage — and the studio's own tokens to the docks.
+ *
+ * `accent` is here for the FILL rule and only reachable by it: it is the one token that is a fill
+ * rather than an ink, so no source may write it as a word — a separate rule refuses `text-accent`
+ * outright — but `bg-accent/30` would be a shape like any other.
  */
 const SURFACES_OF: Record<string, string[]> = {
   'base-content': ['base-100', 'base-200', 'base-300'],
-  muted: READING_SURFACES,
-  text: READING_SURFACES,
+  ...Object.fromEntries([...INKS, 'accent'].map(ink => [ink, READING_SURFACES])),
+}
+
+const VOCABULARY = Object.keys(SURFACES_OF).join('|')
+
+/**
+ * `text-muted/70`, `fill-base-content/60` — a token painting a WORD, at an opacity.
+ *
+ * `fill-` and `stroke-` are here because SVG paints its text with them, and that is not a
+ * hypothetical: a chart's graduations were written `fill-base-content/60` and read **3.86:1** on a
+ * light `base-300`. Two guards walked past them for reading `text-` alone.
+ */
+const ALPHA_INK = new RegExp(String.raw`\b(?:text|fill|stroke)-(${VOCABULARY})\/(\d{1,3})\b`, 'g')
+
+/**
+ * `bg-muted/40`, `border-create/40` — a token drawing a SHAPE, at an opacity.
+ *
+ * A separate family, and not the sweep above wearing another hat: that one asks what a WORD reads
+ * at, this one what a SHAPE reads at, and they answer to different lines of WCAG. The carousel's
+ * unread pagination dots were `bg-muted/40` and stood at 1.99:1 on a panel — a control saying how
+ * many pages there are, and how many of them you can see.
+ *
+ * The vocabulary is the table's, deliberately: `bg-panel/80` and `bg-chassis/75` are SCRIMS — a
+ * surface token spent as a translucent surface, which is what a scrim is — and holding them to a
+ * contrast bar would be measuring the wrong thing entirely. `from-black/85` names no token at all.
+ */
+const ALPHA_FILL = new RegExp(
+  String.raw`\b(?:bg|border|border-[trblxy]|ring|outline|divide|from|via|to)-(${VOCABULARY})\/(\d{1,3})\b`,
+  'g',
+)
+
+/**
+ * The one site that spends an ink as a translucent fill and may.
+ *
+ * Spotlight tints its leading slide `bg-create/15` inside a `border-create/40`, both around 2:1 —
+ * and neither carries the state alone: the same card's icon turns `text-create` at FULL token
+ * when it leads, and `INKS` above holds that at 4.5. The band is emphasis on a state something
+ * else already states, which is the same reading `DECORATIVE_GLYPHS` takes of a placeholder.
+ */
+const ALPHA_FILL_ALLOWED: Record<string, string> = {
+  '/Spotlight.tsx': 'a tint on a state its own icon states at full `create`',
 }
 
 /**
@@ -238,23 +285,32 @@ function dimmedWithoutReason(sources: readonly (readonly [string, string])[]): s
 }
 
 /**
- * Every alpha ink of a set of sources, composed on the surfaces of its vocabulary and measured
- * against the bar its role asks for — 4.5 for a word, 3 for a glyph that informs.
+ * Every token written at an opacity, composed on the surfaces of its vocabulary and measured
+ * against the bar the caller's rule asks for. `barFor` answers `null` for a path that is exempt.
  *
- * Taken as a function so the rule can be run against a source known to FAIL, which is what tells
- * a reader it measures anything at all.
+ * ONE sweep for the words and the shapes, because the two rules differ in DATA and nowhere else —
+ * which spelling paints, and what bar it owes. They were written twice and had already drifted in
+ * the hour it took to review them: the second read `READING_SURFACES` where the first read
+ * `SURFACES_OF`, so a `bg-danger/40` in a settings pane would have been measured on a dock.
+ *
+ * Taken as a function so a rule can be run against a source known to FAIL, which is what tells a
+ * reader it measures anything at all.
  */
-function alphaFailures(sources: readonly (readonly [string, string])[]): string[] {
+function alphaFailures(
+  sources: readonly (readonly [string, string])[],
+  spelling: RegExp,
+  barFor: (path: string) => number | null,
+): string[] {
   const failing: string[] = []
 
   for (const theme of THEMES) {
     const tokens = palette(theme.from)
 
     for (const [path, source] of sources) {
-      if (DECORATIVE_GLYPHS.some(one => path.endsWith(one))) continue
-      const bar = INFORMATIVE_GLYPHS.some(one => path.endsWith(one)) ? AA_NON_TEXT : AA_NORMAL_TEXT
+      const bar = barFor(path)
+      if (bar === null) continue
 
-      for (const [, ink = '', percent = ''] of source.matchAll(ALPHA_INK)) {
+      for (const [, ink = '', percent = ''] of source.matchAll(spelling)) {
         for (const surface of SURFACES_OF[ink] ?? []) {
           const seen = blend(tokens[ink] ?? '', tokens[surface] ?? '', Number(percent) / 100)
           if (contrastRatio(seen, tokens[surface] ?? '') < bar) {
@@ -266,6 +322,21 @@ function alphaFailures(sources: readonly (readonly [string, string])[]): string[
   }
 
   return failing
+}
+
+/** A word written at an opacity: 4.5, or 3 for the one glyph that informs, or exempt. */
+function inkFailures(sources: readonly (readonly [string, string])[]): string[] {
+  return alphaFailures(sources, ALPHA_INK, path => {
+    if (DECORATIVE_GLYPHS.some(one => path.endsWith(one))) return null
+    return INFORMATIVE_GLYPHS.some(one => path.endsWith(one)) ? AA_NON_TEXT : AA_NORMAL_TEXT
+  })
+}
+
+/** A shape drawn at an opacity: the 3:1 of WCAG 1.4.11, or exempt. */
+function fillFailures(sources: readonly (readonly [string, string])[]): string[] {
+  return alphaFailures(sources, ALPHA_FILL, path =>
+    Object.keys(ALPHA_FILL_ALLOWED).some(one => path.endsWith(one)) ? null : AA_NON_TEXT,
+  )
 }
 
 describe('the contrast of the inks', () => {
@@ -462,7 +533,7 @@ describe('the contrast of the inks', () => {
    * windows, the studio's inks to the docks — the boundary `CLAUDE.md` draws.
    */
   it('clears its bar once composed, wherever an ink is written with an alpha', () => {
-    expect(alphaFailures(WRITTEN_SOURCES)).toEqual([])
+    expect(inkFailures(WRITTEN_SOURCES)).toEqual([])
   })
 
   /**
@@ -472,11 +543,71 @@ describe('the contrast of the inks', () => {
    * added to the exemptions. A rule that cannot be shown to refuse anything refuses nothing.
    */
   it('refuses an ink that fails, which is the only way to know it measures at all', () => {
-    const bad = alphaFailures([['./probe.ts', "'text-base-content/60 text-xs'"]])
+    const bad = inkFailures([['./probe.ts', "'text-base-content/60 text-xs'"]])
 
     expect(bad).toContain('./probe.ts base-content/60 on base-300')
     // And the same ink one step up passes, so the probe proves the threshold, not the sweep.
-    expect(alphaFailures([['./probe.ts', "'text-base-content/70'"]])).toEqual([])
+    expect(inkFailures([['./probe.ts', "'text-base-content/70'"]])).toEqual([])
+  })
+
+  /**
+   * The shapes, where the sweep above holds the words. A control identified by nothing but a
+   * translucent ink is a control a reader has to guess at — WCAG 1.4.11, 3:1, and the carousel's
+   * pagination dots stood at 1.99 on a panel and 1.82 on a light one.
+   */
+  it('clears the 3:1 of a shape, wherever an ink is spent as a translucent fill', () => {
+    expect(fillFailures(WRITTEN_SOURCES)).toEqual([])
+  })
+
+  it('refuses a fill that fails, and takes a scrim for what it is', () => {
+    // The exact class the dots carried, and the ratio that closed this batch.
+    expect(fillFailures([['./probe.tsx', "'bg-muted/40'"]])).toContain(
+      './probe.tsx muted/40 on panel',
+    )
+    expect(fillFailures([['./probe.tsx', "'bg-muted'"]])).toEqual([])
+    // A surface token spent as a translucent surface is a scrim, and owes no ratio.
+    expect(fillFailures([['./probe.tsx', "'bg-panel/80 bg-chassis/75'"]])).toEqual([])
+    // Nor does a gradient stop that names no token at all.
+    expect(fillFailures([['./probe.tsx', "'from-black/85 via-black/45'"]])).toEqual([])
+    // The spellings a first draft of this rule missed, each a way to draw the same shape.
+    expect(fillFailures([['./probe.tsx', "'ring-muted/40'"]])).not.toEqual([])
+    expect(fillFailures([['./probe.tsx', "'border-l-create/20'"]])).not.toEqual([])
+    // `accent` is in the table for THIS rule alone and no source spends it yet, so without a probe
+    // its entry could be deleted with every test still green — measured, it survived that mutant.
+    expect(fillFailures([['./probe.tsx', "'bg-accent/30'"]])).not.toEqual([])
+  })
+
+  /**
+   * The exemption, held by REPLAYING the rule rather than by asking whether the file still writes
+   * an opacity. The difference is the whole value: Spotlight raised to 3:1 would keep an exemption
+   * it no longer needs, and that exemption would silently cover the next translucent fill added
+   * beside it — the exemption being by FILE, not by class.
+   */
+  it('carries no fill exemption for a source the rule would now pass', () => {
+    const stale = Object.keys(ALPHA_FILL_ALLOWED).filter(
+      one =>
+        !WRITTEN_SOURCES.some(
+          ([path, source]) =>
+            path.endsWith(one) &&
+            alphaFailures([['probe', source]], ALPHA_FILL, () => AA_NON_TEXT).length,
+        ),
+    )
+
+    expect(stale).toEqual([])
+    expect(Object.values(ALPHA_FILL_ALLOWED).filter(one => one.length < 20)).toEqual([])
+  })
+
+  /**
+   * The fact the carousel's `w-4` rests on, measured here rather than recopied into a comment
+   * beside it. `text` and `muted` are the two fills of a pagination dot, and 1.4.11 asks 3:1 of a
+   * state — which they do NOT clear, so the current page has to be said by something else.
+   */
+  it('leaves two inks too close to tell a state apart on their own', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      expect(contrastRatio(tokens.text ?? '', tokens.muted ?? '')).toBeLessThan(AA_NON_TEXT)
+    }
   })
 
   it('leaves no word dimmed by an opacity nobody has justified', () => {
