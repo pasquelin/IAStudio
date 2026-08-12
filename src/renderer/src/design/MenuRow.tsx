@@ -81,7 +81,9 @@ export function MenuRow({
         // The tick marks what is armed; the accent marks what the pointer is on. Two
         // different questions, and colouring the armed row would answer neither.
         'group text-text hover:bg-accent hover:text-accent-content flex cursor-pointer items-center',
-        'h-(--sc-control) gap-2 rounded-(--radius-sc-md) border-none bg-transparent px-2',
+        // `shrink-0` next to the height, not instead of it: a row is a flex item of a column
+        // that stops at `max-h`, so a full menu squeezed every row to 16.5px of the gauge's 28.
+        'h-(--sc-control) shrink-0 gap-2 rounded-(--radius-sc-md) border-none bg-transparent px-2',
         'text-tiny text-left transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
         'disabled:hover:text-text',

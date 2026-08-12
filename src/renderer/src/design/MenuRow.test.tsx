@@ -95,4 +95,19 @@ describe('one row of a menu', () => {
 
     expect(container.querySelectorAll('svg')).toHaveLength(1)
   })
+
+  /**
+   * The height and `shrink-0` are one statement, and jsdom lays nothing out so only the pair is
+   * visible here: a row is a flex item of a column that stops at `max-h-[min(60vh,32rem)]`
+   * (`Flyout`), where the default `flex-shrink: 1` spends the overflow on its children. The font
+   * menu's 271 rows measured 16.5px each — the gauge says 28 — and every menu long enough to
+   * scroll was drawing rows a third shorter than the rest of the studio's controls.
+   */
+  it('keeps its gauge height in a menu that has more rows than room', () => {
+    render(<MenuRow {...props} />)
+
+    const row = screen.getByRole('menuitem', { name: 'Copy' })
+    expect(row).toHaveClass('h-(--sc-control)')
+    expect(row).toHaveClass('shrink-0')
+  })
 })
