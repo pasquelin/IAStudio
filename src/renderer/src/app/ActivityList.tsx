@@ -92,6 +92,7 @@ function namedParams(
         : formatList(
             value.map(id => (isWorkspaceId(id) ? t(workspaceLabelKey(id)) : id)),
             language,
+            'conjunction',
           )
   }
   return named
@@ -166,10 +167,13 @@ function FilterMenu<T extends string>({
 
   // The names rather than a count: "Level: warning" is what the reader wants back, and a count
   // would make them open the menu to learn what they had chosen. Truncation handles the long tail.
-  // Joined the way this file's other enumeration is (`namedParams`), rather than through a key
-  // both bundles spell the same — a separator that translates nothing is a promise it cannot keep.
+  //
+  // A DISJUNCTION, and the distinction is the whole of it: `matchesActivity` keeps a line whose
+  // level is ANY of those chosen, so "warning AND failure" would name a filter no line can meet.
   const chosen =
-    active.length === 0 ? t('activity.all') : formatList(active.map(label), i18n.language)
+    active.length === 0
+      ? t('activity.all')
+      : formatList(active.map(label), i18n.language, 'disjunction')
 
   const summary = t('activity.filters.summary', { facet, choice: chosen })
 

@@ -155,7 +155,7 @@ describe('the filters of the journal', () => {
 
     render(<ActivityList />)
 
-    expect(menuFor('Niveau', 'Avertissement et Échec')).toBeInTheDocument()
+    expect(menuFor('Niveau', 'Avertissement ou Échec')).toBeInTheDocument()
   })
 
   /**

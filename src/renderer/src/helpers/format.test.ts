@@ -115,25 +115,37 @@ describe('a list of names, joined by the language', () => {
    * between the last two items differs per language, and no component can know it.
    */
   it('writes the conjunction French writes', () => {
-    expect(formatList(['Image', '3D'], 'fr')).toBe('Image et 3D')
-    expect(formatList(['Image', '3D', 'Vidéo'], 'fr')).toBe('Image, 3D et Vidéo')
+    expect(formatList(['Image', '3D'], 'fr', 'conjunction')).toBe('Image et 3D')
+    expect(formatList(['Image', '3D', 'Vidéo'], 'fr', 'conjunction')).toBe('Image, 3D et Vidéo')
   })
 
   it('writes the one English writes, which is not the same word or the same comma', () => {
-    expect(formatList(['Image', '3D'], 'en')).toBe('Image and 3D')
-    expect(formatList(['Image', '3D', 'Video'], 'en')).toBe('Image, 3D, and Video')
+    expect(formatList(['Image', '3D'], 'en', 'conjunction')).toBe('Image and 3D')
+    expect(formatList(['Image', '3D', 'Video'], 'en', 'conjunction')).toBe('Image, 3D, and Video')
+  })
+
+  /*
+   * The half a comma hid, and the reason the join has no default: a filter that keeps a line whose
+   * level is ANY of those chosen is a disjunction, and calling it "et" names a filter no line can
+   * meet. One word apart, opposite meanings.
+   */
+  it('writes the alternative when the sentence offers one', () => {
+    expect(formatList(['Avertissement', 'Échec'], 'fr', 'disjunction')).toBe(
+      'Avertissement ou Échec',
+    )
+    expect(formatList(['Warning', 'Failure'], 'en', 'disjunction')).toBe('Warning or Failure')
+  })
+
+  // Two joins are two formatters for one language: keyed by language alone, the second call
+  // would hand back the first's word.
+  it('keeps a formatter per join, not per language', () => {
+    expect(formatList(['a', 'b'], 'fr', 'conjunction')).toBe('a et b')
+    expect(formatList(['a', 'b'], 'fr', 'disjunction')).toBe('a ou b')
   })
 
   // One name is not a list, and no separator belongs anywhere near it.
   it('leaves a single name alone, and answers nothing for none', () => {
-    expect(formatList(['Image'], 'fr')).toBe('Image')
-    expect(formatList([], 'fr')).toBe('')
-  })
-
-  // `conjunction`, never `disjunction`: these lists are things ALL true at once. An "ou" would
-  // tell the reader the studio is unsure which shelf its picture landed in.
-  it('joins with an "and", never an "or"', () => {
-    expect(formatList(['a', 'b'], 'fr')).not.toContain('ou')
-    expect(formatList(['a', 'b'], 'en')).not.toContain(' or ')
+    expect(formatList(['Image'], 'fr', 'conjunction')).toBe('Image')
+    expect(formatList([], 'fr', 'conjunction')).toBe('')
   })
 })

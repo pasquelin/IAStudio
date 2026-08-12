@@ -11,9 +11,11 @@ import { formatList } from '@/helpers/format'
  */
 export function UsageNotes({ report }: { report: UsageReport }) {
   const { t, i18n } = useTranslation()
+  // Every one of them answered nothing: all true at once.
   const silent = formatList(
     report.silent.map(account => account.name),
     i18n.language,
+    'conjunction',
   )
 
   return (
