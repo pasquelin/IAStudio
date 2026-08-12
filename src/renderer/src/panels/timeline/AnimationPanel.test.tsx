@@ -1,18 +1,14 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cameraNode } from '@/engines/scene/node-factory'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
-import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
-import { installFakeBridge } from '@/services/fake-bridge'
-import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { setTimelineSettings } from '@/engines/scene/animation-commands'
 import { SECOND } from '@shared/domain/time'
 import { installScene } from '@/stores/scene-fixtures'
-import { useModelClips } from '@/stores/model-clips'
 import { useSceneViews } from '@/stores/scene-views'
-import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
+import { useAnimationViews } from '@/stores/animation-view'
+import { useModelClips } from '@/stores/model-clips'
 import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationPanel } from './AnimationPanel'
 
@@ -106,40 +102,6 @@ describe('AnimationPanel', () => {
     await userEvent.click(fold())
     expect(channel()).not.toBeInTheDocument()
   })
-
-  it('records with auto-key, and keeps the switch off the undo stack', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
-
-    await userEvent.click(screen.getByRole('button', { name: /Enregistrement automatique/ }))
-
-    expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).autoKey).toBe(true)
-    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
-  })
-
-  it('sets the duration and the rate, which nothing could reach before', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    await userEvent.tripleClick(screen.getByLabelText(/Images\/s/))
-    await userEvent.keyboard('30{Enter}')
-
-    expect(timelineOf().fps).toBe(30)
-  })
-
-  it('runs the head back to the start', async () => {
-    useSceneViews.getState().setPlayhead(DOCUMENT, 2_000_000)
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Revenir au début/ }))
-
-    expect(screen.getByText('00:00:00:00')).toBeInTheDocument()
-  })
-
-  it('switches between playing and paused', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /^Lire/ }))
-
-    expect(screen.getByRole('button', { name: /Mettre en pause/ })).toBeInTheDocument()
-  })
 })
 
 describe('AnimationPanel and the bones of a rig', () => {
@@ -151,23 +113,6 @@ describe('AnimationPanel and the bones of a rig', () => {
     })
     useSceneViews.setState({ views: {} })
     useModelClips.setState({ clips: {}, bones: {} })
-  })
-
-  it('offers no bone picker for a model that brought none', () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    expect(screen.queryByLabelText('Os')).not.toBeInTheDocument()
-  })
-
-  it('offers every bone the file brought, plus the model as a whole', () => {
-    useModelClips.setState({ bones: { [DOCUMENT]: { perso: ['spine', 'arm.L'] } } })
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    expect(screen.getAllByRole('option').map(option => option.textContent)).toEqual([
-      'Le modèle entier',
-      'spine',
-      'arm.L',
-    ])
   })
 
   it('keys the model itself, on its own line', async () => {
@@ -185,69 +130,6 @@ describe('AnimationPanel and the bones of a rig', () => {
       { nodeId: 'perso', property: 'rotation' },
       { nodeId: 'perso', property: 'scale' },
     ])
-  })
-})
-
-describe('writing the film', () => {
-  const withCamera = (): void => {
-    installScene(DOCUMENT, {
-      ...EMPTY_SCENE,
-      nodes: [meshNode('cube-1'), cameraNode()],
-      selectedIds: ['cube-1'],
-    })
-  }
-
-  /** A stand-in for the engine: there is no WebGL here, and what is under test is the wiring. */
-  function installEngine(renderFilm = vi.fn(() => Promise.resolve())): typeof renderFilm {
-    registerSceneEngine(DOCUMENT, { renderFilm } as unknown as SceneRenderer)
-    return renderFilm
-  }
-
-  afterEach(() => forgetSceneEngine(DOCUMENT))
-
-  it('says a scene without a camera has nothing to render from', () => {
-    withSelectedCube()
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    expect(screen.getByRole('button', { name: /Rendre en vidéo/ })).toBeDisabled()
-  })
-
-  it('asks where the film goes, then draws it, then encodes it', async () => {
-    withCamera()
-    const renderFilm = installEngine()
-    const start = vi.fn(() => Promise.resolve('render_1'))
-    const finish = vi.fn(() => Promise.resolve('set.mp4'))
-    installFakeBridge({ render: { start, finish } })
-
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Rendre en vidéo/ }))
-
-    expect(start).toHaveBeenCalledWith({ name: expect.any(String), fps: timelineOf().fps })
-    expect(renderFilm).toHaveBeenCalled()
-    expect(finish).toHaveBeenCalledWith('render_1')
-  })
-
-  it('draws nothing at all when the save dialog is dismissed', async () => {
-    withCamera()
-    const renderFilm = installEngine()
-    installFakeBridge({ render: { start: () => Promise.resolve(null) } })
-
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Rendre en vidéo/ }))
-
-    expect(renderFilm).not.toHaveBeenCalled()
-  })
-
-  it('cancels the session when the drawing fails, rather than leaving frames behind', async () => {
-    withCamera()
-    installEngine(vi.fn(() => Promise.reject(new Error('context lost'))))
-    const cancel = vi.fn(() => Promise.resolve())
-    installFakeBridge({ render: { start: () => Promise.resolve('render_1'), cancel } })
-
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    await userEvent.click(screen.getByRole('button', { name: /Rendre en vidéo/ }))
-
-    expect(cancel).toHaveBeenCalledWith('render_1')
   })
 })
 
@@ -283,32 +165,6 @@ describe('a head left outside the band', () => {
   })
 })
 
-describe('typing a duration', () => {
-  beforeEach(() => {
-    withSelectedCube()
-    useSceneViews.setState({ views: {} })
-    useAnimationViews.setState({ views: {} })
-  })
-
-  it('costs ONE undo for a number typed digit by digit', async () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
-
-    const field = screen.getByLabelText(/Images\/s/)
-    await userEvent.click(field)
-    await userEvent.keyboard('{Backspace}{Backspace}120')
-    await userEvent.tab()
-
-    expect(timelineOf().fps).toBe(120)
-    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
-  })
-})
-
-/**
- * The request this whole panel answers, in the words it was made in: "a timeline like video and
- * audio, seeing my objects on a track, and setting keyframes". One case per clause, so a change
- * that quietly walks away from it fails here rather than at the next screenshot.
- */
 describe('the request, clause by clause', () => {
   beforeEach(() => {
     withSelectedCube()
@@ -326,12 +182,6 @@ describe('the request, clause by clause', () => {
 
     expect(screen.getByTestId('anim-subject-cube-1')).toBeInTheDocument()
     expect(screen.getByTestId('anim-subject-sphere-1')).toBeInTheDocument()
-  })
-
-  it('« comme vidéo et audio » — the band carries a ruler in timecode', () => {
-    render(<AnimationPanel documentId={DOCUMENT} />)
-
-    expect(screen.getByText('00:00:00:00')).toBeInTheDocument()
   })
 
   it('« mettre des points clés » — one press keys the object, whatever it held before', async () => {

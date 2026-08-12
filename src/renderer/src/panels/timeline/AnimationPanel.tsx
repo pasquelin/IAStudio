@@ -1,51 +1,21 @@
-import {
-  mdiMovieOpenOutline,
-  mdiPause,
-  mdiPlay,
-  mdiRecordCircleOutline,
-  mdiRhombus,
-  mdiSkipPrevious,
-} from '@mdi/js'
-import { useEffect, useMemo, useState } from 'react'
+import { mdiRhombus } from '@mdi/js'
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
+import { secondsToUs, type Us } from '@shared/domain/time'
 import { EmptyState } from '@/design/EmptyState'
-import { NumberField } from '@/design/NumberField'
-import { Timecode } from '@/design/Timecode'
-import { ToolButton } from '@/design/ToolButton'
-import { CONTROL } from '@/design/styles'
 import { clampPlayhead } from '@/engines/scene/animation-eval'
-import { keySubject, setTimelineSettings } from '@/engines/scene/animation-commands'
 import { animationRows, type ClipBlock } from '@/engines/scene/animation-rows'
-import { cn } from '@/helpers/cn'
-import { TIP_TOP } from '@/helpers/tooltip'
-import { selectedNodes } from '@/engines/scene/scene-state'
-import { bonesOfNode, useModelClips } from '@/stores/model-clips'
-import { getBridge } from '@/services/bridge'
-import { reportFailure } from '@/services/diagnostics'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation-view'
-import { useDocuments } from '@/stores/documents'
-import { sceneEngineOf } from '@/stores/scene-engines'
+import { useModelClips } from '@/stores/model-clips'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
+import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
 import { AnimationCanvas } from './AnimationCanvas'
 import { AnimationHeaders } from './AnimationHeaders'
 
 export type AnimationPanelProps = { documentId: string }
 
-/** What a film is written at. One size for now, and a setting the day somebody asks for one. */
-const FILM_WIDTH = 1920
-const FILM_HEIGHT = 1080
-
-/** What a band may be asked to last, in seconds — a frame at the low end, an hour at the top. */
-const MIN_DURATION = 0.1
-const MAX_DURATION = 3_600
-
 /** A speed of zero would make a block infinitely long; the inspector never offers less. */
 const MIN_SPEED = 0.1
-
-const MIN_FPS = 1
-const MAX_FPS = 120
 
 /**
  * The animation of a 3D scene, laid out as a dope sheet: one line per object, its channels
@@ -59,7 +29,6 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const { t } = useTranslation()
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   const view = useSceneViews(state => sceneViewOf(state, documentId))
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
 
@@ -93,12 +62,8 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
     return animationRows(timeline, { nodes, expanded, clips })
   }, [timeline, nodes, expanded, lengths])
 
-  const anchor = selectedNodes(nodes, selectedIds).at(-1) ?? null
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <AnimationBar documentId={documentId} anchor={anchor} />
-
       {rows.length === 0 ? (
         <EmptyState icon={mdiRhombus} message={t('animation.noTrack')} />
       ) : (
@@ -111,230 +76,6 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
       )}
     </div>
   )
-}
-
-type BarProps = {
-  documentId: string
-  anchor: { id: string; name: string } | null
-}
-
-function AnimationBar({ documentId, anchor }: BarProps) {
-  const { t } = useTranslation()
-  const timeline = useScenes(state => sceneOf(state, documentId).animation)
-  const view = useSceneViews(state => sceneViewOf(state, documentId))
-  const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
-
-  const bones = useModelClips(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
-  const picked = useSceneViews(state => sceneViewOf(state, documentId).pickedBone)
-  const [chosen, setChosen] = useState('')
-
-  // The pose mode decides when it has picked one: clicking a bone in the viewport is a clearer
-  // statement of intent than a picker two panels away, so it wins over what was chosen there.
-  const bone = picked?.nodeId === anchor?.id ? (picked?.bone ?? chosen) : chosen
-
-  const write = (settings: Partial<{ duration: Us; fps: number }>): void =>
-    useScenes.getState().runCommand(documentId, setTimelineSettings(settings))
-
-  // Typing is one gesture: a rate written digit by digit must cost one undo, not one per
-  // keystroke — which is what the field's own comment promises and what nothing was honouring.
-  const gesture = {
-    onGestureStart: () => useScenes.getState().beginGesture(documentId),
-    onGestureEnd: () => useScenes.getState().endGesture(documentId),
-  }
-
-  return (
-    <div className="border-border flex shrink-0 items-center gap-1.5 border-b px-1.5 py-1">
-      <ToolButton
-        icon={mdiSkipPrevious}
-        label={t('animation.toStart')}
-        tooltip={TIP_TOP}
-        variant="header"
-        onClick={() => useSceneViews.getState().setPlayhead(documentId, 0)}
-      />
-      <ToolButton
-        icon={view.playing ? mdiPause : mdiPlay}
-        label={view.playing ? t('animation.pause') : t('animation.play')}
-        tooltip={TIP_TOP}
-        variant="header"
-        active={view.playing}
-        onClick={() => {
-          const views = useSceneViews.getState()
-          // Rewound first when the head is already at the end: pressing Play there would stop on
-          // the very frame it started, which reads as a button that does nothing.
-          if (!view.playing && view.playhead >= timeline.duration) {
-            views.setPlayhead(documentId, 0)
-          }
-          views.setPlaying(documentId, !view.playing)
-        }}
-      />
-      <Timecode time={view.playhead} fps={timeline.fps} />
-
-      <ToolButton
-        icon={mdiRecordCircleOutline}
-        label={t('animation.autoKey')}
-        description={t('animation.autoKeyHint')}
-        tooltip={TIP_TOP}
-        variant="header"
-        active={autoKey}
-        onClick={() => useAnimationViews.getState().setAutoKey(documentId, !autoKey)}
-      />
-      <KeyButton documentId={documentId} />
-
-      <div className="flex-1" />
-
-      <div className="flex w-40 items-center">
-        <NumberField
-          label={t('animation.duration')}
-          value={usToSeconds(timeline.duration)}
-          min={MIN_DURATION}
-          max={MAX_DURATION}
-          step={0.1}
-          layout="inline"
-          onChange={seconds => write({ duration: secondsToUs(seconds) })}
-          {...gesture}
-        />
-      </div>
-      <div className="flex w-32 items-center">
-        <NumberField
-          label={t('animation.fps')}
-          value={timeline.fps}
-          min={MIN_FPS}
-          max={MAX_FPS}
-          step={1}
-          layout="inline"
-          onChange={fps => write({ fps })}
-          {...gesture}
-        />
-      </div>
-
-      {bones.length > 0 && (
-        <select
-          aria-label={t('animation.bone')}
-          value={bone}
-          onChange={event => setChosen(event.target.value)}
-          className={cn(CONTROL, 'max-w-40 px-1')}
-        >
-          <option value="">{t('animation.wholeModel')}</option>
-          {bones.map(name => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      )}
-
-      <RenderButton documentId={documentId} />
-    </div>
-  )
-}
-
-/**
- * One key on every channel of every selected subject, at the head — Blender's `LocRotScale`.
- *
- * It writes what each channel already stands at, never a neutral: a key holding nothing moves
- * nothing, and that is what made the old diamond button appear to do nothing at all.
- */
-function KeyButton({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
-  const tracks = useScenes(state => sceneOf(state, documentId).animation.tracks)
-  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
-
-  return (
-    <ToolButton
-      icon={mdiRhombus}
-      label={t('animation.keyAll')}
-      description={t('animation.keyAllHint')}
-      tooltip={TIP_TOP}
-      variant="header"
-      disabled={tracks.length === 0}
-      onClick={() => {
-        const store = useScenes.getState()
-        const state = sceneOf(store, documentId)
-        const command = keySubject(
-          state,
-          tracks.map(track => track.id),
-          snapToFrame(playhead, state.animation.fps),
-        )
-        if (command) store.runCommand(documentId, command)
-      }}
-    />
-  )
-}
-
-/**
- * Writes the film. The camera is the first one the scene holds — a scene without one has nothing
- * to render FROM, so the button says that rather than being missing.
- *
- * The work is the engine's: it draws each frame off screen and hands the bytes over one at a
- * time, and this only carries them to the main process. Awaited frame by frame on purpose —
- * running ahead would hold a whole film in memory.
- */
-function RenderButton({ documentId }: AnimationPanelProps) {
-  const { t } = useTranslation()
-  const [busy, setBusy] = useState(false)
-  const nodes = useScenes(state => sceneOf(state, documentId).nodes)
-  const camera = nodes.find(node => node.type === 'camera')
-
-  const render = async (): Promise<void> => {
-    const engine = sceneEngineOf(documentId)
-    const bridge = getBridge()
-    if (!engine || !bridge || !camera) return
-
-    const { animation } = sceneOf(useScenes.getState(), documentId)
-    const title = useDocuments.getState().documents[documentId]?.title ?? 'render'
-
-    setBusy(true)
-    const id = await bridge.render.start({ name: title, fps: animation.fps })
-    if (!id) {
-      setBusy(false)
-      return
-    }
-
-    try {
-      await engine.renderFilm(
-        camera.id,
-        {
-          width: FILM_WIDTH,
-          height: FILM_HEIGHT,
-          fps: animation.fps,
-          duration: animation.duration,
-        },
-        (index, png) => bridge.render.frame({ id, index, png }),
-      )
-      await bridge.render.finish(id)
-    } catch (error) {
-      await bridge.render.cancel(id)
-      reportFailure('scene.render', title, error)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <ToolButton
-      icon={mdiMovieOpenOutline}
-      label={t('animation.render')}
-      description={camera ? t('animation.renderHint') : t('animation.renderNeedsCamera')}
-      tooltip={TIP_TOP}
-      variant="header"
-      disabled={!camera || busy}
-      onClick={() => void render()}
-    />
-  )
-}
-
-/**
- * Pulls the head back inside the band when the band is shortened under it.
- *
- * Nothing else would: shortening is an edit of the document, the head is session state, and the
- * two never meet. Left outside, the head sits where no key can stand, and Play stops on the frame
- * it starts on — the very defect the rewind was added to close.
- */
-function useHeadInsideBand(documentId: string, playhead: Us, duration: Us): void {
-  useEffect(() => {
-    if (playhead <= duration) return
-    useSceneViews.getState().setPlayhead(documentId, duration)
-  }, [documentId, playhead, duration])
 }
 
 /**
@@ -369,4 +110,18 @@ function usePlayback(documentId: string, playing: boolean, duration: Us): void {
     frame = requestAnimationFrame(step)
     return () => cancelAnimationFrame(frame)
   }, [documentId, playing, duration])
+}
+
+/**
+ * Pulls the head back inside the band when the band is shortened under it.
+ *
+ * Nothing else would: shortening is an edit of the document, the head is session state, and the
+ * two never meet. Left outside, the head sits where no key can stand, and Play stops on the frame
+ * it starts on — the very defect the rewind was added to close.
+ */
+function useHeadInsideBand(documentId: string, playhead: Us, duration: Us): void {
+  useEffect(() => {
+    if (playhead <= duration) return
+    useSceneViews.getState().setPlayhead(documentId, duration)
+  }, [documentId, playhead, duration])
 }

@@ -1,13 +1,18 @@
-import { activeSequenceId, useDocuments } from '@/stores/documents'
+import { activeSceneId, activeSequenceId, useDocuments } from '@/stores/documents'
+import { AnimationActions } from './AnimationActions'
 import { SequenceActions } from './SequenceActions'
 
 /**
- * The montage tools and the history, rendered by `ToolWindow` on the panel's own title bar.
- * The bar is split off so its hooks never run without a sequence — as the layer panel does.
+ * What the timeline panel puts on its own title bar — the montage tools for a sequence, the
+ * transport and the settings for a scene's animation.
+ *
+ * Split off from the panel so its hooks never run without a document, as the layer panel does.
  */
 export function TimelineActions() {
+  const sceneId = useDocuments(activeSceneId)
   const documentId = useDocuments(activeSequenceId)
 
+  if (sceneId) return <AnimationActions documentId={sceneId} />
   if (!documentId) return null
   return <SequenceActions documentId={documentId} />
 }
