@@ -157,30 +157,22 @@ describe('the translation bundles', () => {
 
   /**
    * `CLAUDE.md` calls the French bundle out by name: user-facing text, with no ASCII stand-ins.
-   * A straight quote is one — the bundle already wrote `’` in a hundred and twenty-three lines
-   * and `'` in thirty-four, so the same word was drawn two ways depending on where it was read.
+   * A straight quote is one — French wrote `’` in a hundred and twenty-three lines and `'` in
+   * thirty-four, so the same word was drawn two ways depending on where it was read. English had
+   * no rule at all for a while, and it landed on the side its own quotation marks had already
+   * taken: fifteen values wore `“ ”` while seven of `activity.*` wrote `"{{name}}"`, against
+   * French counterparts all in `« »`.
    *
-   * English had no rule for a while, and this comment said so. It has one now — the check below
-   * — because the count made the case: fifteen straight against five typographic, in a bundle
-   * already wearing `“ ”` in fifteen values.
+   * One check for both languages, because they ran on different strengths and the weaker one let
+   * real text through. Asking for a letter on each side of the apostrophe misses a plural
+   * possessive closing a sentence (`the other keys'.`) and one following an interpolation
+   * (`{{name}}'s`), and it never looked at the quotation mark at all. This reads the SIGN alone:
+   * in a bundle, neither ASCII mark carries a meaning its typographic form does not.
    */
-  it('types the French apostrophe rather than the ASCII one', () => {
-    for (const [key, text] of BUNDLES.fr) {
-      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/\w'\w/)
-    }
-  })
-
-  /**
-   * The same rule for English, and it took a count to notice: the bundle held fifteen straight
-   * apostrophes against five typographic ones, so `Don't apply` sat beside `Don’t save` and the
-   * same word was drawn two ways depending on which screen showed it.
-   *
-   * The guard beside this one used to say English had no rule picking a side. It has one now, and
-   * it is the side the bundle already took for its quotation marks — fifteen values wear `“ ”`.
-   */
-  it('types the English apostrophe the way it types its quotation marks', () => {
-    for (const [key, text] of BUNDLES.en) {
-      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/\p{Letter}'\p{Letter}/u)
+  it.each(CODES)('writes no ASCII quotation mark or apostrophe in %s', code => {
+    for (const [key, text] of BUNDLES[code]) {
+      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/'/)
+      expect(text, `${key} uses a straight quotation mark`).not.toMatch(/"/)
     }
   })
 

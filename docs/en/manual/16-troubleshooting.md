@@ -16,9 +16,9 @@ names the object involved and says what failed.
 
 | What the journal can report | Topic |
 |---|---|
-| "Generation \"…\" failed", "Generation \"…\" cancelled", "2 assets generated in Image and 3D" | Generation |
-| "Could not import \"…\"", "\"…\" is unreadable" | Import |
-| "Could not send \"…\"", "The tags of \"…\" did not reach the library", "The Scenario API refused a request" | Library |
+| "Generation “…” failed", "Generation “…” cancelled", "2 assets generated in Image and 3D" | Generation |
+| "Could not import “…”", "“…” is unreadable" | Import |
+| "Could not send “…”", "The tags of “…” did not reach the library", "The Scenario API refused a request" | Library |
 | "Saving the document failed", "A layer could not be loaded", "Exporting the scene failed", "The file could not be shown" | Document |
 | "This folder is not a Scenario project", "The project could not be created in this folder", "The system could not open this file" | Project |
 | "Part of the interface could not be drawn", "A workspace’s stored layout could not be read" | Interface |
