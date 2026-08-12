@@ -27,7 +27,7 @@ import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 
@@ -53,7 +53,7 @@ function turned(x: number, y: number, z: number): Transform {
 
 const nodeInStore = (id: string): SceneNode | null => sceneNodeNow('doc-1', id)
 
-const entries = () => historyOf(useScenes.getState(), 'doc-1').past.length
+const entries = () => sceneHistoryOf(useScenes.getState(), 'doc-1').past.length
 
 /** The drag handle of one axis. Throws rather than narrowing, so a miss reads as a miss. */
 function axisHandle(axis: string, occurrence = 0): HTMLElement {

@@ -9,7 +9,7 @@ import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { useAnimationViews } from '@/stores/animation-view'
 import { installScene } from '@/stores/scene-fixtures'
-import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/scene-views'
 import { AnimationCanvas } from './AnimationCanvas'
 
@@ -79,18 +79,18 @@ describe('dragging a clip block', () => {
 
   it('costs ONE undo entry however many pixels the drag crossed', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
     press(canvas(), 'pointerdown', 150, 30)
     for (const x of [200, 250, 300, 350, 400]) press(canvas(), 'pointermove', x, 30)
     press(canvas(), 'pointerup', 400, 30)
 
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
   })
 
   it('opens a second entry for a second drag, rather than swallowing it into the first', () => {
     render(<AnimationCanvas documentId={DOCUMENT} rows={blockRows()} />)
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
     press(canvas(), 'pointerdown', 150, 30)
     press(canvas(), 'pointermove', 300, 30)
@@ -100,7 +100,7 @@ describe('dragging a clip block', () => {
     press(canvas(), 'pointermove', 500, 30)
     press(canvas(), 'pointerup', 500, 30)
 
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 2)
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 2)
   })
 
   it('never slides a block before the start of the band', () => {

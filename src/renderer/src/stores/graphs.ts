@@ -7,7 +7,7 @@ const store = createDocumentStore<GraphState>(EMPTY_GRAPH)
 export const graphStore = store
 export const useGraphs = store.use
 export const graphOf = store.stateOf
-export const historyOf = store.historyOf
+export const graphHistoryOf = store.historyOf
 
 /**
  * One node of one document, in the shape a subscribed selector takes it.

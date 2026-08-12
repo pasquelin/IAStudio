@@ -6,7 +6,7 @@ import { edgeBetween } from '@/engines/graph/connect'
 import { forEachEndNode, forEachNode, textNode, wire } from '@/engines/graph/graph-fixtures'
 import { handleId, loopInputId, loopOutputId } from '@/engines/graph/handles'
 import { edgesNow, installGraph, graphNodeNow } from '@/stores/graph-fixtures'
-import { historyOf, useGraphs } from '@/stores/graphs'
+import { graphHistoryOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
@@ -166,7 +166,7 @@ describe('the lists a loop walks', () => {
     show('forEach1')
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une liste à parcourir/ }))
     expect(outputs()).toHaveLength(2)
-    const past = historyOf(useGraphs.getState(), DOCUMENT).past.length
+    const past = graphHistoryOf(useGraphs.getState(), DOCUMENT).past.length
 
     useGraphs.getState().undo(DOCUMENT)
 

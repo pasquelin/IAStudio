@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
+import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { guidePort } from './guide-port'
 
 const DOCUMENT = 'doc-1'
 
 const guides = () => canvasOf(useCanvases.getState(), DOCUMENT).guides
-const entries = () => historyOf(useCanvases.getState(), DOCUMENT).past.length
+const entries = () => canvasHistoryOf(useCanvases.getState(), DOCUMENT).past.length
 
 describe('guidePort', () => {
   beforeEach(() => {
@@ -61,7 +61,7 @@ describe('guidePort', () => {
     port.remove(id)
     port.endDrag()
 
-    expect(historyOf(useCanvases.getState(), DOCUMENT).future).toEqual([])
+    expect(canvasHistoryOf(useCanvases.getState(), DOCUMENT).future).toEqual([])
     useCanvases.getState().redo(DOCUMENT)
     expect(guides()).toEqual([])
   })

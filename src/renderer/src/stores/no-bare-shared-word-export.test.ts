@@ -28,33 +28,46 @@ const exportsOf = (source: string): string[] => [
     .filter(name => name.length > 0),
 ]
 
-const bareNodeExports = (sources: readonly (readonly [string, string])[]): string[] =>
+/**
+ * The words two of this studio's domains both own. Each is a reader that answers for ONE kind of
+ * document while its name says which of several it could be — so each needs the domain in front.
+ *
+ * `node`: `nodeById` exists for a scene (`engines/scene/scene-state.ts`) and for a graph
+ * (`shared/domain/graph.ts`). `history`: six stores published `historyOf` under that one name —
+ * graphs, canvases, scenes, sequences, skyboxes, textures — while `audio-edits.ts` had already
+ * written `audioHistoryOf`, which is the form the rest now follows.
+ *
+ * A word joins this list when a SECOND domain claims it, never in anticipation: a rule wider than
+ * its evidence is one the next reader argues with instead of obeying.
+ */
+const SHARED_WORDS: readonly string[] = ['node', 'history']
+
+const bareExports = (sources: readonly (readonly [string, string])[]): string[] =>
   sources.flatMap(([path, source]) =>
     exportsOf(source)
-      .filter(name => name.startsWith('node'))
+      .filter(name => SHARED_WORDS.some(word => name.startsWith(word)))
       .map(name => `${path}: ${name}`),
   )
 
 /**
- * `node` is the word of TWO domains, and each has its own reader: `nodeById` for a scene
- * (`engines/scene/scene-state.ts`) and for a graph (`shared/domain/graph.ts`). A store export
- * named `node…` therefore says nothing about which it answers, and an editor's auto-import
- * reaches whichever comes first — a suite then reads a graph where it meant a scene, and asserts
- * about the wrong document.
+ * A store export whose name starts with a word two domains share says nothing about which of them
+ * it answers, and an editor's auto-import reaches whichever comes first — a suite then reads a
+ * graph where it meant a scene, and asserts about the wrong document.
  *
- * **What this holds, exactly, and it is less than its subject.** One word, `node`, and one folder,
- * `stores/`. It does NOT hold the two `nodeById` above — they are upstream, in `engines/` and
- * `shared/`, across 53 sites and a coverage budget at zero margin — nor the other words two
- * domains share here (`clip` is a video clip and a GLB animation clip; `track` is exported by
- * `engines/timeline/timeline-state.ts` and lives again on `AnimationTrack`), nor `historyOf`,
- * which six stores publish under one name. Each of those is written at the chantier as its own
- * lot. **A green run here means this one word is clean in this one folder — nothing wider**, and
- * saying so is the point: a guard that let its silence be read as coverage would be worse than
- * none.
+ * **What this holds, exactly, and it is less than its subject.** The words of `SHARED_WORDS`, in
+ * one folder: `stores/`. It does NOT hold the two `nodeById` upstream — they are in `engines/`
+ * and `shared/`, across 53 sites and a coverage budget at zero margin — nor `clip` and `track`,
+ * which two domains share and whose files are held by another branch today. Each is written at
+ * the chantier as its own lot. **A green run here means these words are clean in this one
+ * folder — nothing wider**, and saying so is the point: a guard whose silence could be read as
+ * coverage would be worse than none.
+ *
+ * `document-store.ts` is deliberately untouched by all this: its `historyOf` is a member of the
+ * generic factory's contract, not a module export, so no import can reach it ambiguously.
  */
-describe('what a store exports about a node', () => {
-  it('names the domain the node belongs to', () => {
-    expect(bareNodeExports(STORES)).toEqual([])
+describe('what a store exports about a shared word', () => {
+  it('names the domain the export belongs to', () => {
+    expect(bareExports(STORES)).toEqual([])
   })
 
   /*
@@ -65,10 +78,13 @@ describe('what a store exports about a node', () => {
    */
   it('would say so of a store that broke it', () => {
     const offender: [string, string][] = [
-      ['../stores/zz.ts', 'export const nodeIn = 1\nexport const graphNodeIn = 2\n'],
+      [
+        '../stores/zz.ts',
+        'export const nodeIn = 1\nexport const graphNodeIn = 2\nexport const historyOf = 3\n',
+      ],
     ]
 
-    expect(bareNodeExports(offender)).toEqual(['../stores/zz.ts: nodeIn'])
+    expect(bareExports(offender)).toEqual(['../stores/zz.ts: nodeIn', '../stores/zz.ts: historyOf'])
   })
 
   /*
@@ -86,5 +102,6 @@ describe('what a store exports about a node', () => {
     // The two this rule renamed: if the filter ever stops reaching them, the check above goes quiet.
     expect(names).toContain('graphNodeIn')
     expect(names).toContain('graphNodeNow')
+    expect(names).toContain('graphHistoryOf')
   })
 })

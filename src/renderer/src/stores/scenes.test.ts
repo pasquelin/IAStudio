@@ -5,7 +5,7 @@ import { createDefaultScene } from '@/engines/scene/default-scene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
 import { clearScenes } from './scene-fixtures'
-import { historyOf, isDirty, sceneOf, sceneStore, useScenes } from './scenes'
+import { sceneHistoryOf, isDirty, sceneOf, sceneStore, useScenes } from './scenes'
 
 const box = meshNode('box-1')
 
@@ -26,8 +26,8 @@ describe('scenes store', () => {
 
   it('keeps one history per document', () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
-    expect(canUndo(historyOf(useScenes.getState(), 'doc-1'))).toBe(true)
-    expect(canUndo(historyOf(useScenes.getState(), 'doc-2'))).toBe(false)
+    expect(canUndo(sceneHistoryOf(useScenes.getState(), 'doc-1'))).toBe(true)
+    expect(canUndo(sceneHistoryOf(useScenes.getState(), 'doc-2'))).toBe(false)
   })
 
   it('undoes and redoes within one document', () => {
@@ -36,7 +36,7 @@ describe('scenes store', () => {
 
     undo('doc-1')
     expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toHaveLength(0)
-    expect(canRedo(historyOf(useScenes.getState(), 'doc-1'))).toBe(true)
+    expect(canRedo(sceneHistoryOf(useScenes.getState(), 'doc-1'))).toBe(true)
 
     redo('doc-1')
     expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toHaveLength(1)
@@ -108,9 +108,10 @@ describe('isDirty', () => {
     for (let index = 0; index < HISTORY_LIMIT + 1; index += 1) {
       useScenes.getState().runCommand('doc-1', addNode(meshNode(`box-${index}`)))
     }
-    while (canUndo(historyOf(useScenes.getState(), 'doc-1'))) useScenes.getState().undo('doc-1')
+    while (canUndo(sceneHistoryOf(useScenes.getState(), 'doc-1')))
+      useScenes.getState().undo('doc-1')
 
-    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(0)
+    expect(sceneHistoryOf(useScenes.getState(), 'doc-1').past).toHaveLength(0)
     expect(sceneOf(useScenes.getState(), 'doc-1').nodes).not.toHaveLength(0)
     expect(dirty('doc-1')).toBe(true)
   })
@@ -173,7 +174,7 @@ describe('gestures', () => {
     drag('doc-1', [1, 2, 3, 4, 5])
 
     expect(positionOf('doc-1')).toBe(5)
-    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(1)
+    expect(sceneHistoryOf(useScenes.getState(), 'doc-1').past).toHaveLength(1)
   })
 
   it('undoes the whole drag rather than one frame of it', () => {
@@ -181,7 +182,7 @@ describe('gestures', () => {
     useScenes.getState().undo('doc-1')
 
     expect(positionOf('doc-1')).toBe(0)
-    expect(canUndo(historyOf(useScenes.getState(), 'doc-1'))).toBe(false)
+    expect(canUndo(sceneHistoryOf(useScenes.getState(), 'doc-1'))).toBe(false)
   })
 
   // Two drags of the same field are two things the user did, and ⌘Z must give them back one
@@ -190,7 +191,7 @@ describe('gestures', () => {
     drag('doc-1', [1, 2])
     drag('doc-1', [8, 9])
 
-    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(2)
+    expect(sceneHistoryOf(useScenes.getState(), 'doc-1').past).toHaveLength(2)
 
     useScenes.getState().undo('doc-1')
     expect(positionOf('doc-1')).toBe(2)
@@ -201,7 +202,7 @@ describe('gestures', () => {
     store.runCommand('doc-1', setTransform('box-1', moved(1)))
     store.runCommand('doc-1', setTransform('box-1', moved(2)))
 
-    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(2)
+    expect(sceneHistoryOf(useScenes.getState(), 'doc-1').past).toHaveLength(2)
   })
 
   // ⌘Z mid-drag: the entry the next value would merge into is no longer the one it started from.
@@ -213,7 +214,7 @@ describe('gestures', () => {
     store.runCommand('doc-1', setTransform('box-1', moved(2)))
 
     expect(positionOf('doc-1')).toBe(2)
-    expect(historyOf(useScenes.getState(), 'doc-1').past).toHaveLength(1)
+    expect(sceneHistoryOf(useScenes.getState(), 'doc-1').past).toHaveLength(1)
   })
 
   it('keeps a gesture to the document that opened it', () => {
@@ -230,6 +231,6 @@ describe('gestures', () => {
     store.runCommand('doc-2', setTransform('box-1', moved(1)))
     store.runCommand('doc-2', setTransform('box-1', moved(2)))
 
-    expect(historyOf(useScenes.getState(), 'doc-2').past).toHaveLength(2)
+    expect(sceneHistoryOf(useScenes.getState(), 'doc-2').past).toHaveLength(2)
   })
 })

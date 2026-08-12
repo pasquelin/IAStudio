@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { layerNow } from '@/stores/canvas-fixtures'
-import { historyOf, useCanvases } from '@/stores/canvases'
+import { canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { layerPort } from './layer-port'
 
 const DOCUMENT = 'doc-1'
 
 const transform = (documentId = DOCUMENT) => layerNow(documentId, 'layer-1')?.transform
-const entries = () => historyOf(useCanvases.getState(), DOCUMENT).past.length
+const entries = () => canvasHistoryOf(useCanvases.getState(), DOCUMENT).past.length
 
 describe('layerPort', () => {
   beforeEach(() => {

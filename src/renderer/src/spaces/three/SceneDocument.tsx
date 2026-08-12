@@ -25,7 +25,7 @@ import { selectedNodes, type NodeMove } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
-import { addModelTo, historyOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { addModelTo, sceneHistoryOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, useSceneViews, viewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
@@ -92,8 +92,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const scene = useScenes(state => sceneOf(state, documentId))
   // Booleans rather than the history itself: a selector that builds an object on every call
   // hands React a new snapshot each render, and the render loop never settles.
-  const undoable = useScenes(state => canUndo(historyOf(state, documentId)))
-  const redoable = useScenes(state => canRedo(historyOf(state, documentId)))
+  const undoable = useScenes(state => canUndo(sceneHistoryOf(state, documentId)))
+  const redoable = useScenes(state => canRedo(sceneHistoryOf(state, documentId)))
   const modified = useScenes(state => isDirty(state, documentId))
   const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()

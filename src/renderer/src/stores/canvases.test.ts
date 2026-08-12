@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { canvasOf, historyOf, useCanvases } from './canvases'
+import { canvasOf, canvasHistoryOf, useCanvases } from './canvases'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { addLayer, renameLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
@@ -25,8 +25,8 @@ describe('canvases store', () => {
 
   it('keeps one history per document', () => {
     useCanvases.getState().runCommand('doc-1', addLayer(layer))
-    expect(canUndo(historyOf(useCanvases.getState(), 'doc-1'))).toBe(true)
-    expect(canUndo(historyOf(useCanvases.getState(), 'doc-2'))).toBe(false)
+    expect(canUndo(canvasHistoryOf(useCanvases.getState(), 'doc-1'))).toBe(true)
+    expect(canUndo(canvasHistoryOf(useCanvases.getState(), 'doc-2'))).toBe(false)
   })
 
   it('undoes and redoes within one document', () => {
@@ -35,7 +35,7 @@ describe('canvases store', () => {
 
     undo('doc-1')
     expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(1)
-    expect(canRedo(historyOf(useCanvases.getState(), 'doc-1'))).toBe(true)
+    expect(canRedo(canvasHistoryOf(useCanvases.getState(), 'doc-1'))).toBe(true)
 
     redo('doc-1')
     expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(2)
@@ -62,7 +62,7 @@ describe('canvases store', () => {
 
       forgetThrough('doc-1', `layer:add:${layer.id}`)
 
-      expect(historyOf(useCanvases.getState(), 'doc-1').past.map(entry => entry.id)).toEqual([
+      expect(canvasHistoryOf(useCanvases.getState(), 'doc-1').past.map(entry => entry.id)).toEqual([
         'layer:rename:layer-1',
       ])
     })
@@ -77,9 +77,9 @@ describe('canvases store', () => {
 
       forgetThrough('doc-1', `layer:add:${layer.id}`)
 
-      expect(historyOf(useCanvases.getState(), 'doc-1').future.map(entry => entry.id)).toEqual([
-        'layer:rename:layer-1',
-      ])
+      expect(
+        canvasHistoryOf(useCanvases.getState(), 'doc-1').future.map(entry => entry.id),
+      ).toEqual(['layer:rename:layer-1'])
     })
 
     it('leaves a history that knows nothing of that entry alone', () => {
@@ -88,7 +88,7 @@ describe('canvases store', () => {
 
       forgetThrough('doc-1', 'pixels:gone')
 
-      expect(canUndo(historyOf(useCanvases.getState(), 'doc-1'))).toBe(true)
+      expect(canUndo(canvasHistoryOf(useCanvases.getState(), 'doc-1'))).toBe(true)
     })
   })
 

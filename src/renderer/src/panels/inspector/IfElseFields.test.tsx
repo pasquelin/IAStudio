@@ -18,7 +18,7 @@ import {
 } from '@/engines/graph/graph-fixtures'
 import { handleId, inputHandlesOf } from '@/engines/graph/handles'
 import { installGraph, graphNodeNow } from '@/stores/graph-fixtures'
-import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
+import { graphOf, graphHistoryOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
@@ -116,10 +116,10 @@ describe('the conditions of a branch', () => {
   /** A typed word is ONE undo entry, as every other field of the inspector is. */
   it('collapses a typed value into a single history entry', async () => {
     show('ifElse1')
-    const before = historyOf(useGraphs.getState(), DOCUMENT).past.length
+    const before = graphHistoryOf(useGraphs.getState(), DOCUMENT).past.length
     await userEvent.type(screen.getByLabelText('Valeur comparée'), 'rock')
 
-    expect(historyOf(useGraphs.getState(), DOCUMENT).past.length).toBe(before + 1)
+    expect(graphHistoryOf(useGraphs.getState(), DOCUMENT).past.length).toBe(before + 1)
   })
 
   it('drops the value field for an operator that reads none', async () => {

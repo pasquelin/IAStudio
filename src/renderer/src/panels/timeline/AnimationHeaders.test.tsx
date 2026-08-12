@@ -8,7 +8,7 @@ import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { addAnimationTrack } from '@/engines/scene/animation-commands'
 import { useAnimationViews } from '@/stores/animation-view'
 import { installScene } from '@/stores/scene-fixtures'
-import { historyOf, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
+import { sceneHistoryOf, sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews } from '@/stores/scene-views'
 import { AnimationHeaders } from './AnimationHeaders'
 
@@ -74,11 +74,11 @@ describe('the column beside the band', () => {
 
   it('keeps a switch off the undo stack: it is how one works, not what one made', async () => {
     headers()
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
     await userEvent.click(subject().getByRole('button', { name: /Rendre muette/ }))
 
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
   })
 
   it('keys the subject at the head, on every one of its channels', async () => {

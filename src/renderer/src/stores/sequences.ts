@@ -15,7 +15,7 @@ const store = createDocumentStore<SequenceState>(EMPTY_SEQUENCE)
 export const sequenceStore = store
 export const useSequences = store.use
 export const sequenceOf = store.stateOf
-export const historyOf = store.historyOf
+export const sequenceHistoryOf = store.historyOf
 
 /**
  * Whether any track of that montage would hold this asset — what keeps the cascade from

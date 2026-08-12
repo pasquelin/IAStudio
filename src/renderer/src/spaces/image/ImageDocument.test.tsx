@@ -10,7 +10,7 @@ import { PANE_TOOLBAR } from '@/design/styles'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
-import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
+import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
@@ -477,7 +477,7 @@ describe('merging the layer below', () => {
     expect(mergeInto).not.toHaveBeenCalled()
     // The history too: `run` stacks a command whether or not it changed anything, so a merge that
     // let the command through at the bottom would leave a ⌘Z that undoes nothing.
-    expect(canUndo(historyOf(useCanvases.getState(), DOCUMENT))).toBe(false)
+    expect(canUndo(canvasHistoryOf(useCanvases.getState(), DOCUMENT))).toBe(false)
   })
 })
 
