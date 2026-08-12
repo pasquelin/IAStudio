@@ -90,8 +90,9 @@ const collidingExports = (sources: readonly (readonly [string, string])[]): stri
 
 /**
  * The collisions this guard has NOT closed yet, each a lot of its own at the chantier: `isDirty`,
- * published by `scenes.ts`, `settings-draft.ts` and `textures.ts` — and the third under a
- * different signature, so it is three renames rather than one.
+ * published by `scenes.ts` and `textures.ts` — both re-exporting the one `store.isDirty` of
+ * `document-store.ts` — and by `settings-draft.ts`, which is NOT a document store and takes a
+ * different argument entirely. Three renames, and the odd one out is the draft.
  *
  * `claimOnSubmit` left this list on 2026-08-12, and the leaving is what the check below is for:
  * `image-generation.ts` now publishes `claimImageOnSubmit` — the name `generation-claims.ts` was
@@ -221,5 +222,8 @@ describe('what a store exports about a shared word', () => {
     for (const domain of ['canvas', 'scene', 'skybox']) {
       expect(names).toContain(`${domain}ViewOf`)
     }
+    // The infix form deposits its witness too, or the day `image-generation.ts` leaves the folder
+    // the rule goes quiet about it without reddening.
+    expect(names).toContain('claimImageOnSubmit')
   })
 })
