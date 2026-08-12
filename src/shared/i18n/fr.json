@@ -67,7 +67,7 @@
     "noProject": "Ouvrez un projet pour générer.",
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
-    "estimatedCost": "~{{units}} UC"
+    "estimatedCost": "~{{units}} UC"
   },
   "apps": {
     "what": "La Génération, c’est un modèle, une étape. Une App, c’est plusieurs modèles enchaînés, déjà montés : un seul formulaire, et toute la chaîne tourne.",
@@ -408,7 +408,7 @@
     "oldest": "Création : les plus anciens"
   },
   "periods": {
-    "day": "Dernières 24 h",
+    "day": "Dernières 24 h",
     "week": "7 derniers jours",
     "month": "30 derniers jours",
     "quarter": "3 derniers mois"
@@ -890,7 +890,7 @@
     "fadeOut": "Fondu de sortie",
     "fadeOutHint": "Descendre vers le silence sur la sélection",
     "normalize": "Normaliser",
-    "normalizeHint": "Ramener le niveau à −14 LUFS",
+    "normalizeHint": "Ramener le niveau à −14 LUFS",
     "trimSilence": "Couper les silences",
     "trimSilenceHint": "Retirer le silence au début et à la fin",
     "compare": "A/B",
@@ -958,7 +958,7 @@
     "roblox": "Roblox",
     "raw": "Canaux bruts"
   },
-  "skyboxFaceSize": "{{size}} × {{size}}",
+  "skyboxFaceSize": "{{size}} × {{size}}",
   "sceneViews": {
     "free": "Perspective",
     "freeHint": "La vue qu’on pilote : c’est la seule qui tourne",
@@ -983,7 +983,7 @@
     "vertices": "Sommets",
     "draws": "Appels de dessin",
     "textures": "Textures",
-    "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
+    "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
   },
   "sceneDisplay": {
     "shaded": "Rendu",
@@ -1199,7 +1199,7 @@
     },
     "dictationIdleUnload": {
       "title": "Libérer la mémoire après",
-      "help": "Minutes sans dicter au bout desquelles le modèle est déchargé, rendant environ 700 Mo de mémoire. Il se recharge tout seul à la dictée suivante, ce qui prend quelques secondes. Mettez 0 pour le garder chargé en permanence."
+      "help": "Minutes sans dicter au bout desquelles le modèle est déchargé, rendant environ 700 Mo de mémoire. Il se recharge tout seul à la dictée suivante, ce qui prend quelques secondes. Mettez 0 pour le garder chargé en permanence."
     },
     "dictationModelFolder": {
       "title": "Dossier du modèle",
@@ -1849,7 +1849,7 @@
     },
     "period": {
       "label": "Période",
-      "short": "{{count, number}} j",
+      "short": "{{count, number}} j",
       "hint": "Ne compte que les {{count, number}} derniers jours"
     },
     "refresh": "Actualiser",
@@ -2085,7 +2085,7 @@
     "kibibyte": "Kio",
     "mebibyte": "Mio",
     "gibibyte": "Gio",
-    "creative": "{{units}} UC"
+    "creative": "{{units}} UC"
   },
   "keys": {
     "Space": "Espace",

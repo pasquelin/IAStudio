@@ -1,6 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
 import { DISPLAY_MODES, LIGHT_ENTRIES, MESH_ENTRIES, VIEW_DIRECTIONS } from '@shared/domain/scene'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
@@ -648,10 +649,14 @@ describe('exporting a sky', () => {
   it('offers one row per face size, and only sizes the domain knows', () => {
     const file = submenuOf(menuTemplate(options({ workspace: 'skyboxes' })), 'Fichier')
 
+    // Written through the constant, which is why it exists: the no-break space binding a size to
+    // its `×` is invisible here, and a literal one would have been read as an ordinary space.
+    const size = (side: number): string => `${side}${NO_BREAK_SPACE}×${NO_BREAK_SPACE}${side}`
+
     expect(submenuOf(file, 'Exporter le ciel').map(item => item.label)).toEqual([
-      '512 × 512',
-      '1024 × 1024',
-      '2048 × 2048',
+      size(512),
+      size(1024),
+      size(2048),
     ])
   })
 
