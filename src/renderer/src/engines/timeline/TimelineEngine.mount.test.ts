@@ -108,6 +108,7 @@ describe('mounting a monitor', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    sprites.length = 0
     resolveInit = null
     started = null
     host = document.createElement('div')

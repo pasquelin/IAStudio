@@ -19,9 +19,9 @@ In the centre, two monitors side by side — the Premiere and DaVinci convention
 | **Source**, on the left | the selected clip, on its own |
 | **Program**, on the right | the edit as it will be |
 
-When no clip is selected, the Source monitor shows "Select a clip to see it here." When the clip
-under the playhead cannot be decoded, [the other message](#when-a-clip-cannot-be-shown) takes its
-place.
+When no clip is selected, the Source monitor shows "Select a clip to see it here." When the **picture**
+clip under the playhead cannot be decoded, [the other message](#when-a-clip-cannot-be-shown) takes
+its place; a sound clip whose media is missing stays black and silent, announcing nothing.
 
 ---
 
@@ -213,7 +213,8 @@ Four things worth knowing, because they show:
 - **Sound only comes out during playback.** Dragging the playhead by hand plays nothing: it is the
   picture that follows the cursor, not the sound.
 - **The Source monitor plays the selected clip**, sound included when it is one — but it then
-  shows no picture, a sound having none.
+  shows no picture, a sound having none. Its playhead does not move back on its own: coming from
+  a longer clip, it may land past the end of the new one, which then stays silent.
 - **A video's own sound is not played yet**: only sound tracks are. A video laid on a picture track
   is seen without being heard.
 - **The first sound may take a moment to arrive**: the file is decoded whole before it plays. A

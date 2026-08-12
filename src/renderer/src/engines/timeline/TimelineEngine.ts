@@ -28,7 +28,6 @@ export function clipAt(track: Track, time: Us): Clip | null {
   return track.clips.find(clip => time >= clip.start && time < clipEnd(clip)) ?? null
 }
 
-/** Lowest index first: the sprite added last is the one the eye sees on top. */
 /**
  * The sprites whose track LEFT the frame, and which nothing else would ever take down.
  *
@@ -44,6 +43,7 @@ export function spritesOffFrame<T>(
   return [...sprites].filter(([trackId]) => !inFrame.has(trackId)).map(([, sprite]) => sprite)
 }
 
+/** Lowest index first: the sprite added last is the one the eye sees on top. */
 export function videoTracksByDepth(state: SequenceState): Track[] {
   return state.tracks
     .filter(track => track.kind === 'video')
