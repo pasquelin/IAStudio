@@ -21,7 +21,8 @@ import {
 } from './canvas-state'
 import { DEFAULT_BRUSH } from './brush'
 import { PixelPatches } from './PixelPatches'
-import type { CanvasTool } from './CanvasEngine'
+import stylesheet from '@/index.css?raw'
+import { FALLBACK_COLORS, OVERLAY_TOKENS, type CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from '../core/geometry'
 import { RULER_SIZE } from './CanvasOverlay'
@@ -3499,5 +3500,51 @@ describe('the brush ring', () => {
     await nextFrame()
 
     expect(rings).toHaveLength(0)
+  })
+})
+
+/**
+ * The overlay reads its colours from the stylesheet and keeps a table of hexadecimals for the
+ * one case where it cannot: a canvas that is not in a document yet. That table restates nine
+ * tokens by hand, and nothing but this described what it was restating.
+ *
+ * The stakes are not that the fallback looks wrong. `token()` answers an empty string for a name
+ * `index.css` no longer declares, and `readColors` falls back on exactly that answer — so a
+ * renamed or removed token turns this table into the real source of the overlay's colours, on
+ * every canvas, with the whole suite green. Two of these nine tokens were repainted on 12 August
+ * alone.
+ *
+ * Pinned against the DARK declarations only, and that is a decision rather than an oversight: a
+ * canvas with no document has no theme to read either, and the table's own comment states the
+ * greys it was chosen for.
+ */
+describe('the overlay colours the canvas falls back on', () => {
+  // Keeping the FIRST value of each name from `@theme` onwards, as `design/tokens.test.ts` does:
+  // `--color-accent` is declared three times, and the later two belong to daisyUI theme blocks.
+  const darkTokens = (): Map<string, string> => {
+    const found = new Map<string, string>()
+    for (const [, name = '', value = ''] of stylesheet
+      .slice(stylesheet.indexOf('@theme {'))
+      .matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)) {
+      if (!found.has(name)) found.set(name, value.trim())
+    }
+
+    return found
+  }
+
+  it('names only tokens the stylesheet still declares', () => {
+    const declared = darkTokens()
+    const gone = Object.values(OVERLAY_TOKENS).filter(name => !declared.has(name))
+
+    expect(gone).toEqual([])
+  })
+
+  it('restates each of those tokens exactly', () => {
+    const declared = darkTokens()
+    const parts = Object.keys(OVERLAY_TOKENS) as (keyof typeof OVERLAY_TOKENS)[]
+
+    expect(parts.map(part => [part, FALLBACK_COLORS[part]])).toEqual(
+      parts.map(part => [part, declared.get(OVERLAY_TOKENS[part])]),
+    )
   })
 })
