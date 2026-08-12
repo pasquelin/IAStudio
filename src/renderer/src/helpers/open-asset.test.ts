@@ -141,6 +141,50 @@ describe('opening an asset', () => {
     expect(opened().id).toBe(first.id)
   })
 
+  /**
+   * The half that matters most, and the one open tabs alone cannot answer: a document saved for
+   * an asset and then closed lives only in the folder listing. Read from `documents` only, the
+   * gesture built a second document beside the very work it was meant to reopen.
+   */
+  it('reopens the document saved for an asset even once its tab is closed', async () => {
+    const saved: DocumentDescriptor = {
+      id: 'doc-saved',
+      kind: 'image',
+      workspace: 'image',
+      title: 'dusk.png',
+      sourceAssetId: 'asset-sky',
+    }
+    useDocuments.setState({ documents: {}, stored: [saved], activeId: null })
+
+    await openAsset(picture())
+
+    expect(useDocuments.getState().documents['doc-saved']).toBeDefined()
+    expect(openedCount()).toBe(1)
+  })
+
+  /**
+   * The home covers a centre whose Dockview is unmounted, while the module still holds the api
+   * of the workspace last mounted. `openDocument` only switches workspace when the document
+   * belongs to another one — so on the same one it would add a panel to a discarded api, and
+   * the double-click would paint nothing at all.
+   */
+  it('leaves the home, even for an asset of the workspace already settled on', async () => {
+    useLayouts.setState({ layouts: {}, activeWorkspace: 'image', home: true })
+
+    await openAsset(picture())
+
+    expect(useLayouts.getState().home).toBe(false)
+  })
+
+  it('leaves the home when it comes back to a tab too', async () => {
+    await openAsset(picture())
+    useLayouts.setState({ home: true })
+
+    await openAsset(picture())
+
+    expect(useLayouts.getState().home).toBe(false)
+  })
+
   // Same kind, another asset: the tab is not reused, because it is that asset's tab.
   it('opens a second tab for a second asset of the same kind', async () => {
     await openAsset(picture())
@@ -178,6 +222,22 @@ describe('opening an asset', () => {
     expect(openedCount()).toBe(0)
     expect(entries()).toHaveLength(1)
     expect(entries()[0]?.message).toContain('dusk.png')
+  })
+
+  /**
+   * The picture kinds are refused by their destination's own guard; a take, a mesh and a rush
+   * have none, and each would have opened an editor onto a reference resolving to a 404. Every
+   * editor loads its subject from the file behind it, so the gesture asks once, for all of them.
+   */
+  it('refuses every kind the cloud still holds, not only the pictures', async () => {
+    const { entries } = bridgeWatchingLogs()
+
+    await openAsset(asset({ location: 'cloud' }))
+    await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.glb', location: 'cloud' }))
+    await openAsset(asset({ id: 'clip-1', type: 'video', name: 'rush.mp4', location: 'cloud' }))
+
+    expect(openedCount()).toBe(0)
+    expect(entries()).toHaveLength(3)
   })
 
   it('keeps quiet when the asset did land somewhere', async () => {

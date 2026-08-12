@@ -158,6 +158,34 @@ describe('documents store', () => {
     expect(created?.kind).toBe('texture')
   })
 
+  /**
+   * The numbering counts blank documents, and an asset-opened one carries the asset's name. Left
+   * in the tally, three pictures opened from the shelf made the FIRST untitled document of the
+   * space « Sans titre 4 ».
+   */
+  it('does not count asset-opened documents when numbering a blank one', async () => {
+    const { create } = useDocuments.getState()
+    const first = await create('image')
+    await create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_1' })
+    await create('image', { title: 'Gemini 3.2', sourceAssetId: 'asset_2' })
+
+    const second = await create('image')
+    expect(second?.title).not.toBe(first?.title)
+    // The third blank one, had the two assets counted, would have been numbered 5.
+    expect((await create('image'))?.title).toContain('3')
+  })
+
+  /**
+   * Both creations await the same in-flight listing, so a state read BEFORE that await hands
+   * them the same number — two tabs called « Sans titre 1 », indistinguishable everywhere.
+   */
+  it('numbers two creations in flight apart', async () => {
+    const { create } = useDocuments.getState()
+    const [one, other] = await Promise.all([create('image'), create('image')])
+
+    expect(one?.title).not.toBe(other?.title)
+  })
+
   it('numbers untitled documents per workspace', async () => {
     const { create } = useDocuments.getState()
     const first = await create('3d')
@@ -232,6 +260,38 @@ describe('documentForAsset', () => {
     await useDocuments.getState().create('image')
 
     expect(documentForAsset(useDocuments.getState(), 'asset_42')).toBeNull()
+  })
+
+  /**
+   * The document saved for an asset and then closed lives only in the folder listing. Reading
+   * the open tabs alone made the gesture build a second document beside the work it meant to
+   * reopen — one asset, two files, and the first reachable only by hunting for it.
+   */
+  it('finds the document saved for an asset once its tab is closed', () => {
+    const saved: DocumentDescriptor = {
+      id: 'from-disk',
+      kind: 'image',
+      title: 'Poster',
+      workspace: 'image',
+      sourceAssetId: 'asset_42',
+    }
+    useDocuments.setState({ documents: {}, stored: [saved] })
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')?.id).toBe('from-disk')
+  })
+
+  // The open one wins: it is the descriptor a tab has been renaming, and the listing is a snapshot.
+  it('prefers the open tab over the listing it also appears in', async () => {
+    const open = await useDocuments
+      .getState()
+      .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
+    useDocuments.setState({
+      stored: [
+        { id: 'stale', kind: 'image', title: 'Old', workspace: 'image', sourceAssetId: 'asset_42' },
+      ],
+    })
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')?.id).toBe(open?.id)
   })
 })
 

@@ -2,6 +2,7 @@ import type { Asset } from '@shared/domain/asset'
 import { openDocument } from '@/app/dockview-api'
 import { reportFailure } from '@/services/diagnostics'
 import { documentForAsset, useDocuments } from '@/stores/documents'
+import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { editorIntent } from './asset-intents'
 
@@ -21,13 +22,23 @@ export async function openAsset(asset: Asset): Promise<void> {
   const already = documentForAsset(useDocuments.getState(), asset.id)
   // Back to its own tab rather than a second one onto the same asset: two tabs of one document
   // are two histories of it, and the second save writes over the first.
-  if (already) return openDocument(already)
+  if (already) {
+    useLayouts.getState().setActiveWorkspace(already.workspace)
+    return openDocument(already)
+  }
 
   const intent = editorIntent(asset)
-  // `takes` before anything is made: an editor that would refuse the asset — a picture the cloud
-  // still holds — must say so rather than leave an empty tab standing where a refusal belonged.
+  // `takes` before anything is made: an editor that would refuse the asset must say so rather
+  // than leave an empty tab standing where a refusal belonged.
   if (!intent?.takes(asset)) {
     return reportFailure('assets.open', asset.name, new Error('no destination'))
+  }
+
+  // Every editor loads its subject from the file behind it — `assetUrl` resolves an id against
+  // the catalogue, and one the cloud still holds answers 404. `takes` cannot see this for the
+  // kinds whose destination has no picture guard, so the gesture asks it once, for all of them.
+  if (asset.location !== 'local') {
+    return reportFailure('assets.open', asset.name, new Error('not on disk'))
   }
 
   // A document is a file in a project folder, so without one there is nowhere to write it —
@@ -42,7 +53,9 @@ export async function openAsset(asset: Asset): Promise<void> {
 
   if (!created) return reportFailure('assets.open', asset.name, new Error('no document'))
 
-  // `into` brings the tab forward, which is what switches workspace: the asset decides where the
-  // user lands, not where they were.
+  // Before the panel is added, and not left to `openDocument`: it only switches workspace when
+  // the document belongs to another one, so an asset opened from the home onto the workspace
+  // last mounted would land on a Dockview api whose DocumentArea the home has unmounted.
+  useLayouts.getState().setActiveWorkspace(intent.workspace)
   await intent.into(created.id, asset)
 }

@@ -80,7 +80,15 @@ export function Explorer() {
 
     // A file the catalogue knows is an asset, and it opens like one from the shelf — the folder
     // shows `asset_2604…png` where the shelf shows the name, so only the catalogue can tell.
-    const [asset] = (await getBridge()?.assets.search({ path: node.path, limit: 1 })) ?? []
+    //
+    // Caught rather than awaited bare: a project being switched has no catalogue to answer, and
+    // a rejection here would take the system fallback below with it — a row that does nothing at
+    // all, which is strictly worse than the viewer it used to open.
+    const found = await getBridge()
+      ?.assets.search({ path: node.path, limit: 1 })
+      .catch(() => [])
+
+    const asset = found?.[0]
     if (asset) {
       const { openAsset } = await import('@/helpers/open-asset')
       return openAsset(asset)

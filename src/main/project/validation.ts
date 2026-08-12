@@ -163,7 +163,29 @@ const MAX_CONTENT_BYTES = 256 * 1024 * 1024
 
 const content = z.string().max(MAX_CONTENT_BYTES)
 
-const documentDraft = z.object({ title, content })
+/**
+ * The files that go beside the content — one PNG per layer of an image document.
+ *
+ * `isPartName` is the guard that matters and it lives where the file is written; this only
+ * bounds what crosses. Without this field the schema STRIPPED every part in silence, and
+ * `storeFolder` then replaced the document folder with a manifest and nothing else: a save
+ * threw away the pixels it was called to keep.
+ */
+const MAX_PART_BYTES = 512 * 1024 * 1024
+
+const documentPart = z.object({
+  name: z.string().min(1).max(255),
+  data: z.string().max(MAX_PART_BYTES),
+})
+
+const documentDraft = z.object({
+  title,
+  content,
+  parts: z.array(documentPart).max(1024).optional(),
+  // The asset this document edits. Same reason as `parts`: a field the schema does not name is
+  // a field the renderer writes and the disk never sees.
+  sourceAssetId: assetId.optional(),
+})
 
 /** A title on its way into a dialog. Capped like the one a draft carries, and for the same reason. */
 export function parseDocumentTitle(value: unknown): string {
