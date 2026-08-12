@@ -11,7 +11,7 @@ import { cn } from '@/helpers/cn'
  */
 
 /** The secondary line of a window: a count, an empty state, a sentence beside a control. */
-export const WINDOW_CAPTION = 'text-base-content/60 text-xs'
+export const WINDOW_CAPTION = 'text-base-content/70 text-xs'
 
 /**
  * What a control explains about itself, under it. Capped: a help sentence running the whole

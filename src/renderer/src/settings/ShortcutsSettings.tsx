@@ -240,7 +240,7 @@ function Scope({
 
   return (
     <section>
-      <h3 className="text-base-content/60 text-tiny mb-1 tracking-wide uppercase">
+      <h3 className="text-base-content/70 text-tiny mb-1 tracking-wide uppercase">
         {t(`settings.scope.${scope}`)}
       </h3>
 

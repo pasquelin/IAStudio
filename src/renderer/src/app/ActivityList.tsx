@@ -107,7 +107,7 @@ export function ActivityMessage({ entry }: { entry: ActivityEntry }) {
         {t(entry.messageKey, namedParams(entry.params, t, i18n.language))}
       </span>
       {entry.detail && (
-        <span className="text-muted/70 text-mini font-mono break-all">{entry.detail}</span>
+        <span className="text-muted text-mini font-mono break-all">{entry.detail}</span>
       )}
     </div>
   )

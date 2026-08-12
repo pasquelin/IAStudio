@@ -50,7 +50,7 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
             <td className="py-1.5">{event.accountName}</td>
             <td className="py-1.5 text-right font-mono">
               {event.units === 0 ? (
-                <span className="text-base-content/60">{t('usage.free')}</span>
+                <span className="text-base-content/70">{t('usage.free')}</span>
               ) : (
                 formatUnits(event.units, locale)
               )}

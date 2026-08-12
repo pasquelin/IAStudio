@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AA_NON_TEXT, AA_NORMAL_TEXT, contrastRatio } from '@shared/domain/color'
+import { AA_NON_TEXT, AA_NORMAL_TEXT, blend, contrastRatio } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
 import { WRITTEN_SOURCES } from './test-harness'
@@ -117,6 +117,70 @@ const READING_SURFACES = ['chassis', 'panel', 'surface']
  * `create-hover` is NOT: it is the darker state of that fill, and no source writes a word in it.
  */
 const INKS = ['text', 'muted', 'accent-ink', 'danger', 'warning', 'success', 'create']
+
+/** `text-muted/70`, `text-base-content/60` — an ink and the opacity it is written at. */
+const ALPHA_INK = /\btext-(base-content|muted|text)\/(\d{1,3})\b/g
+
+/**
+ * Where each vocabulary is read. daisyUI's `base-*` belongs to the app windows — settings, usage —
+ * and the studio's own surfaces to the docks; `CLAUDE.md` draws that boundary and this follows it.
+ */
+const SURFACES_OF: Record<string, string[]> = {
+  'base-content': ['base-100', 'base-200', 'base-300'],
+  muted: READING_SURFACES,
+  text: READING_SURFACES,
+}
+
+/**
+ * Two placeholders, exempt and measured: a crossed-out image on an empty thumbnail (1.65:1 at
+ * `/30`) and the large glyph of an empty state (1.96 at `/40`).
+ *
+ * They carry no information a word does not already carry beside them — `EmptyState` renders its
+ * sentence in full `muted` right under the glyph, and on a thumbnail the ABSENCE of a picture is
+ * itself the message. **Raising them would say the placeholder is the message.**
+ *
+ * `MediaTile` was on this list and had no business being here: its glyph is `assetIcon(type)`,
+ * so it says whether a tile holds a mesh or a sound, and nothing else on the tile does — the
+ * caption is the asset's name and the badge is its sync state. It is measured below instead.
+ */
+const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
+
+/**
+ * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. One site:
+ * the type icon a media tile falls back to while its poster is being made.
+ */
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
+
+/**
+ * Every alpha ink of a set of sources, composed on the surfaces of its vocabulary and measured
+ * against the bar its role asks for — 4.5 for a word, 3 for a glyph that informs.
+ *
+ * Taken as a function so the rule can be run against a source known to FAIL, which is what tells
+ * a reader it measures anything at all.
+ */
+function alphaFailures(sources: readonly (readonly [string, string])[]): string[] {
+  const failing: string[] = []
+
+  for (const theme of THEMES) {
+    const tokens = palette(theme.from)
+
+    for (const [path, source] of sources) {
+      if (DECORATIVE_GLYPHS.some(one => path.endsWith(one))) continue
+      const bar = INFORMATIVE_GLYPHS.some(one => path.endsWith(one)) ? AA_NON_TEXT : AA_NORMAL_TEXT
+
+      for (const [, ink = '', percent = ''] of source.matchAll(ALPHA_INK)) {
+        for (const surface of SURFACES_OF[ink] ?? []) {
+          const seen = blend(tokens[ink] ?? '', tokens[surface] ?? '', Number(percent) / 100)
+          if (contrastRatio(seen, tokens[surface] ?? '') < bar) {
+            failing.push(`${path} ${ink}/${percent} on ${surface}`)
+          }
+        }
+      }
+    }
+  }
+
+  return failing
+}
 
 describe('the contrast of the inks', () => {
   for (const theme of THEMES) {
@@ -237,6 +301,45 @@ describe('the contrast of the inks', () => {
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
+  })
+
+  /**
+   * The inks written with an ALPHA, composed on their fill before being measured — the only way
+   * to see them at all. `text-muted/70` is not a colour, it is an instruction, and a ratio taken
+   * on `muted` alone answers 5.79 where the reader sees 3.50.
+   *
+   * **This is the angle every guard of this repository was blind to until 2026-08-12**, and it
+   * held two real defects: `WINDOW_CAPTION` at `/60` read 3.86:1 on a light `base-300`, and a
+   * journal detail at `text-muted/70` failed in BOTH themes. Fourteen iterations measured opaque
+   * tokens and found neither.
+   *
+   * Each vocabulary is composed on its own surfaces: daisyUI's `base-content` belongs to the app
+   * windows, the studio's inks to the docks — the boundary `CLAUDE.md` draws.
+   */
+  it('clears its bar once composed, wherever an ink is written with an alpha', () => {
+    expect(alphaFailures(WRITTEN_SOURCES)).toEqual([])
+  })
+
+  /**
+   * The sweep run against a source that is KNOWN bad — the exact state `window-styles.ts` was in
+   * before this batch. Without it, five one-line edits leave the rule green while it measures
+   * nothing: `alpha = 1`, an emptied `SURFACES_OF`, the threshold lowered to the glyph bar, a path
+   * added to the exemptions. A rule that cannot be shown to refuse anything refuses nothing.
+   */
+  it('refuses an ink that fails, which is the only way to know it measures at all', () => {
+    const bad = alphaFailures([['./probe.ts', "'text-base-content/60 text-xs'"]])
+
+    expect(bad).toContain('./probe.ts base-content/60 on base-300')
+    // And the same ink one step up passes, so the probe proves the threshold, not the sweep.
+    expect(alphaFailures([['./probe.ts', "'text-base-content/70'"]])).toEqual([])
+  })
+
+  it('finds an alpha ink at all, so the rule above cannot pass on an empty sweep', () => {
+    // `String.match` and not `RegExp.test`: a global regex carries `lastIndex` from one file to
+    // the next, and this count read 9 of the 11 that exist before it was written this way.
+    const written = WRITTEN_SOURCES.filter(([, source]) => source.match(ALPHA_INK))
+
+    expect(written.length).toBeGreaterThanOrEqual(10)
   })
 
   /**
