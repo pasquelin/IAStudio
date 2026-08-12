@@ -11,7 +11,7 @@ import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
-import { useSceneViews, viewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { TRACK_FLAGS } from './track-flags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
@@ -88,7 +88,7 @@ type SubjectRowProps = { documentId: string; row: SubjectRow }
 
 function SubjectHeader({ documentId, row }: SubjectRowProps) {
   const { t } = useTranslation()
-  const playhead = useSceneViews(state => viewOf(state, documentId).playhead)
+  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
 
   const key = (): void => {
     const store = useScenes.getState()

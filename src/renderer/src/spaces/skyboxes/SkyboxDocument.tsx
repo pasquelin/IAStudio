@@ -13,7 +13,7 @@ import { SkyboxRenderer } from '@/engines/skybox/SkyboxRenderer'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useDocuments } from '@/stores/documents'
-import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import type { CommandId } from '@shared/domain/command'
@@ -69,7 +69,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   // Held in a store rather than here: the controls that set these live in the View panel, and
   // the centre carries the toolbar and the rulers only. Session state all the same — none of it
   // is saved with the document, and ⌘Z never touches it.
-  const { fieldOfView, probes, view } = useSkyboxViews(state => viewOf(state, documentId))
+  const { fieldOfView, probes, view } = useSkyboxViews(state => skyboxViewOf(state, documentId))
 
   useRestoredDocument(documentId)
 
@@ -135,7 +135,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
           return useSkyboxViews.getState().cycleView(documentId)
         case 'skybox.probes': {
           const views = useSkyboxViews.getState()
-          return views.set(documentId, { probes: !viewOf(views, documentId).probes })
+          return views.set(documentId, { probes: !skyboxViewOf(views, documentId).probes })
         }
         case 'skybox.undo':
           return useSkyboxes.getState().undo(documentId)

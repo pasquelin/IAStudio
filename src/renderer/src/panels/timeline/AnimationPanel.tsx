@@ -27,7 +27,7 @@ import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation
 import { useDocuments } from '@/stores/documents'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, useScenes } from '@/stores/scenes'
-import { useSceneViews, viewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { AnimationCanvas } from './AnimationCanvas'
 import { AnimationHeaders } from './AnimationHeaders'
 
@@ -60,7 +60,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
-  const view = useSceneViews(state => viewOf(state, documentId))
+  const view = useSceneViews(state => sceneViewOf(state, documentId))
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
 
   usePlayback(documentId, view.playing, timeline.duration)
@@ -121,11 +121,11 @@ type BarProps = {
 function AnimationBar({ documentId, anchor }: BarProps) {
   const { t } = useTranslation()
   const timeline = useScenes(state => sceneOf(state, documentId).animation)
-  const view = useSceneViews(state => viewOf(state, documentId))
+  const view = useSceneViews(state => sceneViewOf(state, documentId))
   const autoKey = useAnimationViews(state => animationViewOf(state, documentId).autoKey)
 
   const bones = useModelClips(state => bonesOfNode(state, documentId, anchor?.id ?? ''))
-  const picked = useSceneViews(state => viewOf(state, documentId).pickedBone)
+  const picked = useSceneViews(state => sceneViewOf(state, documentId).pickedBone)
   const [chosen, setChosen] = useState('')
 
   // The pose mode decides when it has picked one: clicking a bone in the viewport is a clearer
@@ -237,7 +237,7 @@ function AnimationBar({ documentId, anchor }: BarProps) {
 function KeyButton({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const tracks = useScenes(state => sceneOf(state, documentId).animation.tracks)
-  const playhead = useSceneViews(state => viewOf(state, documentId).playhead)
+  const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
 
   return (
     <ToolButton
@@ -354,7 +354,7 @@ function usePlayback(documentId: string, playing: boolean, duration: Us): void {
       // frames it causes, and a ref written during render is not allowed either.
       const views = useSceneViews.getState()
       // `performance.now()` counts milliseconds; the head counts microseconds.
-      const next = viewOf(views, documentId).playhead + (now - last) * 1000
+      const next = sceneViewOf(views, documentId).playhead + (now - last) * 1000
       last = now
 
       if (next >= duration) {

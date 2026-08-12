@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { installDocument } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
-import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
 import { View } from './View'
 
 describe('the View panel', () => {
@@ -31,7 +31,7 @@ describe('the View panel', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Croix' }))
 
-    expect(viewOf(useSkyboxViews.getState(), 'sky-1').view).toBe('cross')
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').view).toBe('cross')
   })
 
   it('sets the field of view', () => {
@@ -39,7 +39,7 @@ describe('the View panel', () => {
 
     fireEvent.change(screen.getByLabelText('Champ de vision'), { target: { value: '90' } })
 
-    expect(viewOf(useSkyboxViews.getState(), 'sky-1').fieldOfView).toBe(90)
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').fieldOfView).toBe(90)
   })
 
   it('turns the test objects off', async () => {
@@ -47,7 +47,7 @@ describe('the View panel', () => {
 
     await userEvent.click(screen.getByLabelText('Objets de test'))
 
-    expect(viewOf(useSkyboxViews.getState(), 'sky-1').probes).toBe(false)
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').probes).toBe(false)
   })
 
   // Two skies open at once must not share one lens.
@@ -55,6 +55,6 @@ describe('the View panel', () => {
     useSkyboxViews.getState().set('sky-2', { fieldOfView: 120 })
     render(<View />)
 
-    expect(viewOf(useSkyboxViews.getState(), 'sky-1').fieldOfView).not.toBe(120)
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').fieldOfView).not.toBe(120)
   })
 })

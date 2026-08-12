@@ -10,7 +10,7 @@ import {
 } from '@/engines/canvas/viewport'
 import { clearGuides as clearGuidesCommand } from '@/engines/canvas/commands'
 import { canvasOf, useCanvases } from '@/stores/canvases'
-import { hostOf, useCanvasViews, viewOf, type ViewToggle } from '@/stores/canvas-views'
+import { hostOf, useCanvasViews, canvasViewOf, type ViewToggle } from '@/stores/canvas-views'
 
 /**
  * Navigating an image document, from wherever the gesture comes: the zoom bar or a key. Written
@@ -27,12 +27,12 @@ function panel(documentId: string): { host: Size; inset: number } | null {
   const views = useCanvasViews.getState()
   const host = hostOf(views, documentId)
   if (host.width === 0 || host.height === 0) return null
-  return { host, inset: viewOf(views, documentId).rulers ? RULER_SIZE : 0 }
+  return { host, inset: canvasViewOf(views, documentId).rulers ? RULER_SIZE : 0 }
 }
 
 function reframe(documentId: string, change: (viewport: Viewport) => Viewport): void {
   const views = useCanvasViews.getState()
-  views.setViewport(documentId, change(viewOf(views, documentId).viewport))
+  views.setViewport(documentId, change(canvasViewOf(views, documentId).viewport))
 }
 
 /**
