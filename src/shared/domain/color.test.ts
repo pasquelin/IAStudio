@@ -199,6 +199,19 @@ describe('an ink laid over a fill', () => {
   })
 })
 
+/** Every seventeenth step of each channel — 4096 fills, enough to cross every branch below. */
+function sweep(): string[] {
+  const steps = Array.from({ length: 16 }, (_, index) => index * 17)
+
+  return steps.flatMap(red =>
+    steps.flatMap(green =>
+      steps.map(
+        blue => `#${[red, green, blue].map(one => one.toString(16).padStart(2, '0')).join('')}`,
+      ),
+    ),
+  )
+}
+
 describe('the fill a hover takes', () => {
   /**
    * The one hover pair in this repository a human drew by eye, in both themes. Reproducing it to
@@ -227,19 +240,25 @@ describe('the fill a hover takes', () => {
   })
 
   it('never takes the ink of a fill under the bar, over every hue', () => {
-    const failing: string[] = []
-
-    for (let red = 0; red < 256; red += 17) {
-      for (let green = 0; green < 256; green += 17) {
-        for (let blue = 0; blue < 256; blue += 17) {
-          const fill = `#${[red, green, blue].map(one => one.toString(16).padStart(2, '0')).join('')}`
-          const hover = hoverFor(fill)
-          if (contrastRatio(contentFor(fill), hover) < AA_NORMAL_TEXT) failing.push(fill)
-        }
-      }
-    }
+    const failing = sweep().filter(
+      fill => contrastRatio(contentFor(fill), hoverFor(fill)) < AA_NORMAL_TEXT,
+    )
 
     expect(failing).toEqual([])
+  })
+
+  /**
+   * The COUNT of fills left without a hover, and it is the assertion the rest of this block was
+   * missing: `HOVER_IS_SEEN` could be raised from 1.1 to 1.3 with every other case here still
+   * green, while 4595 hues of a finer sweep quietly lost their hover — `#009900` among them, an
+   * accent somebody would pick. A threshold nothing counts is a threshold nothing holds.
+   */
+  it('leaves only a handful of fills without a hover at all, and counts them', () => {
+    const immobile = sweep().filter(fill => hoverFor(fill) === fill)
+
+    expect(immobile).toHaveLength(6)
+    // All of them saturated magentas, where black is already at the bar and lighter reads the same.
+    expect(immobile).toContain('#ff00ff')
   })
 
   it('stays on the studio shape, and hands back what it cannot move', () => {

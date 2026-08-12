@@ -59,6 +59,10 @@
    * therefore LIGHTENED the button on the light theme, taking its white label to 3.52:1. Same
    * value in both themes because the accent is, and `useAppearance` overwrites it for a picked
    * one — see `hoverFor`, which draws this from the accent the way `create-hover` was drawn.
+   *
+   * The dark theme moves too, and knowingly: the alpha composed to #3061d2 over a panel, #3162d3
+   * over a surface and #3364d5 over the chassis — one hover wearing three colours — and this is
+   * one colour, a touch darker than any of them.
    */
   --color-accent-hover: #2a58c2;
   --color-accent-soft: #2e436e;

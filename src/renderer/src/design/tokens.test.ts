@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { AA_NON_TEXT, AA_NORMAL_TEXT, blend, contrastRatio, hoverFor } from '@shared/domain/color'
+import {
+  AA_NON_TEXT,
+  AA_NORMAL_TEXT,
+  blend,
+  contrastRatio,
+  HOVER_IS_SEEN,
+  hoverFor,
+} from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
 import { WRITTEN_SOURCES } from './test-harness'
@@ -151,18 +158,34 @@ const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
  */
 const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
 
-/** `opacity-70`, `hover:opacity-90` — a dimming written on an element rather than on an ink. */
-const DIMMING = /\bopacity-(\d{1,3})\b/g
+/**
+ * `opacity-70`, `hover:opacity-90`, and Tailwind's arbitrary `opacity-[0.7]` — a dimming written
+ * on an element. The arbitrary form is a FRACTION, so it is read apart: a regex that swallowed
+ * both spellings as digits read `[0.7]` as `0` and let it through as a reveal.
+ */
+const DIMMING = /\bopacity-(?:\[([0-9.]+)(%?)\]|(\d{1,3}))/g
+
+function dimmingPercent(fraction = '', unit = '', step = ''): number {
+  if (!fraction) return Number(step)
+
+  return unit ? Number(fraction) : Number(fraction) * 100
+}
 
 /**
  * The two sites that dim without a `disabled` beside them, each with the reason it may.
  *
  * Kept as paths rather than folded into the rule because neither is derivable from the text: one
- * dims a PICTURE, the other is a disabled control whose `disabled` prop sits twelve lines above
+ * dims a picture, the other is a disabled control whose `disabled` prop sits twelve lines above
  * the class. A rule that guessed either would guess wrong on the next site.
+ *
+ * `ShelfTile` first carried "no word of the tile is inside it", **which was false** — its button
+ * wraps a `MediaTile`, whose `figcaption` is a visible word. The reason it may is that the word
+ * is white on a near-black gradient and reads about 17:1; a tenth off the whole subtree leaves it
+ * nowhere near the bar. The reasons here are prose, and prose is what a reviewer has to check —
+ * `staleExemptions` below asks whether an entry is still NEEDED, never whether it is true.
  */
 const DIMMING_ALLOWED: Record<string, string> = {
-  '/ShelfTile.tsx': 'a picture under the pointer, and no word of the tile is inside it',
+  '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
   '/Counts.tsx': 'a count of nothing, `disabled` on the button twelve lines up',
 }
 
@@ -186,6 +209,12 @@ const DIMMING_ALLOWED: Record<string, string> = {
  * Comments are cut away first, and that is not a detail: this rule flagged its OWN explanation
  * and the one in `styles.ts` on its first run. A guard that reddens when somebody writes down why
  * is a guard that teaches people to stop writing down why.
+ *
+ * **What it does NOT hold**, so nobody reads it as more than it is: `style={{ opacity: 0.7 }}`
+ * writes no class and is invisible to it; `disabled` is looked for on the LINE, so an unrelated
+ * `disabled &&` on a long `cn()` call excuses a dimming beside it; and an exemption is by FILE,
+ * so a second dimming added to `ShelfTile.tsx` inherits the first one's reason. None of the three
+ * has a live case today — the renderer's sixteen `opacity-N` sites were read one by one.
  */
 function dimmedWithoutReason(sources: readonly (readonly [string, string])[]): string[] {
   const offenders: string[] = []
@@ -198,9 +227,9 @@ function dimmedWithoutReason(sources: readonly (readonly [string, string])[]): s
     for (const line of written.split('\n')) {
       if (/\bdisabled\b/.test(line)) continue
 
-      for (const [, percent = ''] of line.matchAll(DIMMING)) {
-        if (Number(percent) > 0 && Number(percent) < 100)
-          offenders.push(`${path} opacity-${percent}`)
+      for (const [, fraction, unit, step] of line.matchAll(DIMMING)) {
+        const percent = dimmingPercent(fraction, unit, step)
+        if (percent > 0 && percent < 100) offenders.push(`${path} opacity-${percent}`)
       }
     }
   }
@@ -345,17 +374,42 @@ describe('the contrast of the inks', () => {
         AA_NORMAL_TEXT,
       )
       // And it is a hover at all — the fill has to move, or pointing at the button says nothing.
-      expect(contrastRatio(accent, hover)).toBeGreaterThan(1.1)
+      expect(contrastRatio(accent, hover)).toBeGreaterThanOrEqual(HOVER_IS_SEEN)
     }
   })
 
-  /** An alpha of the accent lets the surface through, and that is the whole defect above. */
-  it('leaves no source hovering the accent through an alpha', () => {
-    const offenders = WRITTEN_SOURCES.filter(([, source]) =>
-      /hover:bg-accent\/\d/.test(source),
-    ).map(([path]) => path)
+  /**
+   * The `create` pair the sheet writes BY HAND, held against the same function. It is what says
+   * the step of `hoverFor` is the studio's own rather than a number fitted to the accent: a human
+   * drew this green's hover by eye, in both themes, and the function lands on it to the byte.
+   *
+   * Read from the stylesheet and not recopied here, which is the difference between holding the
+   * claim and restating it: the day the green moves, this is what says whether it still holds.
+   */
+  it('redraws the one hover pair a human picked, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      expect(tokens['create-hover']).toBe(hoverFor(tokens.create ?? ''))
+    }
+  })
+
+  /**
+   * An alpha of the accent lets the surface through, and that is the whole defect above. Every
+   * state, not just `hover:` — `active:bg-accent/85` on a primary toggle replays it exactly.
+   */
+  it('leaves no source taking a state of the accent through an alpha', () => {
+    const throughAnAlpha = /\b(hover|active|focus|focus-visible|group-hover)[^\s'"]*:bg-accent\/\d/
+
+    const offenders = WRITTEN_SOURCES.filter(([, source]) => throughAnAlpha.test(source)).map(
+      ([path]) => path,
+    )
 
     expect(offenders).toEqual([])
+    // The rule refuses something, which a sweep that only ever returns nothing cannot show.
+    expect(throughAnAlpha.test("'hover:bg-accent/85'")).toBe(true)
+    expect(throughAnAlpha.test("'active:bg-accent/85'")).toBe(true)
+    expect(throughAnAlpha.test("'hover:bg-accent-hover'")).toBe(false)
   })
 
   /**
@@ -441,6 +495,13 @@ describe('the contrast of the inks', () => {
     expect(dimmedWithoutReason([['./probe.tsx', "'opacity-0 group-hover:opacity-100'"]])).toEqual(
       [],
     )
+    // Tailwind's arbitrary form, which the first spelling of this rule read as `0` and let past.
+    expect(dimmedWithoutReason([['./probe.tsx', "'opacity-[0.7]'"]])).toEqual([
+      './probe.tsx opacity-70',
+    ])
+    expect(dimmedWithoutReason([['./probe.tsx', "'opacity-[70%]'"]])).toEqual([
+      './probe.tsx opacity-70',
+    ])
   })
 
   /**
@@ -454,6 +515,23 @@ describe('the contrast of the inks', () => {
         !WRITTEN_SOURCES.some(
           ([path, source]) => path.endsWith(one) && dimmedWithoutReason([['probe', source]]).length,
         ),
+    )
+
+    expect(stale).toEqual([])
+    // The reasons are read by a human and by nothing else, so at least require they exist.
+    expect(Object.values(DIMMING_ALLOWED).filter(one => one.length < 20)).toEqual([])
+  })
+
+  /**
+   * The same question asked of the two glyph lists above, which had no such guard and needed one:
+   * `DECORATIVE_GLYPHS` has already rotted once — its own comment tells how `MediaTile` sat on it
+   * with no business being there, and nothing reddened. An exemption is a claim about a site, and
+   * a claim nobody rechecks is how a hole comes to look like a decision.
+   */
+  it('carries no glyph exemption for a source that has stopped writing an alpha', () => {
+    const stale = [...DECORATIVE_GLYPHS, ...INFORMATIVE_GLYPHS].filter(
+      one =>
+        !WRITTEN_SOURCES.some(([path, source]) => path.endsWith(one) && source.match(ALPHA_INK)),
     )
 
     expect(stale).toEqual([])
