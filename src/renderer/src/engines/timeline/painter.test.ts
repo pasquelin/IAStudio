@@ -32,6 +32,8 @@ type Point = { x: number; y: number }
 /** Records what was painted, so the test asserts on rectangles and labels, not on pixels. */
 function spyContext() {
   const rects: Rect[] = []
+  const inks: string[] = []
+  let ink = ''
   const texts: { text: string; x: number; y: number }[] = []
   const lines: Point[] = []
   const images: Rect[] = []
@@ -54,10 +56,18 @@ function spyContext() {
       images.push({ x, y, width, height }),
     ),
     fillText: vi.fn((text: string, x: number, y: number) => texts.push({ text, x, y })),
-    fillRect: vi.fn((x: number, y: number, width: number, height: number) =>
-      rects.push({ x, y, width, height }),
-    ),
+    fillRect: vi.fn((x: number, y: number, width: number, height: number) => {
+      rects.push({ x, y, width, height })
+      inks.push(ink)
+    }),
   }
+
+  // The ink each rectangle was painted with, index for index with `rects`: `fillStyle` is
+  // reassigned a dozen times per clip, and reading the property back shows only the last.
+  Object.defineProperty(context, 'fillStyle', {
+    get: () => ink,
+    set: (value: string) => void (ink = value),
+  })
 
   // Every assignment kept, not just the last: the painter sets one font for the ruler and
   // another for the clips, and reading the property back would only ever show the second.
@@ -71,6 +81,7 @@ function spyContext() {
   return {
     context: context as unknown as CanvasRenderingContext2D,
     rects,
+    inks,
     texts,
     lines,
     images,
@@ -306,6 +317,32 @@ describe('timeline painter', () => {
 
     expect(border).toBeGreaterThan(-1)
     expect(grip).toBeGreaterThan(border)
+  })
+
+  it('inks the grips of the selected clip like its label, and the rest like a hint', () => {
+    document.documentElement.style.setProperty('--color-text', 'rgb(1, 2, 3)')
+    document.documentElement.style.setProperty('--color-muted', 'rgb(4, 5, 6)')
+    forgetPalette()
+
+    // Restored even on a failed assertion, as above: the palette is a module cache.
+    try {
+      const gripInk = (painted: { rects: Rect[]; inks: string[] }): string | undefined =>
+        painted.inks[painted.rects.findIndex(rect => rect.width === EDGE_BAR_WIDTH)]
+
+      const one = clip('a', 0, 1_000_000)
+      const chosen = spyContext()
+      paintTimeline(chosen.context, { ...stateWith([one]), selectedId: 'a' }, viewport, size)
+
+      const idle = spyContext()
+      paintTimeline(idle.context, stateWith([one]), viewport, size)
+
+      expect(gripInk(chosen)).toBe('rgb(1, 2, 3)')
+      expect(gripInk(idle)).toBe('rgb(4, 5, 6)')
+    } finally {
+      document.documentElement.style.removeProperty('--color-text')
+      document.documentElement.style.removeProperty('--color-muted')
+      forgetPalette()
+    }
   })
 
   it('leaves a clip too narrow to hold them unmarked, rather than covering it in grips', () => {
