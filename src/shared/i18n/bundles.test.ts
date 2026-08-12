@@ -29,6 +29,7 @@ import { INGEST_STAGES } from '../domain/media'
 import { JOB_STATUSES } from '../domain/job'
 import { LOG_SCOPES } from '../ipc'
 import { PBR_CHANNELS } from '../domain/texture'
+import { WORKSPACE_IDS } from '../domain/workspace'
 import { USAGE_ACTIONS, USAGE_ASSET_KINDS, USAGE_EVENT_ACTIONS } from '../domain/usage'
 import { LANGUAGES, TRANSLATIONS, type Language } from './index'
 
@@ -639,5 +640,38 @@ describe('how far back a listing reaches', () => {
     const wrong = spans.filter(span => span.stated !== null && span.stated !== span.queried)
 
     expect({ unreadable, wrong }).toEqual({ unreadable: [], wrong: [] })
+  })
+})
+
+/**
+ * A space named in the middle of a sentence — `l'espace Ciels`, `the Skies space`. French puts
+ * the name after the word and English before it, which is why this reads as two alternatives
+ * rather than one shape.
+ */
+const NAMED_SPACE =
+  /l['’]espace\s+(\p{Lu}[\p{L}\d]*)|\bthe\s+(\p{Lu}[\p{L}\d]*)\s+(?:space|workspace)\b/gu
+
+describe('a space a sentence points at', () => {
+  /**
+   * `intents.skyboxSourceHint` sent the reader to `l'espace Ciels` — `the Skies space` — and no
+   * space has ever been called that: the bar reads `Skyboxes` in both languages, and the name was
+   * invented in the very commit that wrote the sentence. A reader following the hint looked for
+   * something that is not on their screen.
+   *
+   * What this reads is ONE phrasing, the one that claims a name. A sentence that names the same
+   * surface some other way — `the montage`, `the audio editor`, the five siblings of that hint —
+   * says nothing this can check, and is not meant to: they name what the reader lands IN, which
+   * the bar does not label.
+   */
+  it.each(CODES)('calls it what the bar calls it, in %s', code => {
+    const named = new Set(WORKSPACE_IDS.map(id => BUNDLES[code].get(`workspaces.${id}`)))
+    const invented = [...BUNDLES[code]].flatMap(([key, value]) =>
+      [...value.matchAll(NAMED_SPACE)]
+        .map(match => match[1] ?? match[2])
+        .filter(claimed => !named.has(claimed))
+        .map(claimed => ({ key, claimed })),
+    )
+
+    expect(invented).toEqual([])
   })
 })
