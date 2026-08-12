@@ -99,7 +99,7 @@ Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des ré
 | **Clic** | sélectionne — l’Inspecteur, à droite, montre ses informations |
 | **⌘-clic** *(Ctrl ailleurs)* | ajoute cet asset à la sélection, ou l’en retire |
 | **Maj-clic** | sélectionne toute la plage entre le dernier choisi et celui-ci |
-| **Double-clic** | envoie l’asset dans le document qui peut le prendre, en changeant d’espace s’il le faut |
+| **Double-clic** | **ouvre l’asset dans son propre onglet**, dans l’espace qui édite son type |
 | **Clic droit** | ouvre la liste de **toutes** ses destinations |
 | **Glisser-déposer** | dépose l’asset là où vous le lâchez |
 
@@ -119,12 +119,13 @@ pas de la première.
 **L’étagère s’atteint aussi au clavier**, comme les autres listes du studio — voir
 [Parcourir une liste au clavier](15-raccourcis.md#parcourir-une-liste-au-clavier).
 
-### Le clic droit dit ce que le double-clic ne montre pas
+### Le clic droit envoie l’asset ailleurs que le double-clic
 
-Le double-clic prend **la première destination applicable**, et se tait sur les autres. Le clic
-droit les liste toutes :
+**Les deux gestes ne servent pas le même besoin, et c’est le partage à retenir** : le double-clic
+sert **l’asset** — il l’ouvre chez lui ; le clic droit sert **le document déjà ouvert** — il y
+envoie l’asset. Le premier crée un onglet, le second n’en crée aucun.
 
-Les lignes apparaissent toujours dans le même ordre, celui que suit le double-clic :
+Le clic droit liste toutes les destinations, toujours dans le même ordre :
 
 | Ligne | Où elle envoie l’asset | Pour quels types |
 |---|---|---|
@@ -145,42 +146,43 @@ grisée.** C’est délibéré : un menu qui change de longueur selon ce qui est
 qu’on ne peut pas apprendre. Une ligne grisée vous dit quoi faire — ouvrir un document dans cet
 espace — là où une ligne absente ne dit rien du tout.
 
-C’est aussi ce qu’il faut regarder quand le double-clic répond « Cet asset n’a nulle part où
-aller » : le clic droit montre en une fois ce que cet asset peut faire, et ce qui manque pour
-qu’il le fasse.
+C’est aussi ce qu’il faut regarder quand un envoi ne mène nulle part : le clic droit montre en une
+fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
 
-### Le double-clic ne fait pas ce qu’on croit
+### Le double-clic ouvre l’asset, il ne l’envoie nulle part
 
-**Il n’ouvre jamais de nouvel onglet.** C’est le point qui surprend tout le monde une fois, et une
-seule : le double-clic **envoie** l’asset dans un document déjà ouvert. Il n’en crée aucun.
+**Un asset ouvert par double-clic a son onglet à lui**, dans l’espace qui édite son type : une
+image dans Image, un maillage dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
 
-En revanche, il n’est pas prisonnier de l’onglet que vous regardez : **il traverse les espaces**.
-Un document ouvert ailleurs — dans un autre espace de travail, derrière un autre onglet — est une
-destination valable, et l’y envoyer vous y amène.
+**Il ne regarde jamais l’onglet que vous avez devant vous**, et c’est délibéré. Le même
+double-clic sur la même image a longtemps voulu dire deux choses — un calque au-dessus d’un
+onglet Image, un ciel au-dessus d’un onglet Skyboxes — et aucune des deux n’était « ouvre cet
+asset ». Une règle sans exception est la seule qu’une main apprenne.
 
-Deux règles, dans cet ordre :
+**Rouvrir le même asset revient à son onglet**, il n’en naît pas un second : deux onglets sur un
+même document sont deux historiques, et la seconde sauvegarde écraserait la première.
 
-1. **L’onglet devant vous a la priorité**, dès lors qu’il sait prendre cet asset. Double-cliquer
-   une image alors qu’une image est ouverte la pose en calque, point.
-2. **Sinon, la cascade tranche** entre les documents ouverts ailleurs, toujours dans le même
-   ordre : ciel, scène 3D, prise audio, image, montage, matière.
+**Un refus se dit**, plutôt que de laisser un onglet vide à la place : un asset qu’aucun éditeur
+ne prend, ou qui n’est pas encore descendu sur votre disque, vous le fait savoir.
 
-| Ce que vous double-cliquez | Où ça va |
+Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compte :
+
+| Ce que vous double-cliquez | Où il s’ouvre |
 |---|---|
-| une **image**, une **texture**, un **ciel** | ciel, calque, montage ou couleur de base — selon ce qui est ouvert |
-| un **maillage** | la scène 3D ouverte |
-| un **son** | la prise audio ouverte, ou une piste du montage |
-| une **vidéo** | le montage ouvert |
+| une **image** | l’espace Image |
+| une **texture** | l’espace Textures |
+| un **ciel** | l’espace Skyboxes |
+| un **maillage** | l’espace 3D |
+| un **son** | l’espace Audio |
+| une **vidéo** | l’espace Vidéo |
 
-Le montage prend **tout** — c’est ce qui lui vaut sa place en fin de cascade : il ne récupère un
-asset que lorsque aucune destination plus précise ne le réclame.
+**Un double-clic qui ne mène nulle part le dit** : « Cet asset n’a nulle part où aller ». C’est le
+cas d’un type qu’aucun éditeur ne prend, ou d’un asset qui n’est pas encore descendu sur votre
+disque — pas d’un asset abîmé.
 
-**Un double-clic qui ne mène nulle part le dit maintenant** : « Cet asset n’a nulle part où
-aller ». C’est le cas quand aucun document capable de le recevoir n’est ouvert — pas quand
-l’asset est abîmé.
-
-> **Pour ouvrir un document, c’est le bouton `+` du rail gauche**, dans l’espace voulu. Il crée un
-> document neuf. Le double-clic sert ensuite à y faire entrer de la matière.
+> **Le bouton `+` du rail gauche crée un document VIDE**, dans l’espace voulu. Le double-clic, lui,
+> ouvre un document **sur un asset**. Ce sont les deux façons de commencer, et le clic droit sert
+> ensuite à faire entrer de la matière dans ce qui est ouvert.
 
 ### Ce que le glisser-déposer sait faire aujourd’hui
 

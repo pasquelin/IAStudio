@@ -193,6 +193,7 @@ c’est votre dossier, et c’est ce qui distingue un explorateur d’une liste 
 |---|---|
 | **Double-clic** sur un dossier | l’ouvre ou le referme |
 | **Double-clic** sur un document du studio | l’ouvre, en changeant d’espace s’il appartient à un autre |
+| **Double-clic** sur un fichier d’`assets/` | **l’ouvre dans le studio**, dans l’espace qui édite son type — c’est un asset, pas un fichier quelconque |
 | **Double-clic** sur tout autre fichier | le confie à votre système, qui l’ouvre avec l’application prévue |
 | `→` `←` | déplie, replie |
 | `↑` `↓` | la ligne précédente, la suivante |

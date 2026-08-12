@@ -636,7 +636,8 @@ you click another — or reset the layout.
 
 **Why the Explorer is visible everywhere.** It shows the project folder as a tree, and that is the
 same question in every workspace: double-clicking a document opens it, switching workspace if it
-belongs to another, and double-clicking anything else hands it to the system. It long showed the 3D scene tree — that
+belongs to another; a file under `assets/` opens in the workspace that edits its kind; anything
+else is handed to the system. It long showed the 3D scene tree — that
 now has its own panel, **Scene**.
 
 ---
