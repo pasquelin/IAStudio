@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Collection, type CollectionProps } from './Collection'
+import { refreshPalette } from '@/engines/core/palette'
 import { DEFAULT_COLLECTION_STATE, type CollectionState } from '@/helpers/collection-state'
 
 type Row = { id: string; name: string }
@@ -523,5 +524,81 @@ describe('Collection', () => {
       await userEvent.keyboard('{ArrowDown}')
       await waitFor(() => expect(cellOf('Row 1')).toHaveFocus())
     })
+  })
+})
+
+describe('Collection, the height it estimates', () => {
+  afterEach(() => {
+    document.documentElement.style.removeProperty('--sc-control')
+    document.documentElement.style.removeProperty('--sc-row-stacked')
+    refreshPalette()
+  })
+
+  const listOf = (count: number, props: Partial<CollectionProps<Row>> = {}) =>
+    renderCollection(rows(count), { view: 'list' }, { onSelect: vi.fn(), ...props })
+
+  /**
+   * Each row reserves its height plus `ROW_GAP`. A constant estimate is only right at one
+   * density: three compact rows at 24 are 84px, and estimating them at 28 reserves twelve
+   * pixels nobody paints — the dead band this lot was opened for.
+   */
+  it('estimates the gauge its rows are drawn at, not a constant', () => {
+    document.documentElement.style.setProperty('--sc-control', '24px')
+    refreshPalette()
+
+    listOf(3)
+
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '84px' })
+  })
+
+  it('falls back to the shipped height when no gauge is declared', () => {
+    listOf(3)
+
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '96px' })
+  })
+
+  /**
+   * A row stacking a name over a subtitle reads its own gauge. Two steps of `leading-tight` text
+   * are 27.5px, so the control height leaves nothing at all — which is what « Vos projets »
+   * showed, its rows touching each other.
+   */
+  it('gives a stacked row the taller gauge', () => {
+    document.documentElement.style.setProperty('--sc-row-stacked', '32px')
+    refreshPalette()
+
+    listOf(3, { rowHeight: 'stacked' })
+
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '108px' })
+  })
+
+  it('leaves a stacked row taller than a plain one at the same density', () => {
+    listOf(3, { rowHeight: 'stacked' })
+
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '120px' })
+  })
+
+  /** A number still passes through, for the picture rows no gauge describes. */
+  it('takes a number for what no shape names', () => {
+    listOf(3, { rowHeight: 40 })
+
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '132px' })
+  })
+
+  /**
+   * Switching density under a mounted list. The virtualizer memoizes on `count`, never on the
+   * estimator, so without a re-measure the rows keep the height the density just left.
+   */
+  it('re-measures when the density changes under a mounted list', () => {
+    document.documentElement.style.setProperty('--sc-control', '28px')
+    refreshPalette()
+    listOf(3)
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '96px' })
+
+    act(() => {
+      document.documentElement.style.setProperty('--sc-control', '24px')
+      refreshPalette()
+    })
+
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '84px' })
   })
 })

@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Collection } from '@/design/Collection'
-import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { canvasOf, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { useSelection } from '@/stores/selection'
 import { LayerRow } from './LayerRow'
@@ -51,7 +50,6 @@ export function LayerList({ documentId }: { documentId: string }) {
         // or picking a row would describe whatever was selected before it.
         useSelection.getState().selectLayer(documentId, row.layer.id)
       }}
-      rowHeight={LIST_ROW_HEIGHT}
       renderRow={row => (
         <LayerRow documentId={documentId} layer={row.layer} depth={row.depth} labels={labels} />
       )}

@@ -3,10 +3,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
-import { rowSkin } from './styles'
+import { LIST_ROW_HEIGHT, rowSkin, STACKED_ROW_HEIGHT } from './styles'
+import { useGauge } from '@/hooks/useGauge'
 import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
 
-const ROW_HEIGHT = 26
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
 
@@ -74,9 +74,19 @@ export type CollectionProps<T extends { id: string }> = {
   /** Shown in place of the items — the caller decides whether it means empty or unmatched. */
   empty?: ReactNode
   footer?: ReactNode
-  /** Height of a list row. Rows carrying a thumbnail need more than a line of text. */
-  rowHeight?: number
+  /**
+   * How tall a list row is — a SHAPE by preference, a number only for what no gauge describes.
+   *
+   * A shape is resolved here, once, by reading the gauge the stylesheet already applies. Callers
+   * used to pass `LIST_ROW_HEIGHT` themselves, which was right at one density and left four
+   * pixels of dead space at the other; three of them did, and the fix is not to make them read
+   * the gauge three times.
+   */
+  rowHeight?: RowHeight
 }
+
+/** `control` for one line of text, `stacked` for a name over a subtitle. */
+export type RowHeight = 'control' | 'stacked' | number
 
 type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
 
@@ -157,7 +167,7 @@ export function Collection<T extends { id: string }>({
   isDisabled,
   empty,
   footer,
-  rowHeight = ROW_HEIGHT,
+  rowHeight = 'control',
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
   // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
@@ -168,6 +178,13 @@ export function Collection<T extends { id: string }>({
   const grid = card !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
+  // Read back from the gauges the rows are sized by, like `Tree` does: a constant is only right
+  // at one density. Both are read unconditionally — a hook cannot sit behind a branch.
+  const controlRow = useGauge('--sc-control', LIST_ROW_HEIGHT)
+  const stackedRow = useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT)
+  const shaped = rowHeight === 'stacked' ? stackedRow : controlRow
+  const rowPixels = typeof rowHeight === 'number' ? rowHeight : shaped
+
   const roles = rolesFor(onSelect !== undefined, onActivate !== undefined || onOpen !== undefined)
   const columns = grid ? fitting.columns : 1
   const rows = Math.ceil(items.length / columns)
@@ -176,7 +193,7 @@ export function Collection<T extends { id: string }>({
    * inside it. The gap is part of the row the virtualizer reserves, and given back as padding
    * below the cell: a margin would be swallowed by the absolute positioning of each row.
    */
-  const size = grid ? fitting.columnWidth + GAP : rowHeight + ROW_GAP
+  const size = grid ? fitting.columnWidth + GAP : rowPixels + ROW_GAP
 
   const virtualizer = useVirtualizer({
     count: rows,

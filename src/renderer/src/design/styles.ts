@@ -112,6 +112,16 @@ export function chipSkin(active: boolean): string {
 export const LIST_ROW_HEIGHT = 28
 
 /**
+ * `--sc-row-stacked` at its tallest, as a number — the fallback for a list whose rows stack a
+ * name over a subtitle, where `LIST_ROW_HEIGHT` leaves no room at all.
+ *
+ * Like its neighbour, this is the value a gauge that cannot be read falls back to, never the
+ * value to write at a call site: `Collection` reads the gauge, and a caller passing a number
+ * would go back to being right at one density only.
+ */
+export const STACKED_ROW_HEIGHT = 36
+
+/**
  * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn
  * OVER the content rather than beside it, and with no room reserved it lands on the last column
  * of every row — which in an inspector is the value one is trying to read.

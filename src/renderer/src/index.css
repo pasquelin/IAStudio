@@ -352,6 +352,11 @@
   /* Overwritten inline by `useAppearance`; the value here is what an unstyled root falls to. */
   --sc-font-scale: 1;
   --sc-control: 28px;
+  /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
+     `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
+     one. Its own gauge rather than a padding on the row, because the virtualizer is given a
+     NUMBER and a padding would not reach it. */
+  --sc-row-stacked: 36px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
   --sc-rail-button: 36px;
@@ -383,6 +388,7 @@
 
 :root[data-density='compact'] {
   --sc-control: 24px;
+  --sc-row-stacked: 32px;
   --sc-rail: 42px;
   --sc-rail-button: 32px;
   --sc-gutter: 4px;

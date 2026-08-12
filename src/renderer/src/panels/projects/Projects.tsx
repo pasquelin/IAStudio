@@ -31,6 +31,7 @@ export function Projects() {
     <Collection
       label={t('panels.projects')}
       items={items}
+      rowHeight="stacked"
       // A folder gone from the disk drops out on its own: the store forgets it wherever an
       // opening fails, not only where it was clicked.
       onOpen={project => void useProject.getState().open(project.path)}
