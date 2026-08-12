@@ -170,10 +170,29 @@ describe('formatMoment', () => {
     expect(formatMoment('', 'fr')).toBe('')
   })
 
-  // The whole reason it lives beside `kept`: two calls in one language build one formatter.
-  it('keeps one formatter per language', () => {
-    const first = formatMoment('2026-08-12T10:47:33Z', 'fr')
-    expect(formatMoment('2026-08-12T10:47:33Z', 'fr')).toBe(first)
-    expect(formatMoment('2026-08-12T10:47:33Z', 'en-US')).not.toBe(first)
+  /**
+   * The whole reason it lives beside `kept`, and the assertion has to be the COUNT.
+   *
+   * This test compared two formatted strings at first, and a review pulled `kept` out of
+   * `formatMoment` without it going red: two throwaway formatters agree on their output, which
+   * is exactly what makes the defect invisible. A language no other test reaches, so the cache
+   * is cold when the count starts.
+   */
+  it('builds one formatter per language, however often it is called', () => {
+    // Delegating to the real one rather than replacing it: a bare spy on a native constructor
+    // hands `new` an object with no `format`, and the call under test dies before it counts.
+    // A `function` and not an arrow, which `new` cannot call at all.
+    const real = Intl.DateTimeFormat
+    const built = vi.fn(function (...args: ConstructorParameters<typeof Intl.DateTimeFormat>) {
+      return new real(...args)
+    })
+    const spy = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(built)
+
+    formatMoment('2026-08-12T10:47:33Z', 'de')
+    formatMoment('2026-08-12T11:00:00Z', 'de')
+    formatMoment('2026-08-12T11:00:00Z', 'de')
+
+    expect(built).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
   })
 })
