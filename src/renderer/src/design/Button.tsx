@@ -4,8 +4,10 @@ import { BUTTON_BASE } from './styles'
 
 export type ButtonVariant = 'primary' | 'neutral'
 
+// The hover is a token, not an alpha of the fill: an alpha lets the surface through, so it
+// darkened this button on the dark theme and lightened it on the light one — 3.52:1 for the label.
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-accent-content hover:bg-accent/85',
+  primary: 'bg-accent text-accent-content hover:bg-accent-hover',
   neutral: 'bg-surface text-text hover:bg-elevated',
 }
 

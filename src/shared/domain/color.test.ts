@@ -5,6 +5,7 @@ import {
   contrastRatio,
   HEX_COLOR,
   contentFor,
+  hoverFor,
   inkFor,
   readColor,
   relativeLuminance,
@@ -195,5 +196,73 @@ describe('an ink laid over a fill', () => {
     expect(blend('#12b600', '#2b2d30', 0.5)).toMatch(HEX_COLOR)
     expect(blend('rebeccapurple', '#2b2d30', 0.5)).toBe('rebeccapurple')
     expect(blend('#12b600', '', 0.5)).toBe('#12b600')
+  })
+})
+
+/** Every seventeenth step of each channel — 4096 fills, enough to cross every branch below. */
+function sweep(): string[] {
+  const steps = Array.from({ length: 16 }, (_, index) => index * 17)
+
+  return steps.flatMap(red =>
+    steps.flatMap(green =>
+      steps.map(
+        blue => `#${[red, green, blue].map(one => one.toString(16).padStart(2, '0')).join('')}`,
+      ),
+    ),
+  )
+}
+
+describe('the fill a hover takes', () => {
+  /**
+   * The one hover pair in this repository a human drew by eye, in both themes. Reproducing it to
+   * the byte is what says the step is the studio's own and not a number picked to fit one case —
+   * and it is the assertion that would fail first if the step were ever nudged.
+   */
+  it('redraws the green the sheet ships, in both themes', () => {
+    expect(hoverFor('#12b600')).toBe('#0e9200')
+    expect(hoverFor('#0b7100')).toBe('#095a00')
+  })
+
+  it('darkens the accent rather than lightening it, which is what an alpha did', () => {
+    // `bg-accent/85` over the light theme's panel composed to #5284f4, and white on THAT is 3.52.
+    expect(hoverFor('#346ef2')).toBe('#2a58c2')
+    expect(contrastRatio('#ffffff', '#2a58c2')).toBeGreaterThan(AA_NORMAL_TEXT)
+    expect(contrastRatio('#ffffff', blend('#346ef2', '#ffffff', 0.85))).toBeLessThan(AA_NORMAL_TEXT)
+  })
+
+  it('lightens instead when a fill has nowhere darker to go', () => {
+    expect(hoverFor('#000000')).toBe('#333333')
+  })
+
+  it('leaves a fill alone rather than taking its ink under the bar', () => {
+    // Saturated magenta: darker fails black, lighter is the same colour to a reader.
+    expect(hoverFor('#ff00ff')).toBe('#ff00ff')
+  })
+
+  it('never takes the ink of a fill under the bar, over every hue', () => {
+    const failing = sweep().filter(
+      fill => contrastRatio(contentFor(fill), hoverFor(fill)) < AA_NORMAL_TEXT,
+    )
+
+    expect(failing).toEqual([])
+  })
+
+  /**
+   * The COUNT of fills left without a hover, and it is the assertion the rest of this block was
+   * missing: `HOVER_IS_SEEN` could be raised from 1.1 to 1.3 with every other case here still
+   * green, while 4595 hues of a finer sweep quietly lost their hover — `#009900` among them, an
+   * accent somebody would pick. A threshold nothing counts is a threshold nothing holds.
+   */
+  it('leaves only a handful of fills without a hover at all, and counts them', () => {
+    const immobile = sweep().filter(fill => hoverFor(fill) === fill)
+
+    expect(immobile).toHaveLength(6)
+    // All of them saturated magentas, where black is already at the bar and lighter reads the same.
+    expect(immobile).toContain('#ff00ff')
+  })
+
+  it('stays on the studio shape, and hands back what it cannot move', () => {
+    expect(hoverFor('#346ef2')).toMatch(HEX_COLOR)
+    expect(hoverFor('rebeccapurple')).toBe('rebeccapurple')
   })
 })

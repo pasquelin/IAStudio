@@ -137,3 +137,52 @@ export function contentFor(fill: string, threshold = AA_NORMAL_TEXT): string {
 
   return contrastRatio('#000000', fill) > onWhite ? '#000000' : '#ffffff'
 }
+
+/** How far a hover moves its fill — the step the sheet's own `create` pair was drawn at. */
+const HOVER_STEP = 0.2
+
+/**
+ * Below this, two fills are the same colour to a reader and the hover says nothing.
+ *
+ * Exported because it is a bar like `AA_NORMAL_TEXT` and not a tuning knob: raised to 1.3 it
+ * takes 4595 hues of a 61 200 sweep from having a hover to having none — `#009900` among them —
+ * and every assertion of this module went on passing until one counted them.
+ */
+export const HOVER_IS_SEEN = 1.1
+
+/**
+ * The fill a button takes under the pointer — darker, or lighter when darker would not be read.
+ *
+ * A hover written as an ALPHA of the fill cannot answer this: `bg-accent/85` lets the surface
+ * through, so it darkens the blue on a dark panel and LIGHTENS it on a light one. The studio's
+ * primary button did exactly that, and its white label fell to 3.52:1 on the light theme — below
+ * the 4.5 it clears at rest, which is the one place a hover must never take a word.
+ *
+ * Darkening is tried first because that is the conventional direction for a FILL a word is
+ * written on, and it is kept unless it would take that word under the bar — a yellow carries
+ * black, and black on a darker yellow eventually stops being read. It is not a rule about hovers
+ * in general: the studio's neutral button goes from `surface` to `elevated`, which lightens on
+ * the dark theme, because those are two named tokens rather than one derived from the other.
+ *
+ * Both directions failing leaves the fill untouched, and a hover nobody sees is better than a
+ * label nobody reads. How many hues that is, is counted by `color.test.ts` rather than written
+ * here, where the number would outlive the step it comes from.
+ *
+ * The step is not invented: at 0.2 this reproduces `--color-create-hover` to the byte, in BOTH
+ * themes, from the `create` the sheet ships — the one hover pair a human picked here by eye.
+ * `tokens.test.ts` holds that against the stylesheet, so the claim cannot rot into prose.
+ */
+export function hoverFor(fill: string, threshold = AA_NORMAL_TEXT): string {
+  if (!HEX_COLOR.test(fill)) return fill
+
+  const ink = contentFor(fill, threshold)
+
+  for (const target of ['#000000', '#ffffff']) {
+    const moved = blend(target, fill, HOVER_STEP)
+    if (contrastRatio(ink, moved) >= threshold && contrastRatio(fill, moved) >= HOVER_IS_SEEN) {
+      return moved
+    }
+  }
+
+  return fill
+}

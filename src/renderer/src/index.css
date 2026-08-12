@@ -54,6 +54,17 @@
    * `useAppearance` overwrites it for a picked accent — see `contentFor`.
    */
   --color-accent-content: #ffffff;
+  /*
+   * The fill under the pointer, opaque — where `bg-accent/85` used to let the surface through and
+   * therefore LIGHTENED the button on the light theme, taking its white label to 3.52:1. Same
+   * value in both themes because the accent is, and `useAppearance` overwrites it for a picked
+   * one — see `hoverFor`, which draws this from the accent the way `create-hover` was drawn.
+   *
+   * The dark theme moves too, and knowingly: the alpha composed to #3061d2 over a panel, #3162d3
+   * over a surface and #3364d5 over the chassis — one hover wearing three colours — and this is
+   * one colour, a touch darker than any of them.
+   */
+  --color-accent-hover: #2a58c2;
   --color-accent-soft: #2e436e;
   --color-danger: #ff715b;
   /*
@@ -323,6 +334,8 @@
   --color-border: #c9cbd1;
   /* Darker than the dark theme's, not lighter: the ink has to leave the background it sits on. */
   --color-accent-ink: #2a5dc0;
+  /* Restated rather than inherited: this theme reads its own block, and the accent could part. */
+  --color-accent-hover: #2a58c2;
   --color-accent-soft: #d3e1fb;
   /* The studio's own name for daisyUI's `error`, and the same value: two reds would be one too many. */
   --color-danger: #b72e27;

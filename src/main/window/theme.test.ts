@@ -58,6 +58,9 @@ describe('the light theme', () => {
       '--color-accent',
       // Shared because the fill it sits on is: one blue in both themes, one ink written on it.
       '--color-accent-content',
+      // And the fill under the pointer, for the same reason and derived from the same blue —
+      // `hoverFor` draws it, so it parts from the dark value on the day the accent does.
+      '--color-accent-hover',
       '--color-monitor',
       '--color-marquee-light',
       '--color-marquee-dark',

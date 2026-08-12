@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
-import { contentFor, inkFor } from '@shared/domain/color'
+import { contentFor, hoverFor, inkFor } from '@shared/domain/color'
 import { THEME_ATTRIBUTE, type ResolvedTheme, type Theme } from '@shared/domain/settings'
 import { refreshPalette, token } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
@@ -96,6 +96,11 @@ export function useAppearance(): void {
       if (content) root.style.setProperty(name, content)
       else root.style.removeProperty(name)
     }
+
+    // And the fill under the pointer, which has to follow too: the sheet's hover is drawn from
+    // the sheet's accent, so a picked red would darken toward the blue it replaced.
+    if (accent) root.style.setProperty('--color-accent-hover', hoverFor(accent))
+    else root.style.removeProperty('--color-accent-hover')
 
     // After the attributes, never before: the engines read the tokens back the moment they are
     // told, and `getComputedStyle` would hand them the palette they are leaving.
