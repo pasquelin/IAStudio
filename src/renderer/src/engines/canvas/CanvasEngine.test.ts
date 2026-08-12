@@ -3528,7 +3528,11 @@ describe('the overlay colours the canvas falls back on', () => {
    */
   const darkTokens = (): Map<string, string> => {
     const start = stylesheet.indexOf('@theme {')
-    const block = stylesheet.slice(start, stylesheet.indexOf('\n}', start))
+    // Comments stripped first: a declaration commented out is a token that no longer exists, and
+    // the pattern alone reads it as a live one — green while the fallback became the real source.
+    const block = stylesheet
+      .slice(start, stylesheet.indexOf('\n}', start))
+      .replace(/\/\*[\s\S]*?\*\//g, '')
 
     return new Map(
       [...block.matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)].map(([, name = '', value = '']) => [

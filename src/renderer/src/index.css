@@ -16,11 +16,16 @@
  * further down, inside its own daisyUI theme block. Nothing else in the application may hold a
  * hex value — the engines read these tokens through `engines/core/palette.ts`.
  *
- * Two places restate a value from here, both because they paint before they can read: the window
- * chrome (`WINDOW_CHROME_COLOR`) and the canvas overlay's last resort (`FALLBACK_COLORS`). Each
- * is pinned by a test against the token it restates, so repainting a token here fails a suite
- * rather than leaving a copy behind. There is no third one, and adding one without its pin is
- * how a palette silently splits in two.
+ * The line above is the rule, not a description of the code: some places DO restate a value from
+ * here, because they paint before any stylesheet can be read — the window chrome, the splash
+ * screen, the canvas overlay's last resort. Each such copy is meant to be pinned by a test against
+ * the token it restates, so that repainting a token here fails a suite instead of leaving a stale
+ * twin behind.
+ *
+ * They are deliberately NOT listed here. A list written in a comment is wrong the day someone adds
+ * the next one, and this very paragraph claimed "there is no third one" for twenty minutes before
+ * a review found three. `grep -rn '#[0-9a-fA-F]\{6\}' src` answers the question a list would have
+ * answered badly.
  */
 @theme {
   --color-chassis: #2b2d30;
