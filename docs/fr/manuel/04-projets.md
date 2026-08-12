@@ -35,6 +35,24 @@ tout ce qui était enregistré l’est resté.
 
 Le nom du projet ouvert s’affiche dans la ligne d’état, en bas à gauche.
 
+### La liste des projets de l’accueil
+
+**Chaque ligne porte le nom du projet et, dessous, le dossier où il se trouve.** C’est le dossier
+qui distingue deux projets appelés pareil — et un studio finit toujours par en avoir deux, l’un
+sous `Documents`, l’autre sur un disque de travail. **La date de dernière ouverture n’a pas
+disparu** : elle est dans l’infobulle de la ligne, avec le chemin entier, qu’un panneau étroit
+tronque.
+
+**Chaque ligne a son menu**, au clic droit comme au bouton :
+
+| Entrée | Ce qu’elle fait |
+|---|---|
+| **Révéler dans le dossier** | ouvre le dossier du système de fichiers, sur ce projet |
+| **Retirer de la liste** | retire le projet de cette liste, **sans toucher au dossier ni à ce qu’il contient** |
+
+**Retirer ne demande pas confirmation, et c’est voulu** : rien n’est perdu, et rouvrir le projet
+remet sa ligne. C’est le geste qui nettoie une liste où traîne un dossier déplacé.
+
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un
 > document quand vous faites `⌘S`, la disposition des panneaux quand vous la changez.

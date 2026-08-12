@@ -118,7 +118,7 @@ bas ce qu’on parcourt. **À l’accueil, seule la moitié basse existe.**
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
-| **Vos projets** | 1re | ceux que vous avez ouverts récemment, à rouvrir d’un clic | rien |
+| **Vos projets** | 1re | ceux que vous avez ouverts récemment, avec leur dossier, à rouvrir d’un clic — [son menu par ligne](04-projets.md#la-liste-des-projets-de-laccueil) | rien |
 | **Vos recettes** | 2de | les réglages que vous avez épinglés | rien |
 | **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
 | **Dans la même veine** | 2de | des créations publiques qui ressemblent à votre dernier asset | une clé API |

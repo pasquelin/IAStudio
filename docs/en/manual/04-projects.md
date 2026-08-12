@@ -33,6 +33,23 @@ everything that was saved stayed saved.
 
 The open project's name appears in the status line, bottom left.
 
+### The home screen's project list
+
+**Each row carries the project's name and, below it, the folder it sits in.** The folder is what
+tells two projects with the same name apart — and a studio always ends up with two, one under
+`Documents`, one on a scratch disk. **The last-opened date has not gone**: it is in the row's
+tooltip, along with the whole path, which a narrow panel truncates.
+
+**Each row has its own menu**, on right-click as on the button:
+
+| Entry | What it does |
+|---|---|
+| **Reveal in folder** | opens the system's file manager on this project |
+| **Remove from the list** | removes the project from this list, **leaving its folder and everything in it untouched** |
+
+**Removing asks for no confirmation, and that is deliberate**: nothing is lost, and reopening the
+project puts its row back. It is the gesture that cleans up a list where a moved folder lingers.
+
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel
 > layout when you change it.
