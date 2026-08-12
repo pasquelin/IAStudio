@@ -71,6 +71,29 @@ export function formatPercent(ratio: number, language: string, fractionDigits: n
   ).format(ratio)
 }
 
+const MOMENTS = new Map<string, Intl.DateTimeFormat>()
+
+/**
+ * A point in time, read the way the reader reads one — date and clock, no seconds.
+ *
+ * It moved here from the usage window, which was the only surface to have decided what a
+ * timestamp looks like. The asset inspector was drawing its own with a bare `toLocaleString`,
+ * so the studio showed two shapes for one thing, and one of them built a formatter per render.
+ *
+ * A date the API sent unparseable is handed back untouched: a row missing its stamp still names
+ * what happened, which `Invalid Date` in the reader's language does not.
+ */
+export function formatMoment(time: string, language: string): string {
+  const parsed = new Date(time)
+  if (Number.isNaN(parsed.getTime())) return time
+
+  return kept(
+    MOMENTS,
+    language,
+    () => new Intl.DateTimeFormat(language, { dateStyle: 'short', timeStyle: 'short' }),
+  ).format(parsed)
+}
+
 const DECIMALS = new Map<string, Intl.NumberFormat>()
 
 /**

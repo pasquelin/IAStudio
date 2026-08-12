@@ -4,6 +4,7 @@ import {
   BYTE_UNITS,
   formatBytes,
   formatDecimal,
+  formatMoment,
   formatPercent,
   kept,
   formatList,
@@ -147,5 +148,32 @@ describe('a list of names, joined by the language', () => {
   it('leaves a single name alone, and answers nothing for none', () => {
     expect(formatList(['Image'], 'fr', 'conjunction')).toBe('Image')
     expect(formatList([], 'fr', 'conjunction')).toBe('')
+  })
+})
+
+describe('formatMoment', () => {
+  /**
+   * It moved here from the usage window because the asset inspector was drawing the same thing
+   * its own way — `new Date(...).toLocaleString(language)`, which in English reads `8/12/2026`
+   * against this one's `8/12/26`. One shape for one thing, and the shape is the one already
+   * decided; the seconds go with it, which no reader of a creation date was counting.
+   */
+  it('writes a stamp the way the reader reads one', () => {
+    expect(formatMoment('2026-08-12T10:47:33Z', 'fr')).toMatch(/^12\/08\/2026/)
+    expect(formatMoment('2026-08-12T10:47:33Z', 'en-US')).toMatch(/^8\/12\/26/)
+  })
+
+  // The API is what supplies these, and a row missing its stamp still names what happened —
+  // which `Invalid Date`, translated, does not.
+  it('hands back what it cannot read', () => {
+    expect(formatMoment('not-a-date', 'fr')).toBe('not-a-date')
+    expect(formatMoment('', 'fr')).toBe('')
+  })
+
+  // The whole reason it lives beside `kept`: two calls in one language build one formatter.
+  it('keeps one formatter per language', () => {
+    const first = formatMoment('2026-08-12T10:47:33Z', 'fr')
+    expect(formatMoment('2026-08-12T10:47:33Z', 'fr')).toBe(first)
+    expect(formatMoment('2026-08-12T10:47:33Z', 'en-US')).not.toBe(first)
   })
 })

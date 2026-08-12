@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { formatDecimal } from '@/helpers/format'
 import type { SceneStats } from '@/engines/scene/scene-stats'
 
 export type SceneCountersProps = {
@@ -20,7 +21,7 @@ const MEGABYTE = 1024 * 1024
  */
 export function SceneCounters({ scene, selected }: SceneCountersProps) {
   const { t, i18n } = useTranslation()
-  const count = (value: number): string => value.toLocaleString(i18n.language)
+  const count = (value: number): string => formatDecimal(value, i18n.language, { digits: 0 })
 
   const rows: readonly { key: string; label: string; whole: string; part: string }[] = [
     {
