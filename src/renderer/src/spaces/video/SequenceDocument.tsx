@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { Separator } from '@/design/Separator'
+import { trackKindFor } from '@/engines/timeline/insert'
 import { programOwner } from '@/engines/timeline/playback'
 import {
   clipById,
@@ -11,6 +12,7 @@ import {
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timeline-state'
+import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
@@ -34,6 +36,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
   useRestoredDocument(documentId)
 
   const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
+  const byId = useAssets(assetsById)
 
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
@@ -45,7 +48,9 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
         ? [
             makeTrack({
               id: 'S1',
-              kind: 'video',
+              // The asset decides, not this monitor: mounted on a picture track, a take is shown
+              // as a black frame and heard as nothing at all.
+              kind: trackKindFor(byId.get(selected.assetId) ?? null),
               index: 1,
               locked: true,
               clips: [{ ...selected, start: 0 }],
@@ -53,7 +58,7 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
           ]
         : [],
     }),
-    [selected, sequence.settings, sourceTime],
+    [byId, selected, sequence.settings, sourceTime],
   )
 
   const setProgramTime = useCallback(
