@@ -66,9 +66,21 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
 | **Scale** | `S` | grows or shrinks it with the handles |
 | **Snapping** | `M` | moves the handles **in steps** instead of leaving them free |
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
+| **Display mode** | `Z` | cycles the seven ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |
-| **Add** | — | places a mesh or a light in the scene |
-| **Delete** | `Del` | removes everything selected |
+
+**Eight buttons, and that is deliberate.** The bar carried twenty-three: everything a scene can
+do had its icon there, and the eight you reach for while manipulating were lost among them. What
+is left is what the hand asks for **without letting go of the mouse**; the rest is in the native
+menu, where you go once a session.
+
+| What left the bar | Where to find it |
+|---|---|
+| Projection, four views, quad edges, skeletons, pose mode | **View**, as ticked rows |
+| The six sides, the seven display modes | **View ▸ Point of view** and **▸ Display mode** |
+| Adding a mesh, a light, an object | **Add** |
+| Duplicate, group, delete | **Edit** |
+| Copy, cut, paste | **the keys alone** — see below |
 
 **Snapping is for lining things up.** Without it an object lands 1.0374 m from the previous one;
 with it, at a round 1 m. How fine the steps are — one for moving, one for rotating, one for
@@ -104,9 +116,9 @@ Drag an arrow to move along that axis only.
 
 Three paths lead to the same place:
 
-- the toolbar's **Add** button;
+- the **Add** menu, which files the three families — mesh, light, object;
 - the **+** buttons of the **Meshes** and **Lights** panels;
-- the menu **Objects ▸ Add**.
+- dragging and dropping, for a model coming off the shelf.
 
 The object lands at the **scene origin** — the centre of the world, where the axes cross.
 
@@ -231,7 +243,7 @@ not completely black. That is the classic recipe.
 Three buttons, between the toggles and the framing. They change nothing of the scene: they change
 how it is looked at. None of it is saved with the document, and `⌘Z` never touches it.
 
-### Projection — `O`
+### Projection — `O`, or **View ▸ Projection**
 
 In **perspective**, receding lines converge: that is what an eye sees, and it is the default. In
 **orthographic**, parallels stay parallel and an object keeps its size whatever its distance.
@@ -244,14 +256,14 @@ moves to keep it. In orthographic the frustum is sized so that whatever sits at 
 size it had; coming back to perspective, where zooming means moving, what the wheel had magnified
 becomes distance instead.
 
-### Stand at — the six sides
+### Stand at — **View ▸ Point of view**
 
 **Front**, **back**, **left**, **right**, **top**, **bottom**. The camera goes and stands on the
 matching axis, at the distance it already had, looking at the point it was turning around.
 
 Together with the orthographic projection, that is the classic plan view — the one you align on.
 
-### Display — `Z`
+### Display mode — `Z`, or **View ▸ Display mode**
 
 | Mode | What is drawn |
 |---|---|
@@ -271,7 +283,7 @@ pointer**: each quarter keeps its own mode.
 is turned on and thrown away when it is turned off. On an imported model of several thousand
 meshes, it shows.
 
-### Four views — `⇧Q`
+### Four views — `⇧Q`, or **View ▸ Four views**
 
 The viewport splits in four. **The top-left quarter keeps the framing you had**; it returns to
 perspective if you were in orthographic projection. The other three arrive orthographic: **top** at
@@ -325,7 +337,7 @@ Inspector — acts on the **whole** selection, not only on the last object click
 
 ## Grouping
 
-**`⌘G`**, or the toolbar's **Group** button.
+**`⌘G`**, or **Edit ▸ Group**.
 
 A group files several objects under one parent. **Moving the group moves them all**, and it folds
 away with one click in the Scene panel — a scene of thirty objects becomes readable again.
@@ -348,7 +360,8 @@ filed would vanish from the screen, and you would think it lost.
 
 ## Duplicate, copy, paste
 
-Four buttons at the end of the toolbar, and the four shortcuts you already know.
+The four shortcuts you already know. **Duplicate** has its row in **Edit**; the other three do
+not, and the reason is worth saying.
 
 | Gesture | Shortcut | What it does |
 |---|---|---|
@@ -356,6 +369,12 @@ Four buttons at the end of the toolbar, and the four shortcuts you already know.
 | **Copy** | `⌘C` | holds the selection without touching the scene |
 | **Cut** | `⌘X` | holds it and takes it out of the scene |
 | **Paste** | `⌘V` | puts what was held into the current scene |
+
+> **Why copy, cut and paste have no menu row.** The three rows in the Edit menu are the
+> platform's own, and they act on **text**: that is what lets you copy the name of a layer you
+> are renaming. A row of ours in their place would copy the scene even with the caret in a
+> field. The keys, on the other hand, know the difference: highlighted text keeps `⌘C`,
+> everything else belongs to the scene.
 
 Three things worth knowing:
 
@@ -590,10 +609,10 @@ read as though a clip had properties.
 
 ### Seeing the skeleton
 
-A rigged model carries **bones**. The **B** key, or the bone button in the toolbar, draws them over
-the scene.
+A rigged model carries **bones**. The **B** key, or **View ▸ Show skeletons**, draws them over
+the scene. The row stays ticked for as long as they are visible.
 
-**To grab one, switch to pose mode** — the **P** key, or the **Pose mode** button. Clicking then
+**To grab one, switch to pose mode** — the **P** key, or **View ▸ Pose mode**. Clicking then
 picks bones instead of objects.
 
 > **A bone is not grabbed like the rest, which is why it takes a mode.** A bone has no volume:

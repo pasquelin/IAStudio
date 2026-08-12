@@ -949,7 +949,7 @@
     "projectionHint": "Basculer entre perspective et projection orthographique",
     "view": "Se placer",
     "viewHint": "Regarder la scène par l’un de ses six côtés",
-    "display": "Affichage",
+    "display": "Mode de rendu",
     "displayHint": "Dessiner les surfaces, leurs arêtes, ou les deux",
     "quad": "Quatre vues",
     "quadEdges": "Arêtes en quads",
@@ -1494,7 +1494,7 @@
       "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
     },
     "sceneDisplay": {
-      "title": "Affichage",
+      "title": "Mode de rendu",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."
     },
     "sceneGroup": {

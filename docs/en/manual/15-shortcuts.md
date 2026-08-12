@@ -174,7 +174,7 @@ shortcuts screen.
 | **Magnet** | `M` | steps the handles by regular amounts, set in the preferences |
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
-| **Display** | `Z` | cycles shaded, wireframe, shaded and wireframe |
+| **Display mode** | `Z` | cycles the seven ways of drawing |
 | **Four views** | `⇧Q` | splits the viewport in four: the current view, top, front, side |
 | **Quad edges** | `⇧W` | in wireframe, erases the diagonals triangulation added |
 | **Show skeletons** | `B` | draws the bones of every rigged model over the scene |
@@ -574,7 +574,7 @@ are bound to the band, not to a context.
 | `⌘D` |  |  | Duplicate |  | Deselect |  |  |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |  |  |
 | `O` |  |  | Projection |  |  |  |  |  |  |
-| `Z` |  |  | Display |  |  |  |  |  |  |
+| `Z` |  |  | Display mode |  |  |  |  |  |  |
 | `B` |  |  | Show skeletons |  |  |  |  |  |  |
 | `V` |  |  | Select |  |  | Change the view |  |  |  |
 | `P` |  |  | Pose mode |  |  | Light probes |  |  |  |

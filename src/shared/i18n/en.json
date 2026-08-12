@@ -949,7 +949,7 @@
     "projectionHint": "Switch between perspective and orthographic projection",
     "view": "Stand at",
     "viewHint": "Look at the scene from one of its six sides",
-    "display": "Display",
+    "display": "Display mode",
     "displayHint": "Draw the surfaces, their edges, or both",
     "quad": "Four views",
     "quadEdges": "Quad edges",
@@ -1494,7 +1494,7 @@
       "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
     },
     "sceneDisplay": {
-      "title": "Display",
+      "title": "Display mode",
       "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."
     },
     "sceneGroup": {
