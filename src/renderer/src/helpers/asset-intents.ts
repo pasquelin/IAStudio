@@ -22,18 +22,18 @@ import { setSkyboxSource } from '@/stores/skyboxes'
  * Where an asset can be sent, as something one can list rather than something one falls through.
  *
  * This used to be a cascade of `if`s inside `openAsset`, which worked for double-clicking and
- * for nothing else: a menu can only offer what it can enumerate. Same table, two consumers — the
- * double-click takes one entry, and the context menu lists them all.
+ * for nothing else: a menu can only offer what it can enumerate.
  *
- * ORDER IS THE CASCADE, and the tab in front comes before it: a double-click lands where the
- * user is looking whenever that tab takes the asset, and the order of this table only decides
- * between the destinations they are NOT looking at.
+ * There is no cascade left to fall down. A double-click opens the asset in its own space —
+ * `editorIntent`, one entry, no arbitration — and this table is what the context menu lists and
+ * what a drop lands in. Its ORDER is therefore the menu's, which is why the montage sits near
+ * the end: the destination that takes every kind reads last.
  */
 export type AssetIntent = {
   id: string
   /** Where this destination lives — the menu reads its glyph off the workspace table. */
   workspace: WorkspaceId
-  /** The document it writes into. What decides whether the tab in front is this destination. */
+  /** The document it writes into — which is what `ready` looks for among the open tabs. */
   kind: DocumentKind
   labelKey: string
   /**
@@ -47,9 +47,9 @@ export type AssetIntent = {
    * Whether THIS asset can go there right now: a document of that kind must be open somewhere —
    * in front or not — and the destination must be able to take that particular asset.
    *
-   * It takes the asset where `accepts` cannot, because a double-click and a menu both hold it.
-   * A `ready` that only counted open tabs would stop the cascade on a destination that then
-   * refuses in silence — a cloud picture landing nowhere instead of on the montage.
+   * It takes the asset where `accepts` cannot, because the menu holds one and the drag the
+   * other. A `ready` that only counted open tabs would offer a row that then refuses in
+   * silence — a cloud picture greyed in nowhere, and enabled everywhere it cannot land.
    */
   ready: (asset: Asset) => boolean
   /**

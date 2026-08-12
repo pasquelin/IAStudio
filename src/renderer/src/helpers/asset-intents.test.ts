@@ -68,9 +68,9 @@ describe('where an asset can be sent', () => {
     }
   })
 
-  // The order IS the cascade a double-click follows; the montage takes every kind, so anything
-  // more specific has to be considered before it is.
-  it('weighs the take and the sky before the montage', () => {
+  // The order is the MENU's, and the montage takes every kind: a row that answers for everything
+  // reads last, or it reads as the answer.
+  it('lists the take and the sky before the montage', () => {
     const catchAll = ASSET_INTENTS.findIndex(intent => intent.id === 'video.clip')
     const before = ASSET_INTENTS.slice(0, catchAll).map(intent => intent.id)
 

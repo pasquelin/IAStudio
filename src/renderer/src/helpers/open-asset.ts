@@ -7,7 +7,7 @@ import { editorIntent } from './asset-intents'
 
 /**
  * What opening an asset does — double-click or Enter: a tab of its own, in the space that edits
- * its kind. The clic droit and the drag keep the destinations of `ASSET_INTENTS`, which serve
+ * its kind. The context menu and the drag keep the destinations of `ASSET_INTENTS`, which serve
  * the document already open; this gesture serves the asset.
  *
  * It never reads the tab in front, deliberately. Doing so made one gesture mean two things —

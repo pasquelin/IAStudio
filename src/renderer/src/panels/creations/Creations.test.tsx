@@ -8,17 +8,12 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useModels } from '@/stores/models'
 import { connectPreparation } from '@/stores/preparation'
-import { openFromHome } from '@/home/open'
-import type * as HomeOpenModule from '@/home/open'
+import { openAsset } from '@/helpers/open-asset'
 import { Creations } from './Creations'
 
-// Where the asset lands is `ASSET_INTENTS`' business, and it needs open documents to have one.
-// What this band answers for is which gesture it calls. Mocked at `home/open` rather than at the
-// helper: the band loads the cascade on the click, to keep it out of the opening chunk.
-vi.mock('@/home/open', async importOriginal => ({
-  ...(await importOriginal<typeof HomeOpenModule>()),
-  openFromHome: vi.fn(),
-}))
+// Which editor the asset opens in is `openAsset`'s business, and it makes a document to answer.
+// What this band answers for is which gesture it calls.
+vi.mock('@/helpers/open-asset', () => ({ openAsset: vi.fn() }))
 
 function creation(overrides: Partial<Asset> = {}): Asset {
   return {
@@ -160,8 +155,8 @@ describe('the creations panel', () => {
 
       await userEvent.click(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ }))
 
-      expect(openFromHome).toHaveBeenCalledTimes(1)
-      expect(vi.mocked(openFromHome).mock.calls[0]?.[0]).toMatchObject({ id: 'asset_1' })
+      expect(openAsset).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(openAsset).mock.calls[0]?.[0]).toMatchObject({ id: 'asset_1' })
     })
 
     /** The verb was in an `aria-label` only — heard by a reader, never seen by the eye. */

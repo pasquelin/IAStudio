@@ -231,9 +231,13 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     const kind = kindForWorkspace(workspace)
     if (!kind) return null
 
-    const document: DocumentDescriptor = of
-      ? { id: newId(), kind, workspace, title: of.title, sourceAssetId: of.sourceAssetId }
-      : { id: newId(), kind, workspace, title: await numbered(get(), workspace) }
+    const document: DocumentDescriptor = {
+      id: newId(),
+      kind,
+      workspace,
+      title: of ? of.title : await numbered(get(), workspace),
+      ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
+    }
 
     // Nothing is written yet, and nothing should be: a document appears in the folder when it
     // holds something. A file per tab opened and never typed in would litter the project with

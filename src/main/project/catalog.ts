@@ -172,6 +172,12 @@ const MIGRATIONS: readonly string[] = [
   -- not from its next import onwards.
   INSERT INTO assets_fts(rowid, name, prompt) SELECT rowid, name, prompt FROM assets;
   `,
+  `
+  -- « Is the file the explorer is showing one of ours? », asked on every double-click over a
+  -- folder that holds thousands of them. Without this the equality is a full scan of \`assets\`,
+  -- and \`better-sqlite3\` is synchronous in the main process: that scan holds every window.
+  CREATE INDEX assets_path_idx ON assets(path);
+  `,
 ]
 
 const DEFAULT_LIMIT = 200

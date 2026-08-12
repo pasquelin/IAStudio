@@ -257,6 +257,27 @@ describe('catalog', () => {
     expect(catalog.search({ type: 'mesh' }).map(found => found.id)).toEqual(['asset_2'])
   })
 
+  /**
+   * What the explorer asks before it hands a file to the system: the folder shows a file name,
+   * and only the catalogue can say whether that file is an asset this studio edits.
+   */
+  it('finds the asset filed at a path, and nothing else', () => {
+    catalog.add(asset({ id: 'asset_1', path: 'assets/img/asset_1.png' }))
+    catalog.add(asset({ id: 'asset_2', path: 'assets/img/asset_2.png' }))
+
+    const found = catalog.search({ path: 'assets/img/asset_2.png' })
+    expect(found.map(one => one.id)).toEqual(['asset_2'])
+  })
+
+  // Exact, never a prefix: the question is « is THIS file an asset », and a folder that shares
+  // the opening of a file name is not the file.
+  it('answers nothing for a path no asset was filed at', () => {
+    catalog.add(asset({ id: 'asset_1', path: 'assets/img/asset_1.png' }))
+
+    expect(catalog.search({ path: 'assets/img' })).toEqual([])
+    expect(catalog.search({ path: 'assets/img/stray.png' })).toEqual([])
+  })
+
   it('returns the most recent first, and paginates', () => {
     catalog.add(asset({ id: 'asset_old', createdAt: '2026-08-01T10:00:00.000Z' }))
     catalog.add(asset({ id: 'asset_new', createdAt: '2026-08-06T10:00:00.000Z' }))

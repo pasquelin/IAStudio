@@ -1,4 +1,3 @@
-import type { Asset } from '@shared/domain/asset'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { createDocumentIn } from '@/app/new-document'
 import { useLayouts } from '@/stores/layouts'
@@ -13,19 +12,4 @@ import { useLayouts } from '@/stores/layouts'
 export function enterWorkspace(workspace: WorkspaceId): void {
   useLayouts.getState().setActiveWorkspace(workspace)
   createDocumentIn(workspace)
-}
-
-/**
- * Opens an asset from a shelf. `openAsset` does the whole of it; what this adds is WHEN it is
- * loaded.
- *
- * Deferred to the click rather than resolved at mount: `openAsset` reads `ASSET_INTENTS`, which
- * reaches into every editor's folder to know where a sound or a channel lands. Imported at the
- * top of a shelf it drags the audio loader and the texture placer into the opening chunk, which
- * `eager-graph.test.ts` holds a budget on — the home is the first screen, and it must not
- * evaluate an editor to draw a grid of stills.
- */
-export async function openFromHome(asset: Asset): Promise<void> {
-  const { openAsset } = await import('@/helpers/open-asset')
-  await openAsset(asset)
 }

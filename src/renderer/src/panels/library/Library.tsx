@@ -11,7 +11,7 @@ import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { activeOwnerId, useSettings } from '@/stores/settings'
-import { openFromHome } from '@/home/open'
+import { openAsset } from '@/helpers/open-asset'
 import { ShelfTile } from '@/design/ShelfTile'
 import { ShelfPanel } from '@/panels/shared/ShelfPanel'
 import { PANEL_PAGE } from '@/panels/shared/tiles'
@@ -87,7 +87,7 @@ function Tile({ asset, fetched }: { asset: CloudAsset; fetched: Asset | undefine
   const busy = useCloud(state => state.busy)
 
   const act = fetched
-    ? { label: t('home.open', { name: asset.name }), run: () => void openFromHome(fetched) }
+    ? { label: t('home.open', { name: asset.name }), run: () => void openAsset(fetched) }
     : hasProject && !busy
       ? {
           label: t('home.library.fetch', { name: asset.name }),

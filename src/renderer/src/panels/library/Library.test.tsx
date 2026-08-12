@@ -9,17 +9,12 @@ import { useAssets } from '@/stores/assets'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
-import { openFromHome } from '@/home/open'
-import type * as HomeOpenModule from '@/home/open'
+import { openAsset } from '@/helpers/open-asset'
 import { Library } from './Library'
 
-// Where the asset lands is `ASSET_INTENTS`' business, and it needs open documents to have one.
-// What this panel answers for is which of the two gestures it calls. Mocked at `home/open` rather
-// than at the helper: it loads the cascade on the click, to keep it out of the opening chunk.
-vi.mock('@/home/open', async importOriginal => ({
-  ...(await importOriginal<typeof HomeOpenModule>()),
-  openFromHome: vi.fn(),
-}))
+// Which editor the asset opens in is `openAsset`'s business, and it makes a document to answer.
+// What this panel answers for is which of the two gestures it calls.
+vi.mock('@/helpers/open-asset', () => ({ openAsset: vi.fn() }))
 
 /** The local twin of `cloudAsset`, as the collector writes it after a pull. */
 function localAsset(overrides: Partial<Asset> = {}): Asset {
@@ -175,7 +170,7 @@ describe('the library panel', () => {
 
       await userEvent.click(await screen.findByRole('button', { name: /Ouvrir.+boulder\.png/ }))
 
-      expect(openFromHome).toHaveBeenCalledTimes(1)
+      expect(openAsset).toHaveBeenCalledTimes(1)
     })
 
     it('fetches one the project does not hold, and says so by name', async () => {
@@ -186,7 +181,7 @@ describe('the library panel', () => {
       await userEvent.click(await screen.findByRole('button', { name: /Récupérer.+boulder\.png/ }))
 
       expect(pull).toHaveBeenCalledWith(['cloud_1'])
-      expect(openFromHome).not.toHaveBeenCalled()
+      expect(openAsset).not.toHaveBeenCalled()
     })
   })
 

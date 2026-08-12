@@ -18,9 +18,13 @@ export type AssetMenuProps = {
 /**
  * What can be done with an asset, listed rather than guessed.
  *
- * Every destination comes from `ASSET_INTENTS` — the same table the double-click walks. That is
- * the whole point of the table existing: before it, where an asset could go was knowledge locked
- * inside one `if` chain, so double-clicking was the only gesture that could send one anywhere.
+ * Every destination comes from `ASSET_INTENTS`, and this menu is what the table is FOR: before
+ * it, where an asset could go was knowledge locked inside one `if` chain, so double-clicking was
+ * the only gesture that could send one anywhere.
+ *
+ * The double-click no longer walks it at all — it opens the asset in its own editor
+ * (`editorIntent`). What this lists is the other half: sending an asset into a document already
+ * open, which is a gesture of its own and not a fallback of that one.
  *
  * A destination whose space has no document open is shown disabled rather than hidden: a menu
  * that changes length depending on what is open is a menu one cannot learn.
