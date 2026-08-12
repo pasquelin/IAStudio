@@ -9,7 +9,8 @@ import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timel
 import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
 import type { Size } from '../core/geometry'
 
-// Bare, where the canvas spells `CANVAS_MIN_SCALE`: no second module declares these three.
+// Bare because the CANVAS took the prefix: the two ranges are four orders apart and an
+// auto-import once crossed them. `canvas/viewport.test.ts` reads both sides and holds the gap.
 /** One pixel a second: a twenty-minute rush still fits across a wide strip. */
 export const MIN_SCALE = 1 / 1_000_000
 /** Two thousand pixels a second: a couple of frames fill the strip, which is as far as trimming needs. */

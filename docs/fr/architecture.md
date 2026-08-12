@@ -349,7 +349,7 @@ src/renderer/src/
 │   ├── TitleBar.tsx     espaces de travail, feux natifs
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, et `core/` — l'historique partagé
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, et `core/` — ce que tous les moteurs partagent
 ├── spaces/       un éditeur par type de document — SEPT, autant que d'espaces
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils

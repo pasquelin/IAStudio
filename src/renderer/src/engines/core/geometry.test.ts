@@ -31,13 +31,33 @@ const HOME = './geometry.ts'
  */
 const HOUSED: readonly string[] = ['Size', 'Point']
 
-/** The housed names a module declares, whether as a type alias or as an interface. */
+/**
+ * What this holds, exactly, and it is less than its subject.
+ *
+ * It compares NAMES, so the same shape under another name walks straight past it — and three
+ * already do, all older than this guard: `scene/bone-picking.ts` (`Pointer`),
+ * `texture/derive/offscreen.ts` (`PictureSize`) and `canvas/CanvasEngine.test.ts` (`Pair`).
+ * Absorbing them is a lot of its own, because a name-matching guard cannot then keep them in.
+ *
+ * It reads `engines/` only: the same declaration in `stores/`, `spaces/`, `panels/` or `shared/`
+ * is invisible here. And it reads `.ts`; there is no `.tsx` under `engines/` today, which is a
+ * measurement about this tree rather than a rule about it.
+ *
+ * A guard whose silence reads wider than its reach is the one its next reader disarms — the
+ * neighbour at `stores/no-bare-shared-word-export.test.ts` writes the same warning for the same
+ * reason.
+ */
 const declares = (code: string): string[] => {
   const source = ts.createSourceFile('module.ts', code, ts.ScriptTarget.Latest, true)
   const found: string[] = []
   const walk = (node: ts.Node): void => {
     const named = ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)
     if (named && HOUSED.includes(node.name.text)) found.push(node.name.text)
+    // A re-export hands the name back out under a second module, which is the ambiguous
+    // auto-import this house exists to close — declaring it again is only one way to get there.
+    if (ts.isExportDeclaration(node) && node.exportClause && ts.isNamedExports(node.exportClause))
+      for (const element of node.exportClause.elements)
+        if (HOUSED.includes(element.name.text)) found.push(element.name.text)
     ts.forEachChild(node, walk)
   }
   walk(source)
@@ -45,7 +65,7 @@ const declares = (code: string): string[] => {
 }
 
 describe('the shapes every engine paints with', () => {
-  it('are declared in one module and nowhere else', () => {
+  it('are declared, and handed back out, by one module in engines/ only', () => {
     const elsewhere = Object.entries(ENGINES)
       .filter(([path]) => path !== HOME)
       .flatMap(([path, code]) => declares(code).map(name => `${path} declares ${name}`))
@@ -66,13 +86,17 @@ describe('the shapes every engine paints with', () => {
     expect(Object.keys(ENGINES).length).toBeGreaterThan(100)
   })
 
-  /** And it can fail. Both spellings that hide one, and the two that do not. */
-  it('would see one declared again, however it was written', () => {
+  /** And it can fail. The spellings that put a name back out, and the ones that do not. */
+  it('would see one handed out again, however it was written', () => {
     expect(declares('export type Point = { x: number; y: number }')).toEqual(['Point'])
     expect(declares('type Size = { width: number; height: number }')).toEqual(['Size'])
     expect(declares('export interface Size { width: number }')).toEqual(['Size'])
+    expect(declares("export type { Point } from '../core/geometry'")).toEqual(['Point'])
+    expect(declares("export { type Size } from '../core/geometry'")).toEqual(['Size'])
 
+    // Importing is the whole point of the house; only re-exporting reopens the ambiguity.
     expect(declares("import type { Point } from '../core/geometry'")).toEqual([])
     expect(declares('export type Rect = { x: number; y: number }')).toEqual([])
+    expect(declares("export type { ClipEdge } from './timeline-state'")).toEqual([])
   })
 })

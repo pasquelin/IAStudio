@@ -11,12 +11,7 @@ import {
 } from '@/engines/timeline/interactions'
 import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
-import {
-  cursorAt,
-  hitTest,
-  xToTime,
-  type Viewport,
-} from '@/engines/timeline/timeline-geometry'
+import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import {
   clipUnderPlayhead,
