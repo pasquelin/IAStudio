@@ -153,6 +153,8 @@ ces défauts : il est propre par construction.
 Ce qui reste utile sur un son généré, c’est de le raccourcir, de l’amener au bon niveau et de le
 faire entrer et sortir proprement. C’est exactement ce que fait cet espace.
 
+Le détail est dans [Ce qui n’existe pas encore](18-limites.md).
+
 > **Deux gestes différents, et il faut les distinguer.** `⌘S` enregistre le **document** — vos
 > coupes, vos fondus, vos réglages — dans un fichier `.aud` du projet, qui se rouvre tel quel.
 > **Appliquer** et **Enregistrer comme nouveau** écrivent un **asset audio**, c’est-à-dire un son
