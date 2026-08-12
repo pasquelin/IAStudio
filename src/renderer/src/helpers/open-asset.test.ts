@@ -160,13 +160,11 @@ describe('opening an asset', () => {
   it('says so when the tab it comes back to no longer measures its asset', async () => {
     await openAsset(picture())
     const { entries } = bridgeWatchingLogs()
-    useCanvases
-      .getState()
-      .replace(opened().id, {
-        ...canvasOf(useCanvases.getState(), opened().id),
-        width: 1024,
-        height: 1024,
-      })
+    useCanvases.getState().replace(opened().id, {
+      ...canvasOf(useCanvases.getState(), opened().id),
+      width: 1024,
+      height: 1024,
+    })
 
     await openAsset(picture())
 
