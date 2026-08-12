@@ -76,9 +76,12 @@ export function rowSkin(selected: boolean, disabled = false): string {
 }
 
 /**
- * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the filters of
- * the journal. Written once because three surfaces had it, and the third had already drifted —
- * it lit up in `accent-soft` where the others use `elevated`, the studio's hover token.
+ * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the shelves of the
+ * home. Written once because three surfaces had it, and one had already drifted — it lit up in
+ * `accent-soft` where the others use `elevated`, the studio's hover token.
+ *
+ * The journal's filters were a fourth, and are no longer: eleven of these took a third of the
+ * panel, and they are a menu now. A chip suits a handful of choices that all fit on one row.
  */
 export function chipSkin(active: boolean): string {
   return cn(

@@ -19,7 +19,13 @@ const ROLE: Record<MenuTick, 'menuitemradio' | 'menuitemcheckbox'> = {
 type MenuRowBase = {
   /** Already translated: the row draws what it is handed and looks nothing up. */
   label: string
-  icon: string
+  /**
+   * Absent for a row whose meaning is entirely in its tick — a filter that is on or off. The
+   * column is KEPT when it is, exactly as the tick's is: a menu mixing rows with and without a
+   * glyph would step its labels in and out by fourteen pixels, and the first caller to leave one
+   * out did precisely that.
+   */
+  icon?: string
   shortcut?: string
   disabled?: boolean
   /**
@@ -90,7 +96,9 @@ export function MenuRow({
       <span className="flex w-3.5 shrink-0 justify-center">
         {checked && <UiIcon path={mdiCheck} size={12} />}
       </span>
-      <UiIcon path={icon} size={14} />
+      <span className="flex w-3.5 shrink-0 justify-center">
+        {icon && <UiIcon path={icon} size={14} />}
+      </span>
       <span className="flex-1 truncate">{label}</span>
       {shortcut && (
         <span className="text-muted text-mini shrink-0 pl-3 group-hover:text-white">

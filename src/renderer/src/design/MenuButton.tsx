@@ -6,7 +6,23 @@ import { ToolButton, type ToolButtonProps } from './ToolButton'
 
 export type MenuButtonProps = Pick<
   ToolButtonProps,
-  'icon' | 'label' | 'description' | 'shortcut' | 'active' | 'disabled' | 'variant'
+  | 'icon'
+  | 'label'
+  | 'description'
+  | 'shortcut'
+  | 'active'
+  | 'disabled'
+  | 'variant'
+  // Drawn beside the icon, for a menu whose CHOICE has to stay readable while it is closed — a
+  // filter says what it is filtering on, or collapsing its chips only hides them.
+  | 'children'
+  /*
+   * Needed BY `children` and not separately: `ToolButton` is square by gauge (`size-(--sc-control)`,
+   * and `styles.ts` states the rule), so a label handed to it without `w-auto` is clipped to a
+   * character or two. jsdom lays nothing out, so no test can see that — `ZoomBar` is the other
+   * label-bearing caller and undoes the square the same way.
+   */
+  | 'className'
 > & {
   tooltip: TooltipFactory
   /** How many rows the menu holds. One or none makes the button act directly. */
