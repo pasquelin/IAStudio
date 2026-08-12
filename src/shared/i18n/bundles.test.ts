@@ -549,3 +549,30 @@ describe('the symbol of a creative unit', () => {
     for (const [key, value] of carrying) expect(value, key).toContain('{{units}}')
   })
 })
+
+/** The figures a label states — `Last 3 months` says 3, `Last quarter` says nothing. */
+function spanOf(code: Language, period: string): string {
+  return ((BUNDLES[code].get(`periods.${period}`) ?? '').match(/\d+/g) ?? []).join('+')
+}
+
+describe('how far back a listing reaches', () => {
+  /**
+   * Every span is ROLLING — `now` minus so many days, `PERIOD_DAYS` applied against the main
+   * process's own clock — so a label states its LENGTH, and states the same one everywhere.
+   * English read `Last quarter` beside `Last 30 days`, and a quarter is a piece of the calendar:
+   * ninety rolling days announced themselves as the quarter that ended, which is a different set
+   * of models and no way to tell from the menu.
+   *
+   * Compared across the languages rather than against `PERIOD_DAYS`, which counts days where two
+   * of the four labels count hours and months: a conversion table here would be a second place
+   * to be right, and the divergence it exists to catch is between the bundles.
+   */
+  it('states the same span in every language', () => {
+    const unclear = MODEL_PERIODS.filter(period => {
+      const stated = new Set(CODES.map(code => spanOf(code, period)))
+      return stated.size !== 1 || stated.has('')
+    })
+
+    expect(unclear).toEqual([])
+  })
+})
