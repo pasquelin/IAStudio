@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { ASSET_TYPES, emptyAssetCounts, type AssetType } from '@shared/domain/asset'
 import { UiIcon } from '@/design/UiIcon'
-import { rowSkin } from '@/design/styles'
+import { ROW_QUIET, rowSkin } from '@/design/styles'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { cn } from '@/helpers/cn'
 import { revealAssetsOfKind } from '@/helpers/reveal-panel'
@@ -80,9 +80,7 @@ function Counter({ type, total }: { type: AssetType; total: number }) {
             on `elevated`, the fill this line takes on hover. `rowSkin` opens the group.
             `transition-colors` HERE and not on the button alone — the property does not inherit,
             so the fill would fade while the word above it snapped. */}
-        <span className="text-muted group-hover/row:text-text text-tiny truncate transition-colors">
-          {t(`assetTypes.${type}`)}
-        </span>
+        <span className={cn(ROW_QUIET, 'text-tiny truncate')}>{t(`assetTypes.${type}`)}</span>
       </span>
     </button>
   )

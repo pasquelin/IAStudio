@@ -1,7 +1,7 @@
 import { mdiCogOutline, mdiFolderOpenOutline, mdiFolderPlusOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/design/UiIcon'
-import { rowSkin } from '@/design/styles'
+import { ROW_QUIET, rowSkin } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { workspaceLabelKey } from '@/helpers/workspaces'
@@ -109,7 +109,7 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
               {/* Lifted under the pointer, as a list row's subtitle is: `muted` reads 3.51:1 on
                   `elevated`, the fill this tile takes on hover. `transition-colors` here too —
                   the property does not inherit, so the fill would fade while the words snapped. */}
-              <span className="text-muted group-hover/row:text-text text-tiny line-clamp-2 leading-snug transition-colors">
+              <span className={cn(ROW_QUIET, 'text-tiny line-clamp-2 leading-snug')}>
                 {entry.help}
               </span>
             </span>

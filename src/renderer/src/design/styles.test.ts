@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rowSkin, TITLE_BAR_GHOST } from './styles'
+import { ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -27,6 +27,48 @@ describe('the shared class strings', () => {
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
+  })
+})
+
+describe('the quiet ink of a row', () => {
+  it('lifts on both states the skin knows, and stays quiet at rest', () => {
+    expect(ROW_QUIET).toContain('text-muted')
+    expect(ROW_QUIET).toContain('group-hover/row:text-text')
+    expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
+    // The fill fades under it; the property does not inherit, so the word carries its own.
+    expect(ROW_QUIET).toContain('transition-colors')
+  })
+
+  /**
+   * Five sites had reached these three classes on their own, one of them twice — and a sixth was
+   * about to. Read off the constant rather than spelled out again, so a change of rule moves
+   * every word with it.
+   *
+   * **What this holds is narrow, and the narrowness matters**: it refuses the literal re-copy of
+   * this one class, nothing else. A site that writes `text-muted` ALONE under a row — the very
+   * state `AssetRow` was in before this batch — passes it untouched, and so would a variant
+   * (`group-hover/row:text-accent-content`) or a group under another name. What catches those is
+   * a test at the site, and each of the six sites has one.
+   *
+   * `WRITTEN_SOURCES` reads `renderer/src` only: a class string written in `shared/` would not be
+   * seen. No JSX lives there today, which is why the gap is tolerated rather than closed.
+   */
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('group-hover/row:text-text'),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  // The partner of the rule above: it stays green on a studio where nobody wears the constant at
+  // all, which is what a dead export looks like from here.
+  it('is worn by the sites it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('ROW_QUIET'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(4)
   })
 })
 

@@ -2,6 +2,8 @@ import { memo } from 'react'
 import { assetBadgeOf, type Asset, type AssetBadge as BadgeName } from '@shared/domain/asset'
 import { AssetBadge } from '@/design/AssetBadge'
 import { Row } from '@/design/Row'
+import { ROW_QUIET } from '@/design/styles'
+import { cn } from '@/helpers/cn'
 import { DraggableAsset } from './DraggableAsset'
 
 export type AssetRowProps = {
@@ -31,7 +33,7 @@ export const AssetRow = memo(function AssetRow({
           <span className="flex shrink-0 items-center gap-2">
             {/* The list has room the grid does not: every state is drawn, settled ones included. */}
             <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? badge} showQuiet />
-            <span className="text-muted text-tiny">{typeLabel}</span>
+            <span className={cn(ROW_QUIET, 'text-tiny')}>{typeLabel}</span>
           </span>
         }
       />
