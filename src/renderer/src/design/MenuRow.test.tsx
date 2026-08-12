@@ -74,4 +74,17 @@ describe('one row of a menu', () => {
 
     expect(screen.getByRole('menuitem')).not.toHaveAttribute('tabindex')
   })
+
+  /**
+   * The contract widened for the journal's filters, guarded at home: a row whose meaning is
+   * entirely in its tick carries no glyph, and the column stays anyway. Without it, a menu mixing
+   * ticked rows with and without an icon steps its labels in and out by fourteen pixels — which
+   * is what the first caller to leave one out did.
+   */
+  it('keeps the glyph column for a row that carries no icon', () => {
+    const { container } = render(<MenuRow {...props} icon={undefined} />)
+
+    expect(container.querySelectorAll('svg')).toHaveLength(0)
+    expect(container.querySelectorAll('span.w-3\\.5')).toHaveLength(2)
+  })
 })

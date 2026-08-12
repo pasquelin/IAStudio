@@ -124,6 +124,31 @@ describe('the filters of the journal', () => {
     expect(menuFor('Sujet', 'Tout')).toBeInTheDocument()
   })
 
+  /**
+   * The one thing jsdom cannot see, asserted the only way it can be: `ToolButton` is square by
+   * gauge, so a label handed to it without `w-auto` is clipped to a character or two — the panel
+   * would gain its height back and lose the reading, which is the opposite of the point. The
+   * review caught this on a suite that was fully green, because every other assertion here reads
+   * `aria-label`, and an accessible name survives any amount of clipping.
+   */
+  it('gives the button back the width its label needs', () => {
+    useActivity.setState({ levels: ['error'], topics: [] })
+
+    render(<ActivityList />)
+
+    expect(menuFor('Niveau', 'Échec')).toHaveClass('w-auto')
+  })
+
+  // The summary is TEXT on the button, not only its accessible name: read by the eye, it is what
+  // replaces the eleven chips.
+  it('draws the choice, and does not merely name it', () => {
+    useActivity.setState({ levels: ['error'], topics: [] })
+
+    render(<ActivityList />)
+
+    expect(menuFor('Niveau', 'Échec')).toHaveTextContent('Échec')
+  })
+
   it('names every value it is narrowed to, not a count', () => {
     useActivity.setState({ levels: ['warn', 'error'] })
 

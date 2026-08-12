@@ -226,8 +226,7 @@
     "filters": {
       "levels": "Level",
       "topics": "Topic",
-      "separator": ", ",
-      "summary": "{{family}}: {{choice}}"
+      "summary": "{{facet}}: {{choice}}"
     },
     "levels": {
       "info": "Information",

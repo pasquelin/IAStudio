@@ -140,14 +140,14 @@ function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | nul
  * worth keeping in the first place.
  */
 function FilterMenu<T extends string>({
-  family,
+  facet,
   values,
   active,
   label,
   icon,
   onChange,
 }: {
-  family: string
+  facet: string
   values: readonly T[]
   active: readonly T[]
   label: (value: T) => string
@@ -159,12 +159,11 @@ function FilterMenu<T extends string>({
 
   // The names rather than a count: "Level: warning" is what the reader wants back, and a count
   // would make them open the menu to learn what they had chosen. Truncation handles the long tail.
-  const chosen =
-    active.length === 0
-      ? t('activity.all')
-      : active.map(label).join(t('activity.filters.separator'))
+  // Joined the way this file's other enumeration is (`namedParams`), rather than through a key
+  // both bundles spell the same — a separator that translates nothing is a promise it cannot keep.
+  const chosen = active.length === 0 ? t('activity.all') : active.map(label).join(', ')
 
-  const summary = t('activity.filters.summary', { family, choice: chosen })
+  const summary = t('activity.filters.summary', { facet, choice: chosen })
 
   const toggle = (value: T): T[] =>
     active.includes(value) ? active.filter(one => one !== value) : [...active, value]
@@ -172,6 +171,9 @@ function FilterMenu<T extends string>({
   return (
     <MenuButton
       icon={mdiFilterVariant}
+      // `ToolButton` is square by gauge; a label needs the width back. `ZoomBar` does the same.
+      className="w-auto px-1.5"
+
       // The accessible name IS the visible text: `ToolButton` names itself from `label`, and a
       // name that did not contain what the eye reads breaks WCAG 2.5.3.
       label={summary}
@@ -237,7 +239,7 @@ export function ActivityList() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex flex-col gap-1.5 border-b p-1">
         <FilterMenu
-          family={t('activity.filters.levels')}
+          facet={t('activity.filters.levels')}
           values={ACTIVITY_LEVELS}
           active={levels}
           label={level => t(`activity.levels.${level}`)}
@@ -245,7 +247,7 @@ export function ActivityList() {
           onChange={next => setFilters({ levels: next })}
         />
         <FilterMenu
-          family={t('activity.filters.topics')}
+          facet={t('activity.filters.topics')}
           values={ACTIVITY_TOPICS}
           active={topics}
           label={topic => t(`activity.topics.${topic}`)}
