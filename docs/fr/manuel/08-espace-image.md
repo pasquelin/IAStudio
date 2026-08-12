@@ -353,6 +353,16 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > tel quel. Ce n’est pas la même chose que `⇧⌘E` : l’export aplatit et sort du studio, tandis que
 > l’enregistrement garde la pile intacte pour continuer à travailler.
 >
+> **Et si ce document a été ouvert depuis un asset, `⌘S` réécrit AUSSI cet asset** — la vignette
+> de l’étagère suit donc ce que vous éditez, au lieu de montrer la génération d’origine. Les deux
+> écritures sont dans cet ordre, et il compte : le document porte les calques et l’historique,
+> l’asset une image plate. Si la seconde échoue, votre travail est déjà sur le disque et c’est la
+> vignette qui est en retard — jamais l’inverse.
+>
+> **`⇧⌘S` — Enregistrer sous — écrit une copie à côté et continue dessus.** Aucune boîte de
+> dialogue ne demande de nom : la copie s’appelle *« (le nom) copie »*, et l’asset que vous aviez
+> ouvert reste tel qu’il était au dernier `⌘S`.
+>
 > L’image s’écrit en **dossier** `documents/<id>.img/` : un `document.json` pour la pile, et un
 > `.png` par calque — plus un second pour son masque, s’il en a un. C’est volontairement
 > inspectable : vous pouvez ouvrir le dossier et regarder les calques un par un.
