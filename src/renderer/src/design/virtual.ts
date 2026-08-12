@@ -1,3 +1,5 @@
+import { useGauge } from '@/hooks/useGauge'
+import { LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from './styles'
 import { useEffect } from 'react'
 
 /**
@@ -71,4 +73,25 @@ export function useReachEnd(
  */
 export function useRemeasure(virtualizer: { measure: () => void }, key: string | number): void {
   useEffect(() => virtualizer.measure(), [virtualizer, key])
+}
+
+/** How tall a list row is — a SHAPE by preference, a number only for what no gauge describes. */
+export type RowHeight = 'control' | 'stacked' | number
+
+/**
+ * The pixels a row shape measures, read back from the gauge that sizes it.
+ *
+ * A shape rather than a number, because a constant is only right at one density. Shared by the
+ * two virtualized surfaces rather than written in each, which is what the explorer was missing:
+ * `Tree` sized every row on `--sc-control` while its rows stack a name over a subtitle for a
+ * document that is open. What that costs is written where the gauge is declared, in `index.css`
+ * beside `--sc-row-stacked`.
+ */
+export function useRowHeight(shape: RowHeight): number {
+  // Both read unconditionally: a hook cannot sit behind a branch.
+  const control = useGauge('--sc-control', LIST_ROW_HEIGHT)
+  const stacked = useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT)
+
+  if (typeof shape === 'number') return shape
+  return shape === 'stacked' ? stacked : control
 }

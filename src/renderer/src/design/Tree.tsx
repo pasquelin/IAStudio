@@ -3,17 +3,26 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
-import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
-import { useRemeasure } from './virtual'
+import { useRemeasure, useRowHeight, type RowHeight } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
 const ROWS = dragChannel('application/x-scenario-tree-row')
 
-export type TreeRow<T> = { node: T; depth: number; hasChildren: boolean; expanded: boolean }
+export type TreeRow<T> = {
+  node: T
+  depth: number
+  hasChildren: boolean
+  expanded: boolean
+  /** Which of its siblings this is, from one — what a reader announces as « 3 of 12 ». */
+  position: number
+  /** How many siblings it has. Counted here because the tree is flattened and virtualized: the
+   * DOM holds a window of rows and no nesting at all, so nothing else could say it. */
+  siblings: number
+}
 
 /**
  * Flattens the tree into the rows actually on screen. A node whose parent is missing is dropped
@@ -33,13 +42,14 @@ export function flattenTree<T extends TreeNode>(
 
   const rows: TreeRow<T>[] = []
   const walk = (parentId: string | null, depth: number): void => {
-    for (const node of byParent.get(parentId) ?? []) {
+    const among = byParent.get(parentId) ?? []
+    for (const [index, node] of among.entries()) {
       // Asked rather than derived when the caller knows better: a folder nobody has expanded
       // has no children LOADED, and a tree that read that as "no children" would draw no
       // chevron — leaving the folder impossible to open at all.
       const hasChildren = expandable ? expandable(node) : byParent.has(node.id)
       const expanded = expandedIds.has(node.id)
-      rows.push({ node, depth, hasChildren, expanded })
+      rows.push({ node, depth, hasChildren, expanded, position: index + 1, siblings: among.length })
       if (hasChildren && expanded) walk(node.id, depth + 1)
     }
   }
@@ -236,6 +246,10 @@ export function Tree<T extends TreeNode>({
           return (
             <li
               key={row.node.id}
+              // The virtualizer's row is geometry, not structure: a generic element between a
+              // `tree` and its `treeitem`s breaks the ownership ARIA requires — the same reason
+              // `Collection` gives for its own.
+              role="presentation"
               style={{
                 transform: `translateY(${virtual.start}px)`,
                 height: virtual.size,
@@ -251,6 +265,12 @@ export function Tree<T extends TreeNode>({
                 // is OPEN through the same skin, where announcing "selected" would be a lie.
                 data-selected={selected.has(row.node.id) || undefined}
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
+                // The tree is flattened and virtualized, so the DOM conveys neither nesting nor
+                // how many rows there are: depth is a `paddingLeft` and only a window is mounted.
+                // Said in words, or a reader announces a folder and what it holds as equals.
+                aria-level={row.depth + 1}
+                aria-posinset={row.position}
+                aria-setsize={row.siblings}
                 style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
                   'group flex h-full cursor-pointer items-center gap-2 px-1',

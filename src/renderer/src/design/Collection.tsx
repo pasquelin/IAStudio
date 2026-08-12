@@ -4,8 +4,15 @@ import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { rowSkin } from './styles'
-import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
-import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
+import {
+  columnsIn,
+  GAP,
+  PREFETCH_ROWS,
+  useReachEnd,
+  useRemeasure,
+  useRowHeight,
+  type RowHeight,
+} from './virtual'
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
@@ -77,13 +84,11 @@ export type CollectionProps<T extends { id: string }> = {
   /**
    * How tall a list row is — a SHAPE by preference, a number only for what no gauge describes.
    *
-   * Resolved by `useRowHeight`, which reads the gauge the stylesheet already applies — see there
-   * for what a shape costs and why a caller must not pass a number of its own.
+   * Resolved by `useRowHeight`, which reads the gauge the stylesheet already applies.
    */
   rowHeight?: RowHeight
 }
 
-/** `control` for one line of text, `stacked` for a name over a subtitle. */
 type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
 
 /**

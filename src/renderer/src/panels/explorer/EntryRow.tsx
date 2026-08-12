@@ -27,7 +27,9 @@ export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
   const { t } = useTranslation()
 
   // The whole row becomes the field: a name edited beside its own icon is where the eye already
-  // is, and `InlineRename` owns the part that is subtle — when the edit ends.
+  // is, and `InlineRename` owns the part that is subtle — when the edit ends. It stands a
+  // control tall inside a row sized for two lines, so the tint shows above and below it while
+  // renaming: deliberate, and not a defect to rediscover.
   if (onRename)
     return <InlineRename value={name} label={t('explorer.rename')} onCommit={onRename} />
 

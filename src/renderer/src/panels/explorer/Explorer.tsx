@@ -135,7 +135,12 @@ export function Explorer() {
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
       onContextMenu={(node, at) => setMenu({ node, at })}
-      // Its rows carry a second line for a document that is open — see `EntryRow`.
+      // Its rows carry a second line for a document that is open — see `EntryRow`. Uniformly,
+      // as `Documents` does with the same conditionally stacked row: every row is then 8px taller
+      // than a control, which is five or six fewer on screen. The alternative is a per-row
+      // measurement, and a ResizeObserver on each of a few hundred rows is what invariant 6 sends
+      // away — it would also make the estimate move as documents open and close, which the
+      // keyboard's `scrollToIndex` assumes it does not.
       rowHeight="stacked"
       renderRow={row => {
         const document = documentOf(row.node)
