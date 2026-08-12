@@ -146,6 +146,37 @@ describe('parseDocumentDraft', () => {
     expect(() => parseDocumentDraft({ content: null })).toThrow()
     expect(() => parseDocumentDraft(null)).toThrow()
   })
+
+  /**
+   * The field this schema does not name is the field the disk never sees, and zod strips in
+   * silence. An image document holds one PNG per layer: without `parts` here, `storeFolder`
+   * replaced the folder with a manifest alone — a save that threw away the pixels it was called
+   * to keep, and nothing in the reply said so.
+   */
+  it('keeps the files that go beside the content', () => {
+    const drafted = parseDocumentDraft({
+      title: 'Poster',
+      content: '{"layers":[{"id":"l1"}]}',
+      parts: [{ name: 'l1.png', data: 'AA==' }],
+    })
+
+    expect(drafted.parts).toEqual([{ name: 'l1.png', data: 'AA==' }])
+  })
+
+  // Same silence, same cost: the link is what brings a double-click back to the tab that edits
+  // an asset, and it is read off the file after a restart.
+  it('keeps the asset a document was opened to edit', () => {
+    const drafted = parseDocumentDraft({ title: 'Poster', content: '{}', sourceAssetId: 'asset_1' })
+
+    expect(drafted.sourceAssetId).toBe('asset_1')
+  })
+
+  it('leaves both out when the editor sends neither', () => {
+    const drafted = parseDocumentDraft({ title: 'Stone', content: '{}' })
+
+    expect(drafted.parts).toBeUndefined()
+    expect(drafted.sourceAssetId).toBeUndefined()
+  })
 })
 
 describe('parseAssetQuery', () => {

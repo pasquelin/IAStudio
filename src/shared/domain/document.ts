@@ -26,6 +26,14 @@ export type DocumentDescriptor = {
   kind: DocumentKind
   title: string
   workspace: WorkspaceId
+  /**
+   * The asset this document was opened to edit, when it was opened for one.
+   *
+   * What tells "the image document that is open" from "the document OF this image": a
+   * double-click on an asset must come back to its own tab rather than pile a second copy into
+   * whichever tab happens to be of the right kind.
+   */
+  sourceAssetId?: string
 }
 
 const KIND_BY_WORKSPACE: Record<WorkspaceId, DocumentKind | null> = {
@@ -114,6 +122,11 @@ export function kindForExtension(extension: string): DocumentKind | null {
 export type DocumentDraft = {
   title: string
   content: string
+  /**
+   * Carried into the file so the link survives the tab: a document reopened next session still
+   * knows which asset it edits, which is what a save back onto that asset will read.
+   */
+  sourceAssetId?: string
   /**
    * The files that go beside the content, for a document one string cannot hold. An image keeps
    * one PNG per layer: the pixels live on the GPU, never in the state, so `content` can only

@@ -9,7 +9,7 @@ import { assetIcon } from '@/helpers/workspaces'
 import { useShelf } from '@/hooks/use-shelf'
 import { getBridge } from '@/services/bridge'
 import { useProject } from '@/stores/project'
-import { openFromHome } from '@/home/open'
+import { openAsset } from '@/helpers/open-asset'
 import { recreate } from '@/home/recreate'
 import { ShelfTile } from '@/design/ShelfTile'
 import { ShelfPanel } from '@/panels/shared/ShelfPanel'
@@ -71,7 +71,7 @@ function Tile({ asset }: { asset: Asset }) {
       hint={generation?.prompt || asset.name}
       label={t('home.open', { name: asset.name })}
       tip={TIP_LEFT}
-      onClick={() => void openFromHome(asset)}
+      onClick={() => void openAsset(asset)}
       corner={
         generation && (
           <Recreate

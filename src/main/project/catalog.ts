@@ -172,6 +172,13 @@ const MIGRATIONS: readonly string[] = [
   -- not from its next import onwards.
   INSERT INTO assets_fts(rowid, name, prompt) SELECT rowid, name, prompt FROM assets;
   `,
+  `
+  -- « Is the file the explorer is showing one of ours? », asked on every double-click over a
+  -- folder that can hold thousands. Without it the equality is a full scan of \`assets\`, and the
+  -- gesture waits on it: the thread it blocks is the catalogue's own worker, not the main
+  -- process — \`catalog-client\` is what keeps that true, and it is why no window freezes here.
+  CREATE INDEX assets_path_idx ON assets(path);
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -602,6 +609,13 @@ export function createCatalog(driver: SqliteDriver): Catalog {
       if (query.location) {
         conditions.push('location = ?')
         params.push(query.location)
+      }
+
+      // What the explorer asks before it hands a file to the system: a row filed at this exact
+      // path, or none. Both sides spell it with `/` — see `relativePathFor`.
+      if (query.path) {
+        conditions.push('path = ?')
+        params.push(query.path)
       }
 
       if (query.syncStatus) {

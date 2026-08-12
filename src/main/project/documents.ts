@@ -276,7 +276,13 @@ export function createDocumentFiles({ projectPath, now }: DocumentFilesDeps): Do
       // hand must not send a document to an editor that cannot open it.
       if (envelope.kind !== kind) return null
 
-      return { id: basename(entry, extname(entry)), kind, title: envelope.title, workspace }
+      return {
+        id: basename(entry, extname(entry)),
+        kind,
+        title: envelope.title,
+        workspace,
+        ...(envelope.sourceAssetId ? { sourceAssetId: envelope.sourceAssetId } : {}),
+      }
     } catch {
       // One unreadable document must not cost the user the listing of all the others.
       return null

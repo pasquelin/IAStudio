@@ -1,10 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
+import { workspaceOfType } from '@shared/domain/asset-kind'
 import { kindForWorkspace } from '@shared/domain/document'
-import { installDocument } from '@/stores/document-fixtures'
-import { useDocuments } from '@/stores/documents'
 import { WORKSPACES } from './workspaces'
-import { ASSET_INTENTS, defaultIntent, intentsFor } from './asset-intents'
+import { ASSET_INTENTS, editorIntent, intentsFor } from './asset-intents'
 
 const picture = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset_1',
@@ -69,9 +68,9 @@ describe('where an asset can be sent', () => {
     }
   })
 
-  // The order IS the cascade a double-click follows; the montage takes every kind, so anything
-  // more specific has to be considered before it is.
-  it('weighs the take and the sky before the montage', () => {
+  // The order is the MENU's, and the montage takes every kind: a row that answers for everything
+  // reads last, or it reads as the answer.
+  it('lists the take and the sky before the montage', () => {
     const catchAll = ASSET_INTENTS.findIndex(intent => intent.id === 'video.clip')
     const before = ASSET_INTENTS.slice(0, catchAll).map(intent => intent.id)
 
@@ -81,41 +80,31 @@ describe('where an asset can be sent', () => {
   })
 })
 
-describe('what a double-click settles on', () => {
-  beforeEach(() => {
-    useDocuments.setState({ documents: {}, activeId: null })
+describe('where an asset is edited', () => {
+  // The guard on the deduction: an editor is read off `workspaceOfType`, so a kind whose own
+  // space takes nothing of it would answer null — and a double-click on it would say nothing.
+  it('names an editor for every kind there is', () => {
+    for (const type of ASSET_TYPES) {
+      const intent = editorIntent(picture({ type }))
+
+      expect(intent).not.toBeNull()
+      expect(intent?.workspace).toBe(workspaceOfType(type))
+    }
   })
 
-  it('finds nowhere to send an asset when no document is in front', () => {
-    expect(defaultIntent(picture())).toBeNull()
+  it('edits a picture in Images, whatever else would take it', () => {
+    expect(editorIntent(picture())?.id).toBe('image.layer')
   })
 
-  it('lays a picture on the image tab that is in front', () => {
-    installDocument('img-1', 'image')
-
-    expect(defaultIntent(picture())?.id).toBe('image.layer')
+  // The two kinds a plain image shares its destinations with are edited in their own space,
+  // which is the whole difference between editing an asset and placing one.
+  it('edits a texture in Textures and a sky in Skyboxes', () => {
+    expect(editorIntent(picture({ type: 'texture' }))?.id).toBe('textures.channel')
+    expect(editorIntent(picture({ type: 'skybox' }))?.id).toBe('skyboxes.source')
   })
 
-  // `placeAsset` refuses an asset with no file behind it. A `ready` that only counted open tabs
-  // would settle here anyway, and the double-click would do nothing at all.
-  it('refuses the layer for a picture the cloud still holds', () => {
-    installDocument('img-1', 'image')
-
-    expect(defaultIntent(picture({ location: 'cloud' }))).toBeNull()
-  })
-
-  // The montage used to answer yes whatever was open, which put it in front of the texture
-  // channel for every asset — a destination the table listed and no gesture could reach.
-  it('reaches the texture channel, which the montage used to hide', () => {
-    installDocument('tex-1', 'textures')
-
-    expect(defaultIntent(picture())?.id).toBe('textures.channel')
-  })
-
-  it('sends anything to the montage when a sequence is in front', () => {
-    installDocument('seq-1', 'video')
-
-    expect(defaultIntent(picture())?.id).toBe('video.clip')
-    expect(defaultIntent(picture({ type: 'mesh' }))?.id).toBe('video.clip')
+  it('edits a take in Audio and a mesh in 3D', () => {
+    expect(editorIntent(picture({ type: 'audio' }))?.id).toBe('audio.take')
+    expect(editorIntent(picture({ type: 'mesh' }))?.id).toBe('3d.mesh')
   })
 })

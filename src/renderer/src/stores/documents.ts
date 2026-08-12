@@ -47,8 +47,17 @@ type DocumentsState = {
    * listing that came back says a document is nowhere.
    */
   refresh: () => Promise<boolean>
-  /** `null` when the workspace has no editable document kind yet. */
-  create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
+  /**
+   * `null` when the workspace has no editable document kind yet.
+   *
+   * `of` is what opening an asset passes: the two fields travel together because a tab named
+   * after an asset it is not linked to would be a title that lies. Without it the document is
+   * numbered, which is what the rail's plus button and the home want.
+   */
+  create: (
+    workspace: WorkspaceId,
+    of?: { title: string; sourceAssetId: string },
+  ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
    * Takes in a document the folder holds but no tab shows yet — what the Explorer hands over
@@ -70,11 +79,6 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
   return id !== null && state.documents[id]?.kind === kind ? id : null
 }
 
-/** What kind of document is in front, or `null` when none is. */
-export function activeKind(state: DocumentsSlice): DocumentKind | null {
-  return (state.activeId !== null && state.documents[state.activeId]?.kind) || null
-}
-
 /**
  * A document of a kind, preferring the one in front.
  *
@@ -90,6 +94,25 @@ export function documentOfKind(
   if (front?.kind === kind) return front
 
   return Object.values(state.documents).find(document => document.kind === kind) ?? null
+}
+
+/**
+ * The document already editing an asset, open or merely on disk, or `null` when none is.
+ *
+ * What keeps a double-click idempotent: opening the same asset twice must come back to its tab
+ * rather than open a second one onto the same file — two tabs of one document are two histories
+ * of it, and the second save writes over the first.
+ *
+ * `stored` as well as `documents`, and that is the half that matters most: a document saved for
+ * an asset and then CLOSED lives only in the folder listing, and reading the open tabs alone
+ * would make the gesture build a second document beside the work it was meant to reopen.
+ */
+export function documentForAsset(
+  state: Pick<DocumentsState, 'documents' | 'stored'>,
+  assetId: string,
+): DocumentDescriptor | null {
+  const isIt = (document: DocumentDescriptor): boolean => document.sourceAssetId === assetId
+  return Object.values(state.documents).find(isIt) ?? state.stored.find(isIt) ?? null
 }
 
 /**
@@ -209,23 +232,21 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     return found !== null
   },
 
-  create: async workspace => {
+  create: async (workspace, of) => {
     const kind = kindForWorkspace(workspace)
     if (!kind) return null
 
-    // Numbered against the folder as much as against the open tabs: a document saved and then
-    // closed still holds its name, and counting only what is open hands that name out twice.
-    const stored = (await listed()) ?? []
-    const taken = new Set([
-      ...stored.filter(document => document.workspace === workspace).map(document => document.id),
-      ...documentsIn(get(), workspace).map(document => document.id),
-    ])
+    // The listing FIRST, so that reading the store and writing to it happen in one synchronous
+    // run. An await between the two makes concurrent creations blind to each other: both read a
+    // store neither has written to yet, and two tabs open called « Sans titre 1 ».
+    const stored = of ? [] : ((await listed()) ?? [])
 
     const document: DocumentDescriptor = {
       id: newId(),
       kind,
       workspace,
-      title: i18next.t('documents.untitled', { n: taken.size + 1 }),
+      title: of ? of.title : untitled(stored, get(), workspace),
+      ...(of ? { sourceAssetId: of.sourceAssetId } : {}),
     }
 
     // Nothing is written yet, and nothing should be: a document appears in the folder when it
@@ -262,6 +283,37 @@ const generations = { relist: 0, refresh: 0 }
 
 /** The listing `relist` has in flight, shared by whoever asks while it is still travelling. */
 let listing: Promise<DocumentDescriptor[] | null> | null = null
+
+/**
+ * The next free name for a blank document — « Sans titre 3 ».
+ *
+ * Numbered against the folder as much as against the open tabs: a document saved and then closed
+ * still holds its name, and counting only what is open hands that name out twice.
+ *
+ * Only the BLANK ones count. A document opened for an asset carries the asset's name and skips
+ * this entirely — counting it would make the first untitled document of a space « Sans titre 4 »
+ * because three pictures had been opened before it.
+ *
+ * Synchronous, and the listing is handed in rather than read here: its caller has to write to the
+ * store in the same run it reads it, and an await inside would put a gap between the two.
+ */
+function untitled(
+  stored: readonly DocumentDescriptor[],
+  state: Pick<DocumentsState, 'documents'>,
+  workspace: WorkspaceId,
+): string {
+  const blank = (document: DocumentDescriptor): boolean =>
+    document.workspace === workspace && document.sourceAssetId === undefined
+
+  const taken = new Set([
+    ...stored.filter(blank).map(document => document.id),
+    ...documentsIn(state, workspace)
+      .filter(blank)
+      .map(document => document.id),
+  ])
+
+  return i18next.t('documents.untitled', { n: taken.size + 1 })
+}
 
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that

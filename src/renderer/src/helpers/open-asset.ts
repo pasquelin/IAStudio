@@ -1,20 +1,61 @@
 import type { Asset } from '@shared/domain/asset'
+import { openDocument } from '@/app/dockview-api'
 import { reportFailure } from '@/services/diagnostics'
-import { defaultIntent } from './asset-intents'
+import { documentForAsset, useDocuments } from '@/stores/documents'
+import { useLayouts } from '@/stores/layouts'
+import { useProject } from '@/stores/project'
+import { editorIntent } from './asset-intents'
 
 /**
- * What opening an asset does — double-click or Enter; the cascade itself is `ASSET_INTENTS`.
+ * What opening an asset does — double-click or Enter: a tab of its own, in the space that edits
+ * its kind. The context menu and the drag keep the destinations of `ASSET_INTENTS`, which serve
+ * the document already open; this gesture serves the asset.
  *
- * A refusal is said out loud. The same double-click worked over one tab and did nothing at all
- * over another, without a word either way, which is what made the gesture untrustworthy: the
- * right-click menu lists the destinations, but only for whoever thinks to open it.
+ * It never reads the tab in front, deliberately. Doing so made one gesture mean two things —
+ * a picture became a layer over an image tab and a sky over a skybox one — and neither was
+ * "open this asset". A rule with no exception is the only one a hand can learn.
+ *
+ * A refusal is said out loud, as it has to be: the same double-click worked over one tab and did
+ * nothing at all over another, without a word either way.
  */
-export function openAsset(asset: Asset): Promise<void> {
-  const intent = defaultIntent(asset)
-  if (!intent) {
-    reportFailure('assets.open', asset.name, new Error('no destination'))
-    return Promise.resolve()
+export async function openAsset(asset: Asset): Promise<void> {
+  const already = documentForAsset(useDocuments.getState(), asset.id)
+  // Back to its own tab rather than a second one onto the same asset: two tabs of one document
+  // are two histories of it, and the second save writes over the first.
+  if (already) {
+    useLayouts.getState().setActiveWorkspace(already.workspace)
+    return openDocument(already)
   }
 
-  return intent.run(asset)
+  const intent = editorIntent(asset)
+  // `takes` before anything is made: an editor that would refuse the asset must say so rather
+  // than leave an empty tab standing where a refusal belonged.
+  if (!intent?.takes(asset)) {
+    return reportFailure('assets.open', asset.name, new Error('no destination'))
+  }
+
+  // Every editor loads its subject from the file behind it — `assetUrl` resolves an id against
+  // the catalogue, and one the cloud still holds answers 404. `takes` cannot see this for the
+  // kinds whose destination has no picture guard, so the gesture asks it once, for all of them.
+  if (asset.location !== 'local') {
+    return reportFailure('assets.open', asset.name, new Error('not on disk'))
+  }
+
+  // A document is a file in a project folder, so without one there is nowhere to write it —
+  // `create` alone would post a descriptor for a tab that can never be saved.
+  if (!useProject.getState().project) {
+    return reportFailure('assets.open', asset.name, new Error('no project'))
+  }
+
+  const created = await useDocuments
+    .getState()
+    .create(intent.workspace, { title: asset.name, sourceAssetId: asset.id })
+
+  if (!created) return reportFailure('assets.open', asset.name, new Error('no document'))
+
+  // Before the panel is added, and not left to `openDocument`: it only switches workspace when
+  // the document belongs to another one, so an asset opened from the home onto the workspace
+  // last mounted would land on a Dockview api whose DocumentArea the home has unmounted.
+  useLayouts.getState().setActiveWorkspace(intent.workspace)
+  await intent.into(created.id, asset)
 }

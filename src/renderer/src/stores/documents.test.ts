@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { documentsIn, panelIds, useDocuments } from './documents'
+import { documentForAsset, documentsIn, panelIds, useDocuments } from './documents'
 import { showPanels } from './layout-fixtures'
 import { useLayouts } from './layouts'
 
@@ -158,6 +158,34 @@ describe('documents store', () => {
     expect(created?.kind).toBe('texture')
   })
 
+  /**
+   * The numbering counts blank documents, and an asset-opened one carries the asset's name. Left
+   * in the tally, three pictures opened from the shelf made the FIRST untitled document of the
+   * space « Sans titre 4 ».
+   */
+  it('does not count asset-opened documents when numbering a blank one', async () => {
+    const { create } = useDocuments.getState()
+    const first = await create('image')
+    await create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_1' })
+    await create('image', { title: 'Gemini 3.2', sourceAssetId: 'asset_2' })
+
+    const second = await create('image')
+    expect(second?.title).not.toBe(first?.title)
+    // The third blank one, had the two assets counted, would have been numbered 5.
+    expect((await create('image'))?.title).toContain('3')
+  })
+
+  /**
+   * Both creations await the same in-flight listing, so a state read BEFORE that await hands
+   * them the same number — two tabs called « Sans titre 1 », indistinguishable everywhere.
+   */
+  it('numbers two creations in flight apart', async () => {
+    const { create } = useDocuments.getState()
+    const [one, other] = await Promise.all([create('image'), create('image')])
+
+    expect(one?.title).not.toBe(other?.title)
+  })
+
   it('numbers untitled documents per workspace', async () => {
     const { create } = useDocuments.getState()
     const first = await create('3d')
@@ -168,6 +196,26 @@ describe('documents store', () => {
     // Numbering restarts per workspace: an image document is not "Untitled 3" because the
     // 3D workspace already holds two.
     expect(other?.title).toBe(first?.title)
+  })
+
+  it('names a document after the asset it was opened for, rather than numbering it', async () => {
+    const created = await useDocuments
+      .getState()
+      .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
+
+    expect(created?.title).toBe('Gemini 3.1')
+    expect(created?.sourceAssetId).toBe('asset_42')
+  })
+
+  // Two assets may share a name, and the numbering is not the answer: it counts untitled
+  // documents. What tells the two tabs apart is the link, which is what comes back to one.
+  it('leaves two documents opened for homonymous assets under the same title', async () => {
+    const { create } = useDocuments.getState()
+    const first = await create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_1' })
+    const second = await create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_2' })
+
+    expect(second?.title).toBe(first?.title)
+    expect(second?.id).not.toBe(first?.id)
   })
 
   it('gives every document its own id', async () => {
@@ -189,6 +237,61 @@ describe('documents store', () => {
     await create('image')
 
     expect(documentsIn(useDocuments.getState(), '3d')).toHaveLength(1)
+  })
+})
+
+describe('documentForAsset', () => {
+  beforeEach(() => {
+    useDocuments.setState({ documents: {}, activeId: null })
+    installFakeBridge()
+  })
+
+  it('finds the tab already editing an asset', async () => {
+    const created = await useDocuments
+      .getState()
+      .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')?.id).toBe(created?.id)
+  })
+
+  // A document of the right kind is not a document of this asset: answering with one would send
+  // the asset into a tab that already edits another, which is the whole confusion this replaces.
+  it('answers nothing for an asset no tab is editing', async () => {
+    await useDocuments.getState().create('image')
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')).toBeNull()
+  })
+
+  /**
+   * The document saved for an asset and then closed lives only in the folder listing. Reading
+   * the open tabs alone made the gesture build a second document beside the work it meant to
+   * reopen — one asset, two files, and the first reachable only by hunting for it.
+   */
+  it('finds the document saved for an asset once its tab is closed', () => {
+    const saved: DocumentDescriptor = {
+      id: 'from-disk',
+      kind: 'image',
+      title: 'Poster',
+      workspace: 'image',
+      sourceAssetId: 'asset_42',
+    }
+    useDocuments.setState({ documents: {}, stored: [saved] })
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')?.id).toBe('from-disk')
+  })
+
+  // The open one wins: it is the descriptor a tab has been renaming, and the listing is a snapshot.
+  it('prefers the open tab over the listing it also appears in', async () => {
+    const open = await useDocuments
+      .getState()
+      .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
+    useDocuments.setState({
+      stored: [
+        { id: 'stale', kind: 'image', title: 'Old', workspace: 'image', sourceAssetId: 'asset_42' },
+      ],
+    })
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')?.id).toBe(open?.id)
   })
 })
 

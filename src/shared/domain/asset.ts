@@ -352,6 +352,14 @@ export type AssetQuery = {
   types?: readonly AssetType[]
   tags?: string[]
   text?: string
+  /**
+   * The asset filed at exactly this path, relative to the project — how the explorer asks
+   * whether a file it is showing is one of ours.
+   *
+   * Exact, not a prefix: the question is « is this file an asset », and the folder walked by the
+   * explorer spells its paths the way `relativePathFor` writes them — `/` on every platform.
+   */
+  path?: string
   /** Narrows to one side of the library, or to what still has to move between them. */
   location?: AssetLocation
   syncStatus?: SyncStatus

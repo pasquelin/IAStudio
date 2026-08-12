@@ -75,6 +75,8 @@ const assetQuery = z.object({
   types: z.array(z.custom<AssetType>(isAssetType)).max(ASSET_TYPES.length).optional(),
   tags: z.array(z.string().min(1)).max(32).optional(),
   text: z.string().max(200).optional(),
+  // The same shape the explorer's own channel is held to: it is the surface that asks this.
+  path: folderPath.optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),
@@ -161,7 +163,29 @@ const MAX_CONTENT_BYTES = 256 * 1024 * 1024
 
 const content = z.string().max(MAX_CONTENT_BYTES)
 
-const documentDraft = z.object({ title, content })
+/**
+ * The files that go beside the content — one PNG per layer of an image document.
+ *
+ * `isPartName` is the guard that matters and it lives where the file is written; this only
+ * bounds what crosses. Without this field the schema STRIPPED every part in silence, and
+ * `storeFolder` then replaced the document folder with a manifest and nothing else: a save
+ * threw away the pixels it was called to keep.
+ */
+const MAX_PART_BYTES = 512 * 1024 * 1024
+
+const documentPart = z.object({
+  name: z.string().min(1).max(255),
+  data: z.string().max(MAX_PART_BYTES),
+})
+
+const documentDraft = z.object({
+  title,
+  content,
+  parts: z.array(documentPart).max(1024).optional(),
+  // The asset this document edits. Same reason as `parts`: a field the schema does not name is
+  // a field the renderer writes and the disk never sees.
+  sourceAssetId: assetId.optional(),
+})
 
 /** A title on its way into a dialog. Capped like the one a draft carries, and for the same reason. */
 export function parseDocumentTitle(value: unknown): string {
@@ -179,6 +203,9 @@ const documentEnvelope = z.object({
   kind: documentKind,
   title,
   updatedAt: z.string().min(1),
+  // Absent on every document written before assets could be opened, and on every document that
+  // edits none — so an absent field means "not linked" rather than a file to migrate.
+  sourceAssetId: z.string().min(1).optional(),
 })
 
 /** A document file is user territory, like the manifest: hand-edited, truncated, or older. */
