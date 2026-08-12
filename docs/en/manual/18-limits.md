@@ -322,13 +322,16 @@ The clip drops onto a track and keeps its duration, but the monitor says "This c
 shown" in place of the picture. The studio does not convert them: see
 [The Video workspace](10-video-workspace.md#when-a-clip-cannot-be-shown).
 
-### The file is not copied
+### The file is not copied — on import
 
-The studio creates a **link** to your file, where it sits. Moving or deleting the original breaks the
-link.
+On import, the studio creates a **link** to your file, where it sits. Moving or deleting the
+original breaks the link.
 
 That is not a defect but a choice: copying multi-gigabyte rushes into every project would fill your
 disk for nothing.
+
+**Editing one, however, brings it into the project** — and your original file is not touched. See
+[Assets](07-assets.md).
 
 ---
 

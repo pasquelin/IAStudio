@@ -319,10 +319,10 @@ The **Import media** button, on the shelf's title line.
 > nowhere to be found. `.obj`, `.fbx` and HDRIs (`.hdr`) cannot be imported yet, and an imported
 > `.exr` is catalogued as an image, not as a sky. See [What does not exist yet](18-limits.md).
 
-### The file is not copied
+### The file is not copied — on import
 
-**Important.** The studio does not copy your file into the project: it creates a **link** to where
-it sits.
+**Important.** On import, the studio does not copy your file into the project: it creates a
+**link** to where it sits.
 
 Two consequences:
 
@@ -333,6 +333,15 @@ Two consequences:
 
 If you have to take a project elsewhere, take the media it points at too — or copy them into the
 project folder yourself before importing them.
+
+**But EDITING one brings it into the project.** A linked medium you retouch and then save — `⌘S`
+on an image, **Apply** on a sound take — is written into the project folder, and it is that copy
+the studio shows everywhere afterwards: the shelf, the scene, the inspector. The link is replaced
+by a real file, and **Show in the file manager** now leads there.
+
+**The file you pointed at is not touched.** It stays where it is, in the state you left it in:
+writing into a folder you merely showed the studio is a different act from editing an asset. If
+you meant to change the original, do it in the tool that made it.
 
 ### What happens during an import
 

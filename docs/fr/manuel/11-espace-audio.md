@@ -120,7 +120,7 @@ Ce n’est qu’au moment où vous le demandez explicitement que quelque chose e
 
 | Bouton | Ce qu’il fait |
 |---|---|
-| **Appliquer** | **réécrit l’asset** avec vos modifications. L’original est remplacé |
+| **Appliquer** | **réécrit l’asset** avec vos modifications. L’original est remplacé — sauf s’il s’agit d’un [média lié](07-assets.md), qui entre alors dans le projet sans que votre fichier soit touché |
 | **Enregistrer comme nouveau** | crée un **nouvel asset** à côté, nommé « *(édité)* » |
 
 > **En cas de doute, prenez « Enregistrer comme nouveau ».** Vous gardez l’original, et vous
