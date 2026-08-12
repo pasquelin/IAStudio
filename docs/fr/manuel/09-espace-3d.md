@@ -372,8 +372,9 @@ ranger disparaîtrait de l’écran, et on le croirait perdu.
 
 ## Dupliquer, copier, coller
 
-Les quatre raccourcis que vous connaissez déjà. **Dupliquer** a sa ligne dans **Édition** ;
-les trois autres n'en ont pas, et la raison mérite d'être dite.
+Les quatre raccourcis que vous connaissez déjà. **Dupliquer** a sa ligne dans **Édition** ; les
+lignes *Couper*, *Copier* et *Coller* que vous y verrez plus haut **ne sont pas celles de la
+scène**, et la raison mérite d'être dite.
 
 | Geste | Raccourci | Ce qu’il fait |
 |---|---|---|
