@@ -456,7 +456,7 @@ models chained together, already assembled.**
 
 > **Not necessarily in the workspace you launched it from.** An App makes what it makes: a chain
 > started from 3D may drop a picture into the Image shelf. That is why the **activity journal**
-> names the shelves — "2 assets generated in Image, 3D". Look there rather than hunting through
+> names the shelves — "2 assets generated in Image and 3D". Look there rather than hunting through
 > the shelf of the workspace you happen to be in.
 
 **The price shows on the button** as soon as the form is complete, just as for a generation.
