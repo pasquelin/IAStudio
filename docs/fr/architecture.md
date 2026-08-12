@@ -789,6 +789,13 @@ vivent dans `:root`, redéclarées sous `:root[data-density='compact']`. **Aucun
 hexadécimale dans un composant**, et aucun pixel là où une gauge existe — cette unique
 redéclaration est ce qui fait que le réglage de densité atteint tous les contrôles d’un coup.
 
+**Un cas y échappe, et il a un outil dédié : le code qui a besoin de la gauge en NOMBRE.**
+L’estimateur d’une liste virtualisée en est le seul exemple aujourd’hui — il prend un nombre,
+alors que la ligne qu’il estime est dimensionnée par une classe. Écrire ce nombre en dur, c’est
+n’avoir raison qu’à une densité : `useGauge` (`hooks/useGauge.ts`) relit la gauge et suit le
+réglage, par le même signal que les moteurs — `onPaletteChange`. **Ce n’est pas une porte de
+sortie pour écrire des pixels en JavaScript** : hors de ce cas, la classe reste la seule voie.
+
 Les surfaces sont **plus sombres** que le châssis, à l’inverse de l’habitude web. C’est cette
 inversion qui donne la lecture « panneaux posés sur un cadre ».
 

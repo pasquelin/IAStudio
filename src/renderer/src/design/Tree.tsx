@@ -3,9 +3,11 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
+import { useGauge } from '@/hooks/useGauge'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { LIST_ROW_HEIGHT, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
+import { useRemeasure } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
@@ -125,14 +127,21 @@ export function Tree<T extends TreeNode>({
     [nodes, expandedIds, expandable],
   )
 
+  // Read back from the gauge the row below is sized by: a constant is only right at one density.
+  const rowHeight = useGauge('--sc-control', LIST_ROW_HEIGHT)
+
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroller.current,
-    estimateSize: () => LIST_ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 8,
   })
+
+  // The virtualizer memoizes on `count`, never on the estimator: without this the rows keep the
+  // height the previous density gave them.
+  useRemeasure(virtualizer, rowHeight)
 
   const focusRow = (index: number): void => {
     const bounded = Math.max(0, Math.min(index, rows.length - 1))

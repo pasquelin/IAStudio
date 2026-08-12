@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
@@ -64,6 +65,54 @@ function renderTree(
     />,
   )
 }
+
+describe('Tree, the height it estimates', () => {
+  afterEach(() => {
+    document.documentElement.style.removeProperty('--sc-control')
+    refreshPalette()
+  })
+
+  /**
+   * The rows are drawn at `h-(--sc-control)`, so a constant estimate is only right at one
+   * density. Estimating 28 against a compact row of 24 does not misplace anything — each row is
+   * positioned at the offset the virtualizer computed — it reserves four pixels nobody paints:
+   * a dead band between every pair of rows, and 4×N of empty scroll under the last one.
+   */
+  it('estimates the gauge its rows are drawn at, not a constant', () => {
+    document.documentElement.style.setProperty('--sc-control', '24px')
+    refreshPalette()
+
+    renderTree()
+
+    // Three visible rows: `scene` expanded over `a` and `b`.
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '72px' })
+  })
+
+  it('falls back to the shipped height when no gauge is declared', () => {
+    renderTree()
+
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '84px' })
+  })
+
+  /**
+   * Switching density while the tree is on screen. Re-reading the gauge is not enough: the
+   * virtualizer memoizes on `count` and friends, never on the estimator, so its cached
+   * measurements survive a re-render and the rows keep the height the density just left.
+   */
+  it('re-measures when the density changes under a mounted tree', () => {
+    document.documentElement.style.setProperty('--sc-control', '28px')
+    refreshPalette()
+    renderTree()
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '84px' })
+
+    act(() => {
+      document.documentElement.style.setProperty('--sc-control', '24px')
+      refreshPalette()
+    })
+
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '72px' })
+  })
+})
 
 describe('Tree', () => {
   it('renders one row per visible node', () => {
