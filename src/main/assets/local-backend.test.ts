@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -271,8 +271,54 @@ describe('local backend', () => {
     await expect(readFile(join(root, 'assets/aud/asset_3.mp3'))).rejects.toThrow()
   })
 
-  it('refuses to replace an asset it has no file for', async () => {
+  it('refuses to replace an asset the catalogue does not hold', async () => {
     await expect(backend.replaceBytes('nobody', new Uint8Array([1]), '.wav')).rejects.toThrow()
+  })
+
+  /**
+   * A LINKED asset keeps its bytes where the user left them and its `path` empty on purpose, so
+   * editing one had no file to replace and was refused outright — a picture dragged in from the
+   * desktop could never be saved back. The edit lands in the project instead, and the row gains
+   * the `path` it did not have.
+   */
+  it('brings a linked asset into the project rather than refusing the edit', async () => {
+    await catalog.add({
+      id: 'asset_5',
+      name: 'Capture',
+      type: 'image',
+      location: 'local',
+      sourcePath: '/Users/someone/Desktop/Capture.png',
+      tags: [],
+      createdAt: '2026-08-12T08:00:00.000Z',
+    })
+
+    const replaced = await backend.replaceBytes('asset_5', new Uint8Array([4, 5]), '.png')
+
+    expect(replaced).toMatchObject({
+      id: 'asset_5',
+      name: 'Capture',
+      path: 'assets/img/asset_5.png',
+    })
+    expect(await readFile(join(root, 'assets/img/asset_5.png'))).toEqual(Buffer.from([4, 5]))
+  })
+
+  // The file the user only pointed at is not ours to delete: the studio owns the copy it wrote.
+  it('leaves the linked file where it was', async () => {
+    const linked = join(root, 'outside.png')
+    await writeFile(linked, Buffer.from([9]))
+    await catalog.add({
+      id: 'asset_6',
+      name: 'Capture',
+      type: 'image',
+      location: 'local',
+      sourcePath: linked,
+      tags: [],
+      createdAt: '2026-08-12T08:00:00.000Z',
+    })
+
+    await backend.replaceBytes('asset_6', new Uint8Array([4, 5]), '.png')
+
+    expect(await readFile(linked)).toEqual(Buffer.from([9]))
   })
 
   it('records what the new bytes say about themselves, and drops the stale waveform', async () => {
