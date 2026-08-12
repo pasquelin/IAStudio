@@ -1,6 +1,3 @@
-import { clamp } from '@shared/numeric'
-import type { Rect } from './canvas-state'
-
 /**
  * The shape tool's arithmetic, kept out of the engine so it can be tested: jsdom has no WebGL
  * context, but a rectangle's corners are just numbers.
@@ -8,7 +5,9 @@ import type { Rect } from './canvas-state'
  * Every kind is derived from the same two points — where the drag started and where the pointer
  * is now — so one gesture describes them all.
  */
-export type Point = { x: number; y: number }
+import { clamp } from '@shared/numeric'
+import type { Rect } from './canvas-state'
+import type { Point } from '../core/geometry'
 
 export type ShapeKind = 'rectangle' | 'line' | 'arrow' | 'ellipse' | 'polygon' | 'star'
 

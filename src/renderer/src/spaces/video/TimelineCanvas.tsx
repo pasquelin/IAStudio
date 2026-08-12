@@ -15,9 +15,9 @@ import {
   cursorAt,
   hitTest,
   xToTime,
-  type Point,
   type Viewport,
 } from '@/engines/timeline/timeline-geometry'
+import type { Point, Size } from '@/engines/core/geometry'
 import {
   clipUnderPlayhead,
   sequenceDuration,
@@ -32,7 +32,6 @@ import {
   scrollBy,
   zoomAt,
   ZOOM_STEP,
-  type Size,
 } from '@/engines/timeline/viewport'
 import { assetIdFromDrag, carriesAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'

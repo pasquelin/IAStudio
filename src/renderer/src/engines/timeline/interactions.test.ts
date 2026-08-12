@@ -7,7 +7,8 @@ import {
   type Gesture,
   type MediaExtents,
 } from './interactions'
-import { RULER_HEIGHT, type Point, type Viewport } from './timeline-geometry'
+import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import type { Point } from '../core/geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import { DEFAULT_TRACK_HEIGHT, trackOfClip, type Clip, type SequenceState } from './timeline-state'
 

@@ -1,6 +1,7 @@
 import type { Command } from '../core/history'
 import { moveClip, setClipFade, trimClip, type MediaExtent } from './commands'
-import { hitTest, rowAt, snap, xToTime, type Point, type Viewport } from './timeline-geometry'
+import { hitTest, rowAt, snap, xToTime, type Viewport } from './timeline-geometry'
+import type { Point } from '../core/geometry'
 import { scrollBy } from './viewport'
 import {
   clipById,

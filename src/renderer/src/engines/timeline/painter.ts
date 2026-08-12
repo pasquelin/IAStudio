@@ -13,9 +13,8 @@ import {
 import { paintRuler as paintBandRuler } from './ruler'
 import { clipEnd, type Clip, type SequenceState, type Track, type Us } from './timeline-state'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
+import type { Size } from '../core/geometry'
 import { waveformColumns, type WaveColumn } from './waveform'
-
-export type Size = { width: number; height: number }
 
 /** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
 const POSTER_RATIO = 16 / 9

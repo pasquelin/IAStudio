@@ -6,7 +6,7 @@ import {
 import { DEFAULT_FONT, readFontRef, type FontRef } from '@shared/domain/font'
 import { isRecord } from '@shared/guards'
 import { clamp } from '@shared/numeric'
-import type { Point } from './shape-geometry'
+import type { Point } from '../core/geometry'
 
 /**
  * An image document, as plain data. It holds no Pixi object on purpose: an engine is rebuilt

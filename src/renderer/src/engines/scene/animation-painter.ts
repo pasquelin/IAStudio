@@ -11,9 +11,8 @@ import { placeRows } from '../timeline/band'
 import { paintRuler, type RulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timeline-geometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
+import type { Size } from '../core/geometry'
 import type { AnimationRow } from './animation-rows'
-
-export type Size = { width: number; height: number }
 
 const RULER_FAMILY = 'ui-monospace, monospace'
 

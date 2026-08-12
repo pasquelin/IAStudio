@@ -23,7 +23,7 @@ import { DEFAULT_BRUSH } from './brush'
 import { PixelPatches } from './PixelPatches'
 import type { CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
-import type { Point } from './shape-geometry'
+import type { Point } from '../core/geometry'
 import { RULER_SIZE } from './CanvasOverlay'
 import { DEFAULT_VIEW, toDocument, type Viewport } from './viewport'
 

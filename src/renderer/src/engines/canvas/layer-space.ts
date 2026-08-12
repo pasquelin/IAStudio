@@ -1,6 +1,5 @@
 import type { Rect, Transform } from './canvas-state'
-import type { Point } from './shape-geometry'
-import type { Size } from './viewport'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * A 2D affine map, as the six numbers Pixi's `Matrix` takes. Kept as plain data rather than as a

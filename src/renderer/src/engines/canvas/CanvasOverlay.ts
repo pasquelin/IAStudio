@@ -3,8 +3,9 @@ import type { Guide, Rect } from './canvas-state'
 import { cropChrome } from './crop'
 import { gripRects, HANDLE_IDS, outlinePoints, type Corners, type HandleId } from './handles'
 import { rulerStep, tickLabel, ticks } from './rulers'
-import { shapeOutline, type Point, type ShapeGeometry } from './shape-geometry'
-import { crisp, toScreen, visibleRect, type Size, type Viewport } from './viewport'
+import { shapeOutline, type ShapeGeometry } from './shape-geometry'
+import { crisp, toScreen, visibleRect, type Viewport } from './viewport'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * The 2D overlay drawn above the Pixi canvas. It holds no pixel of the document: everything here

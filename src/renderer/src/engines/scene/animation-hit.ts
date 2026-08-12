@@ -9,9 +9,8 @@ import { snapToFrame, type Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
 import { RULER_HEIGHT, timeToX, xToTime, type Viewport } from '../timeline/timeline-geometry'
 import { keysOf, reachOf } from './animation-painter'
+import type { Point } from '../core/geometry'
 import type { AnimationRow } from './animation-rows'
-
-export type Point = { x: number; y: number }
 
 export type AnimationHit =
   /** The graduated strip: pressing there scrubs, wherever the pointer then goes. */

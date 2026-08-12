@@ -5,9 +5,9 @@ import {
   nextZoom,
   previousZoom,
   zoomCanvasAt,
-  type Size,
   type Viewport,
 } from '@/engines/canvas/viewport'
+import type { Size } from '@/engines/core/geometry'
 import { clearGuides as clearGuidesCommand } from '@/engines/canvas/commands'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { hostOf, useCanvasViews, canvasViewOf, type ViewToggle } from '@/stores/canvas-views'

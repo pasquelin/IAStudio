@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { paintTimeline } from './painter'
+import type { Point } from '../core/geometry'
 import { refreshPalette } from '../core/palette'
 import {
   CLIP_INSET,
@@ -27,8 +28,6 @@ const stateWith = (clips: Clip[]): SequenceState =>
   sequenceWith([trackFixture('V1', 'video', clips)])
 
 type Rect = { x: number; y: number; width: number; height: number }
-
-type Point = { x: number; y: number }
 
 /** Records what was painted, so the test asserts on rectangles and labels, not on pixels. */
 function spyContext() {
