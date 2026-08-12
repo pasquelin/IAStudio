@@ -241,6 +241,7 @@
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
+    "projectNotRevealed": "Le dossier du projet est introuvable",
     "fileNotOpened": "Ce fichier n’a pas pu être ouvert par le système",
     "fileNotMoved": "Ce fichier n’a pas pu être déplacé — ce nom est peut-être déjà pris dans le dossier d’arrivée",
     "fileNotRenamed": "Ce fichier n’a pas pu être renommé — ce nom est peut-être déjà pris",
@@ -287,6 +288,8 @@
       "document.save": "L’enregistrement du document a échoué",
       "assets.reveal": "Le fichier n’a pas pu être montré",
       "assets.open": "Cet asset n’a nulle part où aller",
+      "project.reveal": "Le dossier du projet n’a pas pu être montré",
+      "project.forget": "Le projet n’a pas pu être retiré de la liste",
       "font.face": "Une police n’a pas pu être chargée",
       "graph.node": "Un nœud n’a pas pu être créé",
       "graph.run": "Le graphe n’a pas pu être lancé",
@@ -2124,7 +2127,15 @@
       "settingsHelp": "Clés, apparence, limites de génération et raccourcis."
     },
     "projects": {
-      "none": "Créer votre premier projet"
+      "none": "Créer votre premier projet",
+      "rowHint": "{{path}} — ouvert {{when}}",
+      "openedAt": "Ouvert {{when}}",
+      "actions": "Actions du projet",
+      "actionsHint": "Montrer le dossier de ce projet, ou le retirer de la liste.",
+      "reveal": "Révéler dans le dossier",
+      "revealHint": "Ouvre le dossier du système de fichiers, sur ce projet",
+      "forget": "Retirer de la liste",
+      "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient"
     },
     "creations": {
       "recreate": "En refaire une avec {{model}}",

@@ -53,6 +53,69 @@ describe('a menu at the pointer', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  /**
+   * The portal moves the menu in the DOM and NOT in the React tree, which is the tree React
+   * bubbles synthetic events through. So a menu raised over a row of a list is still, to React,
+   * inside that row — and the list it sits in opens what a single click lands on.
+   */
+  describe('kept apart from what it was raised over', () => {
+    function Host({ spy }: { spy: (kind: string) => void }) {
+      const [at, setAt] = useState<{ x: number; y: number } | null>(null)
+
+      return (
+        <div
+          onClick={() => spy('click')}
+          onPointerDown={() => spy('pointerdown')}
+          onContextMenu={event => {
+            event.preventDefault()
+            spy('contextmenu')
+            setAt({ x: event.clientX, y: event.clientY })
+          }}
+        >
+          <button type="button">The row underneath</button>
+          {at && (
+            <ContextMenu at={at} onClose={vi.fn()}>
+              <MenuRow
+                label="Remove from the list"
+                icon={mdiContentCut}
+                tip={HINT_RIGHT('Takes the row off the shelf')}
+                onSelect={() => undefined}
+              />
+            </ContextMenu>
+          )}
+        </div>
+      )
+    }
+
+    const raise = (spy: (kind: string) => void): HTMLElement => {
+      render(<Host spy={spy} />)
+      fireEvent.contextMenu(screen.getByRole('button', { name: 'The row underneath' }))
+      return screen.getByRole('menuitem', { name: 'Remove from the list' })
+    }
+
+    it('does not press what lies under it when a row is chosen', async () => {
+      const spy = vi.fn()
+      const row = raise(spy)
+      spy.mockClear()
+
+      await userEvent.click(row)
+
+      expect(spy).not.toHaveBeenCalled()
+    })
+
+    // Right-clicking an open menu is how one tries to dismiss it. Left to bubble, the host takes
+    // it for a fresh right-click and re-anchors the menu under the pointer instead.
+    it('does not re-open itself on a right-click inside it', () => {
+      const spy = vi.fn()
+      const row = raise(spy)
+      spy.mockClear()
+
+      fireEvent.contextMenu(row)
+
+      expect(spy).not.toHaveBeenCalled()
+    })
+  })
+
   it('closes on Escape', () => {
     const { onClose } = open()
 

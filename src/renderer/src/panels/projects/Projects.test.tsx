@@ -70,12 +70,38 @@ describe('the projects panel', () => {
     expect(openPicked).toHaveBeenCalled()
   })
 
-  // A hand-edited settings file reaches here: the row must still name the project.
-  it('falls back to the path when the date cannot be read', () => {
-    setRecent([{ ...SUMMER, openedAt: 'not-a-date' }])
+  /**
+   * The row opens on a SINGLE click, and its menu offers to forget the project. Left to bubble,
+   * the press that opens the menu would open the very project it is about to drop — tearing down
+   * every panel and reloading a catalogue on the way.
+   */
+  it('does not open the project when its menu button is pressed', async () => {
+    const open = vi.fn(() => Promise.resolve(true))
+    useProject.setState({ open })
     render(<Projects />)
 
-    expect(screen.getByText('/projects/summer')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Retirer de la liste' })).toBeInTheDocument()
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The same trap through the right-click, which is the gesture that has no button to hide
+   * behind: `ContextMenu` portals to `body`, but React bubbles synthetic events through the
+   * REACT tree, so the press was reaching the cell and opening the project being dropped.
+   */
+  it('does not open the project when a row of its context menu is chosen', async () => {
+    const open = vi.fn(() => Promise.resolve(true))
+    const forget = vi.fn(() => Promise.resolve())
+    useProject.setState({ open, forget })
+    render(<Projects />)
+
+    await userEvent.pointer({ target: screen.getByText('Summer'), keys: '[MouseRight]' })
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Retirer de la liste' }))
+
+    expect(forget).toHaveBeenCalledWith('/projects/summer')
+    expect(open).not.toHaveBeenCalled()
   })
 })
 

@@ -37,6 +37,14 @@ type ProjectState = {
    * catalogue to land on the folder already in front.
    */
   open: (path: string) => Promise<boolean>
+  /**
+   * Drops a folder from the shelf of recent projects. The folder itself is untouched: this is a
+   * list of shortcuts, and forgetting one is not a gesture on someone's disk.
+   *
+   * Reopening the project puts it back, which is what makes the row's menu safe to offer without
+   * a confirmation.
+   */
+  forget: (path: string) => Promise<void>
 }
 
 /**
@@ -147,12 +155,27 @@ export const useProject = create<ProjectState>()((set, get) => ({
     } catch {
       // Forgotten here rather than by whoever clicked: an opening can fail from anywhere, and a
       // list that only forgets when the home asked it keeps offering a folder nothing can open.
-      const recent = useSettings.getState().settings.storage.recentProjects
-      await bridge.settings.write({
-        storage: { recentProjects: withoutRecentProject(recent, path) },
-      })
+      // Swallowed on the way: this is already the failing path, and `open` answers `false`
+      // whether or not the shelf could be written.
+      await get()
+        .forget(path)
+        .catch(() => {})
       return false
     }
+  },
+
+  forget: async path => {
+    const { settings, write } = useSettings.getState()
+
+    await write({
+      storage: {
+        recentProjects: withoutRecentProject(settings.storage.recentProjects, path),
+        // Cleared with it when it named this folder: `startup: 'lastProject'` is the default, so
+        // the next launch would reopen the project, record it through `withRecentProject`, and
+        // put the row the user just removed back at the top without a word.
+        ...(settings.storage.lastProject === path ? { lastProject: undefined } : {}),
+      },
+    })
   },
 
   openPicked: async () => {

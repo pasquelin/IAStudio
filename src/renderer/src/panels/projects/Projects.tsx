@@ -1,12 +1,12 @@
-import { mdiFolderOutline, mdiFolderOpenOutline } from '@mdi/js'
+import { mdiFolderOpenOutline } from '@mdi/js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { RecentProject } from '@shared/domain/project'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
-import { Row } from '@/design/Row'
-import { timeAgo } from '@/helpers/relative-time'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
+import { ProjectRow } from './ProjectRow'
 
 /** A recent project needs an `id` to be listed; its folder is already one. */
 type Card = RecentProject & { id: string }
@@ -22,10 +22,12 @@ type Card = RecentProject & { id: string }
  * A single click opens, which is what `onOpen` announces: a project is not a thing to select.
  */
 export function Projects() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const recent = useSettings(state => state.settings.storage.recentProjects)
 
-  const items: Card[] = recent.map(entry => ({ ...entry, id: entry.path }))
+  // Held, or every render of the home hands each row a project of a new identity and `ProjectRow`
+  // is memoised against nothing.
+  const items: Card[] = useMemo(() => recent.map(entry => ({ ...entry, id: entry.path })), [recent])
 
   return (
     <Collection
@@ -35,14 +37,7 @@ export function Projects() {
       // A folder gone from the disk drops out on its own: the store forgets it wherever an
       // opening fails, not only where it was clicked.
       onOpen={project => void useProject.getState().open(project.path)}
-      renderRow={project => (
-        <Row
-          icon={mdiFolderOutline}
-          title={project.name}
-          // The path when the date is unreadable — a hand-edited settings file reaches here.
-          subtitle={timeAgo(project.openedAt, i18n.language) ?? project.path}
-        />
-      )}
+      renderRow={project => <ProjectRow project={project} />}
       // The one screen a first launch actually shows. It says what to do rather than that there
       // is nothing: a studio with no project yet is a studio about to have one.
       empty={

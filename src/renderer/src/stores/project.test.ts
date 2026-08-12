@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useProject } from './project'
+import { useSettings } from './settings'
 
 const closeOrphanTabs = vi.hoisted(() => vi.fn())
 vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
@@ -119,5 +121,110 @@ describe('picking a folder in the dialog', () => {
     await useProject.getState().openPicked()
 
     expect(open).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * The shelf is a list of shortcuts, and dropping one is not a gesture on anyone's disk: the
+ * folder stays, and reopening the project puts the row back. That is what makes the home's menu
+ * safe to offer with no confirmation behind it.
+ */
+describe('dropping a project from the shelf', () => {
+  const SUMMER: RecentProject = {
+    path: '/projects/summer',
+    name: 'Summer',
+    openedAt: '2026-08-10T09:00:00.000Z',
+  }
+  const WINTER: RecentProject = {
+    path: '/projects/winter',
+    name: 'Winter',
+    openedAt: '2026-08-09T09:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: {
+          ...state.settings.storage,
+          recentProjects: [SUMMER, WINTER],
+          lastProject: undefined,
+        },
+      },
+    }))
+  })
+
+  it('writes the shelf back without the folder it was handed', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().forget(SUMMER.path)
+
+    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
+  })
+
+  /**
+   * `startup: 'lastProject'` is the default, so a removal that left the pointer behind was undone
+   * by the next launch: the project reopened, `withRecentProject` put it back at the top, and
+   * nothing anywhere said why the row had returned.
+   */
+  it('clears the startup pointer when it named the folder being dropped', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, lastProject: SUMMER.path },
+      },
+    }))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().forget(SUMMER.path)
+
+    expect(write).toHaveBeenCalledWith({
+      storage: { recentProjects: [WINTER], lastProject: undefined },
+    })
+  })
+
+  // …and leaves it alone otherwise: dropping one project must not stop another from reopening.
+  it('leaves the startup pointer alone when it names another project', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, lastProject: WINTER.path },
+      },
+    }))
+    installFakeBridge({ settings: { write } })
+
+    await useProject.getState().forget(SUMMER.path)
+
+    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
+  })
+
+  // The row says "removes it from this list only". Nothing may reach the folder itself.
+  it('touches nothing on the disk', async () => {
+    const trashFile = vi.fn(() => Promise.resolve(true))
+    installFakeBridge({ project: { trashFile } })
+
+    await useProject.getState().forget(SUMMER.path)
+
+    expect(trashFile).not.toHaveBeenCalled()
+  })
+
+  it('says nothing and does nothing with no bridge to write through', async () => {
+    vi.unstubAllGlobals()
+
+    await expect(useProject.getState().forget(SUMMER.path)).resolves.toBeUndefined()
+  })
+
+  // The same forgetting, reached from the other side: an opening can fail anywhere, and a list
+  // that only forgets when the home asked it keeps offering a folder nothing can open.
+  it('forgets a folder that will not open, wherever the click came from', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({ settings: { write } })
+
+    await expect(useProject.getState().open(SUMMER.path)).resolves.toBe(false)
+
+    expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
   })
 })
