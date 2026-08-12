@@ -355,7 +355,7 @@ const FALLBACK_COLORS: OverlayColors = {
   rulerBackground: '#3c3f44',
   rulerText: '#91959b',
   rulerTick: '#91959b',
-  accent: '#3574f0',
+  accent: '#346ef2',
   marqueeLight: '#ffffff',
   marqueeDark: '#000000',
   scrim: '#00000099',

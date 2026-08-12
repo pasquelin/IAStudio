@@ -56,6 +56,8 @@ describe('the light theme', () => {
     // theme, as `muted` and `accent-ink` already do.
     const shared = [
       '--color-accent',
+      // Shared because the fill it sits on is: one blue in both themes, one ink written on it.
+      '--color-accent-content',
       '--color-monitor',
       '--color-marquee-light',
       '--color-marquee-dark',

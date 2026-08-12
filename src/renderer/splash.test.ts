@@ -16,7 +16,7 @@ const FROM_TOKENS = [
   { value: '#dfe1e5', token: '--color-text' },
   { value: '#91959b', token: '--color-muted' },
   { value: '#34363a', token: '--color-border' },
-  { value: '#336fe6', token: '--color-accent' },
+  { value: '#346ef2', token: '--color-accent' },
 ]
 
 function reference(): string {

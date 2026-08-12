@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AA_NORMAL_TEXT, contrastRatio } from '@shared/domain/color'
+import { AA_NON_TEXT, AA_NORMAL_TEXT, contrastRatio } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
 import { WRITTEN_SOURCES } from './test-harness'
@@ -200,6 +200,29 @@ describe('the contrast of the inks', () => {
       expect(
         contrastRatio(tokens['accent-content'] ?? '', tokens.accent ?? ''),
       ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+    }
+  })
+
+  /**
+   * The accent as a CONTROL against the surfaces it is drawn over — the focus ring, first of
+   * all, which `FOCUS_RING` paints in this very colour and which is the only thing saying where
+   * the keyboard is. WCAG 1.4.11 asks 3:1 of it, and that is the second bar the accent is pinned
+   * between: white on it needs the blue dark, the ring needs it light.
+   *
+   * **Written because the pair went unmeasured and broke.** On 2026-08-12 the accent was darkened
+   * to #336fe6 for the ink alone, taking the ring to 2.997 — under the bar, and recorded in a
+   * comment as "3.00, exactly the 3:1", because two decimals hid the crossing. A ratio that a
+   * human rounds is a ratio no one is holding.
+   */
+  it('stays visible as a control on every surface it is drawn over, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      const failing = READING_SURFACES.filter(
+        surface => contrastRatio(tokens.accent ?? '', tokens[surface] ?? '') < AA_NON_TEXT,
+      )
+
+      expect(failing).toEqual([])
     }
   })
 

@@ -100,8 +100,16 @@ export function MenuRow({
         {icon && <UiIcon path={icon} size={14} />}
       </span>
       <span className="flex-1 truncate">{label}</span>
+      {/* `group-focus-within` beside the hover: the keyboard walks these rows without a pointer
+          anywhere near them, and the shortcut was the one thing left at `muted` on the accent —
+          1.33:1 there, 2.03 on a picked yellow. The row's own fill already follows both. */}
       {shortcut && (
-        <span className="text-muted text-mini group-hover:text-accent-content shrink-0 pl-3">
+        <span
+          className={cn(
+            'text-muted text-mini shrink-0 pl-3',
+            'group-hover:text-accent-content group-focus-within:text-accent-content',
+          )}
+        >
           {shortcut}
         </span>
       )}
