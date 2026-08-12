@@ -653,11 +653,8 @@ describe('project handlers', () => {
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 
-    /**
-     * `replaces` overwrites, which is ⌘S on a tab opened from the shelf. It was refused while a
-     * pixel layer was reloaded from the asset it names — the flattened stack came back into the
-     * layer it was flattened from — and `CanvasEngine` now leaves a restored layer alone.
-     */
+    // `replaces` overwrites, which is ⌘S on a tab opened from the shelf. Why it was refused for
+    // a while is written where the rule lives: `LayerSurface.fromDocument`.
     it('overwrites the asset the caller names', async () => {
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets }))

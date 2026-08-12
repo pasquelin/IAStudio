@@ -193,21 +193,19 @@ describe('saveDocument', () => {
 
   /**
    * ⌘S writes the document and then the asset it was opened from — the second half of the
-   * gesture, which the shelf is what shows.
-   *
-   * It waited on the engine. A document's base layer carries `source: <assetId>`, and
-   * `CanvasEngine` reloaded any pixel layer that had one from `assetUrl(source)` when its surface
-   * was born: the flattened stack written back came home into the layer it was flattened from,
-   * with the upper layers drawn over it again at every reopen. The engine now leaves a layer
-   * whose pixels the document restored alone, so the write is safe.
+   * gesture, and what the shelf shows. It waited on `LayerSurface.fromDocument`, which is where
+   * the loop it would otherwise close is written out.
    */
   describe('the asset behind the document', () => {
     const PNG = 'iVBORw0KGgo='
 
-    const openLinkedImage = async (): Promise<{ documentId: string; release: () => void }> => {
+    /** `sourceAssetId` absent is the blank document of the `+` button: it edits no asset. */
+    const openImage = async (
+      sourceAssetId?: string,
+    ): Promise<{ documentId: string; release: () => void }> => {
       const created = await useDocuments
         .getState()
-        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+        .create('image', sourceAssetId ? { title: 'Gemini 3.1', sourceAssetId } : undefined)
       if (!created) throw new Error('expected a document')
 
       useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
@@ -239,12 +237,14 @@ describe('saveDocument', () => {
         },
         assets: { savePicture },
       })
-      const { documentId, release } = await openLinkedImage()
+      const { documentId, release } = await openImage('asset-1')
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Calque')))
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
+      // `name` rides along because the channel is shaped like `saveAudio`'s; an overwrite keeps
+      // the name the asset already has, so this is not ⌘S renaming anything.
       expect(savePicture).toHaveBeenCalledWith({
         replaces: 'asset-1',
         name: 'Gemini 3.1',
@@ -264,7 +264,7 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve() },
         assets: { savePicture },
       })
-      const { documentId, release } = await openLinkedImage()
+      const { documentId, release } = await openImage('asset-1')
 
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
@@ -279,17 +279,10 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve() },
         assets: { savePicture },
       })
-      const created = await useDocuments.getState().create('image')
-      if (!created) throw new Error('expected a document')
-      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
-      const release = holdCanvas(created.id, () => ({
-        pixelSnapshots: () => Promise.resolve([]),
-        restoreSnapshot: () => Promise.resolve(),
-        snapshot: () => Promise.resolve(PNG),
-      }))
-      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Calque')))
+      const { documentId, release } = await openImage()
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Calque')))
 
-      await expect(saveDocument(created.id)).resolves.toBe(true)
+      await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
       expect(savePicture).not.toHaveBeenCalled()
@@ -305,7 +298,7 @@ describe('saveDocument', () => {
         documents: { write: () => Promise.resolve() },
         assets: { savePicture: () => Promise.reject(new Error('disk full')) },
       })
-      const { documentId, release } = await openLinkedImage()
+      const { documentId, release } = await openImage('asset-1')
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Calque')))
 
       await expect(saveDocument(documentId)).resolves.toBe(true)

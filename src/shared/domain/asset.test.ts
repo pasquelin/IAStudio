@@ -31,19 +31,6 @@ describe('asset URLs', () => {
     expect(assetIdFromUrl(assetUrl('asset/1 2'))).toBe('asset/1 2')
   })
 
-  /**
-   * The whole point of the version: a rewritten asset keeps its id, so without it the browser
-   * serves the bitmap it already decoded and an overwrite looks like a gesture that did nothing.
-   */
-  it('carries a version that a rewrite moves', () => {
-    expect(assetUrl('asset_1', '2026-08-12T09:00:00.000Z')).not.toBe(assetUrl('asset_1'))
-  })
-
-  // The resolver reads the path, so the id has to survive whatever the query carries.
-  it('still names the same asset once versioned', () => {
-    expect(assetIdFromUrl(assetUrl('asset/1 2', '2026-08-12T09:00:00.000Z'))).toBe('asset/1 2')
-  })
-
   it('refuses a URL that is not ours to serve', () => {
     expect(assetIdFromUrl('https://cdn.cloud.scenario.com/asset_1')).toBeNull()
     expect(assetIdFromUrl('scenario://other/asset_1')).toBeNull()
@@ -63,11 +50,21 @@ describe('which assets have a picture to show', () => {
     expect(posterUrl(asset({ type: 'image', path: 'assets/img/one.png' }))).not.toBeNull()
   })
 
-  // A tile is what a ⌘S over the asset has to repaint, and the stamp is what tells it to.
+  /**
+   * A tile is what a ⌘S over the asset has to repaint, and the stamp is what tells it to: the id
+   * does not move, so an unstamped URL hands back the bitmap the browser already decoded.
+   */
   it('stamps the poster with the moment the file last changed', () => {
     const rewritten = asset({ type: 'image', localChangedAt: '2026-08-12T09:00:00.000Z' })
 
-    expect(posterUrl(rewritten)).toBe(assetUrl('asset-1', '2026-08-12T09:00:00.000Z'))
+    expect(posterUrl(rewritten)).not.toBe(assetUrl('asset-1'))
+  })
+
+  // The resolver reads the path, so the id has to survive whatever the stamp puts in the query.
+  it('still names the same asset once stamped', () => {
+    const rewritten = asset({ type: 'image', localChangedAt: '2026-08-12T09:00:00.000Z' })
+
+    expect(assetIdFromUrl(posterUrl(rewritten) ?? '')).toBe('asset-1')
   })
 
   it('offers none for what does not decode as a picture', () => {

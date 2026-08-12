@@ -436,24 +436,29 @@ export function hostedIdFromUrl(url: string, host: string): string | null {
  *
  * The renderer still never handles a file path — the main process resolves the id against the
  * catalogue when it serves the scheme.
- *
- * `version` is what makes a REWRITTEN asset repaint. An id alone is a stable URL, so a browser
- * that already decoded it keeps the bitmap it has, and a ⌘S that overwrote the file would look
- * like a gesture that did nothing. It is dropped by the resolver, which reads the path only —
- * pass `localChangedAt`, which is the stamp a rewrite moves.
  */
-export function assetUrl(assetId: string, version?: string): string {
-  const url = hostedUrl(ASSET_HOST, assetId)
-  return version === undefined ? url : `${url}?v=${encodeURIComponent(version)}`
+export function assetUrl(assetId: string): string {
+  return hostedUrl(ASSET_HOST, assetId)
 }
 
 /**
  * The still that stands for an asset — in a browser cell, on a timeline clip. Only pictures
  * have one today: a video's poster frame is produced at ingest, which is still to come, and
  * decoding one here would open a hardware decoder per visible clip.
+ *
+ * Stamped with `localChangedAt`, and that is what makes a REWRITTEN asset repaint: an id alone
+ * is a stable URL, so a browser that already decoded it keeps the bitmap it holds and a ⌘S that
+ * overwrote the file would look like a gesture that did nothing. The stamp rides in the query,
+ * which the resolver never reads — it resolves the path.
+ *
+ * It lives HERE rather than on `assetUrl` because this is the one that knows the asset: a
+ * version parameter on `assetUrl` would widen a pure function for its fourteen callers to serve
+ * three, and `.map(assetUrl)` would then quietly pass the index as the version.
  */
 export function posterUrl(asset: Asset): string | null {
-  return isLocalPicture(asset) ? assetUrl(asset.id, asset.localChangedAt) : null
+  if (!isLocalPicture(asset)) return null
+  const url = assetUrl(asset.id)
+  return asset.localChangedAt ? `${url}?v=${encodeURIComponent(asset.localChangedAt)}` : url
 }
 
 /**

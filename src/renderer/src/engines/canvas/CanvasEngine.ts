@@ -209,6 +209,20 @@ export const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
 type LayerSurface = {
   texture: RenderTexture
   sprite: Sprite
+  /**
+   * Whether the document filled this surface itself, which makes it the authority over the
+   * layer's `source`.
+   *
+   * `source` names where a pixel layer CAME FROM, and the engine reloads it when the surface is
+   * born. That is right until the document carries the layer's own pixels — and ⌘S is what makes
+   * the two diverge: it writes the flattened stack into that very asset, so a reload would fold
+   * the whole picture back into the layer it came from and draw the upper layers over it a
+   * second time, further at every open.
+   *
+   * Held on the surface rather than in a set beside it, so it dies with the texture: a layer
+   * that comes back on ⌘Z has no pixels left and its asset is the only picture to draw.
+   */
+  fromDocument: boolean
 }
 
 /** Which of a layer's two surfaces the brush writes on. */
@@ -427,13 +441,6 @@ export class CanvasEngine {
    * disk almost always arrives before the layer it fills.
    */
   private readonly pendingSnapshots = new Map<string, string>()
-
-  /**
-   * The surfaces whose pixels came from the document rather than from an asset. Claimed the
-   * moment the document offers them, before any await: what it carries is the truth for that
-   * layer, and `syncLayer` must not race a reload of `source` against it.
-   */
-  private readonly documentPixels = new Set<string>()
   private readonly stamp = new Graphics()
   /**
    * What softens the edge of a dab. One instance, tuned when the brush changes and never per
@@ -713,9 +720,6 @@ export class CanvasEngine {
       // The texture lives on the GPU: dropping the reference is not enough.
       surface.texture.destroy(true)
       this.surfaces.delete(id)
-      // The document's pixels went with the texture, so the claim on them goes too: a layer that
-      // comes back on ⌘Z has nothing left to draw but the asset it names.
-      this.documentPixels.delete(id)
     }
 
     for (const [id, container] of this.groups) {
@@ -1321,16 +1325,17 @@ export class CanvasEngine {
   async restoreSnapshot(pixels: LayerPixels): Promise<void> {
     const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
     const url = `data:image/png;base64,${pixels.data}`
-    // Before the await below, and before the surface even exists: whichever of the two arrives
-    // first, the reload of `source` has to find the claim already standing.
-    this.documentPixels.add(key)
+    const surface = this.surfaces.get(key)
 
     // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
-    // on a missing one, and a document would reopen with its stack and none of its pixels.
-    if (!this.surfaces.has(key)) {
+    // on a missing one, and a document would reopen with its stack and none of its pixels. The
+    // claim below is then made by the drain, which runs before the surface can reload `source`.
+    if (!surface) {
       this.pendingSnapshots.set(key, url)
       return
     }
+    // Marked before the await, so a reload of `source` in flight cannot slip in front of it.
+    surface.fromDocument = true
     // Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
     // and compositing over that would bring a hole the user erased back as white rather than as
     // the transparency the file holds.
@@ -1338,10 +1343,11 @@ export class CanvasEngine {
   }
 
   /** Pours the saved pixels held for a surface into it, once it exists. */
-  private drainPendingSnapshot(key: string): void {
+  private drainPendingSnapshot(key: string, surface: LayerSurface): void {
     const url = this.pendingSnapshots.get(key)
     if (!url) return
     this.pendingSnapshots.delete(key)
+    surface.fromDocument = true
     // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
     void this.loadInto(key, url, true).catch(() => undefined)
   }
@@ -1422,7 +1428,6 @@ export class CanvasEngine {
     this.clips.clear()
     this.pendingMaskFills.clear()
     this.pendingSnapshots.clear()
-    this.documentPixels.clear()
     for (const picture of this.pendingPictures.values()) picture.destroy(true)
     this.pendingPictures.clear()
     this.wordings.clear()
@@ -1527,18 +1532,11 @@ export class CanvasEngine {
 
     // A flatten composed its picture before the command ran; this is the surface it was for.
     if (born) this.drainPendingPicture(layer.id, surface)
-    if (born) this.drainPendingSnapshot(layer.id)
+    // Before the reload below, which is the whole ordering: the drain is what claims the surface.
+    if (born) this.drainPendingSnapshot(layer.id, surface)
 
-    // Not when the document carries the layer's own pixels: `source` then names an asset the
-    // layer was made FROM, not what it holds now — and once ⌘S writes the flattened stack back
-    // into that asset, redrawing it here would fold the whole picture into the layer it came
-    // from, with the layers above it drawn over a second time at every open.
-    if (
-      born &&
-      layer.kind === 'pixel' &&
-      layer.source !== undefined &&
-      !this.documentPixels.has(layer.id)
-    ) {
+    // Never over pixels the document filled in — see `LayerSurface.fromDocument`.
+    if (born && layer.kind === 'pixel' && layer.source !== undefined && !surface.fromDocument) {
       // Unawaited: one unreadable asset must not take the rest of the document's reconciliation
       // down with it. The layer then lists in the panel and draws nothing, hence the report.
       void this.loadInto(layer.id, assetUrl(layer.source)).catch(error =>
@@ -1565,7 +1563,7 @@ export class CanvasEngine {
 
     this.place(mask.sprite, surfaceTransform(layer, true), mask.texture)
     if (bornMasked) this.drainPendingMask(layer.id, mask)
-    if (bornMasked) this.drainPendingSnapshot(maskKey(layer.id))
+    if (bornMasked) this.drainPendingSnapshot(maskKey(layer.id), mask)
   }
 
   /**
@@ -1639,7 +1637,7 @@ export class CanvasEngine {
       resolution: 1,
     })
     // Attached by `attach`, which is the only place that knows which container holds it.
-    const surface: LayerSurface = { texture, sprite: new Sprite(texture) }
+    const surface: LayerSurface = { texture, sprite: new Sprite(texture), fromDocument: false }
     this.surfaces.set(key, surface)
 
     if (fill !== undefined) this.fill(surface, fill)

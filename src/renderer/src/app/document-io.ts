@@ -44,19 +44,19 @@ type CapturedDraft = Omit<DocumentDraft, 'title'>
 /**
  * Where a baked document lands: over the asset it was opened from — ⌘S — or beside it — ⌘⇧S.
  *
- * Overwriting was impossible until the engine learned to leave a restored layer alone. A
- * document's base layer carries `source: <assetId>`, and `CanvasEngine` reloaded any pixel layer
- * that had one from `assetUrl(source)` when its surface was born: the flattened stack written
- * back into that asset came home into the layer it came from, with the upper layers drawn over
- * it a second time, and the document drifted further from itself at every save. The engine now
- * claims a surface whose pixels the document restored, so `source` names where the layer came
- * from and no longer what it holds.
+ * Overwriting is only safe because the engine leaves a layer whose pixels the document restored
+ * alone; `LayerSurface.fromDocument` holds that rule and the reason for it.
+ *
+ * Both fields optional, and both are sent flat, because `SaveAudioRequest` is shaped that way
+ * and two sibling channels saying the same thing differently is worse than a field that goes
+ * unread — see `name` below.
  */
 export type AssetTarget = {
   /** The asset to overwrite. Absent writes a new one instead. */
   replaces?: string
   /** The picture the new one was edited from. An overwrite keeps the filiation it already had. */
   derivedFrom?: string
+  /** Names a NEW asset. Ignored by an overwrite, which keeps the name the asset already has. */
   name: string
 }
 
@@ -67,13 +67,19 @@ export type AssetTarget = {
  */
 type DocumentIo = {
   /**
-   * What to write, and how to record that it was written.
+   * What to write, how to record that it was written, and whether there was anything to write.
    *
    * Asynchronous because an image's pixels live on the GPU and only come back through a promise.
    * **The mark is read synchronously, before the first `await`** — that is the whole property:
    * an edit made while the file is on its way to disk must not be counted as saved.
+   *
+   * `wasEdited` is read at that same instant, and it is here rather than at the caller for the
+   * same reason: `commit` clears the mark, so a caller asking afterwards always hears "no". It
+   * is what stops ⌘S on an untouched tab from rewriting the asset behind it.
    */
-  capture: (documentId: string) => Promise<{ draft: CapturedDraft; commit: () => void }>
+  capture: (
+    documentId: string,
+  ) => Promise<{ draft: CapturedDraft; commit: () => void; wasEdited: boolean }>
   install: (documentId: string, content: string, parts?: readonly DocumentPart[]) => void
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
@@ -126,6 +132,7 @@ function textDocumentIo<S>(
         // content, so the biggest of them is never decoded in the main process.
         draft: { content: JSON.stringify(toPayload(store.stateOf(current, documentId))) },
         commit: () => store.use.getState().markSaved(documentId, mark),
+        wasEdited: store.hasUnsavedWork(current, documentId),
       })
     },
     install: (documentId, content) => {
@@ -175,6 +182,7 @@ const IMAGE_IO: DocumentIo = {
     // Read before the first await, which is the whole reason `capture` may be asynchronous: an
     // edit made while the pixels are being extracted must not be counted as saved.
     const mark = canvasStore.markOf(canvases, documentId)
+    const wasEdited = canvasStore.hasUnsavedWork(canvases, documentId)
     const content = serializeCanvas(canvasOf(canvases, documentId))
 
     const host = canvasHost(documentId)
@@ -194,6 +202,7 @@ const IMAGE_IO: DocumentIo = {
     return {
       draft: { content, parts },
       commit: () => useCanvases.getState().markSaved(documentId, mark),
+      wasEdited,
     }
   },
   install: (documentId, content, parts = []) => {
@@ -314,12 +323,7 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   if (!savable) return false
   const { bridge, document, io } = savable
 
-  // Read BEFORE `capture`, whose `commit` clears the mark. An untouched tab must not have its
-  // asset rewritten: ⌘S on a `.jpg` nobody edited would replace it with a re-encoded PNG, and
-  // `replaceBytes` deletes the file the extension no longer names.
-  const edited = io.dirty(documentId)
-
-  const { draft, commit } = await io.capture(documentId)
+  const { draft, commit, wasEdited } = await io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, {
     ...draft,
     title: document.title,
@@ -329,7 +333,7 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   })
   commit()
 
-  await rewriteSourceAsset(document, io, edited)
+  await rewriteSourceAsset(document, io, wasEdited)
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist('own-write')
@@ -350,16 +354,20 @@ export async function saveDocument(documentId: string): Promise<boolean> {
 async function rewriteSourceAsset(
   document: DocumentDescriptor,
   io: DocumentIo,
-  edited: boolean,
+  wasEdited: boolean,
 ): Promise<void> {
   const source = document.sourceAssetId
-  if (!edited || !source || !io.writeAsset) return
+  if (!wasEdited || !source || !io.writeAsset) return
 
   try {
     await io.writeAsset(document.id, { replaces: source, name: document.title })
     // The tile still holds the bitmap it decoded: only a fresh `localChangedAt` moves the URL
     // `posterUrl` builds, and without it the overwrite looks like a gesture that did nothing.
-    await useAssets.getState().refresh()
+    //
+    // `invalidate`, like every other site that says the catalogue changed: `assets.search` is a
+    // synchronous SQLite query in the main process, and a held ⌘S would open one per keystroke
+    // on the path of a shortcut.
+    useAssets.getState().invalidate()
   } catch (error) {
     reportFailure('assets.save', document.title, error)
   }
