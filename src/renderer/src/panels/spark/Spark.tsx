@@ -6,7 +6,7 @@ import type { PromptSuggestion } from '@shared/domain/prompt-assist'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
-import { BUTTON_BASE } from '@/design/styles'
+import { BUTTON_BASE, NEUTRAL_SKIN } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { openGeneratorOn } from '@/helpers/generation'
@@ -88,15 +88,17 @@ function Idea({ suggestion, modelId }: IdeaProps) {
       type="button"
       {...TIP_RIGHT(t('home.spark.use', { prompt: suggestion.text }), false, suggestion.rationale)}
       onClick={() => openGeneratorOn('image', modelId, suggestion.parameters)}
-      // The docks' own button chrome, rather than a fourth hand-written copy of it — laid out
-      // from the top, since an idea is two lines of prose beside a glyph.
+      // The docks' own button chrome AND its neutral fill, rather than a copy of either — laid
+      // out from the top, since an idea is two lines of prose beside a glyph.
       className={cn(
         BUTTON_BASE,
-        'bg-surface hover:bg-elevated flex items-start justify-start gap-2 p-3 text-left',
+        NEUTRAL_SKIN,
+        'flex items-start justify-start gap-2 p-3 text-left',
       )}
     >
       <UiIcon path={mdiCreationOutline} size={16} className="text-create mt-px shrink-0" />
-      <span className="text-text text-xs leading-relaxed">{suggestion.text}</span>
+      {/* The ink comes from the skin above; only the size and the leading are this card's own. */}
+      <span className="text-xs leading-relaxed">{suggestion.text}</span>
     </button>
   )
 }

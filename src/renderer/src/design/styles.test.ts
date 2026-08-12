@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
+import { NEUTRAL_SKIN, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -113,5 +113,46 @@ describe('the row skin and the state it publishes', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The fill a button of the docks takes when it is not the primary action. Two sites reached it on
+ * their own — `Button`'s neutral variant and the idea card of `Spark` — and the second had written
+ * beside itself that it was avoiding a copy while writing one.
+ */
+describe('the neutral fill of a button', () => {
+  it('carries the fill, the ink on it, and what the pointer does', () => {
+    expect(NEUTRAL_SKIN).toContain('bg-surface')
+    expect(NEUTRAL_SKIN).toContain('text-text')
+    expect(NEUTRAL_SKIN).toContain('hover:bg-elevated')
+  })
+
+  /**
+   * Narrow on purpose, like its neighbour above: it refuses the literal re-copy of the FILL and
+   * its hover together, which is the shape both sites had. A site writing `hover:bg-elevated`
+   * over some other fill is a different question — `ToolButton` sits on `bg-transparent` and the
+   * carousel arrow on a shadow — and this rule deliberately leaves them alone.
+   */
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && /bg-surface[^'"`]*hover:bg-elevated/.test(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+    // And it refuses something: the exact string both sites carried before this batch.
+    expect(/bg-surface[^'"`]*hover:bg-elevated/.test("'bg-surface hover:bg-elevated flex'")).toBe(
+      true,
+    )
+  })
+
+  // The partner of the rule above: it stays green on a studio where nobody wears the constant,
+  // which is what a dead export looks like from here.
+  it('is worn by the two sites it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('NEUTRAL_SKIN'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(2)
   })
 })

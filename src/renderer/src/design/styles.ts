@@ -21,6 +21,20 @@ export const BUTTON_BASE = cn(
 )
 
 /**
+ * What a button of the docks is FILLED with when it is not the one action a surface exists for —
+ * the fill, the ink written on it, and what the pointer does to that fill.
+ *
+ * Apart from `BUTTON_BASE` because the two answer different questions: that one is the shape and
+ * the focus ring, this one is the colour. A site can want the chrome and not the fill — `Spark`'s
+ * idea card is two lines of prose beside a glyph, so it takes the fill and lays itself out from
+ * the top, where `Button` is one word centred at a control's height.
+ *
+ * The alternative was for that card to render a `Button` and override six of its geometry classes,
+ * which would have been a worse copy than the one this closes.
+ */
+export const NEUTRAL_SKIN = 'bg-surface text-text hover:bg-elevated'
+
+/**
  * The control language shared by the bars: same height token, so the density setting reaches
  * every one of them at once, and the same focus ring, so no bar ends up being the one control
  * a keyboard user cannot see.
