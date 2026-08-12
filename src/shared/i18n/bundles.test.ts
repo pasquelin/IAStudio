@@ -177,10 +177,17 @@ describe('the translation bundles', () => {
    *
    * The guard beside this one used to say English had no rule picking a side. It has one now, and
    * it is the side the bundle already took for its quotation marks — fifteen values wear `“ ”`.
+   *
+   * That side was named and left unguarded: seven `activity.*` values still wrote `"{{name}}"`
+   * where every French counterpart wore `« »`. And asking for a letter on both sides of the
+   * apostrophe let two more through — a plural possessive closing a sentence (`the other keys'.`)
+   * and one following an interpolation (`{{name}}'s`). The check reads the SIGN alone: neither
+   * ASCII mark carries a meaning here that its typographic form does not.
    */
-  it('types the English apostrophe the way it types its quotation marks', () => {
+  it('types English quotation marks and apostrophes, never their ASCII stand-ins', () => {
     for (const [key, text] of BUNDLES.en) {
-      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/\p{Letter}'\p{Letter}/u)
+      expect(text, `${key} uses a straight apostrophe`).not.toMatch(/'/)
+      expect(text, `${key} uses a straight quotation mark`).not.toMatch(/"/)
     }
   })
 
