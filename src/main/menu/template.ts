@@ -306,6 +306,24 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
 
+  /**
+   * What a scene does to what is selected, once the toolbar stopped drawing a button for each.
+   *
+   * Only these three, and the omission is deliberate: `scene.copy`, `scene.cut` and
+   * `scene.paste` stay on the bar. The rows above keep their NATIVE roles so a text field goes
+   * on copying, and a command row in their place would act on the scene even with the caret in
+   * a field — the menu path carries no `isTyping` guard, unlike the keyboard one.
+   */
+  const sceneEditItems: MenuItemConstructorOptions[] =
+    workspace === '3d'
+      ? [
+          { type: 'separator' },
+          commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
+          commandItem('scene.group', t.commands.sceneGroup.title),
+          commandItem('scene.delete', t.commands.sceneDelete.title),
+        ]
+      : []
+
   const editMenu: MenuItemConstructorOptions = {
     label: t.menu.edit,
     submenu: [
@@ -324,6 +342,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { ...roleItem('copy'), registerAccelerator: false },
       { ...roleItem('paste'), registerAccelerator: false },
       roleItem('selectAll'),
+      ...sceneEditItems,
     ],
   }
 

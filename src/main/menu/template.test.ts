@@ -294,6 +294,41 @@ describe('the Edit menu', () => {
   })
 
   /**
+   * The three gestures that left the 3D bar. Not the clipboard trio beside them: those keep the
+   * native roles so a text field goes on copying, and a command row would act on the scene with
+   * the caret in a field — the menu path carries no `isTyping` guard.
+   */
+  describe('the rows a scene adds', () => {
+    const editOf = (workspace: WorkspaceId | null): (string | undefined)[] =>
+      submenuOf(menuTemplate(options({ workspace })), 'Édition').map(item => item.label)
+
+    it('offers duplicate, group and delete in the 3D workspace alone', () => {
+      expect(editOf('3d')).toEqual(expect.arrayContaining(['Dupliquer', 'Grouper', 'Supprimer']))
+      expect(editOf('image')).not.toContain('Grouper')
+      expect(editOf(null)).not.toContain('Grouper')
+    })
+
+    it('leaves the clipboard to the platform, so a field goes on copying', () => {
+      const rows = submenuOf(menuTemplate(options({ workspace: '3d' })), 'Édition')
+      const clipboard = rows.filter(row => ['cut', 'copy', 'paste'].includes(row.role ?? ''))
+
+      expect(clipboard).toHaveLength(3)
+      expect(clipboard.every(row => row.click === undefined)).toBe(true)
+    })
+
+    it('fires the command the row names', () => {
+      const runCommand = vi.fn()
+      const rows = submenuOf(
+        menuTemplate(options({ workspace: '3d', actions: actions({ runCommand }) })),
+        'Édition',
+      )
+
+      activate(rows.find(row => row.label === 'Grouper'))
+      expect(runCommand).toHaveBeenCalledWith('scene.group')
+    })
+  })
+
+  /**
    * What the menu does when the focused window names no surface at all — the settings window,
    * the splash: the platform keeps the key rather than a command answering for a history the
    * menu cannot name.
