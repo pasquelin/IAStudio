@@ -635,7 +635,7 @@ is shown.
 | On a line's header | What it does |
 |---|---|
 | the chevron | **Show or hide the animated properties** |
-| **Key *(the name)*** | records the movement made since, on every property of that object. **The same button toggles**: where a key already stands, it lights up and reads **Remove *(the name)*'s key** |
+| **Key *(the name)*** | records the movement made since, on every property of that object. **The same button toggles**: where a key already stands, it lights up and reads **Remove *(the name)*’s key** |
 | **Mute** / **Solo** / **Lock** | the three switches a line carries, the same as in Video |
 | **Remove track *(the name)*** | on a property line, takes it away with its keys |
 
