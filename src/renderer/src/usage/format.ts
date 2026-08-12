@@ -48,17 +48,6 @@ export function formatDay(date: string, locale: string): string {
   ).format(parsed)
 }
 
-export function formatMoment(time: string, locale: string): string {
-  const parsed = new Date(time)
-  if (Number.isNaN(parsed.getTime())) return time
-
-  return kept(
-    DATES,
-    `moment:${locale}`,
-    () => new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'short' }),
-  ).format(parsed)
-}
-
 /**
  * The share one row holds of the largest row, as a percentage for a bar's width.
  *

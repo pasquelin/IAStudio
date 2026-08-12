@@ -4,6 +4,7 @@ import {
   BYTE_UNITS,
   formatBytes,
   formatDecimal,
+  formatMoment,
   formatPercent,
   kept,
   formatList,
@@ -147,5 +148,51 @@ describe('a list of names, joined by the language', () => {
   it('leaves a single name alone, and answers nothing for none', () => {
     expect(formatList(['Image'], 'fr', 'conjunction')).toBe('Image')
     expect(formatList([], 'fr', 'conjunction')).toBe('')
+  })
+})
+
+describe('formatMoment', () => {
+  /**
+   * It moved here from the usage window because the asset inspector was drawing the same thing
+   * its own way — `new Date(...).toLocaleString(language)`, which in English reads `8/12/2026`
+   * against this one's `8/12/26`. One shape for one thing, and the shape is the one already
+   * decided; the seconds go with it, which no reader of a creation date was counting.
+   */
+  it('writes a stamp the way the reader reads one', () => {
+    expect(formatMoment('2026-08-12T10:47:33Z', 'fr')).toMatch(/^12\/08\/2026/)
+    expect(formatMoment('2026-08-12T10:47:33Z', 'en-US')).toMatch(/^8\/12\/26/)
+  })
+
+  // The API is what supplies these, and a row missing its stamp still names what happened —
+  // which `Invalid Date`, translated, does not.
+  it('hands back what it cannot read', () => {
+    expect(formatMoment('not-a-date', 'fr')).toBe('not-a-date')
+    expect(formatMoment('', 'fr')).toBe('')
+  })
+
+  /**
+   * The whole reason it lives beside `kept`, and the assertion has to be the COUNT.
+   *
+   * This test compared two formatted strings at first, and a review pulled `kept` out of
+   * `formatMoment` without it going red: two throwaway formatters agree on their output, which
+   * is exactly what makes the defect invisible. A language no other test reaches, so the cache
+   * is cold when the count starts.
+   */
+  it('builds one formatter per language, however often it is called', () => {
+    // Delegating to the real one rather than replacing it: a bare spy on a native constructor
+    // hands `new` an object with no `format`, and the call under test dies before it counts.
+    // A `function` and not an arrow, which `new` cannot call at all.
+    const real = Intl.DateTimeFormat
+    const built = vi.fn(function (...args: ConstructorParameters<typeof Intl.DateTimeFormat>) {
+      return new real(...args)
+    })
+    const spy = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(built)
+
+    formatMoment('2026-08-12T10:47:33Z', 'de')
+    formatMoment('2026-08-12T11:00:00Z', 'de')
+    formatMoment('2026-08-12T11:00:00Z', 'de')
+
+    expect(built).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
   })
 })

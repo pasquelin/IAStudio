@@ -7,7 +7,7 @@ import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { ToolButton } from '@/design/ToolButton'
 import { formatDuration } from '@/engines/timeline/timecode'
-import { formatBytes } from '@/helpers/format'
+import { formatBytes, formatMoment } from '@/helpers/format'
 import { generationOf, openGeneratorOn } from '@/helpers/generation'
 import { TIP_LEFT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
@@ -60,7 +60,7 @@ export function AssetInspector({ asset }: { asset: Asset }) {
         )}
         <PropertyRow label={t('inspector.created')}>
           {/* The studio's language, not the machine's — the two differ. */}
-          {new Date(asset.createdAt).toLocaleString(i18n.language)}
+          {formatMoment(asset.createdAt, i18n.language)}
         </PropertyRow>
       </PropertyGroup>
 
