@@ -112,6 +112,26 @@ describe('UsageWindow', () => {
     expect(await screen.findByText(/Revoked/)).toBeInTheDocument()
   })
 
+  /*
+   * Two silent accounts are two things true at once, so the language joins them with "et" — not
+   * with the bare comma this line carried until the enumeration moved into `formatList`. Measured
+   * by a mutation harness: turning this one join into a disjunction reddened nothing before.
+   */
+  it('names several silent accounts the way the language joins them', async () => {
+    install(
+      report({
+        accounts: [],
+        silent: [
+          { accountId: 'acc-2', name: 'Revoked', failure: 'invalid-credentials' },
+          { accountId: 'acc-3', name: 'Expired', failure: 'invalid-credentials' },
+        ],
+      }),
+    )
+    render(<UsageWindow />)
+
+    expect(await screen.findByText(/Revoked et Expired/)).toBeInTheDocument()
+  })
+
   // The grid prices prepaid packs in tiers and says nothing about a subscription's own rate.
   it('calls the euro amount indicative whenever it shows one', async () => {
     install(report({ price: { perUnit: 0.01, currency: 'EUR' } }))
