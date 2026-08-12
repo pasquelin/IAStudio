@@ -173,17 +173,19 @@ describe('useNativeMenu', () => {
     expect(saveDocumentAs).not.toHaveBeenCalled()
   })
 
-  it('records a copy the project refused, rather than swallowing it', async () => {
-    saveDocumentAs.mockReturnValueOnce(Promise.reject(new Error('no project')))
+  /**
+   * `saveDocumentAs` journals its own failures under `assets.save` — the shelf the copy would
+   * have landed in — and answers false rather than rejecting. A second scope reported here would
+   * say the same failure twice, under a name that does not fit it.
+   */
+  it('leaves a refused copy to say so itself, without a second report', async () => {
+    saveDocumentAs.mockReturnValueOnce(Promise.resolve(false))
     const menu = captureCommand()
     renderHook(() => useNativeMenu())
 
     expect(() => menu.emit('document.saveAs')).not.toThrow()
-    await vi.waitFor(() =>
-      expect(menu.report).toHaveBeenCalledWith(
-        expect.objectContaining({ scope: 'document.save', message: expect.any(String) }),
-      ),
-    )
+
+    expect(menu.report).not.toHaveBeenCalled()
   })
 
   /**

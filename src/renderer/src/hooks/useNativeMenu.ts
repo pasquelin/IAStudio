@@ -41,13 +41,10 @@ function runCommand(command: CommandId): void {
     }
     case 'document.saveAs': {
       const documentId = useDocuments.getState().activeId
-      // The refusal is `saveDocumentAs`' to journal — a document that edits no asset has no copy
-      // to make, and it says so under the shelf the copy would have landed in.
-      if (documentId) {
-        void saveDocumentAs(documentId).catch(error =>
-          reportFailure('document.save', documentId, error),
-        )
-      }
+      // No `catch` here, unlike Save: `saveDocumentAs` journals its own failures under
+      // `assets.save` and answers false — the shelf the copy would have landed in is where a
+      // reader looks for it, and a second scope on the same failure would say it twice.
+      if (documentId) void saveDocumentAs(documentId)
       return
     }
     default:

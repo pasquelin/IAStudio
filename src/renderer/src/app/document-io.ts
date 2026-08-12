@@ -15,6 +15,7 @@ import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox } from '@/engines/skybox/skybox-state'
 import { EMPTY_SEQUENCE, parseSequence } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
+import type { StudioBridge } from '@shared/ipc'
 import { reportFailure } from '@/services/diagnostics'
 import i18next from 'i18next'
 import { closePanel, openDocument } from './dockview-api'
@@ -77,10 +78,9 @@ type DocumentIo = {
    * Answers `null` when there was nothing to bake yet — an engine whose GPU context is still
    * coming up, which is exactly when a ⌘S after switching workspace lands.
    *
-   * **Absent is the refusal, and it is a decision rather than an omission.** A scene is not a
-   * mesh, a montage renders in minutes, and a sky's adjustments are meant to stay undoable —
-   * none of the three has an asset its document could honestly overwrite. Reading that off the
-   * table is what keeps the rule out of an `if` somewhere else.
+   * **Absent means "not through ⌘S", and the four kinds that leave it out do so for two
+   * different reasons** — which is why each says so at its own line of `IO_BY_KIND` rather than
+   * here. Reading it off the table is what keeps the rule out of an `if` somewhere else.
    */
   writeAsset?: (documentId: string, target: AssetTarget) => Promise<Asset | null>
   /** Whether the document is already filled — a remount must not read over what is open. */
@@ -254,12 +254,19 @@ const withGraphRun = (io: DocumentIo): DocumentIo => ({
  */
 const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
+  // No `writeAsset`, and the reason is the kind itself: a scene is not a mesh — the asset it was
+  // opened from is one node of it.
   scene: textDocumentIo(sceneStore, scenePayload, sceneFromPayload, createDefaultScene),
+  // Nor here: rendering a montage is minutes of work, which has no business on a keystroke.
   sequence: textDocumentIo(sequenceStore, asIs, parseSequence, () => EMPTY_SEQUENCE),
   audio: withRenderedTake(
     textDocumentIo(audioEditStore, asIs, parseAudioEdits, () => EMPTY_AUDIO_EDIT),
   ),
+  // Nor here: `adjustments` are applied over a source left intact, and baking them into it would
+  // destroy the only copy of what they are meant to stay undoable against.
   skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
+  // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
+  // produce pixels — `derive-channel` — already writes them as an asset when it derives them.
   texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
   graph: withGraphRun(textDocumentIo(graphStore, asIs, parseGraph, () => EMPTY_GRAPH)),
 }
@@ -279,6 +286,26 @@ const ioOf = (documentId: string): DocumentIo | undefined => {
 const unreadable = new Set<string>()
 
 /**
+ * What both saving gestures need before they can write anything, or `null` when one of them is
+ * missing — which is the same refusal for both, said once.
+ *
+ * `holds` separates "empty scene" from "no scene yet", and `unreadable` is the file that would
+ * not read: writing over it is the one thing that loses work irrecoverably, so neither gesture
+ * gets past this.
+ */
+function savableDocument(
+  documentId: string,
+): { bridge: StudioBridge; document: DocumentDescriptor; io: DocumentIo } | null {
+  const bridge = getBridge()
+  const document = useDocuments.getState().documents[documentId]
+  const io = ioOf(documentId)
+  if (!bridge || !document || !io) return null
+  if (unreadable.has(documentId) || !io.holds(documentId)) return null
+
+  return { bridge, document, io }
+}
+
+/**
  * Writes the document to the project. A document whose state was never filled is refused:
  * `holds` separates "empty scene" from "no scene yet".
  *
@@ -288,11 +315,9 @@ const unreadable = new Set<string>()
  * would not read from closing the tab on work that never reached the disk.
  */
 export async function saveDocument(documentId: string): Promise<boolean> {
-  const bridge = getBridge()
-  const document = useDocuments.getState().documents[documentId]
-  const io = ioOf(documentId)
-  if (!bridge || !document || !io) return false
-  if (unreadable.has(documentId) || !io.holds(documentId)) return false
+  const savable = savableDocument(documentId)
+  if (!savable) return false
+  const { bridge, document, io } = savable
 
   const { draft, commit } = await io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, {
@@ -329,11 +354,9 @@ export async function saveDocument(documentId: string): Promise<boolean> {
  * nothing to copy, and says so in the journal rather than in silence.
  */
 export async function saveDocumentAs(documentId: string): Promise<boolean> {
-  const bridge = getBridge()
-  const document = useDocuments.getState().documents[documentId]
-  const io = ioOf(documentId)
-  if (!bridge || !document || !io) return false
-  if (unreadable.has(documentId) || !io.holds(documentId)) return false
+  const savable = savableDocument(documentId)
+  if (!savable) return false
+  const { bridge, document, io } = savable
 
   const source = document.sourceAssetId
   // No asset to derive from, or a kind that bakes to nothing one could hold: both are "there is
@@ -354,7 +377,7 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
 
     // The document SECOND, and pointed at the copy: the tab carries on with the new asset, and
     // the one that was open keeps whatever the last ⌘S left on it.
-    const { draft, commit } = await io.capture(documentId)
+    const { draft } = await io.capture(documentId)
     const created = await useDocuments
       .getState()
       .create(document.workspace, { title: name, sourceAssetId: copy.id })
@@ -362,7 +385,9 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
     if (!created) return false
 
     await bridge.documents.write(created.id, created.kind, { ...draft, title: name })
-    commit()
+    // `commit` is deliberately NOT called: it closes over the ORIGINAL id, and calling it would
+    // mark that tab as saved when nothing was written for it — a document whose unsaved work
+    // would then close without a word. `install` marks the copy clean, which is the one on disk.
     io.install(created.id, draft.content, draft.parts)
     openDocument(created)
 

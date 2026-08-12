@@ -20,10 +20,11 @@ import { newTexture } from '@/engines/texture/texture-state'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
-import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
+import { addLayer } from '@/engines/canvas/commands'
 import { holdAudio } from '@/spaces/audio/audio-hosts'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
-import { useCanvases } from '@/stores/canvases'
+import { canvasStore, useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
 import { addGraphNode, connectGraph } from '@/engines/graph/commands'
 import { textNode } from '@/engines/graph/graph-fixtures'
@@ -448,6 +449,30 @@ describe('saveDocument', () => {
       release()
 
       expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+    })
+
+    /**
+     * The copy is what reached the disk, so the copy is what opens clean. Marking the ORIGINAL
+     * saved is the trap: `capture` closes over its id, and calling its `commit` would clear the
+     * bullet of a tab whose file was never rewritten — it would then close without a word, and
+     * the work in it would go with it.
+     */
+    it('leaves the original tab modified, since nothing was written for it', async () => {
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture: () => Promise.resolve(picture()) },
+      })
+      const { documentId, release } = await openLinkedImage()
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Calque')))
+      expect(canvasStore.hasUnsavedWork(useCanvases.getState(), documentId)).toBe(true)
+
+      await expect(saveDocumentAs(documentId)).resolves.toBe(true)
+      release()
+
+      // The copy is on disk and opens clean; the original's own file was never rewritten.
+      expect(canvasStore.hasUnsavedWork(useCanvases.getState(), documentId)).toBe(true)
+      const copy = Object.values(useDocuments.getState().documents).at(-1)
+      expect(canvasStore.hasUnsavedWork(useCanvases.getState(), copy?.id ?? '')).toBe(false)
     })
 
     /** A document nothing could read must not be copied either: the copy would hold nothing. */
