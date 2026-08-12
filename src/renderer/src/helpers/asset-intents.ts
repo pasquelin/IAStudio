@@ -11,7 +11,7 @@ import type { WorkspaceId } from '@shared/domain/workspace'
 import { openDocument } from '@/app/dockview-api'
 import { restoreDocument } from '@/app/document-io'
 import { loadTake } from '@/spaces/audio/load-take'
-import { placeAsset } from '@/spaces/image/place-asset'
+import { becomeAsset, placeAsset } from '@/spaces/image/place-asset'
 import { placeTextureChannel } from '@/spaces/textures/place-channel'
 import { documentOfKind, useDocuments } from '@/stores/documents'
 import { addModelTo } from '@/stores/scenes'
@@ -69,6 +69,16 @@ export type AssetIntent = {
    * find an existing tab, and the tab that edits an asset does not exist until it is asked for.
    */
   into: (documentId: string, asset: Asset) => Promise<void>
+  /**
+   * The same landing, for a document made FOR this asset — what a double-click asks for.
+   *
+   * Absent on every destination but the image, and the absence is the point: sending a mesh to a
+   * scene or a take to the audio editor already fills a fresh document with the asset and nothing
+   * else. A picture did not — it landed as a layer on a blank 1024² canvas with a white
+   * background — so `⌘S` had no faithful flatten to write back. `openAsset` prefers this when a
+   * destination offers one, and falls back to `into` where none is needed.
+   */
+  become?: (documentId: string, asset: Asset) => Promise<void>
 }
 
 /**
@@ -97,8 +107,17 @@ function inDocument(
   kind: DocumentKind,
   put: (documentId: string, asset: Asset) => void,
   eligible: (asset: Asset, documentId: string | null) => boolean = () => true,
-): Pick<AssetIntent, 'kind' | 'ready' | 'takes' | 'run' | 'into'> {
-  const into = async (documentId: string, asset: Asset): Promise<void> => {
+  fill?: (documentId: string, asset: Asset) => Promise<void>,
+): Pick<AssetIntent, 'kind' | 'ready' | 'takes' | 'run' | 'into' | 'become'> {
+  /**
+   * The order both landings share, and every step of it is load-bearing — see the comments
+   * inside. Only what is placed at the end differs.
+   */
+  const land = async (
+    documentId: string,
+    asset: Asset,
+    place: (documentId: string, asset: Asset) => void | Promise<void>,
+  ): Promise<void> => {
     const target = useDocuments.getState().documents[documentId]
     if (!target) return
 
@@ -110,12 +129,17 @@ function inDocument(
     // screen holds no state, and writing into it makes `restoreDocument` take it for one
     // already loaded: the file is then never read, and the next save writes this over it.
     await restoreDocument(documentId)
-    put(documentId, asset)
+    await place(documentId, asset)
   }
+
+  const into = (documentId: string, asset: Asset): Promise<void> => land(documentId, asset, put)
 
   return {
     kind,
     into,
+    ...(fill
+      ? { become: (documentId: string, asset: Asset) => land(documentId, asset, fill) }
+      : {}),
     takes: asset => eligible(asset, null),
     ready: asset => {
       const target = targetOf(kind)
@@ -155,7 +179,7 @@ export const ASSET_INTENTS: readonly AssetIntent[] = [
     workspace: 'image',
     labelKey: 'intents.imageLayer',
     accepts: PICTURES,
-    ...inDocument('image', placeAsset, isLocalPicture),
+    ...inDocument('image', placeAsset, isLocalPicture, becomeAsset),
   },
   {
     id: 'video.clip',

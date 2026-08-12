@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { CHANNELS } from '@shared/ipc'
-import { withoutSourcePath } from '@shared/domain/asset'
+import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
@@ -237,6 +237,16 @@ export function registerProjectHandlers({
     // The same asset, edited — what ⌘S means on a document opened from one. `replaceBytes` keeps
     // the id, the name and the tags, and moves the extension with the bytes.
     if (request.replaces) {
+      // Checked against the CATALOGUE, not against what was sent. `sourceAssetId` is read back
+      // off a JSON envelope inside the project folder — user territory, like the manifest — and
+      // `replaceBytes` builds its path from the row's own type: an id naming a take would write
+      // `audio/<id>.png` and `rm` the `.wav` beside it, destroying a recording from a save on
+      // another document entirely.
+      const replaced = await project.catalog().find(request.replaces)
+      if (!replaced || !PICTURES.includes(replaced.type)) {
+        throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
+      }
+
       return withoutSourcePath(await assets.replaceBytes(request.replaces, png, PNG_EXTENSION))
     }
 

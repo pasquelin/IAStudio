@@ -653,11 +653,21 @@ describe('project handlers', () => {
       replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
     })
 
+    /**
+     * A catalogue that answers with a picture, because an overwrite now asks it what it is about
+     * to replace: the id travels in a JSON envelope inside the project folder, and `replaceBytes`
+     * builds its path from the row's own type.
+     */
+    const holdingPicture = () => ({
+      ...catalog,
+      find: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
+    })
+
     // `replaces` overwrites, which is ⌘S on a tab opened from the shelf. Why it was refused for
     // a while is written where the rule lives: `LayerSurface.fromDocument`.
     it('overwrites the asset the caller names', async () => {
       const assets = backend()
-      registerProjectHandlers(deps(catalog, { assets }))
+      registerProjectHandlers(deps(holdingPicture(), { assets }))
 
       await invoke(CHANNELS.assetsSavePicture, {
         replaces: 'asset-1',
@@ -671,6 +681,27 @@ describe('project handlers', () => {
         '.png',
       )
       expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The id travels in a JSON envelope inside the project folder — user territory, like the
+     * manifest — and `replaceBytes` builds its path from the ROW's type. An id naming a take
+     * would write `audio/<id>.png` and `rm` the `.wav` beside it, destroying a recording from a
+     * save on another document entirely.
+     */
+    it('refuses to overwrite an asset that is not a picture', async () => {
+      const assets = backend()
+      const holdingTake = { ...catalog, find: vi.fn(async () => asset({ type: 'audio' })) }
+      registerProjectHandlers(deps(holdingTake, { assets }))
+
+      await expect(
+        invoke(CHANNELS.assetsSavePicture, {
+          replaces: 'asset-1',
+          name: 'Gemini 3.1',
+          png: PNG_BASE64,
+        }),
+      ).rejects.toThrow()
+      expect(assets.replaceBytes).not.toHaveBeenCalled()
     })
 
     // The bytes are checked before anything is written, so a payload that is not a picture cannot
@@ -735,7 +766,7 @@ describe('project handlers', () => {
       assets.replaceBytes = vi.fn(async () =>
         asset({ id: 'asset-1', type: 'image', sourcePath: '/Users/someone/secret.png' }),
       )
-      registerProjectHandlers(deps(catalog, { assets }))
+      registerProjectHandlers(deps(holdingPicture(), { assets }))
 
       const saved = await invoke(CHANNELS.assetsSavePicture, {
         replaces: 'asset-1',

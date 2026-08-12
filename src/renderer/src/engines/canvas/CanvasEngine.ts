@@ -937,6 +937,25 @@ export class CanvasEngine {
   }
 
   /**
+   * Drops a rewritten picture from the loader's cache, so the next layer placed from that asset
+   * draws what is on disk now.
+   *
+   * The cache is keyed on the URL and lives for the session, so ⌘S over an asset would otherwise
+   * be invisible to every OTHER document that places it — the loader answers from memory and
+   * never asks the scheme again.
+   *
+   * `unload` frees the GPU texture as well, so it must not run while something still draws from
+   * it. Nothing here does: `loadInto` renders it into the layer's own surface and destroys the
+   * sprite in the same breath. Skipped when the loader never held it — unloading a URL it does
+   * not know is not something to make a caller think about.
+   */
+  async forgetPicture(assetId: string): Promise<void> {
+    const url = assetUrl(assetId)
+    if (Assets.get(url) === undefined) return
+    await Assets.unload(url)
+  }
+
+  /**
    * What the rulers are graduated in. Pushed like the view rather than read off
    * `documentElement.lang`: that attribute is a projection written for screen readers, and it
    * carries no notification — the rulers would keep the language they were mounted in while the
@@ -1336,10 +1355,16 @@ export class CanvasEngine {
     }
     // Marked before the await, so a reload of `source` in flight cannot slip in front of it.
     surface.fromDocument = true
-    // Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
-    // and compositing over that would bring a hole the user erased back as white rather than as
-    // the transparency the file holds.
-    await this.loadInto(key, url, true)
+    try {
+      // Cleared, unlike a placed picture: the surface was born filled — white, for the base
+      // layer — and compositing over that would bring a hole the user erased back as white
+      // rather than as the transparency the file holds.
+      await this.loadInto(key, url, true)
+    } catch (error) {
+      // Given back, and the asset drawn in its place — see `fallBackToSource`.
+      this.fallBackToSource(key, surface)
+      throw error
+    }
   }
 
   /** Pours the saved pixels held for a surface into it, once it exists. */
@@ -1347,9 +1372,31 @@ export class CanvasEngine {
     const url = this.pendingSnapshots.get(key)
     if (!url) return
     this.pendingSnapshots.delete(key)
+    // Claimed BEFORE the load, because the guard in `syncLayer` reads it on the very next line:
+    // set on success it would always be too late, and the asset would be drawn over these pixels
+    // every time. Given back below if the load turns out not to arrive.
     surface.fromDocument = true
     // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
-    void this.loadInto(key, url, true).catch(() => undefined)
+    void this.loadInto(key, url, true).catch(() => this.fallBackToSource(key, surface))
+  }
+
+  /**
+   * Draws the asset a layer names, after its own saved pixels failed to.
+   *
+   * A part inside `<id>.img/` can be truncated or corrupt, and before the claim existed the
+   * layer was drawn from `assetUrl(source)` regardless — so a bad part cost nothing visible.
+   * The claim would now leave that layer empty and silent, and the next ⌘S would write the empty
+   * layer over the asset. The claim is given back and the asset drawn, which is what it did.
+   */
+  private fallBackToSource(key: string, surface: LayerSurface): void {
+    surface.fromDocument = false
+
+    const layer = this.state && layerById(this.state, key)
+    if (!layer || layer.kind !== 'pixel' || layer.source === undefined) return
+
+    void this.loadInto(key, assetUrl(layer.source)).catch(error =>
+      reportFailure('canvas.layer', layer.source ?? key, error),
+    )
   }
 
   /** Rectangle, ellipse or lasso: three gestures behind one tool, as the bar offers them. */

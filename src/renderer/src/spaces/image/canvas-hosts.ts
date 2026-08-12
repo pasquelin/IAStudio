@@ -13,6 +13,14 @@ export type CanvasHost = {
    * lands on disk is what was judged.
    */
   snapshot: () => Promise<string | null>
+  /**
+   * Forgets a picture the loader had cached, once its asset has been rewritten.
+   *
+   * On the port because the loader's cache is global to the window while an engine is the only
+   * thing that holds it — and a rewrite only ever happens where one is mounted, since it is that
+   * engine's own `snapshot` that produced the bytes.
+   */
+  forgetPicture: (assetId: string) => Promise<void>
 }
 
 const registry = createHostRegistry<CanvasHost>()

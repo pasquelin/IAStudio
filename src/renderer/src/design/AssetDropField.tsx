@@ -1,7 +1,7 @@
 import { mdiImagePlusOutline } from '@mdi/js'
 import { useState } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
-import { ASSET_TYPES, assetUrl, type Asset } from '@shared/domain/asset'
+import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
 import { AssetDropTarget } from './AssetDropTarget'
 import { FIELD } from './styles'
@@ -28,6 +28,14 @@ const THUMBNAIL = 'size-(--sc-control)'
  */
 export function AssetDropField({ registration, initial, placeholder }: AssetDropFieldProps) {
   const [assetId, setAssetId] = useState(initial ?? '')
+  /**
+   * The dropped picture's stamped URL, kept beside the id so a ⌘S that overwrote it repaints.
+   *
+   * Only what was DROPPED, never what the form was reset to: stamping needs the asset, and
+   * nothing in `design/` reads a store — no component here does, and this field is not the one
+   * to open that door for a preset's thumbnail.
+   */
+  const [poster, setPoster] = useState<string | null>(null)
 
   // A model switch resets the form; without this the old thumbnail outlives the value it stood
   // for. Keyed on what the form was reset to, so typing in between is not undone.
@@ -35,10 +43,12 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
   if (seen !== initial) {
     setSeen(initial)
     setAssetId(initial ?? '')
+    setPoster(null)
   }
 
   const take = (dropped: Asset): void => {
     setAssetId(dropped.id)
+    setPoster(posterUrl(dropped))
     // Through the registration, or react-hook-form never hears about a value nobody typed.
     void registration.onChange({ target: { name: registration.name, value: dropped.id } })
   }
@@ -52,7 +62,7 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
       className="flex min-w-0 items-center gap-2 rounded"
     >
       {assetId ? (
-        <Thumbnail url={assetUrl(assetId)} className={THUMBNAIL} />
+        <Thumbnail url={poster ?? assetUrl(assetId)} className={THUMBNAIL} />
       ) : (
         <span className={cn(THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
           <UiIcon path={mdiImagePlusOutline} size={14} />

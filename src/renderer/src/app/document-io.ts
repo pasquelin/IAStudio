@@ -172,6 +172,26 @@ function pixelsFromPart(name: string, data: string): LayerPixels | null {
 }
 
 /**
+ * Whether this document still measures what the asset it edits measures — the one condition
+ * under which its flatten may REPLACE that asset's file rather than land beside it.
+ *
+ * Measured rather than remembered: the picture is already decoded by the layer drawing it, so
+ * the browser answers from its cache, and a size carried on the descriptor would be one more
+ * field to persist and one more that could drift from the pixels. An asset that will not
+ * measure answers `false` — refusing to overwrite is the safe half of the doubt.
+ */
+async function carriesAsset(documentId: string, assetId: string): Promise<boolean> {
+  // Through `import()` for the reason `place-asset` gives: this file is in the opening chunk,
+  // and nothing measures a picture until a ⌘S lands on a document that edits one.
+  const { measureAsset } = await import('@/spaces/image/picture-size')
+  const size = await measureAsset(assetId)
+  if (!size) return false
+
+  const canvas = canvasOf(useCanvases.getState(), documentId)
+  return canvas.width === size.width && canvas.height === size.height
+}
+
+/**
  * The image, which is the one kind a string cannot hold: the stack goes in the manifest, and each
  * layer's texture in a PNG beside it. The pixels live on the GPU, so they are asked of the engine
  * holding the document — see `canvasHost`.
@@ -223,10 +243,28 @@ const IMAGE_IO: DocumentIo = {
   },
   writeAsset: async (documentId, target) => {
     const bridge = getBridge()
+    const host = canvasHost(documentId)
+    if (!bridge || !host) return null
+
+    // An overwrite REPLACES the file, so the flatten has to be the picture and not a version of
+    // it. A document that no longer measures what the asset does — cropped, resampled, or opened
+    // under the ceiling because the picture was enormous — would silently shrink the asset it is
+    // standing in for, and `replaceBytes` deletes what it replaces. Refused instead, out loud;
+    // ⌘⇧S is the way to keep that result.
+    if (target.replaces && !(await carriesAsset(documentId, target.replaces))) {
+      throw new Error('the document no longer measures what its asset does')
+    }
+
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
     // workspace lands. The document is still written; only the asset waits for the next save.
-    const png = await canvasHost(documentId)?.snapshot()
-    return bridge && png ? bridge.assets.savePicture({ ...target, png }) : null
+    const png = await host.snapshot()
+    if (!png) return null
+
+    const written = await bridge.assets.savePicture({ ...target, png })
+    // After the write, and only for an overwrite: the id did not move, so the loader would keep
+    // answering with the picture it cached before this save.
+    if (target.replaces) await host.forgetPicture(target.replaces)
+    return written
   },
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),

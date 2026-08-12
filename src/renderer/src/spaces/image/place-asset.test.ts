@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { canvasOf, useCanvases } from '@/stores/canvases'
-import { placeAsset } from './place-asset'
+import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
+import { becomeAsset, placeAsset } from './place-asset'
 
 const DOCUMENT = 'image-1'
 
@@ -68,5 +69,54 @@ describe('placing an asset on a canvas', () => {
     placeAsset(DOCUMENT, { ...picture, location: 'cloud' })
 
     expect(stack().layers).toHaveLength(1)
+  })
+})
+
+/**
+ * What a double-click makes, as opposed to a drop. The distinction is what ⌘S is allowed to
+ * write back: a picture dropped onto a default canvas is a 1024² white-matted crop of itself,
+ * and flattening THAT over the asset deleted the original file.
+ */
+describe('making a document be the asset', () => {
+  const measuring = (width: number, height: number) => () => Promise.resolve({ width, height })
+
+  it('takes the picture’s own size, not the default canvas', async () => {
+    await becomeAsset(DOCUMENT, picture, measuring(4096, 2048))
+
+    expect(stack()).toMatchObject({ width: 4096, height: 2048 })
+  })
+
+  // One layer, and no fill on it: the white base of a fresh canvas would be baked into every
+  // transparent pixel the moment ⌘S flattened the stack back onto the asset.
+  it('holds the picture alone, over nothing', async () => {
+    await becomeAsset(DOCUMENT, picture, measuring(800, 600))
+
+    expect(stack().layers).toHaveLength(1)
+    expect(stack().layers[0]).toMatchObject({ kind: 'pixel', source: 'asset-7', fill: undefined })
+  })
+
+  /**
+   * The one that matters most. Opening is not an edit, and `placeAsset` made it one by running
+   * `addLayer` as a history command — so the tab was MODIFIED before the user touched it, and
+   * the guard meant to keep a reflex ⌘S off the original file never fired once.
+   */
+  it('leaves the tab unmodified, because opening is not an edit', async () => {
+    await becomeAsset(DOCUMENT, picture, measuring(800, 600))
+
+    expect(canvasStore.hasUnsavedWork(useCanvases.getState(), DOCUMENT)).toBe(false)
+  })
+
+  // A picture that will not decode still opens; the size guard on ⌘S is what keeps it safe.
+  it('falls back to the default size when the picture will not measure', async () => {
+    await becomeAsset(DOCUMENT, picture, () => Promise.reject(new Error('gone')))
+
+    expect(stack()).toMatchObject({ width: DEFAULT_CANVAS.width, height: DEFAULT_CANVAS.height })
+  })
+
+  it('refuses what is not a picture on this machine', async () => {
+    await becomeAsset(DOCUMENT, { ...picture, location: 'cloud' }, measuring(800, 600))
+
+    // Untouched, not merely unchanged in shape: nothing of the asset reached the document.
+    expect(stack()).toEqual(DEFAULT_CANVAS)
   })
 })
