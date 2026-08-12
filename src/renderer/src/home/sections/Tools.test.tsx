@@ -92,6 +92,6 @@ describe('Tools', () => {
     render(<Tools />)
 
     expect(screen.getByRole('button', { name: /Nouveau projet/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Préférences/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Réglages/ })).toBeInTheDocument()
   })
 })

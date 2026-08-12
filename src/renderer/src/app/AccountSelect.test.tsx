@@ -73,7 +73,7 @@ describe('AccountSelect', () => {
     expect(account).not.toHaveAttribute('aria-label')
     expect(screen.getByRole('menuitem', { name: 'Gérer les comptes…' })).toHaveAttribute(
       'data-tooltip-content',
-      'Ouvre les préférences pour ajouter, renommer ou retirer un compte',
+      'Ouvre les réglages pour ajouter, renommer ou retirer un compte',
     )
   })
 

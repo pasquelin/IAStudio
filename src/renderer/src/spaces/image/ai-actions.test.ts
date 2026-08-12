@@ -51,7 +51,7 @@ describe('preparing an edit', () => {
   })
 
   // The session choice wins over the preference, the order the generator itself follows.
-  it('uses the model chosen in the panel over the one set in the preferences', async () => {
+  it('uses the model chosen in the panel over the one set in the settings', async () => {
     useModels.getState().select('image', 'model_chosen', 'image')
 
     await prepareEdit(DOCUMENT, 'regenerate', host, bridge)

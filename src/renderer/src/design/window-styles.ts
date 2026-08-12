@@ -1,7 +1,7 @@
 import { cn } from '@/helpers/cn'
 
 /**
- * Class strings shared by the windows that are NOT docks — Preferences and Usage, where the
+ * Class strings shared by the windows that are NOT docks — Settings and Usage, where the
  * studio becomes an ordinary application and DaisyUI dresses it.
  *
  * Apart from `styles.ts` on purpose: that file says in its first line that it holds what the

@@ -78,7 +78,7 @@ function Closing() {
 
 /**
  * The way back from hiding a section, offered where the sections are rather than in the
- * preferences: a control that removes something must say where it went, or the studio grows a
+ * settings: a control that removes something must say where it went, or the studio grows a
  * setting whose only symptom is a shelf that stopped appearing.
  */
 function Hidden() {

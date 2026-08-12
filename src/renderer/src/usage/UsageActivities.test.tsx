@@ -9,7 +9,7 @@ import { UsageActivities } from './UsageActivities'
  * a few pixels under a `Vidéo` the bundle had known all along.
  */
 /**
- * The Usage window and the Preferences say a secondary line the same way, and neither imports
+ * The Usage window and the Settings say a secondary line the same way, and neither imports
  * the other: the classes live in one module, read here rather than copied.
  */
 describe('the sentence a window says beside its figures', () => {

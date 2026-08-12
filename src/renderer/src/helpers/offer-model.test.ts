@@ -59,9 +59,9 @@ describe('offering a model of one family', () => {
 
     /**
      * The browser lists that space's family and no other, so an upscaler would never appear in
-     * it however long one looked. The preferences are where those three families are set.
+     * it however long one looked. The settings are where those three families are set.
      */
-    it('opens the preferences for a family that space cannot list', () => {
+    it('opens the settings for a family that space cannot list', () => {
       offerModelsOfFamily('upscale')
 
       expect(opened).toEqual(['generation.upscale'])

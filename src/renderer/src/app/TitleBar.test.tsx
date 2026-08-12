@@ -123,7 +123,7 @@ describe('TitleBar', () => {
    * A drop needs a pointer that can hold a button down while it travels. These two gestures are
    * what the same reordering looks like to a keyboard (2.1.1) and to a pointer that cannot drag
    * (2.5.7) — and before them the bar had no other path at all, the setting being a dedicated one
-   * the preferences screen does not draw.
+   * the settings screen does not draw.
    */
   it('moves the focused space with Alt and an arrow', () => {
     const write = vi.fn(async () => undefined)

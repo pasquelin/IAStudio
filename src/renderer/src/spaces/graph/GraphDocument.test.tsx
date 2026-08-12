@@ -694,7 +694,7 @@ describe('a graph as a document', () => {
       fireEvent.click(screen.getByRole('menuitem', { name }))
     }
 
-    it('falls back to the model the preferences name for that family', async () => {
+    it('falls back to the model the settings name for that family', async () => {
       const describeModel = vi.fn(() => Promise.resolve(descriptor('model_kling', 'video')))
       installFakeBridge({ scenario: { describeModel } })
       preferModels({ video: 'model_kling' })

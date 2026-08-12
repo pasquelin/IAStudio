@@ -171,7 +171,7 @@ shortcuts screen.
 | **Move** | `G` | drag the coloured arrows to slide it |
 | **Rotate** | `R` | drag the coloured circles to turn it |
 | **Scale** | `S` | drag the handles. `⇧` keeps its proportions |
-| **Magnet** | `M` | steps the handles by regular amounts, set in the preferences |
+| **Magnet** | `M` | steps the handles by regular amounts, set in the settings |
 | **Local frame** | `L` | aligns the handles with the object's orientation rather than the world's |
 | **Projection** | `O` | switches between perspective and orthographic projection |
 | **Display mode** | `Z` | cycles the seven ways of drawing |
