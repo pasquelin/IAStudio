@@ -62,11 +62,11 @@ describe('a panel lying in a band', () => {
     expect(container.querySelector('header > span')?.className).toContain('shrink-0')
   })
 
-  // The room is given to the panel that asked for it, not to the zone: the montage shares the
-  // band and would otherwise see its own two buttons drift away from the close button.
+  // The room is given to the panel that asked for it, not to the zone: a panel that publishes
+  // two buttons shares the band and would otherwise see them drift away from the close button.
   it('spreads the actions of the panel that declared it, and no other', () => {
     const { container } = render(
-      <ToolWindow tool="timeline" zone="bottom" onFocus={vi.fn()} onClose={vi.fn()} />,
+      <ToolWindow tool="scene" zone="bottom" onFocus={vi.fn()} onClose={vi.fn()} />,
     )
 
     const actions = container.querySelector('header > span:nth-of-type(2)')
