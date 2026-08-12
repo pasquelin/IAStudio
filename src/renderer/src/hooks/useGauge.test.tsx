@@ -47,4 +47,26 @@ describe('useGauge', () => {
 
     expect(renderHook(() => useGauge(GAUGE, 28)).result.current).toBe(28)
   })
+
+  /**
+   * `1.75rem` is `28px` written another way, and `parseFloat` reads it as `1.75`. Taken, a
+   * virtualizer estimating under two pixels a row mounts the entire list — measured at 400 rows
+   * of a tree: 400 mounted where 37 fit on screen.
+   */
+  it('falls back on a length that is not in pixels', () => {
+    for (const written of ['1.75rem', '50%', '2em', 'calc(28px * 1)']) {
+      declare(written)
+
+      expect(renderHook(() => useGauge(GAUGE, 28)).result.current, written).toBe(28)
+    }
+  })
+
+  /** Neither is a height a row can have, and both break the window a virtualizer computes. */
+  it('falls back on zero and on a negative length', () => {
+    for (const written of ['0px', '-4px']) {
+      declare(written)
+
+      expect(renderHook(() => useGauge(GAUGE, 28)).result.current, written).toBe(28)
+    }
+  })
 })

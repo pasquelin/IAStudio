@@ -3,14 +3,17 @@ import { useToken } from './useToken'
 /**
  * A `--sc-*` gauge in pixels, for the code that needs the number CSS is already applying.
  *
- * An estimator takes a number while the row it estimates is sized by a class, and the two agree
- * only if the number is read back from the gauge: `Tree` estimated a constant 28 against a
- * compact row of 24, four pixels a row, compounding down the list.
+ * An estimator takes a number while the row it estimates is sized by a class; a constant is then
+ * only right at one density, and the gap shows as dead space between rows.
  *
- * `fallback` covers a gauge the stylesheet has not declared — under jsdom every one of them
- * reads back empty — and follows `tokenAsHex` rather than guessing a value of its own.
+ * **Pixels, strictly positive, or `fallback`** — and the check is the point rather than a
+ * formality. `parseFloat` reads `1.75rem` as `1.75`, which is the same height written another
+ * way and a virtualizer estimating under two pixels a row: it mounts the whole list. Zero and
+ * negatives break the window it computes. A gauge the stylesheet never declared reads back
+ * empty, which is every gauge under jsdom.
  */
 export function useGauge(name: string, fallback: number): number {
-  const pixels = Number.parseFloat(useToken(name))
-  return Number.isFinite(pixels) ? pixels : fallback
+  const declared = useToken(name)
+  const pixels = declared.endsWith('px') ? Number.parseFloat(declared) : Number.NaN
+  return pixels > 0 ? pixels : fallback
 }

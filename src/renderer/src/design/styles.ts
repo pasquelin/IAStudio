@@ -94,7 +94,7 @@ export function chipSkin(active: boolean): string {
  * browser) sizes itself and does not read this.
  *
  * A surface whose rows are sized by the gauge itself must read the gauge, not this: the two part
- * company in compact density.
+ * company in compact density, and the difference is reserved space nobody paints.
  */
 export const LIST_ROW_HEIGHT = 28
 

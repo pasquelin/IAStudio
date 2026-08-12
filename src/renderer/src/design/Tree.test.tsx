@@ -74,8 +74,9 @@ describe('Tree, the height it estimates', () => {
 
   /**
    * The rows are drawn at `h-(--sc-control)`, so a constant estimate is only right at one
-   * density. It estimated 28 against a compact row of 24, and the error compounded: by the
-   * hundredth row the tree told the virtualizer a position four hundred pixels off.
+   * density. Estimating 28 against a compact row of 24 does not misplace anything — each row is
+   * positioned at the offset the virtualizer computed — it reserves four pixels nobody paints:
+   * a dead band between every pair of rows, and 4×N of empty scroll under the last one.
    */
   it('estimates the gauge its rows are drawn at, not a constant', () => {
     document.documentElement.style.setProperty('--sc-control', '24px')
