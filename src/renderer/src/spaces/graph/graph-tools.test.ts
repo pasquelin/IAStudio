@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { graphTools, type GraphToolbarState } from './graph-tools'
 
 const bar = (given: Partial<GraphToolbarState> = {}): GraphToolbarState => ({
-  canUndo: false,
-  canRedo: false,
   canRun: true,
   canExport: true,
   canImport: true,
@@ -38,8 +36,6 @@ describe('the export button', () => {
       'add',
       'select',
       'pan',
-      'undo',
-      'redo',
       'zoomIn',
       'zoomOut',
     ])
@@ -72,11 +68,12 @@ describe('the run button', () => {
   })
 })
 
-describe('the history pair', () => {
-  it('greys each half until its own stack has something in it', () => {
-    expect(tool(bar(), 'undo')).toBe(true)
-    expect(tool(bar(), 'redo')).toBe(true)
-    expect(tool(bar({ canUndo: true, canRedo: true }), 'undo')).toBe(false)
-    expect(tool(bar({ canUndo: true, canRedo: true }), 'redo')).toBe(false)
+describe('the history', () => {
+  // Declared here until now, unlike the other spaces, and removed with theirs: the Edit menu
+  // carries `graph.undo` and `graph.redo` for every surface.
+  it("is not the bar's to draw", () => {
+    const ids = graphTools(bar()).map(item => item.id)
+    expect(ids).not.toContain('undo')
+    expect(ids).not.toContain('redo')
   })
 })

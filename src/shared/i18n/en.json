@@ -55,10 +55,6 @@
     "modeHint": "Changes how the skybox is looked at, never the file itself"
   },
   "actions": {
-    "undo": "Undo",
-    "undoHint": "Undo the last action of this document",
-    "redo": "Redo",
-    "redoHint": "Redo the action that was undone",
     "generate": "Generate",
     "close": "Close",
     "removeTool": "Remove tool",
@@ -1287,7 +1283,9 @@
       "sequence": "In the edit",
       "canvas": "In the picture",
       "skybox": "In the sky",
-      "graph": "In the graph"
+      "graph": "In the graph",
+      "audio": "In the take editor",
+      "texture": "In the material"
     },
     "spaces": "Workspaces",
     "spacesDescription": "What only makes sense inside one space: the 3D view, the edit, the image.",

@@ -41,12 +41,13 @@ describe('TimelineActions', () => {
     expect(useVideoTool.getState().tool).toBe('blade')
   })
 
-  it('enables undo once the sequence in front has been edited', () => {
+  // The Edit menu carries `sequence.undo`; a second pair on the title bar said otherwise.
+  it('draws no history of its own', () => {
     installSequence('doc-1')
     useSequences.getState().runCommand('doc-1', addClip('V1', clip))
 
     render(<TimelineActions />)
 
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
   })
 })

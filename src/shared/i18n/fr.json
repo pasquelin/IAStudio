@@ -55,10 +55,6 @@
     "modeHint": "Change la façon dont la skybox est regardée, jamais le fichier lui-même"
   },
   "actions": {
-    "undo": "Annuler",
-    "undoHint": "Annuler la dernière action de ce document",
-    "redo": "Rétablir",
-    "redoHint": "Rétablir l’action annulée",
     "generate": "Générer",
     "close": "Fermer",
     "removeTool": "Retirer le module",
@@ -1287,7 +1283,9 @@
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
       "skybox": "Dans le ciel",
-      "graph": "Dans le graphe"
+      "graph": "Dans le graphe",
+      "audio": "Dans l’éditeur audio",
+      "texture": "Dans la matière"
     },
     "spaces": "Espaces de travail",
     "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",

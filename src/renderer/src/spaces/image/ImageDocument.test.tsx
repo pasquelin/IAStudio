@@ -368,9 +368,9 @@ describe('ImageDocument', () => {
     ).toBeInTheDocument()
   })
 
-  it('disables undo when there is nothing to undo', () => {
+  it('draws no history button of its own', () => {
     render(<ImageDocument documentId="doc-1" />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
   })
 
   describe('dropping a picture on it', () => {

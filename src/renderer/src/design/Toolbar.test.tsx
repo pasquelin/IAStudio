@@ -53,17 +53,12 @@ describe('Toolbar', () => {
     expect(onTool).toHaveBeenCalledWith('select')
   })
 
-  it('shows undo and redo only when the callbacks exist', () => {
-    const { rerender } = render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
+  // The Edit menu is the one place history lives; a bar that drew its own pair said the studio
+  // had two of them.
+  it('draws no history of its own', () => {
+    render(<Toolbar tools={TOOLS} onTool={vi.fn()} />)
     expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
-
-    rerender(<Toolbar tools={TOOLS} onTool={vi.fn()} onUndo={vi.fn()} canUndo />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeEnabled()
-  })
-
-  it('disables undo when the stack is empty', () => {
-    render(<Toolbar tools={TOOLS} onTool={vi.fn()} onUndo={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Rétablir/ })).not.toBeInTheDocument()
   })
 
   it('declares its orientation', () => {

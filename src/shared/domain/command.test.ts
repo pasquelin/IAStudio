@@ -12,7 +12,9 @@ import {
   commandsIn,
   conflicts,
   runsWhileTyping,
+  scopeOfWorkspace,
 } from './command'
+import { WORKSPACE_IDS } from './workspace'
 
 function resolve(bundle: unknown, key: string): unknown {
   return key
@@ -160,6 +162,20 @@ describe('looking a command up by its suffix', () => {
    */
   it('answers null rather than guessing when that scope has none', () => {
     expect(commandIn('scene', 'jamaisDeclare')).toBeNull()
+  })
+
+  /**
+   * Half of the trap `SCOPE_BY_WORKSPACE` describes — the half that lives here. A workspace
+   * pointed at a scope declaring only one of the two leaves the other row greyed for good, and
+   * nothing else says so. The other half, a store holding a history with no scope at all, is a
+   * fact of `renderer/` that this file cannot see.
+   */
+  it('gives every workspace that edits an undo AND a redo', () => {
+    const halved = WORKSPACE_IDS.map(workspace => scopeOfWorkspace(workspace))
+      .filter(scope => scope !== null)
+      .filter(scope => !commandIn(scope, 'undo') || !commandIn(scope, 'redo'))
+
+    expect(halved).toEqual([])
   })
 })
 

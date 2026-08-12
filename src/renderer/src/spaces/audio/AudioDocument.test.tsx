@@ -8,6 +8,8 @@ import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { useAssets } from '@/stores/assets'
 import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { useDocuments } from '@/stores/documents'
+import { installDocuments } from '@/stores/document-fixtures'
 import { AudioDocument } from './AudioDocument'
 
 import type { SaveAudioRequest } from '@shared/ipc'
@@ -40,11 +42,23 @@ const asset: Asset = {
 
 const editsOf = () => audioEditsOf(useAudioEdits.getState(), 'doc-1')
 
-async function openTake(): Promise<void> {
+// Every suite in this file, not one: a document left behind sends `useRestoredDocument`
+// reaching for a bridge these tests do not mount.
+beforeEach(() => {
+  useDocuments.setState({ documents: {}, activeId: null })
+})
+
+async function openTake({ inFront = true }: { inFront?: boolean } = {}): Promise<void> {
   useAudioEdits.setState({
     states: { 'doc-1': { ...EMPTY_AUDIO_EDIT, assetId: 'asset-1' } },
     histories: {},
   })
+  // Two tabs when the take is meant to be behind: what puts another document in front is
+  // another document, not an empty `activeId`.
+  installDocuments(
+    inFront ? { 'doc-1': 'audio' } : { 'doc-1': 'audio', 'doc-2': 'audio' },
+    inFront ? 'doc-1' : 'doc-2',
+  )
   render(<AudioDocument documentId="doc-1" />)
   // The chain is replayed off this thread now, so the take is not there on the first render:
   // a tool clicked while it still says "loading" would act on nothing.
@@ -56,6 +70,33 @@ describe('AudioDocument', () => {
     saveAudio.mockClear()
     useAssets.setState({ items: [asset] })
     useAudioEdits.setState({ states: {}, histories: {} })
+  })
+
+  // The bar carried the only undo this space had until `audio.undo` was registered — which is
+  // what let the pair leave every bar in the studio.
+  describe('its history', () => {
+    it('is not drawn on the bar', async () => {
+      await openTake()
+      expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
+    })
+
+    it('answers the key while the take is the tab in front', async () => {
+      await openTake()
+      await userEvent.click(screen.getByRole('button', { name: /Normaliser/ }))
+
+      await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+      expect(editsOf().edits).toEqual([])
+    })
+
+    it('stays deaf while another tab is in front', async () => {
+      await openTake({ inFront: false })
+      await userEvent.click(screen.getByRole('button', { name: /Couper les silences/ }))
+
+      await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+      expect(editsOf().edits).toEqual([{ kind: 'trimSilence' }])
+    })
   })
 
   it('asks for a take when none is open', () => {

@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TextureExportCommand, FolderExportRequest } from '@shared/ipc'
 import type { TextureExportTarget } from '@shared/domain/texture-export'
@@ -8,7 +9,7 @@ import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
-import { useTextures } from '@/stores/textures'
+import { textureOf, useTextures } from '@/stores/textures'
 import { TextureDocument } from './TextureDocument'
 
 // jsdom has no WebGL context: what the engine draws is exercised by hand, not here. This covers
@@ -34,6 +35,32 @@ const fill = (channel: 'baseColor' | 'normal', assetId = 'img-1'): void => {
 beforeEach(() => {
   installTexture(DOCUMENT)
   useTextureViews.setState({ inspected: {} })
+})
+
+/**
+ * The history this store has always recorded, and that nothing could reach until `texture.undo`
+ * was registered: no scope, no key, no menu row — while the manual already promised ⌘Z on an
+ * applied style. `stores/history-scopes.test.ts` is the guard that now refuses the next one.
+ */
+describe('the texture history', () => {
+  it('takes back a channel edit on the key', async () => {
+    fill('normal')
+    render(<TextureDocument documentId={DOCUMENT} />)
+
+    await userEvent.keyboard('{Meta>}{z}{/Meta}')
+
+    expect(textureOf(useTextures.getState(), DOCUMENT).channels.normal).toBeUndefined()
+  })
+
+  it('puts it back on redo', async () => {
+    fill('normal')
+    render(<TextureDocument documentId={DOCUMENT} />)
+
+    await userEvent.keyboard('{Meta>}{z}{/Meta}')
+    await userEvent.keyboard('{Shift>}{Meta>}{z}{/Meta}{/Shift}')
+
+    expect(textureOf(useTextures.getState(), DOCUMENT).channels.normal).toBeDefined()
+  })
 })
 
 describe('TextureDocument', () => {

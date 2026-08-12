@@ -58,10 +58,6 @@ export type GraphCanvasProps = {
    */
   selectedNodeIds: readonly string[]
   onSelectNodes: (ids: readonly string[]) => void
-  onUndo: () => void
-  onRedo: () => void
-  canUndo: boolean
-  canRedo: boolean
   /** Whether a run would report anything — the bar greys the button when it would not. */
   canRun: boolean
   canExport: boolean
@@ -107,10 +103,6 @@ export function GraphCanvas({
   onDropAsset,
   selectedNodeIds,
   onSelectNodes,
-  onUndo,
-  onRedo,
-  canUndo,
-  canRedo,
   canRun,
   canExport,
   canImport,
@@ -280,14 +272,10 @@ export function GraphCanvas({
               onMode={setMode}
               // The bar's own button opens the same menu the right-click does; the bar says where.
               onAdd={setMenuAt}
-              onUndo={onUndo}
-              onRedo={onRedo}
               onRun={onRun}
               onExport={onExport}
               onPublish={onPublish}
               onImport={onImport}
-              canUndo={canUndo}
-              canRedo={canRedo}
               canRun={canRun}
               canExport={canExport}
               canImport={canImport}

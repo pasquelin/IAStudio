@@ -2,18 +2,20 @@ import { mdiMusicNoteOutline, mdiPause, mdiPlay } from '@mdi/js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Asset, AssetType } from '@shared/domain/asset'
+import type { CommandId } from '@shared/domain/command'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
 import { Toolbar } from '@/design/Toolbar'
 import { durationOf } from '@/engines/audio/audio-data'
 import type { RenderedAudio } from '@/engines/audio/audio-render'
 import { clampRegion, pushEdit, type AudioEdit, type Region } from '@/engines/audio/edits'
-import { canRedo, canUndo } from '@/engines/core/history'
 import { formatDuration } from '@/engines/timeline/timecode'
 import { SECOND, type Us } from '@/engines/timeline/timeline-state'
+import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
 import { assetsById, useAssets } from '@/stores/assets'
-import { audioEditsOf, audioHistoryOf, useAudioEdits } from '@/stores/audio-edits'
+import { audioEditsOf, useAudioEdits } from '@/stores/audio-edits'
+import { useDocuments } from '@/stores/documents'
 import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
 import { loadTake } from './load-take'
@@ -40,8 +42,8 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   const waveform = useRef<HTMLDivElement>(null)
 
   const state = useAudioEdits(current => audioEditsOf(current, documentId))
-  const history = useAudioEdits(current => audioHistoryOf(current, documentId))
   const byId = useAssets(assetsById)
+  const active = useDocuments(current => current.activeId === documentId)
 
   const renderer = useAudioRenderer()
 
@@ -170,6 +172,19 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     }
   }
 
+  const onCommand = useCallback(
+    (command: CommandId) => {
+      const store = useAudioEdits.getState()
+      if (command === 'audio.undo') return store.undo(documentId)
+      if (command === 'audio.redo') return store.redo(documentId)
+    },
+    [documentId],
+  )
+
+  // Both the keyboard and the Edit menu land here. `enabled` for the same reason the scene
+  // gives: Dockview keeps hidden tabs mounted, and a background take would eat ⌘Z.
+  useShortcuts({ scope: 'audio', enabled: active, onCommand })
+
   // The whole space takes a drop, empty or not: dropping a take onto the editor is how one
   // replaces what is loaded, and the empty state is where the first one lands.
   const takeDrop = (dropped: Asset): void => loadTake(documentId, dropped)
@@ -207,10 +222,6 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
         ]}
         activeTool={state.bypassed ? 'compare' : undefined}
         onTool={id => (id === 'transport' ? player.toggle() : isAudioTool(id) && act(id))}
-        onUndo={() => useAudioEdits.getState().undo(documentId)}
-        onRedo={() => useAudioEdits.getState().redo(documentId)}
-        canUndo={canUndo(history)}
-        canRedo={canRedo(history)}
         extras={
           <span className="text-muted text-tiny px-1 font-mono">
             {formatDuration(player.currentTime)}

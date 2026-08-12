@@ -1,11 +1,13 @@
 import { mdiTextureBox } from '@mdi/js'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
+import type { CommandId } from '@shared/domain/command'
 import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
+import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { EmptyState } from '@/design/EmptyState'
@@ -68,6 +70,19 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const active = useDocuments(state => state.activeId === documentId)
 
   useRestoredDocument(documentId)
+
+  // Channels and styles both push onto `useTextures`, and until now nothing could pop it: no
+  // scope, no key, no menu row — while the manual already promised ⌘Z on an applied style.
+  const onCommand = useCallback(
+    (command: CommandId) => {
+      const store = useTextures.getState()
+      if (command === 'texture.undo') return store.undo(documentId)
+      if (command === 'texture.redo') return store.redo(documentId)
+    },
+    [documentId],
+  )
+
+  useShortcuts({ scope: 'texture', enabled: active, onCommand })
 
   // Only while this tab is in front. The event goes to the window, not to a document, so two
   // open textures would otherwise both answer one click of the same menu row — and both would

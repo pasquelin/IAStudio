@@ -13,8 +13,6 @@ export type GraphToolbarProps = Omit<GraphToolbarState, 'runShortcut'> & {
   onMode: (mode: GraphMode) => void
   /** Called with the point the menu should open at — viewport coordinates, as a click reports. */
   onAdd: (at: { x: number; y: number }) => void
-  onUndo: () => void
-  onRedo: () => void
   /** One handler for the pair: the button says which of the two it is offering right now. */
   onRun: () => void
   onExport: () => void
@@ -33,14 +31,10 @@ export function GraphToolbar({
   mode,
   onMode,
   onAdd,
-  onUndo,
-  onRedo,
   onRun,
   onExport,
   onPublish,
   onImport,
-  canUndo,
-  canRedo,
   canRun,
   canExport,
   canImport,
@@ -71,19 +65,17 @@ export function GraphToolbar({
       if (id === 'import') return onImport()
       if (id === 'add') return onAdd(pointBesideBar())
       if (id === 'select' || id === 'pan') return onMode(id)
-      if (id === 'undo') return onUndo()
-      if (id === 'redo') return onRedo()
       if (id === 'zoomIn') return void zoomIn()
       if (id === 'zoomOut') return void zoomOut()
     },
-    [onAdd, onMode, onUndo, onRedo, onRun, onExport, onPublish, onImport, zoomIn, zoomOut],
+    [onAdd, onMode, onRun, onExport, onPublish, onImport, zoomIn, zoomOut],
   )
 
   return (
     // `z-10` on top of the shared inset: React Flow paints its pane over anything without one.
     <div ref={bar} className={cn(PANE_TOOLBAR, 'z-10')}>
       <Toolbar
-        tools={graphTools({ canUndo, canRedo, canRun, canExport, canImport, running, runShortcut })}
+        tools={graphTools({ canRun, canExport, canImport, running, runShortcut })}
         activeTool={mode}
         onTool={onTool}
       />
