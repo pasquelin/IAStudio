@@ -4,7 +4,7 @@ import {
   fitTo,
   nextZoom,
   previousZoom,
-  zoomAt,
+  zoomCanvasAt,
   type Size,
   type Viewport,
 } from '@/engines/canvas/viewport'
@@ -47,7 +47,7 @@ function step(documentId: string, pick: (scale: number) => number): void {
     x: (measured.inset + measured.host.width) / 2,
     y: (measured.inset + measured.host.height) / 2,
   }
-  reframe(documentId, viewport => zoomAt(viewport, pick(viewport.scale), anchor))
+  reframe(documentId, viewport => zoomCanvasAt(viewport, pick(viewport.scale), anchor))
 }
 
 export function zoomIn(documentId: string): void {
