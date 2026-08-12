@@ -583,8 +583,7 @@ est dans la scène, pas là où il est dans son groupe.
 
 `⌘S` / `Ctrl+S` écrit la scène dans le projet, sous `documents/`.
 
-**Les scènes 3D savent s’enregistrer** — c’est l’un des deux seuls types de documents qui le
-sachent aujourd’hui.
+**Les scènes 3D savent s’enregistrer**, comme les six autres types de documents.
 
 Un onglet dont le travail n’est pas encore écrit porte **un point** (`•`) à côté de son nom. Le
 point disparaît à l’enregistrement et revient à la modification suivante.
