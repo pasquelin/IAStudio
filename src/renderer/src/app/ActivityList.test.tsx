@@ -188,6 +188,33 @@ describe('the filters of the journal', () => {
     expect(useActivity.getState().topics).toEqual(['import'])
   })
 
+  /**
+   * The half the chips had and the menu nearly lost: unticking the last value narrowed to means
+   * "stop narrowing", and `matchesActivity` reads an empty list as everything. Nothing exercised
+   * the removal branch until the review asked for it — the one place an inverted filter would
+   * have passed green.
+   */
+  it('un-narrows a family by unticking what it was narrowed to', async () => {
+    useActivity.setState({ levels: ['error'], topics: [] })
+    render(<ActivityList />)
+
+    await userEvent.click(menuFor('Niveau', 'Échec'))
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Échec' }))
+
+    expect(useActivity.getState().levels).toEqual([])
+  })
+
+  // The subjects are the family with no glyph of its own, and no test opened their menu: a
+  // missing `activity.topics.*` key would have shown its raw key to nobody watching.
+  it('offers every subject by name, glyphless', async () => {
+    render(<ActivityList />)
+
+    await userEvent.click(menuFor('Sujet', 'Tout'))
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Import' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Génération' })).toBeInTheDocument()
+  })
+
   it('adds a value to what its family already narrows to', async () => {
     useActivity.setState({ levels: ['error'], topics: [] })
     render(<ActivityList />)

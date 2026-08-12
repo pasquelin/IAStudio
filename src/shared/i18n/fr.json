@@ -226,7 +226,8 @@
     "filters": {
       "levels": "Niveau",
       "topics": "Sujet",
-      "summary": "{{facet}} : {{choice}}"
+      "summary": "{{facet}} : {{choice}}",
+      "hint": "Choisit les valeurs à retenir — aucune cochée les retient toutes"
     },
     "levels": {
       "info": "Information",

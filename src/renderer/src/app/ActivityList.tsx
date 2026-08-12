@@ -177,7 +177,7 @@ function FilterMenu<T extends string>({
       // The accessible name IS the visible text: `ToolButton` names itself from `label`, and a
       // name that did not contain what the eye reads breaks WCAG 2.5.3.
       label={summary}
-      description={t('activity.filterHint')}
+      description={t('activity.filters.hint')}
       tooltip={TIP_BOTTOM}
       variant="header"
       active={active.length > 0}

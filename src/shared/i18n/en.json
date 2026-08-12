@@ -226,7 +226,8 @@
     "filters": {
       "levels": "Level",
       "topics": "Topic",
-      "summary": "{{facet}}: {{choice}}"
+      "summary": "{{facet}}: {{choice}}",
+      "hint": "Chooses the values to keep — none ticked keeps them all"
     },
     "levels": {
       "info": "Information",
