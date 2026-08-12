@@ -34,7 +34,7 @@ describe('EntryMenu', () => {
       screen.getByRole('menuitem', { name }).getAttribute('data-tooltip-content')
 
     expect(said('Révéler dans le dossier')).toBe(
-      'Ouvre le dossier du système de fichiers, le fichier sélectionné',
+      'Ouvre le gestionnaire de fichiers sur le fichier sélectionné',
     )
     expect(said('Renommer')).toBe('Change le nom du fichier sur le disque, pas seulement à l’écran')
     expect(said('Mettre à la corbeille')).toBe(

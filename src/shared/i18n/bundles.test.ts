@@ -261,6 +261,44 @@ describe('the translation bundles', () => {
   })
 
   /**
+   * One thing, one word — for the thing a reader has to recognise across five screens.
+   *
+   * The desktop's own file window was called two things in each language at once: `file manager`
+   * three times against `file browser` twice, `gestionnaire de fichiers` twice against `système
+   * de fichiers` three times. Nothing was wrong with either sentence on its own, which is why no
+   * guard here saw it and why it took reading the five side by side.
+   *
+   * The retained word is not a preference: the manual already says `gestionnaire de fichiers`
+   * four times for the application, and keeps `système de fichiers` for what it properly names —
+   * the filesystem, in `architecture.md`. The bundle's own use of it was the loose one.
+   *
+   * A pair enters this list on two conditions, and a review found the second one missing from an
+   * earlier draft of this comment: both forms measured in the bundles, AND something outside the
+   * bundles settling which one wins. The manual settles this one. `Réglages` against `Préférences`
+   * — 22 to 8 in French, 26 to 8 in English — meets the first condition and not the second: what
+   * a preferences window is called is a product call, and a typography guard is no place to make
+   * it quietly.
+   *
+   * What this does NOT catch, measured rather than assumed: a form split across two lines, a
+   * THIRD synonym nobody has written yet (`explorateur de fichiers`, `file explorer`), and text
+   * in NFD. It reads one shape of one settled word — which is what the drift looked like.
+   */
+  const SETTLED_WORDS: Record<Language, readonly { dropped: RegExp; kept: string }[]> = {
+    fr: [{ dropped: /système de fichiers/i, kept: 'gestionnaire de fichiers' }],
+    en: [{ dropped: /file browser/i, kept: 'file manager' }],
+  }
+
+  it.each(CODES)('says one thing one way in %s', code => {
+    const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
+      SETTLED_WORDS[code]
+        .filter(({ dropped }) => dropped.test(text))
+        .map(({ kept }) => `${key} — say "${kept}"`),
+    )
+
+    expect(drifted).toEqual([])
+  })
+
+  /**
    * A plural base names every form the language HAS, asked of `Intl` rather than assumed. French
    * carries three — `one`, `many`, `other` — and the third language is not where this breaks: it
    * is French, at a million, where `select` answers `many` and a bundle without it renders the

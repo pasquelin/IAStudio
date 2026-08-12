@@ -681,7 +681,7 @@
     "noProject": "No project open. Create or open one to see its documents.",
     "empty": "This project folder could not be read.",
     "open": "Open",
-    "revealHint": "Opens the system file browser with this file selected",
+    "revealHint": "Opens the file manager on the selected file",
     "renameHint": "Changes the file’s name on disk, not only on screen",
     "trashHint": "Sends the file to the system trash; nothing is erased right away"
   },
@@ -840,7 +840,7 @@
     "pauseClip": "Pause",
     "clipSpeed": "Speed",
     "clipLoop": "Loop",
-    "revealHint": "Opens the system file browser with this asset selected",
+    "revealHint": "Opens the file manager on the selected asset",
     "conditions": "Conditions",
     "branch": "Branch {{number}}",
     "otherwise": "Otherwise",
@@ -2104,7 +2104,7 @@
   },
   "home": {
     "sections": {
-      "spotlight": "Where you were",
+      "spotlight": "Where you left off",
       "tools": "Tools",
       "explore": "Explore"
     },
@@ -2131,9 +2131,9 @@
       "rowHint": "{{path}} — opened {{when}}",
       "openedAt": "Opened {{when}}",
       "actions": "Project actions",
-      "actionsHint": "Show this project’s folder, or drop it from the list.",
+      "actionsHint": "Show this project’s folder, or remove it from the list.",
       "reveal": "Reveal in folder",
-      "revealHint": "Opens the system’s file manager on this project",
+      "revealHint": "Opens the file manager on this project",
       "forget": "Remove from the list",
       "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched"
     },

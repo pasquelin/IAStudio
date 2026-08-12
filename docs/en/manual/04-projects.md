@@ -44,7 +44,7 @@ tooltip, along with the whole path, which a narrow panel truncates.
 
 | Entry | What it does |
 |---|---|
-| **Reveal in folder** | opens the system's file manager on this project |
+| **Reveal in folder** | opens the file manager on this project |
 | **Remove from the list** | removes the project from this list, **leaving its folder and everything in it untouched** |
 
 **Removing asks for no confirmation, and that is deliberate**: nothing is lost, and reopening the
