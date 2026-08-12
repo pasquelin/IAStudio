@@ -50,10 +50,10 @@ Sept contextes :
 | **Dans le ciel** | la vue de l’espace Skyboxes |
 | **Dans le graphe** | la toile de l’espace Graphe |
 
-**Une surface peut écouter une touche sans être un contexte.** La bande d’animation de l’espace 3D
-en est le cas : `Suppr` et `Retour arrière` y retirent la clé choisie, mais la touche est liée à la
-bande elle-même et n’écoute que si elle a le focus — d’où le clic sur la clé avant. Elle ne figure
-donc pas dans l’écran des raccourcis, et ne se change pas.
+**Une surface peut écouter une touche sans être un contexte, et la garantie ci-dessus ne la couvre
+alors pas.** La bande d’animation de l’espace 3D en est le cas : `Suppr` et `Retour arrière` y
+retirent la clé choisie, la touche étant liée à la bande et non au registre des contextes. Elle ne
+figure donc pas dans l’écran des raccourcis, et ne se change pas.
 
 Un seul contexte est spécial : **Partout dans l’application**. Ses touches passent par le menu du
 système d’exploitation, qui les attrape avant tout le monde. Elles sont donc les seules à ne

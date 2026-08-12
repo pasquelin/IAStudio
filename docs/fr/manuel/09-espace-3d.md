@@ -662,11 +662,12 @@ s’y pose — un bloc de clip, lui, s’y dépose encore. Une règle graduée j
 dirait que la scène est plus longue qu’elle ne l’est.
 
 **Une clé se retire de deux façons.** Le losange de l’en-tête, pressé là où une clé se tient sous
-la tête de lecture, la retire de toutes les propriétés de l’objet — d’un seul coup, comme il les
-avait posées, et `⌘Z` les fait toutes revenir ensemble. Sur la bande, **cliquez une clé pour la
-choisir, puis `Suppr` ou `Retour arrière`** : elle part de la ligne où elle est, donc de la seule
-propriété si la ligne est dépliée, et de toutes si elle est repliée. **Une ligne verrouillée garde
-la sienne** — le verrou protège du retrait comme il protège de la pose.
+la tête de lecture, la retire de **toutes les propriétés qui en portent une à cet instant** — d’un
+seul coup, comme il les avait posées, et `⌘Z` les fait toutes revenir ensemble. Sur la bande,
+**cliquez une clé pour la choisir, puis `Suppr` ou `Retour arrière`** : elle part de la ligne où
+elle est, et c’est **la ligne qui décide de la portée**, jamais son pliage — celle d’un objet
+emporte toutes ses propriétés, celle d’une propriété dépliée n’emporte qu’elle. **Une ligne
+verrouillée garde la sienne** — le verrou protège du retrait comme il protège de la pose.
 
 **Lire quand la tête est déjà au bout rembobine** au lieu de s’arrêter sur l’image où l’on est.
 

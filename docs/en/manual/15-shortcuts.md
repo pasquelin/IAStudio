@@ -50,10 +50,10 @@ Seven contexts:
 | **In the sky** | the view of the Skyboxes workspace |
 | **In the graph** | the canvas of the Graph workspace |
 
-**A surface can listen to a key without being a context.** The 3D workspace's animation band is
-that case: `Delete` and `Backspace` take off the chosen key there, but the key is bound to the band
-itself and only listens once it has focus — hence the click on the key first. So it does not appear
-on the shortcuts screen, and cannot be changed.
+**A surface can listen to a key without being a context, and the guarantee above does not cover it
+then.** The 3D workspace's animation band is that case: `Delete` and `Backspace` take off the
+chosen key there, the key being bound to the band rather than to the register of contexts. So it
+does not appear on the shortcuts screen, and cannot be changed.
 
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be

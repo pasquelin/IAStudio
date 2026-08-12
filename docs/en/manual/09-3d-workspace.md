@@ -645,10 +645,12 @@ there — a clip block still can. A ruler graduated to seventeen seconds over a 
 scene is longer than it is.
 
 **A key comes off two ways.** The header's diamond, pressed where a key stands under the playhead,
-takes it off every property of that object — in one go, the way it laid them, and `⌘Z` brings them
-all back together. On the band, **click a key to pick it, then `Delete` or `Backspace`**: it leaves
-the line it sits on, so the one property if that line is unfolded, and all of them if it is folded.
-**A locked line keeps its own** — the lock guards against removal as it guards against keying.
+takes it off **every property carrying one at that instant** — in one go, the way it laid them, and
+`⌘Z` brings them all back together. On the band, **click a key to pick it, then `Delete` or
+`Backspace`**: it leaves the line it sits on, and **the line decides the reach**, never its
+folding — an object's line carries all of its properties away, an unfolded property's line only
+itself. **A locked line keeps its own** — the lock guards against removal as it guards against
+keying.
 
 **Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 
