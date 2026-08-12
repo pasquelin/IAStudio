@@ -10,9 +10,9 @@ import { arrangementOf, useTools } from '@/stores/tools'
 
 /**
  * Brings a panel forward, wherever this surface puts it. The zone is resolved rather than
- * fixed: the shelf is the bottom band in Image and the right column in Video, the Explorer the
- * left column on the home, and a half that does not match its placement renders a different
- * panel altogether.
+ * fixed: the shelf is the bottom band in Image and the right column in Video, the upper left is
+ * the models in every space and the projects on the home, and a half that does not match its
+ * placement renders a different panel altogether.
  *
  * No placement means this surface does not serve the tool — opening it would accent a rail
  * icon that is not drawn and show nothing.

@@ -67,9 +67,11 @@ export type ToolId =
   | 'jobs'
 
 /**
- * The panels the UPPER HALF of the left column is reserved for: choosing a model, then filling
- * its form. Nothing else may sit in that half, and neither sits anywhere else — `tool.test.ts`
- * enforces both directions.
+ * The panels the upper half of a WORKSPACE's left column is reserved for: choosing a model, then
+ * filling its form. Nothing else may sit in that half of a workspace, and neither sits anywhere
+ * else — `tool.test.ts` enforces both directions, and both are scoped to `WORKSPACE_IDS`. The
+ * home is outside the rule and always was: it generates nothing, and its upper left holds the
+ * projects.
  *
  * The upper half of every space's left column, so generating — the one thing every space does —
  * keeps the same place in each, under the same button that creates a document. The half below
@@ -190,18 +192,21 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // one browses, the right is what speaks ABOUT what is open. The home never had it applied — its
   // panels arrived one at a time, six on the right against one on the left.
   //
-  // Its upper left is EMPTY, and stays so: the list of what the studio can start went back to the
-  // centre, where a grid reads it across instead of a 320-pixel column stacking it. The half is
-  // not to be filled with the next panel to hand — `tool.test.ts` holds it empty.
+  // The upper left, which the home alone leaves for something other than generation: it makes no
+  // document, so the half goes to what one produces IN — the projects, the first thing anyone
+  // comes to this screen for. It is ALONE there, and that is the point of the half: the three
+  // below take turns with each other, and none of them may take the projects' turn.
+  { id: 'projects', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
 
-  // The lower left, where every space puts what one produces WITH and what one browses. The home
-  // produces nothing, so it puts what one produces IN — the projects, the first thing anyone
-  // comes to this screen for — then the recipes kept across them, the ideas to start from, and
-  // work in the vein of the last asset. `projects` stays declared first: it is what the half
-  // shows to everyone who never chose one.
-  { id: 'projects', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
-  { id: 'spark', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  // The lower half, where every space puts what one browses: the recipes kept across projects,
+  // the ideas to start from, and work in the vein of the last asset.
+  //
+  // `favorites` is declared first, so it is what the half shows to everyone who never chose one,
+  // and it is first because it is the only one of the three that asks for NOTHING. The other two
+  // condition on a key — `spark` cannot even ask without a chosen image model, and drew the empty
+  // state saying so to anyone opening the studio for the first time.
   { id: 'favorites', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
+  { id: 'spark', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
   { id: 'similar', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
 
   // The right column, in rail order: from the newest thing this project made to the files it

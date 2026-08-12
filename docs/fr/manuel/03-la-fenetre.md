@@ -118,15 +118,15 @@ bas ce qu’on parcourt. **À l’accueil, seule la moitié basse existe.**
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
-| **Vos projets** | 2de | ceux que vous avez ouverts récemment, à rouvrir d’un clic | rien |
-| **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
+| **Vos projets** | 1re | ceux que vous avez ouverts récemment, à rouvrir d’un clic | rien |
 | **Vos recettes** | 2de | les réglages que vous avez épinglés | rien |
+| **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
 | **Dans la même veine** | 2de | des créations publiques qui ressemblent à votre dernier asset | une clé API |
 
 **La moitié haute est celle que les espaces réservent à la génération**, et l’accueil ne génère
-rien. Elle y est donc **absente** — pas vide : aucun panneau ne s’y place, et le rail n’y propose
-rien. Les sept espaces se choisissent **au centre**, où ils se lisent en largeur plutôt qu’en
-colonne de 320 px.
+rien : il y met ce dans quoi on produit. **Vos projets** y est seul, donc aucun clic sur les trois
+étagères du dessous ne peut le faire disparaître. La liste de ce que le studio sait commencer,
+elle, se lit au centre, en largeur — c’est la section **Outils**.
 
 **Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des projets,
 elle vous suit de l’un à l’autre.
@@ -458,9 +458,9 @@ De haut en bas :
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
 | *séparateur* | |
-| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; **l’accueil n’en a aucune**, sa moitié haute n’existe pas |
+| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; l’accueil y met **Vos projets** |
 | *séparateur* | |
-| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets**, l’assistance de prompt, puis ses deux étagères |
+| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met ses trois étagères : recettes, assistance de prompt, puis « dans la même veine » |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
 
 **Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la
@@ -577,12 +577,11 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 > **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
 > espace est un endroit qui ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun —
 > il ouvre ceux des autres. **L’accueil a ses propres panneaux, et ce tableau ne les liste pas** :
-> il a ses deux colonnes à lui, avec onze panneaux qui n’existent nulle part ailleurs. À gauche il
-> met **Vos projets**, à la place où les espaces mettent l’Explorateur : en moitié basse. La
-> logique est la même à un mot près — un espace y range ce **avec** quoi on produit, l’accueil ce
-> **dans** quoi on produit, et c’est la première chose qu’on vient y chercher. N’ayant pas de
-> génération à mettre au-dessus, **il n’ouvre pas de moitié haute du tout** : ce que le studio
-> sait commencer se lit au centre, en largeur, plutôt que dans une colonne étroite.
+> il a ses deux colonnes à lui, avec onze panneaux qui n’existent nulle part ailleurs. N’ayant pas
+> de génération à mettre en moitié haute, il y met **Vos projets** — un espace range à gauche ce
+> **avec** quoi on produit, l’accueil ce **dans** quoi on produit, et c’est la première chose
+> qu’on vient y chercher. Ses trois étagères se partagent la moitié basse, là où les espaces
+> mettent l’Explorateur ; ce que le studio sait commencer se lit au centre, en largeur.
 
 **La colonne de gauche est celle de ce qui produit**, et elle est coupée en deux.
 

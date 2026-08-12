@@ -89,17 +89,18 @@ export const DEFAULT_SPLIT = 240
 /**
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
  * each surface opens on the panel it declares first: the layers in Image, the shelf in Video,
- * the sky in Skyboxes, the models in the upper left of every space, the Explorer in the lower
- * left of each, and the projects in the home's.
+ * the sky in Skyboxes, the models in the upper left of every space and the Explorer in the lower
+ * left of each — and, on the home, the projects above and the recipes below (the one shelf of
+ * the three that asks for no key).
  *
  * Every half a surface has is named here, and the lower left is no exception: two halves of two
  * exist so the generator stays visible WHILE the Explorer is read, and a half that starts closed
  * would be that arrangement withheld until someone goes looking for it in the rail.
  *
- * The home names the two columns it has and no band, and every half those columns HAVE. Its upper
- * left is not one: no placement serves it, and naming it would leave the zone reporting itself
- * open — `isZoneOpen` reads the key, not what the key resolves to — so closing the lower half
- * would take the column off the screen while it went on reserving 320 px against the other one.
+ * The home names the two columns it has and no band, and every half those columns HAVE — all four
+ * again since the projects took its upper left. A half a surface does NOT have must stay unnamed:
+ * `isZoneOpen` reads the key rather than what it resolves to, so a name over an empty half keeps
+ * the zone reserving 320 px against the other column long after the screen stopped drawing it.
  */
 export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
@@ -108,7 +109,7 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     bottom: { primary: null },
   },
   home: {
-    left: { secondary: null },
+    left: { primary: null, secondary: null },
     right: { primary: null, secondary: null },
   },
 }
@@ -400,13 +401,11 @@ export const useTools = create<ToolsState>()(
     }),
     {
       name: 'scenario-studio:tools',
-      // Bumped whenever a `ToolId` is renamed or dropped, or the shape changes: a stale entry
-      // would reach a tool no version knows, which `isKnownTool` drops — a blank half where a
-      // panel used to be. `shownTool` substituting the half's first tool is NOT a reason to skip
-      // the bump: it substitutes from the placements, and a half whose last placement is what
-      // just left has nothing to offer. That is version 12 exactly — `tools` went back to the
-      // centre, and a stored `left: { primary: 'tools' }` whose other half the user had closed
-      // resolved to two nulls, which `Edge` reads as no left column at all.
+      // Bumped whenever a `ToolId` is renamed or dropped, RE-HUNG ON ANOTHER HALF, or the shape
+      // changes: a stale entry would reach a tool no version knows, which `isKnownTool` drops —
+      // a blank half where a panel used to be. `shownTool` substituting the half's first tool is
+      // NOT a reason to skip the bump: it substitutes from the placements, and a half whose last
+      // placement is what just left has nothing to offer.
       // Version 1 held a `collapsed` map, and 2 one tool per zone; 3 predates the
       // mesh and light panels, and 4 the asset shelf moving out of the bottom strip. 5 still
       // cut that strip in two and knew a `jobs` panel, which the status line carries now, and
@@ -417,8 +416,12 @@ export const useTools = create<ToolsState>()(
       // home a left column and nothing else; it has two now, and a stored arrangement naming
       // only the first would withhold the right one from everyone who had ever opened the app.
       // 10 left the home's upper left closed, which is where the tools moved on 11 August: the
-      // same withholding, one half further in. 11 named that half; it has none now.
-      version: 12,
+      // same withholding, one half further in. 11 named that half and 12 unnamed it, the tools
+      // having gone back to the centre; 13 gives it to the projects, which came up from the half
+      // below. Everyone who ever launched 12 carries its `left: { secondary: null }` — the upper
+      // half unnamed, so closed, and the projects never drawn at all. Not the minority who had
+      // clicked: the whole installed base, on the panel the surface exists to open on.
+      version: 13,
       migrate: migrateTools,
       // Focus is session state: restoring it would accent a zone on startup that the user
       // never touched.
