@@ -360,8 +360,8 @@ filed would vanish from the screen, and you would think it lost.
 
 ## Duplicate, copy, paste
 
-The four shortcuts you already know. **Duplicate** has its row in **Edit**; the other three do
-not, and the reason is worth saying.
+The four shortcuts you already know. **Duplicate** has its row in **Edit**; the *Cut*, *Copy* and
+*Paste* rows you will see higher up there **are not the scene's**, and the reason is worth saying.
 
 | Gesture | Shortcut | What it does |
 |---|---|---|
