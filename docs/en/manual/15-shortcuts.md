@@ -50,6 +50,11 @@ Seven contexts:
 | **In the sky** | the view of the Skyboxes workspace |
 | **In the graph** | the canvas of the Graph workspace |
 
+**A surface can listen to a key without being a context.** The 3D workspace's animation band is
+that case: `Delete` and `Backspace` take off the chosen key there, but the key is bound to the band
+itself and only listens once it has focus — hence the click on the key first. So it does not appear
+on the shortcuts screen, and cannot be changed.
+
 One context is special: **Anywhere in the application**. Its keys go through the operating system's
 menu, which catches them before anybody else. They are therefore the only ones that can never be
 "covered" by another context — and the only ones whose conflict is always a real conflict.
@@ -513,6 +518,9 @@ That is the question people actually ask — "what does `⌘K` do again?" — ra
 
 **The flying keys** (`W A S D Q E` and boost) are not on this screen. They are fixed for now. See
 [What does not exist yet](18-limits.md).
+
+**`Delete` and `Backspace` on the animation band** are not either, for the reason given above: they
+are bound to the band, not to a context.
 
 ---
 
