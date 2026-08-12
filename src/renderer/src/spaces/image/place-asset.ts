@@ -2,6 +2,7 @@ import { isLocalPicture, type Asset } from '@shared/domain/asset'
 import { DEFAULT_CANVAS, pixelLayer, type CanvasState } from '@/engines/canvas/canvas-state'
 import { addLayer } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
+import { reportFailure } from '@/services/diagnostics'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import type { PictureMeasure } from './picture-size'
 
@@ -53,6 +54,12 @@ export async function becomeAsset(
   const { measureAsset, withinCeiling } = await import('./picture-size')
   const measured = await measureAsset(asset.id, measure)
   const size = measured ? withinCeiling(measured) : DEFAULT_CANVAS
+  // Said out loud when the ceiling actually bit, because ⌘S writes the document's size back over
+  // the asset: a picture opened smaller than it is would be saved smaller than it was, and that
+  // has to be a thing the user was told rather than one the studio did quietly.
+  if (measured && (size.width !== measured.width || size.height !== measured.height)) {
+    reportFailure('assets.open', asset.name, new Error('picture opened below its own size'))
+  }
   const layer = { ...pixelLayer(newId(), asset.name), source: asset.id }
   const state: CanvasState = {
     ...DEFAULT_CANVAS,
