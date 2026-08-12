@@ -15,6 +15,18 @@
  * what makes `bg-chassis` and friends exist at all; the light theme restates every one of them
  * further down, inside its own daisyUI theme block. Nothing else in the application may hold a
  * hex value — the engines read these tokens through `engines/core/palette.ts`.
+ *
+ * The line above is the rule, not a description of the code: some places DO restate a value from
+ * here, because they paint before any stylesheet can be read — the window chrome, the splash
+ * screen, the canvas overlay's last resort. Those three are pinned by a test against the token
+ * they restate, so repainting a token here fails a suite instead of leaving a stale twin behind.
+ * Others are not, and that is what the rule is for rather than a description of the code.
+ *
+ * No list, and no search either. This paragraph claimed "there is no third one" for twenty minutes
+ * before a review found three; the search offered in its place then missed two of them, because a
+ * copy needs neither this file's spelling nor even its type — `0x000000` restates a colour,
+ * `'9px'` restates a size. What holds is the rule: a value taken from here carries a test that
+ * says where it came from, written where the copy lives.
  */
 @theme {
   --color-chassis: #2b2d30;

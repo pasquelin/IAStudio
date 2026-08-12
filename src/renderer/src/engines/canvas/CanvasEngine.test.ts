@@ -21,7 +21,8 @@ import {
 } from './canvas-state'
 import { DEFAULT_BRUSH } from './brush'
 import { PixelPatches } from './PixelPatches'
-import type { CanvasTool } from './CanvasEngine'
+import stylesheet from '@/index.css?raw'
+import { FALLBACK_COLORS, OVERLAY_TOKENS, type CanvasTool } from './CanvasEngine'
 import type { CanvasSelection } from './canvas-selection'
 import type { Point } from '../core/geometry'
 import { RULER_SIZE } from './CanvasOverlay'
@@ -3499,5 +3500,64 @@ describe('the brush ring', () => {
     await nextFrame()
 
     expect(rings).toHaveLength(0)
+  })
+})
+
+/**
+ * The overlay reads its colours from the stylesheet and keeps a table of hexadecimals for the
+ * one case where it cannot: a canvas that is not in a document yet. That table restates nine
+ * tokens by hand, and nothing but this described what it was restating.
+ *
+ * The stakes are not that the fallback looks wrong. `token()` answers an empty string for a name
+ * `index.css` no longer declares, and `readColors` falls back on exactly that answer — so a
+ * renamed or removed token turns this table into the real source of the overlay's colours, on
+ * every canvas, with the whole suite green. Two of these nine tokens were repainted on 12 August
+ * alone.
+ *
+ * Pinned against the DARK declarations only, and that is a decision rather than an oversight: a
+ * canvas with no document has no theme to read either, and the table's own comment states the
+ * greys it was chosen for.
+ */
+describe('the overlay colours the canvas falls back on', () => {
+  /**
+   * The `@theme` BLOCK, not the rest of the file from `@theme` onwards — and the difference is
+   * the whole point, measured. Reading onwards, a token deleted from `@theme` is still found in
+   * the light theme's own block further down, so removing `--color-marquee-light` from the
+   * reference left this green while the dark theme no longer declared it. Three tokens are
+   * exposed that way: the ones the light theme restates at the same value.
+   */
+  const darkTokens = (): Map<string, string> => {
+    // Comments go from the WHOLE sheet before the block is cut out, and the order is the point:
+    // cutting first leaves any comment that opens above `@theme {` and closes inside it, so a
+    // commented-out declaration — or the commented-out block itself — reads as live and this
+    // guard stays green while the fallback quietly becomes the real source of every colour.
+    const live = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '')
+    const start = live.indexOf('@theme {')
+    expect(start, '`@theme {` is gone from index.css').toBeGreaterThan(-1)
+    const block = live.slice(start, live.indexOf('\n}', start))
+
+    return new Map(
+      [...block.matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)].map(([, name = '', value = '']) => [
+        name,
+        value.trim(),
+      ]),
+    )
+  }
+
+  it('names only tokens the stylesheet still declares', () => {
+    const declared = darkTokens()
+    const gone = Object.values(OVERLAY_TOKENS).filter(name => !declared.has(name))
+
+    expect(gone).toEqual([])
+  })
+
+  it('restates each of those tokens exactly', () => {
+    const declared = darkTokens()
+
+    expect({ ...FALLBACK_COLORS }).toEqual(
+      Object.fromEntries(
+        Object.entries(OVERLAY_TOKENS).map(([part, name]) => [part, declared.get(name)]),
+      ),
+    )
   })
 })

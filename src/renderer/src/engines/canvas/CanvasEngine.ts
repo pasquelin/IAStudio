@@ -346,7 +346,7 @@ function cursorFor(hit: HandleHit, facing: Facing): string {
 const ORIGIN: Point = { x: 0, y: 0 }
 
 /** Which token each part of the overlay is painted with. The values live in `index.css`. */
-const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
+export const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   frame: '--color-border',
   guide: '--color-accent-soft',
   // A step above the chassis, not level with it: the bands sit on the darkest surface of the
@@ -362,8 +362,14 @@ const OVERLAY_TOKENS: Record<keyof OverlayColors, string> = {
   scrim: '--color-scrim',
 }
 
-/** Legible on the studio's greys, and only ever used before a canvas exists to read from. */
-const FALLBACK_COLORS: OverlayColors = {
+/**
+ * Legible on the studio's greys, and only ever used before a canvas exists to read from.
+ *
+ * Every value restates its token's DARK declaration, and a test pins the pair: `token()` answers
+ * empty for a name `index.css` no longer declares, so a renamed token would quietly make this
+ * table the real source of the overlay's colours instead of its last resort.
+ */
+export const FALLBACK_COLORS: OverlayColors = {
   frame: '#34363a',
   guide: '#2e436e',
   rulerBackground: '#3c3f44',
