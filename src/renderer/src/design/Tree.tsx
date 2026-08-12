@@ -3,9 +3,9 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
-import { useGauge } from '@/hooks/useGauge'
+import { useRowHeight, type RowHeight } from '@/hooks/useRowHeight'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
-import { LIST_ROW_HEIGHT, rowSkin } from './styles'
+import { rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 import { useRemeasure } from './virtual'
 
@@ -93,6 +93,15 @@ export type TreeProps<T extends TreeNode> = {
   droppable?: (node: T, dragged: T) => boolean
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
+  /**
+   * How tall a row is, for a tree whose rows stack a name over a subtitle.
+   *
+   * `control` by default, which is every tree but the explorer's — and the explorer is what this
+   * exists for: its rows carry a second line for a document that is open, and two steps of
+   * `leading-tight` text do not fit in a control's height. Same shape as `Collection`'s, resolved
+   * by the same hook.
+   */
+  rowHeight?: RowHeight
 }
 
 /** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
@@ -116,6 +125,7 @@ export function Tree<T extends TreeNode>({
   onActivate,
   onContextMenu,
   renderRow,
+  rowHeight = 'control',
 }: TreeProps<T>) {
   // Which row the pointer is over during a drag, and what is being dragged. Session state of
   // the gesture itself, so neither reaches the caller: what the caller hears about is the drop.
@@ -128,20 +138,20 @@ export function Tree<T extends TreeNode>({
   )
 
   // Read back from the gauge the row below is sized by: a constant is only right at one density.
-  const rowHeight = useGauge('--sc-control', LIST_ROW_HEIGHT)
+  const rowPixels = useRowHeight(rowHeight)
 
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroller.current,
-    estimateSize: () => rowHeight,
+    estimateSize: () => rowPixels,
     overscan: 8,
   })
 
   // The virtualizer memoizes on `count`, never on the estimator: without this the rows keep the
   // height the previous density gave them.
-  useRemeasure(virtualizer, rowHeight)
+  useRemeasure(virtualizer, rowPixels)
 
   const focusRow = (index: number): void => {
     const bounded = Math.max(0, Math.min(index, rows.length - 1))
@@ -243,7 +253,7 @@ export function Tree<T extends TreeNode>({
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
                 style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
-                  'group flex h-(--sc-control) cursor-pointer items-center gap-2 px-1',
+                  'group flex h-full cursor-pointer items-center gap-2 px-1',
                   rowSkin(selected.has(row.node.id)),
                   // The row a drop would land in, told apart from the row that is selected.
                   over === row.node.id && 'outline-accent outline -outline-offset-1',

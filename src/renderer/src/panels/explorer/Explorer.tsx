@@ -135,6 +135,8 @@ export function Explorer() {
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
       onContextMenu={(node, at) => setMenu({ node, at })}
+      // Its rows carry a second line for a document that is open — see `EntryRow`.
+      rowHeight="stacked"
       renderRow={row => {
         const document = documentOf(row.node)
         const icon =
