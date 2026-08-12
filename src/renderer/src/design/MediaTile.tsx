@@ -55,7 +55,7 @@ export function MediaTile({
           className="absolute inset-0 size-full object-cover"
         />
       ) : (
-        <UiIcon path={fallbackIcon} size={20} className="text-muted/30 absolute inset-0 m-auto" />
+        <UiIcon path={fallbackIcon} size={20} className="text-muted/80 absolute inset-0 m-auto" />
       )}
 
       {badge}

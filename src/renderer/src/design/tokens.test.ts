@@ -132,15 +132,55 @@ const SURFACES_OF: Record<string, string[]> = {
 }
 
 /**
- * Three placeholders, exempt and measured: a crossed-out image on an empty thumbnail (1.65:1 at
- * `/30`), the same on a media tile, and the large glyph of an empty state (1.96 at `/40`).
+ * Two placeholders, exempt and measured: a crossed-out image on an empty thumbnail (1.65:1 at
+ * `/30`) and the large glyph of an empty state (1.96 at `/40`).
  *
  * They carry no information a word does not already carry beside them — `EmptyState` renders its
- * sentence in full `muted` right under the glyph — so WCAG 1.4.11 does not reach them. **Raising
- * them would say the placeholder is the message**, which is the opposite of what an empty frame
- * means. This is a decision, not an oversight.
+ * sentence in full `muted` right under the glyph, and on a thumbnail the ABSENCE of a picture is
+ * itself the message. **Raising them would say the placeholder is the message.**
+ *
+ * `MediaTile` was on this list and had no business being here: its glyph is `assetIcon(type)`,
+ * so it says whether a tile holds a mesh or a sound, and nothing else on the tile does — the
+ * caption is the asset's name and the badge is its sync state. It is measured below instead.
  */
-const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/MediaTile.tsx', '/EmptyState.tsx']
+const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
+
+/**
+ * A glyph that INFORMS, held at the 3:1 of WCAG 1.4.11 rather than the 4.5 of a word. One site:
+ * the type icon a media tile falls back to while its poster is being made.
+ */
+const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
+
+/**
+ * Every alpha ink of a set of sources, composed on the surfaces of its vocabulary and measured
+ * against the bar its role asks for — 4.5 for a word, 3 for a glyph that informs.
+ *
+ * Taken as a function so the rule can be run against a source known to FAIL, which is what tells
+ * a reader it measures anything at all.
+ */
+function alphaFailures(sources: readonly (readonly [string, string])[]): string[] {
+  const failing: string[] = []
+
+  for (const theme of THEMES) {
+    const tokens = palette(theme.from)
+
+    for (const [path, source] of sources) {
+      if (DECORATIVE_GLYPHS.some(one => path.endsWith(one))) continue
+      const bar = INFORMATIVE_GLYPHS.some(one => path.endsWith(one)) ? AA_NON_TEXT : AA_NORMAL_TEXT
+
+      for (const [, ink = '', percent = ''] of source.matchAll(ALPHA_INK)) {
+        for (const surface of SURFACES_OF[ink] ?? []) {
+          const seen = blend(tokens[ink] ?? '', tokens[surface] ?? '', Number(percent) / 100)
+          if (contrastRatio(seen, tokens[surface] ?? '') < bar) {
+            failing.push(`${path} ${ink}/${percent} on ${surface}`)
+          }
+        }
+      }
+    }
+  }
+
+  return failing
+}
 
 describe('the contrast of the inks', () => {
   for (const theme of THEMES) {
@@ -276,35 +316,30 @@ describe('the contrast of the inks', () => {
    * Each vocabulary is composed on its own surfaces: daisyUI's `base-content` belongs to the app
    * windows, the studio's inks to the docks — the boundary `CLAUDE.md` draws.
    */
-  it('clears AA once composed, wherever an ink is written with an alpha', () => {
-    const failing: string[] = []
+  it('clears its bar once composed, wherever an ink is written with an alpha', () => {
+    expect(alphaFailures(WRITTEN_SOURCES)).toEqual([])
+  })
 
-    for (const theme of THEMES) {
-      const tokens = palette(theme.from)
+  /**
+   * The sweep run against a source that is KNOWN bad — the exact state `window-styles.ts` was in
+   * before this batch. Without it, five one-line edits leave the rule green while it measures
+   * nothing: `alpha = 1`, an emptied `SURFACES_OF`, the threshold lowered to the glyph bar, a path
+   * added to the exemptions. A rule that cannot be shown to refuse anything refuses nothing.
+   */
+  it('refuses an ink that fails, which is the only way to know it measures at all', () => {
+    const bad = alphaFailures([['./probe.ts', "'text-base-content/60 text-xs'"]])
 
-      for (const [path, source] of WRITTEN_SOURCES) {
-        if (DECORATIVE_GLYPHS.some(one => path.endsWith(one))) continue
-
-        for (const [, ink = '', percent = ''] of source.matchAll(ALPHA_INK)) {
-          const alpha = Number(percent) / 100
-
-          for (const surface of SURFACES_OF[ink] ?? []) {
-            const seen = blend(tokens[ink] ?? '', tokens[surface] ?? '', alpha)
-            const ratio = contrastRatio(seen, tokens[surface] ?? '')
-            if (ratio < AA_NORMAL_TEXT) failing.push(`${path} ${ink}/${percent} on ${surface}`)
-          }
-        }
-      }
-    }
-
-    expect(failing).toEqual([])
+    expect(bad).toContain('./probe.ts base-content/60 on base-300')
+    // And the same ink one step up passes, so the probe proves the threshold, not the sweep.
+    expect(alphaFailures([['./probe.ts', "'text-base-content/70'"]])).toEqual([])
   })
 
   it('finds an alpha ink at all, so the rule above cannot pass on an empty sweep', () => {
-    const written = WRITTEN_SOURCES.filter(([, source]) => ALPHA_INK.test(source))
-    ALPHA_INK.lastIndex = 0
+    // `String.match` and not `RegExp.test`: a global regex carries `lastIndex` from one file to
+    // the next, and this count read 9 of the 11 that exist before it was written this way.
+    const written = WRITTEN_SOURCES.filter(([, source]) => source.match(ALPHA_INK))
 
-    expect(written.length).toBeGreaterThanOrEqual(8)
+    expect(written.length).toBeGreaterThanOrEqual(10)
   })
 
   /**
