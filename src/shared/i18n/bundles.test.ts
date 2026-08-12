@@ -14,6 +14,7 @@ import {
   GRAPH_RUN_STATUSES,
   SILENT_RUN_STATUSES,
 } from '../domain/graph'
+import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
 import { NAMED_KEYS } from '../domain/shortcut'
 import {
@@ -246,14 +247,15 @@ describe('the translation bundles', () => {
    * twenty-eight of the openers had an ordinary one. A citation breakable at one end and not
    * the other leaves `«` as the last thing on a line: the very shape the closing half prevents.
    *
-   * U+00A0 rather than the narrow U+202F: the two look alike at eleven pixels, and the wide
-   * one is the space every font actually has. Named by code point because eslint refuses
-   * either of them in source.
+   * A number binds the same way, to its unit and to its own thousands, and that half was missing:
+   * `{{units}} UC` is the readout the studio draws most, and every pattern written here looked for
+   * a DIGIT — which an interpolation is not. `breakableSpots` reads all five spots, and it lives
+   * in `typography.ts` because `model-text.fr.json` is guarded against exactly the same ones.
    */
-  it('holds its double punctuation with a no-break space in French', () => {
-    const breakable = [...BUNDLES.fr]
-      .filter(([, text]) => / [;:!?»]|« /.test(text))
-      .map(([key]) => key)
+  it('binds what French does not break, in French', () => {
+    const breakable = [...BUNDLES.fr].flatMap(([key, text]) =>
+      breakableSpots(text).map(spot => `${key} — ${spot}`),
+    )
 
     expect(breakable).toEqual([])
   })

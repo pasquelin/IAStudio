@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import fr from './model-text.fr.json'
+import { breakableSpots } from './typography'
 import { normalizeModelText, translateModelText } from './model-text'
 
 /**
@@ -95,27 +96,22 @@ describe('the French of the model texts', () => {
   })
 
   /**
-   * The rest of French typography, which this file had escaped entirely.
+   * The same five spots as `fr.json`, read by the same function.
    *
-   * `bundles.test.ts` holds it for `fr.json` — a NO-BREAK space before `;` `:` `!` `?` and `»`,
-   * and after `«` — and this dictionary is French shown on screen just the same: it is what the
-   * generation panel reads under every field a model describes. It sat outside because it is
-   * excluded from the PARITY measure, being keyed on the English sentence with no English twin;
-   * the exclusion quietly took the typography with it.
+   * This file is French shown on screen — what the generation panel draws under every field a
+   * model describes — and it sat outside the guard because it is excluded from the PARITY
+   * measure, being keyed on the English sentence with no English twin. The exclusion quietly
+   * took the typography with it, and eleven spaces paid for it.
    *
-   * What it cost: eight ordinary spaces before a double punctuation against three no-break ones —
-   * the file disagreed with itself — and all three opening quotes breakable. A description is the
-   * longest text the panel draws, in its narrowest column, so it is exactly where a `:` dropped
-   * alone onto the next line shows.
-   *
-   * The space in the pattern is the ORDINARY one, written plainly, and it has to be: a no-break
-   * space there would condemn the correct case and clear the faulty one. Slipping one in is not a
-   * risk to watch for — eslint's `no-irregular-whitespace` refuses it in source, and only it.
+   * A description is the longest text the panel draws, in its narrowest column, so a `:` or a
+   * `1 000` dropped alone onto the next line shows here before anywhere else.
    */
-  it('holds its double punctuation with a no-break space', () => {
-    const breakable = entries.filter(([, french]) => / [;:!?»]|« /.test(french))
+  it('binds what French does not break', () => {
+    const breakable = entries.flatMap(([source, french]) =>
+      breakableSpots(french).map(spot => `${source} — ${spot}`),
+    )
 
-    expect(breakable.map(([source]) => source)).toEqual([])
+    expect(breakable).toEqual([])
   })
 
   it('leaves the vocabulary of the craft in English', () => {
