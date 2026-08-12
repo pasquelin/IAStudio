@@ -23,10 +23,8 @@ names the object involved and says what failed.
 | "This folder is not a Scenario project", "The project could not be created in this folder", "The system could not open this file" | Project |
 | "Part of the interface could not be drawn", "A workspace’s stored layout could not be read" | Interface |
 
-Filter by **level** — information, warning, failure — or by **topic**. Each is a menu: the button
-says what it keeps ("Level: Failure", or "Level: All" when it keeps everything), and opening it
-gives the checkboxes. Several values can be ticked at once; the **All** row, at the top of the
-menu, releases the whole filter.
+Filter by **level** — information, warning, failure — or by **topic**: each is a menu whose
+button says what it keeps. The detail is in [chapter 3](03-the-window.md#the-journal-next-to-it).
 
 The panel closes three ways: a click beside it, `Escape`, or switching to another application.
 Clicking the icon again works too. The same holds for the generations bar to its left.

@@ -23,10 +23,9 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 | « Ce dossier n’est pas un projet Scenario », « Le projet n’a pas pu être créé dans ce dossier », « Ce fichier n’a pas pu être ouvert par le système » | Projet |
 | « Une partie de l’interface n’a pas pu s’afficher », « L’agencement enregistré d’un espace était illisible » | Interface |
 
-Filtrez par **niveau** — information, avertissement, échec — ou par **sujet**. Chacun est un
-menu : le bouton dit ce qu'il retient (« Niveau : Échec », ou « Niveau : Tout » quand il ne
-retient rien), et l'ouvrir donne les cases à cocher. Plusieurs valeurs peuvent l'être à la fois ;
-la ligne **Tout**, en tête du menu, relâche le filtre entier.
+Filtrez par **niveau** — information, avertissement, échec — ou par **sujet** : chacun est un
+menu dont le bouton dit ce qu'il retient. Le détail est au
+[chapitre 3](03-la-fenetre.md#le-journal-à-côté).
 
 Le volet se referme de trois façons : un clic à côté, `Échap`, ou le passage à une autre
 application. Recliquer l’icône marche aussi. C’est vrai de la barre des générations à sa gauche.
