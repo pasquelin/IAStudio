@@ -70,11 +70,10 @@ const isShared = (name: string): boolean =>
 /**
  * The names more than one store publishes — computed, never listed.
  *
- * This is the other half of the rule, and the half a word list cannot state: `claimOnSubmit` is
- * shared by two stores and its corrected form (`claimImageOnSubmit`) carries the domain in the
- * MIDDLE, so no prefix describes it. Asking which names have two owners needs no vocabulary at
- * all, catches a collision the day it appears, and would have found `historyOf` and `viewOf` on
- * its own.
+ * This is the other half of the rule, and the half a word list cannot state: `claimOnSubmit` was
+ * shared by two stores and its corrected form, `claimImageOnSubmit`, carries the domain in the
+ * MIDDLE — no prefix describes it. Asking which names have two owners needs no vocabulary at all,
+ * catches a collision the day it appears, and would have found `historyOf` and `viewOf` on its own.
  */
 const collidingExports = (sources: readonly (readonly [string, string])[]): string[] => {
   const owners = new Map<string, Set<string>>()
@@ -90,16 +89,21 @@ const collidingExports = (sources: readonly (readonly [string, string])[]): stri
 }
 
 /**
- * The collisions this guard has NOT closed yet, each a lot of its own at the chantier: `isDirty`
- * (`scenes.ts`, `settings-draft.ts`, `textures.ts` — three, not two) and `claimOnSubmit`
- * (`image-generation.ts` and `generation-claims.ts`, the second of which also imports the first
- * under an alias, which is the admission that the name is missing).
+ * The collisions this guard has NOT closed yet, each a lot of its own at the chantier: `isDirty`,
+ * published by `scenes.ts` and `textures.ts` — both re-exporting the one `store.isDirty` of
+ * `document-store.ts` — and by `settings-draft.ts`, which is NOT a document store and takes a
+ * different argument entirely. Three renames, and the odd one out is the draft.
+ *
+ * `claimOnSubmit` left this list on 2026-08-12, and the leaving is what the check below is for:
+ * `image-generation.ts` now publishes `claimImageOnSubmit` — the name `generation-claims.ts` was
+ * already importing it under — so the aggregate keeps the bare name, which is its by right. The
+ * guard refused the stale entry before anyone thought to remove it.
  *
  * **This list only ever SHRINKS.** A name leaves it when its rename lands; a name that appears
  * here without a lot behind it is a collision being tolerated rather than fixed. A test below
  * refuses an entry that has stopped colliding, so it cannot rot into a permission.
  */
-const KNOWN_COLLISIONS: readonly string[] = ['claimOnSubmit', 'isDirty']
+const KNOWN_COLLISIONS: readonly string[] = ['isDirty']
 
 /** Exemptions whose collision is gone — debts written down after they were paid. */
 const staleExemptions = (
@@ -218,5 +222,8 @@ describe('what a store exports about a shared word', () => {
     for (const domain of ['canvas', 'scene', 'skybox']) {
       expect(names).toContain(`${domain}ViewOf`)
     }
+    // The infix form deposits its witness too, or the day `image-generation.ts` leaves the folder
+    // the rule goes quiet about it without reddening.
+    expect(names).toContain('claimImageOnSubmit')
   })
 })
