@@ -1,6 +1,6 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import type { Asset } from '@shared/domain/asset'
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOCUMENT_KINDS, DOCUMENT_VERSION, workspaceForKind } from '@shared/domain/document'
 import type {
   CloseChoice,
@@ -21,9 +21,8 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
 import { DEFAULT_CANVAS, pixelLayer } from '@/engines/canvas/canvas-state'
-import { addLayer } from '@/engines/canvas/commands'
+import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvas-hosts'
-import { lendPictureMeasure } from '@/spaces/image/picture-size'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
 import { addGraphNode, connectGraph } from '@/engines/graph/commands'
@@ -221,12 +220,6 @@ describe('saveDocument', () => {
 
     beforeEach(() => {
       forgotten = []
-      // The document opens at the default size, so the asset has to measure the same for the
-      // overwrite to be allowed at all — jsdom decodes nothing, hence the lent measurer.
-      const restore = lendPictureMeasure(() =>
-        Promise.resolve({ width: DEFAULT_CANVAS.width, height: DEFAULT_CANVAS.height }),
-      )
-      onTestFinished(restore)
     })
 
     /** `sourceAssetId` absent is the blank document of the `+` button: it edits no asset. */
@@ -306,29 +299,28 @@ describe('saveDocument', () => {
     })
 
     /**
-     * An overwrite REPLACES the file, so a flatten that is not the picture's own size is not a
-     * replacement for it — a crop, a resample, or a picture opened under the ceiling because it
-     * was enormous. `replaceBytes` deletes what it replaces, so this refusal is the difference
-     * between "the asset is now smaller" and "the asset is intact".
+     * A crop is an edit like any other, and the flatten goes back at whatever size the document
+     * has become. A save that refused a resized document would be an image editor that cannot
+     * crop; what keeps an asset safe is that an untouched tab writes nothing at all.
      */
-    it('refuses to overwrite an asset the document no longer measures', async () => {
+    it('writes the asset even when the document no longer measures what it did', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
-      const { entries } = bridgeWatchingLogs({
+      installFakeBridge({
         documents: { write: () => Promise.resolve() },
         assets: { savePicture },
       })
-      const restore = lendPictureMeasure(() => Promise.resolve({ width: 4096, height: 2048 }))
-      onTestFinished(restore)
-
       const { documentId, release } = await openImage('asset-1')
       useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+      useCanvases.getState().runCommand(documentId, resizeCanvas(320, 200, { x: 0, y: 0 }))
 
-      // The document was written all the same: only the asset half is refused.
       await expect(saveDocument(documentId)).resolves.toBe(true)
       release()
 
-      expect(savePicture).not.toHaveBeenCalled()
-      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+      expect(savePicture).toHaveBeenCalledWith({
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: PNG,
+      })
     })
 
     /**
@@ -344,25 +336,6 @@ describe('saveDocument', () => {
       release()
 
       expect(unsavedDocumentIds()).toEqual([documentId])
-    })
-
-    // Doubt falls on the safe side: a picture that will not measure cannot be shown to match.
-    it('refuses to overwrite an asset that will not measure', async () => {
-      const savePicture = vi.fn(() => Promise.resolve(picture()))
-      installFakeBridge({
-        documents: { write: () => Promise.resolve() },
-        assets: { savePicture },
-      })
-      const restore = lendPictureMeasure(() => Promise.reject(new Error('gone')))
-      onTestFinished(restore)
-
-      const { documentId, release } = await openImage('asset-1')
-      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
-
-      await expect(saveDocument(documentId)).resolves.toBe(true)
-      release()
-
-      expect(savePicture).not.toHaveBeenCalled()
     })
 
     /**
