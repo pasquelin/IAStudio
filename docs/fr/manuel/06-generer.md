@@ -502,7 +502,7 @@ Le panneau le dit lui-même, au-dessus de sa liste : **la Génération, c’est 
 | **Cette clé API n’a pas les droits requis.** | la clé existe mais ne peut pas faire cela | vérifier votre plan sur app.scenario.com |
 | **Trop de requêtes. Nouvelle tentative en cours…** | vous avez dépassé le débit autorisé | rien, le studio réessaie tout seul |
 | **Le service Scenario est momentanément indisponible.** | panne côté serveur | réessayer plus tard |
-| **Impossible de joindre Scenario.** | votre connexion internet | vérifier le réseau |
+| **Impossible de joindre Scenario. Vérifiez votre connexion.** | votre connexion internet | vérifier le réseau |
 | **La génération a échoué.** | le modèle a refusé la demande | souvent un paramètre hors limites, ou un prompt refusé |
 | **Impossible d’enregistrer le résultat sur le disque.** | le dossier du projet n’est plus accessible | disque plein, projet déplacé, droits en écriture |
 | **Valeur invalide.** | un champ du formulaire | le champ concerné est signalé |

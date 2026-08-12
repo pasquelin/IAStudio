@@ -83,8 +83,8 @@ The studio checks with Scenario immediately. Three possible answers:
 | What appears | What it means |
 |---|---|
 | A green **In use** badge on the account's row | all is well, you can close settings |
-| **Invalid API key or secret** | one of the two strings is wrong — often a stray space at the start or end |
-| **Cannot reach Scenario** | it is not your key, it is your internet connection |
+| **Invalid API key or secret.** | one of the two strings is wrong — often a stray space at the start or end |
+| **Cannot reach Scenario. Check your connection.** | it is not your key, it is your internet connection |
 
 **Where your credentials go.** They are encrypted by your system's keychain — Keychain on macOS,
 the credential manager on Windows, the desktop keyring on Linux — and filed with the studio's
