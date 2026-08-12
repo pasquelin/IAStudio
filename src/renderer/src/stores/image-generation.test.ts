@@ -6,7 +6,7 @@ import { canvasOf, useCanvases } from './canvases'
 import { installDocument } from './document-fixtures'
 import { useDocuments } from './documents'
 import { job as jobOf } from './job-fixtures'
-import { claimOnSubmit, connectImageGeneration } from './image-generation'
+import { claimImageOnSubmit, connectImageGeneration } from './image-generation'
 import { useJobs } from './jobs'
 
 const picture = (id: string, overrides: Partial<Asset> = {}): Asset => ({
@@ -47,7 +47,7 @@ async function finish(status: JobStatus, overrides: Partial<Job> = {}): Promise<
 
 /** Submits from whatever tab is in front, the way the generator does — capture, then settle. */
 function submitFrom(jobId: string): void {
-  claimOnSubmit()(job({ id: jobId }))
+  claimImageOnSubmit()(job({ id: jobId }))
 }
 
 const stack = (documentId: string) => canvasOf(useCanvases.getState(), documentId)

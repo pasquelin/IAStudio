@@ -13,5 +13,5 @@ const landing = createGenerationLanding({
   land: placeAsset,
 })
 
-export const claimOnSubmit = landing.claimOnSubmit
+export const claimImageOnSubmit = landing.claimOnSubmit
 export const connectImageGeneration = landing.connect
