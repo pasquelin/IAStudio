@@ -3,9 +3,16 @@ import { useTranslation } from 'react-i18next'
 import type { TrackProperty } from '@shared/domain/animation'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
-import { keyNode, removeAnimationTrack } from '@/engines/scene/animation-commands'
+import { keyNode, removeAnimationTrack, unkeySubject } from '@/engines/scene/animation-commands'
+import { snapToFrame } from '@shared/domain/time'
 import { newId } from '@/helpers/ids'
-import type { AnimationRow, ChannelRow, ClipRow, SubjectRow } from '@/engines/scene/animation-rows'
+import {
+  trackIdsOf,
+  type AnimationRow,
+  type ChannelRow,
+  type ClipRow,
+  type SubjectRow,
+} from '@/engines/scene/animation-rows'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
@@ -89,16 +96,21 @@ type SubjectRowProps = { documentId: string; row: SubjectRow }
 function SubjectHeader({ documentId, row }: SubjectRowProps) {
   const { t } = useTranslation()
   const playhead = useSceneViews(state => sceneViewOf(state, documentId).playhead)
+  const fps = useScenes(state => sceneOf(state, documentId).animation.fps)
+
+  const at = snapToFrame(playhead, fps)
+  const standing = row.keys.includes(at)
 
   const key = (): void => {
     const store = useScenes.getState()
-    const command = keyNode(
-      sceneOf(store, documentId),
-      subjectOf(row.id),
-      playhead,
-      channelNames(t, row.name),
-      () => `track_${newId()}`,
-    )
+    const state = sceneOf(store, documentId)
+
+    // Pressed where a key already stands, it takes that key off: a pose one cannot undo is a
+    // pose one is stuck with, and nothing else in the panel removes one.
+    const command = standing
+      ? unkeySubject(state, trackIdsOf(row), at)
+      : keyNode(state, subjectOf(row.id), at, channelNames(t, row.name), () => `track_${newId()}`)
+
     if (command) store.runCommand(documentId, command)
   }
 
@@ -121,10 +133,15 @@ function SubjectHeader({ documentId, row }: SubjectRowProps) {
       <div className="flex items-center gap-0.5">
         <ToolButton
           icon={mdiRhombus}
-          label={t('animation.keySubject', { name: row.name })}
-          description={t('animation.keySubjectHint')}
+          label={
+            standing
+              ? t('animation.unkeySubject', { name: row.name })
+              : t('animation.keySubject', { name: row.name })
+          }
+          description={standing ? t('animation.unkeySubjectHint') : t('animation.keySubjectHint')}
           tooltip={TIP_RIGHT}
           variant="header"
+          active={standing}
           onClick={key}
         />
         {TRACK_FLAGS.map(flag => (

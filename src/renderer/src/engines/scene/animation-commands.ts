@@ -267,6 +267,26 @@ function dedupeMoves(moves: readonly NodeMove[]): NodeMove[] {
 }
 
 /**
+ * Takes a key off every channel of one subject at that instant.
+ *
+ * The counterpart of `keySubject`, and it has to exist: a pose one cannot undo is a pose one is
+ * stuck with, and the old panel's diamond removed what it had posed.
+ */
+export function unkeySubject(
+  state: SceneState,
+  trackIds: readonly string[],
+  time: Us,
+): Command<SceneState> | null {
+  const drops = trackIds
+    .map(trackId => trackById(state, trackId))
+    .filter(track => track && !track.locked && track.keys.some(key => key.time === time))
+    .map(track => removeAnimationKey(track!.id, time))
+
+  if (drops.length === 0) return null
+  return drops.length === 1 && drops[0] ? drops[0] : multi('key:unset', drops)
+}
+
+/**
  * Slides a key along its track, keeping its value.
  *
  * A key landing on an instant another already holds REPLACES it, which is what `withKey` does
