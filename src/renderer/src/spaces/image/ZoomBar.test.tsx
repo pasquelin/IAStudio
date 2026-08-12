@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { MAX_SCALE, MIN_SCALE } from '@/engines/canvas/viewport'
+import { CANVAS_MAX_SCALE, CANVAS_MIN_SCALE } from '@/engines/canvas/viewport'
 import { ZoomBar, zoomLabel } from './ZoomBar'
 
 function mount(scale: number) {
@@ -57,12 +57,12 @@ describe('ZoomBar', () => {
   })
 
   it('stops offering a zoom the renderer cannot go to', () => {
-    mount(MAX_SCALE)
+    mount(CANVAS_MAX_SCALE)
     expect(screen.getByRole('button', { name: /Zoom avant/ })).toBeDisabled()
   })
 
   it('stops offering a zoom out at the far end too', () => {
-    mount(MIN_SCALE)
+    mount(CANVAS_MIN_SCALE)
     expect(screen.getByRole('button', { name: /Zoom arrière/ })).toBeDisabled()
   })
 })

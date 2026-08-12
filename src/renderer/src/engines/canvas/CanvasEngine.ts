@@ -89,7 +89,7 @@ import {
   fitTo,
   sameViewport,
   toDocument,
-  zoomAt,
+  zoomCanvasAt,
   type CanvasView,
   type Size,
   type Viewport,
@@ -2246,7 +2246,7 @@ export class CanvasEngine {
     if (event.ctrlKey || event.metaKey) {
       // Exponential, so a notch feels the same at 5% and at 800%.
       const scale = viewport.scale * Math.exp(-event.deltaY / 250)
-      this.moveTo(zoomAt(viewport, scale, this.toHost(event)))
+      this.moveTo(zoomCanvasAt(viewport, scale, this.toHost(event)))
       return
     }
 

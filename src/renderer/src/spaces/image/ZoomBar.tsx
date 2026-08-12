@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { formatPercent } from '@/helpers/format'
 import { TIP_TOP } from '@/helpers/tooltip'
-import { MAX_SCALE, MIN_SCALE } from '@/engines/canvas/viewport'
+import { CANVAS_MAX_SCALE, CANVAS_MIN_SCALE } from '@/engines/canvas/viewport'
 
 export type ZoomBarProps = {
   scale: number
@@ -36,7 +36,7 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
         shortcut={shortcuts.zoomOut}
         tooltip={TIP_TOP}
         variant="header"
-        disabled={scale <= MIN_SCALE}
+        disabled={scale <= CANVAS_MIN_SCALE}
         onClick={onZoomOut}
       />
       {/* The readout is the button: clicking a zoom level to go back to 100% is the gesture
@@ -58,7 +58,7 @@ export function ZoomBar({ scale, shortcuts, onZoomIn, onZoomOut, onFit, onActual
         shortcut={shortcuts.zoomIn}
         tooltip={TIP_TOP}
         variant="header"
-        disabled={scale >= MAX_SCALE}
+        disabled={scale >= CANVAS_MAX_SCALE}
         onClick={onZoomIn}
       />
       <ToolButton

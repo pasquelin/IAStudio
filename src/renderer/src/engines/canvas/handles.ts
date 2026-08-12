@@ -351,7 +351,7 @@ export function rotateBy(
  * multiply, so three collapsing drags of a bounded ratio still reached a millionth. A layer that
  * small has no box left to grab, and only ⌘Z would bring it back.
  */
-const MIN_SCALE = 0.01
+const LAYER_MIN_SCALE = 0.01
 
 function middle(one: Point, other: Point): Point {
   return { x: (one.x + other.x) / 2, y: (one.y + other.y) / 2 }
@@ -369,5 +369,5 @@ function ratio(moved: number, extent: number): number {
 
 /** Keeps a scale off zero without flipping the mirror the user may have asked for. */
 function floored(scale: number): number {
-  return Math.abs(scale) < MIN_SCALE ? MIN_SCALE * Math.sign(scale || 1) : scale
+  return Math.abs(scale) < LAYER_MIN_SCALE ? LAYER_MIN_SCALE * Math.sign(scale || 1) : scale
 }
