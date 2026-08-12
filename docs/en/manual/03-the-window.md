@@ -116,7 +116,7 @@ one browses. **On the home screen, only the lower half exists.**
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
-| **Your projects** | 1st | the ones you opened recently, reopened with a click | nothing |
+| **Your projects** | 1st | the ones you opened recently, with their folder, reopened with a click — [its per-row menu](04-projects.md#the-home-screens-project-list) | nothing |
 | **Your recipes** | 2nd | the settings you have pinned | nothing |
 | **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
 | **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
