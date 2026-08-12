@@ -42,6 +42,7 @@ import {
   closeDocument,
   deleteDocument,
   refreshDocuments,
+  rehydrateDocument,
   restoreDocument,
   saveDocument,
   saveDocumentAs,
@@ -397,6 +398,186 @@ describe('saveDocument', () => {
       release()
 
       expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * A remount does not lose the state, so `restoreDocument` reads nothing — and the fresh
+     * engine came up with the whole stack and not one pixel in it. Every layer was blank except
+     * the ones carrying `source`, which redrew from their asset; and once ⌘S has written the
+     * flattened stack into that asset, redrawing from it folds the whole picture into the one
+     * layer it came from.
+     */
+    it('hands a remounted engine the pixels the document holds on disk', async () => {
+      const restored: string[] = []
+      installFakeBridge({
+        documents: {
+          write: () => Promise.resolve(),
+          read: () =>
+            Promise.resolve({
+              version: DOCUMENT_VERSION,
+              kind: 'image',
+              title: 'Gemini 3.1',
+              content: JSON.stringify(DEFAULT_CANVAS),
+              updatedAt: '2026-08-12T10:00:00.000Z',
+              parts: [{ name: 'p_layer-1.png', data: 'QUJD' }],
+            }),
+        },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      release()
+
+      // The engine that comes up after the switch, holding nothing.
+      const remounted = holdCanvas(documentId, () =>
+        fakeCanvas({
+          restoreSnapshot: pixels => {
+            restored.push(pixels.layerId)
+            return Promise.resolve()
+          },
+        }),
+      )
+      await rehydrateDocument(documentId)
+      remounted()
+
+      expect(restored).toEqual(['layer-1'])
+    })
+
+    // Said out loud rather than swallowed: a remount that came back blank because the file would
+    // not read is indistinguishable from one that came back blank because there was nothing in it.
+    it('says so when the file it would read back refuses', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: {
+          write: () => Promise.resolve(),
+          read: () => Promise.reject(new Error('gone')),
+        },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      release()
+
+      await rehydrateDocument(documentId)
+
+      expect(entries()[0]).toMatchObject({ scope: 'document.load' })
+    })
+
+    /**
+     * Only a kind whose pixels live outside its state has anything to hand back, which is the
+     * image alone — a scene, a sky or a montage is entirely in the string it was written as.
+     */
+    it('reads nothing back for a kind that keeps everything in its state', async () => {
+      const read = vi.fn(() => Promise.resolve(savedFile()))
+      installFakeBridge({ documents: { write: () => Promise.resolve(), read } })
+
+      const documentId = await openScene()
+      await rehydrateDocument(documentId)
+
+      expect(read).not.toHaveBeenCalled()
+    })
+
+    // A document saved before it held any pixels has no parts, and that is not a failure.
+    it('hands nothing back when the file carries no pixels', async () => {
+      installFakeBridge({
+        documents: {
+          write: () => Promise.resolve(),
+          read: () =>
+            Promise.resolve({
+              version: DOCUMENT_VERSION,
+              kind: 'image',
+              title: 'Gemini 3.1',
+              content: JSON.stringify(DEFAULT_CANVAS),
+              updatedAt: '2026-08-12T10:00:00.000Z',
+            }),
+        },
+      })
+      const restored: string[] = []
+      const { documentId, release } = await openImage('asset-1')
+      release()
+
+      const remounted = holdCanvas(documentId, () =>
+        fakeCanvas({
+          restoreSnapshot: pixels => {
+            restored.push(pixels.layerId)
+            return Promise.resolve()
+          },
+        }),
+      )
+      await rehydrateDocument(documentId)
+      remounted()
+
+      expect(restored).toEqual([])
+    })
+
+    // `restoreDocument` owns the empty tab; both reading would race two installs onto it.
+    it('leaves a document that has not been filled to the reader that fills it', async () => {
+      const read = vi.fn(() => Promise.resolve(null))
+      installFakeBridge({ documents: { write: () => Promise.resolve(), read } })
+      useDocuments.setState({
+        documents: { 'doc-1': { id: 'doc-1', kind: 'image', title: 'x', workspace: 'image' } },
+      })
+
+      await rehydrateDocument('doc-1')
+
+      expect(read).not.toHaveBeenCalled()
+    })
+
+    /**
+     * `commit` clears the dirty mark the moment the document reaches disk, so "was edited" is
+     * true exactly once — a failed asset half would otherwise never be tried again, and the
+     * shelf would stand on the pre-edit picture for good with no bullet to say so.
+     */
+    it('writes the asset on the next ⌘S after one that failed', async () => {
+      let refuse = true
+      const savePicture = vi.fn(() => {
+        if (refuse) return Promise.reject(new Error('disk full'))
+        return Promise.resolve(picture())
+      })
+      bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openImage('asset-1')
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Layer')))
+
+      await saveDocument(documentId)
+      // Nothing was edited in between, and the document is clean: only the debt makes it retry.
+      refuse = false
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).toHaveBeenCalledTimes(2)
+    })
+
+    /**
+     * `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
+     * exactly when a ⌘S after switching workspace lands. Treated as a success it left every
+     * consumer of the asset on the pre-edit picture, and said nothing.
+     */
+    it('says so, and retries, when there was nothing to bake yet', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+
+      const booting = holdCanvas(created.id, () => fakeCanvas())
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Layer')))
+      await saveDocument(created.id)
+      booting()
+
+      expect(savePicture).not.toHaveBeenCalled()
+      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+
+      // The engine is up now, and the debt is what brings the asset back into line.
+      const ready = holdCanvas(created.id, () =>
+        fakeCanvas({ snapshot: () => Promise.resolve(PNG) }),
+      )
+      await saveDocument(created.id)
+      ready()
+
+      expect(savePicture).toHaveBeenCalledTimes(1)
     })
 
     /**
