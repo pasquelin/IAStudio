@@ -604,6 +604,13 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(query.location)
       }
 
+      // What the explorer asks before it hands a file to the system: a row filed at this exact
+      // path, or none. Both sides spell it with `/` — see `relativePathFor`.
+      if (query.path) {
+        conditions.push('path = ?')
+        params.push(query.path)
+      }
+
       if (query.syncStatus) {
         conditions.push('sync_state = ?')
         params.push(query.syncStatus)

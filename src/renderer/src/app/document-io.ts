@@ -239,7 +239,13 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   if (unreadable.has(documentId) || !io.holds(documentId)) return false
 
   const { draft, commit } = await io.capture(documentId)
-  await bridge.documents.write(document.id, document.kind, { ...draft, title: document.title })
+  await bridge.documents.write(document.id, document.kind, {
+    ...draft,
+    title: document.title,
+    // Written from the descriptor for the same reason the title is: the tab owns both, and the
+    // captured draft is the editor's state alone.
+    ...(document.sourceAssetId ? { sourceAssetId: document.sourceAssetId } : {}),
+  })
   commit()
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { documentsIn, panelIds, useDocuments } from './documents'
+import { documentForAsset, documentsIn, panelIds, useDocuments } from './documents'
 import { showPanels } from './layout-fixtures'
 import { useLayouts } from './layouts'
 
@@ -170,6 +170,26 @@ describe('documents store', () => {
     expect(other?.title).toBe(first?.title)
   })
 
+  it('names a document after the asset it was opened for, rather than numbering it', async () => {
+    const created = await useDocuments
+      .getState()
+      .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
+
+    expect(created?.title).toBe('Gemini 3.1')
+    expect(created?.sourceAssetId).toBe('asset_42')
+  })
+
+  // Two assets may share a name, and the numbering is not the answer: it counts untitled
+  // documents. What tells the two tabs apart is the link, which is what comes back to one.
+  it('leaves two documents opened for homonymous assets under the same title', async () => {
+    const { create } = useDocuments.getState()
+    const first = await create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_1' })
+    const second = await create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_2' })
+
+    expect(second?.title).toBe(first?.title)
+    expect(second?.id).not.toBe(first?.id)
+  })
+
   it('gives every document its own id', async () => {
     const { create } = useDocuments.getState()
     expect((await create('3d'))?.id).not.toBe((await create('3d'))?.id)
@@ -189,6 +209,29 @@ describe('documents store', () => {
     await create('image')
 
     expect(documentsIn(useDocuments.getState(), '3d')).toHaveLength(1)
+  })
+})
+
+describe('documentForAsset', () => {
+  beforeEach(() => {
+    useDocuments.setState({ documents: {}, activeId: null })
+    installFakeBridge()
+  })
+
+  it('finds the tab already editing an asset', async () => {
+    const created = await useDocuments
+      .getState()
+      .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset_42' })
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')?.id).toBe(created?.id)
+  })
+
+  // A document of the right kind is not a document of this asset: answering with one would send
+  // the asset into a tab that already edits another, which is the whole confusion this replaces.
+  it('answers nothing for an asset no tab is editing', async () => {
+    await useDocuments.getState().create('image')
+
+    expect(documentForAsset(useDocuments.getState(), 'asset_42')).toBeNull()
   })
 })
 

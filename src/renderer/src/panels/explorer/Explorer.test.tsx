@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FolderEntry } from '@shared/domain/folder'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -14,6 +15,9 @@ const openDocument = vi.fn()
 vi.mock('@/app/dockview-api', () => ({
   openDocument: (...args: unknown[]) => openDocument(...args),
 }))
+
+const openAsset = vi.hoisted(() => vi.fn<(asset: Asset) => Promise<void>>(() => Promise.resolve()))
+vi.mock('@/helpers/open-asset', () => ({ openAsset }))
 
 const scene: DocumentDescriptor = { id: 'a3f1', kind: 'scene', title: 'Niveau', workspace: '3d' }
 
@@ -38,8 +42,17 @@ const withProject = (): void => {
   })
 }
 
-/** What the main process answers per folder, so a test says what the disk holds and no more. */
-function install(byFolder: Record<string, FolderEntry[]>, documents: DocumentDescriptor[] = []) {
+/**
+ * What the main process answers per folder, so a test says what the disk holds and no more.
+ *
+ * `catalogued` is what the folder cannot say: whether a file it shows is an asset. Empty by
+ * default, which is a folder of files the studio has never heard of.
+ */
+function install(
+  byFolder: Record<string, FolderEntry[]>,
+  documents: DocumentDescriptor[] = [],
+  catalogued: readonly Asset[] = [],
+) {
   const listFolder = vi.fn((relative: string) => Promise.resolve(byFolder[relative] ?? []))
   const openFile = vi.fn(() => Promise.resolve(true))
   const revealFile = vi.fn(() => Promise.resolve())
@@ -49,6 +62,10 @@ function install(byFolder: Record<string, FolderEntry[]>, documents: DocumentDes
   installFakeBridge({
     project: { listFolder, openFile, revealFile, renameFile, moveFile, trashFile },
     documents: { list: () => Promise.resolve(documents) },
+    assets: {
+      search: (query: AssetQuery) =>
+        Promise.resolve(catalogued.filter(asset => asset.path === query.path)),
+    },
   })
   return { listFolder, openFile, revealFile, renameFile, moveFile, trashFile }
 }
@@ -283,6 +300,55 @@ describe('the project explorer', () => {
 
       expect(openFile).toHaveBeenCalledWith('brief.pdf')
       expect(openDocument).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The complaint this answers: double-clicking a generated picture launched a picture viewer.
+     * The folder shows `asset_2604….png`, the shelf shows « Gemini 3.1 », and only the catalogue
+     * knows they are the same thing — so the extension alone cannot decide.
+     */
+    it('opens an asset in its own editor rather than in another application', async () => {
+      withProject()
+      const { openFile } = install(
+        { '': [folder('assets')], assets: [file('boulder.png', 'assets')] },
+        [],
+        [
+          {
+            id: 'asset_1',
+            name: 'Gemini 3.1',
+            type: 'image',
+            location: 'local',
+            path: 'assets/boulder.png',
+            tags: [],
+            createdAt: '2026-08-12T10:00:00.000Z',
+          },
+        ],
+      )
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('assets'))
+      await userEvent.dblClick(await screen.findByText('boulder.png'))
+
+      await waitFor(() => expect(openAsset).toHaveBeenCalledTimes(1))
+      expect(vi.mocked(openAsset).mock.calls[0]?.[0]).toMatchObject({ id: 'asset_1' })
+      expect(openFile).not.toHaveBeenCalled()
+    })
+
+    // A file under a project folder the catalogue has never recorded — dropped in by hand — is
+    // not an asset, and the system is still where it goes.
+    it('still hands a file the catalogue does not know to the system', async () => {
+      withProject()
+      const { openFile } = install({
+        '': [folder('assets')],
+        assets: [file('stray.png', 'assets')],
+      })
+
+      render(<Explorer />)
+      await userEvent.dblClick(await screen.findByText('assets'))
+      await userEvent.dblClick(await screen.findByText('stray.png'))
+
+      await waitFor(() => expect(openFile).toHaveBeenCalledWith('assets/stray.png'))
+      expect(openAsset).not.toHaveBeenCalled()
     })
 
     // A `.scene` whose descriptor the project does not list is a file like any other: the

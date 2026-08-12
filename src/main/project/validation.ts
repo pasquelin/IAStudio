@@ -75,6 +75,8 @@ const assetQuery = z.object({
   types: z.array(z.custom<AssetType>(isAssetType)).max(ASSET_TYPES.length).optional(),
   tags: z.array(z.string().min(1)).max(32).optional(),
   text: z.string().max(200).optional(),
+  // The same shape the explorer's own channel is held to: it is the surface that asks this.
+  path: folderPath.optional(),
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),
@@ -179,6 +181,9 @@ const documentEnvelope = z.object({
   kind: documentKind,
   title,
   updatedAt: z.string().min(1),
+  // Absent on every document written before assets could be opened, and on every document that
+  // edits none — so an absent field means "not linked" rather than a file to migrate.
+  sourceAssetId: z.string().min(1).optional(),
 })
 
 /** A document file is user territory, like the manifest: hand-edited, truncated, or older. */

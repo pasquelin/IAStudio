@@ -47,8 +47,17 @@ type DocumentsState = {
    * listing that came back says a document is nowhere.
    */
   refresh: () => Promise<boolean>
-  /** `null` when the workspace has no editable document kind yet. */
-  create: (workspace: WorkspaceId) => Promise<DocumentDescriptor | null>
+  /**
+   * `null` when the workspace has no editable document kind yet.
+   *
+   * `of` is what opening an asset passes: the two fields travel together because a tab named
+   * after an asset it is not linked to would be a title that lies. Without it the document is
+   * numbered, which is what the rail's plus button and the home want.
+   */
+  create: (
+    workspace: WorkspaceId,
+    of?: { title: string; sourceAssetId: string },
+  ) => Promise<DocumentDescriptor | null>
   activate: (id: string | null) => void
   /**
    * Takes in a document the folder holds but no tab shows yet — what the Explorer hands over
@@ -70,11 +79,6 @@ export function activeIdOfKind(state: DocumentsSlice, kind: DocumentKind): strin
   return id !== null && state.documents[id]?.kind === kind ? id : null
 }
 
-/** What kind of document is in front, or `null` when none is. */
-export function activeKind(state: DocumentsSlice): DocumentKind | null {
-  return (state.activeId !== null && state.documents[state.activeId]?.kind) || null
-}
-
 /**
  * A document of a kind, preferring the one in front.
  *
@@ -90,6 +94,20 @@ export function documentOfKind(
   if (front?.kind === kind) return front
 
   return Object.values(state.documents).find(document => document.kind === kind) ?? null
+}
+
+/**
+ * The tab already editing an asset, or `null` when none is.
+ *
+ * What keeps a double-click idempotent: opening the same asset twice must come back to its tab
+ * rather than open a second one onto the same file — two tabs of one document are two histories
+ * of it, and the second save writes over the first.
+ */
+export function documentForAsset(
+  state: DocumentsSlice,
+  assetId: string,
+): DocumentDescriptor | null {
+  return Object.values(state.documents).find(document => document.sourceAssetId === assetId) ?? null
 }
 
 /**
@@ -209,24 +227,13 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     return found !== null
   },
 
-  create: async workspace => {
+  create: async (workspace, of) => {
     const kind = kindForWorkspace(workspace)
     if (!kind) return null
 
-    // Numbered against the folder as much as against the open tabs: a document saved and then
-    // closed still holds its name, and counting only what is open hands that name out twice.
-    const stored = (await listed()) ?? []
-    const taken = new Set([
-      ...stored.filter(document => document.workspace === workspace).map(document => document.id),
-      ...documentsIn(get(), workspace).map(document => document.id),
-    ])
-
-    const document: DocumentDescriptor = {
-      id: newId(),
-      kind,
-      workspace,
-      title: i18next.t('documents.untitled', { n: taken.size + 1 }),
-    }
+    const document: DocumentDescriptor = of
+      ? { id: newId(), kind, workspace, title: of.title, sourceAssetId: of.sourceAssetId }
+      : { id: newId(), kind, workspace, title: await numbered(get(), workspace) }
 
     // Nothing is written yet, and nothing should be: a document appears in the folder when it
     // holds something. A file per tab opened and never typed in would litter the project with
@@ -262,6 +269,26 @@ const generations = { relist: 0, refresh: 0 }
 
 /** The listing `relist` has in flight, shared by whoever asks while it is still travelling. */
 let listing: Promise<DocumentDescriptor[] | null> | null = null
+
+/**
+ * The next free name for a blank document — « Sans titre 3 ».
+ *
+ * Numbered against the folder as much as against the open tabs: a document saved and then closed
+ * still holds its name, and counting only what is open hands that name out twice. A document
+ * opened for an asset skips this, name and round trip both.
+ */
+async function numbered(
+  state: Pick<DocumentsState, 'documents'>,
+  workspace: WorkspaceId,
+): Promise<string> {
+  const stored = (await listed()) ?? []
+  const taken = new Set([
+    ...stored.filter(document => document.workspace === workspace).map(document => document.id),
+    ...documentsIn(state, workspace).map(document => document.id),
+  ])
+
+  return i18next.t('documents.untitled', { n: taken.size + 1 })
+}
 
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that

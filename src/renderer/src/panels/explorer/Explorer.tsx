@@ -34,7 +34,9 @@ function extensionOf(name: string): string {
  * fold down, and it opens on a double-click like everything else here.
  *
  * A file the studio cannot open goes to the system. That is the one place the studio launches a
- * third-party application, and it is why the channel lives in the main process.
+ * third-party application, and it is why the channel lives in the main process — but « cannot
+ * open » is asked of the catalogue too, not of the extension alone: a `.png` under `assets/` is
+ * an asset this studio edits, and handing it to a picture viewer was the whole complaint.
  */
 export function Explorer() {
   const { t } = useTranslation()
@@ -70,11 +72,19 @@ export function Explorer() {
     [documentsByFile],
   )
 
-  const activate = (node: FolderNode): void => {
+  const activate = async (node: FolderNode): Promise<void> => {
     if (node.kind === 'folder') return toggle(node.id)
 
     const document = documentOf(node)
     if (document) return openDocument(document)
+
+    // A file the catalogue knows is an asset, and it opens like one from the shelf — the folder
+    // shows `asset_2604…png` where the shelf shows the name, so only the catalogue can tell.
+    const [asset] = (await getBridge()?.assets.search({ path: node.path, limit: 1 })) ?? []
+    if (asset) {
+      const { openAsset } = await import('@/helpers/open-asset')
+      return openAsset(asset)
+    }
 
     // Handed to the system, and the journal is what says so when it refuses: a folder the user
     // owns can hold anything, and the studio has no business throwing about a `.pdf`.
@@ -115,7 +125,7 @@ export function Explorer() {
       // Nothing is written here on faith: the watch says the folder changed and the tree reads
       // it again, so what appears in the new folder is what the disk actually holds.
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
-      onActivate={activate}
+      onActivate={node => void activate(node)}
       onContextMenu={(node, at) => setMenu({ node, at })}
       renderRow={row => {
         const document = documentOf(row.node)
