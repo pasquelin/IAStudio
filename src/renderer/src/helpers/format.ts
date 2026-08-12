@@ -1,3 +1,4 @@
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 /**
  * One formatter per shape and language, kept — the only cache the window's formatters use.
  *
@@ -165,7 +166,9 @@ export function formatBytes(
   // says nothing `847 Mio` did not. Kept even when it is a zero — a download counter refreshing
   // from `1 Gio` to `1,1 Gio` would jump a character wide under a `tabular-nums` column.
   const digits = value < 10 && unit !== 'byte' ? 1 : 0
-  return `${formatDecimal(value, language, { digits, least: digits })} ${unitName(unit)}`
+  // The space binds, like every other number-and-unit the studio writes: assembled HERE rather
+  // than in a bundle, it is the one no guard on the French values can ever see.
+  return `${formatDecimal(value, language, { digits, least: digits })}${NO_BREAK_SPACE}${unitName(unit)}`
 }
 
 /**

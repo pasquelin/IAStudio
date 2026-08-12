@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
+import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import {
   BYTE_UNITS,
   formatBytes,
@@ -59,24 +60,24 @@ describe('keeping a formatter', () => {
 
 describe('sizing a file', () => {
   it('counts in kibibytes, like the file managers it sits beside', () => {
-    expect(formatBytes(512, name, 'en')).toBe('512 byte')
-    expect(formatBytes(1024, name, 'en')).toBe('1.0 kibibyte')
-    expect(formatBytes(1024 * 1024 * 4.2, name, 'en')).toBe('4.2 mebibyte')
+    expect(formatBytes(512, name, 'en')).toBe(`512${NO_BREAK_SPACE}byte`)
+    expect(formatBytes(1024, name, 'en')).toBe(`1.0${NO_BREAK_SPACE}kibibyte`)
+    expect(formatBytes(1024 * 1024 * 4.2, name, 'en')).toBe(`4.2${NO_BREAK_SPACE}mebibyte`)
   })
 
   // The separator belongs to the language: `4.2` is a wrong number to a French reader, not a
   // differently written one.
   it('writes the tenth the way the reader writes one', () => {
-    expect(formatBytes(1024 * 1024 * 4.2, name, 'fr')).toBe('4,2 mebibyte')
+    expect(formatBytes(1024 * 1024 * 4.2, name, 'fr')).toBe(`4,2${NO_BREAK_SPACE}mebibyte`)
   })
 
   it('stops rounding to a tenth once the number is wide enough to read', () => {
-    expect(formatBytes(1024 * 42, name, 'en')).toBe('42 kibibyte')
+    expect(formatBytes(1024 * 42, name, 'en')).toBe(`42${NO_BREAK_SPACE}kibibyte`)
   })
 
   // Beyond the last unit the value keeps growing rather than naming a unit nothing translates.
   it('holds at the largest unit it knows', () => {
-    expect(formatBytes(1024 ** 5, name, 'en')).toBe('1,048,576 gibibyte')
+    expect(formatBytes(1024 ** 5, name, 'en')).toBe(`1,048,576${NO_BREAK_SPACE}gibibyte`)
   })
 })
 

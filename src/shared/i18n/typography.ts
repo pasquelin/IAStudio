@@ -15,7 +15,12 @@ const ORDINARY = '\u0020'
  * A WORD is not one: French writes `2 derniers`, `3 assets`, `24 étapes`, and that space may
  * break — some fifty of them do. Telling `Mo` from `au` is what needs a list, and it is why this
  * one is written out rather than derived. A new unit goes in here, with the value that introduced
- * it; `o`, `Kio`, `Mio` and `Gio` are what `units.*` renders through `formatBytes`.
+ * it.
+ *
+ * `o`, `Kio`, `Mio` and `Gio` are here for the day a bundle writes one, and a review measured that
+ * none can arrive by that road today: `units.*` holds the bare symbols, and it is `formatBytes`
+ * that joins them to the figure. That join is in CODE, so no guard reading French values can see
+ * it — which is why it binds with `NO_BREAK_SPACE` rather than trusting this list.
  */
 export const UNIT_SYMBOLS: readonly string[] = [
   'UC',
