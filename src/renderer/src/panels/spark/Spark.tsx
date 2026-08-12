@@ -6,7 +6,7 @@ import type { PromptSuggestion } from '@shared/domain/prompt-assist'
 import { Button } from '@/design/Button'
 import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
-import { BUTTON_BASE, NEUTRAL_SKIN } from '@/design/styles'
+import { BUTTON_BASE, BUTTON_NEUTRAL } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { openGeneratorOn } from '@/helpers/generation'
@@ -92,7 +92,7 @@ function Idea({ suggestion, modelId }: IdeaProps) {
       // out from the top, since an idea is two lines of prose beside a glyph.
       className={cn(
         BUTTON_BASE,
-        NEUTRAL_SKIN,
+        BUTTON_NEUTRAL,
         'flex items-start justify-start gap-2 p-3 text-left',
       )}
     >
