@@ -17,7 +17,7 @@ import {
   setGeometryOn,
   setLight,
   setLightOn,
-  setMaterial,
+  setSceneMaterial,
   setMaterialOn,
   setNodeVisible,
   setEnvironment,
@@ -206,10 +206,10 @@ describe('setGeometry', () => {
   })
 })
 
-describe('setMaterial', () => {
+describe('setSceneMaterial', () => {
   it('replaces the material and comes back', () => {
     const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
-    const command = setMaterial('a', {
+    const command = setSceneMaterial('a', {
       ...DEFAULT_MATERIAL,
       color: '#ff0000',
       roughness: 0.2,
@@ -226,7 +226,7 @@ describe('setMaterial', () => {
 
   it('leaves the geometry it did not touch alone', () => {
     const start: SceneState = { ...EMPTY_SCENE, nodes: [mesh('a')], selectedIds: [] }
-    const command = setMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
+    const command = setSceneMaterial('a', { ...DEFAULT_MATERIAL, roughness: 0.5 })
 
     const node = command.apply(start).nodes[0]
     expect(node?.type === 'mesh' && node.geometry.kind).toBe('box')

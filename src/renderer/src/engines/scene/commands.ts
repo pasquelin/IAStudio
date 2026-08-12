@@ -177,7 +177,7 @@ export function setGeometry(id: string, geometry: GeometryDescriptor): Command<S
   return editMesh('geometry', id, { geometry })
 }
 
-export function setMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
+export function setSceneMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
   return editMesh('material', id, { material })
 }
 
@@ -320,6 +320,10 @@ function readField(descriptor: object, name: string): unknown {
 /**
  * Material fields onto every selected mesh. Only what the inspector moved is carried: the whole
  * descriptor would take the anchor's texture slots with it, onto meshes that never showed them.
+ *
+ * Keeps the bare shape beside `setSceneMaterial`, and that is a decision: only ONE engine
+ * publishes this name, so nothing can auto-import the wrong one. A domain is added the day a
+ * second claims the word — never for symmetry with a neighbour that needed it.
  */
 export function setMaterialOn(
   nodes: readonly SceneNode[],
@@ -328,7 +332,7 @@ export function setMaterialOn(
   return batch('material', nodes, node => {
     // A text is lit exactly as a mesh is, and wears the same descriptor — so one section of the
     // inspector serves both, and neither has to know the other exists.
-    if (node.type === 'mesh') return setMaterial(node.id, { ...node.material, ...changes })
+    if (node.type === 'mesh') return setSceneMaterial(node.id, { ...node.material, ...changes })
     if (node.type === 'text') return setTextMaterial(node.id, { ...node.material, ...changes })
     return null
   })
@@ -395,7 +399,7 @@ export function setText(id: string, text: TextDescriptor): Command<SceneState> {
   }
 }
 
-/** The material a text wears. Apart from `setMaterial`, which only ever knew about meshes. */
+/** The material a text wears. Apart from `setSceneMaterial`, which only ever knew about meshes. */
 export function setTextMaterial(id: string, material: MaterialDescriptor): Command<SceneState> {
   let previous: MaterialDescriptor | null = null
 
