@@ -39,7 +39,11 @@ export function InlineRename({ value, label, onCommit }: InlineRenameProps) {
     // Both caught while the input is still attached: `closest` from a detached node finds
     // nothing, and by the time the cleanup runs the field is out of the tree.
     const row = field.current?.closest<HTMLElement>('[tabindex]')
-    const list = field.current?.closest<HTMLElement>('[role="list"], [role="listbox"]')
+    // `tree` among them: the explorer renames inside one, so without it this fallback was dead
+    // in the one list whose rows a folder watch can tear out from under the field.
+    const list = field.current?.closest<HTMLElement>(
+      '[role="list"], [role="listbox"], [role="tree"]',
+    )
 
     return () => {
       // An input torn out of the tree leaves the focus on `document.body`, so the next Tab

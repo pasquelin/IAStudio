@@ -5,6 +5,7 @@ import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
+import type { RowHeight } from './virtual'
 
 const NODES = [
   { id: 'scene', parentId: null },
@@ -53,6 +54,7 @@ function renderTree(
   onSelect: Selector = () => {},
   onToggle = (): void => {},
   selectedIds: readonly string[] = [],
+  rowHeight: RowHeight = 'control',
 ) {
   return render(
     <Tree
@@ -61,6 +63,7 @@ function renderTree(
       expandedIds={new Set(['scene'])}
       onSelect={onSelect}
       onToggle={onToggle}
+      rowHeight={rowHeight}
       renderRow={row => <span>{row.node.id}</span>}
     />,
   )
@@ -69,14 +72,16 @@ function renderTree(
 describe('Tree, the height it estimates', () => {
   afterEach(() => {
     document.documentElement.style.removeProperty('--sc-control')
+    document.documentElement.style.removeProperty('--sc-row-stacked')
     refreshPalette()
   })
 
   /**
-   * The rows are drawn at `h-(--sc-control)`, so a constant estimate is only right at one
-   * density. Estimating 28 against a compact row of 24 does not misplace anything — each row is
-   * positioned at the offset the virtualizer computed — it reserves four pixels nobody paints:
-   * a dead band between every pair of rows, and 4×N of empty scroll under the last one.
+   * The row is drawn at `h-full`, so the estimate IS the height: it is the one number, and a
+   * constant would only be right at one density. Estimating 28 against a compact row of 24 does
+   * not misplace anything — each row sits at the offset the virtualizer computed — it reserves
+   * four pixels nobody paints: a dead band between every pair of rows, and 4×N of empty scroll
+   * under the last one.
    */
   it('estimates the gauge its rows are drawn at, not a constant', () => {
     document.documentElement.style.setProperty('--sc-control', '24px')
@@ -86,6 +91,27 @@ describe('Tree, the height it estimates', () => {
 
     // Three visible rows: `scene` expanded over `a` and `b`.
     expect(screen.getByRole('tree')).toHaveStyle({ height: '72px' })
+  })
+
+  /**
+   * A tree whose rows stack a name over a subtitle — the explorer's. Two steps of `leading-tight`
+   * text do not fit a control, and `index.css` writes the arithmetic beside the gauge.
+   */
+  it('estimates the taller gauge for a tree whose rows stack', () => {
+    document.documentElement.style.setProperty('--sc-control', '24px')
+    document.documentElement.style.setProperty('--sc-row-stacked', '32px')
+    refreshPalette()
+
+    renderTree(undefined, undefined, undefined, 'stacked')
+
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '96px' })
+  })
+
+  // What no gauge describes, for the two panels that size their own rows.
+  it('takes a number for a shape no gauge names', () => {
+    renderTree(undefined, undefined, undefined, 40)
+
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '120px' })
   })
 
   it('falls back to the shipped height when no gauge is declared', () => {

@@ -3,17 +3,26 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
-import { useGauge } from '@/hooks/useGauge'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
-import { LIST_ROW_HEIGHT, rowSkin } from './styles'
+import { rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
-import { useRemeasure } from './virtual'
+import { useRemeasure, useRowHeight, type RowHeight } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
 const ROWS = dragChannel('application/x-scenario-tree-row')
 
-export type TreeRow<T> = { node: T; depth: number; hasChildren: boolean; expanded: boolean }
+export type TreeRow<T> = {
+  node: T
+  depth: number
+  hasChildren: boolean
+  expanded: boolean
+  /** Which of its siblings this is, from one — what a reader announces as « 3 of 12 ». */
+  position: number
+  /** How many siblings it has. Counted here because the tree is flattened and virtualized: the
+   * DOM holds a window of rows and no nesting at all, so nothing else could say it. */
+  siblings: number
+}
 
 /**
  * Flattens the tree into the rows actually on screen. A node whose parent is missing is dropped
@@ -33,13 +42,14 @@ export function flattenTree<T extends TreeNode>(
 
   const rows: TreeRow<T>[] = []
   const walk = (parentId: string | null, depth: number): void => {
-    for (const node of byParent.get(parentId) ?? []) {
+    const among = byParent.get(parentId) ?? []
+    for (const [index, node] of among.entries()) {
       // Asked rather than derived when the caller knows better: a folder nobody has expanded
       // has no children LOADED, and a tree that read that as "no children" would draw no
       // chevron — leaving the folder impossible to open at all.
       const hasChildren = expandable ? expandable(node) : byParent.has(node.id)
       const expanded = expandedIds.has(node.id)
-      rows.push({ node, depth, hasChildren, expanded })
+      rows.push({ node, depth, hasChildren, expanded, position: index + 1, siblings: among.length })
       if (hasChildren && expanded) walk(node.id, depth + 1)
     }
   }
@@ -93,6 +103,15 @@ export type TreeProps<T extends TreeNode> = {
   droppable?: (node: T, dragged: T) => boolean
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
+  /**
+   * How tall a row is, for a tree whose rows stack a name over a subtitle.
+   *
+   * `control` by default, which is every tree but the explorer's — and the explorer is what this
+   * exists for: its rows carry a second line for a document that is open, and two steps of
+   * `leading-tight` text do not fit in a control's height. Same shape as `Collection`'s, resolved
+   * by the same hook.
+   */
+  rowHeight?: RowHeight
 }
 
 /** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
@@ -116,6 +135,7 @@ export function Tree<T extends TreeNode>({
   onActivate,
   onContextMenu,
   renderRow,
+  rowHeight = 'control',
 }: TreeProps<T>) {
   // Which row the pointer is over during a drag, and what is being dragged. Session state of
   // the gesture itself, so neither reaches the caller: what the caller hears about is the drop.
@@ -128,20 +148,20 @@ export function Tree<T extends TreeNode>({
   )
 
   // Read back from the gauge the row below is sized by: a constant is only right at one density.
-  const rowHeight = useGauge('--sc-control', LIST_ROW_HEIGHT)
+  const rowPixels = useRowHeight(rowHeight)
 
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scroller.current,
-    estimateSize: () => rowHeight,
+    estimateSize: () => rowPixels,
     overscan: 8,
   })
 
   // The virtualizer memoizes on `count`, never on the estimator: without this the rows keep the
   // height the previous density gave them.
-  useRemeasure(virtualizer, rowHeight)
+  useRemeasure(virtualizer, rowPixels)
 
   const focusRow = (index: number): void => {
     const bounded = Math.max(0, Math.min(index, rows.length - 1))
@@ -226,6 +246,10 @@ export function Tree<T extends TreeNode>({
           return (
             <li
               key={row.node.id}
+              // The virtualizer's row is geometry, not structure: a generic element between a
+              // `tree` and its `treeitem`s breaks the ownership ARIA requires — the same reason
+              // `Collection` gives for its own.
+              role="presentation"
               style={{
                 transform: `translateY(${virtual.start}px)`,
                 height: virtual.size,
@@ -241,9 +265,15 @@ export function Tree<T extends TreeNode>({
                 // is OPEN through the same skin, where announcing "selected" would be a lie.
                 data-selected={selected.has(row.node.id) || undefined}
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
+                // The tree is flattened and virtualized, so the DOM conveys neither nesting nor
+                // how many rows there are: depth is a `paddingLeft` and only a window is mounted.
+                // Said in words, or a reader announces a folder and what it holds as equals.
+                aria-level={row.depth + 1}
+                aria-posinset={row.position}
+                aria-setsize={row.siblings}
                 style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
-                  'group flex h-(--sc-control) cursor-pointer items-center gap-2 px-1',
+                  'group flex h-full cursor-pointer items-center gap-2 px-1',
                   rowSkin(selected.has(row.node.id)),
                   // The row a drop would land in, told apart from the row that is selected.
                   over === row.node.id && 'outline-accent outline -outline-offset-1',

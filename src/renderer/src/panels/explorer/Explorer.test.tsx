@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FolderEntry } from '@shared/domain/folder'
+import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
@@ -70,7 +71,17 @@ function install(
   return { listFolder, openFile, revealFile, renameFile, moveFile, trashFile }
 }
 
+/** A gauge the stylesheet would apply, which jsdom does not. Dropped after every case. */
+function declareGauge(gauge: string, value: string): void {
+  document.documentElement.style.setProperty(gauge, value)
+  // The token cache is module-level and shared: without this the next read answers the last case.
+  refreshPalette()
+}
+
 beforeEach(() => {
+  document.documentElement.style.removeProperty('--sc-control')
+  document.documentElement.style.removeProperty('--sc-row-stacked')
+  refreshPalette()
   vi.clearAllMocks()
   useDocuments.setState({ documents: {}, stored: [], activeId: null })
   // `known` settled: the panel says nothing at all until the main process has answered, and
@@ -201,6 +212,28 @@ describe('the project explorer', () => {
       await screen.findByText('assets')
 
       expect(screen.getByRole('treeitem')).toHaveAttribute('aria-expanded', 'false')
+    })
+
+    /**
+     * A row of this tree stacks a name over a second line for a document that is open, and two
+     * steps of `leading-tight` text are 27.5px — they fill a 28px control row edge to edge and
+     * overflow a compact one. The tree reserved a control's height for every row, so the name
+     * and the « open » line spilled over the row below and the tint that marks the row stopped
+     * where the text did not.
+     */
+    it('reserves the height a stacked row needs, not a control’s', async () => {
+      withProject()
+      install({ '': [file('a3f1.scene')] }, [scene])
+      // Declared, so the assertion answers to the STYLESHEET rather than to the fallback the
+      // suite would otherwise compare with itself. Compact values, where the overflow bit.
+      declareGauge('--sc-control', '24px')
+      declareGauge('--sc-row-stacked', '32px')
+
+      render(<Explorer />)
+      await screen.findByText('a3f1.scene')
+
+      const row = screen.getByRole('treeitem').closest('li')
+      expect(row).toHaveStyle({ height: '32px' })
     })
 
     it('closes a folder again, and its contents go with it', async () => {

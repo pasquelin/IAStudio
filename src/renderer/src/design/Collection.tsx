@@ -3,9 +3,16 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
-import { LIST_ROW_HEIGHT, rowSkin, STACKED_ROW_HEIGHT } from './styles'
-import { useGauge } from '@/hooks/useGauge'
-import { columnsIn, GAP, PREFETCH_ROWS, useReachEnd, useRemeasure } from './virtual'
+import { rowSkin } from './styles'
+import {
+  columnsIn,
+  GAP,
+  PREFETCH_ROWS,
+  useReachEnd,
+  useRemeasure,
+  useRowHeight,
+  type RowHeight,
+} from './virtual'
 
 /** Breathing room between list rows. Rows that touch read as one block rather than a list. */
 const ROW_GAP = 4
@@ -77,16 +84,10 @@ export type CollectionProps<T extends { id: string }> = {
   /**
    * How tall a list row is — a SHAPE by preference, a number only for what no gauge describes.
    *
-   * A shape is resolved here, once, by reading the gauge the stylesheet already applies. Callers
-   * used to pass `LIST_ROW_HEIGHT` themselves, which was right at one density and left four
-   * pixels of dead space at the other; three of them did, and the fix is not to make them read
-   * the gauge three times.
+   * Resolved by `useRowHeight`, which reads the gauge the stylesheet already applies.
    */
   rowHeight?: RowHeight
 }
-
-/** `control` for one line of text, `stacked` for a name over a subtitle. */
-export type RowHeight = 'control' | 'stacked' | number
 
 type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
 
@@ -178,12 +179,9 @@ export function Collection<T extends { id: string }>({
   const grid = card !== undefined
   const fitting = useGrid(scroller, state.thumbnailSize, grid)
 
-  // Read back from the gauges the rows are sized by, like `Tree` does: a constant is only right
-  // at one density. Both are read unconditionally — a hook cannot sit behind a branch.
-  const controlRow = useGauge('--sc-control', LIST_ROW_HEIGHT)
-  const stackedRow = useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT)
-  const shaped = rowHeight === 'stacked' ? stackedRow : controlRow
-  const rowPixels = typeof rowHeight === 'number' ? rowHeight : shaped
+  // Read back from the gauge the rows are sized by, like `Tree` does: a constant is only right
+  // at one density.
+  const rowPixels = useRowHeight(rowHeight)
 
   const roles = rolesFor(onSelect !== undefined, onActivate !== undefined || onOpen !== undefined)
   const columns = grid ? fitting.columns : 1
