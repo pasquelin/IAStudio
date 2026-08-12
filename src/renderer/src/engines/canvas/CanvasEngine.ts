@@ -55,6 +55,7 @@ import {
   resizeBy,
   rotateBy,
   ROTATE_REACH,
+  wholeOf,
   type Corners,
   type HandleHit,
   type HandleId,
@@ -418,6 +419,15 @@ export class CanvasEngine {
   private host: HTMLElement | null = null
   private readonly world = new Container()
   private readonly surfaces = new Map<string, LayerSurface>()
+  /**
+   * Where the picture actually landed inside each layer's surface — what `containIn` worked out
+   * when it was drawn, kept so the handles can grip the photo rather than the document.
+   *
+   * Derived, never stored: `loadInto` fills it from `layer.source` on every mount, every undo and
+   * every detach, so a document rebuilt from its manifest arrives with the same answer. Invariant
+   * 3 holds — nothing here is a fact the state does not already carry.
+   */
+  private readonly contents = new Map<string, Rect>()
   /** Families already asked of the page, whether they arrived or not — see `registerFace`. */
   private readonly faces = new Set<string>()
   private readonly groups = new Map<string, Container>()
@@ -673,7 +683,15 @@ export class CanvasEngine {
       surface.texture = texture
     }
 
-    if (recut) this.patches?.dropAll()
+    // The pixels were carried over translated by `-from`, and nothing re-runs `loadInto` here —
+    // so the remembered picture rects have to travel the same distance. Left where they were, a
+    // crop would leave every picture layer's grips at the coordinates the OLD document used.
+    if (recut) {
+      for (const [id, laid] of this.contents) {
+        this.contents.set(id, { ...laid, x: laid.x - from.x, y: laid.y - from.y })
+      }
+      this.patches?.dropAll()
+    }
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */
@@ -726,6 +744,7 @@ export class CanvasEngine {
       // The texture lives on the GPU: dropping the reference is not enough.
       surface.texture.destroy(true)
       this.surfaces.delete(id)
+      this.contents.delete(id)
     }
 
     for (const [id, container] of this.groups) {
@@ -932,6 +951,9 @@ export class CanvasEngine {
     if (!renderer || !this.state) return
 
     const laid = containIn(texture, { width: this.state.width, height: this.state.height })
+    // Remembered here because here is where it is known: the handles need the rect the picture
+    // occupies, and nothing else in the engine ever works it out.
+    this.contents.set(layerId, laid)
     const sprite = new Sprite(texture)
     sprite.position.set(laid.x, laid.y)
     sprite.setSize(laid.width, laid.height)
@@ -1467,6 +1489,7 @@ export class CanvasEngine {
 
     for (const surface of this.surfaces.values()) surface.texture.destroy(true)
     this.surfaces.clear()
+    this.contents.clear()
     // The tree is gone, so no placement holds: kept, it would make the replay in a remount find
     // the signature unchanged and skip the `attach` that is now the only way anything is hung.
     this.stacking = ''
@@ -1952,10 +1975,23 @@ export class CanvasEngine {
     return { width: this.state?.width ?? 0, height: this.state?.height ?? 0 }
   }
 
+  /**
+   * The rect a layer's grips describe: the picture it holds where it holds one, its whole
+   * surface otherwise.
+   *
+   * A layer painted by hand has no better answer — every pixel of its surface is fair game. One
+   * holding a photo does: `containIn` shrank it to fit and centred it, so the surface is mostly
+   * transparent margin, and gripping that is gripping nothing. This is what every other editor
+   * frames for a picture layer.
+   */
+  private frameOf(layerId: string): Rect {
+    return this.contents.get(layerId) ?? wholeOf(this.documentSize())
+  }
+
   /** `null` for a group, which has no texture of its own and so no box to grab. */
   private cornersOf(layer: Layer): Corners | null {
     if (!this.state || isGroup(layer)) return null
-    return layerCornersOf(layer.transform, this.documentSize())
+    return layerCornersOf(layer.transform, this.documentSize(), this.frameOf(layer.id))
   }
 
   /**
@@ -2139,12 +2175,15 @@ export class CanvasEngine {
         return
       }
       case 'handle': {
+        // The same frame the grips were drawn on: solved against the document instead, a pull on
+        // a photo that does not fill its surface would scale from the wrong corner.
         const next = resizeBy(
           gesture.origin,
           gesture.handle,
           this.documentSize(),
           point,
           event.shiftKey,
+          this.frameOf(gesture.id),
         )
         this.options.layers.transform(gesture.id, next)
         return

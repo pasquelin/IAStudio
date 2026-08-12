@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { DocumentDescriptor } from '@shared/domain/document'
 import type { Project } from '@shared/domain/project'
@@ -14,6 +14,7 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { canvasOf, useCanvases } from '@/stores/canvases'
+import { lendPictureMeasure } from '@/spaces/image/picture-size'
 import { openAsset } from './open-asset'
 
 /** Written out rather than taken from the home's fixture, which pulls in a DOM this never uses. */
@@ -39,6 +40,8 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
 
 const picture = (overrides: Partial<Asset> = {}): Asset =>
   asset({ id: 'asset-sky', name: 'dusk.png', type: 'image', ...overrides })
+
+let giveBackMeasure: () => void
 
 /** The tab the gesture made. Every case here opens exactly one, which is the promise itself. */
 function opened(): DocumentDescriptor {
@@ -70,7 +73,14 @@ describe('opening an asset', () => {
     useLayouts.setState({ layouts: {}, activeWorkspace: 'graph' })
     useProject.setState({ project: PROJECT, known: true })
     installFakeBridge()
+    // jsdom decodes nothing, so an unlent `Image` never settles and every picture would open at
+    // the default size — which the studio now says out loud, because a document that is not its
+    // picture is one whose ⌘S will not be faithful. Lending one is what makes these cases model
+    // a machine that CAN read the file.
+    giveBackMeasure = lendPictureMeasure(() => Promise.resolve({ width: 800, height: 600 }))
   })
+
+  afterEach(() => giveBackMeasure())
 
   it('opens a take in the audio editor, in a tab of its own', async () => {
     await openAsset(asset())
@@ -139,6 +149,39 @@ describe('opening an asset', () => {
 
     expect(openedCount()).toBe(1)
     expect(opened().id).toBe(first.id)
+  })
+
+  /**
+   * The tab is NOT resized to the asset — it keeps its size and the work done in it — but one
+   * that no longer measures its picture writes a smaller file over it on the next ⌘S, and
+   * `replaceBytes` deletes what it replaces. A document opened before the sizing existed is
+   * exactly that, and it destroyed a 4112 × 2658 photo in silence.
+   */
+  it('says so when the tab it comes back to no longer measures its asset', async () => {
+    await openAsset(picture())
+    const { entries } = bridgeWatchingLogs()
+    useCanvases
+      .getState()
+      .replace(opened().id, {
+        ...canvasOf(useCanvases.getState(), opened().id),
+        width: 1024,
+        height: 1024,
+      })
+
+    await openAsset(picture())
+
+    expect(entries()).toEqual([
+      expect.objectContaining({ message: expect.stringContaining('no longer measures') }),
+    ])
+  })
+
+  it('says nothing when the tab it comes back to is still its asset', async () => {
+    await openAsset(picture())
+    const { entries } = bridgeWatchingLogs()
+
+    await openAsset(picture())
+
+    expect(entries()).toHaveLength(0)
   })
 
   /**

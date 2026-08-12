@@ -13,6 +13,7 @@ import {
   rotateBy,
   rotationCornerAt,
   unrotated,
+  wholeOf,
   type HandleId,
 } from './handles'
 
@@ -382,6 +383,76 @@ describe('pulling a grip', () => {
 
     expect(after.scaleX).toBe(1)
     expect(after.scaleY).toBe(-1)
+  })
+})
+
+/**
+ * A picture laid by `containIn` does not fill its surface: shrunk to fit and centred, it leaves
+ * transparent margin on two sides. Gripping that margin is gripping nothing, so the grips take
+ * the picture — which is what every other editor frames for a picture layer.
+ *
+ * The frame is a rect INSIDE the document, in document coordinates, and it has to travel through
+ * all three: the corners that are drawn, the box the drag is solved in, and the corner the pull
+ * is anchored against. Drawn on one and solved on another, a grip scales from the wrong point.
+ */
+describe('a layer whose picture does not fill its surface', () => {
+  /** A 1000 × 400 photo centred in a 1000² document — the shape that started all this. */
+  const PHOTO: Rect = { x: 0, y: 300, width: 1000, height: 400 }
+
+  it('frames the picture rather than the surface around it', () => {
+    expect(layerCornersOf(IDENTITY, DOC, PHOTO)).toMatchObject({
+      nw: { x: 0, y: 300 },
+      se: { x: 1000, y: 700 },
+    })
+  })
+
+  it('frames the whole surface when nothing says otherwise', () => {
+    expect(layerCornersOf(IDENTITY, DOC)).toEqual(layerCornersOf(IDENTITY, DOC, wholeOf(DOC)))
+  })
+
+  it('measures the picture, not the document, under a scale', () => {
+    const scaled: Transform = { ...IDENTITY, scaleX: 2, scaleY: 2, originX: 0, originY: 0 }
+
+    expect(layerBoxOf(scaled, DOC, PHOTO)).toMatchObject({
+      y: 600,
+      width: 2000,
+      height: 800,
+    })
+  })
+
+  /** The grip's whole promise, now owed to the picture's edge rather than the surface's. */
+  it('leaves the picture’s anchored edge where it was when a grip is pulled', () => {
+    const next = resizeBy(IDENTITY, 'e', DOC, { x: 2000, y: 500 }, false, PHOTO)
+    const box = layerBoxOf(next, DOC, PHOTO)
+
+    expect(box).toMatchObject({ x: 0, width: 2000 })
+  })
+
+  it('anchors the picture’s top when its south grip is pulled', () => {
+    const next = resizeBy(IDENTITY, 'se', DOC, { x: 1000, y: 1100 }, false, PHOTO)
+    const box = layerBoxOf(next, DOC, PHOTO)
+
+    expect(box).toMatchObject({ y: 300, height: 800 })
+  })
+
+  /**
+   * The one a wrong anchor hides in: on a turned layer the held corner is re-solved through the
+   * matrix, and taking it from the document would drift it by the margin `containIn` left.
+   */
+  it('holds the picture’s corner still through a turn', () => {
+    const before = layerCornersOf(ASKEW, DOC, PHOTO)
+    const next = resizeBy(ASKEW, 'se', DOC, { x: 1400, y: 900 }, false, PHOTO)
+    const after = layerCornersOf(next, DOC, PHOTO)
+
+    expect(after.nw.x).toBeCloseTo(before.nw.x, 6)
+    expect(after.nw.y).toBeCloseTo(before.nw.y, 6)
+  })
+
+  // The layer painted by hand, whose surface IS its content: nothing may change for it.
+  it('changes nothing for a layer that fills its surface', () => {
+    const whole = resizeBy(PINNED, 'se', DOC, { x: 1400, y: 900 }, false, wholeOf(DOC))
+
+    expect(whole).toEqual(resizeBy(PINNED, 'se', DOC, { x: 1400, y: 900 }, false))
   })
 })
 

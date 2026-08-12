@@ -24,7 +24,11 @@ export async function openAsset(asset: Asset): Promise<void> {
   // are two histories of it, and the second save writes over the first.
   if (already) {
     useLayouts.getState().setActiveWorkspace(already.workspace)
-    return openDocument(already)
+    openDocument(already)
+    // The tab is NOT resized to the asset: it keeps its size and the work done in it. But one
+    // that no longer measures its asset writes a smaller file over it on the next ⌘S, so the
+    // destination says so here — the first moment the user can still act on it.
+    return editorIntent(asset)?.revisit?.(already.id, asset)
   }
 
   const intent = editorIntent(asset)

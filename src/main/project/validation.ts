@@ -18,6 +18,7 @@ import {
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
 import type { SaveAudioRequest, SavePictureRequest, SaveTextureRequest } from '@shared/ipc'
+import { isPngBytes } from '@main/media/png'
 import { pathSegment } from '@main/validation'
 import { base64Payload } from '@main/scenario/validation'
 
@@ -117,13 +118,6 @@ export function parseSaveAudio(value: unknown): SaveAudioRequest {
 // under this. Bounded for the same reason a take is: the renderer is the sandboxed side.
 const MAX_PICTURE_BYTES = 256 * 1024 * 1024
 
-/** The eight bytes every PNG opens with. A file that does not is not one, whatever it is called. */
-const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
-
-function isPng(bytes: Uint8Array): boolean {
-  return PNG_SIGNATURE.every((byte, index) => bytes[index] === byte)
-}
-
 const saveTexture = z.object({
   name: z.string().trim().min(1).max(200),
   map: z.custom<PbrChannel>(isPbrChannel),
@@ -134,7 +128,7 @@ const saveTexture = z.object({
   png: z
     .instanceof(Uint8Array)
     .refine(bytes => bytes.byteLength <= MAX_PICTURE_BYTES)
-    .refine(isPng),
+    .refine(isPngBytes),
 })
 
 export function parseSaveTexture(value: unknown): SaveTextureRequest {
@@ -159,11 +153,6 @@ const savePicture = z.object({
 
 export function parseSavePicture(value: unknown): SavePictureRequest {
   return savePicture.parse(value)
-}
-
-/** Whether decoded bytes really are a PNG — the check `saveTexture` makes on its own buffer. */
-export function isPngBytes(bytes: Uint8Array): boolean {
-  return isPng(bytes)
 }
 
 export function parseDocumentId(value: unknown): string {

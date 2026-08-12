@@ -54,10 +54,14 @@ export async function becomeAsset(
   const { measureAsset, withinCeiling } = await import('./picture-size')
   const measured = await measureAsset(asset.id, measure)
   const size = measured ? withinCeiling(measured) : DEFAULT_CANVAS
-  // Said out loud when the ceiling actually bit, because ⌘S writes the document's size back over
-  // the asset: a picture opened smaller than it is would be saved smaller than it was, and that
-  // has to be a thing the user was told rather than one the studio did quietly.
-  if (measured && (size.width !== measured.width || size.height !== measured.height)) {
+  // Said out loud EVERY way the document can fail to be the picture, because ⌘S writes the
+  // document's size back over the asset: one opened smaller than it is would be saved smaller
+  // than it was, and that has to be a thing the user was told rather than one the studio did
+  // quietly. The ceiling biting was said; the file that would not decode was NOT, and that
+  // silence is how a 4112 × 2658 photo came to sit in a 1024² document and be overwritten by it.
+  if (!measured) {
+    reportFailure('assets.open', asset.name, new Error('picture would not measure'))
+  } else if (size.width !== measured.width || size.height !== measured.height) {
     reportFailure('assets.open', asset.name, new Error('picture opened below its own size'))
   }
   const layer = { ...pixelLayer(newId(), asset.name), source: asset.id }

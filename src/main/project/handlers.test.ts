@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
 import { ProjectOpenError, type ProjectOpenFailure } from './store'
@@ -507,6 +508,13 @@ describe('project handlers', () => {
     await expect(invoke(CHANNELS.assetsReveal, '')).rejects.toThrow()
   })
 
+  /**
+   * The signature alone does for the guard, but not for the probe both picture handlers now read
+   * off the very bytes they write. A `Buffer` because that is what the handler decodes its base64
+   * into, and a `Uint8Array` beside it would fail the deep equality on the call.
+   */
+  const png = (width: number, height: number): Buffer => Buffer.from(pngBytes({ width, height }))
+
   describe('a channel the renderer computed', () => {
     const backend = () => ({
       importFromUrl: vi.fn(),
@@ -539,6 +547,29 @@ describe('project handlers', () => {
           derivedFrom: 'asset-1',
         },
         new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+      )
+    })
+
+    /**
+     * A channel is a picture on the shelf, so it owes its reader the dimensions any other one
+     * shows. Read from the bytes here, where they are already in hand — a row with no probe left
+     * the inspector with nothing to print for half the pictures in a project.
+     */
+    it('carries the dimensions of the channel it just wrote', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSaveTexture, {
+        name: 'Brique — Normale',
+        map: 'normal',
+        png: png(2048, 2048),
+      })
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probe: { duration: 0, codec: 'png', width: 2048, height: 2048 },
+        }),
+        expect.anything(),
       )
     })
 
@@ -644,8 +675,8 @@ describe('project handlers', () => {
    * decoding belongs on this side — a `Buffer` does not cross the bridge.
    */
   describe('a picture the editor edited', () => {
-    /** The eight bytes of a PNG signature, as base64 — what every real payload opens with. */
-    const PNG_BASE64 = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).toString('base64')
+    const PNG = png(1024, 768)
+    const PNG_BASE64 = PNG.toString('base64')
 
     const backend = () => ({
       importFromUrl: vi.fn(),
@@ -675,12 +706,64 @@ describe('project handlers', () => {
         png: PNG_BASE64,
       })
 
+      expect(assets.replaceBytes).toHaveBeenCalledWith('asset-1', PNG, '.png', {
+        duration: 0,
+        codec: 'png',
+        width: 1024,
+        height: 768,
+      })
+      expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The defect this closes destroyed a file and hid it. A 4112 × 2658 photo overwritten at
+     * 1024² kept the probe of the picture that WAS there, so the inspector went on announcing
+     * dimensions nothing on disk held — the one reader that could have shown the loss.
+     */
+    it('carries the dimensions of the bytes it writes, not those it replaces', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(holdingPicture(), { assets }))
+
+      await invoke(CHANNELS.assetsSavePicture, {
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: png(4112, 2658).toString('base64'),
+      })
+
       expect(assets.replaceBytes).toHaveBeenCalledWith(
         'asset-1',
-        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        expect.anything(),
         '.png',
+        expect.objectContaining({ width: 4112, height: 2658 }),
       )
-      expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    /**
+     * A picture whose header will not read is still written — the bytes are what the user asked
+     * to save, and `isPngBytes` already vouched for the signature.
+     *
+     * No probe is sent, which means `replaceBytes` KEEPS the previous one: it spreads the row it
+     * found and only overwrites what it was given. That is the stale probe this lot closed, still
+     * open on this one path — and deliberately, because the alternative is a row that claims a
+     * picture has no dimensions at all. It is reachable only by bytes that open on a valid PNG
+     * signature and then stop, which the studio's own encoder does not produce.
+     */
+    it('writes a picture whose header will not read, and sends no probe for it', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(holdingPicture(), { assets }))
+
+      await invoke(CHANNELS.assetsSavePicture, {
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).toString('base64'),
+      })
+
+      expect(assets.replaceBytes).toHaveBeenCalledWith(
+        'asset-1',
+        expect.anything(),
+        '.png',
+        undefined,
+      )
     })
 
     /**
@@ -731,8 +814,13 @@ describe('project handlers', () => {
       })
 
       expect(assets.importFromBytes).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'image', extension: '.png', derivedFrom: 'asset-1' }),
-        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        expect.objectContaining({
+          type: 'image',
+          extension: '.png',
+          derivedFrom: 'asset-1',
+          probe: expect.objectContaining({ width: 1024, height: 768 }),
+        }),
+        PNG,
       )
     })
 

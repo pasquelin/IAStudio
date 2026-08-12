@@ -2613,6 +2613,30 @@ describe('the crop tool', () => {
     expect(crops).toEqual([])
   })
 
+  /**
+   * A crop carries the pixels over translated by the frame's origin and re-cuts every surface —
+   * it does NOT reload the pictures. The rect each layer's grips are drawn on has to travel the
+   * same distance: left where it was, the grips of a picture layer would stand at coordinates
+   * only the document BEFORE the crop ever had.
+   */
+  it('moves the picture’s grips with the pixels when the document is cropped', async () => {
+    const { engine, host, layers } = await mounted(DEFAULT_CANVAS, 'crop')
+    // 200 × 100 centred in 1024²: the picture sits at 412,462.
+    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+
+    press(host, 400, 450)
+    drag(host, 700, 600)
+    release(700, 600)
+    engine.applyCrop()
+    engine.setTool('move')
+
+    // The picture now sits at 12,12 in a 300 × 150 document, so its south-east grip is at 212,112.
+    press(host, 212, 112)
+    drag(host, 412, 212)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
+  })
+
   it('gives the new surface the frame’s own size', async () => {
     const { engine, host } = await mounted(DEFAULT_CANVAS, 'crop')
     const before = gpu.texturesCreated
@@ -2740,6 +2764,24 @@ describe('the transform grips', () => {
     drag(host, 1224, 1224)
 
     expect(layers.at(-1)).toMatch(/^transform:layer-1:/)
+  })
+
+  /**
+   * A photo laid by `containIn` does not fill its surface: 200 × 100 centred in a 1024² document
+   * sits at 412,462 with transparent margin all round. The grips take the PHOTO, as every other
+   * editor does — a square touching the picture nowhere is a square one cannot resize it by.
+   *
+   * Pulling its south-east grip from 612,562 to 812,662 doubles both sides of the photo, which
+   * is the assertion: solved against the document, the same drag would report something else.
+   */
+  it('puts the grips on the picture the layer holds, not on the surface around it', async () => {
+    const { host, engine, layers } = await armed()
+    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+
+    press(host, 612, 562)
+    drag(host, 812, 662)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
   })
 
   it('scales from the far corner, so the opposite one stays put', async () => {
