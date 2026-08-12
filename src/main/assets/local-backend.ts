@@ -179,14 +179,24 @@ export function createLocalBackend({
 
     replaceBytes: async (assetId, bytes, extension, probe) => {
       const existing = await catalog().find(assetId)
-      if (!existing?.path) throw new Error(`asset ${assetId} has no file to replace`)
+      if (!existing) throw new Error(`asset ${assetId} is not in the catalogue`)
 
+      // Written INSIDE the project, always — including for a row that had no file there.
+      //
+      // A linked asset keeps its bytes where the user left them and `path` empty on purpose
+      // (`linkedAsset` says so). Editing one used to be refused outright; it now lands in the
+      // project and the row gains its `path`, so the shelf, the scene and every other reader
+      // show the edit. The file that was linked is NOT touched: the studio writing into a
+      // folder the user only pointed at is a different act from editing an asset, and the one
+      // guard that keeps every other write inside the project — `assetFilePath` — exists
+      // precisely because a catalogue row is user-editable territory.
       const relativePath = relativePathFor(assetId, extension, existing.type)
       await writeFile(join(projectPath(), relativePath), bytes)
 
       // The extension follows the bytes: an edited take goes back as a `.wav`, and leaving it
-      // under the `.mp3` it was imported as would hand every reader a file that lies.
-      if (relativePath !== existing.path) {
+      // under the `.mp3` it was imported as would hand every reader a file that lies. Only a
+      // file the PROJECT held is removed — a linked one is not ours to delete.
+      if (existing.path && relativePath !== existing.path) {
         await rm(join(projectPath(), existing.path), { force: true })
       }
 
