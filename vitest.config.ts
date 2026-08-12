@@ -18,6 +18,72 @@ const alias = {
  */
 const TEST_TIMEOUT = 15_000
 
+/**
+ * The renderer tests that must keep a browser, established by RUNNING them under `node` rather
+ * than by reading them — on 2026-08-12, 247 files, of which 43 failed. Grepping for `document.`
+ * would have named 39 and missed the ones whose need is transitive: a store reaching a module
+ * that touches `window`, a helper that walks an element.
+ *
+ * One entry PASSES under node and is here anyway; its own note says why. Passing is not the whole
+ * test, which is why no count of "the ones that fail" governs this list.
+ *
+ * They are the exception, so they are the list: a new `.test.ts` lands in the fast project and
+ * FAILS loudly if it needs a browser, which its author sees at once. Listing the others instead
+ * would leave every new file in jsdom, and nobody would notice.
+ *
+ * A file leaves this list the day it stops needing a DOM — nothing measures that on its own, and
+ * a stale entry costs only the second it wastes.
+ */
+const DOM_BOUND = [
+  'src/renderer/src/app/document-io.test.ts',
+  // Imports the definition of all twenty-one panels, so it loads every panel component. It
+  // PASSES under node — and covers less: the branches those modules run at import take the
+  // other path without a browser, and `panels/**` went four branches over its budget.
+  'src/renderer/src/app/tool-components.test.ts',
+  'src/renderer/src/app/unsaved-guard.test.ts',
+  'src/renderer/src/dictation/insert-at-caret.test.ts',
+  'src/renderer/src/engines/audio/audio-render.test.ts',
+  'src/renderer/src/engines/canvas/CanvasEngine.test.ts',
+  'src/renderer/src/engines/canvas/CanvasOverlay.test.ts',
+  'src/renderer/src/engines/core/palette.test.ts',
+  'src/renderer/src/engines/scene/animation-painter.test.ts',
+  'src/renderer/src/engines/scene/bvh-builder.test.ts',
+  'src/renderer/src/engines/scene/bvh.worker.test.ts',
+  'src/renderer/src/engines/scene/node-kinds.test.ts',
+  'src/renderer/src/engines/scene/pane-dress.test.ts',
+  'src/renderer/src/engines/scene/pane-materials.test.ts',
+  'src/renderer/src/engines/scene/scene-export.test.ts',
+  'src/renderer/src/engines/scene/scene-models.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-animation.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-export.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-loaders.test.ts',
+  'src/renderer/src/engines/scene/scene-renderer-sync.test.ts',
+  'src/renderer/src/engines/scene/three-factory.test.ts',
+  'src/renderer/src/engines/skybox/SkyboxRenderer.test.ts',
+  'src/renderer/src/engines/texture/TextureRenderer.test.ts',
+  'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
+  'src/renderer/src/engines/timeline/painter.test.ts',
+  'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
+  'src/renderer/src/helpers/model-for-scope.test.ts',
+  'src/renderer/src/helpers/scroll-parent.test.ts',
+  'src/renderer/src/helpers/tool-registry.test.ts',
+  'src/renderer/src/helpers/typing.test.ts',
+  'src/renderer/src/home/use-explore.test.ts',
+  'src/renderer/src/hooks/useCostEstimate.test.ts',
+  'src/renderer/src/hooks/useLoadable.test.ts',
+  'src/renderer/src/hooks/useShortcutLabel.test.ts',
+  'src/renderer/src/i18n/index.test.ts',
+  'src/renderer/src/spaces/image/image-tools.test.ts',
+  'src/renderer/src/spaces/textures/derive-channel.test.ts',
+  'src/renderer/src/spaces/three/scene-tools.test.ts',
+  'src/renderer/src/spaces/video/video-tools.test.ts',
+  'src/renderer/src/stores/dictation.test.ts',
+  'src/renderer/src/stores/documents.test.ts',
+  'src/renderer/src/stores/layouts.test.ts',
+  'src/renderer/src/stores/models.test.ts',
+  'src/renderer/src/test-setup.test.ts',
+]
+
 export default defineConfig({
   // Injected by `define` in electron.vite.config.ts, so a module reaching for one under vitest
   // would throw a bare ReferenceError. Development is the truthful answer here: the tests are
@@ -206,12 +272,30 @@ export default defineConfig({
           name: 'renderer',
           environment: 'jsdom',
           testTimeout: TEST_TIMEOUT,
-          include: ['src/renderer/**/*.test.{ts,tsx}'],
+          // Every component test, plus the `.test.ts` that were measured to need a browser.
+          include: ['src/renderer/**/*.test.tsx', ...DOM_BOUND],
           // Stylesheets are stubbed to an empty string by default, `?raw` included — which
           // silently empties the checks that read a rule back. Only the raw reads are spared;
           // nothing that a component imports for its styles is processed.
           css: { include: [/\.css\?raw$/] },
           setupFiles: ['src/renderer/src/test-setup.ts'],
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: 'renderer-node',
+          // The renderer tests that never touch a browser. jsdom and the renderer setup cost them
+          // more than they run: on 2026-08-12, 221 cases of `helpers/` executed in 700 ms under
+          // 45.9 s of environment and 26.9 s of setup. Three alternating pairs over the same
+          // sample: 32.9 s of jsdom against 16.7 s here.
+          environment: 'node',
+          testTimeout: TEST_TIMEOUT,
+          include: ['src/renderer/**/*.test.ts'],
+          exclude: DOM_BOUND,
+          // Three files read a stylesheet back through `?raw` and fail without this, which is how
+          // it was found: they are not DOM-bound, they were parser-bound.
+          css: { include: [/\.css\?raw$/] },
         },
       },
     ],

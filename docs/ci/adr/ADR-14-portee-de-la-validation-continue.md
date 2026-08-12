@@ -9,6 +9,12 @@ Le cahier de mission pose « aucun test automatisé ». C’est inexact : le dé
 à deux projets (node et jsdom), et `pnpm validate` enchaîne typecheck, lint, vérification de
 format et tests **avec couverture**.
 
+> **Au 2026-08-12, la suite compte TROIS projets** : `node`, `renderer` (jsdom) et
+> `renderer-node`, ce dernier prenant les tests du rendu qui ne touchent aucun navigateur — 25 à
+> 30 % de CPU en moins sur la suite entière. La décision de cette ADR n’en est pas affectée :
+> ce qu’elle tranche est **ce que la CI exécute**, pas comment la suite se répartit. La phrase
+> ci-dessus reste telle qu’elle a été écrite le 2026-08-08, comme tout contexte d’ADR.
+
 La couverture est configurée en **budgets absolus négatifs** par glob — un nombre maximal
 d’instructions et de branches non couvertes, non un pourcentage. Ces seuils sont sensibles à
 tout ce qui fait varier les chemins exécutés, y compris la plateforme : du code gardé par
