@@ -19,6 +19,39 @@ const alias = {
 const TEST_TIMEOUT = 15_000
 
 /**
+ * Worker threads, where Vitest defaults to child processes since its version 2. What it buys is the
+ * start of each worker: a process costs more than a thread, and this suite pays that once per
+ * worker either way.
+ *
+ * Two paired series on 2026-08-12, CPU (user+sys), and they DISAGREE on how much:
+ *
+ *   under load ~110 : 400 s → 347 s   (−13 %)
+ *   under load ~40  : 486 s → 447 s   (−8 %)
+ *
+ * The direction held in both and in every pair; the size did not. Read this as "somewhere between
+ * eight and thirteen percent, on a machine shared with other work" rather than as a figure — a
+ * single number here would be the one a later reader trusts.
+ *
+ * `forks` is what a native module that is not thread-safe demands, and ONE such module is reached
+ * by the suites: `node:sqlite`. It is a native binding like any other, experimental at that — the
+ * first `pnpm validate` with threads on all three projects ended in SIGSEGV. `better-sqlite3` is
+ * NOT the one: only `sqlite-native.ts` imports it, which only `catalog-worker` loads. The
+ * dictation addon sits behind a `utilityProcess` no test starts.
+ *
+ * Hence `forks` on the `node` project alone. Its effect is what a review measured, and it is the
+ * mechanism rather than the crash: counting the PIDs that log `ExperimentalWarning: SQLite`, the
+ * twelve loads happen in TWELVE processes here, against ONE process on twelve threads when all
+ * projects use threads. **What is NOT established is that this prevents the crash** — one segfault
+ * seen, then none in 5 + 26 runs across both shapes, which separates nothing at a rate this low.
+ * An insurance, not a fix.
+ *
+ * Stated per project, and that is not redundancy: a project inherits nothing from the root `test`
+ * block unless it says `extends`, and none here does. A review asked each project which side it
+ * runs on: with the pool set at the root alone, all three answer `child_process`.
+ */
+const TEST_POOL = 'threads'
+
+/**
  * The renderer tests that must keep a browser, established by RUNNING them under `node` rather
  * than by reading them — on 2026-08-12, 247 files, of which 43 failed. Grepping for `document.`
  * would have named 39 and missed the ones whose need is transitive: a store reaching a module
@@ -261,6 +294,9 @@ export default defineConfig({
           // Repeated from the root block, which a project does NOT inherit: three guards that
           // parse a whole folder failed announcing `timed out in 5000ms` under a config saying
           // fifteen. The root value governs no project, so every project states its own.
+          // `forks` here, and only here: the suites bind `node:sqlite`, which is a native binding
+          // like any other. A whole-suite run under threads segfaulted once — see TEST_POOL.
+          pool: 'forks',
           testTimeout: TEST_TIMEOUT,
           include: ['src/{main,preload,shared}/**/*.test.ts'],
           setupFiles: ['src/main/test-setup.ts'],
@@ -271,6 +307,7 @@ export default defineConfig({
         test: {
           name: 'renderer',
           environment: 'jsdom',
+          pool: TEST_POOL,
           testTimeout: TEST_TIMEOUT,
           // Every component test, plus the `.test.ts` that were measured to need a browser.
           include: ['src/renderer/**/*.test.tsx', ...DOM_BOUND],
@@ -290,6 +327,7 @@ export default defineConfig({
           // 45.9 s of environment and 26.9 s of setup. Three alternating pairs over the same
           // sample: 32.9 s of jsdom against 16.7 s here.
           environment: 'node',
+          pool: TEST_POOL,
           testTimeout: TEST_TIMEOUT,
           include: ['src/renderer/**/*.test.ts'],
           exclude: DOM_BOUND,
