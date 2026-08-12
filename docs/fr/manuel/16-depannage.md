@@ -679,7 +679,7 @@ installation neuve.
 | Canvas 3D noir | fermer et rouvrir l’onglet |
 | Panneaux en désordre | Affichage → Réinitialiser la disposition |
 | Un espace est revenu tout seul à sa disposition par défaut | son agencement enregistré était illisible : il a été jeté plutôt que gardé — le journal le dit sous **Interface**. Réorganisez-le, le nouvel agencement est réenregistré |
-| Travail perdu à la fermeture d’un onglet | seuls `.scene` et `.tex` s’enregistrent — [voir les limites](18-limites.md) |
+| Travail perdu à la fermeture d’un onglet | la fermeture demande avant de jeter : répondre **Enregistrer**. **Ne pas enregistrer** est définitif — [voir les limites](18-limites.md) |
 
 ---
 

@@ -566,7 +566,7 @@ stands in the scene, not where it stands inside its group.
 
 `⌘S` / `Ctrl+S` writes the scene into the project, under `documents/`.
 
-**3D scenes can save** — it is one of only two document types that can today.
+**3D scenes can save**, as do the six other document kinds.
 
 A tab whose work is not yet written carries **a dot** (`•`) beside its name. The dot disappears on
 save and comes back on the next change.

@@ -653,7 +653,7 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 | Black 3D canvas | close and reopen the tab |
 | Panels in disorder | View → Reset layout |
 | A workspace came back to its default arrangement on its own | its stored layout could not be read, so it was dropped rather than kept — the journal says so under **Interface**. Rearrange it: the new arrangement is stored again |
-| Work lost when closing a tab | only `.scene` and `.tex` save — [see the limits](18-limits.md) |
+| Work lost when closing a tab | closing asks before discarding: answer **Save**. **Don’t save** is final — [see the limits](18-limits.md) |
 
 ---
 
