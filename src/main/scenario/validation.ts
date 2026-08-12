@@ -66,7 +66,7 @@ export function parseAssetName(value: unknown): string {
  * Only the payload, never a data URL: an `data:image/png;base64,` prefix reaches the API as
  * part of the picture and comes back as an opaque decoding error.
  */
-const base64 = z
+export const base64Payload = z
   .string()
   .min(1)
   // Only the head: the payload is megabytes long, and a data URL prefix — the one mistake this
@@ -77,7 +77,7 @@ const base64 = z
   .refine(value => /^[A-Za-z0-9+/=]+$/.test(value.slice(0, 64)), 'expected raw base64')
 
 export function parseBase64(value: unknown): string {
-  return base64.parse(value)
+  return base64Payload.parse(value)
 }
 
 const facetValue = z.string().trim().min(1).max(80)

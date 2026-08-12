@@ -23,10 +23,12 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
+const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
 // What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
 vi.mock('@/app/document-io', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
+  saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))
 
 /**
@@ -149,6 +151,41 @@ describe('useNativeMenu', () => {
     menu.emit('document.save')
 
     expect(saveDocument).not.toHaveBeenCalled()
+  })
+
+  it('copies the document in front when the menu asks for Save as', () => {
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.saveAs')
+
+    expect(saveDocumentAs).toHaveBeenCalledWith('doc-1')
+  })
+
+  // Same reason as saving: with no tab in front there is no document to copy.
+  it('copies nothing when no document is in front', () => {
+    useDocuments.setState({ activeId: null })
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.saveAs')
+
+    expect(saveDocumentAs).not.toHaveBeenCalled()
+  })
+
+  /**
+   * `saveDocumentAs` journals its own failures under `assets.save` — the shelf the copy would
+   * have landed in — and answers false rather than rejecting. A second scope reported here would
+   * say the same failure twice, under a name that does not fit it.
+   */
+  it('leaves a refused copy to say so itself, without a second report', async () => {
+    saveDocumentAs.mockReturnValueOnce(Promise.resolve(false))
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    expect(() => menu.emit('document.saveAs')).not.toThrow()
+
+    expect(menu.report).not.toHaveBeenCalled()
   })
 
   /**

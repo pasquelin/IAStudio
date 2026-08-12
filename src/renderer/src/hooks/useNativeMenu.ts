@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { CommandId, MenuCheck } from '@shared/domain/command'
-import { saveDocument } from '@/app/document-io'
+import { saveDocument, saveDocumentAs } from '@/app/document-io'
 import { revealTool } from '@/helpers/reveal-panel'
 import { availableToolIds } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
@@ -37,6 +37,14 @@ function runCommand(command: CommandId): void {
           reportFailure('document.save', documentId, error),
         )
       }
+      return
+    }
+    case 'document.saveAs': {
+      const documentId = useDocuments.getState().activeId
+      // No `catch` here, unlike Save: `saveDocumentAs` journals its own failures under
+      // `assets.save` and answers false — the shelf the copy would have landed in is where a
+      // reader looks for it, and a second scope on the same failure would say it twice.
+      if (documentId) void saveDocumentAs(documentId)
       return
     }
     default:

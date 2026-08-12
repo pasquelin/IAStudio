@@ -17,8 +17,9 @@ import {
 } from '@shared/domain/document'
 import { MANIFEST_VERSION, type Manifest } from '@shared/domain/project'
 import { isPbrChannel, type PbrChannel } from '@shared/domain/texture'
-import type { SaveAudioRequest, SaveTextureRequest } from '@shared/ipc'
+import type { SaveAudioRequest, SavePictureRequest, SaveTextureRequest } from '@shared/ipc'
 import { pathSegment } from '@main/validation'
+import { base64Payload } from '@main/scenario/validation'
 
 const manifest = z.object({
   // Capped, not merely floored, exactly as `documentEnvelope` below — and for a heavier reason.
@@ -138,6 +139,30 @@ const saveTexture = z.object({
 
 export function parseSaveTexture(value: unknown): SaveTextureRequest {
   return saveTexture.parse(value)
+}
+
+/**
+ * Base64 grows by four bytes for every three, so the same ceiling as a channel's bytes is this
+ * much text. Bounded before it is decoded: the decoding is what would allocate.
+ */
+const MAX_PICTURE_BASE64 = Math.ceil((MAX_PICTURE_BYTES * 4) / 3)
+
+const savePicture = z.object({
+  name: z.string().trim().min(1).max(200),
+  derivedFrom: assetId.optional(),
+  // The same rule the export applies, for the same reason: a `data:image/png;base64,` prefix
+  // reaching the file would be written as part of the picture. That the payload really decodes
+  // to a PNG is checked once, by the handler, on the bytes it decodes anyway.
+  png: z.string().max(MAX_PICTURE_BASE64).pipe(base64Payload),
+})
+
+export function parseSavePicture(value: unknown): SavePictureRequest {
+  return savePicture.parse(value)
+}
+
+/** Whether decoded bytes really are a PNG — the check `saveTexture` makes on its own buffer. */
+export function isPngBytes(bytes: Uint8Array): boolean {
+  return isPng(bytes)
 }
 
 export function parseDocumentId(value: unknown): string {

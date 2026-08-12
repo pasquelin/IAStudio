@@ -26,6 +26,8 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'assets.reveal',
   // A double-click is a gesture too: refusing the same asset twice must say so twice.
   'assets.open',
+  // ⌘S is a gesture, and the half that reaches the asset can fail while the document is written.
+  'assets.save',
   // Both rows of the home's project menu: chosen again precisely because the first attempt
   // said nothing, and a shelf whose row does nothing twice in silence reads as a dead menu.
   'project.reveal',

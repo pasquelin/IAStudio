@@ -4,6 +4,7 @@ import { canvasHost, holdCanvas, type CanvasHost } from './canvas-hosts'
 const engine = (label: string): CanvasHost => ({
   pixelSnapshots: () => Promise.resolve([{ layerId: label, mask: false, data: '' }]),
   restoreSnapshot: () => Promise.resolve(),
+  snapshot: () => Promise.resolve(label),
 })
 
 describe('the canvas host registry', () => {
