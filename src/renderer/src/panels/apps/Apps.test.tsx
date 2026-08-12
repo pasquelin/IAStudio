@@ -69,6 +69,19 @@ describe('Apps panel', () => {
     expect(search).toHaveBeenCalledWith(expect.objectContaining({ privacy: 'public' }))
   })
 
+  /** Scenario answers in English only, so the sentence its author wrote is said here. */
+  it('says what an App wrote about itself in the studio language', async () => {
+    installFakeBridge({
+      workflows: {
+        search: () =>
+          Promise.resolve({ items: [app({ description: 'Remove background' })], cursor: null }),
+      },
+    })
+    renderPanel()
+
+    expect(await screen.findByText('Supprimer l’arrière-plan')).toBeInTheDocument()
+  })
+
   /**
    * « c'est quoi App, le titre je ne le comprends pas ». The word is Scenario's and stays
    * untranslated, so the panel has to say what one is — and say it over the list, not only in
