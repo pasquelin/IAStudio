@@ -13,7 +13,7 @@ import type { Command } from '@/engines/core/history'
 import type { SceneState } from '@/engines/scene/scene-state'
 import { clampPlayhead } from '@/engines/scene/animation-eval'
 import { hitAnimation, type AnimationHit } from '@/engines/scene/animation-hit'
-import { paintAnimation, keyId } from '@/engines/scene/animation-painter'
+import { paintAnimation, keyId, keyParts } from '@/engines/scene/animation-painter'
 import { rowsHeight, maxOffsetFor, maxScrollTopFor } from '@/engines/timeline/band'
 import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { clampScale, scrollBy, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
@@ -176,13 +176,13 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     const drops: Command<SceneState>[] = []
 
     for (const id of picked) {
-      const cut = id.lastIndexOf('@')
-      const rowId = id.slice(0, cut)
-      const time = Number(id.slice(cut + 1))
-      const row = current.rows.find(candidate => candidate.id === rowId)
+      const key = keyParts(id)
+      if (!key) continue
+
+      const row = current.rows.find(candidate => candidate.id === key.rowId)
       if (!row) continue
 
-      const command = unkeySubject(sceneOf(store, documentId), trackIdsOf(row), time)
+      const command = unkeySubject(sceneOf(store, documentId), trackIdsOf(row), key.time)
       if (command) drops.push(command)
     }
 

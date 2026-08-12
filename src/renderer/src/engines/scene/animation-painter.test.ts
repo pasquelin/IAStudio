@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timeline-geometry'
 import { animationTrack, timelineWith } from './animation-fixtures'
-import { keyId, paintAnimation } from './animation-painter'
+import { keyId, keyParts, paintAnimation } from './animation-painter'
 import { refreshPalette } from '../core/palette'
 import type { Point } from '../core/geometry'
 import { CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animation-rows'
@@ -150,5 +150,32 @@ describe('painting the animation band', () => {
 
   it('names a key the same way the selection set does', () => {
     expect(keyId('cube', 2 * SECOND)).toBe('cube@2000000')
+  })
+
+  it('reads back what it wrote', () => {
+    expect(keyParts(keyId('cube', 2 * SECOND))).toEqual({ rowId: 'cube', time: 2 * SECOND })
+  })
+
+  /**
+   * The separator is a character a row id may hold — `keyId` puts it in without escaping, so the
+   * LAST one is the one that separates. Reading the first would name a row that does not exist,
+   * and the key would silently survive the delete.
+   */
+  it('reads back a row whose name holds the separator', () => {
+    expect(keyParts(keyId('rig@arm', SECOND))).toEqual({ rowId: 'rig@arm', time: SECOND })
+  })
+
+  /**
+   * Whatever is in a selection set is a string; nothing promises it is one of ours. The last
+   * three come from a review that mutated `keyParts` until something survived: a time may not
+   * be endless, may not carry a unit, and a key with no row before the separator names nothing.
+   */
+  it('takes nothing from a string that is not a key name', () => {
+    expect(keyParts('cube')).toBeUndefined()
+    expect(keyParts('cube@')).toBeUndefined()
+    expect(keyParts('cube@soon')).toBeUndefined()
+    expect(keyParts('cube@Infinity')).toBeUndefined()
+    expect(keyParts('cube@2s')).toBeUndefined()
+    expect(keyParts('@1000')).toBeUndefined()
   })
 })
