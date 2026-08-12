@@ -9,7 +9,7 @@ import { SliderField } from '@/design/SliderField'
 import { chipSkin } from '@/design/styles'
 import { ToggleField } from '@/design/ToggleField'
 import { VectorField } from '@/design/VectorField'
-import { setMaterial, setPreview } from '@/engines/texture/commands'
+import { setTextureMaterial, setPreview } from '@/engines/texture/commands'
 import {
   PREVIEW_BOUNDS,
   PREVIEW_SHAPES,
@@ -59,7 +59,7 @@ export function TextureInspector({ documentId }: TextureInspectorProps) {
   const edit = useDocumentEdit(useTextures, documentId)
 
   const onMaterial = <K extends keyof typeof material>(key: K, value: (typeof material)[K]): void =>
-    edit.run(setMaterial(key, value))
+    edit.run(setTextureMaterial(key, value))
   const onPreview = <K extends keyof typeof preview>(key: K, value: (typeof preview)[K]): void =>
     edit.run(setPreview(key, value))
 

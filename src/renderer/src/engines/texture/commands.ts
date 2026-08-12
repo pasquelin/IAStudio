@@ -29,7 +29,7 @@ function replaceSection<K extends keyof TextureState>(
 }
 
 /** One entry per setting, so dragging one slider does not swallow the previous one's entry. */
-export function setMaterial<K extends keyof MaterialSettings>(
+export function setTextureMaterial<K extends keyof MaterialSettings>(
   key: K,
   value: MaterialSettings[K],
 ): Command<TextureState> {

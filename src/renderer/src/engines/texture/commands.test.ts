@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { run, undo, emptyHistory } from '../core/history'
-import { applyStyle, setChannel, setMaterial, setPreview } from './commands'
+import { applyStyle, setChannel, setTextureMaterial, setPreview } from './commands'
 import { newTexture, type ChannelMap, type TextureState } from './texture-state'
 
 const MAP: ChannelMap = { assetId: 'a1', origin: 'imported', width: 512, height: 512 }
 
 function applied(
   texture: TextureState,
-  ...commands: ReturnType<typeof setMaterial>[]
+  ...commands: ReturnType<typeof setTextureMaterial>[]
 ): TextureState {
   let state = texture
   let history = emptyHistory<TextureState>()
@@ -15,17 +15,17 @@ function applied(
   return state
 }
 
-describe('setMaterial', () => {
+describe('setTextureMaterial', () => {
   // Redo replays a command: a revert that never ran has no earlier value to write back, and
   // writing `undefined` would empty the section.
   it('gives the texture back untouched when it is reverted before it ran', () => {
     const texture = newTexture()
 
-    expect(setMaterial('roughness', 0.25).revert(texture)).toBe(texture)
+    expect(setTextureMaterial('roughness', 0.25).revert(texture)).toBe(texture)
   })
 
   it('writes one setting and leaves the others alone', () => {
-    const next = applied(newTexture(), setMaterial('roughness', 0.25))
+    const next = applied(newTexture(), setTextureMaterial('roughness', 0.25))
 
     expect(next.material.roughness).toBe(0.25)
     expect(next.material.metalness).toBe(newTexture().material.metalness)
@@ -34,13 +34,17 @@ describe('setMaterial', () => {
   // Every frame of one drag carries the same id and collapses into a single undo entry; two
   // different settings must not, or undoing the second would give back the first as well.
   it('gives each setting an id of its own', () => {
-    expect(setMaterial('roughness', 0).id).not.toBe(setMaterial('metalness', 0).id)
-    expect(setMaterial('roughness', 0).id).toBe(setMaterial('roughness', 1).id)
+    expect(setTextureMaterial('roughness', 0).id).not.toBe(setTextureMaterial('metalness', 0).id)
+    expect(setTextureMaterial('roughness', 0).id).toBe(setTextureMaterial('roughness', 1).id)
   })
 
   it('gives back what it replaced', () => {
     const before = newTexture()
-    const [after, history] = run(before, emptyHistory<TextureState>(), setMaterial('metalness', 1))
+    const [after, history] = run(
+      before,
+      emptyHistory<TextureState>(),
+      setTextureMaterial('metalness', 1),
+    )
     const [reverted] = undo(after, history)
 
     expect(reverted.material).toEqual(before.material)
@@ -56,7 +60,7 @@ describe('setPreview', () => {
   })
 
   it('never shares an id with a material setting', () => {
-    expect(setPreview('autoSpin', true).id).not.toBe(setMaterial('rotation', 1).id)
+    expect(setPreview('autoSpin', true).id).not.toBe(setTextureMaterial('rotation', 1).id)
   })
 })
 
