@@ -250,22 +250,22 @@
     "fileNotMoved": "Ce fichier n’a pas pu être déplacé — ce nom est peut-être déjà pris dans le dossier d’arrivée",
     "fileNotRenamed": "Ce fichier n’a pas pu être renommé — ce nom est peut-être déjà pris",
     "fileNotTrashed": "Ce fichier n’a pas pu être mis à la corbeille",
-    "jobFailed": "La génération « {{name}} » a échoué",
-    "jobCancelled": "Génération « {{name}} » annulée",
+    "jobFailed": "La génération « {{name}} » a échoué",
+    "jobCancelled": "Génération « {{name}} » annulée",
     "generated_one": "{{count, number}} asset généré",
     "generated_many": "{{count, number}} assets générés",
     "generated_other": "{{count, number}} assets générés",
     "generatedInto_one": "{{count, number}} asset généré dans {{workspaces}}",
     "generatedInto_many": "{{count, number}} assets générés dans {{workspaces}}",
     "generatedInto_other": "{{count, number}} assets générés dans {{workspaces}}",
-    "importFailed": "Impossible d’importer « {{name}} »",
+    "importFailed": "Impossible d’importer « {{name}} »",
     "imported": "{{name}} importé",
-    "importUnreadable": "« {{name}} » est illisible",
-    "pullFailed": "Impossible de rapatrier « {{name}} »",
+    "importUnreadable": "« {{name}} » est illisible",
+    "pullFailed": "Impossible de rapatrier « {{name}} »",
     "pulled_one": "{{count, number}} asset rapatrié",
     "pulled_many": "{{count, number}} assets rapatriés",
     "pulled_other": "{{count, number}} assets rapatriés",
-    "pushFailed": "Impossible d’envoyer « {{name}} »",
+    "pushFailed": "Impossible d’envoyer « {{name}} »",
     "pushed_one": "{{count, number}} asset envoyé",
     "pushed_many": "{{count, number}} assets envoyés",
     "pushed_other": "{{count, number}} assets envoyés",
@@ -273,7 +273,7 @@
     "captioned_many": "{{count, number}} assets nommés",
     "captioned_other": "{{count, number}} assets nommés",
     "captionFailed": "La description automatique a échoué",
-    "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
+    "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
     "apiRefused": "L’API Scenario a refusé une requête",
     "scope": {
       "scene.model": "Un modèle 3D n’a pas pu être chargé",
@@ -487,12 +487,12 @@
     "close": "Fermer l’onglet",
     "closeOthers": "Fermer les autres onglets",
     "delete": "Supprimer le document…",
-    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
+    "saveTitle": "Enregistrer les modifications de « {{title}} » ?",
     "saveBody": "Si vous ne les enregistrez pas, elles seront perdues.",
     "save": "Enregistrer",
     "dontSave": "Ne pas enregistrer",
     "cancel": "Annuler",
-    "deleteTitle": "Supprimer « {{title}} » du projet ?",
+    "deleteTitle": "Supprimer « {{title}} » du projet ?",
     "deleteBody": "Le fichier est retiré du dossier du projet. Cette action est irréversible.",
     "deleteConfirm": "Supprimer",
     "closeHint": "Retire l’onglet de la barre ; le document reste dans le projet",
@@ -1172,14 +1172,14 @@
     "dictationDescription": "Dicter un texte au lieu de le taper. Tout se passe sur cet ordinateur : rien de ce que vous dites n’est envoyé nulle part.",
     "theme": {
       "title": "Thème",
-      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
+      "help": "Choisit les couleurs de toute l’application. Le thème sombre repose les yeux quand on travaille longtemps dans une pièce peu éclairée ; le thème clair se lit mieux en plein jour. « Système » suit le réglage de votre ordinateur et bascule tout seul, par exemple le soir venu.",
       "dark": "Sombre",
       "light": "Clair",
       "system": "Système"
     },
     "density": {
       "title": "Densité",
-      "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
+      "help": "Règle la taille des boutons et la hauteur des lignes. « Compact » fait tenir plus de choses à l’écran ; « Confort » laisse plus d’air entre elles, ce qui les rend plus faciles à viser à la souris.",
       "comfortable": "Confort",
       "compact": "Compact"
     },
@@ -1206,7 +1206,7 @@
     },
     "dictationMode": {
       "title": "Façon de déclencher",
-      "help": "« Maintenir » écoute tant que vous gardez le raccourci enfoncé, et s’arrête dès que vous le relâchez : c’est le plus sûr, on ne laisse jamais le micro ouvert par oubli. « Basculer » démarre à la première pression et s’arrête à la suivante, ce qui repose la main sur les longues dictées.",
+      "help": "« Maintenir » écoute tant que vous gardez le raccourci enfoncé, et s’arrête dès que vous le relâchez : c’est le plus sûr, on ne laisse jamais le micro ouvert par oubli. « Basculer » démarre à la première pression et s’arrête à la suivante, ce qui repose la main sur les longues dictées.",
       "pushToTalk": "Maintenir la touche",
       "continuous": "Basculer marche/arrêt"
     },
@@ -1252,12 +1252,12 @@
     "generalDescription": "Langue de l’application et ce qu’elle fait en s’ouvrant.",
     "language": {
       "title": "Langue",
-      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement prend effet dès que vous cliquez sur Appliquer ou OK, sans rien relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
+      "help": "La langue de tous les textes de l’application : menus, boutons, messages. « Système » reprend la langue de votre ordinateur. Le changement prend effet dès que vous cliquez sur Appliquer ou OK, sans rien relancer. Cela ne touche pas vos projets ni ce que vous écrivez dedans.",
       "system": "Système"
     },
     "startup": {
       "title": "À l’ouverture",
-      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
+      "help": "Ce que l’application fait quand vous la lancez. « Rouvrir le dernier projet » vous remet là où vous vous étiez arrêté. « Ne rien ouvrir » démarre sur une fenêtre vide, ce qui est plus rapide et plus reposant si vous jonglez entre beaucoup de projets.",
       "lastProject": "Rouvrir le dernier projet",
       "nothing": "Ne rien ouvrir"
     },
@@ -1291,7 +1291,7 @@
     },
     "spaces": "Espaces de travail",
     "spacesDescription": "Ce qui n’a de sens que dans un espace précis : la vue 3D, le montage, l’image.",
-    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
+    "requires": "Sans effet tant que « {{setting}} » est désactivé.",
     "showGrid": {
       "title": "Afficher la grille",
       "help": "Le quadrillage posé au sol de la vue 3D. Il ne fait pas partie de ce que vous fabriquez : c’est un repère pour savoir où sont les choses et à quelle hauteur. On le cache pour juger une image sans rien autour."
@@ -1310,7 +1310,7 @@
     },
     "shadowQuality": {
       "title": "Douceur des ombres",
-      "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",
+      "help": "Le grain du bord d’une ombre. « Dure » découpe net et coûte le moins ; « Douce » adoucit le bord. Ce qui projette une ombre, en revanche, se décide objet par objet dans l’inspecteur.",
       "hard": "Dure",
       "soft": "Douce"
     },
@@ -1340,7 +1340,7 @@
     "open": "Ouvrir",
     "logLevel": {
       "title": "Détail du journal",
-      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
+      "help": "Combien l’application raconte ce qu’elle fait, dans la console. « Rien » ne dit plus rien du tout ; « Erreurs » ne signale que ce qui a échoué ; « Tout » raconte chaque étape, ce qui est utile pour comprendre un problème et bavard le reste du temps.",
       "silent": "Rien",
       "error": "Erreurs seulement",
       "warn": "Erreurs et avertissements",
@@ -1471,7 +1471,7 @@
     },
     "sceneSpace": {
       "title": "Repère local",
-      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
+      "help": "Aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde. Sur un objet tourné, c’est ce qui permet de le déplacer « vers son avant » plutôt que vers le nord."
     },
     "sceneProjection": {
       "title": "Projection",
@@ -2161,12 +2161,12 @@
       "none": "Ce que vous générerez dans ce projet s’affichera ici."
     },
     "library": {
-      "fetch": "Récupérer « {{name}} » dans le projet",
+      "fetch": "Récupérer « {{name}} » dans le projet",
       "none": "La bibliothèque de votre compte Scenario est vide, ou aucune clé API n’est renseignée."
     },
     "favorites": {
       "none": "Aucune recette épinglée. Épinglez une génération pour la retrouver ici, dans tous vos projets.",
-      "unpin": "Retirer « {{name}} » de vos recettes"
+      "unpin": "Retirer « {{name}} » de vos recettes"
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",
@@ -2201,11 +2201,11 @@
       "ask": "Proposez-moi une idée",
       "asking": "Un instant…",
       "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
-      "use": "Ouvrir le générateur sur « {{prompt}} »"
+      "use": "Ouvrir le générateur sur « {{prompt}} »"
     },
     "similar": {
       "none": "Rien à comparer pour l’instant : votre bibliothèque Scenario est vide, ou aucune clé API n’est renseignée.",
-      "title": "Dans la veine de « {{name}} »",
+      "title": "Dans la veine de « {{name}} »",
       "refused": "La bibliothèque n’a pas répondu. Le panneau revient dès que vous réessayez."
     },
     "usage": {
