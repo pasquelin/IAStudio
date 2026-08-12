@@ -77,8 +77,10 @@ function Counter({ type, total }: { type: AssetType; total: number }) {
       <span className="flex min-w-0 flex-col">
         <span className="text-text text-sm leading-normal font-semibold tabular-nums">{total}</span>
         {/* Lifted under the pointer for the reason a list row's subtitle is: `muted` reads 3.51:1
-            on `elevated`, the fill this line takes on hover. `rowSkin` opens the group. */}
-        <span className="text-muted group-hover/row:text-text text-tiny truncate">
+            on `elevated`, the fill this line takes on hover. `rowSkin` opens the group.
+            `transition-colors` HERE and not on the button alone — the property does not inherit,
+            so the fill would fade while the word above it snapped. */}
+        <span className="text-muted group-hover/row:text-text text-tiny truncate transition-colors">
           {t(`assetTypes.${type}`)}
         </span>
       </span>
