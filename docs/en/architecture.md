@@ -757,6 +757,13 @@ Colours live in the `@theme` block of `src/renderer/src/index.css`; the `--sc-*`
 component**, and no pixel where a gauge exists — that single redeclaration is what makes the
 density setting reach every control at once.
 
+**One case escapes it, and has a tool of its own: code that needs the gauge as a NUMBER.** A
+virtualized list's estimator is the only example today — it takes a number, while the row it
+estimates is sized by a class. Writing that number down is being right at one density only:
+`useGauge` (`hooks/useGauge.ts`) reads the gauge back and follows the setting, over the same
+signal the engines use — `onPaletteChange`. **This is not a way out of writing pixels in
+JavaScript**: outside that case, the class remains the only route.
+
 Surfaces are **darker** than the chassis, the opposite of the web habit. That inversion is what
 reads as "panels resting on a frame".
 

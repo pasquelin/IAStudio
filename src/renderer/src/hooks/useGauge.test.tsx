@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { refreshPalette } from '@/engines/core/palette'
-import { useGauge } from './virtual'
+import { useGauge } from './useGauge'
 
 const GAUGE = '--sc-control'
 
@@ -16,10 +16,6 @@ function declare(value: string | null): void {
 afterEach(() => declare(null))
 
 describe('useGauge', () => {
-  /**
-   * The defect this hook exists for. `Tree` estimated a constant 28 while its rows were sized by
-   * the gauge — 24 in compact density — and four pixels a row compounded down the list.
-   */
   it('reads the pixels the stylesheet declares', () => {
     declare('24px')
 

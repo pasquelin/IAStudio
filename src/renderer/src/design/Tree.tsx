@@ -3,10 +3,11 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
+import { useGauge } from '@/hooks/useGauge'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { LIST_ROW_HEIGHT, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
-import { useGauge, useRemeasure } from './virtual'
+import { useRemeasure } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
@@ -126,9 +127,7 @@ export function Tree<T extends TreeNode>({
     [nodes, expandedIds, expandable],
   )
 
-  // Read back from the gauge the row is sized by, never assumed: a constant here and
-  // `h-(--sc-control)` below are the same number in comfortable density and four pixels apart in
-  // compact, an error that compounds down the list.
+  // Read back from the gauge the row below is sized by: a constant is only right at one density.
   const rowHeight = useGauge('--sc-control', LIST_ROW_HEIGHT)
 
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,

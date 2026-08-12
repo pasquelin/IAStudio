@@ -89,14 +89,12 @@ export function chipSkin(active: boolean): string {
 }
 
 /**
- * What one line measures in a list whose rows are the height of a control — `--sc-control` at
- * its tallest. A list whose rows hold more than a line of text (the model browser) sizes itself
- * and does not read this.
+ * `--sc-control` at its tallest, as a number — for the lists that draw a row at a fixed height
+ * and for `useGauge` to fall back on. A list whose rows hold more than a line of text (the model
+ * browser) sizes itself and does not read this.
  *
- * A constant, and only where the row is drawn at this height whatever the density: a surface
- * sized by the gauge itself must read the gauge back, through `useGauge`, or it estimates 28
- * against a compact row of 24 — which is exactly what `Tree` did. This is that surface's
- * fallback, not its measurement.
+ * A surface whose rows are sized by the gauge itself must read the gauge, not this: the two part
+ * company in compact density.
  */
 export const LIST_ROW_HEIGHT = 28
 
