@@ -27,6 +27,7 @@ import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { MissingCredentials } from '@/panels/shared/MissingCredentials'
 import { useCostEstimate } from '@/hooks/useCostEstimate'
+import { useModelText } from '@/hooks/useModelText'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 
 /**
@@ -128,13 +129,19 @@ export function Apps() {
   )
 }
 
-/** Memoized like the model rows: a scroll re-renders every mounted row on each frame. */
+/**
+ * Memoized like the model rows: a scroll re-renders every mounted row on each frame.
+ *
+ * The description is a sentence its author wrote, and the API answers in English only.
+ */
 const AppRow = memo(function AppRow({ app }: { app: WorkflowSummary }) {
+  const say = useModelText()
+
   return (
     <Row
       media={<Thumbnail url={app.thumbnail} className="size-8" />}
       title={app.name}
-      subtitle={app.description ?? app.tags.join(' · ')}
+      subtitle={app.description !== undefined ? say(app.description) : app.tags.join(' · ')}
     />
   )
 })
