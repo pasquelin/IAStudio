@@ -52,7 +52,24 @@ function holes(text: string): readonly string[] {
 }
 
 /** Every key, nested ones included, in the order the file writes them. */
-/** Every nested block, by the JSON it holds — two paths under one shape is one block written twice. */
+/**
+ * What a block holds, with its names sorted at every depth.
+ *
+ * Sorted because the order is not part of what a block SAYS: the same six keys pasted back in a
+ * different order are the same six keys, and a review caught this comparing raw `JSON.stringify`
+ * — which would have called them different and let the copy through.
+ */
+function shapeOf(value: unknown): string {
+  if (!isRecord(value)) return JSON.stringify(value)
+
+  return JSON.stringify(
+    Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, held]) => [name, shapeOf(held)]),
+  )
+}
+
+/** Every nested block, by what it holds — two paths under one shape is one block written twice. */
 function blocksOf(
   bundle: unknown,
   prefix = '',
@@ -64,7 +81,7 @@ function blocksOf(
     if (!isRecord(value)) continue
 
     const key = prefix ? `${prefix}.${name}` : name
-    const shape = JSON.stringify(value)
+    const shape = shapeOf(value)
     into.set(shape, [...(into.get(shape) ?? []), key])
     blocksOf(value, key, into)
   }
@@ -126,9 +143,10 @@ describe('the translation bundles', () => {
    * it. Six keys per language, translated and proofread for nobody, and every guard here was green
    * the whole time: a copy is complete in both languages, blank nowhere, and ICU-valid.
    *
-   * What it reads is the SHAPE, not a spelling: two paths holding the same JSON. Nothing else
-   * repeats in either bundle — measured at every size, down to a block of one key — so this needs
-   * no floor and no exemption. A repeat meant on purpose will have to argue for itself here.
+   * What it reads is what a block HOLDS, down to any depth and whatever order the names sit in —
+   * see `shapeOf`. Nothing else repeats in either bundle, measured at every size down to a block
+   * of one key, so this needs no floor and no exemption. A repeat meant on purpose will have to
+   * argue for itself here.
    */
   it.each(CODES)('writes no block twice under two names in %s', code => {
     const twinned = [...blocksOf(TRANSLATIONS[code]).values()].filter(paths => paths.length > 1)
