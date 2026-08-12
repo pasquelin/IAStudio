@@ -359,6 +359,19 @@ composités à l’export ; les règles, les repères et les pointillés de sél
 > l’asset une image plate. Si la seconde échoue, votre travail est déjà sur le disque et c’est la
 > vignette qui est en retard — jamais l’inverse.
 >
+> **`⌘S` écrit l’asset à la taille du DOCUMENT.** Recadrer ou redimensionner puis enregistrer réduit
+> donc l’asset d’origine — et si cet asset vit dans le projet, son image précédente est remplacée.
+> C’est voulu : un recadrage est une édition comme une autre, et un éditeur qui refuserait
+> d’enregistrer un document redimensionné n’en serait pas un. **Un [média lié](07-assets.md), lui,
+> n’est jamais touché** : l’édition entre dans le projet, votre fichier reste où il est.
+>
+> **Le studio le dit quand il constate que le document ne mesure plus son asset**, à deux moments
+> qui ne se valent pas. En rouvrant l’asset depuis l’étagère alors que son onglet est déjà là,
+> c’est un avertissement : rien n’est encore écrit, vous pouvez choisir. À l’enregistrement, c’est
+> un constat — **rien n’est refusé et l’écriture a lieu**. Et il se tait quand il ne peut pas
+> mesurer : un asset illisible, ou un onglet qui n’a pas fini de s’ouvrir. Pour garder l’original
+> intact, `⇧⌘S` écrit une copie.
+>
 > **`⇧⌘S` — Enregistrer sous — écrit une copie à côté et continue dessus.** Aucune boîte de
 > dialogue ne demande de nom : la copie s’appelle *« (le nom) copie »*, et l’asset que vous aviez
 > ouvert reste tel qu’il était au dernier `⌘S`.
