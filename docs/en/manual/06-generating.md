@@ -481,7 +481,7 @@ models chained together, already assembled.**
 | **This API key lacks the required permissions.** | the key exists but cannot do this | check your plan at app.scenario.com |
 | **Too many requests. Retrying…** | you exceeded the allowed rate | nothing, the studio retries on its own |
 | **The Scenario service is temporarily unavailable.** | server-side outage | try again later |
-| **Cannot reach Scenario.** | your internet connection | check the network |
+| **Cannot reach Scenario. Check your connection.** | your internet connection | check the network |
 | **The generation failed.** | the model refused the request | often an out-of-range parameter, or a refused prompt |
 | **Could not save the result to disk.** | the project folder is no longer reachable | disk full, project moved, write permissions |
 | **Invalid value.** | one field of the form | the offending field is flagged |

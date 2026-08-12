@@ -85,8 +85,8 @@ Le studio vérifie immédiatement auprès de Scenario. Trois réponses possibles
 | Ce qui s’affiche | Ce que ça veut dire |
 |---|---|
 | Une pastille verte **Utilisé** sur la ligne du compte | tout va bien, vous pouvez fermer les réglages |
-| **Clé ou secret API invalide** | une des deux chaînes est fausse — souvent un espace collé en trop au début ou à la fin |
-| **Impossible de joindre Scenario** | ce n’est pas votre clé, c’est votre connexion internet |
+| **Clé ou secret API invalide.** | une des deux chaînes est fausse — souvent un espace collé en trop au début ou à la fin |
+| **Impossible de joindre Scenario. Vérifiez votre connexion.** | ce n’est pas votre clé, c’est votre connexion internet |
 
 **Où vont vos identifiants.** Ils sont chiffrés par le trousseau de votre système — Keychain sur
 macOS, le gestionnaire d’identifiants sur Windows, le trousseau du bureau sur Linux — et rangés
