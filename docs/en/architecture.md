@@ -758,11 +758,18 @@ component**, and no pixel where a gauge exists — that single redeclaration is 
 density setting reach every control at once.
 
 **One case escapes it, and has a tool of its own: code that needs the gauge as a NUMBER.** A
-virtualized list's estimator is the only example today — it takes a number, while the row it
-estimates is sized by a class. Writing that number down is being right at one density only:
-`useGauge` (`hooks/useGauge.ts`) reads the gauge back and follows the setting, over the same
-signal the engines use — `onPaletteChange`. **This is not a way out of writing pixels in
-JavaScript**: outside that case, the class remains the only route.
+virtualized list's estimator is the only example — it takes a number, while the row it estimates
+is sized by a class. Writing that number down is being right at one density only: `useGauge`
+(`hooks/useGauge.ts`) reads the gauge back and follows the setting, over the same signal the
+engines use — `onPaletteChange`. **This is not a way out of writing pixels in JavaScript**:
+outside that case, the class remains the only route.
+
+**Two virtualizers do it, over three gauges** — `Tree` and `Collection`, the latter reading
+`--sc-control` and `--sc-row-stacked` **unconditionally**, since a row stacking a name over a
+subtitle does not fit the height of a control. A hook cannot sit behind a branch, so both are
+read and the row's shape picks afterwards. The `LIST_ROW_HEIGHT` and `STACKED_ROW_HEIGHT`
+constants are **only** the fallback for a gauge that cannot be read: no call site passes them any
+more, and three did — each right at a single density.
 
 Surfaces are **darker** than the chassis, the opposite of the web habit. That inversion is what
 reads as "panels resting on a frame".
