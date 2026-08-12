@@ -102,16 +102,22 @@ export function onPaletteChange(listener: PaletteListener): () => void {
  * A painter's whole palette, computed once per theme rather than once per paint: at sixty frames
  * a second, a style resolution over the shell per frame is the frame budget on its own.
  *
- * Subscribes at module level and drops on `refreshPalette`, so a painter no longer publishes a
- * forget of its own — two of them did, under two names, around the same twenty lines.
+ * Drops on `refreshPalette`, so a painter no longer publishes a forget of its own — two of them
+ * did, under two names, around the same twenty lines.
+ *
+ * **At module level only.** The subscription it takes is never released, so one call per engine
+ * instance would leave an entry — and a whole palette — behind at every dispose. An engine that
+ * has to cache per instance subscribes itself and keeps the unsubscribe, as `CanvasEngine` does.
  */
 export function memoPalette<T>(compute: () => T): () => T {
-  let cached: T | null = null
+  // Boxed rather than held bare: `T` is the caller's, and a compute that answers null or
+  // undefined would otherwise re-run on every paint while looking memoised.
+  let cached: { value: T } | null = null
   onPaletteChange(() => {
     cached = null
   })
 
-  return () => (cached ??= compute())
+  return () => (cached ??= { value: compute() }).value
 }
 
 /**

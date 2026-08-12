@@ -127,9 +127,25 @@ describe('painting the animation band', () => {
   })
 
   it('reads its colours again once the theme has moved', () => {
-    const before = paintOf(rowsOf([animationTrack('a', 'position', [key(1)])])).fills.length
+    const rows = rowsOf([animationTrack('a', 'position', [key(1)])])
+    document.documentElement.style.setProperty('--color-panel', '#123456')
     refreshPalette()
-    expect(paintOf(rowsOf([animationTrack('a', 'position', [key(1)])])).fills).toHaveLength(before)
+
+    // Restored even on a failed assertion: the root and the token cache are both shared, so
+    // leaking either would fail the NEXT test and accuse the wrong code.
+    try {
+      expect(paintOf(rows).fills).toContain('#123456')
+
+      document.documentElement.style.setProperty('--color-panel', '#654321')
+      refreshPalette()
+
+      // Counting the fills would pass without the drop: the band would go on painting the theme
+      // the user has just left, in exactly as many shapes.
+      expect(paintOf(rows).fills).toContain('#654321')
+    } finally {
+      document.documentElement.style.removeProperty('--color-panel')
+      refreshPalette()
+    }
   })
 
   it('names a key the same way the selection set does', () => {

@@ -102,21 +102,28 @@ describe('what a painter reads off the root', () => {
     document.documentElement.style.setProperty('--painter-sample', '#3574f0')
     refreshPalette()
 
-    expect(rootColour('--painter-sample')).toBe('#3574f0')
-    document.documentElement.style.removeProperty('--painter-sample')
-    refreshPalette()
+    // Restored even on a failed assertion: the root is shared and so is the cache, so leaking
+    // either would fail the NEXT test and accuse the wrong code.
+    try {
+      expect(rootColour('--painter-sample')).toBe('#3574f0')
+    } finally {
+      document.documentElement.style.removeProperty('--painter-sample')
+      refreshPalette()
+    }
   })
 
   it('composes a font shorthand, and keeps the shipped size when no token answers', () => {
     document.documentElement.style.setProperty('--painter-step', '22px')
     refreshPalette()
 
-    expect(rootFont('--painter-step', '11px', 'monospace')).toBe('22px monospace')
-    // A shorthand with no size is rejected whole, and the canvas keeps the font it had.
-    expect(rootFont('--absent-step', '11px', 'monospace')).toBe('11px monospace')
-
-    document.documentElement.style.removeProperty('--painter-step')
-    refreshPalette()
+    try {
+      expect(rootFont('--painter-step', '11px', 'monospace')).toBe('22px monospace')
+      // A shorthand with no size is rejected whole, and the canvas keeps the font it had.
+      expect(rootFont('--absent-step', '11px', 'monospace')).toBe('11px monospace')
+    } finally {
+      document.documentElement.style.removeProperty('--painter-step')
+      refreshPalette()
+    }
   })
 })
 
@@ -139,5 +146,20 @@ describe('a memoised palette', () => {
     memoPalette(() => (computed += 1))
 
     expect(computed).toBe(0)
+  })
+
+  it('memoises a palette that comes out null, rather than recomputing it every paint', () => {
+    let computed = 0
+    const read = memoPalette(() => {
+      computed += 1
+      return null
+    })
+
+    read()
+    read()
+
+    // Held bare, `cached ??= compute()` would answer null, look empty, and read the stylesheet
+    // again on every frame while reporting itself as cached.
+    expect(computed).toBe(1)
   })
 })
