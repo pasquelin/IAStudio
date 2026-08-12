@@ -12,6 +12,21 @@ describe('Row', () => {
     expect(screen.getByText('Mesh')).toBeInTheDocument()
   })
 
+  /**
+   * Muted at rest and full ink on the two states a row takes, because `muted` carries 3.25:1 on
+   * `accent-soft` and 3.51 on `elevated`. Read off `rowSkin`'s group rather than a prop: six
+   * sites render a subtitle and none of them knows whether the cell holding it is picked.
+   */
+  it('lifts its subtitle out of muted once the row is picked or pointed at', () => {
+    render(<Row icon={mdiCube} title="Cube" subtitle="Mesh" />)
+
+    expect(screen.getByText('Mesh')).toHaveClass(
+      'text-muted',
+      'group-hover/row:text-text',
+      'group-data-selected/row:text-text',
+    )
+  })
+
   // The studio tooltip, not the native `title`: the rest of the app is instant and themed.
   it('tips the row with its own name, since it truncates', () => {
     render(<Row icon={mdiCube} title="A rather long name" />)

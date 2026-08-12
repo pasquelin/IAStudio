@@ -153,6 +153,41 @@ describe('the contrast of the inks', () => {
   })
 
   /**
+   * The two fills a list row takes, with the ink that sits on them. `muted` is NOT held here and
+   * that is the whole point of the pair: it reads 3.25:1 on `accent-soft` and 3.51 on `elevated`
+   * in the dark theme, so `Row` lifts its subtitle to `text` on exactly these two states rather
+   * than the palette moving under every list in the studio.
+   */
+  it('carries the full ink on the two backgrounds a row takes, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      const failing = ['accent-soft', 'elevated'].filter(
+        fill => contrastRatio(tokens.text ?? '', tokens[fill] ?? '') < AA_NORMAL_TEXT,
+      )
+
+      expect(failing).toEqual([])
+    }
+  })
+
+  /**
+   * The one ink in the studio that is darker than its fill on one theme and lighter on the other.
+   * Held at AA rather than at the 3:1 of WCAG 1.4.11 that a glyph would need: the rail's plus is
+   * a glyph today, and a token that only ever cleared the glyph bar would be the wrong thing to
+   * hand the first label somebody writes on that button.
+   */
+  it('carries an ink the create button can be drawn in, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      expect(tokens['create-content']).toMatch(/^#[0-9a-f]{6}$/)
+      expect(contrastRatio(tokens['create-content'] ?? '', tokens.create ?? '')).toBeGreaterThan(
+        AA_NORMAL_TEXT,
+      )
+    }
+  })
+
+  /**
    * `accent` is the FILL — a button's background, the playhead, a ring. Lightening it to clear
    * the threshold as ink would take white on it from 4.28 to 3.01, so the two parted ways; a
    * source that writes `text-accent` has picked the one that cannot carry a word.

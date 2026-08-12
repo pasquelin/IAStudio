@@ -66,6 +66,10 @@ export function rowSkin(selected: boolean, disabled = false): string {
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
+    // Named, and paired with `data-selected` on the same element: `Row` reads both to lift its
+    // subtitle out of `muted`, which carries 3.25:1 on `accent-soft` and 3.51 on `elevated` in
+    // the dark theme. A refused row takes no group — its background does not answer either.
+    !disabled && 'group/row',
     selected ? 'bg-accent-soft' : 'hover:bg-elevated',
     // After the hover, which it undoes: a refused line that still lights up under the pointer
     // reads as pickable right until the click that does nothing. `MenuRow` reached the same

@@ -377,7 +377,12 @@ function CollectionCell({
 
   // What the cell answers to is not what puts it in reach: a row that only opens is walked to
   // and pressed like one that only selects.
-  if (!onSelect && !onActivate) return <div className={skin}>{children}</div>
+  if (!onSelect && !onActivate)
+    return (
+      <div className={skin} data-selected={selected || undefined}>
+        {children}
+      </div>
+    )
 
   return (
     <div
@@ -385,6 +390,9 @@ function CollectionCell({
       aria-posinset={position}
       aria-setsize={total}
       aria-disabled={disabled || undefined}
+      // Read by `rowSkin`'s group where the ARIA below cannot be: a `listitem` has no selected
+      // state to announce, and the explorer still paints what is open through this skin.
+      data-selected={selected || undefined}
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
       // An option has a selected state; a listitem has none. The explorer paints what is OPEN

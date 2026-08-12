@@ -90,7 +90,10 @@ export function ChannelTile({
     // Selection is painted by the container, not by the tile inside it, and through `rowSkin` —
     // the studio's one answer to "this line is chosen", so a channel cannot light up differently
     // from an asset. `p-0.5` is what lets the tint show as a frame around the picture.
-    <div className={cn('relative p-0.5', rowSkin(inspected))}>
+    <div
+      className={cn('relative p-0.5', rowSkin(inspected))}
+      data-selected={inspected || undefined}
+    >
       <MediaTile
         url={map ? assetUrl(map.assetId) : undefined}
         caption={name}

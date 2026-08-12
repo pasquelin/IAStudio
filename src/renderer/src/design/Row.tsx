@@ -61,7 +61,14 @@ export function Row({
         >
           {title}
         </p>
-        {subtitle && <p className="text-muted text-mini truncate">{subtitle}</p>}
+        {/* Muted at rest, full ink once the row is picked or pointed at: `muted` on
+            `accent-soft` reads 3.25:1 and on `elevated` 3.51, both under the 4.5 of WCAG 1.4.3.
+            Driven from the row through `rowSkin`'s group, so no list has to pass its state down. */}
+        {subtitle && (
+          <p className="text-muted group-hover/row:text-text group-data-selected/row:text-text text-mini truncate transition-colors">
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions}
     </div>
