@@ -234,6 +234,12 @@ export function registerProjectHandlers({
     // with a file that is not one.
     if (!isPngBytes(png)) throw new Error('expected a PNG payload')
 
+    // The same asset, edited — what ⌘S means on a document opened from one. `replaceBytes` keeps
+    // the id, the name and the tags, and moves the extension with the bytes.
+    if (request.replaces) {
+      return withoutSourcePath(await assets.replaceBytes(request.replaces, png, PNG_EXTENSION))
+    }
+
     // A picture saved beside its source inherits what the source IS: its kind, and the channel
     // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
     // the reason `saveTexture` gives — the kind is what the folder and the extension follow.

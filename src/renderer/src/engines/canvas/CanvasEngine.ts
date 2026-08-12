@@ -427,6 +427,13 @@ export class CanvasEngine {
    * disk almost always arrives before the layer it fills.
    */
   private readonly pendingSnapshots = new Map<string, string>()
+
+  /**
+   * The surfaces whose pixels came from the document rather than from an asset. Claimed the
+   * moment the document offers them, before any await: what it carries is the truth for that
+   * layer, and `syncLayer` must not race a reload of `source` against it.
+   */
+  private readonly documentPixels = new Set<string>()
   private readonly stamp = new Graphics()
   /**
    * What softens the edge of a dab. One instance, tuned when the brush changes and never per
@@ -706,6 +713,9 @@ export class CanvasEngine {
       // The texture lives on the GPU: dropping the reference is not enough.
       surface.texture.destroy(true)
       this.surfaces.delete(id)
+      // The document's pixels went with the texture, so the claim on them goes too: a layer that
+      // comes back on ⌘Z has nothing left to draw but the asset it names.
+      this.documentPixels.delete(id)
     }
 
     for (const [id, container] of this.groups) {
@@ -1311,6 +1321,9 @@ export class CanvasEngine {
   async restoreSnapshot(pixels: LayerPixels): Promise<void> {
     const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
     const url = `data:image/png;base64,${pixels.data}`
+    // Before the await below, and before the surface even exists: whichever of the two arrives
+    // first, the reload of `source` has to find the claim already standing.
+    this.documentPixels.add(key)
 
     // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
     // on a missing one, and a document would reopen with its stack and none of its pixels.
@@ -1409,6 +1422,7 @@ export class CanvasEngine {
     this.clips.clear()
     this.pendingMaskFills.clear()
     this.pendingSnapshots.clear()
+    this.documentPixels.clear()
     for (const picture of this.pendingPictures.values()) picture.destroy(true)
     this.pendingPictures.clear()
     this.wordings.clear()
@@ -1515,7 +1529,16 @@ export class CanvasEngine {
     if (born) this.drainPendingPicture(layer.id, surface)
     if (born) this.drainPendingSnapshot(layer.id)
 
-    if (born && layer.kind === 'pixel' && layer.source !== undefined) {
+    // Not when the document carries the layer's own pixels: `source` then names an asset the
+    // layer was made FROM, not what it holds now — and once ⌘S writes the flattened stack back
+    // into that asset, redrawing it here would fold the whole picture into the layer it came
+    // from, with the layers above it drawn over a second time at every open.
+    if (
+      born &&
+      layer.kind === 'pixel' &&
+      layer.source !== undefined &&
+      !this.documentPixels.has(layer.id)
+    ) {
       // Unawaited: one unreadable asset must not take the rest of the document's reconciliation
       // down with it. The layer then lists in the panel and draws nothing, hence the report.
       void this.loadInto(layer.id, assetUrl(layer.source)).catch(error =>

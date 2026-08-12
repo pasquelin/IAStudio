@@ -654,11 +654,11 @@ describe('project handlers', () => {
     })
 
     /**
-     * Always a new asset, like `saveTexture`: a document's base layer is sourced from the asset
-     * it was opened from, so overwriting that asset would feed the flattened stack back into the
-     * layer it was flattened from.
+     * `replaces` overwrites, which is ⌘S on a tab opened from the shelf. It was refused while a
+     * pixel layer was reloaded from the asset it names — the flattened stack came back into the
+     * layer it was flattened from — and `CanvasEngine` now leaves a restored layer alone.
      */
-    it('never overwrites, whatever the caller sends', async () => {
+    it('overwrites the asset the caller names', async () => {
       const assets = backend()
       registerProjectHandlers(deps(catalog, { assets }))
 
@@ -668,8 +668,28 @@ describe('project handlers', () => {
         png: PNG_BASE64,
       })
 
+      expect(assets.replaceBytes).toHaveBeenCalledWith(
+        'asset-1',
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        '.png',
+      )
+      expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    // The bytes are checked before anything is written, so a payload that is not a picture cannot
+    // destroy the one it claims to replace.
+    it('refuses to overwrite with bytes that are not a picture', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await expect(
+        invoke(CHANNELS.assetsSavePicture, {
+          replaces: 'asset-1',
+          name: 'Gemini 3.1',
+          png: Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]).toString('base64'),
+        }),
+      ).rejects.toThrow()
       expect(assets.replaceBytes).not.toHaveBeenCalled()
-      expect(assets.importFromBytes).toHaveBeenCalled()
     })
 
     it('files it beside its source', async () => {

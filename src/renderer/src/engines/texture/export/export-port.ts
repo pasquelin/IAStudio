@@ -84,7 +84,8 @@ function drawPicture(
 ): Promise<Uint8Array> {
   return runOffscreenPass({
     load: loadTexture,
-    urls: assetsOf(picture).map(assetUrl),
+    // Not point-free: `assetUrl` takes a version second, and `map` would hand it the index.
+    urls: assetsOf(picture).map(assetId => assetUrl(assetId)),
     // In order rather than by lookup: `runOffscreenPass` answers in the order it was asked, and
     // the pass names its samplers by that same order.
     pass: sources =>

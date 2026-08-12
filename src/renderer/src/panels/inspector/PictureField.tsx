@@ -21,9 +21,11 @@ export function PictureField({ label, value, onChange }: PictureFieldProps) {
 
   const options = useMemo<TextureOption[]>(
     () =>
-      assets
-        .filter(isLocalPicture)
-        .map(asset => ({ id: asset.id, name: asset.name, url: assetUrl(asset.id) })),
+      assets.filter(isLocalPicture).map(asset => ({
+        id: asset.id,
+        name: asset.name,
+        url: assetUrl(asset.id, asset.localChangedAt),
+      })),
     [assets],
   )
 

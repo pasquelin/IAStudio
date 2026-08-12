@@ -42,17 +42,23 @@ import { createSkyboxContent } from '@shared/domain/skybox'
 type CapturedDraft = Omit<DocumentDraft, 'title'>
 
 /**
- * Where a baked document lands: BESIDE the asset it was opened from, never over it.
+ * Where a baked document lands: over the asset it was opened from — ⌘S — or beside it — ⌘⇧S.
  *
- * Never over it, and the reason is structural rather than cautious: a document's base layer
- * carries `source: <assetId>`, and `CanvasEngine` reloads any pixel layer that has one from
- * `assetUrl(source)` when its surface is born. Overwriting that asset with the flattened stack
- * would make the base layer resolve to the flattened picture on the next open, with the upper
- * layers drawn over it a second time — the document would drift further from itself at every
- * save. Breaking that loop means teaching the engine to skip the reload when the document
- * carries the layer's pixels itself, which is a change to the engine and belongs to its own lot.
+ * Overwriting was impossible until the engine learned to leave a restored layer alone. A
+ * document's base layer carries `source: <assetId>`, and `CanvasEngine` reloaded any pixel layer
+ * that had one from `assetUrl(source)` when its surface was born: the flattened stack written
+ * back into that asset came home into the layer it came from, with the upper layers drawn over
+ * it a second time, and the document drifted further from itself at every save. The engine now
+ * claims a surface whose pixels the document restored, so `source` names where the layer came
+ * from and no longer what it holds.
  */
-export type AssetTarget = { derivedFrom: string; name: string }
+export type AssetTarget = {
+  /** The asset to overwrite. Absent writes a new one instead. */
+  replaces?: string
+  /** The picture the new one was edited from. An overwrite keeps the filiation it already had. */
+  derivedFrom?: string
+  name: string
+}
 
 /**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
@@ -72,7 +78,8 @@ type DocumentIo = {
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
   /**
-   * Bakes the document into a NEW asset beside the one it was opened from — what ⌘⇧S does.
+   * Bakes the document into the asset it was opened from — ⌘S — or into a new one beside it —
+   * ⌘⇧S. Which of the two is what `target` says.
    *
    * The kind writes it itself rather than handing bytes back: what a picture sends and what a
    * take would send do not have the same shape, and a shared return type would be a union every
@@ -293,8 +300,9 @@ function savableDocument(
 }
 
 /**
- * Writes the document to the project. A document whose state was never filled is refused:
- * `holds` separates "empty scene" from "no scene yet".
+ * Writes the document to the project, and then the asset it edits — what ⌘S means on a tab
+ * opened from the shelf. A document whose state was never filled is refused: `holds` separates
+ * "empty scene" from "no scene yet".
  *
  * Answers whether anything was written. A refusal is not a failure — there was nothing to write,
  * or the file must not be written over — but a caller about to throw the state away has to be
@@ -306,6 +314,11 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   if (!savable) return false
   const { bridge, document, io } = savable
 
+  // Read BEFORE `capture`, whose `commit` clears the mark. An untouched tab must not have its
+  // asset rewritten: ⌘S on a `.jpg` nobody edited would replace it with a re-encoded PNG, and
+  // `replaceBytes` deletes the file the extension no longer names.
+  const edited = io.dirty(documentId)
+
   const { draft, commit } = await io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, {
     ...draft,
@@ -315,10 +328,41 @@ export async function saveDocument(documentId: string): Promise<boolean> {
     ...(document.sourceAssetId ? { sourceAssetId: document.sourceAssetId } : {}),
   })
   commit()
+
+  await rewriteSourceAsset(document, io, edited)
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist('own-write')
   return true
+}
+
+/**
+ * The second half of ⌘S: the asset the tab was opened from, brought back in line with it.
+ *
+ * AFTER the document, and the order is the guarantee — the document holds the layers and the
+ * history, the asset only a flat picture, so writing the asset first and failing on the document
+ * would leave a fresh tile in front of lost work. A failure here undoes nothing and does not mark
+ * the document dirty: it goes to the journal, and the next ⌘S catches the tile up.
+ *
+ * Nothing at all for a document that edits no asset, for a kind whose `writeAsset` is absent —
+ * every refusal in `IO_BY_KIND` says why at its own line — or for a tab nobody touched.
+ */
+async function rewriteSourceAsset(
+  document: DocumentDescriptor,
+  io: DocumentIo,
+  edited: boolean,
+): Promise<void> {
+  const source = document.sourceAssetId
+  if (!edited || !source || !io.writeAsset) return
+
+  try {
+    await io.writeAsset(document.id, { replaces: source, name: document.title })
+    // The tile still holds the bitmap it decoded: only a fresh `localChangedAt` moves the URL
+    // `posterUrl` builds, and without it the overwrite looks like a gesture that did nothing.
+    await useAssets.getState().refresh()
+  } catch (error) {
+    reportFailure('assets.save', document.title, error)
+  }
 }
 
 /**

@@ -1485,6 +1485,41 @@ describe('loading a picture into a layer', () => {
     expect(gpu.loaded).toEqual([])
   })
 
+  /**
+   * The loop this exists to break. A document restores its own pixels into a layer that also
+   * carries `source`, and reloading the asset over them is a race — the two draws land in
+   * whichever order the loader answers in. Once ⌘S writes the flattened stack back into that
+   * asset, the losing order also makes the base layer resolve to the whole picture, which the
+   * layers above are then drawn over a second time.
+   */
+  it('leaves the asset alone for a layer whose pixels the document restored', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    gpu.loaded = []
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background'), laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'data:image/png;base64,QUJD', parser: 'texture' }])
+  })
+
+  // The pixels went with the surface, so the asset is the only picture left to draw.
+  it('goes back to the asset once the layer has left the stack and returned', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
+    gpu.loaded = []
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'scenario://asset/asset-7', parser: 'texture' }])
+  })
+
   it('does nothing at all for a layer it does not hold', async () => {
     const { engine } = await mounted()
     gpu.painted = []

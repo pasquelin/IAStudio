@@ -148,6 +148,7 @@ export function parseSaveTexture(value: unknown): SaveTextureRequest {
 const MAX_PICTURE_BASE64 = Math.ceil((MAX_PICTURE_BYTES * 4) / 3)
 
 const savePicture = z.object({
+  replaces: assetId.optional(),
   name: z.string().trim().min(1).max(200),
   derivedFrom: assetId.optional(),
   // The same rule the export applies, for the same reason: a `data:image/png;base64,` prefix

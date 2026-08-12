@@ -32,7 +32,11 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
         // `isLocalPicture` and nothing else: a cloud row would be offered, chosen, and show
         // nothing at all — the same question has to have one answer everywhere.
         .filter(asset => asset.type === 'skybox' && isLocalPicture(asset))
-        .map(asset => ({ id: asset.id, name: asset.name, url: assetUrl(asset.id) })),
+        .map(asset => ({
+          id: asset.id,
+          name: asset.name,
+          url: assetUrl(asset.id, asset.localChangedAt),
+        })),
     [assets],
   )
 

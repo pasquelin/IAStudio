@@ -192,14 +192,18 @@ describe('saveDocument', () => {
   })
 
   /**
-   * ⌘S writes the document and NOTHING else, and that is a decision the engine forces.
+   * ⌘S writes the document and then the asset it was opened from — the second half of the
+   * gesture, which the shelf is what shows.
    *
-   * A document's base layer carries `source: <assetId>`, and `CanvasEngine` reloads any pixel
-   * layer that has one from `assetUrl(source)` when its surface is born. Overwriting that asset
-   * with the flattened stack would feed the flattened picture back into the layer it was
-   * flattened from, and the upper layers would be drawn over it again at every reopen.
+   * It waited on the engine. A document's base layer carries `source: <assetId>`, and
+   * `CanvasEngine` reloaded any pixel layer that had one from `assetUrl(source)` when its surface
+   * was born: the flattened stack written back came home into the layer it was flattened from,
+   * with the upper layers drawn over it again at every reopen. The engine now leaves a layer
+   * whose pixels the document restored alone, so the write is safe.
    */
   describe('the asset behind the document', () => {
+    const PNG = 'iVBORw0KGgo='
+
     const openLinkedImage = async (): Promise<{ documentId: string; release: () => void }> => {
       const created = await useDocuments
         .getState()
@@ -210,12 +214,51 @@ describe('saveDocument', () => {
       const release = holdCanvas(created.id, () => ({
         pixelSnapshots: () => Promise.resolve([]),
         restoreSnapshot: () => Promise.resolve(),
-        snapshot: () => Promise.resolve('iVBORw0KGgo='),
+        snapshot: () => Promise.resolve(PNG),
       }))
       return { documentId: created.id, release }
     }
 
-    it('leaves the asset alone, however linked the document is', async () => {
+    /**
+     * The order is the guarantee: the document holds the layers and the history, the asset only
+     * a flat picture. Writing the asset first and failing on the document would leave a fresh
+     * tile standing in front of work that never reached the disk.
+     */
+    it('writes the asset it edits, after the document', async () => {
+      const order: string[] = []
+      const savePicture = vi.fn(() => {
+        order.push('asset')
+        return Promise.resolve(picture())
+      })
+      installFakeBridge({
+        documents: {
+          write: () => {
+            order.push('document')
+            return Promise.resolve()
+          },
+        },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openLinkedImage()
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Calque')))
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).toHaveBeenCalledWith({
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: PNG,
+      })
+      expect(order).toEqual(['document', 'asset'])
+    })
+
+    /**
+     * A reflex ⌘S on a tab nobody edited must not touch its file. The asset would come back a
+     * re-encoded PNG, and `replaceBytes` deletes the file whose extension no longer names it —
+     * a `.jpg` opened out of curiosity would be gone.
+     */
+    it('leaves an untouched tab’s asset exactly as it was', async () => {
       const savePicture = vi.fn(() => Promise.resolve(picture()))
       installFakeBridge({
         documents: { write: () => Promise.resolve() },
@@ -227,6 +270,49 @@ describe('saveDocument', () => {
       release()
 
       expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /** The blank document of the `+` button edits no asset: ⌘S writes the file and stops there. */
+    it('writes no asset for a document that edits none', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const created = await useDocuments.getState().create('image')
+      if (!created) throw new Error('expected a document')
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () => ({
+        pixelSnapshots: () => Promise.resolve([]),
+        restoreSnapshot: () => Promise.resolve(),
+        snapshot: () => Promise.resolve(PNG),
+      }))
+      useCanvases.getState().runCommand(created.id, addLayer(pixelLayer('layer-1', 'Calque')))
+
+      await expect(saveDocument(created.id)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * The document is written, which is the point; the tile is the half that is late, and the
+     * next ⌘S catches it up. Marking the document dirty again would offer to save work that is
+     * already on disk.
+     */
+    it('keeps the document written when the asset is refused', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture: () => Promise.reject(new Error('disk full')) },
+      })
+      const { documentId, release } = await openLinkedImage()
+      useCanvases.getState().runCommand(documentId, addLayer(pixelLayer('layer-1', 'Calque')))
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(canvasStore.hasUnsavedWork(useCanvases.getState(), documentId)).toBe(false)
+      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
     })
 
     /**
