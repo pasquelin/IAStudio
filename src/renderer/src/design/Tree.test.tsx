@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { refreshPalette } from '@/engines/core/palette'
@@ -91,6 +91,25 @@ describe('Tree, the height it estimates', () => {
     renderTree()
 
     expect(screen.getByRole('tree')).toHaveStyle({ height: '84px' })
+  })
+
+  /**
+   * Switching density while the tree is on screen. Re-reading the gauge is not enough: the
+   * virtualizer memoizes on `count` and friends, never on the estimator, so its cached
+   * measurements survive a re-render and the rows keep the height the density just left.
+   */
+  it('re-measures when the density changes under a mounted tree', () => {
+    document.documentElement.style.setProperty('--sc-control', '28px')
+    refreshPalette()
+    renderTree()
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '84px' })
+
+    act(() => {
+      document.documentElement.style.setProperty('--sc-control', '24px')
+      refreshPalette()
+    })
+
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '72px' })
   })
 })
 
