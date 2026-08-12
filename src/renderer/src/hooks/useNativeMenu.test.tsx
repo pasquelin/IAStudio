@@ -23,10 +23,12 @@ import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
+const saveDocumentAs = vi.fn((_documentId: string) => Promise.resolve(true))
 
 // What saving does is `document-io`'s own suite; what this one is about is the menu reaching it.
 vi.mock('@/app/document-io', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
+  saveDocumentAs: (documentId: string) => saveDocumentAs(documentId),
 }))
 
 /**
@@ -149,6 +151,39 @@ describe('useNativeMenu', () => {
     menu.emit('document.save')
 
     expect(saveDocument).not.toHaveBeenCalled()
+  })
+
+  it('copies the document in front when the menu asks for Save as', () => {
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.saveAs')
+
+    expect(saveDocumentAs).toHaveBeenCalledWith('doc-1')
+  })
+
+  // Same reason as saving: with no tab in front there is no document to copy.
+  it('copies nothing when no document is in front', () => {
+    useDocuments.setState({ activeId: null })
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    menu.emit('document.saveAs')
+
+    expect(saveDocumentAs).not.toHaveBeenCalled()
+  })
+
+  it('records a copy the project refused, rather than swallowing it', async () => {
+    saveDocumentAs.mockReturnValueOnce(Promise.reject(new Error('no project')))
+    const menu = captureCommand()
+    renderHook(() => useNativeMenu())
+
+    expect(() => menu.emit('document.saveAs')).not.toThrow()
+    await vi.waitFor(() =>
+      expect(menu.report).toHaveBeenCalledWith(
+        expect.objectContaining({ scope: 'document.save', message: expect.any(String) }),
+      ),
+    )
   })
 
   /**

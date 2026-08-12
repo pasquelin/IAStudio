@@ -1,4 +1,5 @@
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import type { Asset } from '@shared/domain/asset'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DOCUMENT_KINDS, DOCUMENT_VERSION, workspaceForKind } from '@shared/domain/document'
 import type {
@@ -20,6 +21,7 @@ import { clearScenes } from '@/stores/scene-fixtures'
 import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { holdAudio } from '@/spaces/audio/audio-hosts'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
 import { useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
@@ -33,6 +35,7 @@ import { setSunAngles } from '@/engines/skybox/commands'
 import { useAudioEdits } from '@/stores/audio-edits'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { useSkyboxes } from '@/stores/skyboxes'
+import { createSkyboxContent } from '@shared/domain/skybox'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import {
@@ -41,13 +44,28 @@ import {
   refreshDocuments,
   restoreDocument,
   saveDocument,
+  saveDocumentAs,
 } from './document-io'
 
-// The real one needs a live Dockview; what this file checks is that closing reaches it.
+// The real one needs a live Dockview; what this file checks is that closing and opening reach it.
 const closePanel = vi.fn()
-vi.mock('./dockview-api', () => ({ closePanel: (id: string) => closePanel(id) }))
+const openDocument = vi.fn()
+vi.mock('./dockview-api', () => ({
+  closePanel: (id: string) => closePanel(id),
+  openDocument: (document: DocumentDescriptor) => openDocument(document),
+}))
 
 const box = meshNode('box-1')
+
+/** What `savePicture` answers with — only its shape matters to a caller that discards it. */
+const picture = (): Asset => ({
+  id: 'asset-1',
+  name: 'Gemini 3.1',
+  type: 'image',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-12T10:00:00.000Z',
+})
 
 const savedFile = (): DocumentFile => ({
   version: DOCUMENT_VERSION,
@@ -172,6 +190,326 @@ describe('saveDocument', () => {
     await saveDocument('doc-1')
 
     expect(write).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The second half of ⌘S: the document holds the layers, the asset holds a flat picture of
+   * them. Before this, the grid kept showing the generation while the document had moved on.
+   */
+  describe('the asset behind the document', () => {
+    const PNG = 'iVBORw0KGgo='
+
+    /** An image tab linked to an asset, with an engine that hands back a flattened picture. */
+    const openLinkedImage = async (): Promise<{ documentId: string; release: () => void }> => {
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () => ({
+        pixelSnapshots: () => Promise.resolve([]),
+        restoreSnapshot: () => Promise.resolve(),
+        snapshot: () => Promise.resolve(PNG),
+      }))
+      return { documentId: created.id, release }
+    }
+
+    it('rewrites the asset with the flattened stack', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openLinkedImage()
+
+      await saveDocument(documentId)
+      release()
+
+      expect(savePicture).toHaveBeenCalledWith({
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: PNG,
+      })
+    })
+
+    /**
+     * The order is the guarantee. The document carries the layers and the history; the asset
+     * only a flat picture. Writing the asset first and failing on the document would leave a
+     * thumbnail up to date in front of work that is gone.
+     */
+    it('writes the document before it touches the asset', async () => {
+      const order: string[] = []
+      installFakeBridge({
+        documents: {
+          write: () => {
+            order.push('document')
+            return Promise.resolve()
+          },
+        },
+        assets: {
+          savePicture: () => {
+            order.push('asset')
+            return Promise.resolve(picture())
+          },
+        },
+      })
+      const { documentId, release } = await openLinkedImage()
+
+      await saveDocument(documentId)
+      release()
+
+      expect(order).toEqual(['document', 'asset'])
+    })
+
+    /**
+     * The file is written, which is the point of ⌘S. What is behind is the thumbnail, and the
+     * next save catches it up — so the failure is journalled rather than thrown at a caller
+     * that would have to guess which half went through.
+     */
+    it('keeps the document saved when the asset refuses, and says so', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture: () => Promise.reject(new Error('disk full')) },
+      })
+      const { documentId, release } = await openLinkedImage()
+
+      await expect(saveDocument(documentId)).resolves.toBe(true)
+      release()
+
+      expect(entries()).toHaveLength(1)
+      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+    })
+
+    /**
+     * An engine whose GPU context is not up yet extracts nothing. `capture` has already refused
+     * the case where no engine holds the document at all — this is the one that gets past it,
+     * and the document must still reach the disk.
+     */
+    it('writes the document alone when the picture cannot be extracted yet', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () => ({
+        pixelSnapshots: () => Promise.resolve([]),
+        restoreSnapshot: () => Promise.resolve(),
+        snapshot: () => Promise.resolve(null),
+      }))
+
+      await expect(saveDocument(created.id)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    it('touches no asset for a document that edits none', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+
+      await saveDocument(await openScene())
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+
+    /**
+     * A scene is not a mesh, a montage renders in minutes, and a sky's adjustments are meant to
+     * stay undoable. The three refuse by having no `flatten` at all, which is the decision read
+     * off the table rather than an `if` written somewhere else.
+     */
+    it('touches no asset for a kind that cannot be flattened, even when one is linked', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const created = await useDocuments
+        .getState()
+        .create('skyboxes', { title: 'Dusk', sourceAssetId: 'asset-sky' })
+      if (!created) throw new Error('expected a document')
+      useSkyboxes.getState().ensure(created.id, createSkyboxContent)
+
+      await saveDocument(created.id)
+      expect(savePicture).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
+   * ⌘⇧S: the asset that was open stays as the last ⌘S left it, and the tab carries on with a
+   * copy — the gesture every application has, applied to an asset rather than to a file.
+   */
+  describe('saveDocumentAs', () => {
+    const PNG = 'iVBORw0KGgo='
+
+    const openLinkedImage = async (): Promise<{ documentId: string; release: () => void }> => {
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () => ({
+        pixelSnapshots: () => Promise.resolve([]),
+        restoreSnapshot: () => Promise.resolve(),
+        snapshot: () => Promise.resolve(PNG),
+      }))
+      return { documentId: created.id, release }
+    }
+
+    it('writes a copy beside the asset rather than over it', async () => {
+      const savePicture = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture },
+      })
+      const { documentId, release } = await openLinkedImage()
+
+      await expect(saveDocumentAs(documentId)).resolves.toBe(true)
+      release()
+
+      expect(savePicture).toHaveBeenCalledWith({
+        derivedFrom: 'asset-1',
+        name: 'Gemini 3.1 copie',
+        png: PNG,
+      })
+    })
+
+    // The tab carries on with the copy: a second ⌘S must land on the new asset, not the old one.
+    it('opens a document linked to the copy, and leaves the first one alone', async () => {
+      installFakeBridge({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture: () => Promise.resolve(picture()) },
+      })
+      const { documentId, release } = await openLinkedImage()
+
+      await saveDocumentAs(documentId)
+      release()
+
+      const documents = Object.values(useDocuments.getState().documents)
+      expect(documents).toHaveLength(2)
+      expect(documents.at(-1)).toMatchObject({
+        title: 'Gemini 3.1 copie',
+        sourceAssetId: 'asset-1',
+      })
+      // The original tab keeps pointing at the original asset.
+      expect(useDocuments.getState().documents[documentId]?.sourceAssetId).toBe('asset-1')
+    })
+
+    /** A blank document edits no asset, so there is nothing to copy — and it says so. */
+    it('refuses a document that edits no asset, out loud', async () => {
+      const { entries } = bridgeWatchingLogs({ documents: { write: () => Promise.resolve() } })
+
+      await expect(saveDocumentAs(await openScene())).resolves.toBe(false)
+
+      expect(entries()).toHaveLength(1)
+      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+    })
+
+    // Nothing baked means nothing to copy: no second document is opened onto an asset that was
+    // never written, which would be a tab pointing at a picture that does not exist.
+    it('opens nothing when the picture cannot be extracted yet', async () => {
+      const { entries } = bridgeWatchingLogs({ documents: { write: () => Promise.resolve() } })
+      const created = await useDocuments
+        .getState()
+        .create('image', { title: 'Gemini 3.1', sourceAssetId: 'asset-1' })
+      if (!created) throw new Error('expected a document')
+
+      useCanvases.getState().ensure(created.id, () => DEFAULT_CANVAS)
+      const release = holdCanvas(created.id, () => ({
+        pixelSnapshots: () => Promise.resolve([]),
+        restoreSnapshot: () => Promise.resolve(),
+        snapshot: () => Promise.resolve(null),
+      }))
+
+      await expect(saveDocumentAs(created.id)).resolves.toBe(false)
+      release()
+
+      expect(Object.keys(useDocuments.getState().documents)).toHaveLength(1)
+      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+    })
+
+    it('says so when the copy itself is refused', async () => {
+      const { entries } = bridgeWatchingLogs({
+        documents: { write: () => Promise.resolve() },
+        assets: { savePicture: () => Promise.reject(new Error('disk full')) },
+      })
+      const { documentId, release } = await openLinkedImage()
+
+      await expect(saveDocumentAs(documentId)).resolves.toBe(false)
+      release()
+
+      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+    })
+
+    /** A document nothing could read must not be copied either: the copy would hold nothing. */
+    it('refuses a document whose file would not read', async () => {
+      installFakeBridge({
+        documents: {
+          write: () => Promise.resolve(),
+          read: () => Promise.reject(new Error('gone')),
+        },
+      })
+      useDocuments.setState({ documents: { 'doc-1': scene('doc-1') } })
+
+      await restoreDocument('doc-1')
+      await expect(saveDocumentAs('doc-1')).resolves.toBe(false)
+    })
+  })
+
+  /**
+   * A take goes back through its own channel: PCM rather than base64, and `saveAudio` probes the
+   * bytes because an edited take is rarely the length it was.
+   */
+  describe('the take behind an audio document', () => {
+    it('writes the rendered take over the asset it was opened from', async () => {
+      const saveAudio = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({ documents: { write: () => Promise.resolve() }, assets: { saveAudio } })
+
+      const created = await useDocuments
+        .getState()
+        .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
+      if (!created) throw new Error('expected a document')
+      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
+
+      const wav = new Uint8Array([1, 2, 3])
+      const release = holdAudio(created.id, () => ({ rendered: () => wav }))
+      await saveDocument(created.id)
+      release()
+
+      expect(saveAudio).toHaveBeenCalledWith({
+        replaces: 'asset-take',
+        name: 'pad.wav',
+        wav,
+      })
+    })
+
+    // The chain is replayed in a worker; a save landing before it answers writes the document
+    // alone, and the next one catches the take up.
+    it('writes the document alone while the chain is still being replayed', async () => {
+      const saveAudio = vi.fn(() => Promise.resolve(picture()))
+      installFakeBridge({ documents: { write: () => Promise.resolve() }, assets: { saveAudio } })
+
+      const created = await useDocuments
+        .getState()
+        .create('audio', { title: 'pad.wav', sourceAssetId: 'asset-take' })
+      if (!created) throw new Error('expected a document')
+      useAudioEdits.getState().runCommand(created.id, pushEdit({ kind: 'trimSilence' }))
+
+      const release = holdAudio(created.id, () => ({ rendered: () => null }))
+      await expect(saveDocument(created.id)).resolves.toBe(true)
+      release()
+
+      expect(saveAudio).not.toHaveBeenCalled()
+    })
   })
 
   it('writes nothing for a space that has no serialized form yet', async () => {
@@ -363,6 +701,7 @@ describe('an image document', () => {
           { layerId: 'layer-1', mask: true, data: PIXELS },
         ]),
       restoreSnapshot: () => Promise.resolve(),
+      snapshot: () => Promise.resolve(null),
     }))
 
     await saveDocument(documentId)
@@ -395,6 +734,7 @@ describe('an image document', () => {
     const release = holdCanvas(documentId, () => ({
       pixelSnapshots: () => Promise.resolve([{ layerId: 'a-b_1', mask: true, data: PIXELS }]),
       restoreSnapshot: () => Promise.resolve(),
+      snapshot: () => Promise.resolve(null),
     }))
 
     await saveDocument(documentId)
@@ -440,6 +780,7 @@ describe('an image document', () => {
           { layerId: 'x', mask: true, data: PIXELS },
         ]),
       restoreSnapshot: () => Promise.resolve(),
+      snapshot: () => Promise.resolve(null),
     }))
 
     await saveDocument(documentId)
@@ -468,6 +809,7 @@ describe('an image document', () => {
           { layerId: 'fine', mask: false, data: PIXELS },
         ]),
       restoreSnapshot: () => Promise.resolve(),
+      snapshot: () => Promise.resolve(null),
     }))
 
     await saveDocument(documentId)
@@ -501,6 +843,7 @@ describe('an image document', () => {
     const release = holdCanvas(documentId, () => ({
       pixelSnapshots: () => Promise.resolve([]),
       restoreSnapshot,
+      snapshot: () => Promise.resolve(null),
     }))
 
     await restoreDocument(documentId)
@@ -539,6 +882,7 @@ describe('an image document', () => {
     const release = holdCanvas(documentId, () => ({
       pixelSnapshots: () => Promise.resolve([]),
       restoreSnapshot,
+      snapshot: () => Promise.resolve(null),
     }))
 
     await restoreDocument(documentId)

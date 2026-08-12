@@ -23,7 +23,9 @@ import {
   parseProjectName,
   parseProjectPath,
   parseSaveAudio,
+  parseSavePicture,
   parseSaveTexture,
+  isPngBytes,
 } from './validation'
 
 /** What `saveAudio` writes — the renderer encodes uncompressed PCM, never a codec. */
@@ -218,6 +220,42 @@ export function registerProjectHandlers({
           ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         },
         request.wav,
+      ),
+    )
+  })
+
+  handle(CHANNELS.assetsSavePicture, async (_event, value) => {
+    const request = parseSavePicture(value)
+    // Decoded here rather than in the renderer, exactly as the export is: a `Buffer` does not
+    // cross the bridge, and base64 is what the extraction already produced.
+    const png = Buffer.from(request.png, 'base64')
+    // Checked on the bytes, which is the only place it can be: base64 says nothing about what it
+    // encodes, and an encoder that answered with nothing would otherwise overwrite a picture
+    // with a file that is not one.
+    if (!isPngBytes(png)) throw new Error('expected a PNG payload')
+
+    if (request.replaces) {
+      // The kind is the overwritten asset's own — `replaceBytes` keeps it, which is what leaves
+      // an edited texture channel a texture channel rather than filing it as a plain picture.
+      return withoutSourcePath(await assets.replaceBytes(request.replaces, png, PNG_EXTENSION))
+    }
+
+    // A picture saved beside its source inherits what the source IS: its kind, and the channel
+    // it holds when it holds one. Read from the catalogue rather than sent by the renderer, for
+    // the reason `saveTexture` gives — the kind is what the folder and the extension follow.
+    const source = request.derivedFrom ? await project.catalog().find(request.derivedFrom) : null
+
+    return withoutSourcePath(
+      await assets.importFromBytes(
+        {
+          id: newAssetId(),
+          name: request.name,
+          type: source?.type ?? 'image',
+          extension: PNG_EXTENSION,
+          ...(source?.map ? { map: source.map } : {}),
+          ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
+        },
+        png,
       ),
     )
   })

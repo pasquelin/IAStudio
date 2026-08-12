@@ -121,6 +121,7 @@ export type Channels = {
   assetsPeaks: 'assets:peaks'
   assetsReveal: 'assets:reveal'
   assetsSaveAudio: 'assets:save-audio'
+  assetsSavePicture: 'assets:save-picture'
   assetsSaveTexture: 'assets:save-texture'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
@@ -247,6 +248,7 @@ export const CHANNELS: Channels = {
   assetsPeaks: 'assets:peaks',
   assetsReveal: 'assets:reveal',
   assetsSaveAudio: 'assets:save-audio',
+  assetsSavePicture: 'assets:save-picture',
   assetsSaveTexture: 'assets:save-texture',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
@@ -314,6 +316,25 @@ export type SaveAudioRequest = {
   derivedFrom?: string
   /** 16-bit PCM WAV, encoded by the renderer that decoded it. */
   wav: Uint8Array
+}
+
+/**
+ * An edited picture on its way back to disk — see `StudioBridge['assets']['savePicture']`.
+ *
+ * `png` is base64 where its two neighbours carry `Uint8Array`, and the reason is written where
+ * the same pixels leave for an export: a `Buffer` does not cross the bridge, and base64 is what
+ * the extraction already produced (`main/window/dialogs.ts`). `extract.base64` hands back a
+ * string, `derive` hands back bytes; each sends what it holds rather than paying for a
+ * conversion — which on a 4K picture is megabytes copied twice for nothing.
+ */
+export type SavePictureRequest = {
+  /** The asset to overwrite. Absent creates a new one instead. */
+  replaces?: string
+  name: string
+  /** The picture this one was edited from, so the two stay traceable to each other. */
+  derivedFrom?: string
+  /** PNG payload, base64 and never a data URL — the prefix is part of the picture otherwise. */
+  png: string
 }
 
 /**
@@ -413,6 +434,9 @@ export type LogScope =
   | 'document.delete'
   | 'assets.reveal'
   | 'assets.open'
+  // ⌘S reaches the asset behind a document as well as the document itself, and the two halves
+  // fail apart: the file can be written while the picture behind it is not.
+  | 'assets.save'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // both of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
@@ -450,6 +474,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'document.delete',
   'assets.reveal',
   'assets.open',
+  'assets.save',
   'project.reveal',
   'project.forget',
   'font.face',
@@ -807,6 +832,14 @@ export type StudioBridge = {
     reveal: (assetId: string) => Promise<boolean>
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
+    /**
+     * Writes an edited picture back, the same way: over its source when `replaces` is set,
+     * beside it otherwise. What ⌘S calls once the document itself is on disk.
+     *
+     * The kind is the overwritten asset's own — a texture channel edited as a picture stays a
+     * texture channel, which is what keeps it on the right shelf and under the right badge.
+     */
+    savePicture: (request: SavePictureRequest) => Promise<Asset>
     /**
      * Puts a channel the renderer computed into the project.
      *

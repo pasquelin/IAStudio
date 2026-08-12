@@ -288,6 +288,7 @@
       "document.save": "L’enregistrement du document a échoué",
       "assets.reveal": "Le fichier n’a pas pu être montré",
       "assets.open": "Cet asset n’a nulle part où aller",
+      "assets.save": "L’asset n’a pas pu être réécrit",
       "project.reveal": "Le dossier du projet n’a pas pu être montré",
       "project.forget": "Le projet n’a pas pu être retiré de la liste",
       "font.face": "Une police n’a pas pu être chargée",
@@ -478,6 +479,7 @@
     "fewerHint": "Replie les filtres, pour laisser la place à la collection"
   },
   "documents": {
+    "copyName": "{{name}} copie",
     "none": "Aucun document ouvert. Générez ou ouvrez un asset pour commencer.",
     "untitled": "Sans titre {{n}}",
     "new": "Nouveau document",
@@ -1098,6 +1100,7 @@
     "newProject": "Nouveau projet…",
     "openProject": "Ouvrir un projet…",
     "saveDocument": "Enregistrer",
+    "saveDocumentAs": "Enregistrer sous",
     "settings": "Réglages…",
     "tools": "Modules",
     "add": "Ajouter",
@@ -1396,6 +1399,10 @@
     "projectOpen": {
       "title": "Ouvrir un projet",
       "help": "Choisit un projet déjà existant sur votre disque et l’ouvre à la place de celui en cours. Le projet ouvert est enregistré au fur et à mesure, il n’y a rien à enregistrer avant."
+    },
+    "documentSaveAs": {
+      "title": "Enregistrer sous",
+      "help": "Écrit une copie de l’asset à côté de l’original et continue sur elle. L’asset ouvert reste tel qu’il était au dernier enregistrement."
     },
     "documentSave": {
       "title": "Enregistrer le document",

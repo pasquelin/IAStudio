@@ -636,4 +636,134 @@ describe('project handlers', () => {
       ).rejects.toThrow()
     })
   })
+
+  /**
+   * The picture an editor sends back, which is what ⌘S calls once the document is on disk.
+   *
+   * Base64 where its two neighbours carry bytes: `extract.base64` hands back a string, and the
+   * decoding belongs on this side — a `Buffer` does not cross the bridge.
+   */
+  describe('a picture the editor edited', () => {
+    /** The eight bytes of a PNG signature, as base64 — what every real payload opens with. */
+    const PNG_BASE64 = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).toString('base64')
+
+    const backend = () => ({
+      importFromUrl: vi.fn(),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'image' })),
+      replaceBytes: vi.fn(async () => asset({ id: 'asset-1', type: 'image' })),
+    })
+
+    it('overwrites the asset it was edited from, keeping its identity', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSavePicture, {
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: PNG_BASE64,
+      })
+
+      expect(assets.replaceBytes).toHaveBeenCalledWith(
+        'asset-1',
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        '.png',
+      )
+      expect(assets.importFromBytes).not.toHaveBeenCalled()
+    })
+
+    it('files a new one beside its source when nothing is to be replaced', async () => {
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      await invoke(CHANNELS.assetsSavePicture, {
+        name: 'Gemini 3.1 copie',
+        derivedFrom: 'asset-1',
+        png: PNG_BASE64,
+      })
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'image', extension: '.png', derivedFrom: 'asset-1' }),
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+      )
+    })
+
+    /**
+     * A texture channel edited as a picture is still a channel. Read from the catalogue rather
+     * than sent by the renderer, for the reason `saveTexture` gives: the kind is what the folder
+     * and the extension follow, and a channel filed as a plain picture leaves its shelf.
+     */
+    it('gives a derived picture the kind and the channel of its source', async () => {
+      const assets = backend()
+      const sourced = {
+        ...catalog,
+        find: vi.fn(async () => asset({ id: 'asset-1', type: 'texture', map: 'normal' })),
+      }
+      registerProjectHandlers(deps(sourced, { assets }))
+
+      await invoke(CHANNELS.assetsSavePicture, {
+        name: 'Brique — Normale copie',
+        derivedFrom: 'asset-1',
+        png: PNG_BASE64,
+      })
+
+      expect(assets.importFromBytes).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'texture', map: 'normal' }),
+        expect.anything(),
+      )
+    })
+
+    it('never hands back where the file sits', async () => {
+      const assets = backend()
+      assets.replaceBytes = vi.fn(async () =>
+        asset({ id: 'asset-1', type: 'image', sourcePath: '/Users/someone/secret.png' }),
+      )
+      registerProjectHandlers(deps(catalog, { assets }))
+
+      const saved = await invoke(CHANNELS.assetsSavePicture, {
+        replaces: 'asset-1',
+        name: 'Gemini 3.1',
+        png: PNG_BASE64,
+      })
+
+      expect(saved).toEqual(expect.not.objectContaining({ sourcePath: expect.anything() }))
+    })
+
+    /**
+     * Base64 says nothing about what it encodes, so the check is on the decoded bytes — the only
+     * place it can be. Without it, an encoder answering with nothing would overwrite a picture
+     * with a file that is not one, and the tile would show an empty frame.
+     */
+    it('refuses a payload that does not decode to a PNG', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSavePicture, {
+          replaces: 'asset-1',
+          name: 'Gemini 3.1',
+          png: Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]).toString('base64'),
+        }),
+      ).rejects.toThrow()
+    })
+
+    /** The one mistake worth catching at the front, and the same rule the export applies. */
+    it('refuses a data URL, whose prefix would be written into the picture', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSavePicture, {
+          replaces: 'asset-1',
+          name: 'Gemini 3.1',
+          png: `data:image/png;base64,${PNG_BASE64}`,
+        }),
+      ).rejects.toThrow()
+    })
+
+    it('refuses a request with no name to file it under', async () => {
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(
+        invoke(CHANNELS.assetsSavePicture, { name: '   ', png: PNG_BASE64 }),
+      ).rejects.toThrow()
+    })
+  })
 })

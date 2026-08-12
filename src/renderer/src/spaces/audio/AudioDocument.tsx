@@ -20,6 +20,7 @@ import { AUDIO_TOOLS, isAudioTool, type AudioToolId } from './audio-tools'
 import { decodeAsset } from './decode'
 import { loadTake } from './load-take'
 import { useAudioRenderer } from './useAudioRenderer'
+import { holdAudio } from './audio-hosts'
 import { useWaveSurfer } from './useWaveSurfer'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
@@ -100,6 +101,14 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
   }, [renderer, settled, state.assetId, state.edits, state.bypassed])
 
   const rendered = output?.assetId === state.assetId ? output.audio : null
+
+  // What ⌘S reaches for. Registered again on every render rather than kept in a ref: `holdAudio`
+  // replaces the entry it already holds, and a ref written during render is exactly what React
+  // forbids — the chain is replayed in a worker, so a newer take arrives as a new render anyway.
+  useEffect(
+    () => holdAudio(documentId, () => ({ rendered: () => rendered?.wav ?? null })),
+    [documentId, rendered],
+  )
 
   const onRegionChange = useCallback(
     (region: Region | null) => {

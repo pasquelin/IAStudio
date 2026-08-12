@@ -18,6 +18,7 @@ export type CommandId =
   | 'project.new'
   | 'project.open'
   | 'document.save'
+  | 'document.saveAs'
   | 'layout.reset'
   | 'app.settings'
   | 'app.dictate'
@@ -201,6 +202,13 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.documentSave.title',
     helpKey: 'commands.documentSave.help',
     defaultBinding: 'Meta+KeyS',
+  }),
+  command({
+    id: 'document.saveAs',
+    scope: 'global',
+    titleKey: 'commands.documentSaveAs.title',
+    helpKey: 'commands.documentSaveAs.help',
+    defaultBinding: 'Shift+Meta+KeyS',
   }),
   command({
     id: 'layout.reset',

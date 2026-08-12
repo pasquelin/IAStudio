@@ -288,6 +288,7 @@
       "document.save": "Saving the document failed",
       "assets.reveal": "The file could not be shown",
       "assets.open": "This asset has nowhere to go",
+      "assets.save": "The asset could not be rewritten",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",
       "font.face": "A font could not be loaded",
@@ -478,6 +479,7 @@
     "fewerHint": "Folds the filters away, to leave the room to the collection"
   },
   "documents": {
+    "copyName": "{{name}} copy",
     "none": "No document open. Generate or open an asset to get started.",
     "untitled": "Untitled {{n}}",
     "new": "New document",
@@ -1098,6 +1100,7 @@
     "newProject": "New project…",
     "openProject": "Open project…",
     "saveDocument": "Save",
+    "saveDocumentAs": "Save as",
     "settings": "Settings…",
     "tools": "Tool windows",
     "add": "Add",
@@ -1396,6 +1399,10 @@
     "projectOpen": {
       "title": "Open project",
       "help": "Picks a project already on your disk and opens it in place of the current one. The open project is saved as you go, so there is nothing to save first."
+    },
+    "documentSaveAs": {
+      "title": "Save as",
+      "help": "Writes a copy of the asset beside the original and carries on with it. The asset that was open stays as it was at the last save."
     },
     "documentSave": {
       "title": "Save document",

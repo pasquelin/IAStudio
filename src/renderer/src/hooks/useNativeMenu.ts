@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { CommandId, MenuCheck } from '@shared/domain/command'
-import { saveDocument } from '@/app/document-io'
+import { saveDocument, saveDocumentAs } from '@/app/document-io'
 import { revealTool } from '@/helpers/reveal-panel'
 import { availableToolIds } from '@/helpers/tool-registry'
 import { getBridge } from '@/services/bridge'
@@ -34,6 +34,17 @@ function runCommand(command: CommandId): void {
       // The tab keeps its marker either way; the log is what says why it kept it.
       if (documentId) {
         void saveDocument(documentId).catch(error =>
+          reportFailure('document.save', documentId, error),
+        )
+      }
+      return
+    }
+    case 'document.saveAs': {
+      const documentId = useDocuments.getState().activeId
+      // The refusal is `saveDocumentAs`' to journal — a document that edits no asset has no copy
+      // to make, and it says so under the shelf the copy would have landed in.
+      if (documentId) {
+        void saveDocumentAs(documentId).catch(error =>
           reportFailure('document.save', documentId, error),
         )
       }

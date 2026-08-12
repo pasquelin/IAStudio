@@ -552,6 +552,11 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           accelerator: shortcut('document.save'),
           click: () => actions.runCommand('document.save'),
         },
+        {
+          label: t.menu.saveDocumentAs,
+          accelerator: shortcut('document.saveAs'),
+          click: () => actions.runCommand('document.saveAs'),
+        },
         ...exportMenu(),
         { type: 'separator' },
         ...fileMenuSettings,

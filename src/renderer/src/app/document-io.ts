@@ -1,6 +1,8 @@
+import type { Asset } from '@shared/domain/asset'
 import {
   isPartName,
   type CloseChoice,
+  type DocumentDescriptor,
   type DocumentDraft,
   type DocumentKind,
   type DocumentPart,
@@ -14,7 +16,9 @@ import { parseSkybox } from '@/engines/skybox/skybox-state'
 import { EMPTY_SEQUENCE, parseSequence } from '@/engines/timeline/timeline-state'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
-import { closePanel } from './dockview-api'
+import i18next from 'i18next'
+import { closePanel, openDocument } from './dockview-api'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audio-edits'
 import { useGraphRuns } from '@/stores/graph-runs'
@@ -25,6 +29,7 @@ import { skyboxStore } from '@/stores/skyboxes'
 import type { DocumentStore } from '@/stores/document-store'
 import { DEFAULT_CANVAS, deserializeCanvas, serializeCanvas } from '@/engines/canvas/canvas-state'
 import type { LayerPixels } from '@/engines/canvas/CanvasEngine'
+import { audioHost } from '@/spaces/audio/audio-hosts'
 import { canvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, canvasOf, useCanvases } from '@/stores/canvases'
 import { newTexture, parseTexture } from '@/engines/texture/texture-state'
@@ -35,6 +40,14 @@ import { createSkyboxContent } from '@shared/domain/skybox'
 
 /** What an editor produces to be saved. The title is the tab's, not the editor's. */
 type CapturedDraft = Omit<DocumentDraft, 'title'>
+
+/**
+ * Where a baked document lands: over the asset it was opened from, or beside it as a new one.
+ *
+ * The two are what ⌘S and ⌘⇧S mean, said once so both channels take the same shape — and
+ * `derivedFrom` is what keeps the copy traceable to what it was edited from.
+ */
+export type AssetTarget = { replaces: string; name: string } | { derivedFrom: string; name: string }
 
 /**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
@@ -53,6 +66,23 @@ type DocumentIo = {
   install: (documentId: string, content: string, parts?: readonly DocumentPart[]) => void
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
+  /**
+   * Bakes the document onto an asset — over the one it edits, or beside it.
+   *
+   * The kind writes it ITSELF rather than handing bytes back, because the bytes differ: a
+   * picture goes through `savePicture` as base64, a take through `saveAudio` as PCM. One
+   * shared return type would have been a union nobody could act on without switching on it
+   * again.
+   *
+   * Answers `null` when there was nothing to bake yet — an engine whose GPU context is still
+   * coming up, which is exactly when a ⌘S after switching workspace lands.
+   *
+   * **Absent is the refusal, and it is a decision rather than an omission.** A scene is not a
+   * mesh, a montage renders in minutes, and a sky's adjustments are meant to stay undoable —
+   * none of the three has an asset its document could honestly overwrite. Reading that off the
+   * table is what keeps the rule out of an `if` somewhere else.
+   */
+  writeAsset?: (documentId: string, target: AssetTarget) => Promise<Asset | null>
   /** Whether the document is already filled — a remount must not read over what is open. */
   holds: (documentId: string) => boolean
   /** Whether closing the document would throw work away — never true for an untouched tab. */
@@ -173,11 +203,35 @@ const IMAGE_IO: DocumentIo = {
       if (pixels) void host.restoreSnapshot(pixels).catch(() => undefined)
     }
   },
+  writeAsset: async (documentId, target) => {
+    const bridge = getBridge()
+    // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
+    // workspace lands. The document is still written; only the asset waits for the next save.
+    const png = await canvasHost(documentId)?.snapshot()
+    return bridge && png ? bridge.assets.savePicture({ ...target, png }) : null
+  },
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
   dirty: documentId => canvasStore.hasUnsavedWork(useCanvases.getState(), documentId),
   forget: documentId => useCanvases.getState().drop(documentId),
 }
+
+/**
+ * The take, as the chain has rendered it — what ⌘S writes back over the asset.
+ *
+ * Its own channel rather than the picture one: a take goes back as PCM, and `saveAudio` probes
+ * the bytes on the way in because an edited take is rarely the length it was.
+ */
+const withRenderedTake = (io: DocumentIo): DocumentIo => ({
+  ...io,
+  writeAsset: async (documentId, target) => {
+    const bridge = getBridge()
+    // `null` while the worker is still replaying the chain — the document is written all the
+    // same, and the next save catches the take up.
+    const wav = audioHost(documentId)?.rendered()
+    return bridge && wav ? bridge.assets.saveAudio({ ...target, wav }) : null
+  },
+})
 
 /**
  * A graph carries a RUN beside its state — what each node is doing, and what it produced.
@@ -202,7 +256,9 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   image: IMAGE_IO,
   scene: textDocumentIo(sceneStore, scenePayload, sceneFromPayload, createDefaultScene),
   sequence: textDocumentIo(sequenceStore, asIs, parseSequence, () => EMPTY_SEQUENCE),
-  audio: textDocumentIo(audioEditStore, asIs, parseAudioEdits, () => EMPTY_AUDIO_EDIT),
+  audio: withRenderedTake(
+    textDocumentIo(audioEditStore, asIs, parseAudioEdits, () => EMPTY_AUDIO_EDIT),
+  ),
   skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),
   texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
   graph: withGraphRun(textDocumentIo(graphStore, asIs, parseGraph, () => EMPTY_GRAPH)),
@@ -250,7 +306,93 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist('own-write')
+
+  // The asset SECOND, and the order is the guarantee: the document holds the layers and the
+  // history, the asset only a flat picture of them. Writing the asset first and failing on the
+  // document would leave a thumbnail up to date in front of work that is gone.
+  await writeAssetOf(document, io)
   return true
+}
+
+/**
+ * Writes a COPY of the asset beside the original, and carries the tab on with the copy.
+ *
+ * What ⌘⇧S means in every application: the file that was open stays as it was at the last save,
+ * and the work continues on the new one. Here the file is an asset — `derivedFrom` keeps the two
+ * traceable to each other, which a copy on disk could not say.
+ *
+ * The copy is NOT named by a dialog. The audio editor settled that first: its « save as new »
+ * derives a name and the renaming happens in the inspector, so asking here would be a second way
+ * to name an asset, next to a gesture that never asks.
+ *
+ * Answers whether anything was written, like `saveDocument` — a document that edits no asset has
+ * nothing to copy, and says so in the journal rather than in silence.
+ */
+export async function saveDocumentAs(documentId: string): Promise<boolean> {
+  const bridge = getBridge()
+  const document = useDocuments.getState().documents[documentId]
+  const io = ioOf(documentId)
+  if (!bridge || !document || !io) return false
+  if (unreadable.has(documentId) || !io.holds(documentId)) return false
+
+  const source = document.sourceAssetId
+  // No asset to derive from, or a kind that bakes to nothing one could hold: both are "there is
+  // no copy to make", and both are said out loud rather than doing nothing quietly.
+  if (!source || !io.writeAsset) {
+    reportFailure('assets.save', document.title, new Error('nothing to copy'))
+    return false
+  }
+
+  const name = i18next.t('documents.copyName', { name: document.title })
+
+  try {
+    const copy = await io.writeAsset(documentId, { derivedFrom: source, name })
+    if (!copy) {
+      reportFailure('assets.save', document.title, new Error('nothing to bake yet'))
+      return false
+    }
+
+    // The document SECOND, and pointed at the copy: the tab carries on with the new asset, and
+    // the one that was open keeps whatever the last ⌘S left on it.
+    const { draft, commit } = await io.capture(documentId)
+    const created = await useDocuments
+      .getState()
+      .create(document.workspace, { title: name, sourceAssetId: copy.id })
+
+    if (!created) return false
+
+    await bridge.documents.write(created.id, created.kind, { ...draft, title: name })
+    commit()
+    io.install(created.id, draft.content, draft.parts)
+    openDocument(created)
+
+    await useAssets.getState().refresh()
+    void useDocuments.getState().relist('own-write')
+    return true
+  } catch (error) {
+    reportFailure('assets.save', document.title, error)
+    return false
+  }
+}
+
+/**
+ * Bakes the document onto the asset it edits, when it edits one and its kind can bake.
+ *
+ * A failure here does NOT undo the save and does not mark the document dirty again: the file is
+ * written, which is the point of ⌘S. What is behind is the thumbnail, and the next save catches
+ * it up — so this is journalled rather than thrown at a caller that would have to guess.
+ */
+async function writeAssetOf(document: DocumentDescriptor, io: DocumentIo): Promise<void> {
+  const assetId = document.sourceAssetId
+  if (!assetId || !io.writeAsset) return
+
+  try {
+    const written = await io.writeAsset(document.id, { replaces: assetId, name: document.title })
+    // The shelf paints from what it holds, and the bytes behind the id have just changed.
+    if (written) await useAssets.getState().refresh()
+  } catch (error) {
+    reportFailure('assets.save', document.title, error)
+  }
 }
 
 /**
