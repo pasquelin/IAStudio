@@ -182,13 +182,19 @@ describe('the translation bundles', () => {
    * the line may break, so a narrow column — the activity journal is one — drops the colon or
    * the closing quote alone onto the next line.
    *
+   * The opening `«` takes one AFTER it, and this read only the closing side for a while. The
+   * bundle holds twenty-nine citations over twenty-three values — five settings hints cite more
+   * than one — and their twenty-nine closing quotes all held the no-break space while
+   * twenty-eight of the openers had an ordinary one. A citation breakable at one end and not
+   * the other leaves `«` as the last thing on a line: the very shape the closing half prevents.
+   *
    * U+00A0 rather than the narrow U+202F: the two look alike at eleven pixels, and the wide
    * one is the space every font actually has. Named by code point because eslint refuses
    * either of them in source.
    */
   it('holds its double punctuation with a no-break space in French', () => {
     const breakable = [...BUNDLES.fr]
-      .filter(([, text]) => / [;:!?»]/.test(text))
+      .filter(([, text]) => / [;:!?»]|« /.test(text))
       .map(([key]) => key)
 
     expect(breakable).toEqual([])
