@@ -6,7 +6,7 @@ import {
   type Density,
   type Theme,
 } from '@shared/domain/settings'
-import { AA_NORMAL_TEXT, contrastRatio, HEX_COLOR } from '@shared/domain/color'
+import { AA_NORMAL_TEXT, contrastRatio, HEX_COLOR, hoverFor } from '@shared/domain/color'
 import { onPaletteChange } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
 import { useAppearance } from './useAppearance'
@@ -182,6 +182,23 @@ describe('the accent a user picks', () => {
     expect(published('--color-accent-content')).toBe('#ffffff')
   })
 
+  /**
+   * The fill UNDER THE POINTER, third of the set and the one the sheet cannot answer alone: its
+   * hover is drawn from its own blue, so a picked red would darken toward a colour that is no
+   * longer on the button. The button used to hover at `bg-accent/85`, which followed the pick but
+   * let the surface through — and so lightened on the light theme, at 3.52:1 for the label.
+   */
+  it('publishes the fill the pointer takes, drawn from the accent that was picked', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#c62828')
+
+    expect(published('--color-accent-hover')).toBe(hoverFor('#c62828'))
+    expect(
+      contrastRatio(published('--color-accent-content'), published('--color-accent-hover')),
+    ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+  })
+
   // Removed rather than blanked, like the fill above it: an empty value parses as nothing, and
   // the theme's own ink never comes back.
   it('takes the ink away again when nothing is picked', () => {
@@ -190,12 +207,14 @@ describe('the accent a user picks', () => {
     withAppearance('dark', 'comfortable', '#c62828')
     expect(published('--color-accent-ink')).not.toBe('')
     expect(published('--color-accent-content')).not.toBe('')
+    expect(published('--color-accent-hover')).not.toBe('')
 
     withAppearance('dark')
 
     expect(published('--color-accent-ink')).toBe('')
     expect(published('--color-accent-content')).toBe('')
     expect(published('--color-primary-content')).toBe('')
+    expect(published('--color-accent-hover')).toBe('')
     expect(published('--color-accent')).toBe('')
   })
 })

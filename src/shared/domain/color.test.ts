@@ -5,6 +5,7 @@ import {
   contrastRatio,
   HEX_COLOR,
   contentFor,
+  hoverFor,
   inkFor,
   readColor,
   relativeLuminance,
@@ -195,5 +196,54 @@ describe('an ink laid over a fill', () => {
     expect(blend('#12b600', '#2b2d30', 0.5)).toMatch(HEX_COLOR)
     expect(blend('rebeccapurple', '#2b2d30', 0.5)).toBe('rebeccapurple')
     expect(blend('#12b600', '', 0.5)).toBe('#12b600')
+  })
+})
+
+describe('the fill a hover takes', () => {
+  /**
+   * The one hover pair in this repository a human drew by eye, in both themes. Reproducing it to
+   * the byte is what says the step is the studio's own and not a number picked to fit one case —
+   * and it is the assertion that would fail first if the step were ever nudged.
+   */
+  it('redraws the green the sheet ships, in both themes', () => {
+    expect(hoverFor('#12b600')).toBe('#0e9200')
+    expect(hoverFor('#0b7100')).toBe('#095a00')
+  })
+
+  it('darkens the accent rather than lightening it, which is what an alpha did', () => {
+    // `bg-accent/85` over the light theme's panel composed to #5284f4, and white on THAT is 3.52.
+    expect(hoverFor('#346ef2')).toBe('#2a58c2')
+    expect(contrastRatio('#ffffff', '#2a58c2')).toBeGreaterThan(AA_NORMAL_TEXT)
+    expect(contrastRatio('#ffffff', blend('#346ef2', '#ffffff', 0.85))).toBeLessThan(AA_NORMAL_TEXT)
+  })
+
+  it('lightens instead when a fill has nowhere darker to go', () => {
+    expect(hoverFor('#000000')).toBe('#333333')
+  })
+
+  it('leaves a fill alone rather than taking its ink under the bar', () => {
+    // Saturated magenta: darker fails black, lighter is the same colour to a reader.
+    expect(hoverFor('#ff00ff')).toBe('#ff00ff')
+  })
+
+  it('never takes the ink of a fill under the bar, over every hue', () => {
+    const failing: string[] = []
+
+    for (let red = 0; red < 256; red += 17) {
+      for (let green = 0; green < 256; green += 17) {
+        for (let blue = 0; blue < 256; blue += 17) {
+          const fill = `#${[red, green, blue].map(one => one.toString(16).padStart(2, '0')).join('')}`
+          const hover = hoverFor(fill)
+          if (contrastRatio(contentFor(fill), hover) < AA_NORMAL_TEXT) failing.push(fill)
+        }
+      }
+    }
+
+    expect(failing).toEqual([])
+  })
+
+  it('stays on the studio shape, and hands back what it cannot move', () => {
+    expect(hoverFor('#346ef2')).toMatch(HEX_COLOR)
+    expect(hoverFor('rebeccapurple')).toBe('rebeccapurple')
   })
 })

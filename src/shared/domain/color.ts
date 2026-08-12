@@ -137,3 +137,42 @@ export function contentFor(fill: string, threshold = AA_NORMAL_TEXT): string {
 
   return contrastRatio('#000000', fill) > onWhite ? '#000000' : '#ffffff'
 }
+
+/** How far a hover moves its fill — the step the sheet's own `create` pair was drawn at. */
+const HOVER_STEP = 0.2
+
+/** Below this, two fills are the same colour to a reader, and the hover says nothing. */
+const HOVER_IS_SEEN = 1.1
+
+/**
+ * The fill a button takes under the pointer — darker, or lighter when darker would not be read.
+ *
+ * A hover written as an ALPHA of the fill cannot answer this: `bg-accent/85` lets the surface
+ * through, so it darkens the blue on a dark panel and LIGHTENS it on a light one. The studio's
+ * primary button did exactly that, and its white label fell to 3.52:1 on the light theme — below
+ * the 4.5 it clears at rest, which is the one place a hover must never take a word.
+ *
+ * Darkening is tried first because that is what a hover means, and it is kept unless it would
+ * take the fill's own ink under the bar — a yellow carries black, and black on a darker yellow
+ * eventually stops being read. Both directions failing leaves the fill untouched: over a sweep of
+ * 4096 hues that is 6 of them, all near-fluorescent, and a hover nobody sees is better than a
+ * label nobody reads.
+ *
+ * The step is not invented: at 0.2 this reproduces `--color-create-hover` to the byte, in BOTH
+ * themes, from the `create` the sheet ships — the one hover pair a human picked here by eye.
+ */
+export function hoverFor(fill: string, threshold = AA_NORMAL_TEXT): string {
+  if (!HEX_COLOR.test(fill)) return fill
+
+  const ink = contentFor(fill, threshold)
+  const from = channels(fill)
+
+  for (const target of [0, 255]) {
+    const moved = toHex(from.map(value => value + (target - value) * HOVER_STEP))
+    if (contrastRatio(ink, moved) >= threshold && contrastRatio(fill, moved) >= HOVER_IS_SEEN) {
+      return moved
+    }
+  }
+
+  return fill
+}

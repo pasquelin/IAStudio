@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AA_NON_TEXT, AA_NORMAL_TEXT, blend, contrastRatio } from '@shared/domain/color'
+import { AA_NON_TEXT, AA_NORMAL_TEXT, blend, contrastRatio, hoverFor } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
 import { WRITTEN_SOURCES } from './test-harness'
@@ -151,6 +151,63 @@ const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/EmptyState.tsx']
  */
 const INFORMATIVE_GLYPHS = ['/MediaTile.tsx']
 
+/** `opacity-70`, `hover:opacity-90` — a dimming written on an element rather than on an ink. */
+const DIMMING = /\bopacity-(\d{1,3})\b/g
+
+/**
+ * The two sites that dim without a `disabled` beside them, each with the reason it may.
+ *
+ * Kept as paths rather than folded into the rule because neither is derivable from the text: one
+ * dims a PICTURE, the other is a disabled control whose `disabled` prop sits twelve lines above
+ * the class. A rule that guessed either would guess wrong on the next site.
+ */
+const DIMMING_ALLOWED: Record<string, string> = {
+  '/ShelfTile.tsx': 'a picture under the pointer, and no word of the tile is inside it',
+  '/Counts.tsx': 'a count of nothing, `disabled` on the button twelve lines up',
+}
+
+/**
+ * A partial opacity, on a source that has not said why.
+ *
+ * **This is the third angle, and it is the one the two above cannot reach.** `text-muted/70`
+ * names its ink, so the sweep can compose it; `opacity-70` names nothing — it dims whatever the
+ * element inherits, and what that is lives on an ancestor no text can follow. A file-level guard
+ * that tried to read colour through it was written and RETIRED on 2026-08-12, proven to catch
+ * none of the five defects it was written for.
+ *
+ * So this holds the only thing a text can hold, and says so: **no site dims without a reason.**
+ * It is what would have caught the price inside the primary button — white at `opacity-70` on
+ * the accent, 3.03:1 at rest — which is neither an ink with an alpha nor a token, and which
+ * fourteen iterations and two guards walked past.
+ *
+ * `opacity-0` and `opacity-100` are not dimmings but reveals, and a `disabled` on the same line
+ * is WCAG 1.4.3's own exemption: a control that refuses the click owes no ratio.
+ *
+ * Comments are cut away first, and that is not a detail: this rule flagged its OWN explanation
+ * and the one in `styles.ts` on its first run. A guard that reddens when somebody writes down why
+ * is a guard that teaches people to stop writing down why.
+ */
+function dimmedWithoutReason(sources: readonly (readonly [string, string])[]): string[] {
+  const offenders: string[] = []
+
+  for (const [path, source] of sources) {
+    if (Object.keys(DIMMING_ALLOWED).some(one => path.endsWith(one))) continue
+
+    const written = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+
+    for (const line of written.split('\n')) {
+      if (/\bdisabled\b/.test(line)) continue
+
+      for (const [, percent = ''] of line.matchAll(DIMMING)) {
+        if (Number(percent) > 0 && Number(percent) < 100)
+          offenders.push(`${path} opacity-${percent}`)
+      }
+    }
+  }
+
+  return offenders
+}
+
 /**
  * Every alpha ink of a set of sources, composed on the surfaces of its vocabulary and measured
  * against the bar its role asks for — 4.5 for a word, 3 for a glyph that informs.
@@ -268,6 +325,40 @@ describe('the contrast of the inks', () => {
   })
 
   /**
+   * The same ink under the POINTER, which was nobody's question and is where it failed. The
+   * primary button hovered at `bg-accent/85` — an alpha, so the surface showed through: it
+   * darkened the blue on a dark panel and LIGHTENED it on a light one, taking the white label to
+   * 3.52:1. A state a word cannot be read in is not a hover, and no ratio of this file saw it,
+   * because every one of them measured a token and this colour was composed at paint time.
+   *
+   * The token is held to `hoverFor` rather than to a number: the sheet ships one accent and the
+   * user may pick another, so a hand-written hex here would be right for exactly one of them.
+   */
+  it('carries a hover the accent keeps its ink on, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+      const accent = tokens.accent ?? ''
+      const hover = tokens['accent-hover'] ?? ''
+
+      expect(hover).toBe(hoverFor(accent))
+      expect(contrastRatio(tokens['accent-content'] ?? '', hover)).toBeGreaterThanOrEqual(
+        AA_NORMAL_TEXT,
+      )
+      // And it is a hover at all — the fill has to move, or pointing at the button says nothing.
+      expect(contrastRatio(accent, hover)).toBeGreaterThan(1.1)
+    }
+  })
+
+  /** An alpha of the accent lets the surface through, and that is the whole defect above. */
+  it('leaves no source hovering the accent through an alpha', () => {
+    const offenders = WRITTEN_SOURCES.filter(([, source]) =>
+      /hover:bg-accent\/\d/.test(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  /**
    * The accent as a CONTROL against the surfaces it is drawn over — the focus ring, first of
    * all, which `FOCUS_RING` paints in this very colour and which is the only thing saying where
    * the keyboard is. WCAG 1.4.11 asks 3:1 of it, and that is the second bar the accent is pinned
@@ -332,6 +423,40 @@ describe('the contrast of the inks', () => {
     expect(bad).toContain('./probe.ts base-content/60 on base-300')
     // And the same ink one step up passes, so the probe proves the threshold, not the sweep.
     expect(alphaFailures([['./probe.ts', "'text-base-content/70'"]])).toEqual([])
+  })
+
+  it('leaves no word dimmed by an opacity nobody has justified', () => {
+    expect(dimmedWithoutReason(WRITTEN_SOURCES)).toEqual([])
+  })
+
+  it('refuses a dimming that says nothing, and takes the two that do', () => {
+    // The exact line this batch removed, and the reason the sweep above could not see it.
+    expect(
+      dimmedWithoutReason([['./probe.tsx', "<span className='text-tiny opacity-70'>"]]),
+    ).toEqual(['./probe.tsx opacity-70'])
+    expect(dimmedWithoutReason([['./probe.tsx', "disabled && 'opacity-40'"]])).toEqual([])
+    // And a comment that NAMES a dimming is not one — the rule flagged its own prose at first.
+    expect(dimmedWithoutReason([['./probe.tsx', '/* an `opacity-70` read 3.03:1 */']])).toEqual([])
+    expect(dimmedWithoutReason([['./probe.tsx', '// opacity-70 was here']])).toEqual([])
+    expect(dimmedWithoutReason([['./probe.tsx', "'opacity-0 group-hover:opacity-100'"]])).toEqual(
+      [],
+    )
+  })
+
+  /**
+   * The exemptions, held to still be needed. An entry outliving the dimming it excused is how a
+   * list like this rots into a hole — `stores/no-bare-shared-word-export.test.ts` learnt it on
+   * 2026-08-12, when two names were closed only because their exemption started failing.
+   */
+  it('carries no exemption for a site that has stopped dimming', () => {
+    const stale = Object.keys(DIMMING_ALLOWED).filter(
+      one =>
+        !WRITTEN_SOURCES.some(
+          ([path, source]) => path.endsWith(one) && dimmedWithoutReason([['probe', source]]).length,
+        ),
+    )
+
+    expect(stale).toEqual([])
   })
 
   it('finds an alpha ink at all, so the rule above cannot pass on an empty sweep', () => {
