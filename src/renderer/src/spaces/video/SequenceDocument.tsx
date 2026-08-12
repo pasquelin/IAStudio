@@ -3,16 +3,14 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EmptyState } from '@/design/EmptyState'
 import { Separator } from '@/design/Separator'
-import { trackKindFor } from '@/engines/timeline/insert'
 import { programOwner } from '@/engines/timeline/playback'
 import {
-  clipById,
   EMPTY_SEQUENCE,
   makeTrack,
+  trackOfClip,
   type SequenceState,
   type Us,
 } from '@/engines/timeline/timeline-state'
-import { assetsById, useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { Monitor } from './Monitor'
@@ -35,8 +33,10 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
 
   useRestoredDocument(documentId)
 
-  const selected = sequence.selectedId ? clipById(sequence, sequence.selectedId) : null
-  const byId = useAssets(assetsById)
+  // Found through its track, not by id alone: the montage's own answer to "is this a sound?" is
+  // the track the clip sits on, and the inspector and the program monitor both read it there.
+  const holder = sequence.selectedId ? trackOfClip(sequence, sequence.selectedId) : null
+  const selected = holder?.clips.find(clip => clip.id === sequence.selectedId) ?? null
 
   // The source monitor plays one clip, which is a sequence of one — same engine, same painter.
   const source: SequenceState = useMemo(
@@ -44,21 +44,22 @@ export function SequenceDocument({ documentId }: SequenceDocumentProps) {
       ...EMPTY_SEQUENCE,
       settings: sequence.settings,
       playhead: sourceTime,
-      tracks: selected
-        ? [
-            makeTrack({
-              id: 'S1',
-              // The asset decides, not this monitor: mounted on a picture track, a take is shown
-              // as a black frame and heard as nothing at all.
-              kind: trackKindFor(byId.get(selected.assetId) ?? null),
-              index: 1,
-              locked: true,
-              clips: [{ ...selected, start: 0 }],
-            }),
-          ]
-        : [],
+      tracks:
+        holder && selected
+          ? [
+              makeTrack({
+                id: 'S1',
+                // Mounted on a picture track, a take is shown as a black frame and heard as
+                // nothing at all: `audioChunksIn` only schedules tracks of the sound kind.
+                kind: holder.kind,
+                index: 1,
+                locked: true,
+                clips: [{ ...selected, start: 0 }],
+              }),
+            ]
+          : [],
     }),
-    [byId, selected, sequence.settings, sourceTime],
+    [holder, selected, sequence.settings, sourceTime],
   )
 
   const setProgramTime = useCallback(

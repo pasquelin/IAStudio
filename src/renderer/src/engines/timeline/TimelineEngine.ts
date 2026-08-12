@@ -29,6 +29,21 @@ export function clipAt(track: Track, time: Us): Clip | null {
 }
 
 /** Lowest index first: the sprite added last is the one the eye sees on top. */
+/**
+ * The sprites whose track LEFT the frame, and which nothing else would ever take down.
+ *
+ * The paint loop reaches only the tracks still in the list, so a track deleted — or turned into a
+ * sound track by a change of selection — would keep the image it last painted on screen while
+ * something else plays.
+ */
+export function spritesOffFrame<T>(
+  sprites: ReadonlyMap<string, T>,
+  painting: readonly Track[],
+): T[] {
+  const inFrame = new Set(painting.map(track => track.id))
+  return [...sprites].filter(([trackId]) => !inFrame.has(trackId)).map(([, sprite]) => sprite)
+}
+
 export function videoTracksByDepth(state: SequenceState): Track[] {
   return state.tracks
     .filter(track => track.kind === 'video')
@@ -263,7 +278,10 @@ export class TimelineEngine {
     let unreadable = false
     let painted = false
 
-    for (const track of videoTracksByDepth(this.state)) {
+    const painting = videoTracksByDepth(this.state)
+    for (const sprite of spritesOffFrame(this.sprites, painting)) sprite.visible = false
+
+    for (const track of painting) {
       const sprite = this.spriteFor(track.id)
       // Asked here rather than by filtering the list: a track dropped from it would keep the
       // sprite it last painted on screen, which is the opposite of muting it.

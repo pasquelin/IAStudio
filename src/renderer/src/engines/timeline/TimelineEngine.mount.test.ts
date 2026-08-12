@@ -16,6 +16,8 @@ let started: Record<string, unknown> | null = null
 /** Every sprite starts on the empty texture, as it does in Pixi — `swapTexture` reads it. */
 const EMPTY_TEXTURE = {}
 const PAINTED_TEXTURE = { source: {}, width: 8, height: 6, destroy: vi.fn() }
+/** Every sprite the engine builds, in order: the map that holds them is its own business. */
+const sprites: { visible: boolean }[] = []
 
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
@@ -46,8 +48,12 @@ vi.mock('pixi.js', () => ({
   },
   Sprite: class {
     texture = EMPTY_TEXTURE
+    visible = true
     position = { set: vi.fn() }
     scale = { set: vi.fn() }
+    constructor() {
+      sprites.push(this)
+    }
   },
   Texture: { EMPTY: EMPTY_TEXTURE, from: () => PAINTED_TEXTURE },
 }))
@@ -176,6 +182,25 @@ describe('mounting a monitor', () => {
     const listener = on.mock.calls.find(([event]) => event === 'resize')?.[1]
     expect(listener).toBeDefined()
     expect(off).toHaveBeenCalledWith('resize', listener)
+  })
+
+  /**
+   * A track that LEAVES the frame keeps the image it last painted, and the paint loop never
+   * reaches it again — it walks the tracks still in. The source monitor turns its one track from
+   * picture to sound when the selection moves from a rush to a take, and the rush's last frame
+   * would sit on screen over another clip's sound.
+   */
+  it('takes the picture down when a track stops being a picture track', async () => {
+    const engine = engineOver(host, 'asset-c', vi.fn())
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]))
+    await engine.seek(0)
+    expect(sprites.at(-1)?.visible).toBe(true)
+
+    engine.apply(sequenceWith([trackFixture('V1', 'audio', [clipFixture('c', 0, 1_000_000)])]))
+    await engine.seek(0)
+
+    expect(sprites.at(-1)?.visible).toBe(false)
   })
 
   /**

@@ -214,7 +214,8 @@ Quatre choses à savoir, parce qu’elles se remarquent :
 
 - **Le son ne sort qu’en lecture.** Déplacer la tête de lecture à la main ne fait rien entendre :
   c’est l’image qui suit le curseur, pas le son.
-- **Le moniteur Source reste muet**, même sur un clip son sélectionné.
+- **Le moniteur Source joue le clip sélectionné**, son compris quand c’en est un — mais il
+  n’affiche alors aucune image, un son n’en ayant pas.
 - **Le son d’une vidéo n’est pas encore joué** : seules les pistes de son le sont. Une vidéo posée
   sur une piste image se voit sans s’entendre.
 - **Le premier son peut mettre un instant à venir** : le fichier est décodé entier avant d’être

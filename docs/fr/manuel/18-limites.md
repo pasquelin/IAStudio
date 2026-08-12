@@ -214,13 +214,12 @@ se changent pas encore.
 
 ### Ce que la lecture ne fait pas encore entendre
 
-Le moniteur Programme joue les pistes de son. Trois bornes restent, toutes assumées :
+Le moniteur Programme joue les pistes de son. Deux bornes restent, toutes assumées :
 
 | Ce qui ne s’entend pas | Pourquoi |
 |---|---|
 | **Le son d’une vidéo** posée sur une piste image | seules les pistes de genre son sont ordonnancées |
 | **Le scrub** — déplacer la tête de lecture à la main | le son n’est planifié que par la boucle de lecture |
-| **Le moniteur Source** | il monte le clip sélectionné sur une piste image, quel que soit son type |
 
 **Et une dérive, non mesurée** : sur un montage long, l’image peut s’écarter du son. L’horloge de
 sortie prend la main dès qu’elle tourne, ce qui l’évite dans le cas courant — mais la toute

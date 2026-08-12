@@ -4,6 +4,7 @@ import {
   clipAt,
   createFrameSink,
   fitInside,
+  spritesOffFrame,
   swapTexture,
   TimelineEngine,
   uploadNow,
@@ -34,6 +35,27 @@ describe('timeline engine', () => {
   it('treats the end of a clip as outside it, so a butt joint plays the next one', () => {
     const track = stateWith([clip('a', 0, 1_000_000)]).tracks[0]!
     expect(clipAt(track, 1_000_000)).toBeNull()
+  })
+
+  /**
+   * The paint loop only reaches tracks still in the frame, so nothing else would ever take these
+   * down: a source monitor whose selection moves from a rush to a take turns its one track from
+   * picture to sound, and the rush's last image would stay on screen over another clip's sound.
+   */
+  it('hands back the sprite of a track that left the frame, so it can go dark', () => {
+    const sprites = new Map([
+      ['S1', 'stale'],
+      ['V1', 'painting'],
+    ])
+    const painting = sequenceWith([trackFixture('V1', 'video')]).tracks
+
+    expect(spritesOffFrame(sprites, painting)).toEqual(['stale'])
+  })
+
+  it('leaves every sprite alone while its track is still painting', () => {
+    const painting = sequenceWith([trackFixture('V1', 'video')]).tracks
+
+    expect(spritesOffFrame(new Map([['V1', 'painting']]), painting)).toEqual([])
   })
 
   it('orders video tracks by index, so the highest one is composited last', () => {

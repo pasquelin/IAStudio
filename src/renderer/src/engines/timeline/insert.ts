@@ -9,7 +9,6 @@ import {
   type SequenceSettings,
   type SequenceState,
   type Track,
-  type TrackKind,
   type Us,
 } from './timeline-state'
 
@@ -36,20 +35,12 @@ export function clipForAsset(
 }
 
 /**
- * Which kind of track an asset belongs on: sound on a sound track, everything else on a picture
- * track. An unknown asset counts as picture — a strip that shows nothing is read as a missing
- * media, where one that plays nothing is read as a broken studio.
- */
-export function trackKindFor(asset: Asset | null): TrackKind {
-  return asset?.type === 'audio' ? 'audio' : 'video'
-}
-
-/**
- * Where an asset lands when nobody pointed at a track. Locked and silenced tracks are skipped —
- * dropping onto one would look like the add did nothing.
+ * Where an asset lands when nobody pointed at a track: sound on a sound track, everything else
+ * on a picture track. Locked and silenced tracks are skipped — dropping onto one would look
+ * like the add did nothing.
  */
 export function trackForAsset(state: SequenceState, asset: Asset | null): Track | null {
-  const wanted = trackKindFor(asset)
+  const wanted = asset?.type === 'audio' ? 'audio' : 'video'
   const usable = state.tracks.filter(track => !track.locked && playsThrough(state, track))
 
   return usable.find(track => track.kind === wanted) ?? usable[0] ?? null

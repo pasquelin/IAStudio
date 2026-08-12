@@ -1,12 +1,10 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import type { SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
-import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useSequences } from '@/stores/sequences'
 import { SequenceDocument } from './SequenceDocument'
@@ -33,16 +31,7 @@ vi.mock('@/engines/timeline/TimelineEngine', () => ({
 }))
 
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
-
-const asset = (overrides: Partial<Asset> = {}): Asset => ({
-  id: 'asset-1',
-  name: 'pad.wav',
-  type: 'audio',
-  location: 'local',
-  tags: [],
-  createdAt: '2026-08-07T10:00:00.000Z',
-  ...overrides,
-})
+const later = clipFixture('clip-2', 2_000_000, 1_000_000, { assetId: 'asset-2' })
 
 /** The source monitor's track, as the engine last received it — 'S1' is its only one. */
 const sourceTrack = () =>
@@ -56,7 +45,6 @@ describe('SequenceDocument', () => {
     vi.clearAllMocks()
     useSequences.setState({ states: {}, histories: {} })
     useDocuments.setState({ activeId: 'doc-1' })
-    useAssets.setState({ items: [] })
   })
 
   it('shows the source and the program monitors, in that order', () => {
@@ -105,12 +93,11 @@ describe('SequenceDocument', () => {
   })
 
   /**
-   * The monitor used to mount whatever was selected on a picture track. A take landed there is
-   * shown as a black frame and heard as nothing at all — `audioChunksIn` only schedules tracks of
-   * the sound kind.
+   * The monitor used to mount whatever was selected on a picture track, whatever its kind. A take
+   * landed there is shown as a black frame and heard as nothing at all — `audioChunksIn` only
+   * schedules tracks of the sound kind.
    */
-  it('mounts a sound asset on a sound track, so the source monitor is heard', () => {
-    useAssets.setState({ items: [asset()] })
+  it('mounts a clip taken from a sound track on a sound track, so it is heard', () => {
     render(<SequenceDocument documentId="doc-1" />)
 
     act(() => useSequences.getState().runCommand('doc-1', addClip('A1', clip)))
@@ -118,8 +105,12 @@ describe('SequenceDocument', () => {
     expect(sourceTrack()?.kind).toBe('audio')
   })
 
-  it('leaves a picture asset on a picture track', () => {
-    useAssets.setState({ items: [asset({ type: 'video' })] })
+  /**
+   * The track the clip sits on, not the type of the file behind it: a rush dropped onto a sound
+   * track is played without a picture by the program monitor and shown as audio by the inspector,
+   * and the source monitor has no business disagreeing with both.
+   */
+  it('mounts a clip taken from a picture track on a picture track', () => {
     render(<SequenceDocument documentId="doc-1" />)
 
     act(() => useSequences.getState().runCommand('doc-1', addClip('V1', clip)))
@@ -127,13 +118,14 @@ describe('SequenceDocument', () => {
     expect(sourceTrack()?.kind).toBe('video')
   })
 
-  // A clip whose asset left the catalogue: shown as a missing media, not silently made audio.
-  it('falls back to a picture track when the asset is unknown', () => {
+  // A track holds many clips; the monitor shows the selected one, not the first one laid down.
+  it('mounts the selected clip rather than the first on its track', () => {
     render(<SequenceDocument documentId="doc-1" />)
 
-    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', clip)))
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', clip)))
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', later)))
 
-    expect(sourceTrack()?.kind).toBe('video')
+    expect(sourceTrack()?.clips[0]?.id).toBe('clip-2')
   })
 
   it('starts the program monitor when its play button is pressed', () => {

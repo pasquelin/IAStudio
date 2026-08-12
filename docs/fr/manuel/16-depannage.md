@@ -508,7 +508,8 @@ plus technique :
 2. **Vous déplacez la tête de lecture à la main.** Le son ne sort qu’en lecture ; le scrub est muet.
 3. **Le clip est sur une piste image.** Une vidéo posée là se voit sans s’entendre : seules les
    pistes de son sont jouées.
-4. **Vous regardez le moniteur Source.** Il est muet, toujours ; c’est le Programme qui joue.
+4. **Vous regardez le moniteur Source sur une vidéo.** Il joue un clip son sélectionné, mais
+   pas le son d’une vidéo — celui-là n’est encore joué nulle part.
 5. **Le gain du clip est au plancher.** L’inspecteur d’un clip le donne en décibels.
 6. **Le média a bougé depuis l’import.** Le studio ne le redemande pas soixante fois par seconde :
    il abandonne le clip pour la session. Réimportez le fichier.

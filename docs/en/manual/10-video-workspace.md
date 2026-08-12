@@ -212,7 +212,8 @@ Four things worth knowing, because they show:
 
 - **Sound only comes out during playback.** Dragging the playhead by hand plays nothing: it is the
   picture that follows the cursor, not the sound.
-- **The Source monitor stays silent**, even on a selected sound clip.
+- **The Source monitor plays the selected clip**, sound included when it is one — but it then
+  shows no picture, a sound having none.
 - **A video's own sound is not played yet**: only sound tracks are. A video laid on a picture track
   is seen without being heard.
 - **The first sound may take a moment to arrive**: the file is decoded whole before it plays. A
