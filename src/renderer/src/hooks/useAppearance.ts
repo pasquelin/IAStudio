@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
-import { inkFor } from '@shared/domain/color'
+import { contentFor, inkFor } from '@shared/domain/color'
 import { THEME_ATTRIBUTE, type ResolvedTheme, type Theme } from '@shared/domain/settings'
 import { refreshPalette, token } from '@/engines/core/palette'
 import { useSettings } from '@/stores/settings'
@@ -86,6 +86,16 @@ export function useAppearance(): void {
     if (accent) {
       root.style.setProperty('--color-accent-ink', inkFor(accent, token(root, '--color-chassis')))
     } else root.style.removeProperty('--color-accent-ink')
+
+    // And the ink ON the fill, which is a different question and was nobody's until now: the
+    // sheet can only ship one answer, and a picked yellow takes the white it shipped with to
+    // 1.71:1 — a primary button whose label cannot be read at all. daisyUI's name follows for
+    // the reason its fill does, a paragraph above.
+    const content = accent ? contentFor(accent) : ''
+    for (const name of ['--color-accent-content', '--color-primary-content']) {
+      if (content) root.style.setProperty(name, content)
+      else root.style.removeProperty(name)
+    }
 
     // After the attributes, never before: the engines read the tokens back the moment they are
     // told, and `getComputedStyle` would hand them the palette they are leaving.

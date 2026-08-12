@@ -156,6 +156,32 @@ describe('the accent a user picks', () => {
     expect(contrastRatio('#c62828', '#2b2d30')).toBeLessThan(AA_NORMAL_TEXT)
   })
 
+  /**
+   * The ink ON the fill, which is the other half and was nobody's until 2026-08-12. A light
+   * accent is where it earns its keep: the white the sheet ships reads 1.71:1 on a yellow, and a
+   * primary button's label cannot be read at all.
+   */
+  it('publishes an ink for what is written on the fill, and turns it dark on a light one', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#f0c035')
+
+    expect(published('--color-accent-content')).toBe('#000000')
+    // daisyUI's name follows for the reason its fill does: the two are one blue in this studio.
+    expect(published('--color-primary-content')).toBe('#000000')
+    expect(contrastRatio(published('--color-accent-content'), '#f0c035')).toBeGreaterThanOrEqual(
+      AA_NORMAL_TEXT,
+    )
+  })
+
+  it('keeps white on an accent white can be read on, rather than flipping every dark pick', () => {
+    stubMatchMedia(true)
+    document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
+    withAppearance('dark', 'comfortable', '#5b21b6')
+
+    expect(published('--color-accent-content')).toBe('#ffffff')
+  })
+
   // Removed rather than blanked, like the fill above it: an empty value parses as nothing, and
   // the theme's own ink never comes back.
   it('takes the ink away again when nothing is picked', () => {
@@ -163,10 +189,13 @@ describe('the accent a user picks', () => {
     document.documentElement.style.setProperty('--color-chassis', '#2b2d30')
     withAppearance('dark', 'comfortable', '#c62828')
     expect(published('--color-accent-ink')).not.toBe('')
+    expect(published('--color-accent-content')).not.toBe('')
 
     withAppearance('dark')
 
     expect(published('--color-accent-ink')).toBe('')
+    expect(published('--color-accent-content')).toBe('')
+    expect(published('--color-primary-content')).toBe('')
     expect(published('--color-accent')).toBe('')
   })
 })

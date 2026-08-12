@@ -60,6 +60,9 @@ export function MediaTile({
 
       {badge}
 
+      {/* The one white the studio writes outright, and the only place it can be: this word sits
+          on a PICTURE, which no token can describe. Its contrast comes from the gradient under it
+          and the shadow around it, not from a palette that knows nothing of what was generated. */}
       <figcaption
         title={caption}
         className={cn(

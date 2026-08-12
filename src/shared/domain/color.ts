@@ -82,3 +82,28 @@ export function inkFor(accent: string, backdrop: string, threshold = AA_NORMAL_T
 
   return towardsWhite ? '#ffffff' : '#000000'
 }
+
+/**
+ * What to write ON `fill` — the counterpart of `inkFor`, which answers what to write IN that
+ * colour on a studio surface.
+ *
+ * Two candidates rather than a ramp: an ink laid on a fill has nowhere to travel to without
+ * becoming the fill itself. White is kept whenever it clears the bar, so the studio's own blue
+ * goes on carrying white words rather than flipping to black over a tenth of a point; below the
+ * bar the fill is light enough that black is the answer, and by a wide margin — a picked yellow
+ * takes white to 1.71:1 and black to 12.30.
+ *
+ * **At the AA threshold the second branch is unreachable, and that is arithmetic rather than
+ * luck**: white fails under a luminance of 0.183 and black fails over 0.175, so the two ranges
+ * overlap and one of them always answers. It is written for the callers that ask for more — at
+ * 7:1 the gap between 0.10 and 0.30 has no good ink at all, and the better of the two is still
+ * the better of the two.
+ */
+export function contentFor(fill: string, threshold = AA_NORMAL_TEXT): string {
+  if (!HEX_COLOR.test(fill)) return '#ffffff'
+
+  const onWhite = contrastRatio('#ffffff', fill)
+  if (onWhite >= threshold) return '#ffffff'
+
+  return contrastRatio('#000000', fill) > onWhite ? '#000000' : '#ffffff'
+}
