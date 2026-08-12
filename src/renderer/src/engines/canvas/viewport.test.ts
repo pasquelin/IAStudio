@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_SCALE as TIMELINE_MAX_SCALE } from '@/engines/timeline/viewport'
 import {
   centerOn,
   clampCanvasScale,
@@ -118,13 +119,13 @@ describe('viewport', () => {
 
 /**
  * The canvas and the timeline each bound a scale, in two files of the SAME name, and their bounds
- * are four orders of magnitude apart: a canvas zooms between 0.02× and 64×, a timeline between
- * a millionth and two thousandths of a second per pixel. Both were once exported as `MIN_SCALE`
- * and `MAX_SCALE`, and both take and return a bare `number` — so an auto-import reaching the wrong
+ * are four orders of magnitude apart: a canvas zooms between 0.02× and 64×, a timeline between a
+ * millionth and two thousandths of a second per pixel. Both were once exported as `MIN_SCALE` and
+ * `MAX_SCALE`, and both take and return a bare `number` — so an auto-import reaching the wrong
  * file compiled, and clamped a zoom to a unit it had never heard of.
  *
- * The names now say which. These figures are what says the names still mean two different things:
- * the day one of them drifts toward the other's range, someone unified what the rename separated.
+ * The names now say which. This reads BOTH sides on purpose: a claim about two ranges that only
+ * ever measured one would be the costliest kind of comment — true-looking, and half-checked.
  */
 describe("the canvas scale bounds, which are not the timeline's", () => {
   it('lets a canvas zoom out to a fiftieth and in to sixty-four times', () => {
@@ -132,9 +133,26 @@ describe("the canvas scale bounds, which are not the timeline's", () => {
     expect(CANVAS_MAX_SCALE).toBe(64)
   })
 
-  // The timeline's own floor is 1e-6; a canvas that ever clamps that low took the wrong bound.
-  it("clamps to its own floor, nowhere near the timeline's", () => {
-    expect(clampCanvasScale(1e-6)).toBe(CANVAS_MIN_SCALE)
-    expect(clampCanvasScale(1000)).toBe(CANVAS_MAX_SCALE)
+  // The other side, read from its own module: the day the two ranges meet, one of them was
+  // imported by mistake or unified on purpose, and either way somebody must say so out loud.
+  it('bounds nothing the timeline bounds', () => {
+    expect(CANVAS_MIN_SCALE).toBeGreaterThan(TIMELINE_MAX_SCALE)
   })
+
+  /*
+   * The ladder ⌘+ and ⌘− walk is written as literals beside these constants, so it can drift from
+   * them without a word. Asked through the walk rather than by exporting the array: what matters
+   * is that the ends of the ladder ARE the bounds, not how the ladder is stored.
+   */
+  it('walks a ladder that ends exactly on its own bounds', () => {
+    expect(previousZoom(0.03)).toBe(CANVAS_MIN_SCALE)
+    expect(nextZoom(48)).toBe(CANVAS_MAX_SCALE)
+  })
+
+  /*
+   * Retired rather than kept: `clampCanvasScale(1e-6) === CANVAS_MIN_SCALE` holds whatever that
+   * constant is, so it survived the very mutation it was written against — measured, the harness
+   * unified the bound to the timeline's and only the figures above went red. An assertion phrased
+   * against the symbol it is testing proves the symbol equals itself.
+   */
 })
