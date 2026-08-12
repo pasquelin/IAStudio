@@ -85,19 +85,19 @@ describe('Rail', () => {
       expect(createPicked).toHaveBeenCalled()
     })
 
-    // The upper half is what every space keeps for generation, and the home generates nothing.
-    // It held what the studio can start until 12 August, when that went back to the centre — so
-    // the half is EMPTY, and an empty half never reaches the rail: one group, and no cut to draw.
-    // The only separator left is the one under the button that makes a project.
-    it('leaves the left rail uncut: the home has nothing in its upper half', () => {
+    // The upper half is what every space keeps for generation, and the home generates nothing:
+    // it gives it to what one produces IN. The projects stand there alone, above the cut, so a
+    // click on any of the three below can never take them off the screen.
+    it('cuts the left rail: the projects above, what one browses below', () => {
       const { container } = render(<Rail side="left" />)
 
       expect(marksOf(container)).toEqual([
         'Nouveau projet',
         'separator',
         'Vos projets',
-        'Une idée pour commencer',
+        'separator',
         'Vos recettes',
+        'Une idée pour commencer',
         'Dans la même veine',
       ])
 
@@ -163,9 +163,8 @@ describe('Rail', () => {
   })
 
   /**
-   * A lone group has nothing to be cut from. Two surfaces have such a column: the home's left,
-   * since what filled its upper half went back to the centre — the case just above — and the
-   * graph, which no placement gives an upper right, so its rail draws the inspector alone.
+   * A lone group has nothing to be cut from. The graph is where that case lives: no placement
+   * gives it an upper right, so its rail draws the inspector alone.
    */
   it('draws no separator in a column with a single populated half', () => {
     useLayouts.setState({ activeWorkspace: 'graph', home: false })

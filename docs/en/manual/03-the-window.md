@@ -116,15 +116,15 @@ one browses. **On the home screen, only the lower half exists.**
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
-| **Your projects** | 2nd | the ones you opened recently, reopened with a click | nothing |
-| **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
+| **Your projects** | 1st | the ones you opened recently, reopened with a click | nothing |
 | **Your recipes** | 2nd | the settings you have pinned | nothing |
+| **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
 | **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
 
 **The upper half is the one every workspace keeps for generation**, and the home generates
-nothing. So it is **absent** there — not empty: no panel goes in it, and the rail offers none.
-The seven workspaces are picked **in the centre**, where they read across the width rather than
-down a 320 px column.
+nothing: it gives it to what one produces IN. **Your projects** stands there alone, so no click on
+the three shelves below can take it off the screen. The list of what the studio knows how to
+start reads across the width, in the centre — the **Tools** section.
 
 **Your recipes need nothing**, and that is deliberate: a recipe is kept outside every project and
 follows you from one to the next.
@@ -441,9 +441,9 @@ From top to bottom:
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; **the home has none**, its upper half does not exist |
+| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; the home puts **Your projects** there |
 | *separator* | |
-| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there, the prompt help, then its two shelves |
+| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts its three shelves there: recipes, prompt help, then "in the same vein" |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 **One separator per cut of the column, never one more.** The rail is the column's legend: it cuts
@@ -557,13 +557,11 @@ instead.
 > **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
 > workspace is a place that opens documents of a kind of its own; the home opens none — it opens
 > the others'. **The home has panels of its own, and this table does not list them**: it has two
-> columns of its own, holding eleven panels that exist nowhere else. On the left it puts **Your
-> projects** where the workspaces put the Explorer: the lower half. The logic is the same but for
-> one word — a workspace files what
-> you produce **with**, the home what you produce **in**, and that is the first thing anyone comes
-> to this screen for. With no generation to sit above it, **it opens no upper half at all**: what
-> the studio knows how to start reads in the centre, across the width, rather than down a narrow
-> column.
+> columns of its own, holding eleven panels that exist nowhere else. With no generation to put in
+> the upper half, it puts **Your projects** there — a workspace files on the left what you produce
+> **with**, the home what you produce **in**, and that is the first thing anyone comes to this
+> screen for. Its three shelves share the lower half, where the workspaces put the Explorer; what
+> the studio knows how to start reads across the width, in the centre.
 
 **The left column belongs to what produces**, and it is cut in two.
 

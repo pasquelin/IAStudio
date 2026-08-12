@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { arrangedFor } from './tool-fixtures'
-import { HOME_SURFACE } from '@shared/domain/tool'
+import {
+  familyOf,
+  HOME_SURFACE,
+  SURFACE_FAMILIES,
+  TOOL_PLACEMENTS,
+  TOOL_SLOTS,
+  TOOL_ZONES,
+  type SurfaceFamily,
+} from '@shared/domain/tool'
 import {
   arrangementOf,
   DEFAULT_ARRANGEMENTS,
@@ -15,6 +23,7 @@ import {
   openFrom,
   unchosen,
   useTools,
+  type OpenByZone,
 } from './tools'
 
 describe('fitZoneSize', () => {
@@ -142,6 +151,37 @@ describe('tools store', () => {
 })
 
 /**
+ * `DEFAULT_OPEN` is a second copy of what `TOOL_PLACEMENTS` already says, kept by hand — and the
+ * home's upper left has been named, unnamed and named again in three versions, once per panel
+ * that moved through it. Nothing crossed the two until this test.
+ *
+ * Both directions cost something real. A half a surface HAS but does not name starts closed: the
+ * panel is drawn nowhere, and only the rail leads back to it. A half it names but does not have
+ * reports the zone open to `isZoneOpen`, which reads the key rather than what it resolves to —
+ * the column reserves its 320 px against the opposite one long after the screen stopped drawing
+ * it.
+ */
+describe('the halves a surface starts on', () => {
+  const halvesOfFamily = (family: SurfaceFamily): string[] =>
+    [
+      ...new Set(
+        TOOL_PLACEMENTS.filter(placement =>
+          placement.surfaces.some(surface => familyOf(surface) === family),
+        ).map(placement => `${placement.zone}:${placement.slot}`),
+      ),
+    ].sort()
+
+  const halvesNamedBy = (open: OpenByZone): string[] =>
+    TOOL_ZONES.flatMap(zone =>
+      TOOL_SLOTS.filter(slot => open[zone] && slot in open[zone]).map(slot => `${zone}:${slot}`),
+    ).sort()
+
+  it.each(SURFACE_FAMILIES)('names every half %s has, and no other', family => {
+    expect(halvesNamedBy(DEFAULT_OPEN[family])).toEqual(halvesOfFamily(family))
+  })
+})
+
+/**
  * The home and the six spaces use the same two columns — the projects and the journal on one
  * side, the Explorer and generation on the other. They never share the screen, so they must not
  * share an arrangement: every one of these was a real defect before it was split per family, and
@@ -152,7 +192,7 @@ describe('the home and the workspaces arrange their zones apart', () => {
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS, focusedZone: null })
   })
 
-  it('does not close the generation column when the projects are closed on the home', () => {
+  it('does not close the generation column when the home closes its lower left', () => {
     useTools.getState().close(HOME_SURFACE, 'left', 'secondary')
 
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left?.secondary).toBeUndefined()
@@ -173,9 +213,9 @@ describe('the home and the workspaces arrange their zones apart', () => {
       secondary: null,
     })
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
-      // The lower half is the only one this column HAS: naming the upper one would leave the
-      // zone reporting itself open with nothing to draw, so the default does not name it.
-      secondary: 'projects',
+      // Its own lower half is untouched: what the home named is the upper one.
+      primary: 'projects',
+      secondary: null,
     })
   })
 
@@ -233,7 +273,7 @@ describe('migrating to the split arrangement', () => {
    * column width and chosen panel of all seven spaces goes back to the factory without a word.
    * That is what a bump meant to add a half to the home would have cost.
    */
-  it.each([9, 10])('keeps what version %i wrote under `arrangements`', version => {
+  it.each([9, 10, 11, 12])('keeps what version %i wrote under `arrangements`', version => {
     const migrated = migrateTools(
       {
         arrangements: {
@@ -265,11 +305,13 @@ describe('the default layout', () => {
   // What "Reset layout" in the native menu restores. It names no panel at all: naming one would
   // pick a section's answer — the layers, the shelf, the sky — and impose it on the other five.
   it('names which halves are open, and no panel in any of them', () => {
-    for (const family of Object.values(DEFAULT_OPEN)) {
-      for (const slots of Object.values(family)) {
-        for (const tool of Object.values(slots)) expect(tool).toBeNull()
-      }
-    }
+    const named = Object.values(DEFAULT_OPEN).flatMap(family =>
+      Object.values(family).flatMap(slots => Object.values(slots)),
+    )
+
+    // The anchor: an empty table satisfies "no panel is named" without opening anything at all.
+    expect(named.length).toBeGreaterThan(0)
+    for (const tool of named) expect(tool).toBeNull()
   })
 
   it('survives a round trip through the persisted shape', () => {
