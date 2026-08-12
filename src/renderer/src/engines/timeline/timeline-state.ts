@@ -213,7 +213,10 @@ export function clipFrom(clip: Clip, time: Us): Clip {
     ...clip,
     start: time,
     duration: clipEnd(clip) - time,
-    inPoint: sourceTimeAt(clip, time),
+    // Never negative: a still pulled leftwards runs before its own in point, and there is no
+    // earlier frame to seek to. `readPositive` drops a negative one when the project is read
+    // back, so the clip would return other than the one that was saved.
+    inPoint: Math.max(0, sourceTimeAt(clip, time)),
   }
 }
 

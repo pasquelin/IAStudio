@@ -2,7 +2,7 @@ import { fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
-import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
+import { RULER_HEIGHT, timeToX, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
 import type { Clip } from '@/engines/timeline/timeline-state'
 import { EMPTY_SEQUENCE, snapToFrame } from '@/engines/timeline/timeline-state'
@@ -222,6 +222,118 @@ describe('TimelineCanvas', () => {
     fireEvent.pointerUp(canvas, { clientX: 90, clientY: RULER_HEIGHT + 30 })
 
     expect(clipsOf()).toEqual(before)
+  })
+
+  /**
+   * The cursor is the whole of the feedback a trim gets before it starts: nothing is dragged
+   * yet, and the grips painted on the canvas say a clip has ends without saying they are live.
+   */
+  it('takes a resize cursor over a clip edge', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+
+    expect(canvas.style.cursor).toBe('ew-resize')
+  })
+
+  it('gives the cursor back over the body of a clip, which is dragged and not trimmed', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerMove(canvas, {
+      clientX: Math.round(timeToX(500_000, viewOf())),
+      clientY: RULER_HEIGHT + 30,
+    })
+
+    expect(canvas.style.cursor).toBe('')
+  })
+
+  it('drops the resize cursor when the pointer leaves, rather than carrying it off the canvas', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerLeave(canvas)
+
+    expect(canvas.style.cursor).toBe('')
+  })
+
+  it('never asks under the hand, which moves the view whether or not it is over an edge', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint('hand')
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+
+    expect(canvas.style.cursor).toBe('')
+    expect(canvas.className).toContain('cursor-grab')
+  })
+
+  // The blade cuts where it is pressed. A resize cursor there would promise a lengthening and
+  // hand back a cut two frames from the end, plus a history entry to undo.
+  it('never asks under the blade either, which cuts rather than trims', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint('blade')
+
+    fireEvent.pointerMove(canvas, { clientX: 1, clientY: RULER_HEIGHT + 30 })
+
+    expect(canvas.style.cursor).toBe('')
+  })
+
+  /**
+   * The gesture the whole lot exists for: lay an image down, pull its left end, decide how long
+   * it stays on screen. The clip starts at two seconds so there is room to grow leftwards.
+   */
+  const pullLeftEdgeTo = (target: number): void => {
+    const canvas = paint()
+    const left = Math.round(timeToX(2_000_000, viewOf()))
+
+    fireEvent.pointerDown(canvas, { clientX: left + 1, clientY: RULER_HEIGHT + 30 })
+    fireEvent.pointerUp(canvas, {
+      clientX: Math.round(timeToX(target, viewOf())),
+      clientY: RULER_HEIGHT + 30,
+    })
+  }
+
+  const layDown = (): void => {
+    useSequences
+      .getState()
+      .runCommand('doc-1', addClip('V1', clipFixture('c', 2_000_000, 1_000_000, { assetId: 'a1' })))
+  }
+
+  it('lengthens a still by its left edge, which is how an image gets its time on screen', () => {
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'image', name: 'card.png' })] })
+    layDown()
+
+    pullLeftEdgeTo(1_000_000)
+
+    expect(clipsOf()[0]).toMatchObject({ start: 1_000_000, duration: 2_000_000 })
+  })
+
+  // The strip takes every kind of asset, and a texture is as timeless as an image: reading the
+  // type alone rather than `isTimeless` refused this pull on two of the three kinds of picture.
+  it('lengthens a texture the same way, since a picture is a picture however it was made', () => {
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'texture', name: 'brick.png' })] })
+    layDown()
+
+    pullLeftEdgeTo(1_000_000)
+
+    expect(clipsOf()[0]).toMatchObject({ start: 1_000_000, duration: 2_000_000 })
+  })
+
+  /**
+   * `mediaDuration` answers null for a still AND for an asset nobody has probed yet, so without
+   * telling them apart this pull would succeed here too — and the clip would then ask for more
+   * source than the rush holds, freezing its tail on a frame with the sound gone.
+   */
+  it('refuses the same pull on a rush nobody has probed, whose source starts somewhere', () => {
+    useAssets.setState({ items: [asset({ id: 'a1', type: 'video', name: 'rush.mp4' })] })
+    layDown()
+
+    pullLeftEdgeTo(1_000_000)
+
+    expect(clipsOf()[0]).toMatchObject({ start: 2_000_000, duration: 1_000_000 })
   })
 
   it('undoes the last edit from the keyboard', () => {

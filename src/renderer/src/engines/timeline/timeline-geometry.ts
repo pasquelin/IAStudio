@@ -2,6 +2,7 @@ import { placeRows, rowAtOffset, rowsHeight } from './band'
 import {
   clipEnd,
   snapToFrame,
+  trackById,
   CLIP_EDGES,
   type Clip,
   type ClipEdge,
@@ -36,7 +37,9 @@ export type HitTarget =
 
 export const RULER_HEIGHT = 24
 /** Pixels around a clip edge that grab the edge rather than the body. */
-export const EDGE_GRAB = 6
+export const EDGE_GRAB = 8
+/** Share of a clip's width its body keeps, however narrow it gets: a clip must stay draggable. */
+const BODY_SHARE = 1 / 3
 /** Pixels around a fade handle that grab it. */
 export const FADE_GRAB = 7
 /** Depth of the strip along a clip's top where fade handles win over everything else. */
@@ -45,6 +48,14 @@ export const FADE_BAND = 12
 export const SNAP_THRESHOLD = 8
 /** Inset of a clip's rectangle inside its row, so neighbouring rows stay readable. */
 export const CLIP_INSET = 2
+/**
+ * Width of the bar drawn at each end of a clip. Narrower than the zone that grabs it — the
+ * target is meant to be forgiving, the mark is meant to say where the end is without eating
+ * the poster. Named for the edge, not for the fade handle this file already calls a handle.
+ */
+export const EDGE_BAR_WIDTH = 3
+/** How far the bar stops short of a clip's bottom, so it reads as a grip and not as a wall. */
+export const EDGE_BAR_INSET = 3
 
 export type SnapContext = {
   settings: SequenceSettings
@@ -102,6 +113,29 @@ export function fadeHandleTime(clip: Clip, edge: ClipEdge): Us {
   return edge === 'in' ? clip.start + clip.fadeIn : clipEnd(clip) - clip.fadeOut
 }
 
+/**
+ * How wide each edge's grab zone is on a clip of this width. Full width on any ordinary clip;
+ * on a narrow one the two zones would meet and swallow the body, and a clip that cannot be
+ * dragged is worse than one that is awkward to trim.
+ */
+export function edgeGrab(width: number): number {
+  return Math.min(EDGE_GRAB, (width * (1 - BODY_SHARE)) / 2)
+}
+
+/**
+ * The cursor over a point of the strip, as the CSS keyword — the same contract as the two other
+ * `cursorFor` in the studio. Both edges and fade handles are pulled sideways, and the cursor is
+ * the only sign either is live before a drag starts. Empty leaves the surface's own cursor.
+ *
+ * A locked track promises nothing: every edit on it is refused where it is applied, and an arrow
+ * offering a trim that will not happen is worse than no arrow at all.
+ */
+export function cursorAt(state: SequenceState, viewport: Viewport, point: Point): string {
+  const target = hitTest(state, viewport, point)
+  if (target?.kind !== 'edge' && target?.kind !== 'fade') return ''
+  return trackById(state, target.trackId)?.locked ? '' : 'ew-resize'
+}
+
 export function snap(time: Us, context: SnapContext): Us {
   const threshold = SNAP_THRESHOLD / context.viewport.scale
   let best: Us | null = null
@@ -123,27 +157,34 @@ export function hitTest(state: SequenceState, viewport: Viewport, point: Point):
 
   const { track } = row
   const top = RULER_HEIGHT + row.offset - viewport.scrollTop
-  const inBand = point.y - top <= FADE_BAND
+  // Exclusive, so the band ends exactly where the edge bar starts: inclusive left one row of
+  // pixels both painted as a grip and read as a fade, and a press there handed back a ramp.
+  const inBand = point.y - top < FADE_BAND
 
   for (const clip of track.clips) {
     const left = timeToX(clip.start, viewport)
     const right = timeToX(clipEnd(clip), viewport)
     if (point.x < left || point.x > right) continue
 
+    const grab = edgeGrab(right - left)
+
     // Fades win in the top band only: below it the same corner has to stay grabbable for a trim.
+    // Never by a smaller margin than the edge, or a ring around the corner would trim inside the
+    // band and leave that promise half true.
     if (inBand) {
+      const reach = Math.max(FADE_GRAB, grab)
       for (const edge of CLIP_EDGES) {
         const handle = timeToX(fadeHandleTime(clip, edge), viewport)
-        if (Math.abs(point.x - handle) <= FADE_GRAB) {
+        if (Math.abs(point.x - handle) <= reach) {
           return { kind: 'fade', clipId: clip.id, trackId: track.id, edge }
         }
       }
     }
 
-    if (point.x <= left + EDGE_GRAB) {
+    if (point.x <= left + grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'in' }
     }
-    if (point.x >= right - EDGE_GRAB) {
+    if (point.x >= right - grab) {
       return { kind: 'edge', clipId: clip.id, trackId: track.id, edge: 'out' }
     }
     return { kind: 'clip', clipId: clip.id, trackId: track.id }

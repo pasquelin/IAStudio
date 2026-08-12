@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { forgetPalette, paintTimeline } from './painter'
-import { RULER_HEIGHT, type Viewport } from './timeline-geometry'
+import {
+  CLIP_INSET,
+  EDGE_BAR_INSET,
+  EDGE_BAR_WIDTH,
+  FADE_BAND,
+  RULER_HEIGHT,
+  type Viewport,
+} from './timeline-geometry'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import {
   DEFAULT_TRACK_HEIGHT,
@@ -25,6 +32,8 @@ type Point = { x: number; y: number }
 /** Records what was painted, so the test asserts on rectangles and labels, not on pixels. */
 function spyContext() {
   const rects: Rect[] = []
+  const inks: string[] = []
+  let ink = ''
   const texts: { text: string; x: number; y: number }[] = []
   const lines: Point[] = []
   const images: Rect[] = []
@@ -47,10 +56,18 @@ function spyContext() {
       images.push({ x, y, width, height }),
     ),
     fillText: vi.fn((text: string, x: number, y: number) => texts.push({ text, x, y })),
-    fillRect: vi.fn((x: number, y: number, width: number, height: number) =>
-      rects.push({ x, y, width, height }),
-    ),
+    fillRect: vi.fn((x: number, y: number, width: number, height: number) => {
+      rects.push({ x, y, width, height })
+      inks.push(ink)
+    }),
   }
+
+  // The ink each rectangle was painted with, index for index with `rects`: `fillStyle` is
+  // reassigned a dozen times per clip, and reading the property back shows only the last.
+  Object.defineProperty(context, 'fillStyle', {
+    get: () => ink,
+    set: (value: string) => void (ink = value),
+  })
 
   // Every assignment kept, not just the last: the painter sets one font for the ruler and
   // another for the clips, and reading the property back would only ever show the second.
@@ -64,6 +81,7 @@ function spyContext() {
   return {
     context: context as unknown as CanvasRenderingContext2D,
     rects,
+    inks,
     texts,
     lines,
     images,
@@ -252,5 +270,86 @@ describe('timeline painter', () => {
     })
 
     expect(images[0]?.width).toBe(10)
+  })
+
+  it('marks both ends of a clip with a grip, which is what says it can be lengthened', () => {
+    const { context, rects } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    // 100 px wide, in a box inset by CLIP_INSET, the bar starting below the fade band.
+    const boxHeight = TRACK_HEIGHT - CLIP_INSET * 2 - 1
+    const bar = {
+      y: RULER_HEIGHT + FADE_BAND,
+      width: EDGE_BAR_WIDTH,
+      height: boxHeight - (FADE_BAND - CLIP_INSET) - EDGE_BAR_INSET,
+    }
+
+    expect(rects).toContainEqual({ x: 0, ...bar })
+    expect(rects).toContainEqual({ x: 100 - EDGE_BAR_WIDTH, ...bar })
+  })
+
+  /**
+   * The defect this guards against is the whole point of the bar: inside the fade band the same
+   * corner opens a fade, not a trim. A bar drawn up there is pressed for a lengthening and hands
+   * back a ramp — and with `fadeIn` at zero nothing else is painted there to warn of it.
+   */
+  it('starts the bar below the fade band, where the corner is a trim and not a fade', () => {
+    const { context, rects } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    const bars = rects.filter(rect => rect.width === EDGE_BAR_WIDTH)
+    expect(bars).toHaveLength(2)
+    for (const bar of bars) {
+      // The band is measured from the row's top, which is the ruler height on the first track.
+      expect(bar.y).toBeGreaterThanOrEqual(RULER_HEIGHT + FADE_BAND)
+      expect(bar.height).toBeGreaterThan(0)
+    }
+  })
+
+  it('draws a grip after the border, which is what puts it outside the clipping path', () => {
+    const { context, rects } = spyContext()
+    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
+
+    // The border is painted once the clip path is restored; anything before it can be masked
+    // by a poster, and a grip nobody sees says nothing about the end of a clip.
+    const border = rects.findIndex(rect => rect.x === 0 && rect.width === 1)
+    const grip = rects.findIndex(rect => rect.x === 0 && rect.width === EDGE_BAR_WIDTH)
+
+    expect(border).toBeGreaterThan(-1)
+    expect(grip).toBeGreaterThan(border)
+  })
+
+  it('inks the grips of the selected clip like its label, and the rest like a hint', () => {
+    document.documentElement.style.setProperty('--color-text', 'rgb(1, 2, 3)')
+    document.documentElement.style.setProperty('--color-muted', 'rgb(4, 5, 6)')
+    forgetPalette()
+
+    // Restored even on a failed assertion, as above: the palette is a module cache.
+    try {
+      const gripInk = (painted: { rects: Rect[]; inks: string[] }): string | undefined =>
+        painted.inks[painted.rects.findIndex(rect => rect.width === EDGE_BAR_WIDTH)]
+
+      const one = clip('a', 0, 1_000_000)
+      const chosen = spyContext()
+      paintTimeline(chosen.context, { ...stateWith([one]), selectedId: 'a' }, viewport, size)
+
+      const idle = spyContext()
+      paintTimeline(idle.context, stateWith([one]), viewport, size)
+
+      expect(gripInk(chosen)).toBe('rgb(1, 2, 3)')
+      expect(gripInk(idle)).toBe('rgb(4, 5, 6)')
+    } finally {
+      document.documentElement.style.removeProperty('--color-text')
+      document.documentElement.style.removeProperty('--color-muted')
+      forgetPalette()
+    }
+  })
+
+  it('leaves a clip too narrow to hold them unmarked, rather than covering it in grips', () => {
+    const { context, rects } = spyContext()
+    // 80 ms is 8 px wide: `edgeGrab` gives each edge under 3 px there, less than a grip needs.
+    paintTimeline(context, stateWith([clip('a', 0, 80_000)]), viewport, size)
+
+    expect(rects.filter(rect => rect.width === EDGE_BAR_WIDTH)).toHaveLength(0)
   })
 })

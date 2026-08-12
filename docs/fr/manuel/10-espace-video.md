@@ -34,7 +34,8 @@ introuvable, lui, reste noir et muet sans rien annoncer.
 | **Piste** | une ligne horizontale qui reçoit des clips. Il y a des pistes image et des pistes son |
 | **Clip** | un morceau de média posé sur une piste |
 | **Tête de lecture** | le trait vertical qui indique où on en est |
-| **Rogner** (*trim*) | raccourcir un clip par l’un de ses bouts |
+| **Rogner** (*trim*) | raccourcir **ou allonger** un clip par l’un de ses bouts |
+| **Poignée** | la barre verticale à chaque bout d’un clip, celle qu’on attrape pour le rogner |
 | **Point d’entrée** | l’endroit du fichier d’origine où le clip commence |
 
 ---
@@ -60,7 +61,8 @@ un clip qui y atterrirait aurait l’air de n’avoir rien fait.
 Dans les deux cas, le studio décide de deux choses :
 
 - **la durée** — celle du média. Une image fixe, ou un média dont la durée est inconnue, dure
-  **5 secondes** par défaut ;
+  **5 secondes** par défaut. Ce n’est qu’un point de départ : le temps qu’une image reste à
+  l’écran se décide en tirant sur l’un ou l’autre de ses bouts, voir plus bas ;
 - **le calage** — sur une image entière, jamais entre deux. Vous pouvez viser au pixel, le clip
   se range tout seul sur l’image la plus proche.
 
@@ -70,7 +72,7 @@ Dans les deux cas, le studio décide de deux choses :
 
 | Outil | Raccourci | Ce qu’il fait |
 |---|---|---|
-| **Sélection** | `V` | sélectionne, déplace et rogne les clips |
+| **Sélection** | `V` | sélectionne, déplace, rogne et allonge les clips |
 | **Lame** | `C` | coupe un clip là où vous cliquez |
 | **Main** | `H` | fait défiler la timeline — molette pour zoomer |
 
@@ -84,7 +86,18 @@ Dans les deux cas, le studio décide de deux choses :
 |---|---|
 | **Clic** sur un clip | le sélectionne — l’inspecteur le montre |
 | **Glisser** le corps du clip | le déplace, y compris d’une piste à l’autre |
-| **Glisser** un bord du clip | le rogne de ce côté |
+| **Glisser** un bord du clip | le rogne ou l’allonge de ce côté |
+
+**Chaque bout d’un clip porte une poignée**, une barre verticale, et le curseur y devient une
+double flèche : c’est le signe que le bord est attrapable. Sur un clip trop étroit pour les
+porter, les poignées disparaissent et le milieu reste au déplacement — sans quoi un clip mince
+ne pourrait plus être bougé du tout. **Seul l’outil Sélection montre cette double flèche** : la
+**Main** prend toute la surface pour faire défiler, et la **Lame** coupe là où l’on clique — ni
+l’une ni l’autre ne rogne, et leur curseur ne le promet donc pas.
+
+**Un clip allongé recouvre son voisin** plutôt que de buter dessus, comme dans DaVinci ou
+Premiere : allonger un plan, c’est demander au suivant de céder la place. `⌘Z` remet la piste
+entière comme elle était.
 
 **Le magnétisme est automatique.** Un clip déplacé colle :
 
@@ -92,8 +105,12 @@ Dans les deux cas, le studio décide de deux choses :
 - aux **bords des clips voisins**, pour qu’il n’y ait pas de trou d’un millième de seconde
   invisible à l’œil.
 
-> Un clip rogné ne peut pas dépasser la longueur du média d’origine. Le studio arrête le
-> rognage tout seul plutôt que d’afficher du noir.
+> **Une vidéo ou un son** ne peut pas dépasser la longueur du média d’origine. Le studio arrête
+> le rognage tout seul plutôt que d’afficher du noir.
+>
+> **Une image fixe n’a aucun média à dépasser** : ses deux bouts l’allongent autant qu’on veut,
+> et la seule borne est le début de la séquence. C’est ainsi qu’on décide du temps qu’un carton
+> de titre reste à l’écran.
 
 ---
 
