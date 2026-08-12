@@ -151,7 +151,7 @@ The big names in the field, different per workspace:
 
 ### Date — how long the model has existed
 
-**Last 24 hours** · **Last 7 days** · **Last 30 days** · **Last quarter**.
+**Last 24 hours** · **Last 7 days** · **Last 30 days** · **Last 3 months**.
 
 Useful for seeing what has just come out.
 

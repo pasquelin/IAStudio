@@ -22,6 +22,7 @@ import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
   MODEL_SORTS,
+  PERIOD_DAYS,
   TAG_LABEL_KEY_LIST,
 } from '../domain/model'
 import { INGEST_STAGES } from '../domain/media'
@@ -550,29 +551,65 @@ describe('the symbol of a creative unit', () => {
   })
 })
 
-/** The figures a label states — `Last 3 months` says 3, `Last quarter` says nothing. */
-function spanOf(code: Language, period: string): string {
-  return ((BUNDLES[code].get(`periods.${period}`) ?? '').match(/\d+/g) ?? []).join('+')
+/**
+ * Hours rather than days, so every span below is a whole number: a day counted as `1 / 24` of
+ * anything multiplies back to `0.9999…`, and the comparison would turn on floating point.
+ *
+ * A month is thirty days because that is the month `PERIOD_DAYS` counts — three of them are the
+ * ninety days the query asks for, and a calendar month would make the label and the code differ
+ * by two days in February for nothing.
+ */
+const UNIT_HOURS: Record<string, number> = {
+  h: 1,
+  heures: 1,
+  hour: 1,
+  hours: 1,
+  jour: 24,
+  jours: 24,
+  day: 24,
+  days: 24,
+  mois: 720,
+  month: 720,
+  months: 720,
+}
+
+/**
+ * How long a label says the span is, in hours — `null` when it names no length, or names it in
+ * a unit nothing here converts. Both are failures: a span nobody can check is not a span anyone
+ * should trust.
+ *
+ * The unit is looked for among ALL the words rather than the one after the number, because
+ * French puts an adjective between the two: `7 derniers jours`.
+ */
+function statedHours(code: Language, period: string): number | null {
+  const label = BUNDLES[code].get(`periods.${period}`) ?? ''
+  const count = Number(label.match(/\d+/)?.[0] ?? NaN)
+  const unit = label
+    .toLowerCase()
+    .split(/[^\p{Letter}]+/u)
+    .map(word => UNIT_HOURS[word])
+    .find(hours => hours !== undefined)
+
+  return Number.isNaN(count) || unit === undefined ? null : count * unit
 }
 
 describe('how far back a listing reaches', () => {
   /**
    * Every span is ROLLING — `now` minus so many days, `PERIOD_DAYS` applied against the main
-   * process's own clock — so a label states its LENGTH, and states the same one everywhere.
-   * English read `Last quarter` beside `Last 30 days`, and a quarter is a piece of the calendar:
-   * ninety rolling days announced themselves as the quarter that ended, which is a different set
-   * of models and no way to tell from the menu.
+   * process's own clock — so a label states the LENGTH the query uses, in whatever unit reads
+   * best. English read `Last quarter` beside `Last 30 days`, and a quarter is a piece of the
+   * calendar: ninety rolling days announced themselves as the quarter that ended, which is a
+   * different set of models and no way to tell from the menu.
    *
-   * Compared across the languages rather than against `PERIOD_DAYS`, which counts days where two
-   * of the four labels count hours and months: a conversion table here would be a second place
-   * to be right, and the divergence it exists to catch is between the bundles.
+   * Read against `PERIOD_DAYS` rather than between the bundles: two translations agreeing with
+   * each other and both wrong is the failure a comparison between them cannot see, and it is
+   * the likelier one — a span is edited in the table, not in one language.
    */
-  it('states the same span in every language', () => {
-    const unclear = MODEL_PERIODS.filter(period => {
-      const stated = new Set(CODES.map(code => spanOf(code, period)))
-      return stated.size !== 1 || stated.has('')
-    })
+  it.each(CODES)('says how long the span the query uses is, in %s', code => {
+    const wrong = MODEL_PERIODS.filter(
+      period => statedHours(code, period) !== PERIOD_DAYS[period] * 24,
+    )
 
-    expect(unclear).toEqual([])
+    expect(wrong).toEqual([])
   })
 })
