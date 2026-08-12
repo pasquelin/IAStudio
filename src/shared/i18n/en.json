@@ -1143,7 +1143,9 @@
     "licences": "Licences",
     "imageTools": "Tools",
     "usage": "Usage…",
-    "graph": "Graph"
+    "graph": "Graph",
+    "sceneDisplay": "Display mode",
+    "sceneView": "Point of view"
   },
   "about": {
     "copyright": "© 2026 Alban Pasquelin"

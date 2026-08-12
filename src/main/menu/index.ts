@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
 import { placementOf, type ToolId } from '@shared/domain/tool'
-import type { BindingOverrides } from '@shared/domain/command'
+import type { BindingOverrides, MenuCheck } from '@shared/domain/command'
 import { DEFAULT_LANGUAGE, type Language } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
@@ -42,9 +42,13 @@ const workspaces = new Map<number, WorkspaceId>()
 /** The panels each window reported it can open. Same per-window reasoning as `workspaces`. */
 const availableTools = new Map<number, readonly ToolId[]>()
 
+/** The rows each window reported as ticked. Same per-window reasoning again. */
+const checkedRows = new Map<number, readonly MenuCheck[]>()
+
 /** What the menu currently shows, so a focus change that alters nothing rebuilds nothing. */
 let shown: WorkspaceId | null = null
 let shownTools: readonly ToolId[] = []
+let shownChecks: readonly MenuCheck[] = []
 let language: Language = DEFAULT_LANGUAGE
 /**
  * Remembered between builds, like the language: the menu is rebuilt whenever the focus moves
@@ -62,6 +66,11 @@ function focusedTools(): readonly ToolId[] {
   return (target && availableTools.get(target.webContents.id)) || []
 }
 
+function focusedChecks(): readonly MenuCheck[] {
+  const target = focusedWindow()
+  return (target && checkedRows.get(target.webContents.id)) || []
+}
+
 /**
  * Native application menu. Together with the icon rails, it is one of the two ways back for a
  * tool removed with its close button — a panel closed with no way to reopen it would be lost.
@@ -71,11 +80,13 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
   overrides = remapped
   shown = focusedWorkspace()
   shownTools = focusedTools()
+  shownChecks = focusedChecks()
 
   const template = menuTemplate({
     language,
     workspace: shown,
     tools: shownTools,
+    checked: shownChecks,
     isMac: process.platform === 'darwin',
     isDevelopment,
     overrides,
@@ -87,6 +98,8 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
       openTool: request => sendToFocused(EVENTS.openTool, request),
       runCommand: command => sendToFocused(EVENTS.menuCommand, command),
       addNode: request => sendToFocused(EVENTS.sceneAdd, request),
+      viewFrom: request => sendToFocused(EVENTS.sceneView, request),
+      setDisplay: request => sendToFocused(EVENTS.sceneDisplay, request),
       exportScene: command => sendToFocused(EVENTS.sceneExport, command),
       exportTexture: command => sendToFocused(EVENTS.textureExport, command),
       exportSkybox: command => sendToFocused(EVENTS.skyboxExport, command),
@@ -96,12 +109,25 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-function sameTools(tools: readonly ToolId[]): boolean {
-  return tools.length === shownTools.length && tools.every((id, index) => id === shownTools[index])
+function sameList(next: readonly string[], shownList: readonly string[]): boolean {
+  return next.length === shownList.length && next.every((id, index) => id === shownList[index])
 }
 
+/**
+ * Rebuilt only when something the menu draws has actually changed.
+ *
+ * The comparison matters more than it did: ticks are published on every write of five stores,
+ * and a scene being flown writes one of them on every frame. Without it, `setApplicationMenu`
+ * would run sixty times a second.
+ */
 function rebuildIfStale(): void {
-  if (focusedWorkspace() !== shown || !sameTools(focusedTools())) buildMenu()
+  if (
+    focusedWorkspace() !== shown ||
+    !sameList(focusedTools(), shownTools) ||
+    !sameList(focusedChecks(), shownChecks)
+  ) {
+    buildMenu()
+  }
 }
 
 /**
@@ -109,7 +135,7 @@ function rebuildIfStale(): void {
  * is in. It announces the restored one on startup and again on every click of the space rail.
  */
 export function registerMenuHandlers(): void {
-  handle(CHANNELS.windowWorkspace, (event, next, tools) => {
+  handle(CHANNELS.windowWorkspace, (event, next, tools, checked) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a workspace this one has dropped.
     if (!WORKSPACE_IDS.includes(next)) return
@@ -118,6 +144,7 @@ export function registerMenuHandlers(): void {
       event.sender.id,
       tools.filter(id => placementOf(id) !== null),
     )
+    checkedRows.set(event.sender.id, checked)
     rebuildIfStale()
   })
 
@@ -129,6 +156,7 @@ export function registerMenuHandlers(): void {
     window.on('closed', () => {
       workspaces.delete(id)
       availableTools.delete(id)
+      checkedRows.delete(id)
       rebuildIfStale()
     })
   })

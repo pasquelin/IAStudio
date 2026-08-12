@@ -12,6 +12,12 @@ import {
   type ObjectKind,
   type SceneEntry,
 } from '@shared/domain/scene'
+import {
+  DISPLAY_MODES,
+  VIEW_DIRECTIONS,
+  type DisplayMode,
+  type ViewDirection,
+} from '@shared/domain/scene'
 import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import {
@@ -20,6 +26,7 @@ import {
   scopeOfWorkspace,
   type BindingOverrides,
   type CommandId,
+  type MenuCheck,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
@@ -27,7 +34,9 @@ import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
 import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
+  SceneDisplayRequest,
   SceneExportCommand,
+  SceneViewRequest,
   SkyboxExportCommand,
   TextureExportCommand,
   ToolRequest,
@@ -46,6 +55,8 @@ export type MenuActions = {
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
   addNode: (request: SceneAddRequest) => void
+  viewFrom: (request: SceneViewRequest) => void
+  setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
   exportTexture: (command: TextureExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
@@ -68,6 +79,11 @@ export type MenuOptions = {
   tools: readonly ToolId[]
   isMac: boolean
   isDevelopment: boolean
+  /**
+   * The rows the focused window reported as ticked. A row that toggles has to say whether it is
+   * on, and only the window knows: the state belongs to the document in front.
+   */
+  checked: readonly MenuCheck[]
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -118,7 +134,7 @@ function placementsFor(tools: readonly ToolId[], workspace: WorkspaceId | null):
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, tools, isMac, isDevelopment, overrides, actions } = options
+  const { language, workspace, tools, checked, isMac, isDevelopment, overrides, actions } = options
 
   /**
    * The accelerator of a command, read off the registry. Written by hand until now, which is
@@ -334,6 +350,58 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
         ]
       : []
 
+  /** A row that says whether it is on. `checkbox` and not a tick in the label: AppKit draws it. */
+  const toggleItem = (command: CommandId, label: string): MenuItemConstructorOptions => ({
+    ...commandItem(command, label),
+    type: 'checkbox',
+    checked: checked.includes(command),
+  })
+
+  /** The six sides. An action, not a state: looking from the front leaves nothing turned on. */
+  const viewItems = (): MenuItemConstructorOptions[] =>
+    VIEW_DIRECTIONS.map((direction: ViewDirection) => ({
+      label: t.sceneViews[direction],
+      click: () => actions.viewFrom({ direction }),
+    }))
+
+  /**
+   * The seven ways of drawing, as alternatives — exactly one is true at a time, which is what
+   * `radio` says and a row of checkboxes would not.
+   *
+   * The key that cycles them keeps its own row above: a menu is where one is PICKED, `Z` is how
+   * one moves through them, and neither replaces the other.
+   */
+  const displayItems = (): MenuItemConstructorOptions[] =>
+    DISPLAY_MODES.map((mode: DisplayMode) => ({
+      label: t.sceneDisplay[mode],
+      type: 'radio',
+      checked: checked.includes(`scene.display:${mode}`),
+      click: () => actions.setDisplay({ mode }),
+    }))
+
+  /**
+   * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
+   * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
+   *
+   * Seven of these nine were reachable by pointer through that bar alone. They are settings one
+   * changes once a session, not gestures repeated by the minute, which is what a menu is for.
+   */
+  const sceneViewMenu: MenuItemConstructorOptions[] =
+    workspace === '3d'
+      ? [
+          { type: 'separator' },
+          { label: t.menu.sceneDisplay, submenu: displayItems() },
+          { label: t.menu.sceneView, submenu: viewItems() },
+          { type: 'separator' },
+          toggleItem('scene.projection', t.commands.sceneProjection.title),
+          toggleItem('scene.quad', t.commands.sceneQuad.title),
+          toggleItem('scene.quadEdges', t.commands.sceneQuadEdges.title),
+          { type: 'separator' },
+          toggleItem('scene.skeletons', t.commands.sceneSkeletons.title),
+          toggleItem('scene.poseMode', t.commands.scenePoseMode.title),
+        ]
+      : []
+
   /**
    * Every tool of the image space, in the order the bar stacks them.
    *
@@ -495,6 +563,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           click: () => actions.runCommand('layout.reset'),
         },
         ...canvasViewMenu,
+        ...sceneViewMenu,
         { type: 'separator' },
         {
           label: t.menu.fullScreen,

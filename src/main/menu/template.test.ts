@@ -2,7 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
 import { APP_NAME } from '@shared/constants'
 import { COMMAND_REGISTRY } from '@shared/domain/command'
-import { LIGHT_ENTRIES, MESH_ENTRIES } from '@shared/domain/scene'
+import { DISPLAY_MODES, LIGHT_ENTRIES, MESH_ENTRIES, VIEW_DIRECTIONS } from '@shared/domain/scene'
 import { LANGUAGES, TRANSLATIONS } from '@shared/i18n'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import { menuTemplate, type MenuActions, type MenuOptions } from './template'
@@ -15,6 +15,8 @@ const actions = (overrides: Partial<MenuActions> = {}): MenuActions => ({
   openTool: () => {},
   runCommand: () => {},
   addNode: () => {},
+  viewFrom: () => {},
+  setDisplay: () => {},
   exportScene: () => {},
   exportTexture: () => {},
   exportSkybox: () => {},
@@ -25,6 +27,7 @@ const options = (given: Partial<MenuOptions> = {}): MenuOptions => ({
   language: 'fr',
   workspace: '3d',
   tools: ['meshes', 'lights', 'explorer', 'models', 'generator', 'inspector', 'assets'],
+  checked: [],
   isMac: true,
   isDevelopment: true,
   overrides: {},
@@ -123,6 +126,78 @@ describe('the Image menu', () => {
     activate(entries.find(entry => entry.label === 'Rotation horaire'))
 
     expect(runCommand).toHaveBeenCalledWith('canvas.rotateCw')
+  })
+})
+
+/**
+ * The rows that took the place of fifteen toolbar buttons. Seven of the nine were reachable by
+ * pointer through that bar alone, which is what made shrinking it to eight impossible until now.
+ */
+describe('the 3D View rows', () => {
+  const viewOf = (given: Partial<MenuOptions> = {}): MenuItemConstructorOptions[] =>
+    submenuOf(menuTemplate(options(given)), 'Affichage')
+
+  it('are offered in the 3D workspace alone', () => {
+    expect(labels(viewOf())).toContain('Mode de rendu')
+    expect(labels(viewOf({ workspace: 'image' }))).not.toContain('Mode de rendu')
+    expect(labels(viewOf({ workspace: null }))).not.toContain('Mode de rendu')
+  })
+
+  it('offers one row per side, and per way of drawing', () => {
+    expect(submenuOf(viewOf(), 'Point de vue')).toHaveLength(VIEW_DIRECTIONS.length)
+    expect(submenuOf(viewOf(), 'Mode de rendu')).toHaveLength(DISPLAY_MODES.length)
+  })
+
+  it('asks the scene to look from the side the row names', () => {
+    const viewFrom = vi.fn()
+    const rows = submenuOf(
+      submenuOf(menuTemplate(options({ actions: actions({ viewFrom }) })), 'Affichage'),
+      'Point de vue',
+    )
+
+    activate(rows.find(row => row.label === 'De dessus'))
+    expect(viewFrom).toHaveBeenCalledWith({ direction: 'top' })
+  })
+
+  it('asks the scene to draw the way the row names', () => {
+    const setDisplay = vi.fn()
+    const rows = submenuOf(
+      submenuOf(menuTemplate(options({ actions: actions({ setDisplay }) })), 'Affichage'),
+      'Mode de rendu',
+    )
+
+    activate(rows.find(row => row.label === 'Filaire'))
+    expect(setDisplay).toHaveBeenCalledWith({ mode: 'wireframe' })
+  })
+
+  /**
+   * A toggle that reads the same on and off is half a control, and the reason the six of them
+   * could not simply be moved: the state belongs to the document, which the main process has no
+   * access to. It arrives through `checked`.
+   */
+  it('ticks exactly the rows the window reported', () => {
+    const rows = viewOf({ checked: ['scene.quad', 'scene.skeletons'] })
+    const ticked = rows.filter(row => row.checked === true).map(row => row.label)
+
+    expect(ticked).toEqual(['Quatre vues', 'Afficher les squelettes'])
+  })
+
+  it('draws its toggles as checkboxes rather than as plain rows', () => {
+    const rows = viewOf().filter(row => row.label === 'Mode pose')
+    expect(rows[0]?.type).toBe('checkbox')
+  })
+
+  /** Exactly one way of drawing is true at a time, which a row of checkboxes would not say. */
+  it('draws the ways of drawing as alternatives, and ticks the one in force', () => {
+    const rows = submenuOf(viewOf({ checked: ['scene.display:matcap'] }), 'Mode de rendu')
+
+    expect(rows.every(row => row.type === 'radio')).toBe(true)
+    expect(rows.filter(row => row.checked === true).map(row => row.label)).toEqual(['Matcap'])
+  })
+
+  /** The tick follows the value, not the row: nothing is on in a scene nobody has touched. */
+  it('ticks nothing at all when the window reported nothing', () => {
+    expect(viewOf().filter(row => row.checked === true)).toEqual([])
   })
 })
 

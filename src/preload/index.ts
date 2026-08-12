@@ -15,6 +15,8 @@ import {
   EVENTS,
   type LogEntry,
   type SceneAddRequest,
+  type SceneDisplayRequest,
+  type SceneViewRequest,
   type SceneExportCommand,
   type SkyboxExportCommand,
   type TextureExportCommand,
@@ -180,13 +182,15 @@ const bridge: StudioBridge = {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
-    setWorkspace: (workspace, tools) =>
-      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools),
+    setWorkspace: (workspace, tools, checked) =>
+      ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked),
   },
   menu: {
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),
+    onSceneView: callback => subscribe<SceneViewRequest>(EVENTS.sceneView, callback),
+    onSceneDisplay: callback => subscribe<SceneDisplayRequest>(EVENTS.sceneDisplay, callback),
     onSceneExport: callback => subscribe<SceneExportCommand>(EVENTS.sceneExport, callback),
     onTextureExport: callback => subscribe<TextureExportCommand>(EVENTS.textureExport, callback),
     onSkyboxExport: callback => subscribe<SkyboxExportCommand>(EVENTS.skyboxExport, callback),

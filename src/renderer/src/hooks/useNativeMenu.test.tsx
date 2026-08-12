@@ -1,6 +1,12 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SceneAddRequest, Unsubscribe } from '@shared/ipc'
+import type { MenuCheck } from '@shared/domain/command'
+import type {
+  SceneAddRequest,
+  SceneDisplayRequest,
+  SceneViewRequest,
+  Unsubscribe,
+} from '@shared/ipc'
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
 import type { ToolId } from '@shared/domain/tool'
@@ -9,6 +15,7 @@ import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 
@@ -20,7 +27,7 @@ vi.mock('@/app/document-io', () => ({
 const { useNativeMenu } = await import('./useNativeMenu')
 
 /** Holds the listener the hook registers on a menu channel, so the test can play the menu. */
-function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand') {
+function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand' | 'onSceneView' | 'onSceneDisplay') {
   let listener: ((payload: T) => void) | null = null
   const watched = bridgeWatchingLogs({
     menu: {
@@ -37,6 +44,8 @@ function captureMenu<T>(channel: 'onSceneAdd' | 'onCommand') {
 
 const captureSceneAdd = () => captureMenu<SceneAddRequest>('onSceneAdd')
 const captureCommand = () => captureMenu<CommandId>('onCommand')
+const captureSceneView = () => captureMenu<SceneViewRequest>('onSceneView')
+const captureSceneDisplay = () => captureMenu<SceneDisplayRequest>('onSceneDisplay')
 
 function meshes() {
   return sceneOf(useScenes.getState(), 'doc-1').nodes.filter(node => node.type === 'mesh')
@@ -45,6 +54,9 @@ function meshes() {
 beforeEach(() => {
   vi.clearAllMocks()
   installScene('doc-1')
+  // Cleared with the rest: how a scene is drawn is what half of this suite now asserts on, and
+  // a view left behind by another test reads as one this one set.
+  useSceneViews.setState({ views: {} })
 })
 
 describe('useNativeMenu', () => {
@@ -138,13 +150,18 @@ describe('useNativeMenu', () => {
 describe('what the native menu is told', () => {
   const setWorkspace = vi.fn(() => Promise.resolve())
 
-  function lastPublished(): { workspace: string; tools: readonly ToolId[] } {
+  function lastPublished(): {
+    workspace: string
+    tools: readonly ToolId[]
+    checked: readonly MenuCheck[]
+  } {
     // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
-    const [workspace, tools] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+    const [workspace, tools, checked] = (setWorkspace.mock.lastCall ?? []) as unknown as [
       string,
       readonly ToolId[],
+      readonly MenuCheck[],
     ]
-    return { workspace, tools }
+    return { workspace, tools, checked }
   }
 
   beforeEach(() => {
@@ -178,5 +195,84 @@ describe('what the native menu is told', () => {
     renderHook(() => useNativeMenu())
     useModels.getState().select('image', 'flux-dev', 'image')
     expect(lastPublished().tools).toContain('generator')
+  })
+
+  /**
+   * The ticks. Without them a "Skeletons" row would read the same whether they are drawn or
+   * not — which is why the six toggles could not simply move off the bar.
+   */
+  describe('the rows it reports as ticked', () => {
+    it('names the way the main view draws, and nothing else, on a scene nobody has touched', () => {
+      renderHook(() => useNativeMenu())
+      expect(lastPublished().checked).toEqual(['scene.display:shaded'])
+    })
+
+    it('names a toggle as soon as it is on', () => {
+      renderHook(() => useNativeMenu())
+      useSceneViews.getState().setSkeletons('doc-1', true)
+      expect(lastPublished().checked).toContain('scene.skeletons')
+    })
+
+    it('drops it again when it goes off', () => {
+      renderHook(() => useNativeMenu())
+      useSceneViews.getState().setQuad('doc-1', true)
+      useSceneViews.getState().setQuad('doc-1', false)
+      expect(lastPublished().checked).not.toContain('scene.quad')
+    })
+
+    it('follows the way the main view draws', () => {
+      renderHook(() => useNativeMenu())
+      useSceneViews.getState().setDisplay('doc-1', 0, 'matcap')
+      expect(lastPublished().checked).toContain('scene.display:matcap')
+    })
+
+    /**
+     * `useSceneViews` carries the animation playhead, written on every frame of a running
+     * animation. Published without a comparison, a played scene would send sixty messages a
+     * second for a menu that never changes.
+     */
+    it('sends nothing at all when a write changes nothing the menu draws', () => {
+      renderHook(() => useNativeMenu())
+      const sent = setWorkspace.mock.calls.length
+
+      useSceneViews.getState().setPlayhead('doc-1', 1_000_000)
+      useSceneViews.getState().setPlayhead('doc-1', 2_000_000)
+
+      expect(setWorkspace.mock.calls.length).toBe(sent)
+    })
+  })
+})
+
+describe('what the native View menu asks of the scene', () => {
+  it('switches the main view to the way of drawing the row named', () => {
+    const menu = captureSceneDisplay()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ mode: 'wireframe' })
+
+    expect(displayOfPane(sceneViewOf(useSceneViews.getState(), 'doc-1').displays, 0)).toBe(
+      'wireframe',
+    )
+  })
+
+  it('draws nothing when the document in front is not a scene', () => {
+    useDocuments.setState({ activeId: null })
+    const menu = captureSceneDisplay()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ mode: 'wireframe' })
+
+    expect(displayOfPane(sceneViewOf(useSceneViews.getState(), 'doc-1').displays, 0)).toBe('shaded')
+  })
+
+  /**
+   * A side to look from is the camera's, and the camera belongs to the engine — a tab whose
+   * viewport is not mounted has none, and the row must not throw on it.
+   */
+  it('says nothing to a scene whose viewport is not mounted', () => {
+    const menu = captureSceneView()
+    renderHook(() => useNativeMenu())
+
+    expect(() => menu.emit({ direction: 'top' })).not.toThrow()
   })
 })

@@ -115,6 +115,18 @@ export type CommandId =
   | 'texture.redo'
 
 /**
+ * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
+ *
+ * The renderer publishes the ones that are ON and the main process ticks exactly those. A string
+ * rather than a structure because it crosses the bridge and is only ever compared — and a
+ * template literal rather than a bare string so a typo in a mode cannot compile.
+ *
+ * Kept out of the row itself: whether a scene is drawn in wireframe is not a fact of the command
+ * registry, it is a fact of the document in front, which only the renderer holds.
+ */
+export type MenuCheck = CommandId | `${CommandId}:${string}`
+
+/**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
  * key it ships with.
  *

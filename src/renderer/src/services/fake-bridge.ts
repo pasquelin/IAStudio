@@ -197,6 +197,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onOpenTool: noSubscription,
       onCommand: noSubscription,
       onSceneAdd: noSubscription,
+      onSceneView: noSubscription,
+      onSceneDisplay: noSubscription,
       onSceneExport: noSubscription,
       onTextureExport: noSubscription,
       onSkyboxExport: noSubscription,

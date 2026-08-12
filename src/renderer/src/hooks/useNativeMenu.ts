@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { CommandId } from '@shared/domain/command'
+import type { CommandId, MenuCheck } from '@shared/domain/command'
 import { saveDocument } from '@/app/document-io'
 import { revealTool } from '@/helpers/reveal-panel'
 import { availableToolIds } from '@/helpers/tool-registry'
@@ -8,6 +8,8 @@ import { publishCommand } from '@/services/command-bus'
 import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
+import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
+import { sceneEngineOf } from '@/stores/scene-engines'
 import { toolSurface, useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { useProject } from '@/stores/project'
@@ -46,6 +48,44 @@ function runCommand(command: CommandId): void {
 }
 
 /**
+ * Which View rows are ticked, read off the scene in front.
+ *
+ * A row that toggles has to SAY whether it is on — a "Skeletons" row that reads the same either
+ * way is half a control. The state lives here because it belongs to a document, and the main
+ * process holds no document.
+ *
+ * Only the main pane's way of drawing is published: a quad layout gives each of its four views
+ * one, and a menu has a single row to say it with. The bar has the same limit, for the same
+ * reason — see `SceneDocument`.
+ */
+function sceneChecks(): MenuCheck[] {
+  const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
+  if (!documentId) return []
+
+  const view = sceneViewOf(useSceneViews.getState(), documentId)
+  const checks: MenuCheck[] = [`scene.display:${displayOfPane(view.displays, 0)}`]
+
+  if (view.projection === 'orthographic') checks.push('scene.projection')
+  if (view.quad) checks.push('scene.quad')
+  if (view.quadEdges) checks.push('scene.quadEdges')
+  if (view.skeletons) checks.push('scene.skeletons')
+  if (view.poseMode) checks.push('scene.poseMode')
+
+  return checks
+}
+
+/**
+ * What was last sent, so an identical context is not sent twice.
+ *
+ * The main process already drops a rebuild that changes nothing, and that was enough while this
+ * was published on three stores nobody writes in a loop. `useSceneViews` is not one of those:
+ * it carries the animation playhead, written on EVERY frame of a running animation. Compared
+ * here, a played scene sends nothing; compared only on the other side, it would send sixty
+ * messages a second for a menu that never changes.
+ */
+let published = ''
+
+/**
  * Tells the main process what the menu should offer. Published from here rather than from
  * `setActiveWorkspace`, because it depends on more than the section: choosing a model brings
  * the generator into existence, and the menu has to learn it at that moment.
@@ -56,7 +96,13 @@ function publishMenuContext(): void {
   // the Explorer alone, and offering the other panels there would be menu entries that do
   // nothing visible.
   const tools = availableToolIds(toolSurface())
-  void getBridge()?.window.setWorkspace(workspace, tools)
+  const checked = sceneChecks()
+
+  const signature = JSON.stringify([workspace, tools, checked])
+  if (signature === published) return
+  published = signature
+
+  void getBridge()?.window.setWorkspace(workspace, tools, checked)
 }
 
 /**
@@ -70,13 +116,19 @@ export function useNativeMenu(): void {
     const bridge = getBridge()
     if (!bridge) return
 
+    // A window that has just mounted has announced nothing, whatever a previous mount of this
+    // module sent. Without this the first publication after a remount would be skipped as a
+    // duplicate, and the menu would sit on what the PREVIOUS window happened to leave behind.
+    published = ''
     // The persisted workspace is restored without going through `setActiveWorkspace`, so the
     // menu would sit on the default until the user switched spaces by hand.
     publishMenuContext()
     // The main process drops a rebuild that changes nothing, so publishing on every write of
     // these three stores costs a comparison rather than a menu.
-    const stopPublishing = [useLayouts, useModels, useSettings].map(store =>
-      store.subscribe(publishMenuContext),
+    // `useSceneViews` and `useDocuments` join the three: a tick follows the scene in front, and
+    // both which scene that is and how it is drawn are written there.
+    const stopPublishing = [useLayouts, useModels, useSettings, useSceneViews, useDocuments].map(
+      store => store.subscribe(publishMenuContext),
     )
 
     // Through `revealTool`, which resolves the zone: a tool sits in different ones depending on
@@ -92,10 +144,24 @@ export function useNativeMenu(): void {
       if (documentId) addNodeTo(documentId, kind)
     })
 
+    // The camera is the engine's, not the store's: a side to look from is a move, not a state
+    // — see `PaneView`. The main pane alone, as the bar's own flyout does.
+    const stopSceneView = bridge.menu.onSceneView(({ direction }) => {
+      const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
+      if (documentId) sceneEngineOf(documentId)?.viewFrom(direction)
+    })
+
+    const stopSceneDisplay = bridge.menu.onSceneDisplay(({ mode }) => {
+      const documentId = activeIdOfKind(useDocuments.getState(), 'scene')
+      if (documentId) useSceneViews.getState().setDisplay(documentId, 0, mode)
+    })
+
     return () => {
       stopTool()
       stopCommand()
       stopSceneAdd()
+      stopSceneView()
+      stopSceneDisplay()
       for (const stop of stopPublishing) stop()
     }
   }, [])
