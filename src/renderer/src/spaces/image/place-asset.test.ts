@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
+import { reportFailure } from '@/services/diagnostics'
 import { canvasOf, canvasStore, useCanvases } from '@/stores/canvases'
 import { becomeAsset, placeAsset } from './place-asset'
+
+vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
+
+const said = () => vi.mocked(reportFailure).mock.calls.map(([, , error]) => String(error))
 
 const DOCUMENT = 'image-1'
 
@@ -17,6 +22,7 @@ const picture: Asset = {
 
 beforeEach(() => {
   useCanvases.setState({ states: {}, histories: {} })
+  vi.mocked(reportFailure).mockClear()
 })
 
 const stack = () => canvasOf(useCanvases.getState(), DOCUMENT)
@@ -106,11 +112,37 @@ describe('making a document be the asset', () => {
     expect(canvasStore.hasUnsavedWork(useCanvases.getState(), DOCUMENT)).toBe(false)
   })
 
-  // A picture that will not decode still opens; the size guard on ⌘S is what keeps it safe.
+  // A picture that will not decode still opens, rather than not opening at all.
   it('falls back to the default size when the picture will not measure', async () => {
     await becomeAsset(DOCUMENT, picture, () => Promise.reject(new Error('gone')))
 
     expect(stack()).toMatchObject({ width: DEFAULT_CANVAS.width, height: DEFAULT_CANVAS.height })
+  })
+
+  /**
+   * The silence that cost a file. ⌘S writes the document's size back over the asset, so a
+   * document that is not the picture is one whose save will not be faithful — and this was the
+   * only way it could happen without a word. A 4112 × 2658 photo sat in a 1024² document, the
+   * inspector went on showing the photo's dimensions, and the save shrank the file to the
+   * document. The ceiling biting was already said; this half was not.
+   */
+  it('says so when the picture will not measure, because the document is then not the picture', async () => {
+    await becomeAsset(DOCUMENT, picture, () => Promise.reject(new Error('gone')))
+
+    expect(said()).toEqual([expect.stringContaining('would not measure')])
+  })
+
+  it('says so when the ceiling brought the picture under its own size', async () => {
+    await becomeAsset(DOCUMENT, picture, measuring(20000, 10000))
+
+    expect(said()).toEqual([expect.stringContaining('below its own size')])
+  })
+
+  // The ordinary case, and the one that must stay quiet: a document that IS its picture.
+  it('says nothing when the document measures exactly what the picture does', async () => {
+    await becomeAsset(DOCUMENT, picture, measuring(4096, 2048))
+
+    expect(said()).toEqual([])
   })
 
   it('refuses what is not a picture on this machine', async () => {

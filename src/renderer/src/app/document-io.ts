@@ -246,6 +246,21 @@ const IMAGE_IO: DocumentIo = {
     // refused a resized document would be an image editor that cannot crop. What guards the
     // asset is that an untouched tab never writes at all (`wasEdited`), and that ⌘⇧S is there
     // for whoever wants the result beside the original rather than over it.
+    //
+    // Said, though, and this is what the removed refusal left behind: `replaceBytes` deletes
+    // what it replaces, so a document that drifted without anyone meaning it to shrinks the
+    // original in silence.
+    //
+    // NOT awaited, and that is the difference from the refusal it replaces. This only SAYS
+    // something — the save happens either way — so making ⌘S wait on a picture decode would buy
+    // nothing and cost the responsiveness of the one gesture that must never feel stuck.
+    // Through `import()` for the reason `place-asset` gives: this file is in the opening chunk.
+    const replaced = target.replaces
+    if (replaced) {
+      void import('@/spaces/image/asset-fidelity').then(({ reportAssetDrift }) =>
+        reportAssetDrift(documentId, replaced, target.name),
+      )
+    }
 
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
     // workspace lands. The document is still written; only the asset waits for the next save.

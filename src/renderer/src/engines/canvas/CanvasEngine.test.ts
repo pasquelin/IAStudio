@@ -2742,6 +2742,24 @@ describe('the transform grips', () => {
     expect(layers.at(-1)).toMatch(/^transform:layer-1:/)
   })
 
+  /**
+   * A photo laid by `containIn` does not fill its surface: 200 × 100 centred in a 1024² document
+   * sits at 412,462 with transparent margin all round. The grips take the PHOTO, as every other
+   * editor does — a square touching the picture nowhere is a square one cannot resize it by.
+   *
+   * Pulling its south-east grip from 612,562 to 812,662 doubles both sides of the photo, which
+   * is the assertion: solved against the document, the same drag would report something else.
+   */
+  it('puts the grips on the picture the layer holds, not on the surface around it', async () => {
+    const { host, engine, layers } = await armed()
+    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+
+    press(host, 612, 562)
+    drag(host, 812, 662)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
+  })
+
   it('scales from the far corner, so the opposite one stays put', async () => {
     const { host, layers } = await armed()
 

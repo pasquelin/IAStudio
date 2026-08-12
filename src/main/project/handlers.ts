@@ -5,6 +5,7 @@ import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
+import { isPngBytes, probePng } from '@main/media/png'
 import { probeWav } from '@main/media/wav'
 import type { LocalBackend } from '@main/assets/local-backend'
 import type { FolderEditor, FolderReader } from './folder'
@@ -25,7 +26,6 @@ import {
   parseSaveAudio,
   parseSavePicture,
   parseSaveTexture,
-  isPngBytes,
 } from './validation'
 
 /** What `saveAudio` writes — the renderer encodes uncompressed PCM, never a codec. */
@@ -234,6 +234,12 @@ export function registerProjectHandlers({
     // with a file that is not one.
     if (!isPngBytes(png)) throw new Error('expected a PNG payload')
 
+    // Read from the bytes rather than carried over, exactly as `saveAudio` reads its own: a
+    // picture is rarely the size it was, and a probe left behind describes the file that WAS
+    // there. One that did outlived a 4112 × 2658 photo overwritten at 1024², and the inspector
+    // went on announcing the dimensions of a picture nothing on disk held any more.
+    const probe = probePng(png) ?? undefined
+
     // The same asset, edited — what ⌘S means on a document opened from one. `replaceBytes` keeps
     // the id, the name and the tags, and moves the extension with the bytes.
     if (request.replaces) {
@@ -247,7 +253,9 @@ export function registerProjectHandlers({
         throw new Error(`asset ${request.replaces} is not a picture to overwrite`)
       }
 
-      return withoutSourcePath(await assets.replaceBytes(request.replaces, png, PNG_EXTENSION))
+      return withoutSourcePath(
+        await assets.replaceBytes(request.replaces, png, PNG_EXTENSION, probe),
+      )
     }
 
     // A picture saved beside its source inherits what the source IS: its kind, and the channel
@@ -262,6 +270,7 @@ export function registerProjectHandlers({
           name: request.name,
           type: source?.type ?? 'image',
           extension: PNG_EXTENSION,
+          ...(probe ? { probe } : {}),
           ...(source?.map ? { map: source.map } : {}),
           ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         },
@@ -272,6 +281,9 @@ export function registerProjectHandlers({
 
   handle(CHANNELS.assetsSaveTexture, async (_event, value) => {
     const request = parseSaveTexture(value)
+    // A channel is a picture on the shelf, so it owes its reader the same dimensions any other
+    // one shows. Read from the bytes here, where they are already in hand.
+    const probe = probePng(request.png) ?? undefined
 
     return withoutSourcePath(
       await assets.importFromBytes(
@@ -284,6 +296,7 @@ export function registerProjectHandlers({
           type: 'texture',
           extension: PNG_EXTENSION,
           map: request.map,
+          ...(probe ? { probe } : {}),
           ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
         },
         request.png,

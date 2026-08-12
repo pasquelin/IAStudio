@@ -64,16 +64,37 @@ export const ROTATE_REACH = 22
  *
  * Exported for the tests, which read a scale back off it rather than asserting on nine numbers.
  */
-export function layerBoxOf(transform: Transform, document: Size): Rect {
-  const width = document.width * transform.scaleX
-  const height = document.height * transform.scaleY
-
+export function layerBoxOf(
+  transform: Transform,
+  document: Size,
+  frame: Rect = wholeOf(document),
+): Rect {
   return {
-    x: transform.x + document.width * transform.originX * (1 - transform.scaleX),
-    y: transform.y + document.height * transform.originY * (1 - transform.scaleY),
-    width,
-    height,
+    x:
+      transform.x +
+      document.width * transform.originX * (1 - transform.scaleX) +
+      frame.x * transform.scaleX,
+    y:
+      transform.y +
+      document.height * transform.originY * (1 - transform.scaleY) +
+      frame.y * transform.scaleY,
+    width: frame.width * transform.scaleX,
+    height: frame.height * transform.scaleY,
   }
+}
+
+/**
+ * The rect a layer's handles describe, in document coordinates — the whole surface unless the
+ * caller knows better.
+ *
+ * A layer painted by hand has no better answer: its surface IS its content, and every pixel of
+ * it is fair game. A layer holding a PICTURE does — `containIn` centres it and leaves transparent
+ * margins on two sides — and framing those margins frames nothing. That is what every other
+ * editor shows for a picture layer, and what the studio showed instead was the document: a
+ * 4112 × 2658 photo in a 1024² document was gripped by a square that touched it nowhere.
+ */
+export function wholeOf(document: Size): Rect {
+  return { x: 0, y: 0, width: document.width, height: document.height }
 }
 
 /**
@@ -82,14 +103,20 @@ export function layerBoxOf(transform: Transform, document: Size): Rect {
  * Taken through `layerMatrix` rather than derived here: that matrix is what Pixi composes for the
  * sprite, and a second formula for the same thing is a box that drifts from the picture under it.
  */
-export function layerCornersOf(transform: Transform, document: Size): Corners {
+export function layerCornersOf(
+  transform: Transform,
+  document: Size,
+  frame: Rect = wholeOf(document),
+): Corners {
   const matrix = layerMatrix(transform, document)
+  const right = frame.x + frame.width
+  const bottom = frame.y + frame.height
 
   return {
-    nw: applyTo(matrix, { x: 0, y: 0 }),
-    ne: applyTo(matrix, { x: document.width, y: 0 }),
-    se: applyTo(matrix, { x: document.width, y: document.height }),
-    sw: applyTo(matrix, { x: 0, y: document.height }),
+    nw: applyTo(matrix, { x: frame.x, y: frame.y }),
+    ne: applyTo(matrix, { x: right, y: frame.y }),
+    se: applyTo(matrix, { x: right, y: bottom }),
+    sw: applyTo(matrix, { x: frame.x, y: bottom }),
   }
 }
 
@@ -272,8 +299,9 @@ export function resizeBy(
   document: Size,
   to: Point,
   uniform: boolean,
+  frame: Rect = wholeOf(document),
 ): Transform {
-  const box = layerBoxOf(transform, document)
+  const box = layerBoxOf(transform, document, frame)
   const straight = unrotated(transform, document, to)
   const anchor = ANCHOR[handle]
   const fixed = { x: box.x + box.width * anchor.x, y: box.y + box.height * anchor.y }
@@ -304,7 +332,10 @@ export function resizeBy(
   //
   // Exact in one step: the matrix is affine in `x`/`y` with a unit coefficient, so translating
   // the transform translates the rendered point by the same amount.
-  const held = { x: anchor.x * document.width, y: anchor.y * document.height }
+  // The corner the hand is pulling AGAINST, in the frame it is gripping — the picture's when the
+  // layer holds one. Solved against the document instead, the anchored edge of a photo that does
+  // not fill its surface would drift by the margin `containIn` left around it.
+  const held = { x: frame.x + anchor.x * frame.width, y: frame.y + anchor.y * frame.height }
   const before = applyTo(layerMatrix(transform, document), held)
   const after = applyTo(layerMatrix(scaled, document), held)
 
