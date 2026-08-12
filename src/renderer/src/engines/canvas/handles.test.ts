@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IDENTITY, type Rect, type Transform } from './canvas-state'
-import type { Point } from './shape-geometry'
+import type { Point } from '../core/geometry'
 import {
   cornersOfRect,
   handleDirection,

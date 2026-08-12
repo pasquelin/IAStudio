@@ -77,10 +77,10 @@ import {
   paintShape,
   shapeBounds,
   shapeGeometry,
-  type Point,
   type ShapeGeometry,
   type ShapeKind,
 } from './shape-geometry'
+import type { Point, Size } from '../core/geometry'
 import { blurRadius, DEFAULT_BRUSH, readsBrushSetting, type BrushSettings } from './brush'
 import { brushRect, grownBy } from './tiles'
 import {
@@ -91,7 +91,6 @@ import {
   toDocument,
   zoomCanvasAt,
   type CanvasView,
-  type Size,
   type Viewport,
 } from './viewport'
 

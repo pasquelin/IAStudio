@@ -1,5 +1,6 @@
 import type { Rect } from './canvas-state'
-import { box, type Point } from './shape-geometry'
+import { box } from './shape-geometry'
+import type { Point } from '../core/geometry'
 
 /**
  * The region a gesture carved out, in document coordinates.

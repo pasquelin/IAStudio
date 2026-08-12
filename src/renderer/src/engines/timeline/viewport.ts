@@ -1,15 +1,16 @@
-import { clamp } from '@shared/numeric'
-import { maxOffsetFor, maxScrollTopFor } from './band'
-import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
-import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
-
 /**
  * What the user can see of a sequence, and how the wheel and the zoom keys move it. Pure, and
  * kept out of `SequenceState` on purpose: where one is looking is not an edit, and pushing it
  * through the history would make undo step back through scroll positions.
  */
-export type Size = { width: number; height: number }
+import { clamp } from '@shared/numeric'
+import { maxOffsetFor, maxScrollTopFor } from './band'
+import { RULER_HEIGHT, tracksHeight, visibleRange, type Viewport } from './timeline-geometry'
+import { sequenceDuration, type SequenceState, type Us } from './timeline-state'
+import type { Size } from '../core/geometry'
 
+// Bare because the CANVAS took the prefix: the two ranges are four orders apart and an
+// auto-import once crossed them. `canvas/viewport.test.ts` reads both sides and holds the gap.
 /** One pixel a second: a twenty-minute rush still fits across a wide strip. */
 export const MIN_SCALE = 1 / 1_000_000
 /** Two thousand pixels a second: a couple of frames fill the strip, which is as far as trimming needs. */

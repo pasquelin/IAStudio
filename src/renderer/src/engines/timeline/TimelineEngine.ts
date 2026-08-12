@@ -21,7 +21,7 @@ import {
 } from './timeline-state'
 import { mountApplication } from '../core/mount'
 import { tokenAsHex } from '../core/palette'
-import type { Size } from './viewport'
+import type { Size } from '../core/geometry'
 
 /** The clip a track is playing at that instant, or nothing — a gap is a legitimate answer. */
 export function clipAt(track: Track, time: Us): Clip | null {

@@ -1,7 +1,7 @@
 import type { Rect, Transform } from './canvas-state'
 import { applyTo, layerMatrix } from './layer-space'
-import type { Point } from './shape-geometry'
-import { crisp, toScreen, type Size, type Viewport } from './viewport'
+import { crisp, toScreen, type Viewport } from './viewport'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * The eight grips of a transform box. Pixi ships no transformer, so the geometry is ours — and

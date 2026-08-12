@@ -4,6 +4,7 @@ import { RULER_HEIGHT, type Viewport } from '../timeline/timeline-geometry'
 import { animationTrack, timelineWith } from './animation-fixtures'
 import { keyId, paintAnimation } from './animation-painter'
 import { refreshPalette } from '../core/palette'
+import type { Point } from '../core/geometry'
 import { CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animation-rows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
@@ -13,7 +14,6 @@ const size = { width: 800, height: 300 }
 const key = (seconds: number) => ({ time: seconds * SECOND, value: { x: 0, y: 0, z: 0 } })
 
 type Rect = { x: number; y: number; width: number; height: number }
-type Point = { x: number; y: number }
 
 /** Records what was painted, so the test asserts on shapes and not on pixels. */
 function spyContext() {

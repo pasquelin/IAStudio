@@ -1,6 +1,6 @@
 import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
-import type { Size } from './viewport'
+import type { Size } from '../core/geometry'
 
 /**
  * The grid pixel edits are recorded on. A full snapshot per history entry is what this exists to

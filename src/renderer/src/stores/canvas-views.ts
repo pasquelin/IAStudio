@@ -4,9 +4,9 @@ import {
   DEFAULT_VIEW,
   sameViewport,
   type CanvasView,
-  type Size,
   type Viewport,
 } from '@/engines/canvas/viewport'
+import type { Size } from '@/engines/core/geometry'
 
 /** The toggles a menu item flips. Spelled as a union so a typo cannot invent a fourth one. */
 export type ViewToggle = 'rulers' | 'guides' | 'snap'

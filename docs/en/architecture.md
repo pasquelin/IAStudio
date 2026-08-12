@@ -340,7 +340,7 @@ src/renderer/src/
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
 ├── design/       the in-house design system — see below
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, and `core/` — the shared history
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, and `core/` — what every engine shares
 ├── spaces/       one editor per document kind — SEVEN, as many as there are workspaces
 │   ├── image/      Pixi-backed canvas and its tools
 │   ├── three/      the three.js viewport and its tools

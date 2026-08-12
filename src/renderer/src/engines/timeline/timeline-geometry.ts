@@ -11,6 +11,7 @@ import {
   type Track,
   type Us,
 } from './timeline-state'
+import type { Point } from '../core/geometry'
 
 export type { ClipEdge }
 
@@ -25,8 +26,6 @@ export type Viewport = {
   offset: Us
   scrollTop: number
 }
-
-export type Point = { x: number; y: number }
 
 export type HitTarget =
   | { kind: 'ruler' }

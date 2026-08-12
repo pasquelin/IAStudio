@@ -1,8 +1,9 @@
 import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
 import { ANCHOR, cornersOfRect, gripRects, HANDLE_IDS, type HandleId } from './handles'
-import { box, type Point } from './shape-geometry'
-import { crisp, toScreen, type Size, type Viewport } from './viewport'
+import { box } from './shape-geometry'
+import { crisp, toScreen, type Viewport } from './viewport'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * `null` when the drag carved nothing out: a click would otherwise crop the document down to the

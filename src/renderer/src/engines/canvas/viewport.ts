@@ -1,6 +1,6 @@
 import { clamp } from '@shared/numeric'
 import type { Rect } from './canvas-state'
-import type { Point } from './shape-geometry'
+import type { Point, Size } from '../core/geometry'
 
 /**
  * Where the document sits on screen. `x` and `y` are the screen position of the document's
@@ -10,8 +10,6 @@ import type { Point } from './shape-geometry'
  * give a zoom back.
  */
 export type Viewport = { x: number; y: number; scale: number }
-
-export type Size = { width: number; height: number }
 
 /** Below 2% a 4096² document is a smear; above 64 a pixel fills a quarter of the screen. */
 export const CANVAS_MIN_SCALE = 0.02

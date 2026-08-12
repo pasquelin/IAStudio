@@ -1,7 +1,7 @@
 import { Container, Graphics, Rectangle, RenderTexture, Sprite, Texture } from 'pixi.js'
 import type { Rect } from './canvas-state'
 import { tileBytes, tileKey, tilesCovering, type Tile } from './tiles'
-import type { Size } from './viewport'
+import type { Size } from '../core/geometry'
 
 /** Which end of a gesture a patch is being replayed towards. */
 export type PatchSide = 'before' | 'after'
