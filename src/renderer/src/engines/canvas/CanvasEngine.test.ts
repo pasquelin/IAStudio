@@ -3527,12 +3527,14 @@ describe('the overlay colours the canvas falls back on', () => {
    * exposed that way: the ones the light theme restates at the same value.
    */
   const darkTokens = (): Map<string, string> => {
-    const start = stylesheet.indexOf('@theme {')
-    // Comments stripped first: a declaration commented out is a token that no longer exists, and
-    // the pattern alone reads it as a live one — green while the fallback became the real source.
-    const block = stylesheet
-      .slice(start, stylesheet.indexOf('\n}', start))
-      .replace(/\/\*[\s\S]*?\*\//g, '')
+    // Comments go from the WHOLE sheet before the block is cut out, and the order is the point:
+    // cutting first leaves any comment that opens above `@theme {` and closes inside it, so a
+    // commented-out declaration — or the commented-out block itself — reads as live and this
+    // guard stays green while the fallback quietly becomes the real source of every colour.
+    const live = stylesheet.replace(/\/\*[\s\S]*?\*\//g, '')
+    const start = live.indexOf('@theme {')
+    expect(start, '`@theme {` is gone from index.css').toBeGreaterThan(-1)
+    const block = live.slice(start, live.indexOf('\n}', start))
 
     return new Map(
       [...block.matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)].map(([, name = '', value = '']) => [

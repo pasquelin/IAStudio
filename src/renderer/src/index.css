@@ -18,14 +18,15 @@
  *
  * The line above is the rule, not a description of the code: some places DO restate a value from
  * here, because they paint before any stylesheet can be read — the window chrome, the splash
- * screen, the canvas overlay's last resort. Each such copy is meant to be pinned by a test against
- * the token it restates, so that repainting a token here fails a suite instead of leaving a stale
- * twin behind.
+ * screen, the canvas overlay's last resort. Those three are pinned by a test against the token
+ * they restate, so repainting a token here fails a suite instead of leaving a stale twin behind.
+ * Others are not, and that is what the rule is for rather than a description of the code.
  *
- * They are deliberately NOT listed here. A list written in a comment is wrong the day someone adds
- * the next one, and this very paragraph claimed "there is no third one" for twenty minutes before
- * a review found three. `grep -rn '#[0-9a-fA-F]\{6\}' src` answers the question a list would have
- * answered badly.
+ * No list, and no search either. This paragraph claimed "there is no third one" for twenty minutes
+ * before a review found three; the search offered in its place then missed two of them, because a
+ * copy needs neither this file's spelling nor even its type — `0x000000` restates a colour,
+ * `'9px'` restates a size. What holds is the rule: a value taken from here carries a test that
+ * says where it came from, written where the copy lives.
  */
 @theme {
   --color-chassis: #2b2d30;
