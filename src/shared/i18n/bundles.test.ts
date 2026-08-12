@@ -620,15 +620,22 @@ describe('how far back a listing reaches', () => {
    * `unreadable` is kept apart from `wrong` on purpose. A locale arriving with its own words for
    * hours and days lands in the first, and what it asks for is a line in `UNIT_HOURS` — reported
    * as a wrong length, it would read as an accusation against a translation that is correct.
+   *
+   * It carries the label rather than the key alone, because it holds two failures whose remedies
+   * are opposite: a figure whose unit is missing from the table, and a label naming no length at
+   * all. The words themselves are what tells the two apart, so the report shows them.
    */
   it.each(CODES)('says how long the span the query uses is, in %s', code => {
     const spans = MODEL_PERIODS.map(period => ({
       period,
+      label: BUNDLES[code].get(`periods.${period}`) ?? '',
       stated: statedHours(code, period),
       queried: PERIOD_DAYS[period] * 24,
     }))
 
-    const unreadable = spans.filter(span => span.stated === null).map(span => span.period)
+    const unreadable = spans
+      .filter(span => span.stated === null)
+      .map(({ period, label }) => ({ period, label }))
     const wrong = spans.filter(span => span.stated !== null && span.stated !== span.queried)
 
     expect({ unreadable, wrong }).toEqual({ unreadable: [], wrong: [] })
