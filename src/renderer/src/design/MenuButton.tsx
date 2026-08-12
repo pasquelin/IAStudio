@@ -6,7 +6,16 @@ import { ToolButton, type ToolButtonProps } from './ToolButton'
 
 export type MenuButtonProps = Pick<
   ToolButtonProps,
-  'icon' | 'label' | 'description' | 'shortcut' | 'active' | 'disabled' | 'variant'
+  | 'icon'
+  | 'label'
+  | 'description'
+  | 'shortcut'
+  | 'active'
+  | 'disabled'
+  | 'variant'
+  // Drawn beside the icon, for a menu whose CHOICE has to stay readable while it is closed — a
+  // filter says what it is filtering on, or collapsing its chips only hides them.
+  | 'children'
 > & {
   tooltip: TooltipFactory
   /** How many rows the menu holds. One or none makes the button act directly. */

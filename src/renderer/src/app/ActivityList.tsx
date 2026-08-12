@@ -1,4 +1,10 @@
-import { mdiAlertCircleOutline, mdiAlertOutline, mdiCheckCircleOutline, mdiHistory } from '@mdi/js'
+import {
+  mdiAlertCircleOutline,
+  mdiAlertOutline,
+  mdiCheckCircleOutline,
+  mdiFilterVariant,
+  mdiHistory,
+} from '@mdi/js'
 import type { TFunction } from 'i18next'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,12 +18,13 @@ import {
 import { isWorkspaceId } from '@shared/domain/workspace'
 import { EmptyState } from '@/design/EmptyState'
 import { UiIcon } from '@/design/UiIcon'
-import { chipSkin } from '@/design/styles'
+import { MenuButton } from '@/design/MenuButton'
+import { MenuRow } from '@/design/MenuRow'
 import { cn } from '@/helpers/cn'
 import { kept } from '@/helpers/format'
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { useActivity, visibleActivity } from '@/stores/activity'
-import { HINT_TOP } from '@/helpers/tooltip'
+import { HINT_RIGHT, TIP_BOTTOM } from '@/helpers/tooltip'
 
 export const GLYPHS: Record<ActivityLevel, string> = {
   info: mdiCheckCircleOutline,
@@ -124,57 +131,83 @@ function ActivityRow({ entry, time }: { entry: ActivityEntry; time: string | nul
   )
 }
 
-// A row per family rather than one wrap: past seven chips the break fell after the separator,
-// wrapping the subjects away from the hairline that announced them.
-function FilterRow<T extends string>({
-  name,
-  allLabel,
+/**
+ * One family of filters, behind the menu that says what it is filtering on.
+ *
+ * Eleven chips across two rows used to sit above the journal and take a third of it — the panel
+ * spent more height saying what it could show than showing it. Two menus cost one row, and the
+ * button keeps the choice readable while it is closed, which is the whole reason the chips were
+ * worth keeping in the first place.
+ */
+function FilterMenu<T extends string>({
+  family,
   values,
   active,
   label,
+  icon,
   onChange,
 }: {
-  name: string
-  allLabel: string
+  family: string
   values: readonly T[]
   active: readonly T[]
   label: (value: T) => string
+  /** Absent for a family whose values have no glyph of their own — the subjects. */
+  icon?: (value: T) => string
   onChange: (values: T[]) => void
 }) {
   const { t } = useTranslation()
-  return (
-    <div role="group" aria-label={name} className="flex flex-wrap items-center gap-2">
-      {/* Nothing selected is "everything" to `matchesActivity`, so this clears rather than adds.
-          Pressed, it no longer answers — like a radio, and unlike the toggle `aria-pressed` names.
-          Kept because the state is true and drawn: dropping it would tell the eye what it hides
-          from a screen reader. */}
-      <button
-        type="button"
-        aria-pressed={active.length === 0}
-        {...HINT_TOP(t('activity.allHint'))}
-        onClick={() => onChange([])}
-        className={chipSkin(active.length === 0)}
-      >
-        {allLabel}
-      </button>
 
-      {values.map(value => (
-        <button
-          key={value}
-          type="button"
-          aria-pressed={active.includes(value)}
-          {...HINT_TOP(t('activity.filterHint'))}
-          onClick={() =>
-            onChange(
-              active.includes(value) ? active.filter(one => one !== value) : [...active, value],
-            )
-          }
-          className={chipSkin(active.includes(value))}
-        >
-          {label(value)}
-        </button>
-      ))}
-    </div>
+  // The names rather than a count: "Level: warning" is what the reader wants back, and a count
+  // would make them open the menu to learn what they had chosen. Truncation handles the long tail.
+  const chosen =
+    active.length === 0
+      ? t('activity.all')
+      : active.map(label).join(t('activity.filters.separator'))
+
+  const summary = t('activity.filters.summary', { family, choice: chosen })
+
+  const toggle = (value: T): T[] =>
+    active.includes(value) ? active.filter(one => one !== value) : [...active, value]
+
+  return (
+    <MenuButton
+      icon={mdiFilterVariant}
+      // The accessible name IS the visible text: `ToolButton` names itself from `label`, and a
+      // name that did not contain what the eye reads breaks WCAG 2.5.3.
+      label={summary}
+      description={t('activity.filterHint')}
+      tooltip={TIP_BOTTOM}
+      variant="header"
+      active={active.length > 0}
+      rowCount={values.length + 1}
+      opensOnClick
+      rows={() => (
+        <>
+          {/* Nothing selected is "everything" to `matchesActivity`, so this CLEARS rather than
+              adds — and it is ticked when the family filters nothing, which is the true state. */}
+          <MenuRow
+            label={t('activity.all')}
+            tick="on-off"
+            checked={active.length === 0}
+            tip={HINT_RIGHT(t('activity.allHint'))}
+            onSelect={() => onChange([])}
+          />
+          {values.map(value => (
+            <MenuRow
+              key={value}
+              label={label(value)}
+              icon={icon?.(value)}
+              tick="on-off"
+              checked={active.includes(value)}
+              tip={HINT_RIGHT(t('activity.filterHint'))}
+              onSelect={() => onChange(toggle(value))}
+            />
+          ))}
+        </>
+      )}
+    >
+      <span className="truncate">{summary}</span>
+    </MenuButton>
   )
 }
 
@@ -203,17 +236,16 @@ export function ActivityList() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-border flex flex-col gap-1.5 border-b p-1">
-        <FilterRow
-          name={t('activity.filters.levels')}
-          allLabel={t('activity.all')}
+        <FilterMenu
+          family={t('activity.filters.levels')}
           values={ACTIVITY_LEVELS}
           active={levels}
           label={level => t(`activity.levels.${level}`)}
+          icon={level => GLYPHS[level]}
           onChange={next => setFilters({ levels: next })}
         />
-        <FilterRow
-          name={t('activity.filters.topics')}
-          allLabel={t('activity.all')}
+        <FilterMenu
+          family={t('activity.filters.topics')}
           values={ACTIVITY_TOPICS}
           active={topics}
           label={topic => t(`activity.topics.${topic}`)}

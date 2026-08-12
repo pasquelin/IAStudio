@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { ActivityEntry } from '@shared/domain/activity'
@@ -105,43 +105,72 @@ describe('the journal, drawn', () => {
 })
 
 describe('the filters of the journal', () => {
-  const familyOf = (name: string) => within(screen.getByRole('group', { name }))
+  // The French bundle joins the two with a no-break space, which eslint refuses as a literal —
+  // named by code point here for the same reason `bundles.test.ts` names it.
+  const menuFor = (family: string, choice: string) =>
+    screen.getByRole('button', { name: `${family}\u00a0: ${choice}` })
 
-  // A row per family rather than a wrap: seven chips do not fit the 384px flyout, and the break
-  // used to land past the separator — leaving the subjects orphaned of what announced them. The
-  // name is also what tells the two "Tout" apart, their label being the same in both.
-  it('holds each family in a row of its own, named, with a "Tout" of its own', () => {
+  /**
+   * Eleven chips over two rows took a third of the panel. Collapsed, the button has to keep
+   * saying what its family is filtering on — a menu that hid the choice would have traded a
+   * crowded journal for a silent one, which is the failure this lot exists to avoid.
+   */
+  it('says on the closed button what each family is filtering on', () => {
+    useActivity.setState({ levels: ['error'], topics: [] })
+
     render(<ActivityList />)
 
-    expect(familyOf('Niveau').getByRole('button', { name: 'Échec' })).toBeInTheDocument()
-    expect(familyOf('Niveau').getByRole('button', { name: 'Tout' })).toBeInTheDocument()
-    expect(familyOf('Sujet').getByRole('button', { name: 'Import' })).toBeInTheDocument()
-    expect(familyOf('Sujet').getByRole('button', { name: 'Tout' })).toBeInTheDocument()
+    expect(menuFor('Niveau', 'Échec')).toBeInTheDocument()
+    expect(menuFor('Sujet', 'Tout')).toBeInTheDocument()
   })
 
-  it('shows "Tout" as the choice in force while its family narrows nothing', () => {
-    useActivity.setState({ levels: ['error'] })
+  it('names every value it is narrowed to, not a count', () => {
+    useActivity.setState({ levels: ['warn', 'error'] })
 
     render(<ActivityList />)
 
-    expect(familyOf('Niveau').getByRole('button', { name: 'Tout' })).toHaveAttribute(
-      'aria-pressed',
+    expect(menuFor('Niveau', 'Avertissement, Échec')).toBeInTheDocument()
+  })
+
+  /**
+   * Nothing selected IS everything to `matchesActivity`, so the row that means "no narrowing"
+   * has to read as ticked exactly then — a menu that showed it unticked would say the family
+   * was filtering when it was not.
+   */
+  it('ticks "Tout" for the family that narrows nothing, and only that one', async () => {
+    useActivity.setState({ levels: ['error'], topics: [] })
+    render(<ActivityList />)
+
+    await userEvent.click(menuFor('Niveau', 'Échec'))
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Tout' })).toHaveAttribute(
+      'aria-checked',
       'false',
     )
-    expect(familyOf('Sujet').getByRole('button', { name: 'Tout' })).toHaveAttribute(
-      'aria-pressed',
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Échec' })).toHaveAttribute(
+      'aria-checked',
       'true',
     )
   })
 
-  it('clears one family and leaves the other filtering', async () => {
+  it('clears one family from its menu and leaves the other filtering', async () => {
     useActivity.setState({ levels: ['error'], topics: ['import'] })
     render(<ActivityList />)
 
-    await userEvent.click(familyOf('Niveau').getByRole('button', { name: 'Tout' }))
+    await userEvent.click(menuFor('Niveau', 'Échec'))
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Tout' }))
 
     expect(useActivity.getState().levels).toEqual([])
     expect(useActivity.getState().topics).toEqual(['import'])
+  })
+
+  it('adds a value to what its family already narrows to', async () => {
+    useActivity.setState({ levels: ['error'], topics: [] })
+    render(<ActivityList />)
+
+    await userEvent.click(menuFor('Niveau', 'Échec'))
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Avertissement' }))
+
+    expect(useActivity.getState().levels).toEqual(['error', 'warn'])
   })
 
   /**

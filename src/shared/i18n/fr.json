@@ -225,7 +225,9 @@
     "all": "Tout",
     "filters": {
       "levels": "Niveau",
-      "topics": "Sujet"
+      "topics": "Sujet",
+      "separator": ", ",
+      "summary": "{{family}} : {{choice}}"
     },
     "levels": {
       "info": "Information",
