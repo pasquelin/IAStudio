@@ -67,7 +67,27 @@ export const MAX_SLACK = 30
 export const LEAST_BUDGETS = 21
 
 /**
- * The budgets, read off the config as text rather than imported — importing it would run the
+ * The budgets alone — the thresholds written as a negative count of uncovered items, which are
+ * the only ones with room to measure. A `100` is a percentage and has none.
+ */
+export function budgetsIn(config: string): Budget[] {
+  return declaredIn(config).filter(budget => budget.statements < 0)
+}
+
+/**
+ * Every glob the config names, the percentages included — a wider list than `budgetsIn`, and the
+ * one the rename check needs.
+ *
+ * A threshold of `100` carries no room to measure, which is why the slack table leaves it out. It
+ * is still a glob that can stop matching, and the one where that costs most: "nothing may go
+ * uncovered" over a folder that no longer exists asks nothing of anybody, and reads green.
+ */
+export function globsIn(config: string): string[] {
+  return declaredIn(config).map(budget => budget.glob)
+}
+
+/**
+ * Every threshold, read off the config as text rather than imported — importing it would run the
  * config, plugins included, for a handful of numbers.
  *
  * Comments are stripped first, exactly as `coverage-thresholds.test.ts` does on the same file:
@@ -75,20 +95,18 @@ export const LEAST_BUDGETS = 21
  * The two keys Prettier wraps across lines are why `statements` and `branches` are matched apart
  * rather than as one shape — reading 18 of 20 is how a guard goes blind without a word.
  */
-export function budgetsIn(config: string): Budget[] {
+function declaredIn(config: string): Budget[] {
   const bare = config
     .split('\n')
     .filter(line => !line.trim().startsWith('//'))
     .join('\n')
 
   const entries = /'([^']+)':\s*\{([^}]*)\}/g
-  return [...bare.matchAll(entries)]
-    .map(match => ({
-      glob: match[1] ?? '',
-      statements: Number(match[2]?.match(/statements:\s*(-?\d+)/)?.[1]),
-      branches: Number(match[2]?.match(/branches:\s*(-?\d+)/)?.[1]),
-    }))
-    .filter(budget => budget.statements < 0)
+  return [...bare.matchAll(entries)].map(match => ({
+    glob: match[1] ?? '',
+    statements: Number(match[2]?.match(/statements:\s*(-?\d+)/)?.[1]),
+    branches: Number(match[2]?.match(/branches:\s*(-?\d+)/)?.[1]),
+  }))
 }
 
 /**
@@ -149,10 +167,12 @@ export function granted(rows: Slack[], max: number): Slack[] {
  * `vitest.config.ts` names the trap itself — "a glob matching nothing passes silently. Renaming a
  * folder turns its budget into a no-op". A renamed glob is also the one contortion the slack
  * ceiling cannot catch: it reads as room, and a tight budget stays under thirty.
+ *
+ * Takes globs rather than the slack table it once read: that table holds only the budgets, so the
+ * three globs asking for full coverage were the ones this never looked at.
  */
-export function unmatched(rows: Slack[], summary: Summary, root: string): string[] {
-  return rows
-    .filter(row => carried(summary, row.glob, root).statements === 0)
-    .filter(row => !Object.keys(summary).some(path => matches(path.replace(root, ''), row.glob)))
-    .map(row => row.glob)
+export function unmatched(globs: string[], summary: Summary, root: string): string[] {
+  return globs.filter(
+    glob => !Object.keys(summary).some(path => matches(path.replace(root, ''), glob)),
+  )
 }
