@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { cachedToken, onPaletteChange, refreshPalette, token, tokenAsHex } from './palette'
+import {
+  cachedToken,
+  memoPalette,
+  onPaletteChange,
+  refreshPalette,
+  rootColour,
+  rootFont,
+  token,
+  tokenAsHex,
+} from './palette'
 
 function element(style: string): HTMLElement {
   const node = document.createElement('div')
@@ -79,5 +88,78 @@ describe('caching a root token', () => {
   it('caches the absence of a token too, rather than asking again every time', () => {
     expect(cachedToken('--never-declared')).toBe('')
     expect(cachedToken('--never-declared')).toBe('')
+  })
+})
+
+describe('what a painter reads off the root', () => {
+  it('answers black for a token nothing declares, rather than an empty fill', () => {
+    // An empty string assigned to `fillStyle` is IGNORED by the 2D context, which then paints
+    // with whatever colour the previous draw left there.
+    expect(rootColour('--absent-colour')).toBe('#000')
+  })
+
+  it('answers the token when there is one', () => {
+    document.documentElement.style.setProperty('--painter-sample', '#3574f0')
+    refreshPalette()
+
+    // Restored even on a failed assertion: the root is shared and so is the cache, so leaking
+    // either would fail the NEXT test and accuse the wrong code.
+    try {
+      expect(rootColour('--painter-sample')).toBe('#3574f0')
+    } finally {
+      document.documentElement.style.removeProperty('--painter-sample')
+      refreshPalette()
+    }
+  })
+
+  it('composes a font shorthand, and keeps the shipped size when no token answers', () => {
+    document.documentElement.style.setProperty('--painter-step', '22px')
+    refreshPalette()
+
+    try {
+      expect(rootFont('--painter-step', '11px', 'monospace')).toBe('22px monospace')
+      // A shorthand with no size is rejected whole, and the canvas keeps the font it had.
+      expect(rootFont('--absent-step', '11px', 'monospace')).toBe('11px monospace')
+    } finally {
+      document.documentElement.style.removeProperty('--painter-step')
+      refreshPalette()
+    }
+  })
+})
+
+describe('a memoised palette', () => {
+  it('computes once for however many paints, and again once the theme has moved', () => {
+    let computed = 0
+    const read = memoPalette(() => ({ nth: (computed += 1) }))
+
+    expect(read().nth).toBe(1)
+    expect(read().nth).toBe(1)
+
+    refreshPalette()
+
+    // Without this a painter keeps the colours of the theme the user just left.
+    expect(read().nth).toBe(2)
+  })
+
+  it('computes nothing until something paints, so an unmounted module reads no stylesheet', () => {
+    let computed = 0
+    memoPalette(() => (computed += 1))
+
+    expect(computed).toBe(0)
+  })
+
+  it('memoises a palette that comes out null, rather than recomputing it every paint', () => {
+    let computed = 0
+    const read = memoPalette(() => {
+      computed += 1
+      return null
+    })
+
+    read()
+    read()
+
+    // Held bare, `cached ??= compute()` would answer null, look empty, and read the stylesheet
+    // again on every frame while reporting itself as cached.
+    expect(computed).toBe(1)
   })
 })

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { forgetPalette, paintTimeline } from './painter'
+import { paintTimeline } from './painter'
+import { refreshPalette } from '../core/palette'
 import {
   CLIP_INSET,
   EDGE_BAR_INSET,
@@ -127,7 +128,7 @@ describe('timeline painter', () => {
   it('sizes what it paints from the ladder, so the text preference reaches the canvas', () => {
     document.documentElement.style.setProperty('--text-tiny', '22px')
     document.documentElement.style.setProperty('--text-mini', '20px')
-    forgetPalette()
+    refreshPalette()
 
     // Restored even on a failed assertion: the palette is a module cache and the tokens are on
     // the shared root, so leaking either would fail the NEXT test and accuse the wrong code.
@@ -140,12 +141,12 @@ describe('timeline painter', () => {
     } finally {
       document.documentElement.style.removeProperty('--text-tiny')
       document.documentElement.style.removeProperty('--text-mini')
-      forgetPalette()
+      refreshPalette()
     }
   })
 
   it('keeps the shipped size when no token answers, rather than a shorthand with no size', () => {
-    forgetPalette()
+    refreshPalette()
 
     const { context, fonts } = spyContext()
     paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size)
@@ -322,7 +323,7 @@ describe('timeline painter', () => {
   it('inks the grips of the selected clip like its label, and the rest like a hint', () => {
     document.documentElement.style.setProperty('--color-text', 'rgb(1, 2, 3)')
     document.documentElement.style.setProperty('--color-muted', 'rgb(4, 5, 6)')
-    forgetPalette()
+    refreshPalette()
 
     // Restored even on a failed assertion, as above: the palette is a module cache.
     try {
@@ -341,7 +342,7 @@ describe('timeline painter', () => {
     } finally {
       document.documentElement.style.removeProperty('--color-text')
       document.documentElement.style.removeProperty('--color-muted')
-      forgetPalette()
+      refreshPalette()
     }
   })
 

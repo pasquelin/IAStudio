@@ -12,7 +12,7 @@ import {
 } from './timeline-geometry'
 import { paintRuler as paintBandRuler } from './ruler'
 import { clipEnd, type Clip, type SequenceState, type Track, type Us } from './timeline-state'
-import { onPaletteChange, token, tokenAsFont } from '../core/palette'
+import { memoPalette, rootColour, rootFont } from '../core/palette'
 import { waveformColumns, type WaveColumn } from './waveform'
 
 export type Size = { width: number; height: number }
@@ -50,51 +50,19 @@ type Palette = {
   rulerFont: string
 }
 
-let cached: Palette | null = null
-
-/**
- * Read once per theme, not once per paint and certainly not once per clip: `getComputedStyle`
- * forces a style resolution over the whole shell, and at sixty frames a second that alone is
- * the frame budget. The tokens only move when the theme does — see `forgetPalette`.
- */
-function readPalette(): Palette {
-  if (cached) return cached
-  cached = computePalette()
-  return cached
-}
-
-/** Called when the theme changes; the next paint reads the tokens again. */
-export function forgetPalette(): void {
-  cached = null
-}
-
-// Subscribed here rather than called from the hook that publishes the theme: the timeline is
-// the one that knows it caches, and a module nobody imported has no cache to drop.
-onPaletteChange(forgetPalette)
-
-function computePalette(): Palette {
-  // Absent under a test that never built a DOM; black is what an unreadable token falls back
-  // to everywhere, rather than each caller inventing its own.
-  const root = typeof document === 'undefined' ? null : document.documentElement
-  const read = (name: string): string => (root ? token(root, name) : '') || '#000'
-
-  const font = (name: string, size: string, family: string): string =>
-    root ? tokenAsFont(root, name, size, family) : `${size} ${family}`
-
-  return {
-    ruler: read('--color-chassis'),
-    track: read('--color-panel'),
-    trackAlt: read('--color-surface'),
-    border: read('--color-border'),
-    clip: read('--color-elevated'),
-    selected: read('--color-accent-soft'),
-    playhead: read('--color-accent'),
-    text: read('--color-text'),
-    muted: read('--color-muted'),
-    clipFont: font('--text-tiny', CLIP_SIZE, CLIP_FAMILY),
-    rulerFont: font('--text-mini', RULER_SIZE, RULER_FAMILY),
-  }
-}
+const readPalette = memoPalette((): Palette => ({
+  ruler: rootColour('--color-chassis'),
+  track: rootColour('--color-panel'),
+  trackAlt: rootColour('--color-surface'),
+  border: rootColour('--color-border'),
+  clip: rootColour('--color-elevated'),
+  selected: rootColour('--color-accent-soft'),
+  playhead: rootColour('--color-accent'),
+  text: rootColour('--color-text'),
+  muted: rootColour('--color-muted'),
+  clipFont: rootFont('--text-tiny', CLIP_SIZE, CLIP_FAMILY),
+  rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
+}))
 
 function paintRuler(
   context: CanvasRenderingContext2D,
