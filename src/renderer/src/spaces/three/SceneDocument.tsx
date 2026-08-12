@@ -11,7 +11,6 @@ import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { snapToFrame } from '@shared/domain/time'
 import { SceneRenderer, type TransformMode } from '@/engines/scene/SceneRenderer'
 import { setDocumentTitle } from '@/app/dockview-api'
-import { useAddNode } from '@/hooks/useAddNode'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { useDocuments } from '@/stores/documents'
@@ -27,7 +26,7 @@ import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { nextDisplayMode } from '@/engines/scene/scene-view'
-import { isDisplayMode, isViewDirection } from '@shared/domain/scene'
+import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
 import { ScenePaneGrid } from './ScenePaneGrid'
@@ -97,7 +96,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
-  const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
   const viewport = useSettings(state => state.settings.three)
   const view = useSceneViews(state => sceneViewOf(state, documentId))
@@ -306,14 +304,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   /** A flyout row: the Add rows name a node kind, the others a side to stand at or a way to draw. */
   const runMode = useCallback(
-    (toolId: string, modeId: string) => {
-      if (toolId === 'view' && isViewDirection(modeId)) return engine.current?.viewFrom(modeId)
-      if (toolId === 'display' && isDisplayMode(modeId)) {
-        return useSceneViews.getState().setDisplay(documentId, paneInHand(), modeId)
+    (_toolId: string, modeId: string) => {
+      if (isDisplayMode(modeId)) {
+        useSceneViews.getState().setDisplay(documentId, paneInHand(), modeId)
       }
-      addNodeOf(modeId)
     },
-    [documentId, addNodeOf, paneInHand],
+    [documentId, paneInHand],
   )
 
   useShortcuts({
@@ -354,10 +350,10 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
     return SCENE_TOOLS.map(tool => ({
       ...tool,
-      shortcut: tool.command ? label(bindingOf(tool.command, bindings)) : undefined,
+      shortcut: label(bindingOf(tool.command, bindings)),
       activeMode: tool.id === 'display' ? displayOfPane(view.displays, 0) : undefined,
-      disabled: tool.command ? unavailable[tool.command] : undefined,
-      pressed: tool.command ? pressed[tool.command] : undefined,
+      disabled: unavailable[tool.command],
+      pressed: pressed[tool.command],
     }))
   }, [bindings, label, nothingSelected, nothingHeld, snapping, localFrame, view])
 

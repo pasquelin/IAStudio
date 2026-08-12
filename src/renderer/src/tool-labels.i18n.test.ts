@@ -53,7 +53,13 @@ describe('the two names a tool wears', () => {
     }
   })
 
+  /**
+   * A floor, so the rule above cannot go quiet by covering nothing. Lowered from thirty when the
+   * 3D bar went from twenty-three buttons to eight: what left it are menu rows now, whose labels
+   * come from `commands.*` and are the very keys this rule compares against — there is no second
+   * name left for them to drift from.
+   */
   it('covers both bars, so neither drifts unwatched', () => {
-    expect(pairs().length).toBeGreaterThan(30)
+    expect(pairs().length).toBeGreaterThan(25)
   })
 })

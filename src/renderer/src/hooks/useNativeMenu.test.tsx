@@ -16,6 +16,8 @@ import { useLayouts } from '@/stores/layouts'
 import { useModels } from '@/stores/models'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
+import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
+import type { SceneRenderer } from '@/engines/scene/SceneRenderer'
 
 const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 
@@ -266,9 +268,23 @@ describe('what the native View menu asks of the scene', () => {
   })
 
   /**
-   * A side to look from is the camera's, and the camera belongs to the engine — a tab whose
-   * viewport is not mounted has none, and the row must not throw on it.
+   * A side to look from is the camera's, and the camera belongs to the engine rather than to a
+   * store: an axis view is where one stands, not a state the document carries — see `PaneView`.
    */
+  it('stands the camera at the side the row names', () => {
+    const viewFrom = vi.fn()
+    // Only the one method the row reaches for: the rest of `SceneRenderer` is another suite's.
+    registerSceneEngine('doc-1', { viewFrom } as unknown as SceneRenderer)
+    const menu = captureSceneView()
+    renderHook(() => useNativeMenu())
+
+    menu.emit({ direction: 'top' })
+
+    expect(viewFrom).toHaveBeenCalledWith('top')
+    forgetSceneEngine('doc-1')
+  })
+
+  /** A tab whose viewport is not mounted has no engine, and the row must not throw on it. */
   it('says nothing to a scene whose viewport is not mounted', () => {
     const menu = captureSceneView()
     renderHook(() => useNativeMenu())
