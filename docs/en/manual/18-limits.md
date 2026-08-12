@@ -204,13 +204,12 @@ changed yet.
 
 ### What playback does not make you hear yet
 
-The Program monitor plays sound tracks. Three bounds remain, all deliberate:
+The Program monitor plays sound tracks. Two bounds remain, all deliberate:
 
 | What is not heard | Why |
 |---|---|
 | **A video's own sound**, laid on a picture track | only tracks of the sound kind are scheduled |
 | **Scrubbing** — dragging the playhead by hand | sound is planned by the playback loop alone |
-| **The Source monitor** | it mounts the selected clip on a picture track, whatever its type |
 
 **And one drift, unmeasured**: on a long edit the picture can pull away from the sound. The output
 clock takes over as soon as it runs, which avoids this in the common case — but the very first

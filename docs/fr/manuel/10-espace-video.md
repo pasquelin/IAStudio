@@ -20,8 +20,9 @@ Au centre, deux moniteurs côte à côte — la convention de Premiere et de DaV
 | **Programme**, à droite | le montage tel qu’il sera |
 
 Quand aucun clip n’est sélectionné, le moniteur Source affiche « Sélectionnez un clip pour le
-voir ici. » Quand le clip sous la tête de lecture ne peut pas être décodé, c’est
-[l’autre message](#quand-un-clip-ne-peut-pas-safficher) qui prend sa place.
+voir ici. » Quand le clip **image** sous la tête de lecture ne peut pas être décodé, c’est
+[l’autre message](#quand-un-clip-ne-peut-pas-safficher) qui prend sa place ; un clip son
+introuvable, lui, reste noir et muet sans rien annoncer.
 
 ---
 
@@ -214,7 +215,9 @@ Quatre choses à savoir, parce qu’elles se remarquent :
 
 - **Le son ne sort qu’en lecture.** Déplacer la tête de lecture à la main ne fait rien entendre :
   c’est l’image qui suit le curseur, pas le son.
-- **Le moniteur Source reste muet**, même sur un clip son sélectionné.
+- **Le moniteur Source joue le clip sélectionné**, son compris quand c’en est un — mais il
+  n’affiche alors aucune image, un son n’en ayant pas. Sa tête de lecture ne se replace pas
+  seule : venue d’un clip plus long, elle peut tomber après la fin du nouveau, qui reste muet.
 - **Le son d’une vidéo n’est pas encore joué** : seules les pistes de son le sont. Une vidéo posée
   sur une piste image se voit sans s’entendre.
 - **Le premier son peut mettre un instant à venir** : le fichier est décodé entier avant d’être

@@ -488,8 +488,8 @@ ordinary to the most technical:
    silent.
 3. **The clip sits on a picture track.** A video laid there is seen without being heard: only
    sound tracks are played.
-4. **You are watching the Source monitor.** It is always silent; the Program monitor is the one
-   that plays.
+4. **You are watching the Source monitor on a video.** It plays a selected sound clip, but not
+   a video's own sound — that one is played nowhere yet.
 5. **The clip's gain is at the floor.** A clip's inspector gives it in decibels.
 6. **The media moved since it was imported.** The studio does not ask for it sixty times a
    second: it gives the clip up for the session. Import the file again.

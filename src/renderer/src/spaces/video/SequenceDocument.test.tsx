@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addClip } from '@/engines/timeline/commands'
 import { clipFixture } from '@/engines/timeline/timeline-fixtures'
+import type { SequenceState } from '@/engines/timeline/timeline-state'
 import { TimelinePanel } from '@/panels/timeline/TimelinePanel'
 import { useDocuments } from '@/stores/documents'
 import { useSequences } from '@/stores/sequences'
@@ -10,13 +11,16 @@ import { SequenceDocument } from './SequenceDocument'
 
 const play = vi.fn()
 const pause = vi.fn()
+// Shared across instances, unlike the per-engine mocks: what the engine is handed is what will be
+// painted and heard, and both monitors hand it over here.
+const applied = vi.fn<(state: SequenceState) => void>()
 
 // jsdom has neither WebGL nor WebCodecs: the engine is exercised by hand, not here. What this
 // covers is that the tab shows two monitors and wires their transport.
 vi.mock('@/engines/timeline/TimelineEngine', () => ({
   TimelineEngine: class {
     mount = vi.fn(() => Promise.resolve())
-    apply = vi.fn()
+    apply = applied
     seek = vi.fn(() => Promise.resolve())
     play = play
     pause = pause
@@ -27,6 +31,14 @@ vi.mock('@/engines/timeline/TimelineEngine', () => ({
 }))
 
 const clip = clipFixture('clip-1', 0, 1_000_000, { assetId: 'asset-1' })
+const later = clipFixture('clip-2', 2_000_000, 1_000_000, { assetId: 'asset-2' })
+
+/** The source monitor's track, as the engine last received it — 'S1' is its only one. */
+const sourceTrack = () =>
+  applied.mock.calls
+    .map(([state]) => state.tracks.find(track => track.id === 'S1'))
+    .filter(Boolean)
+    .at(-1)
 
 describe('SequenceDocument', () => {
   beforeEach(() => {
@@ -78,6 +90,42 @@ describe('SequenceDocument', () => {
     act(() => useSequences.getState().runCommand('doc-1', addClip('V1', clip)))
 
     expect(screen.queryByText(/Sélectionnez un clip/)).not.toBeInTheDocument()
+  })
+
+  /**
+   * The monitor used to mount whatever was selected on a picture track, whatever its kind. A take
+   * landed there is shown as a black frame and heard as nothing at all — `audioChunksIn` only
+   * schedules tracks of the sound kind.
+   */
+  it('mounts a clip taken from a sound track on a sound track, so it is heard', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', clip)))
+
+    expect(sourceTrack()?.kind).toBe('audio')
+  })
+
+  /**
+   * The track the clip sits on, not the type of the file behind it: a rush dropped onto a sound
+   * track is played without a picture by the program monitor and shown as audio by the inspector,
+   * and the source monitor has no business disagreeing with both.
+   */
+  it('mounts a clip taken from a picture track on a picture track', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('V1', clip)))
+
+    expect(sourceTrack()?.kind).toBe('video')
+  })
+
+  // A track holds many clips; the monitor shows the selected one, not the first one laid down.
+  it('mounts the selected clip rather than the first on its track', () => {
+    render(<SequenceDocument documentId="doc-1" />)
+
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', clip)))
+    act(() => useSequences.getState().runCommand('doc-1', addClip('A1', later)))
+
+    expect(sourceTrack()?.clips[0]?.id).toBe('clip-2')
   })
 
   it('starts the program monitor when its play button is pressed', () => {
