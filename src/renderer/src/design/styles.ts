@@ -21,6 +21,27 @@ export const BUTTON_BASE = cn(
 )
 
 /**
+ * What a button of the docks is FILLED with when it is not the one action a surface exists for —
+ * the fill, the ink written on it, and what the pointer does to that fill.
+ *
+ * Apart from `BUTTON_BASE` because the two answer different questions: that one is the shape and
+ * the focus ring, this one is the colour. **A site can want the chrome and not the fill, and
+ * `ToolButton` is the witness**: it takes `BUTTON_BASE` over `bg-transparent`, because a tool sits
+ * on the bar it belongs to rather than on a surface of its own.
+ *
+ * Worn by `Button`'s neutral variant and by `Spark`'s idea card, which takes the fill and lays
+ * itself out from the top — an idea is two lines of prose beside a glyph, where `Button` is one
+ * word centred at a control's height. Rendering a `Button` there would mean overriding its whole
+ * geometry, which would be a worse copy than the one this closes.
+ *
+ * **`Counts` reaches the same pair and is NOT a third site**, which is worth writing because the
+ * classes look identical: it gets its hover from `rowSkin` and writes `bg-surface` beside it, so
+ * what it is is a ROW that happens to sit on a surface — smaller radius, a `group/row` its
+ * subtitle reads, and a refused state. Unifying the two was measured and refused on 2026-08-12.
+ */
+export const BUTTON_NEUTRAL = 'bg-surface text-text hover:bg-elevated'
+
+/**
  * The control language shared by the bars: same height token, so the density setting reaches
  * every one of them at once, and the same focus ring, so no bar ends up being the one control
  * a keyboard user cannot see.

@@ -51,6 +51,23 @@ describe('the spark panel', () => {
     expect(await screen.findByText('a mossy stone bridge at dawn')).toBeInTheDocument()
   })
 
+  /**
+   * The idea card wears the docks' neutral fill rather than a copy of it — the ink included, which
+   * is why the prose inside no longer names a colour of its own. The site test rather than the
+   * shared guard alone: that one refuses a re-copy, this one says the card is still filled.
+   */
+  it('fills an idea with the docks own neutral skin, ink and all', async () => {
+    install()
+    render(<Spark />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Proposez-moi une idée' }))
+
+    const card = (await screen.findByText('a mossy stone bridge at dawn')).closest('button')
+    expect(card).toHaveClass('bg-surface')
+    expect(card).toHaveClass('text-text')
+    expect(card).toHaveClass('hover:bg-elevated')
+  })
+
   it('carries the settings the API proposed into the generator', async () => {
     install()
     render(<Spark />)

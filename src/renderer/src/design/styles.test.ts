@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
+import { BUTTON_NEUTRAL, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -113,5 +113,58 @@ describe('the row skin and the state it publishes', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The fill a button of the docks takes when it is not the primary action. Two sites reached it on
+ * their own — `Button`'s neutral variant and the idea card of `Spark` — and the second had written
+ * beside itself that it was avoiding a copy while writing one.
+ */
+const REWRITTEN = /(bg-surface[^'"`]*hover:bg-elevated|hover:bg-elevated[^'"`]*bg-surface)/
+
+describe('the neutral fill of a button', () => {
+  it('carries the fill, the ink on it, and what the pointer does', () => {
+    expect(BUTTON_NEUTRAL).toContain('bg-surface')
+    expect(BUTTON_NEUTRAL).toContain('text-text')
+    expect(BUTTON_NEUTRAL).toContain('hover:bg-elevated')
+  })
+
+  /**
+   * Narrow on purpose, like its neighbour above: it refuses the re-copy of the FILL and its hover
+   * inside ONE class string, either way round. A site writing `hover:bg-elevated` over some other
+   * fill is a different question — `ToolButton` sits on `bg-transparent`, the carousel arrow on a
+   * shadow — and this rule deliberately leaves them alone.
+   *
+   * **What it cannot see, and why widening it would be wrong**: the pair reached across two
+   * strings of one `cn()`, or through a helper. Reading the whole FILE instead would flag
+   * `home/sections/Tools.tsx`, where `bg-surface` fills the section and `rowSkin` hovers the tiles
+   * INSIDE it — two elements, not one. A guard by file cannot tell which element carries what,
+   * which is the lesson a rule written and retired on 2026-08-12 already cost.
+   */
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && REWRITTEN.test(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  it('refuses the re-copy either way round, which is the only way to know it refuses anything', () => {
+    // The exact string both sites carried before this batch, and the same one reordered — which
+    // prettier is free to do, and which the first spelling of this rule walked straight past.
+    expect(REWRITTEN.test("'bg-surface hover:bg-elevated flex'")).toBe(true)
+    expect(REWRITTEN.test("'hover:bg-elevated hover:text-text bg-surface'")).toBe(true)
+    expect(REWRITTEN.test("'bg-transparent hover:bg-elevated'")).toBe(false)
+  })
+
+  // The partner of the rule above: it stays green on a studio where nobody wears the constant,
+  // which is what a dead export looks like from here.
+  it('is worn by the two sites it was extracted from', () => {
+    const wearing = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('BUTTON_NEUTRAL'),
+    )
+
+    expect(wearing.length).toBeGreaterThanOrEqual(2)
   })
 })

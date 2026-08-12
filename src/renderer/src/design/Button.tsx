@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, Ref } from 'react'
 import { cn } from '@/helpers/cn'
-import { BUTTON_BASE } from './styles'
+import { BUTTON_BASE, BUTTON_NEUTRAL } from './styles'
 
 export type ButtonVariant = 'primary' | 'neutral'
 
@@ -8,7 +8,7 @@ export type ButtonVariant = 'primary' | 'neutral'
 // darkened this button on the dark theme and lightened it on the light one — 3.52:1 for the label.
 const VARIANT: Record<ButtonVariant, string> = {
   primary: 'bg-accent text-accent-content hover:bg-accent-hover',
-  neutral: 'bg-surface text-text hover:bg-elevated',
+  neutral: BUTTON_NEUTRAL,
 }
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
