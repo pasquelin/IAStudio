@@ -740,8 +740,13 @@ describe('project handlers', () => {
 
     /**
      * A picture whose header will not read is still written — the bytes are what the user asked
-     * to save. It goes without a probe rather than with the previous one: `replaceBytes` keeps
-     * what it is not given, and a stale probe is exactly what this closed.
+     * to save, and `isPngBytes` already vouched for the signature.
+     *
+     * No probe is sent, which means `replaceBytes` KEEPS the previous one: it spreads the row it
+     * found and only overwrites what it was given. That is the stale probe this lot closed, still
+     * open on this one path — and deliberately, because the alternative is a row that claims a
+     * picture has no dimensions at all. It is reachable only by bytes that open on a valid PNG
+     * signature and then stop, which the studio's own encoder does not produce.
      */
     it('writes a picture whose header will not read, and sends no probe for it', async () => {
       const assets = backend()

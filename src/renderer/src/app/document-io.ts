@@ -257,9 +257,11 @@ const IMAGE_IO: DocumentIo = {
     // Through `import()` for the reason `place-asset` gives: this file is in the opening chunk.
     const replaced = target.replaces
     if (replaced) {
-      void import('@/spaces/image/asset-fidelity').then(({ reportAssetDrift }) =>
-        reportAssetDrift(documentId, replaced, target.name),
-      )
+      void import('@/spaces/image/asset-fidelity')
+        .then(({ reportAssetDrift }) => reportAssetDrift(documentId, replaced, target.name))
+        // Nothing is rethrown into a save: a notice that cannot be given has nowhere to go, and
+        // an unhandled rejection here would be the only trace of it.
+        .catch(() => undefined)
     }
 
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching

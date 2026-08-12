@@ -683,7 +683,15 @@ export class CanvasEngine {
       surface.texture = texture
     }
 
-    if (recut) this.patches?.dropAll()
+    // The pixels were carried over translated by `-from`, and nothing re-runs `loadInto` here —
+    // so the remembered picture rects have to travel the same distance. Left where they were, a
+    // crop would leave every picture layer's grips at the coordinates the OLD document used.
+    if (recut) {
+      for (const [id, laid] of this.contents) {
+        this.contents.set(id, { ...laid, x: laid.x - from.x, y: laid.y - from.y })
+      }
+      this.patches?.dropAll()
+    }
   }
 
   /** The stack, made real on the GPU: one texture per paintable layer, in the stack's order. */

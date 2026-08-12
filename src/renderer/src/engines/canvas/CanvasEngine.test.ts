@@ -2613,6 +2613,30 @@ describe('the crop tool', () => {
     expect(crops).toEqual([])
   })
 
+  /**
+   * A crop carries the pixels over translated by the frame's origin and re-cuts every surface —
+   * it does NOT reload the pictures. The rect each layer's grips are drawn on has to travel the
+   * same distance: left where it was, the grips of a picture layer would stand at coordinates
+   * only the document BEFORE the crop ever had.
+   */
+  it('moves the picture’s grips with the pixels when the document is cropped', async () => {
+    const { engine, host, layers } = await mounted(DEFAULT_CANVAS, 'crop')
+    // 200 × 100 centred in 1024²: the picture sits at 412,462.
+    await engine.loadInto('layer-1', 'scenario://asset/take-1')
+
+    press(host, 400, 450)
+    drag(host, 700, 600)
+    release(700, 600)
+    engine.applyCrop()
+    engine.setTool('move')
+
+    // The picture now sits at 12,12 in a 300 × 150 document, so its south-east grip is at 212,112.
+    press(host, 212, 112)
+    drag(host, 412, 212)
+
+    expect(layers.at(-1)).toBe('transform:layer-1:2.00:2.00:0.00')
+  })
+
   it('gives the new surface the frame’s own size', async () => {
     const { engine, host } = await mounted(DEFAULT_CANVAS, 'crop')
     const before = gpu.texturesCreated
