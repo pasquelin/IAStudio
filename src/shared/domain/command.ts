@@ -11,7 +11,7 @@ import type { WorkspaceId } from './workspace'
  * only ones a conflict check treats as competing with every scope.
  */
 export type CommandScope =
-  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph'
+  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph' | 'audio' | 'texture'
 
 export type CommandId =
   | 'project.new'
@@ -109,6 +109,10 @@ export type CommandId =
   | 'graph.run'
   | 'graph.undo'
   | 'graph.redo'
+  | 'audio.undo'
+  | 'audio.redo'
+  | 'texture.undo'
+  | 'texture.redo'
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the
@@ -883,6 +887,40 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
+
+  // The take editor was one of two surfaces whose history had no key and no menu row: its two
+  // buttons were the whole of it, so the bar could not be relieved of them without this pair.
+  command({
+    id: 'audio.undo',
+    scope: 'audio',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'audio.redo',
+    scope: 'audio',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
+
+  // The other one, and worse: the manual already promised ⌘Z on a style applied to a material
+  // (`docs/fr/manuel/12-espace-textures.md`) while nothing at all could reach that history.
+  command({
+    id: 'texture.undo',
+    scope: 'texture',
+    titleKey: 'commands.undo.title',
+    helpKey: 'commands.undo.help',
+    defaultBinding: 'Meta+KeyZ',
+  }),
+  command({
+    id: 'texture.redo',
+    scope: 'texture',
+    titleKey: 'commands.redo.title',
+    helpKey: 'commands.redo.help',
+    defaultBinding: 'Shift+Meta+KeyZ',
+  }),
 ]
 
 export const COMMAND_SCOPES: readonly CommandScope[] = [
@@ -893,33 +931,43 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'canvas',
   'skybox',
   'graph',
+  'audio',
+  'texture',
 ]
 
 /**
- * What each workspace edits, when it edits something undoable. The absent ones — Audio and
- * Textures — have no history of their own, so the native undo keeps the key.
+ * What each workspace edits, or `null` where it edits nothing undoable.
  *
  * Declared rather than derived: the menu is built in the main process from a workspace id, and
  * it has to name the exact command the surface in front is listening for.
  *
- * A workspace whose store DOES hold a history and is missing here is the one failure this table
- * can have, and it is silent: the native role keeps the accelerator, so ⌘Z never reaches the
- * window. It cost Skyboxes once and the graph once — `command.test.ts` now names them all.
+ * **Total, not partial, and that is the guard.** A workspace whose store holds a history and is
+ * missing here reaches nothing: the native role keeps the accelerator, ⌘Z never reaches the
+ * window, and the failure is silent. It cost Skyboxes once, the graph once, Audio until its bar
+ * was asked to stop drawing the only undo it had, and Textures for as long as the manual
+ * promised a key nothing answered. Written as a full `Record`, the next workspace added does
+ * not COMPILE until someone answers the question for it — `Partial` let all four slip through.
+ *
+ * Which of them holds a history is a fact of `renderer/`, invisible from here, so the other half
+ * of the guard sits there: `renderer/src/stores/history-scopes.test.ts` walks the document
+ * stores and fails on the next one that grows a history while its workspace answers `null`.
  */
-const SCOPE_BY_WORKSPACE: Partial<Record<WorkspaceId, CommandScope>> = {
+const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   image: 'canvas',
   '3d': 'scene',
   video: 'sequence',
   skyboxes: 'skybox',
   graph: 'graph',
+  audio: 'audio',
+  textures: 'texture',
 }
 
 /** The surface a workspace edits through, or `null` where nothing is undoable. */
 export function scopeOfWorkspace(workspace: WorkspaceId | null): CommandScope | null {
-  return workspace ? (SCOPE_BY_WORKSPACE[workspace] ?? null) : null
+  return workspace ? SCOPE_BY_WORKSPACE[workspace] : null
 }
 
-/** The command of that scope, when it declares one — `undo` and `redo` exist on all three. */
+/** The command of that scope, when it declares one. Every editing scope declares undo and redo. */
 export function commandIn(scope: CommandScope, suffix: string): CommandId | null {
   return commandsIn(scope).find(descriptor => descriptor.id.endsWith(`.${suffix}`))?.id ?? null
 }

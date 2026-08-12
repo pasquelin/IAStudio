@@ -5,7 +5,6 @@ import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
-import { canRedo, canUndo } from '@/engines/core/history'
 import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
 import { movesToCommand } from '@/engines/scene/animation-commands'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
@@ -25,14 +24,7 @@ import { selectedNodes, type NodeMove } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
-import {
-  addModelTo,
-  sceneHistoryOf,
-  isSceneDirty,
-  sceneOf,
-  selectIn,
-  useScenes,
-} from '@/stores/scenes'
+import { addModelTo, isSceneDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
@@ -100,10 +92,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   })
 
   const scene = useScenes(state => sceneOf(state, documentId))
-  // Booleans rather than the history itself: a selector that builds an object on every call
-  // hands React a new snapshot each render, and the render loop never settles.
-  const undoable = useScenes(state => canUndo(sceneHistoryOf(state, documentId)))
-  const redoable = useScenes(state => canRedo(sceneHistoryOf(state, documentId)))
   const modified = useScenes(state => isSceneDirty(state, documentId))
   const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
@@ -398,12 +386,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           if (command) run(command)
         }}
         onMode={(toolId, modeId) => runMode(toolId, modeId)}
-        onUndo={() => run('scene.undo')}
-        onRedo={() => run('scene.redo')}
-        undoShortcut={label(bindingOf('scene.undo', bindings))}
-        redoShortcut={label(bindingOf('scene.redo', bindings))}
-        canUndo={undoable}
-        canRedo={redoable}
       />
     </AssetDropTarget>
   )

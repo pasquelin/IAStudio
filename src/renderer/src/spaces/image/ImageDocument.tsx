@@ -12,7 +12,6 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { getBridge } from '@/services/bridge'
-import { canRedo, canUndo } from '@/engines/core/history'
 import { registerFace } from '@/engines/canvas/canvas-fonts'
 import { layerBelow, textLayer } from '@/engines/canvas/canvas-state'
 import { mdiTune } from '@mdi/js'
@@ -37,7 +36,7 @@ import {
   rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
-import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
+import { canvasOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
@@ -100,10 +99,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   // What the rulers take from the top and the left when they are on, and nothing when they are off.
   const rulerInset = view.rulers ? RULER_SIZE : 0
   const selection = useCanvasViews(state => selectionOf(state, documentId))
-  // Booleans rather than the history itself: a selector building an object on every call hands
-  // React a new snapshot each render, and the loop never settles.
-  const undoable = useCanvases(state => canUndo(canvasHistoryOf(state, documentId)))
-  const redoable = useCanvases(state => canRedo(canvasHistoryOf(state, documentId)))
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)
@@ -406,10 +401,6 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
               shortcuts={brushKeys}
             />
           }
-          onUndo={() => run('canvas.undo')}
-          onRedo={() => run('canvas.redo')}
-          canUndo={undoable}
-          canRedo={redoable}
         />
 
         <ZoomBar

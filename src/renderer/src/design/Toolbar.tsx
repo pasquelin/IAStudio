@@ -1,4 +1,3 @@
-import { mdiRedo, mdiUndo } from '@mdi/js'
 import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/helpers/cn'
@@ -6,7 +5,6 @@ import { MenuButton } from './MenuButton'
 import { MenuRow, type MenuRowChoice } from './MenuRow'
 import { Separator } from './Separator'
 import { HINT_RIGHT, tipFor, type TooltipFactory } from '@/helpers/tooltip'
-import { ToolButton } from './ToolButton'
 
 export type ToolMode = {
   id: string
@@ -51,13 +49,6 @@ export type ToolbarProps = {
   orientation?: 'vertical' | 'horizontal'
   /** Workspace tools, rendered after the built-in ones and in the same visual language. */
   extras?: ReactNode
-  onUndo?: () => void
-  onRedo?: () => void
-  /** Shown on the undo/redo tooltips. Absent leaves them unlabelled rather than lying. */
-  undoShortcut?: string
-  redoShortcut?: string
-  canUndo?: boolean
-  canRedo?: boolean
   className?: string
   /** What no class can express — an offset read off a runtime measure, such as the rulers'. */
   style?: CSSProperties
@@ -76,16 +67,9 @@ export function Toolbar({
   onMode,
   orientation = 'vertical',
   extras,
-  onUndo,
-  onRedo,
-  undoShortcut,
-  redoShortcut,
-  canUndo = false,
-  canRedo = false,
   className,
   style,
 }: ToolbarProps) {
-  const { t } = useTranslation()
   const vertical = orientation === 'vertical'
   // A vertical bar hugs the left edge, so its tooltips go right — placed on top they would sit
   // over the button above and cover the tool the eye is comparing against.
@@ -120,64 +104,7 @@ export function Toolbar({
       ))}
 
       {extras}
-
-      {(onUndo || onRedo) && divider}
-
-      {onUndo && (
-        <HistoryButton
-          icon={mdiUndo}
-          label={t('actions.undo')}
-          description={t('actions.undoHint')}
-          shortcut={undoShortcut}
-          tip={tip}
-          enabled={canUndo}
-          onClick={onUndo}
-        />
-      )}
-
-      {onRedo && (
-        <HistoryButton
-          icon={mdiRedo}
-          label={t('actions.redo')}
-          description={t('actions.redoHint')}
-          shortcut={redoShortcut}
-          tip={tip}
-          enabled={canRedo}
-          onClick={onRedo}
-        />
-      )}
     </div>
-  )
-}
-
-/** Undo and redo differ only by their icon and their label, so they are one component twice. */
-function HistoryButton({
-  icon,
-  label,
-  description,
-  shortcut,
-  tip,
-  enabled,
-  onClick,
-}: {
-  icon: string
-  label: string
-  description: string
-  shortcut?: string
-  tip: TooltipFactory
-  enabled: boolean
-  onClick: () => void
-}) {
-  return (
-    <ToolButton
-      icon={icon}
-      label={label}
-      description={description}
-      shortcut={shortcut}
-      tooltip={tip}
-      disabled={!enabled}
-      onClick={onClick}
-    />
   )
 }
 

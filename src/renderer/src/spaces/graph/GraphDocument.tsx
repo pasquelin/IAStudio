@@ -21,7 +21,7 @@ import { reportFailure } from '@/services/diagnostics'
 import type { PaletteEntry } from './palette'
 import { useDocuments } from '@/stores/documents'
 import { runOf, useGraphRuns } from '@/stores/graph-runs'
-import { graphOf, graphHistoryOf, useGraphs } from '@/stores/graphs'
+import { graphOf, useGraphs } from '@/stores/graphs'
 import { useSelection } from '@/stores/selection'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { GraphCanvas } from './GraphCanvas'
@@ -33,8 +33,6 @@ import { GraphCanvas } from './GraphCanvas'
 export function GraphDocument({ documentId }: { documentId: string }) {
   const graph = useGraphs(state => graphOf(state, documentId))
   const active = useDocuments(state => state.activeId === documentId)
-  const canUndo = useGraphs(state => graphHistoryOf(state, documentId).past.length > 0)
-  const canRedo = useGraphs(state => graphHistoryOf(state, documentId).future.length > 0)
   const canRun = useGraphs(state => isRunnable(graphOf(state, documentId)))
   const title = useDocuments(state => state.documents[documentId]?.title ?? '')
   // `workflow_create` refuses empty `nodes`/`edges`, so an empty graph writes a file the webapp
@@ -172,12 +170,6 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   )
 
   /**
-   * The keyboard this space would never have had. Its history is built with care above — a drag
-   * is one entry, a deleted selection is one entry — but a workspace absent from
-   * `SCOPE_BY_WORKSPACE` keeps the NATIVE undo, which registers the accelerator with the OS and
-   * swallows it. Exactly what Skyboxes had to learn: the history worked, nothing listened.
-   */
-  /**
    * An asset let go over the canvas becomes the node that carries it, already filled — the
    * shelf offers every kind, and the node's port takes the kind it holds.
    */
@@ -209,9 +201,6 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   }, [documentId, live])
 
   const onSelectNodes = useCallback((ids: readonly string[]) => setPicked(ids), [])
-
-  const undo = useCallback(() => useGraphs.getState().undo(documentId), [documentId])
-  const redo = useCallback(() => useGraphs.getState().redo(documentId), [documentId])
 
   const running = useGraphRuns(state => runOf(state, documentId).running)
   const runs = useGraphRuns(state => runOf(state, documentId).nodes)
@@ -288,10 +277,11 @@ export function GraphDocument({ documentId }: { documentId: string }) {
   const run = useCallback(
     (command: CommandId): void => {
       if (command === 'graph.run') return onRun()
-      if (command === 'graph.undo') return undo()
-      if (command === 'graph.redo') return redo()
+      const store = useGraphs.getState()
+      if (command === 'graph.undo') return store.undo(documentId)
+      if (command === 'graph.redo') return store.redo(documentId)
     },
-    [onRun, undo, redo],
+    [documentId, onRun],
   )
 
   useShortcuts({ scope: 'graph', enabled: active, onCommand: run })
@@ -307,12 +297,8 @@ export function GraphDocument({ documentId }: { documentId: string }) {
       onDropAsset={onDropAsset}
       selectedNodeIds={live}
       onSelectNodes={onSelectNodes}
-      onUndo={undo}
-      onRedo={redo}
       onRun={onRun}
       onDecide={onDecide}
-      canUndo={canUndo}
-      canRedo={canRedo}
       canRun={canRun}
       canExport={canExport}
       onExport={onExport}

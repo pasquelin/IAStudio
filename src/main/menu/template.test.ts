@@ -201,6 +201,9 @@ describe('the Edit menu', () => {
       ['3d', 'scene.undo'],
       ['video', 'sequence.undo'],
       ['skyboxes', 'skybox.undo'],
+      // The take editor joined them when its bar was asked to stop drawing the only undo it
+      // had: the row below is now the whole of how that history is reached by pointer.
+      ['audio', 'audio.undo'],
     ]
 
     for (const [workspace, expected] of cases) {
@@ -215,10 +218,18 @@ describe('the Edit menu', () => {
     }
   })
 
-  // Nothing is undoable there, so the platform keeps the key rather than a command answering
-  // for a history that does not exist.
-  it('leaves undo to the platform where nothing is undoable', () => {
-    const entries = submenuOf(menuTemplate(options({ workspace: 'audio' })), 'Édition')
+  /**
+   * What the menu does when the focused window names no surface at all — the settings window,
+   * the splash: the platform keeps the key rather than a command answering for a history the
+   * menu cannot name.
+   *
+   * `null` and not a workspace, deliberately: every one of the seven now maps to a scope, the
+   * last two having been wired the day the toolbars stopped drawing their own undo. A test
+   * pinned on a workspace would go stale the moment that stopped being true — which is exactly
+   * what happened to this one when it named Textures.
+   */
+  it('leaves undo to the platform where the window edits nothing', () => {
+    const entries = submenuOf(menuTemplate(options({ workspace: null })), 'Édition')
 
     expect(entries[0]?.role).toBe('undo')
   })

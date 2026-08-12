@@ -176,11 +176,13 @@ describe('SceneDocument', () => {
     expect(setMode).not.toHaveBeenCalledWith('rotate')
   })
 
-  it('undoes through the toolbar', async () => {
+  // Through the key rather than a button: the bar drew its own pair until the Edit menu was
+  // made the one place a history lives.
+  it('undoes through the keyboard', async () => {
     useScenes.getState().runCommand('doc-1', addNode(box))
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
+    await userEvent.keyboard('{Meta>}{z}{/Meta}')
     expect(meshesOf('doc-1')).toHaveLength(0)
   })
 
@@ -203,9 +205,9 @@ describe('SceneDocument', () => {
     expect(meshesOf('doc-1')).toHaveLength(1)
   })
 
-  it('disables undo when there is nothing to undo', () => {
+  it('draws no history button of its own', () => {
     render(<SceneDocument documentId="doc-1" />)
-    expect(screen.getByRole('button', { name: /Annuler/ })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Annuler/ })).not.toBeInTheDocument()
   })
 
   // Armed by default, and the one mode that leaves the gizmo off the selection.
@@ -223,7 +225,7 @@ describe('SceneDocument', () => {
     expect(meshesOf('doc-1')).toHaveLength(1)
     expect(meshesOf('doc-1')[0]?.name).toBe('Box')
 
-    await userEvent.click(screen.getByRole('button', { name: /Annuler/ }))
+    await userEvent.keyboard('{Meta>}{z}{/Meta}')
     expect(meshesOf('doc-1')).toHaveLength(0)
   })
 
