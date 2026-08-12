@@ -55,6 +55,12 @@
    */
   --color-create: #12b600;
   --color-create-hover: #0e9200;
+  /*
+   * What is drawn ON that green, and the only ink in the studio that is DARKER than its fill. A
+   * white glyph on this vivid green carries 2.72:1 — under the 3:1 WCAG 1.4.11 asks of a glyph —
+   * where a near-black one carries 6.63. daisyUI reaches the same answer for `success-content`.
+   */
+  --color-create-content: #12180f;
   --color-text: #dfe1e5;
   /*
    * Raised from #868a91, which read 3.98:1 on the chassis — under 4.5, and the chassis is where
@@ -309,6 +315,8 @@
    */
   --color-create: #0b7100;
   --color-create-hover: #095a00;
+  /* White here, where the dark theme goes near-black: this green is dark enough to carry it, 6.22:1. */
+  --color-create-content: #ffffff;
   --color-text: #1f2124;
   /* Lowered from #6b7078, which read 3.67:1 on this theme's chassis. Same reason as the dark. */
   --color-muted: #5d6168;

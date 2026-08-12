@@ -94,7 +94,7 @@ function NewButton() {
       }
       // Filled, unlike every tool icon around it: this one acts, the others only switch what is
       // shown. A grey plus among grey glyphs is a plus nobody finds.
-      className="bg-create hover:bg-create-hover size-(--sc-rail-button) rounded-(--radius-sc-md) text-white hover:text-white disabled:bg-transparent disabled:text-current"
+      className="bg-create hover:bg-create-hover text-create-content hover:text-create-content size-(--sc-rail-button) rounded-(--radius-sc-md) disabled:bg-transparent disabled:text-current"
     />
   )
 }

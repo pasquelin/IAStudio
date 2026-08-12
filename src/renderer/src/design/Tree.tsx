@@ -237,6 +237,9 @@ export function Tree<T extends TreeNode>({
                 data-row={index}
                 tabIndex={index === tabStop ? 0 : -1}
                 aria-selected={selected.has(row.node.id)}
+                // What `rowSkin`'s group reads, and not the ARIA above: the explorer paints what
+                // is OPEN through the same skin, where announcing "selected" would be a lie.
+                data-selected={selected.has(row.node.id) || undefined}
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
                 style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
