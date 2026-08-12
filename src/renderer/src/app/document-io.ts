@@ -42,17 +42,23 @@ import { createSkyboxContent } from '@shared/domain/skybox'
 type CapturedDraft = Omit<DocumentDraft, 'title'>
 
 /**
- * Where a baked document lands: BESIDE the asset it was opened from, never over it.
+ * Where a baked document lands: over the asset it was opened from — ⌘S — or beside it — ⌘⇧S.
  *
- * Never over it, and the reason is structural rather than cautious: a document's base layer
- * carries `source: <assetId>`, and `CanvasEngine` reloads any pixel layer that has one from
- * `assetUrl(source)` when its surface is born. Overwriting that asset with the flattened stack
- * would make the base layer resolve to the flattened picture on the next open, with the upper
- * layers drawn over it a second time — the document would drift further from itself at every
- * save. Breaking that loop means teaching the engine to skip the reload when the document
- * carries the layer's pixels itself, which is a change to the engine and belongs to its own lot.
+ * Overwriting is only safe because the engine leaves a layer whose pixels the document restored
+ * alone; `LayerSurface.fromDocument` holds that rule and the reason for it.
+ *
+ * Both fields optional, and both are sent flat, because `SaveAudioRequest` is shaped that way
+ * and two sibling channels saying the same thing differently is worse than a field that goes
+ * unread — see `name` below.
  */
-export type AssetTarget = { derivedFrom: string; name: string }
+export type AssetTarget = {
+  /** The asset to overwrite. Absent writes a new one instead. */
+  replaces?: string
+  /** The picture the new one was edited from. An overwrite keeps the filiation it already had. */
+  derivedFrom?: string
+  /** Names a NEW asset. Ignored by an overwrite, which keeps the name the asset already has. */
+  name: string
+}
 
 /**
  * How a kind reaches the disk and comes back. One entry per space that has a serialized form; a
@@ -61,18 +67,37 @@ export type AssetTarget = { derivedFrom: string; name: string }
  */
 type DocumentIo = {
   /**
-   * What to write, and how to record that it was written.
+   * What to write, how to record that it was written, and whether there was anything to write.
    *
    * Asynchronous because an image's pixels live on the GPU and only come back through a promise.
    * **The mark is read synchronously, before the first `await`** — that is the whole property:
    * an edit made while the file is on its way to disk must not be counted as saved.
+   *
+   * `wasEdited` is read at that same instant, and it is here rather than at the caller for the
+   * same reason: `commit` clears the mark, so a caller asking afterwards always hears "no". It
+   * is what stops ⌘S on an untouched tab from rewriting the asset behind it.
    */
-  capture: (documentId: string) => Promise<{ draft: CapturedDraft; commit: () => void }>
+  capture: (
+    documentId: string,
+  ) => Promise<{ draft: CapturedDraft; commit: () => void; wasEdited: boolean }>
   install: (documentId: string, content: string, parts?: readonly DocumentPart[]) => void
+  /**
+   * Hands a FRESH engine the pixels the document already has on disk, leaving the state alone.
+   *
+   * Only a kind whose pixels live outside its state needs one, which is the image alone. It
+   * exists because a remount does not lose the state: `DocumentArea` is keyed on the workspace,
+   * so switching space and back rebuilds every engine — and `restoreDocument` reads the file
+   * only when the state is MISSING. The new engine therefore came up with the whole stack and
+   * none of the pixels: every layer blank, except the ones carrying `source`, which redrew from
+   * their asset — and once ⌘S writes the flattened stack into that asset, redrawing from it
+   * folds the whole picture into the one layer it came from.
+   */
+  rehydrate?: (documentId: string, parts: readonly DocumentPart[]) => void
   /** What an unsaved document holds until something is done to it. */
   createDefault: (documentId: string) => void
   /**
-   * Bakes the document into a NEW asset beside the one it was opened from — what ⌘⇧S does.
+   * Bakes the document into the asset it was opened from — ⌘S — or into a new one beside it —
+   * ⌘⇧S. Which of the two is what `target` says.
    *
    * The kind writes it itself rather than handing bytes back: what a picture sends and what a
    * take would send do not have the same shape, and a shared return type would be a union every
@@ -119,6 +144,7 @@ function textDocumentIo<S>(
         // content, so the biggest of them is never decoded in the main process.
         draft: { content: JSON.stringify(toPayload(store.stateOf(current, documentId))) },
         commit: () => store.use.getState().markSaved(documentId, mark),
+        wasEdited: store.hasUnsavedWork(current, documentId),
       })
     },
     install: (documentId, content) => {
@@ -158,6 +184,26 @@ function pixelsFromPart(name: string, data: string): LayerPixels | null {
 }
 
 /**
+ * Whether this document still measures what the asset it edits measures — the one condition
+ * under which its flatten may REPLACE that asset's file rather than land beside it.
+ *
+ * Measured rather than remembered: the picture is already decoded by the layer drawing it, so
+ * the browser answers from its cache, and a size carried on the descriptor would be one more
+ * field to persist and one more that could drift from the pixels. An asset that will not
+ * measure answers `false` — refusing to overwrite is the safe half of the doubt.
+ */
+async function carriesAsset(documentId: string, assetId: string): Promise<boolean> {
+  // Through `import()` for the reason `place-asset` gives: this file is in the opening chunk,
+  // and nothing measures a picture until a ⌘S lands on a document that edits one.
+  const { measureAsset } = await import('@/spaces/image/picture-size')
+  const size = await measureAsset(assetId)
+  if (!size) return false
+
+  const canvas = canvasOf(useCanvases.getState(), documentId)
+  return canvas.width === size.width && canvas.height === size.height
+}
+
+/**
  * The image, which is the one kind a string cannot hold: the stack goes in the manifest, and each
  * layer's texture in a PNG beside it. The pixels live on the GPU, so they are asked of the engine
  * holding the document — see `canvasHost`.
@@ -168,6 +214,7 @@ const IMAGE_IO: DocumentIo = {
     // Read before the first await, which is the whole reason `capture` may be asynchronous: an
     // edit made while the pixels are being extracted must not be counted as saved.
     const mark = canvasStore.markOf(canvases, documentId)
+    const wasEdited = canvasStore.hasUnsavedWork(canvases, documentId)
     const content = serializeCanvas(canvasOf(canvases, documentId))
 
     const host = canvasHost(documentId)
@@ -187,6 +234,7 @@ const IMAGE_IO: DocumentIo = {
     return {
       draft: { content, parts },
       commit: () => useCanvases.getState().markSaved(documentId, mark),
+      wasEdited,
     }
   },
   install: (documentId, content, parts = []) => {
@@ -197,6 +245,9 @@ const IMAGE_IO: DocumentIo = {
 
     // After the state, never before: the engine builds a surface per layer of the state it was
     // given, and pixels aimed at a layer it has not heard of yet land nowhere.
+    IMAGE_IO.rehydrate?.(documentId, parts)
+  },
+  rehydrate: (documentId, parts) => {
     const host = canvasHost(documentId)
     if (!host) return
     for (const part of parts) {
@@ -207,10 +258,28 @@ const IMAGE_IO: DocumentIo = {
   },
   writeAsset: async (documentId, target) => {
     const bridge = getBridge()
+    const host = canvasHost(documentId)
+    if (!bridge || !host) return null
+
+    // An overwrite REPLACES the file, so the flatten has to be the picture and not a version of
+    // it. A document that no longer measures what the asset does — cropped, resampled, or opened
+    // under the ceiling because the picture was enormous — would silently shrink the asset it is
+    // standing in for, and `replaceBytes` deletes what it replaces. Refused instead, out loud;
+    // ⌘⇧S is the way to keep that result.
+    if (target.replaces && !(await carriesAsset(documentId, target.replaces))) {
+      throw new Error('the document no longer measures what its asset does')
+    }
+
     // `null` while the engine boots its GPU context, which is exactly when a ⌘S after switching
     // workspace lands. The document is still written; only the asset waits for the next save.
-    const png = await canvasHost(documentId)?.snapshot()
-    return bridge && png ? bridge.assets.savePicture({ ...target, png }) : null
+    const png = await host.snapshot()
+    if (!png) return null
+
+    const written = await bridge.assets.savePicture({ ...target, png })
+    // After the write, and only for an overwrite: the id did not move, so the loader would keep
+    // answering with the picture it cached before this save.
+    if (target.replaces) await host.forgetPicture(target.replaces)
+    return written
   },
   createDefault: documentId => useCanvases.getState().ensure(documentId, () => DEFAULT_CANVAS),
   holds: documentId => canvasStore.hasState(useCanvases.getState(), documentId),
@@ -273,6 +342,18 @@ const ioOf = (documentId: string): DocumentIo | undefined => {
 const unreadable = new Set<string>()
 
 /**
+ * Documents whose asset has not caught up with them.
+ *
+ * `commit` clears the mark the moment the document itself reaches disk, so "was edited" is true
+ * exactly once. A ⌘S whose second half failed — a full disk, an engine still booting its GPU
+ * context — would therefore never try again: the shelf, the scene and every other consumer would
+ * stand on the pre-edit picture for good, with no bullet to say so, and pressing ⌘S again would
+ * do nothing at all. Remembered here instead, and the next save retries whether or not anything
+ * was edited in between.
+ */
+const assetBehind = new Set<string>()
+
+/**
  * What both saving gestures need before they can write anything, or `null` when one of them is
  * missing — which is the same refusal for both, said once.
  *
@@ -293,8 +374,9 @@ function savableDocument(
 }
 
 /**
- * Writes the document to the project. A document whose state was never filled is refused:
- * `holds` separates "empty scene" from "no scene yet".
+ * Writes the document to the project, and then the asset it edits — what ⌘S means on a tab
+ * opened from the shelf. A document whose state was never filled is refused: `holds` separates
+ * "empty scene" from "no scene yet".
  *
  * Answers whether anything was written. A refusal is not a failure — there was nothing to write,
  * or the file must not be written over — but a caller about to throw the state away has to be
@@ -306,7 +388,7 @@ export async function saveDocument(documentId: string): Promise<boolean> {
   if (!savable) return false
   const { bridge, document, io } = savable
 
-  const { draft, commit } = await io.capture(documentId)
+  const { draft, commit, wasEdited } = await io.capture(documentId)
   await bridge.documents.write(document.id, document.kind, {
     ...draft,
     title: document.title,
@@ -315,10 +397,55 @@ export async function saveDocument(documentId: string): Promise<boolean> {
     ...(document.sourceAssetId ? { sourceAssetId: document.sourceAssetId } : {}),
   })
   commit()
+
+  await rewriteSourceAsset(document, io, wasEdited)
   // The folder now holds a file it did not: a document saved for the first time has to appear
   // in the Explorer without waiting for the panel to be reopened.
   void useDocuments.getState().relist('own-write')
   return true
+}
+
+/**
+ * The second half of ⌘S: the asset the tab was opened from, brought back in line with it.
+ *
+ * AFTER the document, and the order is the guarantee — the document holds the layers and the
+ * history, the asset only a flat picture, so writing the asset first and failing on the document
+ * would leave a fresh tile in front of lost work. A failure here undoes nothing and does not mark
+ * the document dirty: it is journaled, remembered in `assetBehind`, and the next ⌘S retries it.
+ *
+ * Nothing at all for a document that edits no asset, for a kind whose `writeAsset` is absent —
+ * every refusal in `IO_BY_KIND` says why at its own line — or for a tab nobody touched whose
+ * asset is not already behind.
+ */
+async function rewriteSourceAsset(
+  document: DocumentDescriptor,
+  io: DocumentIo,
+  wasEdited: boolean,
+): Promise<void> {
+  const source = document.sourceAssetId
+  if (!source || !io.writeAsset) return
+  // An edit to carry over, or one that never made it: both are a reason to write the asset.
+  if (!wasEdited && !assetBehind.has(document.id)) return
+
+  try {
+    const written = await io.writeAsset(document.id, { replaces: source, name: document.title })
+    // `null` is "nothing to bake yet" — an engine still bringing its GPU context up, which is
+    // exactly when a ⌘S after switching workspace lands. Not a success, and not silent either:
+    // treated as such it left every consumer of the asset on the pre-edit picture for good.
+    if (!written) throw new Error('nothing to bake yet')
+
+    assetBehind.delete(document.id)
+    // The tile still holds the bitmap it decoded: only a fresh `localChangedAt` moves the URL
+    // `posterUrl` builds, and without it the overwrite looks like a gesture that did nothing.
+    //
+    // `invalidate`, like every other site that says the catalogue changed: `assets.search` is a
+    // synchronous SQLite query in the main process, and a held ⌘S would open one per keystroke
+    // on the path of a shortcut.
+    useAssets.getState().invalidate()
+  } catch (error) {
+    assetBehind.add(document.id)
+    reportFailure('assets.save', document.title, error)
+  }
 }
 
 /**
@@ -451,6 +578,34 @@ export function restoreDocument(documentId: string): Promise<void> {
 
   loading.set(documentId, reading)
   return reading
+}
+
+/**
+ * Gives a freshly mounted engine back the pixels the document holds on disk.
+ *
+ * The companion of `restoreDocument`, and the two never both act: that one reads the file when
+ * the state is MISSING, this one when the state is already there and the pixels are not. A
+ * workspace switch rebuilds `DocumentArea` and every engine under it, so a document that stayed
+ * open came back with its whole stack and nothing drawn in it.
+ *
+ * What was last SAVED, which is all there is: the textures went with the GPU context, so work
+ * done since the last ⌘S is gone either way — this is what stops the rest from going with it.
+ */
+export async function rehydrateDocument(documentId: string): Promise<void> {
+  const bridge = getBridge()
+  const document = useDocuments.getState().documents[documentId]
+  const io = ioOf(documentId)
+  if (!bridge || !document || !io?.rehydrate) return
+  // A document not yet filled belongs to `restoreDocument`; both reading would race two installs
+  // onto the same tab. `unreadable` is the file that would not open, and it stays shut.
+  if (!io.holds(documentId) || unreadable.has(documentId)) return
+
+  try {
+    const file = await bridge.documents.read(document.id, document.kind)
+    if (file?.parts) io.rehydrate(documentId, file.parts)
+  } catch (error) {
+    reportFailure('document.load', document.title, error)
+  }
 }
 
 /** Whether closing would throw work away. A tab that never filled, or was never touched, has none. */
@@ -587,6 +742,9 @@ function forgetDocument(documentId: string, kind?: DocumentKind): void {
   const io = kind ? IO_BY_KIND[kind] : ioOf(documentId)
   io?.forget(documentId)
   unreadable.delete(documentId)
+  // Same reason: the id goes back to the folder, and a document reopened later must not inherit
+  // a debt owed by the one before it.
+  assetBehind.delete(documentId)
   // Session views are not the document's state, so no `DocumentIo` drops them. `useCanvasViews`
   // and `useSceneViews` still keep their entry for the session — they hold a viewport, which is
   // harmless to inherit; an inspected channel is not, it would reopen the tab on a flat map.

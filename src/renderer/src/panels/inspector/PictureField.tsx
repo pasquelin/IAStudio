@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { assetUrl, isLocalPicture } from '@shared/domain/asset'
+import { isLocalPicture, posterUrl } from '@shared/domain/asset'
 import { TextureField, type TextureOption } from '@/design/TextureField'
 import { useAssets } from '@/stores/assets'
 
@@ -23,7 +23,7 @@ export function PictureField({ label, value, onChange }: PictureFieldProps) {
     () =>
       assets
         .filter(isLocalPicture)
-        .map(asset => ({ id: asset.id, name: asset.name, url: assetUrl(asset.id) })),
+        .map(asset => ({ id: asset.id, name: asset.name, url: posterUrl(asset) ?? undefined })),
     [assets],
   )
 

@@ -209,6 +209,20 @@ export const BLEND_BY_MODE: Record<BlendMode, BLEND_MODES> = {
 type LayerSurface = {
   texture: RenderTexture
   sprite: Sprite
+  /**
+   * Whether the document filled this surface itself, which makes it the authority over the
+   * layer's `source`.
+   *
+   * `source` names where a pixel layer CAME FROM, and the engine reloads it when the surface is
+   * born. That is right until the document carries the layer's own pixels — and ⌘S is what makes
+   * the two diverge: it writes the flattened stack into that very asset, so a reload would fold
+   * the whole picture back into the layer it came from and draw the upper layers over it a
+   * second time, further at every open.
+   *
+   * Held on the surface rather than in a set beside it, so it dies with the texture: a layer
+   * that comes back on ⌘Z has no pixels left and its asset is the only picture to draw.
+   */
+  fromDocument: boolean
 }
 
 /** Which of a layer's two surfaces the brush writes on. */
@@ -923,6 +937,25 @@ export class CanvasEngine {
   }
 
   /**
+   * Drops a rewritten picture from the loader's cache, so the next layer placed from that asset
+   * draws what is on disk now.
+   *
+   * The cache is keyed on the URL and lives for the session, so ⌘S over an asset would otherwise
+   * be invisible to every OTHER document that places it — the loader answers from memory and
+   * never asks the scheme again.
+   *
+   * `unload` frees the GPU texture as well, so it must not run while something still draws from
+   * it. Nothing here does: `loadInto` renders it into the layer's own surface and destroys the
+   * sprite in the same breath. Skipped when the loader never held it — unloading a URL it does
+   * not know is not something to make a caller think about.
+   */
+  async forgetPicture(assetId: string): Promise<void> {
+    const url = assetUrl(assetId)
+    if (Assets.get(url) === undefined) return
+    await Assets.unload(url)
+  }
+
+  /**
    * What the rulers are graduated in. Pushed like the view rather than read off
    * `documentElement.lang`: that attribute is a projection written for screen readers, and it
    * carries no notification — the rulers would keep the language they were mounted in while the
@@ -1311,26 +1344,59 @@ export class CanvasEngine {
   async restoreSnapshot(pixels: LayerPixels): Promise<void> {
     const key = pixels.mask ? maskKey(pixels.layerId) : pixels.layerId
     const url = `data:image/png;base64,${pixels.data}`
+    const surface = this.surfaces.get(key)
 
     // Held rather than dropped when the surface is not there yet: `loadInto` returns in silence
-    // on a missing one, and a document would reopen with its stack and none of its pixels.
-    if (!this.surfaces.has(key)) {
+    // on a missing one, and a document would reopen with its stack and none of its pixels. The
+    // claim below is then made by the drain, which runs before the surface can reload `source`.
+    if (!surface) {
       this.pendingSnapshots.set(key, url)
       return
     }
-    // Cleared, unlike a placed picture: the surface was born filled — white, for the base layer —
-    // and compositing over that would bring a hole the user erased back as white rather than as
-    // the transparency the file holds.
-    await this.loadInto(key, url, true)
+    // Marked before the await, so a reload of `source` in flight cannot slip in front of it.
+    surface.fromDocument = true
+    try {
+      // Cleared, unlike a placed picture: the surface was born filled — white, for the base
+      // layer — and compositing over that would bring a hole the user erased back as white
+      // rather than as the transparency the file holds.
+      await this.loadInto(key, url, true)
+    } catch (error) {
+      // Given back, and the asset drawn in its place — see `fallBackToSource`.
+      this.fallBackToSource(key, surface)
+      throw error
+    }
   }
 
   /** Pours the saved pixels held for a surface into it, once it exists. */
-  private drainPendingSnapshot(key: string): void {
+  private drainPendingSnapshot(key: string, surface: LayerSurface): void {
     const url = this.pendingSnapshots.get(key)
     if (!url) return
     this.pendingSnapshots.delete(key)
+    // Claimed BEFORE the load, because the guard in `syncLayer` reads it on the very next line:
+    // set on success it would always be too late, and the asset would be drawn over these pixels
+    // every time. Given back below if the load turns out not to arrive.
+    surface.fromDocument = true
     // Nothing is rethrown: this runs inside `reconcile`, which has nowhere to report to.
-    void this.loadInto(key, url, true).catch(() => undefined)
+    void this.loadInto(key, url, true).catch(() => this.fallBackToSource(key, surface))
+  }
+
+  /**
+   * Draws the asset a layer names, after its own saved pixels failed to.
+   *
+   * A part inside `<id>.img/` can be truncated or corrupt, and before the claim existed the
+   * layer was drawn from `assetUrl(source)` regardless — so a bad part cost nothing visible.
+   * The claim would now leave that layer empty and silent, and the next ⌘S would write the empty
+   * layer over the asset. The claim is given back and the asset drawn, which is what it did.
+   */
+  private fallBackToSource(key: string, surface: LayerSurface): void {
+    surface.fromDocument = false
+
+    const layer = this.state && layerById(this.state, key)
+    if (!layer || layer.kind !== 'pixel' || layer.source === undefined) return
+
+    void this.loadInto(key, assetUrl(layer.source)).catch(error =>
+      reportFailure('canvas.layer', layer.source ?? key, error),
+    )
   }
 
   /** Rectangle, ellipse or lasso: three gestures behind one tool, as the bar offers them. */
@@ -1513,9 +1579,11 @@ export class CanvasEngine {
 
     // A flatten composed its picture before the command ran; this is the surface it was for.
     if (born) this.drainPendingPicture(layer.id, surface)
-    if (born) this.drainPendingSnapshot(layer.id)
+    // Before the reload below, which is the whole ordering: the drain is what claims the surface.
+    if (born) this.drainPendingSnapshot(layer.id, surface)
 
-    if (born && layer.kind === 'pixel' && layer.source !== undefined) {
+    // Never over pixels the document filled in — see `LayerSurface.fromDocument`.
+    if (born && layer.kind === 'pixel' && layer.source !== undefined && !surface.fromDocument) {
       // Unawaited: one unreadable asset must not take the rest of the document's reconciliation
       // down with it. The layer then lists in the panel and draws nothing, hence the report.
       void this.loadInto(layer.id, assetUrl(layer.source)).catch(error =>
@@ -1542,7 +1610,7 @@ export class CanvasEngine {
 
     this.place(mask.sprite, surfaceTransform(layer, true), mask.texture)
     if (bornMasked) this.drainPendingMask(layer.id, mask)
-    if (bornMasked) this.drainPendingSnapshot(maskKey(layer.id))
+    if (bornMasked) this.drainPendingSnapshot(maskKey(layer.id), mask)
   }
 
   /**
@@ -1616,7 +1684,7 @@ export class CanvasEngine {
       resolution: 1,
     })
     // Attached by `attach`, which is the only place that knows which container holds it.
-    const surface: LayerSurface = { texture, sprite: new Sprite(texture) }
+    const surface: LayerSurface = { texture, sprite: new Sprite(texture), fromDocument: false }
     this.surfaces.set(key, surface)
 
     if (fill !== undefined) this.fill(surface, fill)

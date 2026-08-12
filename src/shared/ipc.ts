@@ -328,6 +328,8 @@ export type SaveAudioRequest = {
  * conversion — which on a 4K picture is megabytes copied twice for nothing.
  */
 export type SavePictureRequest = {
+  /** The asset to overwrite, keeping its id and its place in the shelf. Absent creates one. */
+  replaces?: string
   name: string
   /** The picture this one was edited from, so the two stay traceable to each other. */
   derivedFrom?: string

@@ -57,5 +57,8 @@ export async function openAsset(asset: Asset): Promise<void> {
   // the document belongs to another one, so an asset opened from the home onto the workspace
   // last mounted would land on a Dockview api whose DocumentArea the home has unmounted.
   useLayouts.getState().setActiveWorkspace(intent.workspace)
-  await intent.into(created.id, asset)
+  // `become` where the destination offers one — the document IS the asset, rather than a blank
+  // one the asset was dropped on. It is what leaves the tab unmodified on open, and what makes
+  // ⌘S able to write a faithful flatten back.
+  await (intent.become ?? intent.into)(created.id, asset)
 }

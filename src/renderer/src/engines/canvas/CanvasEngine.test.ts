@@ -1485,6 +1485,77 @@ describe('loading a picture into a layer', () => {
     expect(gpu.loaded).toEqual([])
   })
 
+  // The race, and the loop behind it, are written out at `LayerSurface.fromDocument`.
+  it('leaves the asset alone for a layer whose pixels the document restored', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    gpu.loaded = []
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background'), laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'data:image/png;base64,QUJD', parser: 'texture' }])
+  })
+
+  /**
+   * A part inside `<id>.img/` can be truncated or corrupt. Before the claim existed the layer was
+   * drawn from its asset regardless, so a bad part cost nothing visible; claimed and then failed,
+   * it would leave the layer empty and silent — and the next ⌘S would write that emptiness over
+   * the asset.
+   */
+  it('falls back to the asset when the document’s own pixels will not decode', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    gpu.loaded = []
+    gpu.refuseLoad = true
+    onTestFinished(() => {
+      gpu.refuseLoad = false
+    })
+
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
+  })
+
+  // Same fallback on the other path: a surface that already exists takes its pixels directly,
+  // and the caller is told, because there it has somewhere to report to.
+  it('gives the claim back when pixels handed to a live surface will not decode', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted(stacked([laid]))
+    await flushMicrotasks()
+    gpu.loaded = []
+    gpu.refuseLoad = true
+    onTestFinished(() => {
+      gpu.refuseLoad = false
+    })
+
+    await expect(
+      engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' }),
+    ).rejects.toThrow()
+    await flushMicrotasks()
+
+    expect(gpu.loaded.map(asked => asked.src)).toContain('scenario://asset/asset-7')
+  })
+
+  // The pixels went with the surface, so the asset is the only picture left to draw.
+  it('goes back to the asset once the layer has left the stack and returned', async () => {
+    const laid = { ...pixelLayer('a', 'A'), source: 'asset-7' }
+    const { engine } = await mounted()
+    await engine.restoreSnapshot({ layerId: 'a', mask: false, data: 'QUJD' })
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    engine.apply(stacked([pixelLayer('layer-1', 'Background')]))
+    gpu.loaded = []
+    engine.apply(stacked([laid]))
+    await flushMicrotasks()
+
+    expect(gpu.loaded).toEqual([{ src: 'scenario://asset/asset-7', parser: 'texture' }])
+  })
+
   it('does nothing at all for a layer it does not hold', async () => {
     const { engine } = await mounted()
     gpu.painted = []

@@ -5,6 +5,7 @@ const engine = (label: string): CanvasHost => ({
   pixelSnapshots: () => Promise.resolve([{ layerId: label, mask: false, data: '' }]),
   restoreSnapshot: () => Promise.resolve(),
   snapshot: () => Promise.resolve(label),
+  forgetPicture: () => Promise.resolve(),
 })
 
 describe('the canvas host registry', () => {

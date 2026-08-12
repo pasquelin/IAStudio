@@ -50,6 +50,23 @@ describe('which assets have a picture to show', () => {
     expect(posterUrl(asset({ type: 'image', path: 'assets/img/one.png' }))).not.toBeNull()
   })
 
+  /**
+   * A tile is what a ⌘S over the asset has to repaint, and the stamp is what tells it to: the id
+   * does not move, so an unstamped URL hands back the bitmap the browser already decoded.
+   */
+  it('stamps the poster with the moment the file last changed', () => {
+    const rewritten = asset({ type: 'image', localChangedAt: '2026-08-12T09:00:00.000Z' })
+
+    expect(posterUrl(rewritten)).not.toBe(assetUrl('asset-1'))
+  })
+
+  // The resolver reads the path, so the id has to survive whatever the stamp puts in the query.
+  it('still names the same asset once stamped', () => {
+    const rewritten = asset({ type: 'image', localChangedAt: '2026-08-12T09:00:00.000Z' })
+
+    expect(assetIdFromUrl(posterUrl(rewritten) ?? '')).toBe('asset-1')
+  })
+
   it('offers none for what does not decode as a picture', () => {
     expect(posterUrl(asset({ type: 'video' }))).toBeNull()
     expect(posterUrl(asset({ type: 'audio' }))).toBeNull()

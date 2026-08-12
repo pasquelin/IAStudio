@@ -1,7 +1,7 @@
 import { mdiTextureBox } from '@mdi/js'
 import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { assetUrl, PICTURES, type Asset } from '@shared/domain/asset'
+import { PICTURES, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
@@ -16,6 +16,7 @@ import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
+import { usePosterUrl } from '@/hooks/usePosterUrl'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 
 /**
@@ -124,6 +125,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   }
 
   const flat = inspected ? texture.channels[inspected] : undefined
+  const flatPoster = usePosterUrl(flat?.assetId)
 
   return (
     <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
@@ -135,7 +137,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
       {flat && (
         <div className="bg-viewport absolute inset-0 flex items-center justify-center p-4">
           <img
-            src={assetUrl(flat.assetId)}
+            src={flatPoster}
             alt=""
             // `pixelated`: a normal or a height map is inspected to be read, and a browser's
             // smoothing hides exactly the noise one is looking for.

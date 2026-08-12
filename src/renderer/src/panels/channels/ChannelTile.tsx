@@ -7,9 +7,9 @@ import {
   mdiTextureBox,
 } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
-import { assetUrl } from '@shared/domain/asset'
 import type { PbrChannel } from '@shared/domain/texture'
 import { cn } from '@/helpers/cn'
+import { usePosterUrl } from '@/hooks/usePosterUrl'
 import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
 import { FOCUS_RING, rowSkin } from '@/design/styles'
 import { MediaTile } from '@/design/MediaTile'
@@ -82,6 +82,7 @@ export function ChannelTile({
   onInspect,
 }: ChannelTileProps) {
   const { t } = useTranslation()
+  const poster = usePosterUrl(map?.assetId)
   const name = t(`texture.channel.${channel}`)
   const origin = map ? ORIGINS[map.origin] : null
   const label = t(inspected ? 'texture.showMaterial' : 'texture.inspectChannel', { channel: name })
@@ -94,11 +95,7 @@ export function ChannelTile({
       className={cn('relative p-0.5', rowSkin(inspected))}
       data-selected={inspected || undefined}
     >
-      <MediaTile
-        url={map ? assetUrl(map.assetId) : undefined}
-        caption={name}
-        fallbackIcon={mdiTextureBox}
-      />
+      <MediaTile url={poster} caption={name} fallbackIcon={mdiTextureBox} />
 
       {/* Laid over the tile rather than wrapped around it: `MediaTile` renders a `figure`, and a
           `button` takes phrasing content only. Before the menu in the DOM, so the menu stays on

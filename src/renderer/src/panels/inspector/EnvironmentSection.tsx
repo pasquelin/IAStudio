@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { assetUrl, isLocalPicture } from '@shared/domain/asset'
+import { isLocalPicture, posterUrl } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextureField, type TextureOption } from '@/design/TextureField'
@@ -32,7 +32,7 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
         // `isLocalPicture` and nothing else: a cloud row would be offered, chosen, and show
         // nothing at all — the same question has to have one answer everywhere.
         .filter(asset => asset.type === 'skybox' && isLocalPicture(asset))
-        .map(asset => ({ id: asset.id, name: asset.name, url: assetUrl(asset.id) })),
+        .map(asset => ({ id: asset.id, name: asset.name, url: posterUrl(asset) ?? undefined })),
     [assets],
   )
 
