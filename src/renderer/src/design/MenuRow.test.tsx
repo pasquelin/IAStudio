@@ -87,4 +87,12 @@ describe('one row of a menu', () => {
     expect(container.querySelectorAll('svg')).toHaveLength(0)
     expect(container.querySelectorAll('span.w-3\\.5')).toHaveLength(2)
   })
+
+  // The other half, and the half a harness caught missing: emptying the column silently left
+  // every row of every menu glyphless with the whole suite green.
+  it('draws the glyph of a row that carries one', () => {
+    const { container } = render(<MenuRow {...props} />)
+
+    expect(container.querySelectorAll('svg')).toHaveLength(1)
+  })
 })
