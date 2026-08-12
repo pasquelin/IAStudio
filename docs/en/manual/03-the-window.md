@@ -41,7 +41,7 @@ Under the banner, the centre stacks two subjects only, and they are the two that
 
 | Band | What it shows | It needs |
 |---|---|---|
-| **Where you were** | the banner itself: resume, connect, or create | nothing |
+| **Where you left off** | the banner itself: resume, connect, or create | nothing |
 | **Explore** | what everyone has published, by kind | an API key |
 
 **A band that lacks what it needs is not greyed out: it is not there.** With no API key,

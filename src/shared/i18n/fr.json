@@ -681,7 +681,7 @@
     "noProject": "Aucun projet ouvert. Créez-en un ou ouvrez-en un pour voir ses documents.",
     "empty": "Ce dossier de projet n’a pas pu être lu.",
     "open": "Ouvert",
-    "revealHint": "Ouvre le dossier du système de fichiers, le fichier sélectionné",
+    "revealHint": "Ouvre le gestionnaire de fichiers sur le fichier sélectionné",
     "renameHint": "Change le nom du fichier sur le disque, pas seulement à l’écran",
     "trashHint": "Envoie le fichier à la corbeille du système ; rien n’est effacé tout de suite"
   },
@@ -840,7 +840,7 @@
     "pauseClip": "Mettre en pause",
     "clipSpeed": "Vitesse",
     "clipLoop": "En boucle",
-    "revealHint": "Ouvre le dossier du système de fichiers, l’asset sélectionné",
+    "revealHint": "Ouvre le gestionnaire de fichiers sur l’asset sélectionné",
     "conditions": "Conditions",
     "branch": "Branche {{number}}",
     "otherwise": "Sinon",
@@ -2133,7 +2133,7 @@
       "actions": "Actions du projet",
       "actionsHint": "Montrer le dossier de ce projet, ou le retirer de la liste.",
       "reveal": "Révéler dans le dossier",
-      "revealHint": "Ouvre le dossier du système de fichiers, sur ce projet",
+      "revealHint": "Ouvre le gestionnaire de fichiers sur ce projet",
       "forget": "Retirer de la liste",
       "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient"
     },

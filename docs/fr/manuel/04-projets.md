@@ -47,7 +47,7 @@ tronque.
 
 | Entrée | Ce qu’elle fait |
 |---|---|
-| **Révéler dans le dossier** | ouvre le dossier du système de fichiers, sur ce projet |
+| **Révéler dans le dossier** | ouvre le gestionnaire de fichiers sur ce projet |
 | **Retirer de la liste** | retire le projet de cette liste, **sans toucher au dossier ni à ce qu’il contient** |
 
 **Retirer ne demande pas confirmation, et c’est voulu** : rien n’est perdu, et rouvrir le projet

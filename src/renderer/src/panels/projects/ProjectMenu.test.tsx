@@ -29,7 +29,7 @@ describe('the menu of a recent project', () => {
 
     expect(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' })).toHaveAttribute(
       'data-tooltip-content',
-      'Ouvre le dossier du système de fichiers, sur ce projet',
+      'Ouvre le gestionnaire de fichiers sur ce projet',
     )
     // The one row a reader could take for "delete this project". It has to say that it does not.
     expect(screen.getByRole('menuitem', { name: 'Retirer de la liste' })).toHaveAttribute(

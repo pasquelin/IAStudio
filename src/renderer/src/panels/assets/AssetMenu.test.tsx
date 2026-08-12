@@ -111,7 +111,7 @@ describe('what the shelf offers to do with an asset', () => {
     const row = screen.getByRole('menuitem', { name: /gestionnaire de fichiers/ })
     expect(row).toHaveAttribute(
       'data-tooltip-content',
-      'Ouvre le dossier du système de fichiers, l’asset sélectionné',
+      'Ouvre le gestionnaire de fichiers sur l’asset sélectionné',
     )
     // An `aria-label` over a visible label replaces it for a screen reader (WCAG 2.5.3).
     expect(row).not.toHaveAttribute('aria-label')
