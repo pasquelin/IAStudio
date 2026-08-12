@@ -51,6 +51,13 @@ export function contrastRatio(one: string, other: string): number {
 /** What WCAG 1.4.3 asks of normal text — every size this studio writes falls under it. */
 export const AA_NORMAL_TEXT = 4.5
 
+/**
+ * What WCAG 1.4.11 asks of anything that is not text but has to be SEEN: a focus ring, a glyph
+ * standing alone, the edge of a control. Lower than the text bar because a shape is recognised
+ * from less than a letterform is read.
+ */
+export const AA_NON_TEXT = 3
+
 function toHex(values: number[]): string {
   return `#${values.map(value => Math.round(value).toString(16).padStart(2, '0')).join('')}`
 }
@@ -94,7 +101,7 @@ export function inkFor(accent: string, backdrop: string, threshold = AA_NORMAL_T
  * takes white to 1.71:1 and black to 12.30.
  *
  * **At the AA threshold the second branch is unreachable, and that is arithmetic rather than
- * luck**: white fails under a luminance of 0.183 and black fails over 0.175, so the two ranges
+ * luck**: white fails ABOVE a luminance of 0.1833 and black fails BELOW 0.175, so the two ranges
  * overlap and one of them always answers. It is written for the callers that ask for more — at
  * 7:1 the gap between 0.10 and 0.30 has no good ink at all, and the better of the two is still
  * the better of the two.

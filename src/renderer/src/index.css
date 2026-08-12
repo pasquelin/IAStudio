@@ -25,21 +25,35 @@
   --color-elevated: #3c3f44;
   --color-border: #34363a;
   /*
-   * DARKENED from #3574f0 on 2026-08-12, and the amount is the whole point: white on it went
-   * from 4.28:1 to 4.61, over the 4.5 that a menu row and a primary button need, for a blue no
-   * eye tells apart. The cost is measured and accepted — as a FILL it now reads 3.00:1 against
-   * the chassis, exactly the 3:1 WCAG 1.4.11 asks of a focus ring, where it had 3.23.
+   * DARKENED from #3574f0 on 2026-08-12, and the amount is the whole point: white on it reads
+   * 4.508:1, over the 4.5 a menu row and a primary button need, for a blue no eye tells apart.
+   *
+   * It is pinned between TWO bars, and the window between them is 0.0052 of luminance wide.
+   * White needs the blue at or under 0.1833; the focus ring needs it at or over 0.1781, because
+   * `FOCUS_RING` draws in this very colour on the chassis and WCAG 1.4.11 asks a control for
+   * 3:1. At 0.1829 it clears both, by 0.008 and by 0.063 — measured, not rounded.
+   *
+   * **A first darkening to #336fe6 landed at 0.1779 and broke the ring at 2.997**, which reads
+   * as 3.00 at two decimals and was written down as if it passed. Two decimals are not enough
+   * for this token: `design/tokens.test.ts` now measures the ring rather than trusting a comment.
    */
-  --color-accent: #336fe6;
+  --color-accent: #346ef2;
   /*
-   * The accent as INK, which the fill cannot be: #336fe6 carries 3.00:1 on the chassis, 3.78 on
-   * a panel and 3.49 on a surface — under the 4.5 WCAG 1.4.3 asks of normal text, on all three.
+   * The accent as INK, which the fill cannot be: #346ef2 carries 3.06:1 on the chassis, 3.86 on
+   * a panel and 3.57 on a surface — under the 4.5 WCAG 1.4.3 asks of normal text, on all three.
    * Lightening `--color-accent` itself would fix the text and break the fill, taking white on it
    * back under the bar: an accented button is a surface, not a word.
    *
    * Restated darker in the light theme, where a lighter blue would be the wrong direction.
    */
   --color-accent-ink: #6193f3;
+  /*
+   * What is written ON that fill, declared HERE and not only in the daisyUI blocks: three dock
+   * components read `text-accent-content`, and leaving the name to daisyUI's variable map would
+   * make them depend on a plugin `CLAUDE.md` reserves for the surfaces outside the docks.
+   * `useAppearance` overwrites it for a picked accent — see `contentFor`.
+   */
+  --color-accent-content: #ffffff;
   --color-accent-soft: #2e436e;
   --color-danger: #ff715b;
   /*
@@ -215,7 +229,7 @@
   --color-base-200: #191a1c;
   --color-base-300: #2b2d30;
   --color-base-content: #dfe1e5;
-  --color-primary: #336fe6;
+  --color-primary: #346ef2;
   --color-primary-content: #ffffff;
   --color-secondary: #3c3f44;
   --color-secondary-content: #dfe1e5;
@@ -226,11 +240,11 @@
    * accent. It is the studio's value that stands, because that is the one eight surfaces read;
    * no daisyUI component uses `accent` at all.
    */
-  --color-accent: #336fe6;
+  --color-accent: #346ef2;
   --color-accent-content: #ffffff;
   --color-neutral: #34363a;
   --color-neutral-content: #dfe1e5;
-  --color-info: #336fe6;
+  --color-info: #346ef2;
   --color-info-content: #ffffff;
   --color-success: #57a773;
   --color-success-content: #12180f;
@@ -268,16 +282,16 @@
   --color-base-200: #ffffff;
   --color-base-300: #dcdde1;
   --color-base-content: #1f2124;
-  --color-primary: #336fe6;
+  --color-primary: #346ef2;
   --color-primary-content: #ffffff;
   --color-secondary: #e4e6ea;
   --color-secondary-content: #1f2124;
   /* One variable for daisyUI and the studio alike — see the dark theme above. */
-  --color-accent: #336fe6;
+  --color-accent: #346ef2;
   --color-accent-content: #ffffff;
   --color-neutral: #c9cbd1;
   --color-neutral-content: #1f2124;
-  --color-info: #336fe6;
+  --color-info: #346ef2;
   --color-info-content: #ffffff;
   /*
    * The status hues, DARKENED once more — the previous green cleared 4.5:1 on a panel and on a
