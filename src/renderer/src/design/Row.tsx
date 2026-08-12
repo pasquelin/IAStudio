@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
+import { ROW_QUIET } from './styles'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
@@ -61,9 +62,7 @@ export function Row({
             // control does not cover either. Lifted on the same two states as the subtitle below —
             // 3.51:1 on `elevated`, 3.25 on `accent-soft` — and the strike-through, with the
             // crossed-out eye beside it, is what goes on saying the row is hidden.
-            muted
-              ? 'text-muted group-hover/row:text-text group-data-selected/row:text-text line-through'
-              : 'text-text',
+            muted ? cn(ROW_QUIET, 'line-through') : 'text-text',
           )}
         >
           {title}
@@ -71,11 +70,7 @@ export function Row({
         {/* Muted at rest, full ink once the row is picked or pointed at: `muted` on
             `accent-soft` reads 3.25:1 and on `elevated` 3.51, both under the 4.5 of WCAG 1.4.3.
             Driven from the row through `rowSkin`'s group, so no list has to pass its state down. */}
-        {subtitle && (
-          <p className="text-muted group-hover/row:text-text group-data-selected/row:text-text text-mini truncate transition-colors">
-            {subtitle}
-          </p>
-        )}
+        {subtitle && <p className={cn(ROW_QUIET, 'text-mini truncate')}>{subtitle}</p>}
       </div>
       {actions}
     </div>

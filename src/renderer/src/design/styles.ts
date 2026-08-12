@@ -86,6 +86,22 @@ export function rowSkin(selected: boolean, disabled = false): string {
 }
 
 /**
+ * The quiet ink of a word that lives INSIDE a row — a subtitle, a kind, the help under a tile.
+ *
+ * `muted` is quiet enough at rest and not enough once the row answers: it carries 3.51:1 on
+ * `elevated` and 3.25 on `accent-soft`, both under the 4.5 of WCAG 1.4.3. Raising the token would
+ * repaint every dimmed word in the studio, so the word is lifted on those two states instead —
+ * read from `rowSkin`'s group, which is why no list has to pass its state down.
+ *
+ * Written once because five sites had reached the same three classes, one of them twice. A site
+ * whose row has no selection carries the selected variant harmlessly: the attribute never appears.
+ */
+export const ROW_QUIET = cn(
+  'text-muted transition-colors',
+  'group-hover/row:text-text group-data-selected/row:text-text',
+)
+
+/**
  * A labelled toggle: the shape buttons of a texture, the view modes of a sky, the shelves of the
  * home. Written once because three surfaces had it, and one had already drifted — it lit up in
  * `accent-soft` where the others use `elevated`, the studio's hover token.

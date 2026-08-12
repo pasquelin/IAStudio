@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rowSkin, TITLE_BAR_GHOST } from './styles'
+import { ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -24,6 +24,32 @@ describe('the shared class strings', () => {
     // `/styles.ts`, and letting them off would leave the copy this rule exists to catch a home.
     const offenders = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && OWN_HOVER.some(one => source.includes(one)),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('the quiet ink of a row', () => {
+  it('lifts on both states the skin knows, and stays quiet at rest', () => {
+    expect(ROW_QUIET).toContain('text-muted')
+    expect(ROW_QUIET).toContain('group-hover/row:text-text')
+    expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
+    // The fill fades under it; the property does not inherit, so the word carries its own.
+    expect(ROW_QUIET).toContain('transition-colors')
+  })
+
+  /**
+   * Five sites had reached these three classes on their own, one of them twice — and a sixth was
+   * about to. Read off the constant rather than spelled out again, so a change of rule moves
+   * every word with it.
+   *
+   * The lift is what a copy would silently lose: a site that writes `text-muted` alone leaves its
+   * word at 3.51:1 on `elevated`, and nothing on screen says so.
+   */
+  it('is worn rather than written out again', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes('group-hover/row:text-text'),
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
