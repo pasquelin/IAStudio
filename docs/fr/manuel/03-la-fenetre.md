@@ -28,7 +28,7 @@ Elle ne dit qu’une chose à la fois, celle qui compte à cet instant.
 | **Tout est prêt** | aucune des lignes ci-dessus ne s’applique, et le studio sait déjà à quoi s’en tenir |
 
 **Il n’y a pas de carte « Démarrer un projet », et c’est délibéré** : créer un projet se demande
-déjà depuis le `+` du rail, le panneau Outils, la liste des projets, l’écran qui s’affiche sans
+déjà depuis le `+` du rail, la section Outils, la liste des projets, l’écran qui s’affiche sans
 projet et le menu. Une bannière en haut de page l’aurait dit une fois de plus.
 
 **Elle attend de savoir avant de conclure.** Lire les projets et les documents prend un instant, et
@@ -113,20 +113,20 @@ centre qu’une bannière épinglée en tête et un fil ancré en pied, et rien 
 
 ### La colonne de gauche
 
-Coupée en deux, comme celle de tous les espaces, et pour la même raison : en haut ce avec quoi on
-produit, en bas ce qu’on parcourt.
+Coupée en deux dans tous les espaces, pour la même raison : en haut ce avec quoi on produit, en
+bas ce qu’on parcourt. **À l’accueil, seule la moitié basse existe.**
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
-| **Outils** | 1re | les sept espaces, et les gestes de projet | rien |
 | **Vos projets** | 2de | ceux que vous avez ouverts récemment, à rouvrir d’un clic | rien |
 | **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
 | **Vos recettes** | 2de | les réglages que vous avez épinglés | rien |
 | **Dans la même veine** | 2de | des créations publiques qui ressemblent à votre dernier asset | une clé API |
 
 **La moitié haute est celle que les espaces réservent à la génération**, et l’accueil ne génère
-rien : il y met ce que le studio sait commencer. **Outils** est le seul panneau qui ait quelque
-chose à dire sur une machine sans clé, sans projet et sans historique.
+rien. Elle y est donc **absente** — pas vide : aucun panneau ne s’y place, et le rail n’y propose
+rien. Les sept espaces se choisissent **au centre**, où ils se lisent en largeur plutôt qu’en
+colonne de 320 px.
 
 **Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des projets,
 elle vous suit de l’un à l’autre.
@@ -400,7 +400,7 @@ de l’[écran des raccourcis](15-raccourcis.md).
 **L’Accueil ne bouge pas** : il n’est pas un espace parmi les autres, il les couvre tous, et il
 reste en tête.
 
-**L’ordre suit partout.** Le panneau **Outils** de l’accueil montre les mêmes espaces : réordonner
+**L’ordre suit partout.** La section **Outils** de l’accueil montre les mêmes espaces : réordonner
 l’un sans l’autre laisserait deux vérités sur le même écran. Il est retenu d’une session à
 l’autre, avec vos réglages.
 
@@ -458,7 +458,7 @@ De haut en bas :
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
 | *séparateur* | |
-| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; l’accueil y met **Outils** |
+| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; **l’accueil n’en a aucune**, sa moitié haute n’existe pas |
 | *séparateur* | |
 | Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met **Vos projets**, l’assistance de prompt, puis ses deux étagères |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
@@ -577,12 +577,12 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 > **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
 > espace est un endroit qui ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun —
 > il ouvre ceux des autres. **L’accueil a ses propres panneaux, et ce tableau ne les liste pas** :
-> il a ses deux colonnes à lui, avec douze panneaux qui n’existent nulle part ailleurs. À gauche il
+> il a ses deux colonnes à lui, avec onze panneaux qui n’existent nulle part ailleurs. À gauche il
 > met **Vos projets**, à la place où les espaces mettent l’Explorateur : en moitié basse. La
 > logique est la même à un mot près — un espace y range ce **avec** quoi on produit, l’accueil ce
 > **dans** quoi on produit, et c’est la première chose qu’on vient y chercher. N’ayant pas de
-> génération à mettre au-dessus, il donne la moitié haute à **Outils** : ce que le studio sait
-> commencer, à défaut de ce avec quoi il génère.
+> génération à mettre au-dessus, **il n’ouvre pas de moitié haute du tout** : ce que le studio
+> sait commencer se lit au centre, en largeur, plutôt que dans une colonne étroite.
 
 **La colonne de gauche est celle de ce qui produit**, et elle est coupée en deux.
 

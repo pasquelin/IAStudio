@@ -28,7 +28,7 @@ It says one thing at a time, whichever matters right now.
 | **Ready when you are** | none of the rows above applies, and the studio already knows where it stands |
 
 **There is no "start a project" card, and that is deliberate**: creating a project is already on
-offer from the rail's `+`, the tools panel, the project list, the screen shown with no project, and
+offer from the rail's `+`, the tools section, the project list, the screen shown with no project, and
 the menu. A banner across the top of the page would have said it once more.
 
 **It waits to know before concluding.** Reading the projects and the documents takes a moment, and
@@ -111,20 +111,20 @@ feed anchored to the foot, with nothing between them to tidy.
 
 ### The left column
 
-Cut in two, like every workspace's own, and for the same reason: above, what one produces with;
-below, what one browses.
+Cut in two in every workspace, for the same reason: above, what one produces with; below, what
+one browses. **On the home screen, only the lower half exists.**
 
 | Panel | Half | What it shows | It needs |
 |---|---|---|---|
-| **Tools** | 1st | the seven workspaces, and the project gestures | nothing |
 | **Your projects** | 2nd | the ones you opened recently, reopened with a click | nothing |
 | **An idea to start from** | 2nd | prompt starting points written for your image model | an API key |
 | **Your recipes** | 2nd | the settings you have pinned | nothing |
 | **In the same vein** | 2nd | public creations that look like your latest asset | an API key |
 
 **The upper half is the one every workspace keeps for generation**, and the home generates
-nothing: it gives it to what the studio knows how to start. **Tools** is the one panel with
-something to say on a machine with no key, no project and no history.
+nothing. So it is **absent** there — not empty: no panel goes in it, and the rail offers none.
+The seven workspaces are picked **in the centre**, where they read across the width rather than
+down a 320 px column.
 
 **Your recipes need nothing**, and that is deliberate: a recipe is kept outside every project and
 follows you from one to the next.
@@ -384,7 +384,7 @@ Both keys **remap like any other**, under the *In the workspace bar* context of 
 **Home does not move**: it is not one workspace among the others, it covers them all, and it
 stays at the head.
 
-**The order follows everywhere.** The home screen's **Tools** panel shows the same workspaces:
+**The order follows everywhere.** The home screen's **Tools** section shows the same workspaces:
 reordering one without the other would leave two truths on the same screen. It is kept from one
 session to the next, along with your settings.
 
@@ -441,7 +441,7 @@ From top to bottom:
 |---|---|
 | **+** (blue button) | creates a **new document** in the active workspace |
 | *separator* | |
-| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; the home puts **Tools** there |
+| The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; **the home has none**, its upper half does not exist |
 | *separator* | |
 | The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts **Your projects** there, the prompt help, then its two shelves |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
@@ -557,12 +557,13 @@ instead.
 > **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
 > workspace is a place that opens documents of a kind of its own; the home opens none — it opens
 > the others'. **The home has panels of its own, and this table does not list them**: it has two
-> columns of its own, holding twelve panels that exist nowhere else. On the left it puts **Your
+> columns of its own, holding eleven panels that exist nowhere else. On the left it puts **Your
 > projects** where the workspaces put the Explorer: the lower half. The logic is the same but for
 > one word — a workspace files what
 > you produce **with**, the home what you produce **in**, and that is the first thing anyone comes
-> to this screen for. With no generation to sit above it, the upper half goes to **Tools**: what
-> the studio knows how to start, in place of what it generates with.
+> to this screen for. With no generation to sit above it, **it opens no upper half at all**: what
+> the studio knows how to start reads in the centre, across the width, rather than down a narrow
+> column.
 
 **The left column belongs to what produces**, and it is cut in two.
 
