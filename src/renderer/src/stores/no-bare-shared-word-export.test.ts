@@ -39,6 +39,13 @@ const exportsOf = (source: string): string[] => [
  *
  * A word joins this list when a SECOND domain claims it, never in anticipation: a rule wider than
  * its evidence is one the next reader argues with instead of obeying.
+ *
+ * **Three words already meet that bar and are NOT here yet**, each because adding it without its
+ * rename would redden this guard — which is the intended behaviour, not an accident: `viewOf`
+ * (`canvas-views.ts`, `scene-views.ts`, `skybox-views.ts` — three stores, three return types),
+ * `isDirty` (`scenes.ts`, `textures.ts`, beside their own prefixed `sceneOf`/`sceneHistoryOf`),
+ * and `claimOnSubmit` (`image-generation.ts`, whose collision is already worked around by
+ * `generation-claims.ts:2` importing it under an alias). Each is a lot of its own at the chantier.
  */
 const SHARED_WORDS: readonly string[] = ['node', 'history']
 
@@ -102,6 +109,10 @@ describe('what a store exports about a shared word', () => {
     // The two this rule renamed: if the filter ever stops reaching them, the check above goes quiet.
     expect(names).toContain('graphNodeIn')
     expect(names).toContain('graphNodeNow')
-    expect(names).toContain('graphHistoryOf')
+    // All six, not one of them: the filter is a path prefix, so a single store moved out of the
+    // folder would go unwatched while a sentinel pinned to another store stayed green.
+    for (const domain of ['graph', 'canvas', 'scene', 'sequence', 'skybox', 'texture']) {
+      expect(names).toContain(`${domain}HistoryOf`)
+    }
   })
 })
