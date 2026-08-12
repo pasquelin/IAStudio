@@ -192,9 +192,9 @@ filtres par niveau et par sujet, et son état vide. Ce n’est pas un extrait de
 un résumé ne peut rien dire de ce qu’il a laissé de côté, alors que « qu’est-ce qui a raté »
 demande précisément de filtrer.
 
-> **L’accueil peut être coupé.** **Préférences ▸ Général ▸ Afficher l’accueil** : décoché, le
+> **L’accueil peut être coupé.** **Réglages ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. Ce que vous masquez se règle sur l’accueil
-> lui-même, pas dans les préférences — et il n’y a plus d’ordre à régler : les deux bandes ne se
+> lui-même, pas dans les réglages — et il n’y a plus d’ordre à régler : les deux bandes ne se
 > déplacent pas.
 
 ---
@@ -861,7 +861,7 @@ Trois avertissements y sont affichés, et aucun n’est décoratif :
 **Une clé qui ne répond pas ne fausse pas les chiffres en silence** : la fenêtre nomme les clés
 restées muettes et précise que les totaux sont ceux des autres.
 
-Sans aucune clé enregistrée, la fenêtre le dit et renvoie aux préférences.
+Sans aucune clé enregistrée, la fenêtre le dit et renvoie aux réglages.
 
 ### La fenêtre des licences
 

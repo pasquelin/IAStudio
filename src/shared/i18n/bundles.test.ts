@@ -268,24 +268,37 @@ describe('the translation bundles', () => {
    * de fichiers` three times. Nothing was wrong with either sentence on its own, which is why no
    * guard here saw it and why it took reading the five side by side.
    *
-   * The retained word is not a preference: the manual already says `gestionnaire de fichiers`
-   * four times for the application, and keeps `système de fichiers` for what it properly names —
-   * the filesystem, in `architecture.md`. The bundle's own use of it was the loose one.
+   * The settings window was the second, and the same shape: eight values called it `Préférences`
+   * — one of them the home tile, beside a menu row saying `Réglages…` — so a reader was told to
+   * open something the menu does not name.
    *
-   * A pair enters this list on two conditions, and a review found the second one missing from an
-   * earlier draft of this comment: both forms measured in the bundles, AND something outside the
-   * bundles settling which one wins. The manual settles this one. `Réglages` against `Préférences`
-   * — 22 to 8 in French, 26 to 8 in English — meets the first condition and not the second: what
-   * a preferences window is called is a product call, and a typography guard is no place to make
-   * it quietly.
+   * A pair enters this list on two conditions: both forms measured in the bundles, AND something
+   * outside the bundles settling which one wins. The manual settles both. It says `gestionnaire
+   * de fichiers` nine times over five pages and keeps `système de fichiers` for the filesystem in
+   * `architecture.md`; it says `Réglages` across FOURTEEN chapters and names its own chapter
+   * `14-reglages.md`. Neither word was chosen here.
    *
-   * What this does NOT catch, measured rather than assumed: a form split across two lines, a
-   * THIRD synonym nobody has written yet (`explorateur de fichiers`, `file explorer`), and text
-   * in NFD. It reads one shape of one settled word — which is what the drift looked like.
+   * The bar is the settling, not the count. An earlier draft called the settings pair a product
+   * call and left it out — on a guess, before measuring what the manual said. The draft after it
+   * wrote "eight chapters" and "`Préférences` exactly once", both off: fourteen, and the second
+   * true only of the capitalised form. A guard is a poor place to freeze a number nobody rechecks.
+   *
+   * What this does NOT catch: a form split across two lines, a THIRD synonym nobody has written
+   * yet (`explorateur de fichiers`, `file explorer`), and text in NFD. And what it catches TOO
+   * much, the day a bundle says it: `préférence` in the sense of a taste — "ce n'est pas une
+   * préférence", "by preference" — where demanding `réglages` would be nonsense. The prose of the
+   * repo already writes it that way; no bundle does yet, and this line is what to read when one
+   * does.
    */
   const SETTLED_WORDS: Record<Language, readonly { dropped: RegExp; kept: string }[]> = {
-    fr: [{ dropped: /système de fichiers/i, kept: 'gestionnaire de fichiers' }],
-    en: [{ dropped: /file browser/i, kept: 'file manager' }],
+    fr: [
+      { dropped: /système de fichiers/i, kept: 'gestionnaire de fichiers' },
+      { dropped: /préférences?/i, kept: 'réglages' },
+    ],
+    en: [
+      { dropped: /file browser/i, kept: 'file manager' },
+      { dropped: /\bpreferences?\b/i, kept: 'settings' },
+    ],
   }
 
   it.each(CODES)('says one thing one way in %s', code => {

@@ -26,7 +26,7 @@ describe.each([
     expect(read('image')).toBe('flux')
   })
 
-  it('falls back to the one the preferences name', () => {
+  it('falls back to the one the settings name', () => {
     preferModels({ image: 'sdxl' })
 
     expect(read('image')).toBe('sdxl')

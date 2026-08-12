@@ -943,7 +943,7 @@
     "frame": "Frame selection",
     "frameHint": "Recentre the camera on the selected object",
     "snap": "Snap",
-    "snapHint": "Move the handles in regular steps, as coarse as the preferences say",
+    "snapHint": "Move the handles in regular steps, as coarse as the settings say",
     "space": "Local frame",
     "display": "Display mode",
     "displayHint": "Draw the surfaces, their edges, or both",
@@ -1021,7 +1021,7 @@
     "secret": "API secret",
     "configure": "Set up credentials",
     "explanation": "Your credentials are encrypted by the system keychain and never leave your machine.",
-    "configureHint": "Opens the preferences, at the account section"
+    "configureHint": "Opens the settings, at the account section"
   },
   "accounts": {
     "name": "Name",
@@ -1056,7 +1056,7 @@
     "saveHint": "Keeps the new name, provided no other account already has it",
     "cancelHint": "Leaves the name as it was",
     "addHint": "Stores the key, encrypted by the system keychain",
-    "manageHint": "Opens the preferences to add, rename or remove an account"
+    "manageHint": "Opens the settings to add, rename or remove an account"
   },
   "errors": {
     "missingCredentials": "No credentials saved.",
@@ -1447,7 +1447,7 @@
     },
     "sceneSnap": {
       "title": "Snapping",
-      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space preferences."
+      "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space settings."
     },
     "sceneSpace": {
       "title": "Local frame",
@@ -1862,7 +1862,7 @@
     "retry": "Try again",
     "retryHint": "Asks for the usage again, in case the refusal came from the network",
     "empty": "No activity over this period.",
-    "noAccount": "No API key stored. Add one in the preferences to see your usage.",
+    "noAccount": "No API key stored. Add one in the settings to see your usage.",
     "noBalance": "The Scenario API exposes no balance: these figures are what was spent, never what is left.",
     "mixedAccounts": "The total adds up keys billed separately — it matches no single invoice.",
     "total": "Total spent",
@@ -2123,7 +2123,7 @@
       "newProjectHelp": "A folder that holds your documents and everything you bring in.",
       "openProject": "Open a project",
       "openProjectHelp": "Pick a project folder already on this machine.",
-      "settings": "Preferences",
+      "settings": "Settings",
       "settingsHelp": "Keys, appearance, generation limits and shortcuts."
     },
     "projects": {
@@ -2158,7 +2158,7 @@
       "running_other": "{{count, number}} generations running",
       "runningBody": "They carry on while you work, and land in the document that asked for them.",
       "connect": "Connect an API key",
-      "connectBody": "Models, generation and the shared library need a Scenario key and secret. Paste them into Preferences ▸ Account — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
+      "connectBody": "Models, generation and the shared library need a Scenario key and secret. Paste them into Settings ▸ Account — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
       "connectAction": "Enter my API key",
       "ready": "Ready when you are",
       "readyBody": "{{project}} is open and holds nothing yet. Pick a workspace and make the first thing in it.",
@@ -2213,7 +2213,7 @@
     "closingActionHint": "Opens the creation space, the one where generating happens",
     "sparkAskHint": "Asks the API for three starting points, written for the generator’s model",
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
-    "spotlightConnectHint": "Opens the preferences, at the account section",
+    "spotlightConnectHint": "Opens the settings, at the account section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens",
     "hideHint": "Takes the section off the home; a line at the foot of the page brings it back"
   },

@@ -154,7 +154,7 @@ export type SceneRendererOptions = {
  * could reach.
  *
  * The settings themselves, not a copy of their shape. Spelled out here, the two drifted in
- * silence: a field added to the preferences would have compiled on both sides and simply never
+ * silence: a field added to the settings would have compiled on both sides and simply never
  * reached the viewport. Whether snapping is ON stays out — that is `setSnapping`, per document,
  * not a preference.
  */

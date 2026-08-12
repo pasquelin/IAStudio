@@ -187,9 +187,9 @@ and by topic included, empty state and all. It is not an extract of the last few
 can say nothing about what it left out, whereas "what went wrong" is exactly a question you
 answer by filtering.
 
-> **The home can be skipped.** **Preferences ▸ General ▸ Show the home screen**: unticked, the
+> **The home can be skipped.** **Settings ▸ General ▸ Show the home screen**: unticked, the
 > studio goes straight to the workspace you left. What you hide is set on the home itself, not in
-> the preferences — and there is no order left to set: the two bands do not move.
+> the settings — and there is no order left to set: the two bands do not move.
 
 ---
 
@@ -831,7 +831,7 @@ Three warnings are shown there, and none is decorative:
 **A key that does not answer does not skew the figures silently**: the window names the keys that
 stayed quiet and says the totals are the others'.
 
-With no key stored at all, the window says so and points to the preferences.
+With no key stored at all, the window says so and points to the settings.
 
 ### The licences window
 

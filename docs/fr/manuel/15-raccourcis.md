@@ -174,7 +174,7 @@ l’écran des raccourcis.
 | **Déplacer** | `G` | tirer sur les flèches de couleur pour le glisser |
 | **Pivoter** | `R` | tirer sur les cercles de couleur pour le faire tourner |
 | **Redimensionner** | `S` | tirer sur les poignées. `⇧` garde les proportions |
-| **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les préférences |
+| **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les réglages |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
 | **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner |
