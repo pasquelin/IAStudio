@@ -3519,17 +3519,23 @@ describe('the brush ring', () => {
  * greys it was chosen for.
  */
 describe('the overlay colours the canvas falls back on', () => {
-  // Keeping the FIRST value of each name from `@theme` onwards, as `design/tokens.test.ts` does:
-  // `--color-accent` is declared three times, and the later two belong to daisyUI theme blocks.
+  /**
+   * The `@theme` BLOCK, not the rest of the file from `@theme` onwards — and the difference is
+   * the whole point, measured. Reading onwards, a token deleted from `@theme` is still found in
+   * the light theme's own block further down, so removing `--color-marquee-light` from the
+   * reference left this green while the dark theme no longer declared it. Three tokens are
+   * exposed that way: the ones the light theme restates at the same value.
+   */
   const darkTokens = (): Map<string, string> => {
-    const found = new Map<string, string>()
-    for (const [, name = '', value = ''] of stylesheet
-      .slice(stylesheet.indexOf('@theme {'))
-      .matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)) {
-      if (!found.has(name)) found.set(name, value.trim())
-    }
+    const start = stylesheet.indexOf('@theme {')
+    const block = stylesheet.slice(start, stylesheet.indexOf('\n}', start))
 
-    return found
+    return new Map(
+      [...block.matchAll(/(--color-[a-z0-9-]+):\s*([^;]+);/g)].map(([, name = '', value = '']) => [
+        name,
+        value.trim(),
+      ]),
+    )
   }
 
   it('names only tokens the stylesheet still declares', () => {
@@ -3541,10 +3547,11 @@ describe('the overlay colours the canvas falls back on', () => {
 
   it('restates each of those tokens exactly', () => {
     const declared = darkTokens()
-    const parts = Object.keys(OVERLAY_TOKENS) as (keyof typeof OVERLAY_TOKENS)[]
 
-    expect(parts.map(part => [part, FALLBACK_COLORS[part]])).toEqual(
-      parts.map(part => [part, declared.get(OVERLAY_TOKENS[part])]),
+    expect({ ...FALLBACK_COLORS }).toEqual(
+      Object.fromEntries(
+        Object.entries(OVERLAY_TOKENS).map(([part, name]) => [part, declared.get(name)]),
+      ),
     )
   })
 })
