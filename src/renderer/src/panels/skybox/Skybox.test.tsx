@@ -5,7 +5,7 @@ import { createSkyboxContent, type SkyboxContent } from '@shared/domain/skybox'
 import { installDocument, installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { installSkybox } from '@/stores/skybox-fixtures'
-import { historyOf, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
+import { skyboxHistoryOf, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { Skybox } from './Skybox'
 
 const sky = (content: Partial<SkyboxContent> = {}): SkyboxContent => ({
@@ -127,7 +127,7 @@ describe('the skybox panel', () => {
     fireEvent.change(slider, { target: { value: '0.3' } })
     fireEvent.pointerUp(slider)
 
-    expect(historyOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(1)
+    expect(skyboxHistoryOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(1)
   })
 
   /**
@@ -147,7 +147,7 @@ describe('the skybox panel', () => {
 
     fireEvent.change(slider, { target: { value: '0.5' } })
 
-    expect(historyOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(2)
+    expect(skyboxHistoryOf(useSkyboxes.getState(), 'doc-1').past).toHaveLength(2)
   })
 
   /**

@@ -13,7 +13,7 @@ import { installScene } from '@/stores/scene-fixtures'
 import { useModelClips } from '@/stores/model-clips'
 import { useSceneViews } from '@/stores/scene-views'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
-import { historyOf, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
 import { AnimationPanel } from './AnimationPanel'
 
 const DOCUMENT = 'doc-1'
@@ -64,7 +64,7 @@ describe('AnimationPanel', () => {
 
   it('costs ONE undo for a key that had to open its channels', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
     await userEvent.click(
       within(screen.getByTestId('anim-subject-cube-1')).getByRole('button', {
@@ -72,7 +72,7 @@ describe('AnimationPanel', () => {
       }),
     )
 
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
   })
 
   it('keys a scale at one, not zero — a neutral key must not flatten the object', async () => {
@@ -109,12 +109,12 @@ describe('AnimationPanel', () => {
 
   it('records with auto-key, and keeps the switch off the undo stack', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
     await userEvent.click(screen.getByRole('button', { name: /Enregistrement automatique/ }))
 
     expect(animationViewOf(useAnimationViews.getState(), DOCUMENT).autoKey).toBe(true)
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before)
   })
 
   it('sets the duration and the rate, which nothing could reach before', async () => {
@@ -292,7 +292,7 @@ describe('typing a duration', () => {
 
   it('costs ONE undo for a number typed digit by digit', async () => {
     render(<AnimationPanel documentId={DOCUMENT} />)
-    const before = historyOf(useScenes.getState(), DOCUMENT).past.length
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
 
     const field = screen.getByLabelText(/Images\/s/)
     await userEvent.click(field)
@@ -300,7 +300,7 @@ describe('typing a duration', () => {
     await userEvent.tab()
 
     expect(timelineOf().fps).toBe(120)
-    expect(historyOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
   })
 })
 

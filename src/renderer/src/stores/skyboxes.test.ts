@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createSkyboxContent } from '@shared/domain/skybox'
-import { historyOf, setSkyboxSource, useSkyboxes } from './skyboxes'
+import { skyboxHistoryOf, setSkyboxSource, useSkyboxes } from './skyboxes'
 
 const picture = (id: string): Asset => ({
   id,
@@ -13,7 +13,7 @@ const picture = (id: string): Asset => ({
 })
 
 const entries = (documentId: string): number =>
-  historyOf(useSkyboxes.getState(), documentId).past.length
+  skyboxHistoryOf(useSkyboxes.getState(), documentId).past.length
 
 /**
  * The only asynchronous writer in the studio: a generation lands whenever it lands, and a drop

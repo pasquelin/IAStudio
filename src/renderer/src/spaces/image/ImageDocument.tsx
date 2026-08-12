@@ -37,7 +37,7 @@ import {
   rotateImage,
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
-import { canvasOf, historyOf, useCanvases } from '@/stores/canvases'
+import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
@@ -102,8 +102,8 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const selection = useCanvasViews(state => selectionOf(state, documentId))
   // Booleans rather than the history itself: a selector building an object on every call hands
   // React a new snapshot each render, and the loop never settles.
-  const undoable = useCanvases(state => canUndo(historyOf(state, documentId)))
-  const redoable = useCanvases(state => canRedo(historyOf(state, documentId)))
+  const undoable = useCanvases(state => canUndo(canvasHistoryOf(state, documentId)))
+  const redoable = useCanvases(state => canRedo(canvasHistoryOf(state, documentId)))
   const bindings = useBindingOverrides()
   const label = useShortcutLabel()
   const active = useDocuments(state => state.activeId === documentId)

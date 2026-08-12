@@ -13,7 +13,7 @@ const store = createDocumentStore<SceneState>(EMPTY_SCENE)
 export const sceneStore = store
 export const useScenes = store.use
 export const sceneOf = store.stateOf
-export const historyOf = store.historyOf
+export const sceneHistoryOf = store.historyOf
 export const isDirty = store.isDirty
 
 /**

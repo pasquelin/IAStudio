@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { GraphNode } from '@shared/domain/graph'
 import { installGraph, graphNodeNow } from '@/stores/graph-fixtures'
-import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
+import { graphOf, graphHistoryOf, useGraphs } from '@/stores/graphs'
 import { LiveNodeInspector } from './inspector-fixtures'
 
 const DOCUMENT = 'graph-1'
@@ -125,10 +125,10 @@ describe('GraphNodeInspector', () => {
    */
   it('collapses a typed sentence into a single history entry', async () => {
     show(TEXT)
-    const before = historyOf(useGraphs.getState(), DOCUMENT).past.length
+    const before = graphHistoryOf(useGraphs.getState(), DOCUMENT).past.length
     await userEvent.type(screen.getByLabelText('Prompt'), 'ette')
 
-    expect(historyOf(useGraphs.getState(), DOCUMENT).past.length).toBe(before + 1)
+    expect(graphHistoryOf(useGraphs.getState(), DOCUMENT).past.length).toBe(before + 1)
   })
 
   /** The types the editor has no face for still say what they are, never nothing. */
@@ -266,7 +266,7 @@ describe('GraphNodeInspector', () => {
 
       const node = graphOf(useGraphs.getState(), DOCUMENT).nodes[0]
       expect(node?.data.isOutput).toBe(true)
-      expect(historyOf(useGraphs.getState(), DOCUMENT).past).toHaveLength(1)
+      expect(graphHistoryOf(useGraphs.getState(), DOCUMENT).past).toHaveLength(1)
     })
 
     it('offers it on a node the converter reads it on', () => {

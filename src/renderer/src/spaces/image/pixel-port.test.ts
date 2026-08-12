@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo, canRedo } from '@/engines/core/history'
 import { renameLayer } from '@/engines/canvas/commands'
 import type { PatchSide } from '@/engines/canvas/PixelPatches'
-import { historyOf, useCanvases } from '@/stores/canvases'
+import { canvasHistoryOf, useCanvases } from '@/stores/canvases'
 import { pixelPort } from './pixel-port'
 
 const DOCUMENT = 'doc-1'
 
-const history = () => historyOf(useCanvases.getState(), DOCUMENT)
+const history = () => canvasHistoryOf(useCanvases.getState(), DOCUMENT)
 
 /** Stands in for the engine: it records what the history asked it to replay. */
 function engine(present = true) {

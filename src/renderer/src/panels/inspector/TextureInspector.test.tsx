@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import fr from '@shared/i18n/fr.json'
 import { installTexture } from '@/stores/texture-fixtures'
-import { historyOf, textureOf, useTextures } from '@/stores/textures'
+import { textureHistoryOf, textureOf, useTextures } from '@/stores/textures'
 import { TextureInspector } from './TextureInspector'
 
 const DOCUMENT = 'tex-1'
@@ -13,7 +13,7 @@ beforeEach(() => {
 
 const material = () => textureOf(useTextures.getState(), DOCUMENT).material
 const preview = () => textureOf(useTextures.getState(), DOCUMENT).preview
-const entries = () => historyOf(useTextures.getState(), DOCUMENT).past.length
+const entries = () => textureHistoryOf(useTextures.getState(), DOCUMENT).past.length
 
 const show = (): void => {
   render(<TextureInspector documentId={DOCUMENT} />)

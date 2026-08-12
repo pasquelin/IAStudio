@@ -11,7 +11,7 @@ const store = createDocumentStore<SkyboxContent>(createSkyboxContent())
 export const skyboxStore = store
 export const useSkyboxes = store.use
 export const skyboxOf = store.stateOf
-export const historyOf = store.historyOf
+export const skyboxHistoryOf = store.historyOf
 
 /**
  * Hangs a picture of the project in a given sky. The target is passed rather than read off the

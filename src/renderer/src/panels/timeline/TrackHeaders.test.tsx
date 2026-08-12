@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { canUndo } from '@/engines/core/history'
 import { sequenceWith, trackFixture } from '@/engines/timeline/timeline-fixtures'
 import type { Track } from '@/engines/timeline/timeline-state'
-import { historyOf, sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceHistoryOf, sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView } from '@/stores/timeline-view'
 import { TrackHeaders } from './TrackHeaders'
 
@@ -57,7 +57,7 @@ describe('TrackHeaders', () => {
     render(<TrackHeaders documentId="doc-1" />)
     await userEvent.click(screen.getByRole('button', { name: /Rendre muette la piste V1/ }))
 
-    expect(canUndo(historyOf(useSequences.getState(), 'doc-1'))).toBe(false)
+    expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(false)
   })
 
   it('renames a track on double-click, and that one is undoable', async () => {
@@ -68,7 +68,7 @@ describe('TrackHeaders', () => {
     await userEvent.type(screen.getByLabelText('Nom de la piste'), 'Wide shot{Enter}')
 
     expect(trackOf('V1')?.name).toBe('Wide shot')
-    expect(canUndo(historyOf(useSequences.getState(), 'doc-1'))).toBe(true)
+    expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(true)
   })
 
   it('keeps the old name when the edit is abandoned', async () => {
@@ -103,7 +103,7 @@ describe('TrackHeaders', () => {
     render(<TrackHeaders documentId="doc-1" />)
     await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste vidéo/ }))
 
-    expect(canUndo(historyOf(useSequences.getState(), 'doc-1'))).toBe(true)
+    expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(true)
   })
 
   it('removes a track from its own menu', async () => {

@@ -21,7 +21,7 @@ import { reportFailure } from '@/services/diagnostics'
 import type { PaletteEntry } from './palette'
 import { useDocuments } from '@/stores/documents'
 import { runOf, useGraphRuns } from '@/stores/graph-runs'
-import { graphOf, historyOf, useGraphs } from '@/stores/graphs'
+import { graphOf, graphHistoryOf, useGraphs } from '@/stores/graphs'
 import { useSelection } from '@/stores/selection'
 import { useShortcuts } from '@/hooks/useShortcuts'
 import { GraphCanvas } from './GraphCanvas'
@@ -33,8 +33,8 @@ import { GraphCanvas } from './GraphCanvas'
 export function GraphDocument({ documentId }: { documentId: string }) {
   const graph = useGraphs(state => graphOf(state, documentId))
   const active = useDocuments(state => state.activeId === documentId)
-  const canUndo = useGraphs(state => historyOf(state, documentId).past.length > 0)
-  const canRedo = useGraphs(state => historyOf(state, documentId).future.length > 0)
+  const canUndo = useGraphs(state => graphHistoryOf(state, documentId).past.length > 0)
+  const canRedo = useGraphs(state => graphHistoryOf(state, documentId).future.length > 0)
   const canRun = useGraphs(state => isRunnable(graphOf(state, documentId)))
   const title = useDocuments(state => state.documents[documentId]?.title ?? '')
   // `workflow_create` refuses empty `nodes`/`edges`, so an empty graph writes a file the webapp
