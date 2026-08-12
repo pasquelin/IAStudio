@@ -787,8 +787,10 @@ montre rien tant que rien n’a cassé laisse l’utilisateur sans endroit où r
 
 **Un clic ouvre la liste et marque tout comme lu** — l’ouvrir, c’est le lire. Deux filtres y
 attendent : le **niveau** (information, avertissement, échec) et le **sujet** (génération,
-import, bibliothèque, document, projet, interface). Chaque rangée commence par un bouton **Tout**
-qui la relâche.
+import, bibliothèque, document, projet, interface). **Chacun est un menu** : le bouton dit ce
+qu'il retient — « Niveau : Échec », ou « Niveau : Tout » quand il ne retient rien — et l'ouvrir
+donne les cases à cocher. Plusieurs valeurs peuvent l'être à la fois ; la ligne **Tout**, en tête
+du menu, relâche le filtre entier.
 
 **Interface, c’est le studio lui-même** plutôt que ce qu’il contient : un panneau qui n’a pas pu
 se dessiner, ou l’agencement enregistré d’un espace devenu illisible. Ces pannes-là n’ont pas de
