@@ -259,9 +259,9 @@ A texture double-clicks like the rest: it then lands as the base colour of the o
    `exr`), 3D (`glb`);
 3. a banner follows each file: Probing, Fingerprinting, Proxy, Waveform, Ready.
 
-**What you need to know, and it has real consequences: the file is not copied.** The studio
-creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
-link**.
+**What you need to know, and it has real consequences: on import, the file is not copied.** The
+studio creates a **link** to where it sits. Moving, renaming or deleting the original **breaks the
+link**. Editing it, on the other hand, brings it into the project, without touching your file.
 
 **On the 3D side, only `.glb` comes in.** A separate `.gltf` — the kind that drags its `.bin`
 files and its textures along beside it — as well as `.obj`, `.fbx` and HDRIs (`.hdr`) are refused.

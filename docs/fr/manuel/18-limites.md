@@ -333,13 +333,16 @@ même comme source pour une *skybox* : il faut simplement aller le chercher dans
 l’image « Ce clip n’a pas pu être affiché ». Le studio ne les convertit pas : voir
 [L’espace Vidéo](10-espace-video.md#quand-un-clip-ne-peut-pas-safficher).
 
-### Le fichier n’est pas copié
+### Le fichier n’est pas copié — à l’import
 
-Le studio crée un **lien** vers votre fichier, là où il se trouve. Déplacer ou supprimer
-l’original casse le lien.
+À l’import, le studio crée un **lien** vers votre fichier, là où il se trouve. Déplacer ou
+supprimer l’original casse le lien.
 
 Ce n’est pas un défaut mais un choix : copier des rushes de plusieurs gigaoctets dans chaque
 projet remplirait votre disque pour rien.
+
+**L’éditer, en revanche, le fait entrer dans le projet** — et votre fichier d’origine n’est pas
+touché. Voir [Les assets](07-assets.md).
 
 ---
 

@@ -114,7 +114,7 @@ Only when you explicitly ask is anything written:
 
 | Button | What it does |
 |---|---|
-| **Apply** | **rewrites the asset** with your changes. The original is replaced |
+| **Apply** | **rewrites the asset** with your changes. The original is replaced — unless it is a [linked medium](07-assets.md), which then enters the project without your file being touched |
 | **Save as new** | creates a **new asset** alongside, named "*(edited)*" |
 
 > **When in doubt, take "Save as new".** You keep the original, and you can always delete the copy

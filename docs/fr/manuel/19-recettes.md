@@ -266,9 +266,10 @@ matière ouverte.
    `tiff` `exr`), 3D (`glb`) ;
 3. un bandeau suit chaque fichier : Analyse, Empreinte, Proxy, Forme d’onde, Prêt.
 
-**Ce qu’il faut savoir, et qui a des conséquences réelles : le fichier n’est pas copié.** Le
-studio crée un **lien** vers l’endroit où il se trouve. Déplacer, renommer ou supprimer
-l’original **casse le lien**.
+**Ce qu’il faut savoir, et qui a des conséquences réelles : à l’import, le fichier n’est pas
+copié.** Le studio crée un **lien** vers l’endroit où il se trouve. Déplacer, renommer ou
+supprimer l’original **casse le lien**. L’éditer, lui, le fait entrer dans le projet, sans toucher
+votre fichier.
 
 **Côté 3D, seul le `.glb` entre.** Un `.gltf` séparé — celui qui traîne ses fichiers `.bin` et
 ses textures à côté — ainsi que `.obj`, `.fbx` et les HDRI (`.hdr`) sont refusés.

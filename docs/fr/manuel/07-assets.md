@@ -335,10 +335,10 @@ Le bouton **Importer un média**, sur la ligne de titre de l’étagère.
 > Un `.exr` importé est catalogué comme une image, pas comme un ciel. Voir
 > [Ce qui n’existe pas encore](18-limites.md).
 
-### Le fichier n’est pas copié
+### Le fichier n’est pas copié — à l’import
 
-**Important.** Le studio ne copie pas votre fichier dans le projet : il crée un **lien** vers
-l’endroit où il se trouve.
+**Important.** À l’import, le studio ne copie pas votre fichier dans le projet : il crée un
+**lien** vers l’endroit où il se trouve.
 
 Deux conséquences :
 
@@ -350,6 +350,17 @@ Deux conséquences :
 
 Si vous devez emporter un projet ailleurs, emportez aussi les médias qu’il pointe — ou copiez-les
 vous-même dans le dossier du projet avant de les importer.
+
+**Mais l’ÉDITER le fait entrer dans le projet.** Un média lié que vous retouchez puis enregistrez —
+`⌘S` sur une image, **Appliquer** sur une prise sonore — est écrit dans le dossier du projet, et
+c’est cette copie que le studio montre ensuite partout : l’étagère, la scène, l’inspecteur.
+Le lien est remplacé par un vrai fichier, et **Révéler dans le gestionnaire de fichiers** mène
+désormais là.
+
+**Le fichier que vous aviez pointé n’est pas touché.** Il reste où il est, dans l’état où vous
+l’avez laissé : écrire dans un dossier que vous avez seulement montré au studio serait un autre
+geste que celui d’éditer un asset. Si vous vouliez modifier l’original, faites-le dans l’outil qui
+l’a produit.
 
 ### Ce qui se passe pendant l’import
 
