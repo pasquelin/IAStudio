@@ -5,6 +5,7 @@ import manifest from '../../package.json'
 import {
   budgetsIn,
   carried,
+  globsIn,
   granted,
   LEAST_BUDGETS,
   matches,
@@ -40,6 +41,19 @@ describe('reading the budgets out of the config', () => {
     }`
 
     expect(budgetsIn(config)).toEqual([{ glob: 'src/a/**', statements: -10, branches: -4 }])
+  })
+
+  /**
+   * What the slack table reads and what the rename check reads are not the same list: a
+   * percentage carries no room to measure, and is still a glob that can stop matching.
+   */
+  it('takes every glob, budget and full coverage alike', () => {
+    const config = `thresholds: {
+      'src/a/**': { statements: -10, branches: -4 },
+      'src/b.ts': { statements: 100, branches: 100 },
+    }`
+
+    expect(globsIn(config)).toEqual(['src/a/**', 'src/b.ts'])
   })
 
   /**
@@ -190,9 +204,19 @@ describe('a glob that no longer matches anything', () => {
    */
   it('is named, however tight its budget', () => {
     const config = `thresholds: { 'src/gone/**': { statements: -3, branches: -1 } }`
-    const rows = slackOf(config, held, ROOT)
 
-    expect(unmatched(rows, held, ROOT)).toEqual(['src/gone/**'])
+    expect(unmatched(globsIn(config), held, ROOT)).toEqual(['src/gone/**'])
+  })
+
+  /**
+   * The globs asking for full coverage never reached this check: it was fed from `slackOf`, which
+   * only knows the negative budgets. A `100` over a renamed folder is the worst of the two to
+   * lose — it demands everything of nothing, and stays green whatever lands beside it.
+   */
+  it('is named when its threshold is full coverage rather than a budget', () => {
+    const config = `thresholds: { 'src/gone/**': { statements: 100, branches: 100 } }`
+
+    expect(unmatched(globsIn(config), held, ROOT)).toEqual(['src/gone/**'])
   })
 
   // A glob covered whole carries nothing either, and must not be mistaken for a renamed one.
@@ -200,7 +224,7 @@ describe('a glob that no longer matches anything', () => {
     const covered = summary({ 'src/a/one.ts': [0, 0] })
     const config = `thresholds: { 'src/a/**': { statements: -3, branches: -1 } }`
 
-    expect(unmatched(slackOf(config, covered, ROOT), covered, ROOT)).toEqual([])
+    expect(unmatched(globsIn(config), covered, ROOT)).toEqual([])
   })
 })
 

@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 // and the rule the tests check is then the one that runs rather than a twin of it.
 import {
   granted,
+  globsIn,
   LEAST_BUDGETS,
   MAX_SLACK,
   slackOf,
@@ -49,7 +50,7 @@ if (pathToFileURL(process.argv[1]).href === import.meta.url) {
   process.stdout.write(`\nCoverage budgets (${rows.length}), and the room each has left:\n`)
   report(rows)
 
-  const empty = unmatched(rows, summary, `${ROOT}/`)
+  const empty = unmatched(globsIn(config), summary, `${ROOT}/`)
   if (empty.length > 0) {
     fail(
       `${empty.join(', ')} match no file at all.\n` +
