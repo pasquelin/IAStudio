@@ -1459,14 +1459,6 @@
       "title": "Quad edges",
       "help": "Redraws the wireframe without the diagonals triangulation added. A GLB never holds quads: this is a reconstruction by angle, faithful except on strongly curved surfaces."
     },
-    "sceneCounters": {
-      "title": "What the scene costs",
-      "triangles": "Triangles",
-      "vertices": "Vertices",
-      "draws": "Draw calls",
-      "textures": "Textures",
-      "megabytes": "{{value, number(maximumFractionDigits: 1)}} MB"
-    },
     "sceneDisplay": {
       "title": "Display mode",
       "help": "Cycles what the viewport draws: the surfaces, their edges alone, or both together. The button’s menu picks one directly."

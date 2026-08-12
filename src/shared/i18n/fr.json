@@ -1459,14 +1459,6 @@
       "title": "Arêtes en quads",
       "help": "Redessine le filaire sans les diagonales que la triangulation a ajoutées. Un fichier GLB ne contient jamais de quads : c’est une reconstruction par angle, fidèle sauf sur les surfaces très courbées."
     },
-    "sceneCounters": {
-      "title": "Ce que la scène coûte",
-      "triangles": "Triangles",
-      "vertices": "Sommets",
-      "draws": "Appels de dessin",
-      "textures": "Textures",
-      "megabytes": "{{value, number(maximumFractionDigits: 1)}} Mo"
-    },
     "sceneDisplay": {
       "title": "Mode de rendu",
       "help": "Fait défiler ce que le viewport dessine : les surfaces, leurs arêtes seules, ou les deux ensemble. Le menu du bouton permet de choisir directement."

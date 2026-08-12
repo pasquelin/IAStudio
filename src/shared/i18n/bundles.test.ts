@@ -52,6 +52,26 @@ function holes(text: string): readonly string[] {
 }
 
 /** Every key, nested ones included, in the order the file writes them. */
+/** Every nested block, by the JSON it holds — two paths under one shape is one block written twice. */
+function blocksOf(
+  bundle: unknown,
+  prefix = '',
+  into = new Map<string, string[]>(),
+): Map<string, string[]> {
+  if (!isRecord(bundle)) return into
+
+  for (const [name, value] of Object.entries(bundle)) {
+    if (!isRecord(value)) continue
+
+    const key = prefix ? `${prefix}.${name}` : name
+    const shape = JSON.stringify(value)
+    into.set(shape, [...(into.get(shape) ?? []), key])
+    blocksOf(value, key, into)
+  }
+
+  return into
+}
+
 function orderOf(bundle: unknown, prefix = '', into: string[] = []): string[] {
   if (!isRecord(bundle)) return into
 
@@ -95,6 +115,25 @@ describe('the translation bundles', () => {
     for (const [key, text] of BUNDLES[code]) {
       expect(text.trim(), `${key} is blank`).not.toBe('')
     }
+  })
+
+  /**
+   * The same block, written twice under two names.
+   *
+   * `commands.sceneCounters` was a word-for-word copy of `sceneCounters`, both landed by ONE
+   * commit, and nothing ever read the copy: the counters call `sceneCounters.*`, and every command
+   * names its key in full — `titleKey: 'commands.projectNew.title'` — so no template could reach
+   * it. Six keys per language, translated and proofread for nobody, and every guard here was green
+   * the whole time: a copy is complete in both languages, blank nowhere, and ICU-valid.
+   *
+   * What it reads is the SHAPE, not a spelling: two paths holding the same JSON. Nothing else
+   * repeats in either bundle — measured at every size, down to a block of one key — so this needs
+   * no floor and no exemption. A repeat meant on purpose will have to argue for itself here.
+   */
+  it.each(CODES)('writes no block twice under two names in %s', code => {
+    const twinned = [...blocksOf(TRANSLATIONS[code]).values()].filter(paths => paths.length > 1)
+
+    expect(twinned).toEqual([])
   })
 
   /**
