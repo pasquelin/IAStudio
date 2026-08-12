@@ -9,7 +9,10 @@ import type {
 } from '@shared/ipc'
 import { installScene } from '@/stores/scene-fixtures'
 import type { CommandId } from '@shared/domain/command'
-import type { ToolId } from '@shared/domain/tool'
+import type { ToolId, ToolSurface } from '@shared/domain/tool'
+import type * as ToolRegistryModule from '@/helpers/tool-registry'
+
+type ToolRegistry = typeof ToolRegistryModule
 import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -25,6 +28,23 @@ const saveDocument = vi.fn((_documentId: string) => Promise.resolve())
 vi.mock('@/app/document-io', () => ({
   saveDocument: (documentId: string) => saveDocument(documentId),
 }))
+
+/**
+ * Counted, not replaced: what the guard below saves is this walk over the whole tool registry,
+ * and the suite has to be able to see it NOT happening.
+ */
+const listedTools = vi.fn()
+
+vi.mock('@/helpers/tool-registry', async importOriginal => {
+  const actual = await importOriginal<ToolRegistry>()
+  return {
+    ...actual,
+    availableToolIds: (surface: ToolSurface) => {
+      listedTools()
+      return actual.availableToolIds(surface)
+    },
+  }
+})
 
 const { useNativeMenu } = await import('./useNativeMenu')
 
@@ -215,6 +235,27 @@ describe('what the native menu is told', () => {
       expect(lastPublished().checked).toContain('scene.skeletons')
     })
 
+    /** All five at once: each is a branch of its own, and one left untested is one left unsaid. */
+    it('names every toggle that is on', () => {
+      renderHook(() => useNativeMenu())
+      const views = useSceneViews.getState()
+
+      views.setProjection('doc-1', 'orthographic')
+      views.setQuad('doc-1', true)
+      views.setQuadEdges('doc-1', true)
+      views.setSkeletons('doc-1', true)
+      views.setPoseMode('doc-1', true)
+
+      expect(lastPublished().checked).toEqual([
+        'scene.display:shaded',
+        'scene.projection',
+        'scene.quad',
+        'scene.quadEdges',
+        'scene.skeletons',
+        'scene.poseMode',
+      ])
+    })
+
     it('drops it again when it goes off', () => {
       renderHook(() => useNativeMenu())
       useSceneViews.getState().setQuad('doc-1', true)
@@ -241,6 +282,31 @@ describe('what the native menu is told', () => {
       useSceneViews.getState().setPlayhead('doc-1', 2_000_000)
 
       expect(setWorkspace.mock.calls.length).toBe(sent)
+    })
+
+    /**
+     * And does not even PRICE one. Dropping the message is half the answer: the context costs a
+     * walk over the whole tool registry and a `JSON.stringify` of its result, and paying that
+     * sixty times a second to throw it away is the very thing the playhead would cause.
+     */
+    it('does not even build the context a frame of animation would throw away', () => {
+      renderHook(() => useNativeMenu())
+      listedTools.mockClear()
+
+      useSceneViews.getState().setPlayhead('doc-1', 1_000_000)
+      useSceneViews.getState().setPlayhead('doc-1', 2_000_000)
+
+      expect(listedTools).not.toHaveBeenCalled()
+    })
+
+    /** The guard prices one the moment a tick really moves, or it would freeze the menu. */
+    it('builds it again as soon as a tick actually moves', () => {
+      renderHook(() => useNativeMenu())
+      listedTools.mockClear()
+
+      useSceneViews.getState().setQuad('doc-1', true)
+
+      expect(listedTools).toHaveBeenCalled()
     })
   })
 })

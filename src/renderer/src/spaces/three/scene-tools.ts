@@ -124,7 +124,7 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     icon: mdiAxisArrowLock,
   },
   // The one view setting worth a button: a modeller flips between shaded and wireframe several
-  // times a minute, which is what tells it from the eight the native View menu now carries.
+  // times a minute, which is what tells it from the seven rows the native View menu now carries.
   {
     id: 'display',
     command: 'scene.display',

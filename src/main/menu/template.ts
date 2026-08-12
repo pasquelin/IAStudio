@@ -3,19 +3,17 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import {
+  DISPLAY_MODES,
   LIGHT_ENTRIES,
   EXPORT_FORMATS,
   MESH_ENTRIES,
   OBJECT_ENTRIES,
+  VIEW_DIRECTIONS,
+  type DisplayMode,
   type LightKind,
   type MeshKind,
   type ObjectKind,
   type SceneEntry,
-} from '@shared/domain/scene'
-import {
-  DISPLAY_MODES,
-  VIEW_DIRECTIONS,
-  type DisplayMode,
   type ViewDirection,
 } from '@shared/domain/scene'
 import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
@@ -310,9 +308,10 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * What a scene does to what is selected, once the toolbar stopped drawing a button for each.
    *
    * Only these three, and the omission is deliberate: `scene.copy`, `scene.cut` and
-   * `scene.paste` stay on the bar. The rows above keep their NATIVE roles so a text field goes
-   * on copying, and a command row in their place would act on the scene even with the caret in
-   * a field — the menu path carries no `isTyping` guard, unlike the keyboard one.
+   * `scene.paste` are left to their KEYS ALONE — no bar button, no menu row. The rows above keep
+   * their NATIVE roles so a text field goes on copying, and a command row in their place would
+   * act on the scene even with the caret in a field: the menu path carries no `isTyping` guard,
+   * unlike the keyboard one, which is what makes a key safe here where a row would not be.
    */
   const sceneEditItems: MenuItemConstructorOptions[] =
     workspace === '3d'
@@ -402,7 +401,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
    * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
    * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
    *
-   * Seven of these nine were reachable by pointer through that bar alone. They are settings one
+   * All seven rows were reachable by pointer through that bar alone. They are settings one
    * changes once a session, not gestures repeated by the minute, which is what a menu is for.
    */
   const sceneViewMenu: MenuItemConstructorOptions[] =

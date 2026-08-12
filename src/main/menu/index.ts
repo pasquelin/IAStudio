@@ -109,7 +109,8 @@ export function buildMenu(next: Language = language, remapped: BindingOverrides 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-function sameList(next: readonly string[], shownList: readonly string[]): boolean {
+/** Generic, so a call cannot quietly compare the tools of one window to the ticks of another. */
+function sameList<T extends string>(next: readonly T[], shownList: readonly T[]): boolean {
   return next.length === shownList.length && next.every((id, index) => id === shownList[index])
 }
 

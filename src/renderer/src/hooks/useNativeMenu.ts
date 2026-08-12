@@ -85,6 +85,9 @@ function sceneChecks(): MenuCheck[] {
  */
 let published = ''
 
+/** The ticks alone, so a frame of animation can be dismissed without pricing the rest. */
+let publishedChecks = ''
+
 /**
  * Tells the main process what the menu should offer. Published from here rather than from
  * `setActiveWorkspace`, because it depends on more than the section: choosing a model brings
@@ -101,8 +104,23 @@ function publishMenuContext(): void {
   const signature = JSON.stringify([workspace, tools, checked])
   if (signature === published) return
   published = signature
+  publishedChecks = checked.join('|')
 
   void getBridge()?.window.setWorkspace(workspace, tools, checked)
+}
+
+/**
+ * The scene view store's own listener, and the reason it is not `publishMenuContext` itself.
+ *
+ * That store is written on every frame of a running animation, and the full context is not free
+ * to build: `availableToolIds` walks the whole tool registry and the signature stringifies its
+ * result. Reading the six values a tick comes from is, so the frames that change nothing — which
+ * is all of them, the playhead being no part of a tick — are dismissed before that work happens.
+ */
+function publishIfChecksChanged(): void {
+  const checks = sceneChecks().join('|')
+  if (checks === publishedChecks) return
+  publishMenuContext()
 }
 
 /**
@@ -120,16 +138,18 @@ export function useNativeMenu(): void {
     // module sent. Without this the first publication after a remount would be skipped as a
     // duplicate, and the menu would sit on what the PREVIOUS window happened to leave behind.
     published = ''
+    publishedChecks = ''
     // The persisted workspace is restored without going through `setActiveWorkspace`, so the
     // menu would sit on the default until the user switched spaces by hand.
     publishMenuContext()
     // The main process drops a rebuild that changes nothing, so publishing on every write of
-    // these three stores costs a comparison rather than a menu.
-    // `useSceneViews` and `useDocuments` join the three: a tick follows the scene in front, and
-    // both which scene that is and how it is drawn are written there.
-    const stopPublishing = [useLayouts, useModels, useSettings, useSceneViews, useDocuments].map(
-      store => store.subscribe(publishMenuContext),
+    // these stores costs a comparison rather than a menu. `useDocuments` is among them because
+    // which scene is in front decides what the ticks read.
+    const stopPublishing = [useLayouts, useModels, useSettings, useDocuments].map(store =>
+      store.subscribe(publishMenuContext),
     )
+    // `useSceneViews` is subscribed apart, through the guard that prices a tick before a context.
+    stopPublishing.push(useSceneViews.subscribe(publishIfChecksChanged))
 
     // Through `revealTool`, which resolves the zone: a tool sits in different ones depending on
     // the workspace, and the menu is built once for the whole app.

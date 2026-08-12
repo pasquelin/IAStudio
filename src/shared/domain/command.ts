@@ -1,3 +1,4 @@
+import type { DisplayMode } from './scene'
 import type { Signature } from './shortcut'
 import type { WorkspaceId } from './workspace'
 
@@ -118,13 +119,17 @@ export type CommandId =
  * A menu row that draws a state: a command that toggles, or one mode of a command that cycles.
  *
  * The renderer publishes the ones that are ON and the main process ticks exactly those. A string
- * rather than a structure because it crosses the bridge and is only ever compared — and a
- * template literal rather than a bare string so a typo in a mode cannot compile.
+ * rather than a structure because it crosses the bridge and is only ever compared.
+ *
+ * BOTH halves are typed, and the second one is the point: `${CommandId}:${string}` would have
+ * accepted `scene.display:mattcap` without a word, and a radio row silently never ticked is the
+ * hardest kind of wrong to see. The union of modes widens the day a second command cycles
+ * through something — which is the moment to look at this line, not a cost to avoid.
  *
  * Kept out of the row itself: whether a scene is drawn in wireframe is not a fact of the command
  * registry, it is a fact of the document in front, which only the renderer holds.
  */
-export type MenuCheck = CommandId | `${CommandId}:${string}`
+export type MenuCheck = CommandId | `scene.display:${DisplayMode}`
 
 /**
  * What a command is: where it applies, what it is called, what it does in plain words, and the

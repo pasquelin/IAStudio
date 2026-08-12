@@ -302,9 +302,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     [documentId, view, cycleDisplay],
   )
 
-  /** A flyout row: the Add rows name a node kind, the others a side to stand at or a way to draw. */
+  /** The one flyout left on this bar names a way to draw; Add and the six sides are menu rows. */
   const runMode = useCallback(
-    (_toolId: string, modeId: string) => {
+    (modeId: string) => {
       if (isDisplayMode(modeId)) {
         useSceneViews.getState().setDisplay(documentId, paneInHand(), modeId)
       }
@@ -382,7 +382,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           const command = SCENE_TOOLS.find(candidate => candidate.id === id)?.command
           if (command) run(command)
         }}
-        onMode={(toolId, modeId) => runMode(toolId, modeId)}
+        onMode={(_toolId, modeId) => runMode(modeId)}
       />
     </AssetDropTarget>
   )
