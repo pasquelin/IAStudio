@@ -267,13 +267,18 @@
   --color-neutral-content: #1f2124;
   --color-info: #3574f0;
   --color-info-content: #ffffff;
-  --color-success: #2f7d4f;
+  /*
+   * The status hues, DARKENED once more — the previous green cleared 4.5:1 on a panel and on a
+   * surface and failed it on the chassis, which is where a status word most often sits. Each is
+   * its own hue moved toward black by `inkFor`, the same ramp the accent a user picks takes.
+   */
+  --color-success: #296e46;
   --color-success-content: #ffffff;
   /* Darkened from the dark theme's amber: #e0a350 on white carries no text and reads as beige. */
-  --color-warning: #a86a08;
+  --color-warning: #885606;
   --color-warning-content: #ffffff;
   /* Same reason: the dark theme's coral is a highlight on black and a pastel on white. */
-  --color-error: #d0342c;
+  --color-error: #b72e27;
   --color-error-content: #ffffff;
 
   --radius-selector: 4px;
@@ -293,9 +298,17 @@
   /* Darker than the dark theme's, not lighter: the ink has to leave the background it sits on. */
   --color-accent-ink: #2a5dc0;
   --color-accent-soft: #d3e1fb;
-  --color-danger: #d0342c;
-  --color-create: #12b600;
-  --color-create-hover: #0e9200;
+  /* The studio's own name for daisyUI's `error`, and the same value: two reds would be one too many. */
+  --color-danger: #b72e27;
+  /*
+   * The one token this theme darkens away from its dark twin rather than alongside it —
+   * `main/window/theme.test.ts` carries why. The green is drawn IN and drawn ON: `text-create`
+   * names a leading slide, `bg-create` fills the rail's create button under a white icon, and at
+   * #12b600 that icon carried 2.72:1, under even the 3:1 WCAG 1.4.11 asks of a glyph.
+   * The hover keeps its LUMINANCE ratio to the resting fill, so pointing still darkens the button.
+   */
+  --color-create: #0b7100;
+  --color-create-hover: #095a00;
   --color-text: #1f2124;
   /* Lowered from #6b7078, which read 3.67:1 on this theme's chassis. Same reason as the dark. */
   --color-muted: #5d6168;
