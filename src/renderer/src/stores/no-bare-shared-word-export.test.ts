@@ -33,18 +33,20 @@ const exportsOf = (source: string): string[] => [
  * document while its name says which of several it could be — so each needs the domain in front.
  *
  * `node`: `nodeById` exists for a scene (`engines/scene/scene-state.ts`) and for a graph
- * (`shared/domain/graph.ts`). `history`: six stores published `historyOf` under that one name.
- * `view`: three did — `canvas-views.ts`, `scene-views.ts`, `skybox-views.ts` — returning three
- * different types from the one name.
+ * (`shared/domain/graph.ts`). `history`: six stores published `historyOf`, while `audio-edits.ts`
+ * had already written `audioHistoryOf` — the observed form the rest then followed. `view`: three
+ * did, returning three different types, while `animation-view.ts:79` had already written
+ * `animationViewOf`. **Each rule here was read off the repo before it was written down.**
  *
- * A word joins this list when a SECOND domain claims it, never in anticipation: a rule wider than
- * its evidence is one the next reader argues with instead of obeying. And it joins WITH its
- * rename — added alone it reddens this guard, which is the intended behaviour.
+ * A word joins this list when a SECOND domain claims it, never in anticipation, and it joins WITH
+ * its rename: added alone it reddens this guard, which is the intended behaviour. **That only
+ * holds for a word a name OPENS on.** `isDirty` opens on `is` and `claimOnSubmit` on `claim`, so
+ * listing either here would change nothing — measured. Those two are held by the collision rule
+ * below instead, which is why both halves exist.
  *
- * **Two words already meet that bar and are NOT here yet**: `isDirty` (`scenes.ts`, `textures.ts`,
- * beside their own prefixed `sceneOf`/`sceneHistoryOf`) and `claimOnSubmit`
- * (`image-generation.ts`, whose collision is already worked around by `generation-claims.ts:2`
- * importing it under an alias). Each is a lot of its own at the chantier.
+ * **This list is for ambiguity ACROSS folders**, which a prefix is the right shape for. Two stores
+ * publishing one name is a different question with a different shape — `claimImageOnSubmit` puts
+ * its domain in the middle — and it is computed below rather than listed.
  */
 const SHARED_WORDS: readonly string[] = ['node', 'history', 'view']
 
@@ -52,14 +54,52 @@ const SHARED_WORDS: readonly string[] = ['node', 'history', 'view']
  * The first camelCase word of a name — `viewportOf` opens on `viewport`, not on `view`.
  *
  * A prefix of LETTERS is what this compared at first, and it would have condemned `viewportOf`
- * (`stores/timeline-view.ts`) the day `view` joined the list: a viewport belongs to one domain and
- * its name says so. A rule that catches names it was never about is one its next reader disables.
+ * (`stores/timeline-view.ts`) the day `view` joined the list. The reason it is spared is narrow
+ * and worth writing exactly: **one store exports it** — NOT that `viewport` names one domain, for
+ * two `Viewport` types exist (`engines/canvas/viewport.ts`, `engines/timeline/timeline-geometry.ts`).
+ * The day a second store publishes a `viewportOf`, the collision rule below catches it; this list
+ * would not. A rule that catches names it was never about is one its next reader disables.
  */
 const opensOn = (name: string): string => name.split(/(?=[A-Z])/)[0] ?? name
 
-// The plural too: `nodesOf` is exactly as ambiguous as `nodeOf`, and only the `s` separates them.
+// Regular plurals only — `nodesOf` is as ambiguous as `nodeOf`. An irregular one (`historiesOf`)
+// escapes, and is left to the collision rule below rather than guessed at here.
 const isShared = (name: string): boolean =>
   SHARED_WORDS.some(word => opensOn(name) === word || opensOn(name) === `${word}s`)
+
+/**
+ * The names more than one store publishes — computed, never listed.
+ *
+ * This is the other half of the rule, and the half a word list cannot state: `claimOnSubmit` is
+ * shared by two stores and its corrected form (`claimImageOnSubmit`) carries the domain in the
+ * MIDDLE, so no prefix describes it. Asking which names have two owners needs no vocabulary at
+ * all, catches a collision the day it appears, and would have found `historyOf` and `viewOf` on
+ * its own.
+ */
+const collidingExports = (sources: readonly (readonly [string, string])[]): string[] => {
+  const owners = new Map<string, Set<string>>()
+  for (const [path, source] of sources) {
+    for (const name of exportsOf(source)) {
+      const seen = owners.get(name) ?? new Set<string>()
+      seen.add(path)
+      owners.set(name, seen)
+    }
+  }
+
+  return [...owners].filter(([, paths]) => paths.size > 1).map(([name]) => name)
+}
+
+/**
+ * The collisions this guard has NOT closed yet, each a lot of its own at the chantier: `isDirty`
+ * (`scenes.ts`, `settings-draft.ts`, `textures.ts` — three, not two) and `claimOnSubmit`
+ * (`image-generation.ts` and `generation-claims.ts`, the second of which also imports the first
+ * under an alias, which is the admission that the name is missing).
+ *
+ * **This list only ever SHRINKS.** A name leaves it when its rename lands; a name that appears
+ * here without a lot behind it is a collision being tolerated rather than fixed. A test below
+ * refuses an entry that has stopped colliding, so it cannot rot into a permission.
+ */
+const KNOWN_COLLISIONS: readonly string[] = ['claimOnSubmit', 'isDirty']
 
 const bareExports = (sources: readonly (readonly [string, string])[]): string[] =>
   sources.flatMap(([path, source]) =>
@@ -89,6 +129,32 @@ describe('what a store exports about a shared word', () => {
     expect(bareExports(STORES)).toEqual([])
   })
 
+  it('lets no two stores publish one name, beyond those already owed a lot', () => {
+    const fresh = collidingExports(STORES).filter(name => !KNOWN_COLLISIONS.includes(name))
+
+    expect(fresh).toEqual([])
+  })
+
+  /*
+   * The exemption list held to its own evidence. Without this, a name renamed elsewhere would
+   * stay written here forever and the next reader would take it for a decision rather than a
+   * debt — and the list would grow instead of shrinking.
+   */
+  it('keeps no exemption that has stopped colliding', () => {
+    const stale = KNOWN_COLLISIONS.filter(name => !collidingExports(STORES).includes(name))
+
+    expect(stale).toEqual([])
+  })
+
+  it('would report a collision the day a second store published one name', () => {
+    const pair: [string, string][] = [
+      ['../stores/aa.ts', 'export const sizeOf = 1\n'],
+      ['../stores/bb.ts', 'export const sizeOf = 2\n'],
+    ]
+
+    expect(collidingExports(pair)).toEqual(['sizeOf'])
+  })
+
   /*
    * The rule proven on a name that breaks it, and it is not ceremony: asserting only that nothing
    * was found lets the predicate itself rot — narrow it to a word no file carries and the empty
@@ -100,7 +166,7 @@ describe('what a store exports about a shared word', () => {
       [
         '../stores/zz.ts',
         'export const nodeIn = 1\nexport const graphNodeIn = 2\nexport const historyOf = 3\n' +
-          'export const nodesOf = 4\nexport const viewportOf = 5\n',
+          'export const nodesOf = 4\nexport const viewportOf = 5\nexport const viewOf = 6\n',
       ],
     ]
 
@@ -110,6 +176,7 @@ describe('what a store exports about a shared word', () => {
       '../stores/zz.ts: nodeIn',
       '../stores/zz.ts: historyOf',
       '../stores/zz.ts: nodesOf',
+      '../stores/zz.ts: viewOf',
     ])
   })
 
