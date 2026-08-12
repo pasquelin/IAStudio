@@ -101,6 +101,12 @@ const collidingExports = (sources: readonly (readonly [string, string])[]): stri
  */
 const KNOWN_COLLISIONS: readonly string[] = ['claimOnSubmit', 'isDirty']
 
+/** Exemptions whose collision is gone — debts written down after they were paid. */
+const staleExemptions = (
+  known: readonly string[],
+  sources: readonly (readonly [string, string])[],
+): string[] => known.filter(name => !collidingExports(sources).includes(name))
+
 const bareExports = (sources: readonly (readonly [string, string])[]): string[] =>
   sources.flatMap(([path, source]) =>
     exportsOf(source)
@@ -141,9 +147,18 @@ describe('what a store exports about a shared word', () => {
    * debt — and the list would grow instead of shrinking.
    */
   it('keeps no exemption that has stopped colliding', () => {
-    const stale = KNOWN_COLLISIONS.filter(name => !collidingExports(STORES).includes(name))
+    expect(staleExemptions(KNOWN_COLLISIONS, STORES)).toEqual([])
+  })
 
-    expect(stale).toEqual([])
+  /*
+   * The anti-rot check proven on a list that HAS rotted — a test that reads its own exemptions
+   * cannot vouch for itself, and the harness said so: emptying the check above left every other
+   * assertion green.
+   */
+  it('would name an exemption whose collision is gone', () => {
+    const one: [string, string][] = [['../stores/aa.ts', 'export const sizeOf = 1\n']]
+
+    expect(staleExemptions(['sizeOf'], one)).toEqual(['sizeOf'])
   })
 
   it('would report a collision the day a second store published one name', () => {
