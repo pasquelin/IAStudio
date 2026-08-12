@@ -8,4 +8,3 @@ export const textureStore = store
 export const useTextures = store.use
 export const textureOf = store.stateOf
 export const textureHistoryOf = store.historyOf
-export const isDirty = store.isDirty

@@ -40,9 +40,9 @@ const exportsOf = (source: string): string[] => [
  *
  * A word joins this list when a SECOND domain claims it, never in anticipation, and it joins WITH
  * its rename: added alone it reddens this guard, which is the intended behaviour. **That only
- * holds for a word a name OPENS on.** `isDirty` opens on `is` and `claimOnSubmit` on `claim`, so
- * listing either here would change nothing — measured. Those two are held by the collision rule
- * below instead, which is why both halves exist.
+ * holds for a word a name OPENS on.** `isDirty` opened on `is` and `claimOnSubmit` on `claim`, so
+ * listing either here would have changed nothing — measured. Both were held by the collision rule
+ * below instead, and that is why both halves exist.
  *
  * **This list is for ambiguity ACROSS folders**, which a prefix is the right shape for. Two stores
  * publishing one name is a different question with a different shape — `claimImageOnSubmit` puts
@@ -89,21 +89,21 @@ const collidingExports = (sources: readonly (readonly [string, string])[]): stri
 }
 
 /**
- * The collisions this guard has NOT closed yet, each a lot of its own at the chantier: `isDirty`,
- * published by `scenes.ts` and `textures.ts` — both re-exporting the one `store.isDirty` of
- * `document-store.ts` — and by `settings-draft.ts`, which is NOT a document store and takes a
- * different argument entirely. Three renames, and the odd one out is the draft.
+ * The collisions this guard has not closed yet — **empty, and that is a state, not an oversight**.
+ * `historyOf`, `viewOf`, `claimOnSubmit` and `isDirty` all left it on 2026-08-12. For the last two
+ * the check below is what ASKED: with the rename applied and the entry still here, it fails —
+ * measured while each lot was being written, though no commit carries that red, both halves
+ * having landed together.
  *
- * `claimOnSubmit` left this list on 2026-08-12, and the leaving is what the check below is for:
- * `image-generation.ts` now publishes `claimImageOnSubmit` — the name `generation-claims.ts` was
- * already importing it under — so the aggregate keeps the bare name, which is its by right. The
- * guard refused the stale entry before anyone thought to remove it.
+ * The rule is proven by its synthetic cases below rather than by this list, so an empty one costs
+ * nothing. **An entry added here without a lot behind it is a collision being tolerated**, and the
+ * same check will refuse it the day it stops being true.
  *
  * **This list only ever SHRINKS.** A name leaves it when its rename lands; a name that appears
  * here without a lot behind it is a collision being tolerated rather than fixed. A test below
  * refuses an entry that has stopped colliding, so it cannot rot into a permission.
  */
-const KNOWN_COLLISIONS: readonly string[] = ['isDirty']
+const KNOWN_COLLISIONS: readonly string[] = []
 
 /** Exemptions whose collision is gone — debts written down after they were paid. */
 const staleExemptions = (
@@ -212,18 +212,28 @@ describe('what a store exports about a shared word', () => {
     expect(STORES.length).toBeGreaterThan(40)
     expect(names.length).toBeGreaterThan(150)
     // The two this rule renamed: if the filter ever stops reaching them, the check above goes quiet.
-    expect(names).toContain('graphNodeIn')
-    expect(names).toContain('graphNodeNow')
-    // All six, not one of them: the filter is a path prefix, so a single store moved out of the
-    // folder would go unwatched while a sentinel pinned to another store stayed green.
-    for (const domain of ['graph', 'canvas', 'scene', 'sequence', 'skybox', 'texture']) {
-      expect(names).toContain(`${domain}HistoryOf`)
-    }
-    for (const domain of ['canvas', 'scene', 'skybox']) {
-      expect(names).toContain(`${domain}ViewOf`)
-    }
-    // The infix form deposits its witness too, or the day `image-generation.ts` leaves the folder
-    // the rule goes quiet about it without reddening.
-    expect(names).toContain('claimImageOnSubmit')
+    // One flat list, a floor on its length, and a single containment: a `for` loop over an
+    // emptied array asserts nothing while every other assertion stays green — measured, the
+    // harness walked straight through it. The floor refuses an emptied list; dropping the
+    // containment outright is a deleted assertion, which is a different and far louder act.
+    const RENAMED = [
+      'graphNodeIn',
+      'graphNodeNow',
+      'graphHistoryOf',
+      'canvasHistoryOf',
+      'sceneHistoryOf',
+      'sequenceHistoryOf',
+      'skyboxHistoryOf',
+      'textureHistoryOf',
+      'canvasViewOf',
+      'sceneViewOf',
+      'skyboxViewOf',
+      'claimImageOnSubmit',
+      'isSceneDirty',
+      'isSettingsDraftDirty',
+    ]
+
+    expect(RENAMED.length).toBeGreaterThan(13)
+    expect(names).toEqual(expect.arrayContaining(RENAMED))
   })
 })

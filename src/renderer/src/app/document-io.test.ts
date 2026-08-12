@@ -17,7 +17,7 @@ import { showPanels } from '@/stores/layout-fixtures'
 import { useTextures } from '@/stores/textures'
 import { newTexture } from '@/engines/texture/texture-state'
 import { clearScenes } from '@/stores/scene-fixtures'
-import { isDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
+import { isSceneDirty, sceneOf, sceneStore, useScenes } from '@/stores/scenes'
 import { isPartName } from '@shared/domain/document'
 import { DEFAULT_CANVAS } from '@/engines/canvas/canvas-state'
 import { holdCanvas } from '@/spaces/image/canvas-hosts'
@@ -99,10 +99,10 @@ describe('saveDocument', () => {
     installFakeBridge({ documents: { write: () => Promise.resolve() } })
 
     const documentId = await openScene()
-    expect(isDirty(useScenes.getState(), documentId)).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
 
     await saveDocument(documentId)
-    expect(isDirty(useScenes.getState(), documentId)).toBe(false)
+    expect(isSceneDirty(useScenes.getState(), documentId)).toBe(false)
   })
 
   // The marker is the only place the studio can say a document is not on disk; a failed write
@@ -112,7 +112,7 @@ describe('saveDocument', () => {
 
     const documentId = await openScene()
     await expect(saveDocument(documentId)).rejects.toThrow()
-    expect(isDirty(useScenes.getState(), documentId)).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
   })
 
   // The content is read before the write; counting the edit as saved would lose it silently.
@@ -143,7 +143,7 @@ describe('saveDocument', () => {
     release()
     await writing
 
-    expect(isDirty(useScenes.getState(), documentId)).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
   })
 
   // The file on disk is the only copy. A read that failed leaves the tab empty and modified, and
@@ -194,7 +194,7 @@ describe('restoreDocument', () => {
     await restoreDocument('doc-1')
 
     expect(sceneOf(useScenes.getState(), 'doc-1').nodes).toEqual([box])
-    expect(isDirty(useScenes.getState(), 'doc-1')).toBe(false)
+    expect(isSceneDirty(useScenes.getState(), 'doc-1')).toBe(false)
   })
 
   // `null` is what a document that was never saved reads as — not a failure, and not a reason
@@ -233,7 +233,7 @@ describe('restoreDocument', () => {
 
     await restoreDocument('doc-1')
     expect(useScenes.getState().states['doc-1']).toBeUndefined()
-    expect(isDirty(useScenes.getState(), 'doc-1')).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), 'doc-1')).toBe(true)
   })
 
   // The tab is live while the read is in flight, and the Add menu acts on it. Overwriting that
@@ -257,7 +257,7 @@ describe('restoreDocument', () => {
     await reading
 
     expect(sceneOf(useScenes.getState(), 'doc-1').nodes.map(node => node.id)).toEqual(['box-2'])
-    expect(isDirty(useScenes.getState(), 'doc-1')).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), 'doc-1')).toBe(true)
   })
 
   // React's StrictMode runs every mount effect twice, and switching workspace remounts the
@@ -744,7 +744,7 @@ describe('closing a document', () => {
     if (!created) throw new Error('expected a document')
     useScenes.getState().ensure(created.id, createDefaultScene)
 
-    expect(isDirty(useScenes.getState(), created.id)).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), created.id)).toBe(true)
   })
 
   /**
@@ -913,7 +913,7 @@ describe('closing a document', () => {
 
     await expect(closeDocument(documentId)).rejects.toThrow()
     expect(useDocuments.getState().documents[documentId]).toBeDefined()
-    expect(isDirty(useScenes.getState(), documentId)).toBe(true)
+    expect(isSceneDirty(useScenes.getState(), documentId)).toBe(true)
   })
 
   it('takes the tab away with the document', async () => {

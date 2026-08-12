@@ -14,7 +14,7 @@ import { useAppliedSettings } from '@/hooks/useAppliedSettings'
 import { getBridge } from '@/services/bridge'
 import { useAccounts } from '@/stores/accounts'
 import { useSettings } from '@/stores/settings'
-import { isDirty, useSettingsDraft } from '@/stores/settings-draft'
+import { isSettingsDraftDirty, useSettingsDraft } from '@/stores/settings-draft'
 import { SettingActions } from './SettingActions'
 import { SettingList } from './SettingList'
 import { findSection, SETTINGS_SECTIONS, type SettingsSection } from './sections'
@@ -209,7 +209,7 @@ export function SettingsWindow() {
 
   // Published so the main process can ask before closing on work nobody applied: closing a
   // window is its decision, and it has no other way to know.
-  const pending = useSettingsDraft(isDirty)
+  const pending = useSettingsDraft(isSettingsDraftDirty)
   useEffect(() => {
     void getBridge()?.settings.setPending(pending)
   }, [pending])
@@ -309,7 +309,7 @@ export function SettingsWindow() {
  */
 function DraftBar() {
   const { t } = useTranslation()
-  const dirty = useSettingsDraft(isDirty)
+  const dirty = useSettingsDraft(isSettingsDraftDirty)
   const apply = useSettingsDraft(state => state.apply)
   const cancel = useSettingsDraft(state => state.cancel)
 
