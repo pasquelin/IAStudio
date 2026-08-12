@@ -94,6 +94,29 @@ describe('the French of the model texts', () => {
     expect(straight.map(([source]) => source)).toEqual([])
   })
 
+  /**
+   * The rest of French typography, which this file had escaped entirely.
+   *
+   * `bundles.test.ts` holds it for `fr.json` — a NO-BREAK space before `;` `:` `!` `?` and `»`,
+   * and after `«` — and this dictionary is French shown on screen just the same: it is what the
+   * generation panel reads under every field a model describes. It sat outside because it is
+   * excluded from the PARITY measure, being keyed on the English sentence with no English twin;
+   * the exclusion quietly took the typography with it.
+   *
+   * What it cost: eight ordinary spaces before a double punctuation against three no-break ones —
+   * the file disagreed with itself — and all three opening quotes breakable. A description is the
+   * longest text the panel draws, in its narrowest column, so it is exactly where a `:` dropped
+   * alone onto the next line shows.
+   *
+   * Written by code point, as `bundles.test.ts` does: eslint refuses either space in source, and
+   * neither survives being typed into a file by hand.
+   */
+  it('holds its double punctuation with a no-break space', () => {
+    const breakable = entries.filter(([, french]) => / [;:!?»]|« /.test(french))
+
+    expect(breakable.map(([source]) => source)).toEqual([])
+  })
+
   it('leaves the vocabulary of the craft in English', () => {
     const translated = KEPT_IN_ENGLISH.filter(term => term in fr)
 
