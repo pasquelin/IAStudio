@@ -50,6 +50,11 @@ Sept contextes :
 | **Dans le ciel** | la vue de l’espace Skyboxes |
 | **Dans le graphe** | la toile de l’espace Graphe |
 
+**Une surface peut écouter une touche sans être un contexte, et la garantie ci-dessus ne la couvre
+alors pas.** La bande d’animation de l’espace 3D en est le cas : `Suppr` et `Retour arrière` y
+retirent la clé choisie, la touche étant liée à la bande et non au registre des contextes. Elle ne
+figure donc pas dans l’écran des raccourcis, et ne se change pas.
+
 Un seul contexte est spécial : **Partout dans l’application**. Ses touches passent par le menu du
 système d’exploitation, qui les attrape avant tout le monde. Elles sont donc les seules à ne
 jamais pouvoir être « recouvertes » par un autre contexte — et les seules dont un conflit est
@@ -524,6 +529,9 @@ l’inverse. Le bouton **Tout afficher** rend la liste complète.
 
 **Les touches de vol** (`W A S D Q E` et l’accélération) ne sont pas dans cet écran. Elles sont
 figées pour l’instant. Voir [Ce qui n’existe pas encore](18-limites.md).
+
+**`Suppr` et `Retour arrière` sur la bande d’animation** non plus, pour la raison dite plus haut :
+ils sont liés à la bande, pas à un contexte.
 
 ---
 

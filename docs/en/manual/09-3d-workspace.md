@@ -635,7 +635,7 @@ is shown.
 | On a line's header | What it does |
 |---|---|
 | the chevron | **Show or hide the animated properties** |
-| **Key *(the name)*** | records the movement made since, on every property of that object |
+| **Key *(the name)*** | records the movement made since, on every property of that object. **The same button toggles**: where a key already stands, it lights up and reads **Remove *(the name)*'s key** |
 | **Mute** / **Solo** / **Lock** | the three switches a line carries, the same as in Video |
 | **Remove track *(the name)*** | on a property line, takes it away with its keys |
 
@@ -643,6 +643,14 @@ is shown.
 line. **Past the duration the band is dimmed**: the head goes no further, and no key can be laid out
 there — a clip block still can. A ruler graduated to seventeen seconds over a five-second scene would say the
 scene is longer than it is.
+
+**A key comes off two ways.** The header's diamond, pressed where a key stands under the playhead,
+takes it off **every property carrying one at that instant** — in one go, the way it laid them, and
+`⌘Z` brings them all back together. On the band, **click a key to pick it, then `Delete` or
+`Backspace`**: it leaves the line it sits on, and **the line decides the reach**, never its
+folding — an object's line carries all of its properties away, an unfolded property's line only
+itself. **A locked line keeps its own** — the lock guards against removal as it guards against
+keying.
 
 **Playing with the head already at the end rewinds** instead of stopping on the frame it starts on.
 

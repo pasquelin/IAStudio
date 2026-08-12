@@ -652,7 +652,7 @@ change que ce qui est montré.
 | Sur l’en-tête d’une ligne | Ce qu’il fait |
 |---|---|
 | le chevron | **Afficher ou masquer les propriétés animées** |
-| **Poser une clé sur *(le nom)*** | enregistre le déplacement fait depuis, sur toutes les propriétés de cet objet |
+| **Poser une clé sur *(le nom)*** | enregistre le déplacement fait depuis, sur toutes les propriétés de cet objet. **Le même bouton bascule** : là où une clé se tient déjà, il s’allume et devient **Retirer la clé de *(le nom)*** |
 | **Rendre muette** / **Écouter seule** / **Verrouiller** | les trois interrupteurs d’une ligne, les mêmes qu’en Vidéo |
 | **Supprimer la piste *(le nom)*** | sur une ligne de propriété, la retire avec ses clés |
 
@@ -660,6 +660,14 @@ change que ce qui est montré.
 sur leur ligne. **Au-delà de la durée, la bande est assombrie** : la tête ne va pas plus loin, et aucune clé ne
 s’y pose — un bloc de clip, lui, s’y dépose encore. Une règle graduée jusqu’à dix-sept secondes sur une scène qui en dure cinq
 dirait que la scène est plus longue qu’elle ne l’est.
+
+**Une clé se retire de deux façons.** Le losange de l’en-tête, pressé là où une clé se tient sous
+la tête de lecture, la retire de **toutes les propriétés qui en portent une à cet instant** — d’un
+seul coup, comme il les avait posées, et `⌘Z` les fait toutes revenir ensemble. Sur la bande,
+**cliquez une clé pour la choisir, puis `Suppr` ou `Retour arrière`** : elle part de la ligne où
+elle est, et c’est **la ligne qui décide de la portée**, jamais son pliage — celle d’un objet
+emporte toutes ses propriétés, celle d’une propriété dépliée n’emporte qu’elle. **Une ligne
+verrouillée garde la sienne** — le verrou protège du retrait comme il protège de la pose.
 
 **Lire quand la tête est déjà au bout rembobine** au lieu de s’arrêter sur l’image où l’on est.
 
