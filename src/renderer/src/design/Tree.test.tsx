@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { Row } from './Row'
 import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
 
@@ -562,5 +563,32 @@ describe('flattenTree, asked what can expand', () => {
     const rows = flattenTree([{ id: 'assets', parentId: null }], new Set(), () => true)
 
     expect(rows[0]?.hasChildren).toBe(true)
+  })
+})
+
+describe('the padding a tree row does not add', () => {
+  /**
+   * `Row` carries `px-1` of its own, written for a row posed alone in a `Collection`. A tree
+   * line that adds its own stacks the two, and the chevron it draws BEFORE the row ends up
+   * 12px from the icon against the 8 that separate that icon from the label — the chevron then
+   * reads as belonging to the line above. Nothing else here would notice the padding coming back.
+   */
+  it('leaves the horizontal padding to the Row it renders', () => {
+    render(
+      <Tree
+        nodes={NODES}
+        label="Scene"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        renderRow={row => <Row title={row.node.id} />}
+      />,
+    )
+
+    const line = screen.getAllByRole('treeitem')[0]
+
+    expect(line?.className).not.toMatch(/\bpx-/)
+    expect(line?.querySelector('.px-1')).not.toBeNull()
   })
 })
