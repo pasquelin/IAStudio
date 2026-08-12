@@ -415,7 +415,7 @@
     "day": "Last 24 hours",
     "week": "Last 7 days",
     "month": "Last 30 days",
-    "quarter": "Last quarter"
+    "quarter": "Last 3 months"
   },
   "families": {
     "image": "Image",

@@ -22,6 +22,7 @@ import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
   MODEL_SORTS,
+  PERIOD_DAYS,
   TAG_LABEL_KEY_LIST,
 } from '../domain/model'
 import { INGEST_STAGES } from '../domain/media'
@@ -547,5 +548,96 @@ describe('the symbol of a creative unit', () => {
 
     expect(carrying.length).toBeGreaterThan(0)
     for (const [key, value] of carrying) expect(value, key).toContain('{{units}}')
+  })
+})
+
+/**
+ * Hours rather than days, so every span below is a whole number: a day counted as `1 / 24` of
+ * anything multiplies back to `0.9999…`, and the comparison would turn on floating point.
+ *
+ * A month is the thirty-day month `PERIOD_DAYS` counts, not a calendar one. That IS a second
+ * place to be right, and it is the price of letting a label say `3 months` at all: a span that
+ * stops being a multiple of thirty days can no longer be named in months here, and what this
+ * asks for then is a label written in days — not a wider table.
+ */
+const UNIT_HOURS: Record<string, number> = {
+  h: 1,
+  heures: 1,
+  hour: 1,
+  hours: 1,
+  jour: 24,
+  jours: 24,
+  day: 24,
+  days: 24,
+  mois: 720,
+  month: 720,
+  months: 720,
+}
+
+/**
+ * How long a label says the span is, in hours — `null` when a figure it holds names no unit this
+ * knows, which is unreadable rather than wrong and is reported as its own thing.
+ *
+ * EVERY figure counts, each taking the first unit word after it, and the total is their sum: a
+ * label that adds two pieces together — `3 months and 5 days` — has to add up to the same span.
+ * The unit is not required to sit against its figure, because French slips an adjective between
+ * the two: `7 derniers jours`.
+ *
+ * A figure meaning something other than a duration would be counted as one, and none does today.
+ * Telling the two apart would mean reading intent out of prose, which is not a thing a guard can
+ * do — so it says it cannot read the label rather than pretending to have measured it.
+ */
+function statedHours(code: Language, period: string): number | null {
+  const words = (BUNDLES[code].get(`periods.${period}`) ?? '').toLowerCase().match(/\d+|\p{L}+/gu)
+  let counted = 0
+  let figure: number | null = null
+
+  for (const word of words ?? []) {
+    if (/^\d+$/.test(word)) {
+      if (figure !== null) return null
+      figure = Number(word)
+    } else if (figure !== null && UNIT_HOURS[word] !== undefined) {
+      counted += figure * UNIT_HOURS[word]
+      figure = null
+    }
+  }
+
+  return figure === null && counted > 0 ? counted : null
+}
+
+describe('how far back a listing reaches', () => {
+  /**
+   * Every span is ROLLING — `now` minus so many days, `PERIOD_DAYS` applied against the main
+   * process's own clock — so a label states the LENGTH the query uses, in whatever unit reads
+   * best. English read `Last quarter` beside `Last 30 days`, and a quarter is a piece of the
+   * calendar: ninety rolling days announced themselves as the quarter that ended, which is a
+   * different set of models and no way to tell from the menu.
+   *
+   * Read against `PERIOD_DAYS` rather than between the bundles: two translations agreeing with
+   * each other and both wrong is the failure a comparison between them cannot see, and it is
+   * the likelier one — a span is edited in the table, not in one language.
+   *
+   * `unreadable` is kept apart from `wrong` on purpose. A locale arriving with its own words for
+   * hours and days lands in the first, and what it asks for is a line in `UNIT_HOURS` — reported
+   * as a wrong length, it would read as an accusation against a translation that is correct.
+   *
+   * It carries the label rather than the key alone, because it holds two failures whose remedies
+   * are opposite: a figure whose unit is missing from the table, and a label naming no length at
+   * all. The words themselves are what tells the two apart, so the report shows them.
+   */
+  it.each(CODES)('says how long the span the query uses is, in %s', code => {
+    const spans = MODEL_PERIODS.map(period => ({
+      period,
+      label: BUNDLES[code].get(`periods.${period}`) ?? '',
+      stated: statedHours(code, period),
+      queried: PERIOD_DAYS[period] * 24,
+    }))
+
+    const unreadable = spans
+      .filter(span => span.stated === null)
+      .map(({ period, label }) => ({ period, label }))
+    const wrong = spans.filter(span => span.stated !== null && span.stated !== span.queried)
+
+    expect({ unreadable, wrong }).toEqual({ unreadable: [], wrong: [] })
   })
 })
