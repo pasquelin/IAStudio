@@ -7,8 +7,8 @@ import {
   hidesSceneLights,
   showsEdges,
   substituteFor,
-  type DisplayMode,
 } from './scene-view'
+import { type DisplayMode } from '@shared/domain/scene'
 
 /**
  * What one view does to the scene just before it is drawn.

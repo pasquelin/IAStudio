@@ -17,7 +17,7 @@ import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
 import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
-import { DISPLAY_MODES } from '@/engines/scene/scene-view'
+import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
 
 const setDocumentTitle = vi.fn()

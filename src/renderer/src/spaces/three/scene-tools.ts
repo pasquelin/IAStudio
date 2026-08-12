@@ -36,13 +36,13 @@ import {
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
+import { type PaneView } from '@/engines/scene/scene-view'
 import {
   DISPLAY_MODES,
   VIEW_DIRECTIONS,
   type DisplayMode,
-  type PaneView,
   type ViewDirection,
-} from '@/engines/scene/scene-view'
+} from '@shared/domain/scene'
 
 /** Arrows read as the direction the camera looks from, which is what the row promises. */
 const VIEW_ICONS: Record<ViewDirection, string> = {

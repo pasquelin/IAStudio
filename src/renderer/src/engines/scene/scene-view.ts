@@ -8,29 +8,14 @@ import {
   type Material,
   type Object3D,
 } from 'three'
+import {
+  DISPLAY_MODES,
+  VIEW_DIRECTIONS,
+  isViewDirection,
+  type DisplayMode,
+  type ViewDirection,
+} from '@shared/domain/scene'
 import { centreOf } from './pivot'
-
-/**
- * How a scene is being looked at, and drawn. Session state, like an image document's zoom: it is
- * never saved with the document and ⌘Z never touches it — the scene did not change, the view did.
- */
-
-/** The six sides of the box a set is judged from. */
-export type ViewDirection = 'top' | 'bottom' | 'front' | 'back' | 'left' | 'right'
-
-export const VIEW_DIRECTIONS: readonly ViewDirection[] = [
-  'front',
-  'back',
-  'left',
-  'right',
-  'top',
-  'bottom',
-]
-
-/** A toolbar row carries a plain string: this is what turns it back into a direction. */
-export function isViewDirection(value: string): value is ViewDirection {
-  return VIEW_DIRECTIONS.some(direction => direction === value)
-}
 
 /**
  * What one view of a quad layout shows: a side, or a camera free to turn.
@@ -109,28 +94,6 @@ export function directionOf(offset: Vector3): ViewDirection | null {
 }
 
 /**
- * What the viewport draws. Seven answers, and the order is the order the key cycles through:
- * the three the studio opened with first, then the four a model is judged by.
- *
- * `solid`, `matcap` and `density` paint every surface with one stand-in material, so what shows
- * is the SHAPE — a matcap reads curvature the way a clay render does, and density says which
- * object of a set carries the triangles. `material` keeps the real materials but drops the
- * scene's own lights, which is how a texture is judged without a light flattering it.
- */
-export type DisplayMode =
-  'shaded' | 'wireframe' | 'both' | 'solid' | 'material' | 'matcap' | 'density'
-
-export const DISPLAY_MODES: readonly DisplayMode[] = [
-  'shaded',
-  'wireframe',
-  'both',
-  'solid',
-  'material',
-  'matcap',
-  'density',
-]
-
-/**
  * Which stand-in material a mode paints every surface with, or `none` for the real ones.
  *
  * A table rather than a chain of comparisons: the renderer asks it once per pass, and a mode
@@ -181,10 +144,6 @@ export function hidesSceneLights(mode: DisplayMode): boolean {
 export function nextDisplayMode(mode: DisplayMode): DisplayMode {
   const at = DISPLAY_MODES.indexOf(mode)
   return DISPLAY_MODES[(at + 1) % DISPLAY_MODES.length] ?? 'shaded'
-}
-
-export function isDisplayMode(value: string): value is DisplayMode {
-  return DISPLAY_MODES.some(mode => mode === value)
 }
 
 /**
