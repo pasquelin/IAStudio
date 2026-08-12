@@ -69,7 +69,8 @@ menu, which catches them before anybody else. They are therefore the only ones t
 |---|---|---|
 | **New project** | `⌘N` | creates an empty project and opens it |
 | **Open project** | `⌘O` | opens an existing project in place of the current one |
-| **Save document** | `⌘S` | writes the document in front into the project |
+| **Save document** | `⌘S` | writes the document in front into the project — **and rewrites the asset it came from**, in the Image workspace |
+| **Save as** | `⇧⌘S` | writes a copy of the asset beside the original and carries on with it, asking for no name |
 | **Settings** | `⌘,` | opens the settings window |
 | **Dictate** | `⌥D` | listens to the microphone and writes what you say at the caret |
 | **Full screen** | `⌃⌘F` | makes the window take the whole screen |
@@ -565,6 +566,7 @@ are bound to the band, not to a context.
 | `⌘N` | New project |  |  |  |  |  |  |  |  |
 | `⌘O` | Open project |  |  |  |  |  |  |  |  |
 | `⌘S` | Save |  |  |  |  |  |  |  |  |
+| `⇧⌘S` | Save as |  |  |  |  |  |  |  |  |
 | `⌘,` | Settings |  |  |  |  |  |  |  |  |
 | `⌃⌘F` | Full screen |  |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo | Undo |

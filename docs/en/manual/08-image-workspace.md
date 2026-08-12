@@ -341,6 +341,16 @@ on the way out; rulers, guides and marching ants are not in it.
 > same. That is not what `⇧⌘E` does: the export flattens and leaves the studio, while saving keeps
 > the stack intact so you can carry on.
 >
+> **And if that document was opened from an asset, `⌘S` rewrites that asset TOO** — so the shelf's
+> thumbnail follows what you are editing, instead of showing the original generation. The two
+> writes happen in that order, and the order matters: the document carries the layers and the
+> history, the asset a flat picture. If the second one fails, your work is already on disk and it
+> is the thumbnail that lags — never the other way round.
+>
+> **`⇧⌘S` — Save as — writes a copy beside it and carries on with that one.** No dialogue asks
+> for a name: the copy is called *"(the name) copy"*, and the asset you had open stays as your
+> last `⌘S` left it.
+>
 > An image is written as a **folder**, `documents/<id>.img/`: one `document.json` for the stack,
 > and one `.png` per layer — plus a second for its mask, where there is one. That is deliberately
 > inspectable: you can open the folder and look at the layers one by one.

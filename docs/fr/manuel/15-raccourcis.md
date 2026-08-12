@@ -70,7 +70,8 @@ toujours un vrai conflit.
 |---|---|---|
 | **Nouveau projet** | `⌘N` | crée un projet vide et l’ouvre |
 | **Ouvrir un projet** | `⌘O` | ouvre un projet existant à la place de celui en cours |
-| **Enregistrer le document** | `⌘S` | écrit le document en avant dans le projet |
+| **Enregistrer le document** | `⌘S` | écrit le document en avant dans le projet — **et réécrit l’asset dont il vient**, dans l’espace Image |
+| **Enregistrer sous** | `⇧⌘S` | écrit une copie de l’asset à côté de l’original et continue sur elle, sans demander de nom |
 | **Réglages** | `⌘,` | ouvre la fenêtre des réglages |
 | **Dicter** | `⌥D` | écoute le micro et écrit ce que vous dites au curseur |
 | **Plein écran** | `⌃⌘F` | fait occuper tout l’écran à la fenêtre |
@@ -576,6 +577,7 @@ ils sont liés à la bande, pas à un contexte.
 | `⌘N` | Nouveau projet |  |  |  |  |  |  |  |  |
 | `⌘O` | Ouvrir un projet |  |  |  |  |  |  |  |  |
 | `⌘S` | Enregistrer |  |  |  |  |  |  |  |  |
+| `⇧⌘S` | Enregistrer sous |  |  |  |  |  |  |  |  |
 | `⌘,` | Réglages |  |  |  |  |  |  |  |  |
 | `⌃⌘F` | Plein écran |  |  |  |  |  |  |  |  |
 | `⌘Z` |  |  | Annuler | Annuler | Annuler | Annuler | Annuler | Annuler | Annuler |
