@@ -67,6 +67,23 @@ export function cachedToken(name: string): string {
 }
 
 /**
+ * A root colour, or black. Black is what an unreadable token falls back to across the painters,
+ * rather than each one inventing its own — a token that answers nothing is a theme that has not
+ * been parsed yet, or a test that never built a DOM.
+ */
+export function rootColour(name: string): string {
+  return cachedToken(name) || '#000'
+}
+
+/**
+ * `tokenAsFont` for a painter that has no element of its own — the shorthand is composed off the
+ * root, and the size comes from the cache rather than a style resolution per paint.
+ */
+export function rootFont(name: string, fallbackSize: string, family: string): string {
+  return `${cachedToken(name) || fallbackSize} ${family}`
+}
+
+/**
  * Called when the theme changes. Engines subscribe when they are built and drop it when they
  * are destroyed; caches subscribe once, at module level.
  *
@@ -79,6 +96,22 @@ export function cachedToken(name: string): string {
 export function onPaletteChange(listener: PaletteListener): () => void {
   listeners.add(listener)
   return () => void listeners.delete(listener)
+}
+
+/**
+ * A painter's whole palette, computed once per theme rather than once per paint: at sixty frames
+ * a second, a style resolution over the shell per frame is the frame budget on its own.
+ *
+ * Subscribes at module level and drops on `refreshPalette`, so a painter no longer publishes a
+ * forget of its own — two of them did, under two names, around the same twenty lines.
+ */
+export function memoPalette<T>(compute: () => T): () => T {
+  let cached: T | null = null
+  onPaletteChange(() => {
+    cached = null
+  })
+
+  return () => (cached ??= compute())
 }
 
 /**

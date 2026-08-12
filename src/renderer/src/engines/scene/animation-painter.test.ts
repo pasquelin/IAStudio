@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { SECOND } from '@shared/domain/time'
 import { RULER_HEIGHT, type Viewport } from '../timeline/timeline-geometry'
 import { animationTrack, timelineWith } from './animation-fixtures'
-import { forgetAnimationPalette, keyId, paintAnimation } from './animation-painter'
+import { keyId, paintAnimation } from './animation-painter'
+import { refreshPalette } from '../core/palette'
 import { CLIP_HEIGHT, SUBJECT_HEIGHT, animationRows } from './animation-rows'
 
 /** One pixel per 10 ms, so a second is a hundred pixels across. */
@@ -127,7 +128,7 @@ describe('painting the animation band', () => {
 
   it('reads its colours again once the theme has moved', () => {
     const before = paintOf(rowsOf([animationTrack('a', 'position', [key(1)])])).fills.length
-    forgetAnimationPalette()
+    refreshPalette()
     expect(paintOf(rowsOf([animationTrack('a', 'position', [key(1)])])).fills).toHaveLength(before)
   })
 

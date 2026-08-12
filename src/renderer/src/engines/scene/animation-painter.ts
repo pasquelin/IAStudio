@@ -10,7 +10,7 @@ import type { Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
 import { paintRuler, type RulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timeline-geometry'
-import { onPaletteChange, token, tokenAsFont } from '../core/palette'
+import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { AnimationRow } from './animation-rows'
 
 export type Size = { width: number; height: number }
@@ -43,41 +43,19 @@ type Palette = {
   rulerFont: string
 }
 
-let cached: Palette | null = null
-
-function readPalette(): Palette {
-  if (cached) return cached
-  cached = computePalette()
-  return cached
-}
-
-/** Called when the theme changes; the next paint reads the tokens again. */
-export function forgetAnimationPalette(): void {
-  cached = null
-}
-
-onPaletteChange(forgetAnimationPalette)
-
-function computePalette(): Palette {
-  const root = typeof document === 'undefined' ? null : document.documentElement
-  const read = (name: string): string => (root ? token(root, name) : '') || '#000'
-
-  return {
-    ruler: read('--color-chassis'),
-    row: read('--color-panel'),
-    rowAlt: read('--color-surface'),
-    border: read('--color-border'),
-    key: read('--color-muted'),
-    keySelected: read('--color-accent'),
-    block: read('--color-elevated'),
-    beyond: read('--color-scrim'),
-    playhead: read('--color-accent'),
-    muted: read('--color-muted'),
-    rulerFont: root
-      ? tokenAsFont(root, '--text-mini', RULER_SIZE, RULER_FAMILY)
-      : `${RULER_SIZE} ${RULER_FAMILY}`,
-  }
-}
+const readPalette = memoPalette((): Palette => ({
+  ruler: rootColour('--color-chassis'),
+  row: rootColour('--color-panel'),
+  rowAlt: rootColour('--color-surface'),
+  border: rootColour('--color-border'),
+  key: rootColour('--color-muted'),
+  keySelected: rootColour('--color-accent'),
+  block: rootColour('--color-elevated'),
+  beyond: rootColour('--color-scrim'),
+  playhead: rootColour('--color-accent'),
+  muted: rootColour('--color-muted'),
+  rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
+}))
 
 export type AnimationPaint = {
   rows: readonly AnimationRow[]
