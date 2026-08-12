@@ -477,7 +477,7 @@ Le panneau le dit lui-même, au-dessus de sa liste : **la Génération, c’est 
 
 > **Pas forcément dans l’espace d’où vous l’avez lancée.** Une App produit ce qu’elle produit :
 > une chaîne démarrée depuis la 3D peut déposer une image dans l’étagère Image. C’est pour ça que
-> le **journal d’activité** nomme les étagères — « 2 assets générés dans Image, 3D ». Regardez-y
+> le **journal d’activité** nomme les étagères — « 2 assets générés dans Image et 3D ». Regardez-y
 > plutôt que de chercher dans l’étagère de l’espace où vous êtes.
 
 **Le prix s’affiche sur le bouton** dès que le formulaire est complet, comme pour une génération.

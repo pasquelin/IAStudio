@@ -6,6 +6,7 @@ import {
   formatDecimal,
   formatPercent,
   kept,
+  formatList,
   type ByteUnit,
 } from './format'
 
@@ -105,5 +106,46 @@ describe('keeping a slider steady', () => {
   it('keeps the zeros a step implies', () => {
     expect(formatDecimal(1.2, 'fr', { digits: 2, least: 2 })).toBe('1,20')
     expect(formatDecimal(1, 'fr', { digits: 2, least: 2 })).toBe('1,00')
+  })
+})
+
+describe('a list of names, joined by the language', () => {
+  /*
+   * The whole point, and the reason `join(', ')` was a defect rather than a shortcut: the word
+   * between the last two items differs per language, and no component can know it.
+   */
+  it('writes the conjunction French writes', () => {
+    expect(formatList(['Image', '3D'], 'fr', 'conjunction')).toBe('Image et 3D')
+    expect(formatList(['Image', '3D', 'Vidéo'], 'fr', 'conjunction')).toBe('Image, 3D et Vidéo')
+  })
+
+  it('writes the one English writes, which is not the same word or the same comma', () => {
+    expect(formatList(['Image', '3D'], 'en', 'conjunction')).toBe('Image and 3D')
+    expect(formatList(['Image', '3D', 'Video'], 'en', 'conjunction')).toBe('Image, 3D, and Video')
+  })
+
+  /*
+   * The half a comma hid, and the reason the join has no default: a filter that keeps a line whose
+   * level is ANY of those chosen is a disjunction, and calling it "et" names a filter no line can
+   * meet. One word apart, opposite meanings.
+   */
+  it('writes the alternative when the sentence offers one', () => {
+    expect(formatList(['Avertissement', 'Échec'], 'fr', 'disjunction')).toBe(
+      'Avertissement ou Échec',
+    )
+    expect(formatList(['Warning', 'Failure'], 'en', 'disjunction')).toBe('Warning or Failure')
+  })
+
+  // Two joins are two formatters for one language: keyed by language alone, the second call
+  // would hand back the first's word.
+  it('keeps a formatter per join, not per language', () => {
+    expect(formatList(['a', 'b'], 'fr', 'conjunction')).toBe('a et b')
+    expect(formatList(['a', 'b'], 'fr', 'disjunction')).toBe('a ou b')
+  })
+
+  // One name is not a list, and no separator belongs anywhere near it.
+  it('leaves a single name alone, and answers nothing for none', () => {
+    expect(formatList(['Image'], 'fr', 'conjunction')).toBe('Image')
+    expect(formatList([], 'fr', 'conjunction')).toBe('')
   })
 })

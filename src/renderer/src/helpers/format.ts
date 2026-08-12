@@ -14,6 +14,38 @@ export function kept<T>(cache: Map<string, T>, key: string, build: () => T): T {
   return built
 }
 
+const LISTS = new Map<string, Intl.ListFormat>()
+
+/**
+ * How the last two items are joined — and it is NOT a house style, it is what the sentence means.
+ *
+ * `conjunction` for things all true at once: the shelves a generation landed in, the accounts that
+ * answered nothing. `disjunction` for alternatives: a filter that keeps a line whose level is ANY
+ * of those listed, a port that accepts any of several types. Writing "et" over a disjunction
+ * describes a filter no line can satisfy — which the bare comma it replaced at least left open.
+ */
+export type ListJoin = 'conjunction' | 'disjunction'
+
+/**
+ * A list of names, joined the way the reader's language joins one.
+ *
+ * `join(', ')` is the same mistake `formatPercent` was written against, one level up: the word
+ * between the last two items belongs to the language, not to the component. French writes
+ * "Image et 3D", English "Image and 3D" with its Oxford comma at three, and three call sites each
+ * wrote a bare comma — so every reader of every language got the enumeration of none of them.
+ *
+ * `join` has no default on purpose. A comma hides the difference between "all of these" and "any
+ * of these"; a word cannot, so every caller has to have decided which it means.
+ */
+export function formatList(items: readonly string[], language: string, join: ListJoin): string {
+  // The shape belongs in the key, as `kept` asks: two joins are two formatters for one language.
+  return kept(
+    LISTS,
+    `${join}:${language}`,
+    () => new Intl.ListFormat(language, { style: 'long', type: join }),
+  ).format(items)
+}
+
 const PERCENTS = new Map<string, Intl.NumberFormat>()
 
 /**

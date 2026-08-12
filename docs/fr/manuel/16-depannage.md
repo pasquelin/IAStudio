@@ -16,7 +16,7 @@ chercher plus loin : il nomme l’objet en cause et dit ce qui a échoué.
 
 | Ce que le journal peut raconter | Sujet |
 |---|---|
-| « La génération « … » a échoué », « Génération « … » annulée », « 2 assets générés dans Image, 3D » | Génération |
+| « La génération « … » a échoué », « Génération « … » annulée », « 2 assets générés dans Image et 3D » | Génération |
 | « Impossible d’importer « … » », « « … » est illisible » | Import |
 | « Impossible d’envoyer « … » », « Les tags de « … » n’ont pas rejoint la bibliothèque », « L’API Scenario a refusé une requête » | Bibliothèque |
 | « L’enregistrement du document a échoué », « Un calque n’a pas pu être chargé », « L’export de la scène a échoué », « Le fichier n’a pas pu être montré » | Document |
