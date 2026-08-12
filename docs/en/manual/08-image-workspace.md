@@ -347,6 +347,19 @@ on the way out; rulers, guides and marching ants are not in it.
 > history, the asset a flat picture. If the second one fails, your work is already on disk and it
 > is the thumbnail that lags — never the other way round.
 >
+> **`⌘S` writes the asset at the DOCUMENT's size.** Cropping or resizing and then saving therefore
+> shrinks the original asset — and if that asset lives in the project, its previous picture is
+> replaced. That is deliberate: a crop is an edit like any other, and an editor that refused to
+> save a resized document would not be one. **A [linked medium](07-assets.md) is never touched**:
+> the edit enters the project, and your file stays where it is.
+>
+> **The studio says so when it finds the document no longer measures its asset**, at two moments
+> that are not equal. Reopening the asset from the shelf while its tab is already there is a
+> warning: nothing has been written yet, and you can still choose. On save it is a statement —
+> **nothing is refused and the write happens**. And it stays quiet when it cannot measure: an
+> asset that will not decode, or a tab that has not finished opening. To keep the original intact,
+> `⇧⌘S` writes a copy.
+>
 > **`⇧⌘S` — Save as — writes a copy beside it and carries on with that one.** No dialogue asks
 > for a name: the copy is called *"(the name) copy"*, and the asset you had open stays as your
 > last `⌘S` left it.
