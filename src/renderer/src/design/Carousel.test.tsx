@@ -128,6 +128,32 @@ describe('the page dots', () => {
 
     expect(scrollTo).toHaveBeenCalledWith({ left: 640 * 2 })
   })
+
+  /**
+   * Which page is current is said by the WIDTH as well as by the fill, and that is not decoration:
+   * `text` and `muted` sit 2.30:1 apart on the dark theme, under the 3:1 WCAG 1.4.11 asks of a
+   * state. Colour alone would leave the current page told at a ratio nothing else makes up for.
+   */
+  it('says which page is current by its width, not by its fill alone', async () => {
+    renderCarousel(cards(500))
+
+    const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
+
+    expect(dots[0]).toHaveClass('w-4')
+    expect(dots[1]).toHaveClass('w-1.5')
+    // Both change, so the fill and the width have to fade together rather than one snapping.
+    expect(dots[0]).toHaveClass('transition-all')
+  })
+
+  /** `bg-muted/40` read 1.99:1 on a panel: a control saying how many pages there are. */
+  it('carries an opaque fill on the pages not being read', async () => {
+    renderCarousel(cards(500))
+
+    const dots = await screen.findAllByRole('button', { name: /^Page \d+$/ })
+
+    expect(dots[1]).toHaveClass('bg-muted')
+    expect(dots[1]?.className).not.toContain('bg-muted/')
+  })
 })
 
 describe('the keyboard', () => {

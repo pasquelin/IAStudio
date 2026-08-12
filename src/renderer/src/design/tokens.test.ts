@@ -139,6 +139,32 @@ const SURFACES_OF: Record<string, string[]> = {
 }
 
 /**
+ * `bg-muted/40`, `border-create/40` — an INK token spent as a FILL, at an opacity.
+ *
+ * The third family, and it is not the alpha sweep above wearing another hat: that one asks what a
+ * WORD reads at, this one what a SHAPE reads at, and they answer to different lines of WCAG. The
+ * carousel's unread pagination dots were `bg-muted/40` and stood at 1.99:1 on a panel — a control
+ * saying how many pages there are, and how many of them you can see.
+ *
+ * Only the ink tokens, deliberately. `bg-panel/80` and `bg-chassis/75` are SCRIMS — a surface
+ * token spent as a translucent surface, which is what a scrim is — and holding them to a contrast
+ * bar would be measuring the wrong thing entirely.
+ */
+const ALPHA_FILL = new RegExp(String.raw`\b(?:bg|border)-(${INKS.join('|')})\/(\d{1,3})\b`, 'g')
+
+/**
+ * The one site that spends an ink as a translucent fill and may.
+ *
+ * Spotlight tints its leading slide `bg-create/15` inside a `border-create/40`, both around 2:1 —
+ * and neither carries the state alone: the same card's icon turns `text-create` at FULL token
+ * when it leads, and `INKS` above holds that at 4.5. The band is emphasis on a state something
+ * else already states, which is the same reading `DECORATIVE_GLYPHS` takes of a placeholder.
+ */
+const ALPHA_FILL_ALLOWED: Record<string, string> = {
+  '/Spotlight.tsx': 'a tint on a state its own icon states at full `create`',
+}
+
+/**
  * Two placeholders, exempt and measured: a crossed-out image on an empty thumbnail (1.65:1 at
  * `/30`) and the large glyph of an empty state (1.96 at `/40`).
  *
@@ -235,6 +261,30 @@ function dimmedWithoutReason(sources: readonly (readonly [string, string])[]): s
   }
 
   return offenders
+}
+
+/** Every ink spent as a translucent fill, composed on each reading surface, held at 1.4.11's 3:1. */
+function alphaFillFailures(sources: readonly (readonly [string, string])[]): string[] {
+  const failing: string[] = []
+
+  for (const theme of THEMES) {
+    const tokens = palette(theme.from)
+
+    for (const [path, source] of sources) {
+      if (Object.keys(ALPHA_FILL_ALLOWED).some(one => path.endsWith(one))) continue
+
+      for (const [, ink = '', percent = ''] of source.matchAll(ALPHA_FILL)) {
+        for (const surface of READING_SURFACES) {
+          const seen = blend(tokens[ink] ?? '', tokens[surface] ?? '', Number(percent) / 100)
+          if (contrastRatio(seen, tokens[surface] ?? '') < AA_NON_TEXT) {
+            failing.push(`${path} ${ink}/${percent} on ${surface}`)
+          }
+        }
+      }
+    }
+  }
+
+  return failing
 }
 
 /**
@@ -477,6 +527,34 @@ describe('the contrast of the inks', () => {
     expect(bad).toContain('./probe.ts base-content/60 on base-300')
     // And the same ink one step up passes, so the probe proves the threshold, not the sweep.
     expect(alphaFailures([['./probe.ts', "'text-base-content/70'"]])).toEqual([])
+  })
+
+  /**
+   * The shapes, where the sweep above holds the words. A control identified by nothing but a
+   * translucent ink is a control a reader has to guess at — WCAG 1.4.11, 3:1, and the carousel's
+   * pagination dots stood at 1.99 on a panel and 1.82 on a light one.
+   */
+  it('clears the 3:1 of a shape, wherever an ink is spent as a translucent fill', () => {
+    expect(alphaFillFailures(WRITTEN_SOURCES)).toEqual([])
+  })
+
+  it('refuses a fill that fails, and takes a scrim for what it is', () => {
+    // The exact class the dots carried, and the ratio that closed this batch.
+    expect(alphaFillFailures([['./probe.tsx', "'bg-muted/40'"]])).toContain(
+      './probe.tsx muted/40 on panel',
+    )
+    expect(alphaFillFailures([['./probe.tsx', "'bg-muted'"]])).toEqual([])
+    // A surface token spent as a translucent surface is a scrim, and owes no ratio.
+    expect(alphaFillFailures([['./probe.tsx', "'bg-panel/80 bg-chassis/75'"]])).toEqual([])
+  })
+
+  it('carries no fill exemption for a source that has stopped spending an ink', () => {
+    const stale = Object.keys(ALPHA_FILL_ALLOWED).filter(
+      one =>
+        !WRITTEN_SOURCES.some(([path, source]) => path.endsWith(one) && source.match(ALPHA_FILL)),
+    )
+
+    expect(stale).toEqual([])
   })
 
   it('leaves no word dimmed by an opacity nobody has justified', () => {

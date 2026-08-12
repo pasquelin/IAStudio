@@ -209,9 +209,12 @@ export function Carousel<T extends { id: string }>({
               {...TIP_BOTTOM(t('carousel.page', { number: page + 1 }))}
               aria-current={page === position.page ? 'true' : undefined}
               onClick={() => scrollToPage(page)}
+              // Which page is current is said by the WIDTH, not by the colour alone: `text` and
+              // `muted` sit 2.30:1 apart, under the 3:1 WCAG 1.4.11 asks of a state. `transition-all`
+              // and not `-colors`, or the dot would snap wide while its fill faded.
               className={cn(
-                'h-1.5 w-1.5 cursor-pointer rounded-full border-none p-0 transition-colors',
-                page === position.page ? 'bg-text' : 'bg-muted/40 hover:bg-muted',
+                'h-1.5 cursor-pointer rounded-full border-none p-0 transition-all',
+                page === position.page ? 'bg-text w-4' : 'bg-muted hover:bg-text w-1.5',
                 FOCUS_RING,
               )}
             />
