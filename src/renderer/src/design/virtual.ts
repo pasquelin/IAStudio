@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
+import { cachedToken, onPaletteChange } from '@/engines/core/palette'
 
 /**
  * What the three virtualized surfaces of the studio agree on.
@@ -71,4 +72,23 @@ export function useReachEnd(
  */
 export function useRemeasure(virtualizer: { measure: () => void }, key: string | number): void {
   useEffect(() => virtualizer.measure(), [virtualizer, key])
+}
+
+/**
+ * A `--sc-*` gauge in pixels, re-read whenever the appearance changes.
+ *
+ * An estimator needs a number while the row it estimates is sized by CSS, and the two agree only
+ * if the number is read back from the gauge. `Tree` estimated a constant 28 against a compact row
+ * measuring 24: four pixels a row, compounding down the list, until the rows a reader saw sat
+ * nowhere near where the virtualizer had placed them.
+ *
+ * `cachedToken` rather than a `getComputedStyle` per call — resolving style over the shell is a
+ * frame's work — and `onPaletteChange` to hear the density move, which is the same signal the
+ * engines already listen to. `fallback` covers a gauge the stylesheet has not declared: under
+ * jsdom every one of them reads back empty.
+ */
+export function useGauge(name: string, fallback: number): number {
+  const declared = useSyncExternalStore(onPaletteChange, () => cachedToken(name))
+  const pixels = Number.parseFloat(declared)
+  return Number.isFinite(pixels) ? pixels : fallback
 }

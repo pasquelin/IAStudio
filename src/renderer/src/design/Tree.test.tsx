@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
@@ -64,6 +65,34 @@ function renderTree(
     />,
   )
 }
+
+describe('Tree, the height it estimates', () => {
+  afterEach(() => {
+    document.documentElement.style.removeProperty('--sc-control')
+    refreshPalette()
+  })
+
+  /**
+   * The rows are drawn at `h-(--sc-control)`, so a constant estimate is only right at one
+   * density. It estimated 28 against a compact row of 24, and the error compounded: by the
+   * hundredth row the tree told the virtualizer a position four hundred pixels off.
+   */
+  it('estimates the gauge its rows are drawn at, not a constant', () => {
+    document.documentElement.style.setProperty('--sc-control', '24px')
+    refreshPalette()
+
+    renderTree()
+
+    // Three visible rows: `scene` expanded over `a` and `b`.
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '72px' })
+  })
+
+  it('falls back to the shipped height when no gauge is declared', () => {
+    renderTree()
+
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '84px' })
+  })
+})
 
 describe('Tree', () => {
   it('renders one row per visible node', () => {
