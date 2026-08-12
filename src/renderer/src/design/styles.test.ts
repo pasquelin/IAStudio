@@ -56,7 +56,9 @@ describe('the row skin and the state it publishes', () => {
     const offenders = WRITTEN_SOURCES.filter(
       ([path, source]) =>
         path !== GUARDED &&
-        /\browSkin\((?!false\))/.test(source) &&
+        // `false` closed OR followed by a `disabled` argument: what the exemption turns on is the
+        // FIRST argument, and a line that can be refused still has no selection to publish.
+        /\browSkin\((?!false[,)])/.test(source) &&
         !source.includes('data-selected'),
     ).map(([path]) => path)
 

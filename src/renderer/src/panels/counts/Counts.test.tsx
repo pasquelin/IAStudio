@@ -78,6 +78,37 @@ describe('the counts panel', () => {
   })
 
   /**
+   * `:hover` matches a disabled button — the click is refused, the pointer still lands. A count of
+   * nothing therefore has to be told to `rowSkin`, or it lights up like a line one can press.
+   */
+  it('stops lighting up under the pointer once there is nothing to reveal', async () => {
+    install({ image: 3 })
+    render(<Counts />)
+
+    await screen.findByText('3')
+    expect(screen.getByRole('button', { name: /Vidéo/ })).toHaveClass('hover:bg-transparent')
+    expect(screen.getByRole('button', { name: /Vidéo/ })).not.toHaveClass('group/row')
+
+    // The other side, and the one that matters: a count with something to reveal keeps the group,
+    // or the label below never lifts. Asserting only the refused line let `rowSkin(false, true)`
+    // grey out all six and stay green.
+    expect(screen.getByRole('button', { name: /Image/ })).toHaveClass('group/row')
+    expect(screen.getByRole('button', { name: /Image/ })).not.toHaveClass('hover:bg-transparent')
+  })
+
+  /**
+   * The label sits on `elevated` under a pointer, where `muted` reads 3.51:1. Lifted from the
+   * row's group, exactly as a list row's subtitle is — one mechanism, not two.
+   */
+  it('lifts the kind out of muted while the pointer is on its line', async () => {
+    install({ image: 3 })
+    render(<Counts />)
+
+    await screen.findByText('3')
+    expect(screen.getByText('Image')).toHaveClass('text-muted', 'group-hover/row:text-text')
+  })
+
+  /**
    * All six at zero rather than an empty panel, with a folder open or without one: the numbers
    * ARE the answer, and they say the project has been counted rather than not yet read. A band
    * could take itself off the page; a column standing under a rail icon cannot.
