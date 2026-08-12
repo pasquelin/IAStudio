@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { useSettings } from './settings'
-import { isDraftDirty, useSettingsDraft, valueOf } from './settings-draft'
+import { isSettingsDraftDirty, useSettingsDraft, valueOf } from './settings-draft'
 
 const draft = () => useSettingsDraft.getState()
 
@@ -18,7 +18,7 @@ describe('staging a change', () => {
     draft().stage('appearance.density', 'compact')
 
     expect(write).not.toHaveBeenCalled()
-    expect(isDraftDirty(draft())).toBe(true)
+    expect(isSettingsDraftDirty(draft())).toBe(true)
   })
 
   it('accumulates several leaves into one write', async () => {
@@ -44,7 +44,7 @@ describe('staging a change', () => {
     draft().stage('appearance.density', 'compact')
     await draft().apply()
 
-    expect(isDraftDirty(draft())).toBe(false)
+    expect(isSettingsDraftDirty(draft())).toBe(false)
   })
 
   it('drops everything on cancel, without writing', async () => {
@@ -56,7 +56,7 @@ describe('staging a change', () => {
     await draft().apply()
 
     expect(write).not.toHaveBeenCalled()
-    expect(isDraftDirty(draft())).toBe(false)
+    expect(isSettingsDraftDirty(draft())).toBe(false)
   })
 
   // A value put back by hand is still a change until it is applied; losing the mark halfway
@@ -65,7 +65,7 @@ describe('staging a change', () => {
     draft().stage('appearance.density', 'compact')
     draft().stage('appearance.density', 'comfortable')
 
-    expect(isDraftDirty(draft())).toBe(true)
+    expect(isSettingsDraftDirty(draft())).toBe(true)
   })
 
   it('stages what no path can express, such as a family default model', async () => {
@@ -112,10 +112,10 @@ describe('whether anything is waiting', () => {
     draft().stageBranch({ generation: { defaultModels: { image: 'model_1' } } })
 
     // Without this the default-model screen stages a change and no Apply button appears.
-    expect(isDraftDirty(draft())).toBe(true)
+    expect(isSettingsDraftDirty(draft())).toBe(true)
   })
 
   it('is quiet on a fresh buffer, so the window is not a form with nothing to submit', () => {
-    expect(isDraftDirty(draft())).toBe(false)
+    expect(isSettingsDraftDirty(draft())).toBe(false)
   })
 })

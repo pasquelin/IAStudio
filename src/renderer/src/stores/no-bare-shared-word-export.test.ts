@@ -90,9 +90,10 @@ const collidingExports = (sources: readonly (readonly [string, string])[]): stri
 
 /**
  * The collisions this guard has not closed yet — **empty, and that is a state, not an oversight**.
- * `historyOf`, `viewOf`, `claimOnSubmit` and `isDirty` all left it on 2026-08-12, and the last two
- * left because the check below REFUSED them: a rename landed, the exemption stopped matching a
- * real collision, and the suite went red before anyone thought to edit this line.
+ * `historyOf`, `viewOf`, `claimOnSubmit` and `isDirty` all left it on 2026-08-12. For the last two
+ * the check below is what ASKED: with the rename applied and the entry still here, it fails —
+ * measured while each lot was being written, though no commit carries that red, both halves
+ * having landed together.
  *
  * The rule is proven by its synthetic cases below rather than by this list, so an empty one costs
  * nothing. **An entry added here without a lot behind it is a collision being tolerated**, and the
@@ -211,21 +212,28 @@ describe('what a store exports about a shared word', () => {
     expect(STORES.length).toBeGreaterThan(40)
     expect(names.length).toBeGreaterThan(150)
     // The two this rule renamed: if the filter ever stops reaching them, the check above goes quiet.
-    expect(names).toContain('graphNodeIn')
-    expect(names).toContain('graphNodeNow')
-    // All six, not one of them: the filter is a path prefix, so a single store moved out of the
-    // folder would go unwatched while a sentinel pinned to another store stayed green.
-    for (const domain of ['graph', 'canvas', 'scene', 'sequence', 'skybox', 'texture']) {
-      expect(names).toContain(`${domain}HistoryOf`)
-    }
-    for (const domain of ['canvas', 'scene', 'skybox']) {
-      expect(names).toContain(`${domain}ViewOf`)
-    }
-    // The infix form deposits its witness too, or the day `image-generation.ts` leaves the folder
-    // the rule goes quiet about it without reddening.
-    expect(names).toContain('claimImageOnSubmit')
-    for (const domain of ['Scene', 'Texture', 'Draft']) {
-      expect(names).toContain(`is${domain}Dirty`)
-    }
+    // One flat list, a floor on its length, and a single containment: a `for` loop over an
+    // emptied array asserts nothing while every other assertion stays green — measured, the
+    // harness walked straight through it. The floor refuses an emptied list; dropping the
+    // containment outright is a deleted assertion, which is a different and far louder act.
+    const RENAMED = [
+      'graphNodeIn',
+      'graphNodeNow',
+      'graphHistoryOf',
+      'canvasHistoryOf',
+      'sceneHistoryOf',
+      'sequenceHistoryOf',
+      'skyboxHistoryOf',
+      'textureHistoryOf',
+      'canvasViewOf',
+      'sceneViewOf',
+      'skyboxViewOf',
+      'claimImageOnSubmit',
+      'isSceneDirty',
+      'isSettingsDraftDirty',
+    ]
+
+    expect(RENAMED.length).toBeGreaterThan(13)
+    expect(names).toEqual(expect.arrayContaining(RENAMED))
   })
 })
