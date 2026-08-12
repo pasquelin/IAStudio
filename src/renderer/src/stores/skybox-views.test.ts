@@ -1,24 +1,24 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_SKYBOX_VIEW, useSkyboxViews, viewOf } from './skybox-views'
+import { DEFAULT_SKYBOX_VIEW, useSkyboxViews, skyboxViewOf } from './skybox-views'
 
 describe('how a sky is being looked at', () => {
   beforeEach(() => useSkyboxViews.setState({ views: {} }))
 
   it('opens on the same defaults for a document nobody has touched', () => {
-    expect(viewOf(useSkyboxViews.getState(), 'sky-1')).toEqual(DEFAULT_SKYBOX_VIEW)
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1')).toEqual(DEFAULT_SKYBOX_VIEW)
   })
 
   /** A selector building its default per call hands React a new snapshot on every render. */
   it('hands back one object for an untouched document, not a fresh one each time', () => {
     const state = useSkyboxViews.getState()
 
-    expect(viewOf(state, 'sky-1')).toBe(viewOf(state, 'sky-2'))
+    expect(skyboxViewOf(state, 'sky-1')).toBe(skyboxViewOf(state, 'sky-2'))
   })
 
   it('changes one setting without disturbing the others', () => {
     useSkyboxViews.getState().set('sky-1', { fieldOfView: 90 })
 
-    expect(viewOf(useSkyboxViews.getState(), 'sky-1')).toEqual({
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-1')).toEqual({
       ...DEFAULT_SKYBOX_VIEW,
       fieldOfView: 90,
     })
@@ -27,14 +27,14 @@ describe('how a sky is being looked at', () => {
   it('keeps two documents apart', () => {
     useSkyboxViews.getState().set('sky-1', { probes: false })
 
-    expect(viewOf(useSkyboxViews.getState(), 'sky-2').probes).toBe(true)
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'sky-2').probes).toBe(true)
   })
 
   it('walks the projections in order and comes back round', () => {
     const seen: string[] = []
     for (let step = 0; step < 5; step += 1) {
       useSkyboxViews.getState().cycleView('sky-1')
-      seen.push(viewOf(useSkyboxViews.getState(), 'sky-1').view)
+      seen.push(skyboxViewOf(useSkyboxViews.getState(), 'sky-1').view)
     }
 
     expect(seen).toEqual(['equirect', 'cross', 'faces', 'immersive', 'equirect'])

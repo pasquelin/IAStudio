@@ -10,7 +10,7 @@ import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
 import { useDocuments } from '@/stores/documents'
-import { useSceneViews, viewOf } from '@/stores/scene-views'
+import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
@@ -422,7 +422,7 @@ describe('how the scene is looked at', () => {
     await userEvent.keyboard('{z}')
 
     expect(setDisplayModes).toHaveBeenLastCalledWith(['shaded', 'shaded', 'wireframe'], false)
-    expect(viewOf(useSceneViews.getState(), 'doc-1').displays[0]).toBe('shaded')
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').displays[0]).toBe('shaded')
   })
 
   // Session state, per document: two scenes side by side are two points of view.
@@ -430,7 +430,7 @@ describe('how the scene is looked at', () => {
     render(<SceneDocument documentId="doc-1" />)
     await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
 
-    expect(viewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
   })
 })
 
@@ -573,7 +573,7 @@ describe('SceneDocument and the pose mode', () => {
 
     await act(async () => built.at(-1)?.onSelectBone?.({ nodeId: 'perso', bone: 'Arm.L' }))
 
-    expect(viewOf(useSceneViews.getState(), 'doc-1').pickedBone).toEqual({
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedBone).toEqual({
       nodeId: 'perso',
       bone: 'Arm.L',
     })
@@ -586,7 +586,7 @@ describe('SceneDocument and the pose mode', () => {
 
     await userEvent.keyboard('{p}')
 
-    expect(viewOf(useSceneViews.getState(), 'doc-1').pickedBone).toBeNull()
+    expect(sceneViewOf(useSceneViews.getState(), 'doc-1').pickedBone).toBeNull()
     expect(setPickedBone).toHaveBeenLastCalledWith(null)
   })
 })

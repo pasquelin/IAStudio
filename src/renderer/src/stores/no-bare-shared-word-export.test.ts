@@ -33,26 +33,38 @@ const exportsOf = (source: string): string[] => [
  * document while its name says which of several it could be — so each needs the domain in front.
  *
  * `node`: `nodeById` exists for a scene (`engines/scene/scene-state.ts`) and for a graph
- * (`shared/domain/graph.ts`). `history`: six stores published `historyOf` under that one name —
- * graphs, canvases, scenes, sequences, skyboxes, textures — while `audio-edits.ts` had already
- * written `audioHistoryOf`, which is the form the rest now follows.
+ * (`shared/domain/graph.ts`). `history`: six stores published `historyOf` under that one name.
+ * `view`: three did — `canvas-views.ts`, `scene-views.ts`, `skybox-views.ts` — returning three
+ * different types from the one name.
  *
  * A word joins this list when a SECOND domain claims it, never in anticipation: a rule wider than
- * its evidence is one the next reader argues with instead of obeying.
+ * its evidence is one the next reader argues with instead of obeying. And it joins WITH its
+ * rename — added alone it reddens this guard, which is the intended behaviour.
  *
- * **Three words already meet that bar and are NOT here yet**, each because adding it without its
- * rename would redden this guard — which is the intended behaviour, not an accident: `viewOf`
- * (`canvas-views.ts`, `scene-views.ts`, `skybox-views.ts` — three stores, three return types),
- * `isDirty` (`scenes.ts`, `textures.ts`, beside their own prefixed `sceneOf`/`sceneHistoryOf`),
- * and `claimOnSubmit` (`image-generation.ts`, whose collision is already worked around by
- * `generation-claims.ts:2` importing it under an alias). Each is a lot of its own at the chantier.
+ * **Two words already meet that bar and are NOT here yet**: `isDirty` (`scenes.ts`, `textures.ts`,
+ * beside their own prefixed `sceneOf`/`sceneHistoryOf`) and `claimOnSubmit`
+ * (`image-generation.ts`, whose collision is already worked around by `generation-claims.ts:2`
+ * importing it under an alias). Each is a lot of its own at the chantier.
  */
-const SHARED_WORDS: readonly string[] = ['node', 'history']
+const SHARED_WORDS: readonly string[] = ['node', 'history', 'view']
+
+/**
+ * The first camelCase word of a name — `viewportOf` opens on `viewport`, not on `view`.
+ *
+ * A prefix of LETTERS is what this compared at first, and it would have condemned `viewportOf`
+ * (`stores/timeline-view.ts`) the day `view` joined the list: a viewport belongs to one domain and
+ * its name says so. A rule that catches names it was never about is one its next reader disables.
+ */
+const opensOn = (name: string): string => name.split(/(?=[A-Z])/)[0] ?? name
+
+// The plural too: `nodesOf` is exactly as ambiguous as `nodeOf`, and only the `s` separates them.
+const isShared = (name: string): boolean =>
+  SHARED_WORDS.some(word => opensOn(name) === word || opensOn(name) === `${word}s`)
 
 const bareExports = (sources: readonly (readonly [string, string])[]): string[] =>
   sources.flatMap(([path, source]) =>
     exportsOf(source)
-      .filter(name => SHARED_WORDS.some(word => name.startsWith(word)))
+      .filter(isShared)
       .map(name => `${path}: ${name}`),
   )
 
@@ -87,11 +99,18 @@ describe('what a store exports about a shared word', () => {
     const offender: [string, string][] = [
       [
         '../stores/zz.ts',
-        'export const nodeIn = 1\nexport const graphNodeIn = 2\nexport const historyOf = 3\n',
+        'export const nodeIn = 1\nexport const graphNodeIn = 2\nexport const historyOf = 3\n' +
+          'export const nodesOf = 4\nexport const viewportOf = 5\n',
       ],
     ]
 
-    expect(bareExports(offender)).toEqual(['../stores/zz.ts: nodeIn', '../stores/zz.ts: historyOf'])
+    // `viewportOf` is the one that must NOT be there: it opens on `viewport`, a word of one
+    // domain, and a letter-prefix rule condemned it the day `view` joined the list.
+    expect(bareExports(offender)).toEqual([
+      '../stores/zz.ts: nodeIn',
+      '../stores/zz.ts: historyOf',
+      '../stores/zz.ts: nodesOf',
+    ])
   })
 
   /*
@@ -113,6 +132,9 @@ describe('what a store exports about a shared word', () => {
     // folder would go unwatched while a sentinel pinned to another store stayed green.
     for (const domain of ['graph', 'canvas', 'scene', 'sequence', 'skybox', 'texture']) {
       expect(names).toContain(`${domain}HistoryOf`)
+    }
+    for (const domain of ['canvas', 'scene', 'skybox']) {
+      expect(names).toContain(`${domain}ViewOf`)
     }
   })
 })

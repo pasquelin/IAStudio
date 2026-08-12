@@ -26,7 +26,7 @@ import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { addModelTo, sceneHistoryOf, isDirty, sceneOf, selectIn, useScenes } from '@/stores/scenes'
-import { displayOfPane, useSceneViews, viewOf } from '@/stores/scene-views'
+import { displayOfPane, useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { isDisplayMode, isViewDirection, nextDisplayMode } from '@/engines/scene/scene-view'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
@@ -66,7 +66,10 @@ async function exportScene(
 function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
   const store = useScenes.getState()
   const state = sceneOf(store, documentId)
-  const at = snapToFrame(viewOf(useSceneViews.getState(), documentId).playhead, state.animation.fps)
+  const at = snapToFrame(
+    sceneViewOf(useSceneViews.getState(), documentId).playhead,
+    state.animation.fps,
+  )
   const recording = animationViewOf(useAnimationViews.getState(), documentId).autoKey
 
   const command = movesToCommand(state, moves, at, recording)
@@ -101,7 +104,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   const addNodeOf = useAddNode(documentId)
   const active = useDocuments(state => state.activeId === documentId)
   const viewport = useSettings(state => state.settings.three)
-  const view = useSceneViews(state => viewOf(state, documentId))
+  const view = useSceneViews(state => sceneViewOf(state, documentId))
 
   // Before the renderer mounts: a saved document comes back from the project, a new one from
   // the default scene — an unlit viewport reads as broken rather than as empty.
@@ -226,7 +229,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
 
   const cycleDisplay = useCallback(() => {
     const pane = paneInHand()
-    const displays = viewOf(useSceneViews.getState(), documentId).displays
+    const displays = sceneViewOf(useSceneViews.getState(), documentId).displays
     useSceneViews
       .getState()
       .setDisplay(documentId, pane, nextDisplayMode(displayOfPane(displays, pane)))

@@ -35,11 +35,11 @@ export const useSkyboxViews = create<SkyboxViewsState>()((set, get) => ({
 
   set: (documentId, patch) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), ...patch } },
+      views: { ...state.views, [documentId]: { ...skyboxViewOf(state, documentId), ...patch } },
     })),
 
   cycleView: documentId => {
-    const current = viewOf(get(), documentId).view
+    const current = skyboxViewOf(get(), documentId).view
     const next = SKYBOX_VIEWS.indexOf(current) + 1
     get().set(documentId, { view: SKYBOX_VIEWS[next % SKYBOX_VIEWS.length] ?? current })
   },
@@ -57,6 +57,6 @@ export const useSkyboxViews = create<SkyboxViewsState>()((set, get) => ({
  * The same object for a document nobody has touched, never a fresh one: a selector that built
  * its default per call would hand React a new snapshot on every render.
  */
-export function viewOf(state: SkyboxViewsState, documentId: string): SkyboxViewState {
+export function skyboxViewOf(state: SkyboxViewsState, documentId: string): SkyboxViewState {
   return state.views[documentId] ?? DEFAULT_SKYBOX_VIEW
 }

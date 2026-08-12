@@ -68,12 +68,12 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
 
   setProjection: (documentId, projection) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), projection } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), projection } },
     })),
 
   setDisplay: (documentId, pane, display) =>
     set(state => {
-      const view = viewOf(state, documentId)
+      const view = sceneViewOf(state, documentId)
       // Grown rather than indexed into: a view switched to four before anything set a mode has
       // one entry, and writing at index 3 would leave two holes reading as undefined.
       const displays = Array.from(
@@ -85,44 +85,44 @@ export const useSceneViews = create<SceneViewsState>()(set => ({
 
   setSkeletons: (documentId, skeletons) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), skeletons } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), skeletons } },
     })),
 
   setPoseMode: (documentId, poseMode) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), poseMode } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), poseMode } },
     })),
 
   setPickedBone: (documentId, pickedBone) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), pickedBone } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), pickedBone } },
     })),
 
   setQuad: (documentId, quad) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), quad } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quad } },
     })),
 
   setQuadEdges: (documentId, quadEdges) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), quadEdges } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), quadEdges } },
     })),
 
   setPaneView: (documentId, pane, view) =>
     set(state => {
-      const current = viewOf(state, documentId)
+      const current = sceneViewOf(state, documentId)
       const panes = current.panes.map((held, index) => (index === pane ? view : held))
       return { views: { ...state.views, [documentId]: { ...current, panes } } }
     }),
 
   setPlayhead: (documentId, playhead) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), playhead } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playhead } },
     })),
 
   setPlaying: (documentId, playing) =>
     set(state => ({
-      views: { ...state.views, [documentId]: { ...viewOf(state, documentId), playing } },
+      views: { ...state.views, [documentId]: { ...sceneViewOf(state, documentId), playing } },
     })),
 }))
 
@@ -132,6 +132,6 @@ export function displayOfPane(displays: readonly DisplayMode[], pane: number): D
 }
 
 /** A document nobody has looked at yet is looked at the default way. */
-export function viewOf(state: SceneViewsState, documentId: string): SceneView {
+export function sceneViewOf(state: SceneViewsState, documentId: string): SceneView {
   return state.views[documentId] ?? DEFAULT_SCENE_VIEW
 }

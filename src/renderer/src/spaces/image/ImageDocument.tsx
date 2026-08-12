@@ -38,7 +38,7 @@ import {
 } from '@/engines/canvas/commands'
 import { newId } from '@/helpers/ids'
 import { canvasOf, canvasHistoryOf, useCanvases } from '@/stores/canvases'
-import { selectionOf, useCanvasViews, viewOf } from '@/stores/canvas-views'
+import { selectionOf, useCanvasViews, canvasViewOf } from '@/stores/canvas-views'
 import { useDocuments } from '@/stores/documents'
 import { clearGuides, toggleView, zoomIn, zoomOut, zoomToActual, zoomToFit } from './canvas-view'
 import { guidePort } from './guide-port'
@@ -96,7 +96,7 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
   const [brush, setBrush] = useState<BrushSettings>(DEFAULT_BRUSH)
 
   const canvas = useCanvases(state => canvasOf(state, documentId))
-  const view = useCanvasViews(state => viewOf(state, documentId))
+  const view = useCanvasViews(state => canvasViewOf(state, documentId))
   // What the rulers take from the top and the left when they are on, and nothing when they are off.
   const rulerInset = view.rulers ? RULER_SIZE : 0
   const selection = useCanvasViews(state => selectionOf(state, documentId))

@@ -9,7 +9,7 @@ import { useDocuments } from '@/stores/documents'
 import { installDocument } from '@/stores/document-fixtures'
 import type { FolderExportRequest, SkyboxExportCommand } from '@shared/ipc'
 import { skyboxOf, useSkyboxes } from '@/stores/skyboxes'
-import { useSkyboxViews, viewOf } from '@/stores/skybox-views'
+import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
 import { SKYBOX_VIEWS, type SkyboxView } from '@shared/domain/skybox'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { SkyboxDocument } from './SkyboxDocument'
@@ -250,7 +250,7 @@ describe('the keyboard of a sky', () => {
    */
   it('cycles through the views and comes back round', () => {
     render(<SkyboxDocument documentId="doc-1" />)
-    const shown = (): SkyboxView => viewOf(useSkyboxViews.getState(), 'doc-1').view
+    const shown = (): SkyboxView => skyboxViewOf(useSkyboxViews.getState(), 'doc-1').view
 
     expect(shown()).toBe('immersive')
     fireEvent.keyDown(window, { code: 'KeyV' })
@@ -267,7 +267,7 @@ describe('the keyboard of a sky', () => {
 
     fireEvent.keyDown(window, { code: 'KeyP' })
 
-    expect(viewOf(useSkyboxViews.getState(), 'doc-1').probes).toBe(false)
+    expect(skyboxViewOf(useSkyboxViews.getState(), 'doc-1').probes).toBe(false)
   })
 
   // The menu that floated over the picture is gone: the centre shows the sky, and nothing else.
