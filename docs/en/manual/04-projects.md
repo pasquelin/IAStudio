@@ -183,6 +183,7 @@ folder, and that is what tells an explorer apart from a list of documents.
 |---|---|
 | **Double-click** a folder | opens or closes it |
 | **Double-click** a studio document | opens it, switching workspace if it belongs to another |
+| **Double-click** a file under `assets/` | **opens it in the studio**, in the workspace that edits its kind — it is an asset, not just any file |
 | **Double-click** any other file | hands it to your system, which opens it with the right application |
 | `→` `←` | unfolds, folds |
 | `↑` `↓` | the previous row, the next one |

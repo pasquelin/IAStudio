@@ -660,7 +660,8 @@ que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
 
 **Pourquoi l’Explorateur est visible partout.** Il montre le dossier du projet en arborescence, et
 c’est la même question dans tous les espaces : un double-clic sur un document l’ouvre, en changeant
-d’espace s’il appartient à un autre, et un double-clic sur autre chose le confie au système. Il a longtemps montré
+d’espace s’il appartient à un autre ; sur un fichier d’`assets/`, il l’ouvre dans l’espace qui édite
+son type ; sur tout le reste, il le confie au système. Il a longtemps montré
 l’arbre de la scène 3D — celui-ci a désormais son propre panneau, **Scène**.
 
 ---
