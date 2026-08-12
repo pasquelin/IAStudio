@@ -64,6 +64,9 @@ describe('Row', () => {
       'group-hover/row:text-text',
       'group-data-selected/row:text-text',
       'line-through',
+      // The fill fades under it; without this the word would snap while its background fades.
+      // Held here because nothing else does: the subtitle carries its own, four lines below.
+      'transition-colors',
     )
   })
 

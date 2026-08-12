@@ -43,13 +43,13 @@ describe('the row skin and the state it publishes', () => {
   /**
    * The skin says HOW a picked row looks; `data-selected` says THAT it is picked, and only the
    * caller can put an attribute on the element. A site that takes the first without the second
-   * paints the background and leaves the subtitle at 3.25:1 — with nothing on screen to say so.
+   * paints the background and leaves the row's words at 3.25:1 — with nothing on screen to say so.
    *
    * `rowSkin(false)` is exempt: a list with no selection has no state to publish.
    *
    * **What this does NOT hold**: the attribute has to sit on the element that wears the skin, and
    * this rule only asks that the file mention it somewhere. A site that puts `data-selected` on a
-   * child leaves the subtitle at 3.25:1 with the guard still green — the selector is
+   * child leaves those words at 3.25:1 with the guard still green — the selector is
    * `.group/row[data-selected]`, one element, not a subtree.
    */
   it('is never worn without the attribute that drives it', () => {
