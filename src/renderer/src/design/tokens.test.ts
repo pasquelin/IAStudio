@@ -188,6 +188,35 @@ describe('the contrast of the inks', () => {
   })
 
   /**
+   * The ink written ON the accent, which the sheet ships and `useAppearance` recomputes for a
+   * picked one. Held here because the sheet's own answer has to be right too: the accent was
+   * darkened to #336fe6 on 2026-08-12 for exactly this pair, white on it going 4.28 → 4.61.
+   */
+  it('carries an ink the accent can be written on, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      expect(tokens['accent-content']).toMatch(/^#[0-9a-f]{6}$/)
+      expect(
+        contrastRatio(tokens['accent-content'] ?? '', tokens.accent ?? ''),
+      ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+    }
+  })
+
+  /**
+   * A white written outright cannot follow a picked accent: on a yellow one it reads 1.71:1, and
+   * the token exists so that it does follow. `MediaTile` is the one exemption and it is not an
+   * accent case — its caption sits on a PICTURE, contrasted by the gradient beneath it.
+   */
+  it('leaves no white written by hand where a token would follow the accent', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) => !path.endsWith('/MediaTile.tsx') && /\btext-white(?![\w-])/.test(source),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
+  })
+
+  /**
    * `accent` is the FILL — a button's background, the playhead, a ring. Lightening it to clear
    * the threshold as ink would take white on it from 4.28 to 3.01, so the two parted ways; a
    * source that writes `text-accent` has picked the one that cannot carry a word.

@@ -67,7 +67,7 @@ export function ToolButton({
         'text-muted size-(--sc-control) shrink-0 bg-transparent',
         'hover:bg-elevated hover:text-text',
         active && 'bg-elevated text-text',
-        accented && 'bg-accent hover:bg-accent text-white',
+        accented && 'bg-accent hover:bg-accent text-accent-content',
         className,
       )}
       {...naming}

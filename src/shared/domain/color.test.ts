@@ -3,6 +3,7 @@ import {
   AA_NORMAL_TEXT,
   contrastRatio,
   HEX_COLOR,
+  contentFor,
   inkFor,
   readColor,
   relativeLuminance,
@@ -125,5 +126,49 @@ describe('the ink of an accent', () => {
   it('stays on the studio shape, so what it returns can be stored and rendered', () => {
     expect(inkFor('#12b600', '#2b2d30')).toMatch(HEX_COLOR)
     expect(inkFor('#ff715b', '#ffffff')).toMatch(HEX_COLOR)
+  })
+})
+
+describe('the ink written ON a fill', () => {
+  it('keeps white wherever white can be read, so a picked blue is not flipped for a tenth', () => {
+    // The studio's own accent: white carries 4.61:1 there, which is what the sheet ships.
+    expect(contentFor('#336fe6')).toBe('#ffffff')
+    expect(contentFor('#5b21b6')).toBe('#ffffff')
+  })
+
+  it('turns black on a fill light enough to swallow white', () => {
+    // Measured on colours a user can actually pick: white reads 1.71:1 on this yellow and 1.93
+    // on this teal, which is a label nobody can read on the one button a surface exists for.
+    expect(contentFor('#f0c035')).toBe('#000000')
+    expect(contentFor('#4ecdc4')).toBe('#000000')
+  })
+
+  it('clears AA on every fill where one of the two can', () => {
+    for (const fill of ['#336fe6', '#f0c035', '#4ecdc4', '#ff6b9d', '#5b21b6', '#12b600']) {
+      expect(contrastRatio(contentFor(fill), fill)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+    }
+  })
+
+  /**
+   * No colour puts BOTH under 4.5 — white fails under a luminance of 0.183 and black over 0.175,
+   * so the ranges overlap. The fallback is therefore only reachable above AA, and asking for AAA
+   * is how it gets exercised at all rather than sitting in the file as a line nothing can run.
+   */
+  it('answers the better of the two when a stricter bar leaves neither clearing it', () => {
+    // At 7:1 this grey gives white 4.54 and black 4.62: neither is a rescue, and the point is
+    // only that the answer is not the deliberately worse one.
+    expect(contentFor('#767676', 7)).toBe('#000000')
+    expect(contentFor('#767676')).toBe('#ffffff')
+  })
+
+  it('stays on white when white is the better of the two, even having failed the bar', () => {
+    // The other side of the same fallback, and it is not symmetric: on this slate white reads
+    // 6.92 and black 3.03, so failing a 7:1 bar is no reason to hand back the worse of the two.
+    expect(contentFor('#4a5a7a', 7)).toBe('#ffffff')
+  })
+
+  it('falls back to white for something that is not a colour, rather than throwing', () => {
+    expect(contentFor('')).toBe('#ffffff')
+    expect(contentFor('rebeccapurple')).toBe('#ffffff')
   })
 })

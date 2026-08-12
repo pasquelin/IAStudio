@@ -80,14 +80,14 @@ export function MenuRow({
       className={cn(
         // The tick marks what is armed; the accent marks what the pointer is on. Two
         // different questions, and colouring the armed row would answer neither.
-        'group text-text hover:bg-accent flex cursor-pointer items-center hover:text-white',
+        'group text-text hover:bg-accent hover:text-accent-content flex cursor-pointer items-center',
         'h-(--sc-control) gap-2 rounded-(--radius-sc-md) border-none bg-transparent px-2',
         'text-tiny text-left transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent',
         'disabled:hover:text-text',
         // The keyboard walks these rows without the pointer being anywhere near them, so the
         // focused row has to light up on its own — `hover:` alone left the walk invisible.
-        'focus-visible:bg-accent focus-visible:text-white focus-visible:outline-none',
+        'focus-visible:bg-accent focus-visible:text-accent-content focus-visible:outline-none',
       )}
       onClick={onSelect}
     >
@@ -101,7 +101,7 @@ export function MenuRow({
       </span>
       <span className="flex-1 truncate">{label}</span>
       {shortcut && (
-        <span className="text-muted text-mini shrink-0 pl-3 group-hover:text-white">
+        <span className="text-muted text-mini group-hover:text-accent-content shrink-0 pl-3">
           {shortcut}
         </span>
       )}

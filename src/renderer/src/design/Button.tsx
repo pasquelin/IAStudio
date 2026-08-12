@@ -5,7 +5,7 @@ import { BUTTON_BASE } from './styles'
 export type ButtonVariant = 'primary' | 'neutral'
 
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-white hover:bg-accent/85',
+  primary: 'bg-accent text-accent-content hover:bg-accent/85',
   neutral: 'bg-surface text-text hover:bg-elevated',
 }
 
