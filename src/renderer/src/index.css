@@ -15,6 +15,12 @@
  * what makes `bg-chassis` and friends exist at all; the light theme restates every one of them
  * further down, inside its own daisyUI theme block. Nothing else in the application may hold a
  * hex value — the engines read these tokens through `engines/core/palette.ts`.
+ *
+ * Two places restate a value from here, both because they paint before they can read: the window
+ * chrome (`WINDOW_CHROME_COLOR`) and the canvas overlay's last resort (`FALLBACK_COLORS`). Each
+ * is pinned by a test against the token it restates, so repainting a token here fails a suite
+ * rather than leaving a copy behind. There is no third one, and adding one without its pin is
+ * how a palette silently splits in two.
  */
 @theme {
   --color-chassis: #2b2d30;
