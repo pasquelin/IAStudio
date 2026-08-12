@@ -243,10 +243,7 @@ export function Tree<T extends TreeNode>({
                 aria-expanded={row.hasChildren ? row.expanded : undefined}
                 style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
-                  // No `px-1` here: the content is a `Row`, which carries its own. The two
-                  // stacked put 12px between the chevron and the icon against 8 inside the row,
-                  // so the chevron read as belonging to the line above.
-                  'group flex h-(--sc-control) cursor-pointer items-center gap-2',
+                  'group flex h-(--sc-control) cursor-pointer items-center gap-2 px-1',
                   rowSkin(selected.has(row.node.id)),
                   // The row a drop would land in, told apart from the row that is selected.
                   over === row.node.id && 'outline-accent outline -outline-offset-1',

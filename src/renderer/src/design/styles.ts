@@ -102,9 +102,9 @@ export function chipSkin(active: boolean): string {
 }
 
 /**
- * `--sc-control` at its tallest, as a number — for the lists that draw a row at a fixed height
- * and for `useGauge` to fall back on. A list whose rows hold more than a line of text (the model
- * browser) sizes itself and does not read this.
+ * `--sc-control` at its tallest, as a number — what `useGauge` falls back on when the gauge
+ * cannot be read, and nothing else. No call site passes it any more: three did, each of them
+ * right at one density only, and `Collection` now reads the gauge once on their behalf.
  *
  * A surface whose rows are sized by the gauge itself must read the gauge, not this: the two part
  * company in compact density, and the difference is reserved space nobody paints.

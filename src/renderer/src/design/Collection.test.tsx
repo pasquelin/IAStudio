@@ -559,8 +559,8 @@ describe('Collection, the height it estimates', () => {
 
   /**
    * A row stacking a name over a subtitle reads its own gauge. Two steps of `leading-tight` text
-   * are 27.5px, so the control height leaves nothing at all — which is what « Vos projets »
-   * showed, its rows touching each other.
+   * are 27.5px, so the control height leaves nothing at all — which is what the recent projects
+   * panel showed, its rows touching each other.
    */
   it('gives a stacked row the taller gauge', () => {
     document.documentElement.style.setProperty('--sc-row-stacked', '32px')

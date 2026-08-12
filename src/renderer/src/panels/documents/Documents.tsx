@@ -45,6 +45,7 @@ export function Documents() {
     <Collection
       label={t('panels.documents')}
       items={stored}
+      rowHeight="stacked"
       // No `selectedIds`: nothing is picked here. "Open" used to borrow the prop, which painted
       // the selection tint on rows the user had never chosen. `DocumentRow` carries its own mark.
       onActivate={openDocument}
