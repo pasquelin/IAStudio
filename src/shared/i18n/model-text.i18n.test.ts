@@ -108,8 +108,9 @@ describe('the French of the model texts', () => {
    * longest text the panel draws, in its narrowest column, so it is exactly where a `:` dropped
    * alone onto the next line shows.
    *
-   * Written by code point, as `bundles.test.ts` does: eslint refuses either space in source, and
-   * neither survives being typed into a file by hand.
+   * The space in the pattern is the ORDINARY one, written plainly, and it has to be: a no-break
+   * space there would condemn the correct case and clear the faulty one. Slipping one in is not a
+   * risk to watch for — eslint's `no-irregular-whitespace` refuses it in source, and only it.
    */
   it('holds its double punctuation with a no-break space', () => {
     const breakable = entries.filter(([, french]) => / [;:!?»]|« /.test(french))
