@@ -71,6 +71,26 @@ export function keyId(rowId: string, time: Us): string {
   return `${rowId}@${time}`
 }
 
+/**
+ * What a key name holds, or nothing when the string is not one.
+ *
+ * Beside `keyId` because the two decide ONE format between them. It was read apart, in the panel
+ * that deletes a key, and a separator decided in two places is a separator that ends up meaning
+ * two things. The LAST `@` is the one that separates: nothing forbids a row id from holding one.
+ */
+export function keyParts(id: string): { rowId: string; time: Us } | undefined {
+  const cut = id.lastIndexOf('@')
+  // `cut === 0` is a name with no row before the separator, which no row answers to.
+  if (cut <= 0) return undefined
+
+  const written = id.slice(cut + 1)
+  const time = Number(written)
+  // `Number('')` is 0, which would read a key at the start of the sheet out of `row@`.
+  if (written === '' || !Number.isFinite(time)) return undefined
+
+  return { rowId: id.slice(0, cut), time }
+}
+
 /** A diamond: a square on its corner, which is what every sheet draws a key as. */
 function paintKey(
   context: CanvasRenderingContext2D,
