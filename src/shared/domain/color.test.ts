@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   AA_NORMAL_TEXT,
+  blend,
   contrastRatio,
   HEX_COLOR,
   contentFor,
@@ -170,5 +171,29 @@ describe('the ink written ON a fill', () => {
   it('falls back to white for something that is not a colour, rather than throwing', () => {
     expect(contentFor('')).toBe('#ffffff')
     expect(contentFor('rebeccapurple')).toBe('#ffffff')
+  })
+})
+
+describe('an ink laid over a fill', () => {
+  it('answers the fill itself at no opacity, and the ink at full', () => {
+    expect(blend('#ffffff', '#000000', 0)).toBe('#000000')
+    expect(blend('#ffffff', '#000000', 1)).toBe('#ffffff')
+  })
+
+  it('composes what a reader actually sees, which is the only thing a ratio can be taken on', () => {
+    // The studio's own case, measured: `text-muted/70` on a panel is this grey, and it reads
+    // 3.50:1 there — a ratio no test of this repository could see before, because `muted` alone
+    // reads 5.79 and that is the number a guard on opaque tokens would have found.
+    const seen = blend('#91959b', '#191a1c', 0.7)
+
+    expect(seen).toBe('#6d7075')
+    expect(contrastRatio(seen, '#191a1c')).toBeLessThan(AA_NORMAL_TEXT)
+    expect(contrastRatio('#91959b', '#191a1c')).toBeGreaterThan(AA_NORMAL_TEXT)
+  })
+
+  it('stays on the studio shape, and hands back what it cannot compose', () => {
+    expect(blend('#12b600', '#2b2d30', 0.5)).toMatch(HEX_COLOR)
+    expect(blend('rebeccapurple', '#2b2d30', 0.5)).toBe('rebeccapurple')
+    expect(blend('#12b600', '', 0.5)).toBe('#12b600')
   })
 })

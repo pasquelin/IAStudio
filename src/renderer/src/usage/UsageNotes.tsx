@@ -19,7 +19,7 @@ export function UsageNotes({ report }: { report: UsageReport }) {
   )
 
   return (
-    <footer className="border-base-300 text-base-content/60 text-tiny flex flex-col gap-2 border-t pt-3">
+    <footer className="border-base-300 text-base-content/70 text-tiny flex flex-col gap-2 border-t pt-3">
       <p>{t('usage.noBalance')}</p>
       {report.accounts.length > 1 && <p>{t('usage.mixedAccounts')}</p>}
       {silent && <p className="text-warning">{t('usage.silent', { names: silent })}</p>}

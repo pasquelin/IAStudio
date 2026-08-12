@@ -40,7 +40,7 @@ export function UsageModels({ report }: { report: UsageReport }) {
           </td>
           <td className="py-1.5 text-right font-mono">{formatUnits(model.units, locale)}</td>
           <td className="py-1.5 text-right font-mono">{formatUnits(model.jobs, locale)}</td>
-          <td className="text-base-content/60 py-1.5 text-right font-mono">
+          <td className="text-base-content/70 py-1.5 text-right font-mono">
             {formatUnits(model.apiKeyUnits, locale)}
           </td>
         </Row>

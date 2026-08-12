@@ -28,8 +28,14 @@ export function readColor(source: Record<string, unknown>, key: string, fallback
 
 const CHANNEL_WEIGHTS = [0.2126, 0.7152, 0.0722]
 
-function channels(colour: string): number[] {
-  return [1, 3, 5].map(at => parseInt(colour.slice(at, at + 2), 16))
+/** A tuple rather than an array: `#rrggbb` has exactly three, and a caller that reads them by
+ *  index otherwise carries a fallback branch nothing can ever reach. */
+function channels(colour: string): [number, number, number] {
+  return [
+    parseInt(colour.slice(1, 3), 16),
+    parseInt(colour.slice(3, 5), 16),
+    parseInt(colour.slice(5, 7), 16),
+  ]
 }
 
 /** Relative luminance, WCAG 2.x. Expects the `#rrggbb` shape above; anything else reads as black. */
@@ -46,6 +52,23 @@ export function contrastRatio(one: string, other: string): number {
   const second = relativeLuminance(other)
 
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05)
+}
+
+/**
+ * An ink laid over a fill at `alpha`, as the compositor would — the colour a reader actually sees.
+ *
+ * A contrast ratio can only be taken between two OPAQUE colours: `text-muted/70` is not a colour,
+ * it is an instruction. Fourteen iterations of the design loop measured only opaque tokens, and
+ * that is exactly where the last two contrast defects hid.
+ */
+export function blend(ink: string, fill: string, alpha: number): string {
+  if (!HEX_COLOR.test(ink) || !HEX_COLOR.test(fill)) return ink
+
+  const [red, green, blue] = channels(ink)
+  const [underRed, underGreen, underBlue] = channels(fill)
+  const mix = (over: number, under: number): number => over * alpha + under * (1 - alpha)
+
+  return toHex([mix(red, underRed), mix(green, underGreen), mix(blue, underBlue)])
 }
 
 /** What WCAG 1.4.3 asks of normal text — every size this studio writes falls under it. */

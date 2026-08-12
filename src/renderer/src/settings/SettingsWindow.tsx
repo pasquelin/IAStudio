@@ -115,7 +115,7 @@ function SearchResults({
             type="button"
             {...HINT_RIGHT(t('settings.searchSectionHint'))}
             onClick={() => onGo(section)}
-            className="text-base-content/60 hover:text-base-content text-tiny mb-1 tracking-wide uppercase"
+            className="text-base-content/70 hover:text-base-content text-tiny mb-1 tracking-wide uppercase"
           >
             {t(sectionEntry(section)?.labelKey ?? '')}
           </button>

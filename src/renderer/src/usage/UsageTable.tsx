@@ -5,7 +5,7 @@ import { cn } from '@/helpers/cn'
 export function UsageTable({ head, children }: { head: ReactNode; children: ReactNode }) {
   return (
     <table className="w-full text-xs">
-      <thead className="text-base-content/60">
+      <thead className="text-base-content/70">
         <tr className="border-base-300 border-b text-left">{head}</tr>
       </thead>
       <tbody>{children}</tbody>

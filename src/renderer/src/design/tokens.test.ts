@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AA_NON_TEXT, AA_NORMAL_TEXT, contrastRatio } from '@shared/domain/color'
+import { AA_NON_TEXT, AA_NORMAL_TEXT, blend, contrastRatio } from '@shared/domain/color'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
 import stylesheet from '../index.css?raw'
 import { WRITTEN_SOURCES } from './test-harness'
@@ -117,6 +117,30 @@ const READING_SURFACES = ['chassis', 'panel', 'surface']
  * `create-hover` is NOT: it is the darker state of that fill, and no source writes a word in it.
  */
 const INKS = ['text', 'muted', 'accent-ink', 'danger', 'warning', 'success', 'create']
+
+/** `text-muted/70`, `text-base-content/60` — an ink and the opacity it is written at. */
+const ALPHA_INK = /\btext-(base-content|muted|text)\/(\d{1,3})\b/g
+
+/**
+ * Where each vocabulary is read. daisyUI's `base-*` belongs to the app windows — settings, usage —
+ * and the studio's own surfaces to the docks; `CLAUDE.md` draws that boundary and this follows it.
+ */
+const SURFACES_OF: Record<string, string[]> = {
+  'base-content': ['base-100', 'base-200', 'base-300'],
+  muted: READING_SURFACES,
+  text: READING_SURFACES,
+}
+
+/**
+ * Three placeholders, exempt and measured: a crossed-out image on an empty thumbnail (1.65:1 at
+ * `/30`), the same on a media tile, and the large glyph of an empty state (1.96 at `/40`).
+ *
+ * They carry no information a word does not already carry beside them — `EmptyState` renders its
+ * sentence in full `muted` right under the glyph — so WCAG 1.4.11 does not reach them. **Raising
+ * them would say the placeholder is the message**, which is the opposite of what an empty frame
+ * means. This is a decision, not an oversight.
+ */
+const DECORATIVE_GLYPHS = ['/Thumbnail.tsx', '/MediaTile.tsx', '/EmptyState.tsx']
 
 describe('the contrast of the inks', () => {
   for (const theme of THEMES) {
@@ -237,6 +261,50 @@ describe('the contrast of the inks', () => {
     ).map(([path]) => path)
 
     expect(offenders).toEqual([])
+  })
+
+  /**
+   * The inks written with an ALPHA, composed on their fill before being measured — the only way
+   * to see them at all. `text-muted/70` is not a colour, it is an instruction, and a ratio taken
+   * on `muted` alone answers 5.79 where the reader sees 3.50.
+   *
+   * **This is the angle every guard of this repository was blind to until 2026-08-12**, and it
+   * held two real defects: `WINDOW_CAPTION` at `/60` read 3.86:1 on a light `base-300`, and a
+   * journal detail at `text-muted/70` failed in BOTH themes. Fourteen iterations measured opaque
+   * tokens and found neither.
+   *
+   * Each vocabulary is composed on its own surfaces: daisyUI's `base-content` belongs to the app
+   * windows, the studio's inks to the docks — the boundary `CLAUDE.md` draws.
+   */
+  it('clears AA once composed, wherever an ink is written with an alpha', () => {
+    const failing: string[] = []
+
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      for (const [path, source] of WRITTEN_SOURCES) {
+        if (DECORATIVE_GLYPHS.some(one => path.endsWith(one))) continue
+
+        for (const [, ink = '', percent = ''] of source.matchAll(ALPHA_INK)) {
+          const alpha = Number(percent) / 100
+
+          for (const surface of SURFACES_OF[ink] ?? []) {
+            const seen = blend(tokens[ink] ?? '', tokens[surface] ?? '', alpha)
+            const ratio = contrastRatio(seen, tokens[surface] ?? '')
+            if (ratio < AA_NORMAL_TEXT) failing.push(`${path} ${ink}/${percent} on ${surface}`)
+          }
+        }
+      }
+    }
+
+    expect(failing).toEqual([])
+  })
+
+  it('finds an alpha ink at all, so the rule above cannot pass on an empty sweep', () => {
+    const written = WRITTEN_SOURCES.filter(([, source]) => ALPHA_INK.test(source))
+    ALPHA_INK.lastIndex = 0
+
+    expect(written.length).toBeGreaterThanOrEqual(8)
   })
 
   /**
