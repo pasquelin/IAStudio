@@ -122,11 +122,16 @@ s’ouvrant**, sur leur première ligne. Vous n’avez rien à faire pour y entr
 | `Échap` | ferme, et rend le focus là où il était |
 | `Tab` | ferme aussi — un menu n’est pas un endroit où l’on tabule |
 
-**Pour ouvrir le menu d’un groupe d’outils : `⌥↓`.** Les autres menus s’ouvrent d’un clic, donc
-d’une `Entrée`, mais pas ceux des **groupes** de la barre d’outils : là, le clic arme l’outil, et
-le menu ne s’ouvrait qu’au survol de la souris. `⌥↓` est le chemin du clavier ; `Entrée` continue
-d’armer l’outil, comme le clic. Comme les touches de parcours ci-dessus, `⌥↓` appartient au
-bouton et non au registre : il ne se change pas.
+**Pour ouvrir le menu d’un groupe d’outils : `⌥↓`.** La plupart des menus s’ouvrent d’un clic,
+donc d’une `Entrée`. Un groupe **dont un outil est armé** fait exception : le clic y choisit
+l’outil, et le menu ne s’ouvrait qu’au survol de la souris. `⌥↓` est le chemin du clavier ;
+`Entrée` continue d’armer l’outil, comme le clic.
+
+Un groupe qui n’arme rien — le **Ajouter** de la 3D, qui n’est qu’une liste d’actions —
+s’ouvre au clic comme les autres menus : il n’y a pas d’outil à choisir à sa place.
+
+Comme les touches de parcours ci-dessus, `⌥↓` appartient au bouton et non au registre : il ne
+se change pas.
 
 **Les lignes grisées sont sautées.** Une ligne qu’on ne peut pas choisir à la souris ne se prend
 pas au clavier non plus, et s’y arrêter donnerait un parcours qui semble bloqué.
