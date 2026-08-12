@@ -555,9 +555,10 @@ describe('the symbol of a creative unit', () => {
  * Hours rather than days, so every span below is a whole number: a day counted as `1 / 24` of
  * anything multiplies back to `0.9999…`, and the comparison would turn on floating point.
  *
- * A month is thirty days because that is the month `PERIOD_DAYS` counts — three of them are the
- * ninety days the query asks for, and a calendar month would make the label and the code differ
- * by two days in February for nothing.
+ * A month is the thirty-day month `PERIOD_DAYS` counts, not a calendar one. That IS a second
+ * place to be right, and it is the price of letting a label say `3 months` at all: a span that
+ * stops being a multiple of thirty days can no longer be named in months here, and what this
+ * asks for then is a label written in days — not a wider table.
  */
 const UNIT_HOURS: Record<string, number> = {
   h: 1,
@@ -574,23 +575,34 @@ const UNIT_HOURS: Record<string, number> = {
 }
 
 /**
- * How long a label says the span is, in hours — `null` when it names no length, or names it in
- * a unit nothing here converts. Both are failures: a span nobody can check is not a span anyone
- * should trust.
+ * How long a label says the span is, in hours — `null` when a figure it holds names no unit this
+ * knows, which is unreadable rather than wrong and is reported as its own thing.
  *
- * The unit is looked for among ALL the words rather than the one after the number, because
- * French puts an adjective between the two: `7 derniers jours`.
+ * EVERY figure counts, each taking the first unit word after it, and the total is their sum: a
+ * label that adds two pieces together — `3 months and 5 days` — has to add up to the same span.
+ * The unit is not required to sit against its figure, because French slips an adjective between
+ * the two: `7 derniers jours`.
+ *
+ * A figure meaning something other than a duration would be counted as one, and none does today.
+ * Telling the two apart would mean reading intent out of prose, which is not a thing a guard can
+ * do — so it says it cannot read the label rather than pretending to have measured it.
  */
 function statedHours(code: Language, period: string): number | null {
-  const label = BUNDLES[code].get(`periods.${period}`) ?? ''
-  const count = Number(label.match(/\d+/)?.[0] ?? NaN)
-  const unit = label
-    .toLowerCase()
-    .split(/[^\p{Letter}]+/u)
-    .map(word => UNIT_HOURS[word])
-    .find(hours => hours !== undefined)
+  const words = (BUNDLES[code].get(`periods.${period}`) ?? '').toLowerCase().match(/\d+|\p{L}+/gu)
+  let counted = 0
+  let figure: number | null = null
 
-  return Number.isNaN(count) || unit === undefined ? null : count * unit
+  for (const word of words ?? []) {
+    if (/^\d+$/.test(word)) {
+      if (figure !== null) return null
+      figure = Number(word)
+    } else if (figure !== null && UNIT_HOURS[word] !== undefined) {
+      counted += figure * UNIT_HOURS[word]
+      figure = null
+    }
+  }
+
+  return figure === null && counted > 0 ? counted : null
 }
 
 describe('how far back a listing reaches', () => {
@@ -604,12 +616,21 @@ describe('how far back a listing reaches', () => {
    * Read against `PERIOD_DAYS` rather than between the bundles: two translations agreeing with
    * each other and both wrong is the failure a comparison between them cannot see, and it is
    * the likelier one — a span is edited in the table, not in one language.
+   *
+   * `unreadable` is kept apart from `wrong` on purpose. A locale arriving with its own words for
+   * hours and days lands in the first, and what it asks for is a line in `UNIT_HOURS` — reported
+   * as a wrong length, it would read as an accusation against a translation that is correct.
    */
   it.each(CODES)('says how long the span the query uses is, in %s', code => {
-    const wrong = MODEL_PERIODS.filter(
-      period => statedHours(code, period) !== PERIOD_DAYS[period] * 24,
-    )
+    const spans = MODEL_PERIODS.map(period => ({
+      period,
+      stated: statedHours(code, period),
+      queried: PERIOD_DAYS[period] * 24,
+    }))
 
-    expect(wrong).toEqual([])
+    const unreadable = spans.filter(span => span.stated === null).map(span => span.period)
+    const wrong = spans.filter(span => span.stated !== null && span.stated !== span.queried)
+
+    expect({ unreadable, wrong }).toEqual({ unreadable: [], wrong: [] })
   })
 })
