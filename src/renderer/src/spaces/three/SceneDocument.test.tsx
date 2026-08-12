@@ -17,7 +17,7 @@ import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
 import { IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
-import { DISPLAY_MODES } from '@/engines/scene/scene-view'
+import { DISPLAY_MODES } from '@shared/domain/scene'
 import { SceneDocument } from './SceneDocument'
 
 const setDocumentTitle = vi.fn()
@@ -216,40 +216,13 @@ describe('SceneDocument', () => {
     expect(setMode).toHaveBeenCalledWith('select')
   })
 
-  it('adds the primitive chosen in the Add flyout, and undo removes it', async () => {
+  /**
+   * Adding is the native Add menu's now, not the bar's — `useNativeMenu` covers the row, and
+   * `useAddNode` what it builds. What is left to say here is that the bar offers no second way.
+   */
+  it('offers no add button of its own', () => {
     render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Cube/ }))
-
-    expect(meshesOf('doc-1')).toHaveLength(1)
-    expect(meshesOf('doc-1')[0]?.name).toBe('Box')
-
-    await userEvent.keyboard('{Meta>}{z}{/Meta}')
-    expect(meshesOf('doc-1')).toHaveLength(0)
-  })
-
-  it('adds a light from the same flyout', async () => {
-    render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Projecteur/ }))
-
-    const lights = sceneOf(useScenes.getState(), 'doc-1').nodes.filter(
-      node => node.type === 'light',
-    )
-    expect(lights).toHaveLength(4)
-  })
-
-  it('drops a text into the scene, words and all', async () => {
-    render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Ajouter/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Texte/ }))
-
-    const added = nodesOf('doc-1').filter(node => node.type === 'text')
-    expect(added).toHaveLength(1)
-    expect(added[0]?.type === 'text' && added[0].text.value).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Ajouter/ })).not.toBeInTheDocument()
   })
 })
 
@@ -352,34 +325,22 @@ describe('the viewport settings', () => {
 })
 
 describe('how the scene is looked at', () => {
-  it('swaps the projection from the toolbar, and lights the button', async () => {
+  // On the key rather than a button: the row moved to the native View menu, which ticks it.
+  it('swaps the projection on the key', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.keyboard('{o}')
 
     expect(setProjection).toHaveBeenCalledWith('orthographic')
-    expect(screen.getByRole('button', { name: /Projection/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
   })
 
-  it('swaps it back on the second click', async () => {
+  it('swaps it back on the second press', async () => {
     render(<SceneDocument documentId="doc-1" />)
 
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.keyboard('{o}')
+    await userEvent.keyboard('{o}')
 
     expect(setProjection).toHaveBeenLastCalledWith('perspective')
-  })
-
-  it('stands the camera at the side a flyout row names', async () => {
-    render(<SceneDocument documentId="doc-1" />)
-
-    await userEvent.hover(screen.getByRole('button', { name: /Se placer/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /De dessus/ }))
-
-    expect(viewFrom).toHaveBeenCalledWith('top')
   })
 
   // The button wears the mode it draws, so it is the mode's own name that names it.
@@ -430,7 +391,7 @@ describe('how the scene is looked at', () => {
   // Session state, per document: two scenes side by side are two points of view.
   it('leaves the view of another document alone', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Projection/ }))
+    await userEvent.keyboard('{o}')
 
     expect(sceneViewOf(useSceneViews.getState(), 'doc-2').projection).toBe('perspective')
   })

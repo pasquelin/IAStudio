@@ -91,10 +91,9 @@ import {
   directionOf,
   framingPlacement,
   viewPosition,
-  type DisplayMode,
   type PaneView,
-  type ViewDirection,
 } from './scene-view'
+import { type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 import BvhWorker from './bvh.worker?worker'
 import { createBvhBuilder, type BvhBuilder } from './bvh-builder'
 import { gizmoTargetFor, type TransformMode, type TransformSpace } from './gizmo-target'

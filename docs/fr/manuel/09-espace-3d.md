@@ -67,9 +67,21 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 | **Redimensionner** | `S` | agrandit ou rétrécit avec les poignées |
 | **Magnétisme** | `M` | fait avancer les poignées **par crans** au lieu de les laisser libres |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de **l’objet** plutôt que sur celle du monde |
+| **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
-| **Ajouter** | — | pose une maille ou une lumière dans la scène |
-| **Supprimer** | `Suppr` | retire tout ce qui est sélectionné |
+
+**Huit boutons, et c'est voulu.** La barre en a porté vingt-trois : tout ce qu'une scène sait
+faire y avait son icône, et les huit qu'on cherche pendant qu'on manipule s'y perdaient. Ce qui
+reste est ce que la main réclame **sans lâcher la souris** ; le reste est au menu natif, où on
+va le chercher une fois par séance.
+
+| Ce qui a quitté la barre | Où le trouver |
+|---|---|
+| Projection, quatre vues, arêtes de quads, squelettes, mode pose | **Affichage**, en cases à cocher |
+| Les six côtés, les sept modes de rendu | **Affichage ▸ Point de vue** et **▸ Mode de rendu** |
+| Ajouter une maille, une lumière, un objet | **Ajouter** |
+| Dupliquer, grouper, supprimer | **Édition** |
+| Copier, couper, coller | **les touches seules** — voir plus bas |
 
 **Le magnétisme sert à aligner.** Sans lui, un objet se pose à 1,0374 m du précédent ; avec lui,
 à 1 m tout rond. La finesse des crans — un pour le déplacement, un pour la rotation, un pour
@@ -105,9 +117,9 @@ Tirez sur une flèche pour déplacer le long de cet axe seulement.
 
 Trois chemins mènent au même endroit :
 
-- le bouton **Ajouter** de la barre d’outils ;
+- le menu **Ajouter**, qui range les trois familles — maille, lumière, objet ;
 - les boutons **+** des panneaux **Mailles** et **Lumières** ;
-- le menu **Objets ▸ Ajouter**.
+- le glisser-déposer, pour un modèle qui vient de l'étagère.
 
 L’objet se pose à **l’origine de la scène** — le centre du monde, là où les axes se croisent.
 
@@ -238,7 +250,7 @@ faible pour que les ombres ne soient pas complètement noires. C’est la recett
 Trois boutons, entre les bascules et le cadrage. Ils ne changent rien à la scène : ils changent la
 façon de la regarder. Rien de tout cela n’est enregistré avec le document, et `⌘Z` n’y touche pas.
 
-### Projection — `O`
+### Projection — `O`, ou **Affichage ▸ Projection**
 
 En **perspective**, les fuyantes convergent : c’est ce que voit un œil, et c’est le réglage par
 défaut. En **orthographique**, les parallèles restent parallèles et un objet garde sa taille quelle
@@ -252,7 +264,7 @@ elle, se replace pour cela. En orthographique le tronc de la projection est calc
 est au centre garde sa taille ; au retour en perspective, où l'on ne peut zoomer qu'en avançant, ce
 que la molette avait grossi devient de la distance.
 
-### Se placer — les six côtés
+### Se placer — **Affichage ▸ Point de vue**
 
 **De face**, **de dos**, **de gauche**, **de droite**, **de dessus**, **de dessous**. La caméra va
 se poser sur l’axe correspondant, à la distance qu’elle avait déjà, et regarde le point autour
@@ -261,7 +273,7 @@ duquel elle tournait.
 Combiné à la projection orthographique, c’est la vue de plan classique — celle sur laquelle on
 aligne.
 
-### Affichage — `Z`
+### Mode de rendu — `Z`, ou **Affichage ▸ Mode de rendu**
 
 | Mode | Ce qui est dessiné |
 |---|---|
@@ -281,7 +293,7 @@ quart où se trouve le pointeur** : chaque quart garde son propre mode.
 quand on l’allume et jeté quand on l’éteint. Sur un modèle importé de plusieurs milliers de
 mailles, cela se sent.
 
-### Quatre vues — `⇧Q`
+### Quatre vues — `⇧Q`, ou **Affichage ▸ Quatre vues**
 
 Le viewport se partage en quatre. **Le quart en haut à gauche garde le cadrage que vous aviez** ;
 il repasse en perspective si vous étiez en projection orthographique. Les trois autres arrivent en
@@ -337,7 +349,7 @@ agit sur **toute** la sélection, pas seulement sur le dernier objet cliqué.
 
 ## Grouper
 
-**`⌘G`**, ou le bouton **Grouper** de la barre d’outils.
+**`⌘G`**, ou **Édition ▸ Grouper**.
 
 Un groupe range plusieurs objets sous un même parent. **Déplacer le groupe les déplace tous**, et
 il se replie d’un clic dans le panneau Scène — une scène de trente objets redevient lisible.
@@ -360,7 +372,8 @@ ranger disparaîtrait de l’écran, et on le croirait perdu.
 
 ## Dupliquer, copier, coller
 
-Quatre boutons en fin de barre d’outils, et les quatre raccourcis que vous connaissez déjà.
+Les quatre raccourcis que vous connaissez déjà. **Dupliquer** a sa ligne dans **Édition** ;
+les trois autres n'en ont pas, et la raison mérite d'être dite.
 
 | Geste | Raccourci | Ce qu’il fait |
 |---|---|---|
@@ -368,6 +381,12 @@ Quatre boutons en fin de barre d’outils, et les quatre raccourcis que vous con
 | **Copier** | `⌘C` | retient la sélection sans toucher à la scène |
 | **Couper** | `⌘X` | la retient et la retire de la scène |
 | **Coller** | `⌘V` | pose ce qui a été retenu dans la scène en cours |
+
+> **Pourquoi copier, couper et coller n'ont pas de ligne de menu.** Les trois lignes du menu
+> Édition sont celles du système, et elles agissent sur le **texte** : c'est ce qui permet de
+> copier le nom d'un calque qu'on est en train de renommer. Une ligne à nous à leur place
+> copierait la scène même le curseur dans un champ. Les touches, elles, savent faire la
+> différence : un texte sélectionné garde `⌘C`, tout le reste appartient à la scène.
 
 Trois choses valent d’être sues :
 
@@ -607,10 +626,10 @@ lire la bande comme si un clip avait des propriétés.
 
 ### Voir le squelette
 
-Un modèle rigué porte des **os**. La touche **B**, ou le bouton en forme d’os de la barre d’outils,
-les dessine par-dessus la scène.
+Un modèle rigué porte des **os**. La touche **B**, ou **Affichage ▸ Afficher les squelettes**,
+les dessine par-dessus la scène. La ligne est cochée tant qu'ils sont visibles.
 
-**Pour en attraper un, passez en mode pose** — touche **P**, ou le bouton **Mode pose**. Le clic
+**Pour en attraper un, passez en mode pose** — touche **P**, ou **Affichage ▸ Mode pose**. Le clic
 cesse alors de choisir des objets et choisit des os.
 
 > **Un os ne s’attrape pas comme le reste, et c’est pour cela qu’il faut un mode.** Un os n’a pas

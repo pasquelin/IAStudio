@@ -177,7 +177,7 @@ l’écran des raccourcis.
 | **Magnétisme** | `M` | fait avancer les poignées par pas réguliers. Les pas se règlent dans les préférences |
 | **Repère local** | `L` | aligne les poignées sur l’orientation de l’objet plutôt que sur celle du monde |
 | **Projection** | `O` | bascule entre perspective et projection orthographique |
-| **Affichage** | `Z` | fait défiler rendu, filaire, rendu et filaire |
+| **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner |
 | **Quatre vues** | `⇧Q` | partage le viewport en quatre : la vue en cours, dessus, face, profil |
 | **Arêtes en quads** | `⇧W` | en filaire, efface les diagonales que la triangulation a ajoutées |
 | **Afficher les squelettes** | `B` | dessine les os de chaque modèle rigué par-dessus la scène |
@@ -585,7 +585,7 @@ ils sont liés à la bande, pas à un contexte.
 | `⌘D` |  |  | Dupliquer |  | Désélectionner |  |  |  |  |
 | `⌘C` / `⌘X` / `⌘V` |  |  | Copier / Couper / Coller |  |  |  |  |  |  |
 | `O` |  |  | Projection |  |  |  |  |  |  |
-| `Z` |  |  | Affichage |  |  |  |  |  |  |
+| `Z` |  |  | Mode de rendu |  |  |  |  |  |  |
 | `B` |  |  | Afficher les squelettes |  |  |  |  |  |  |
 | `V` |  |  | Sélectionner |  |  | Changer de vue |  |  |  |
 | `P` |  |  | Mode pose |  |  | Sondes de lumière |  |  |  |

@@ -3,14 +3,18 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { APP_NAME } from '@shared/constants'
 import {
+  DISPLAY_MODES,
   LIGHT_ENTRIES,
   EXPORT_FORMATS,
   MESH_ENTRIES,
   OBJECT_ENTRIES,
+  VIEW_DIRECTIONS,
+  type DisplayMode,
   type LightKind,
   type MeshKind,
   type ObjectKind,
   type SceneEntry,
+  type ViewDirection,
 } from '@shared/domain/scene'
 import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
 import type { WorkspaceId } from '@shared/domain/workspace'
@@ -20,6 +24,7 @@ import {
   scopeOfWorkspace,
   type BindingOverrides,
   type CommandId,
+  type MenuCheck,
 } from '@shared/domain/command'
 import { acceleratorOf } from '@shared/domain/shortcut'
 import { TRANSLATIONS, type Language, type Translations } from '@shared/i18n'
@@ -27,7 +32,9 @@ import { TEXTURE_EXPORT_TARGETS } from '@shared/domain/texture-export'
 import { FACE_SIZES } from '@shared/domain/skybox'
 import type {
   SceneAddRequest,
+  SceneDisplayRequest,
   SceneExportCommand,
+  SceneViewRequest,
   SkyboxExportCommand,
   TextureExportCommand,
   ToolRequest,
@@ -46,6 +53,8 @@ export type MenuActions = {
   openTool: (request: ToolRequest) => void
   runCommand: (command: CommandId) => void
   addNode: (request: SceneAddRequest) => void
+  viewFrom: (request: SceneViewRequest) => void
+  setDisplay: (request: SceneDisplayRequest) => void
   exportScene: (command: SceneExportCommand) => void
   exportTexture: (command: TextureExportCommand) => void
   exportSkybox: (command: SkyboxExportCommand) => void
@@ -68,6 +77,11 @@ export type MenuOptions = {
   tools: readonly ToolId[]
   isMac: boolean
   isDevelopment: boolean
+  /**
+   * The rows the focused window reported as ticked. A row that toggles has to say whether it is
+   * on, and only the window knows: the state belongs to the document in front.
+   */
+  checked: readonly MenuCheck[]
   /** What the user remapped, so the menu advertises the key it will actually answer to. */
   overrides: BindingOverrides
   actions: MenuActions
@@ -118,7 +132,7 @@ function placementsFor(tools: readonly ToolId[], workspace: WorkspaceId | null):
  * removed with its close button — a panel closed with no way to reopen it would be lost.
  */
 export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { language, workspace, tools, isMac, isDevelopment, overrides, actions } = options
+  const { language, workspace, tools, checked, isMac, isDevelopment, overrides, actions } = options
 
   /**
    * The accelerator of a command, read off the registry. Written by hand until now, which is
@@ -290,6 +304,25 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
   const undo = surface && commandIn(surface, 'undo')
   const redo = surface && commandIn(surface, 'redo')
 
+  /**
+   * What a scene does to what is selected, once the toolbar stopped drawing a button for each.
+   *
+   * Only these three, and the omission is deliberate: `scene.copy`, `scene.cut` and
+   * `scene.paste` are left to their KEYS ALONE — no bar button, no menu row. The rows above keep
+   * their NATIVE roles so a text field goes on copying, and a command row in their place would
+   * act on the scene even with the caret in a field: the menu path carries no `isTyping` guard,
+   * unlike the keyboard one, which is what makes a key safe here where a row would not be.
+   */
+  const sceneEditItems: MenuItemConstructorOptions[] =
+    workspace === '3d'
+      ? [
+          { type: 'separator' },
+          commandItem('scene.duplicate', t.commands.sceneDuplicate.title),
+          commandItem('scene.group', t.commands.sceneGroup.title),
+          commandItem('scene.delete', t.commands.sceneDelete.title),
+        ]
+      : []
+
   const editMenu: MenuItemConstructorOptions = {
     label: t.menu.edit,
     submenu: [
@@ -308,6 +341,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
       { ...roleItem('copy'), registerAccelerator: false },
       { ...roleItem('paste'), registerAccelerator: false },
       roleItem('selectAll'),
+      ...sceneEditItems,
     ],
   }
 
@@ -331,6 +365,58 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           commandItem('canvas.guides', t.menu.guides),
           commandItem('canvas.clearGuides', t.menu.clearGuides),
           commandItem('canvas.snap', t.menu.snap),
+        ]
+      : []
+
+  /** A row that says whether it is on. `checkbox` and not a tick in the label: AppKit draws it. */
+  const toggleItem = (command: CommandId, label: string): MenuItemConstructorOptions => ({
+    ...commandItem(command, label),
+    type: 'checkbox',
+    checked: checked.includes(command),
+  })
+
+  /** The six sides. An action, not a state: looking from the front leaves nothing turned on. */
+  const viewItems = (): MenuItemConstructorOptions[] =>
+    VIEW_DIRECTIONS.map((direction: ViewDirection) => ({
+      label: t.sceneViews[direction],
+      click: () => actions.viewFrom({ direction }),
+    }))
+
+  /**
+   * The seven ways of drawing, as alternatives — exactly one is true at a time, which is what
+   * `radio` says and a row of checkboxes would not.
+   *
+   * The key that cycles them keeps its own row above: a menu is where one is PICKED, `Z` is how
+   * one moves through them, and neither replaces the other.
+   */
+  const displayItems = (): MenuItemConstructorOptions[] =>
+    DISPLAY_MODES.map((mode: DisplayMode) => ({
+      label: t.sceneDisplay[mode],
+      type: 'radio',
+      checked: checked.includes(`scene.display:${mode}`),
+      click: () => actions.setDisplay({ mode }),
+    }))
+
+  /**
+   * What the viewport does, as opposed to what the scene holds — the 3D counterpart of the
+   * canvas rows above, and the reason the 3D bar could go from twenty-three buttons to eight.
+   *
+   * All seven rows were reachable by pointer through that bar alone. They are settings one
+   * changes once a session, not gestures repeated by the minute, which is what a menu is for.
+   */
+  const sceneViewMenu: MenuItemConstructorOptions[] =
+    workspace === '3d'
+      ? [
+          { type: 'separator' },
+          { label: t.menu.sceneDisplay, submenu: displayItems() },
+          { label: t.menu.sceneView, submenu: viewItems() },
+          { type: 'separator' },
+          toggleItem('scene.projection', t.commands.sceneProjection.title),
+          toggleItem('scene.quad', t.commands.sceneQuad.title),
+          toggleItem('scene.quadEdges', t.commands.sceneQuadEdges.title),
+          { type: 'separator' },
+          toggleItem('scene.skeletons', t.commands.sceneSkeletons.title),
+          toggleItem('scene.poseMode', t.commands.scenePoseMode.title),
         ]
       : []
 
@@ -495,6 +581,7 @@ export function menuTemplate(options: MenuOptions): MenuItemConstructorOptions[]
           click: () => actions.runCommand('layout.reset'),
         },
         ...canvasViewMenu,
+        ...sceneViewMenu,
         { type: 'separator' },
         {
           label: t.menu.fullScreen,

@@ -1,6 +1,5 @@
 import type { CommandId } from '@shared/domain/command'
 import {
-  mdiAngleAcute,
   mdiArrowAll,
   mdiArrowDown,
   mdiArrowDownBold,
@@ -12,37 +11,20 @@ import {
   mdiAxisArrowLock,
   mdiCircleHalfFull,
   mdiCircleOpacity,
-  mdiContentCopy,
-  mdiContentCut,
-  mdiContentDuplicate,
-  mdiContentPaste,
   mdiCropFree,
   mdiCubeOutline,
   mdiCubeUnfolded,
   mdiCursorDefaultOutline,
-  mdiDelete,
-  mdiFolderPlusOutline,
-  mdiGrid,
-  mdiBone,
-  mdiHumanHandsup,
   mdiHexagonOutline,
   mdiMagnet,
-  mdiPlus,
   mdiResize,
   mdiSphere,
   mdiThermometer,
   mdiVectorSquare,
-  mdiViewGrid,
 } from '@mdi/js'
 import type { ToolbarItem, ToolMode } from '@/design/Toolbar'
-import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
-import {
-  DISPLAY_MODES,
-  VIEW_DIRECTIONS,
-  type DisplayMode,
-  type PaneView,
-  type ViewDirection,
-} from '@/engines/scene/scene-view'
+import { type PaneView } from '@/engines/scene/scene-view'
+import { DISPLAY_MODES, type DisplayMode, type ViewDirection } from '@shared/domain/scene'
 
 /** Arrows read as the direction the camera looks from, which is what the row promises. */
 const VIEW_ICONS: Record<ViewDirection, string> = {
@@ -70,25 +52,8 @@ const DISPLAY_ICONS: Record<DisplayMode, string> = {
   density: mdiThermometer,
 }
 
-/** `command` is absent on a group that only offers modes: `add` acts through its rows. */
-export type SceneTool = ToolbarItem & { command?: CommandId }
-
-/** Everything a scene can hold, from the registries and nowhere else. */
-const ADD_MODES: readonly ToolMode[] = ADD_ENTRIES.map(({ entry, labelKey }) => ({
-  id: entry.kind,
-  labelKey,
-  descriptionKey: `${labelKey}Hint`,
-  icon: entry.icon,
-  disabled: entry.disabled,
-}))
-
-/** The six sides, and the three ways of drawing what they show. */
-const VIEW_MODES: readonly ToolMode[] = VIEW_DIRECTIONS.map(direction => ({
-  id: direction,
-  labelKey: `sceneViews.${direction}`,
-  descriptionKey: `sceneViews.${direction}Hint`,
-  icon: VIEW_ICONS[direction],
-}))
+/** Every tool of this bar carries one now: the two groups that acted through rows have left. */
+export type SceneTool = ToolbarItem & { command: CommandId }
 
 const DISPLAY_TOOL_MODES: readonly ToolMode[] = DISPLAY_MODES.map(mode => ({
   id: mode,
@@ -100,11 +65,18 @@ const DISPLAY_TOOL_MODES: readonly ToolMode[] = DISPLAY_MODES.map(mode => ({
 /**
  * The bar's registry. The bar itself is `design/Toolbar` — nothing is drawn here.
  *
- * Read in four groups: what manipulates, what qualifies it, what frames, what creates and
- * destroys. The three
- * transform modes stay three visible buttons rather than one flyout — unlike the image space,
- * and on purpose: a mode is switched several times a minute, and Blender, Maya, Unity and the
- * three.js editor all show them at once.
+ * Eight buttons, down from twenty-three. What is left is what a hand reaches for WHILE
+ * manipulating: the four transform modes, the two that qualify them, the one view setting a
+ * modeller flips several times a minute, and framing the selection.
+ *
+ * The fifteen that left are all in the native menu now — Édition for what acts on a selection,
+ * Affichage for what the viewport does, Ajouter for what a scene gains. They are settings and
+ * one-off gestures, not moves repeated by the minute, and a bar of twenty-three icons made the
+ * eight that matter impossible to find.
+ *
+ * The three transform modes stay three visible buttons rather than one flyout — unlike the image
+ * space, and on purpose: a mode is switched several times a minute, and Blender, Maya, Unity and
+ * the three.js editor all show them at once.
  */
 export const SCENE_TOOLS: readonly SceneTool[] = [
   {
@@ -151,57 +123,16 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.spaceHint',
     icon: mdiAxisArrowLock,
   },
-  // What the view does, not what the scene is: a projection, a side to look from, a way to draw.
-  {
-    id: 'projection',
-    command: 'scene.projection',
-    labelKey: 'sceneTools.projection',
-    descriptionKey: 'sceneTools.projectionHint',
-    icon: mdiAngleAcute,
-    separatorBefore: true,
-  },
-  {
-    id: 'view',
-    labelKey: 'sceneTools.view',
-    descriptionKey: 'sceneTools.viewHint',
-    icon: mdiCubeOutline,
-    modes: VIEW_MODES,
-  },
-  {
-    id: 'quad',
-    command: 'scene.quad',
-    labelKey: 'sceneTools.quad',
-    descriptionKey: 'sceneTools.quadHint',
-    icon: mdiViewGrid,
-  },
+  // The one view setting worth a button: a modeller flips between shaded and wireframe several
+  // times a minute, which is what tells it from the seven rows the native View menu now carries.
   {
     id: 'display',
     command: 'scene.display',
     labelKey: 'sceneTools.display',
     descriptionKey: 'sceneTools.displayHint',
     icon: mdiHexagonOutline,
+    separatorBefore: true,
     modes: DISPLAY_TOOL_MODES,
-  },
-  {
-    id: 'quadEdges',
-    command: 'scene.quadEdges',
-    labelKey: 'sceneTools.quadEdges',
-    descriptionKey: 'sceneTools.quadEdgesHint',
-    icon: mdiGrid,
-  },
-  {
-    id: 'skeletons',
-    command: 'scene.skeletons',
-    labelKey: 'sceneTools.skeletons',
-    descriptionKey: 'sceneTools.skeletonsHint',
-    icon: mdiBone,
-  },
-  {
-    id: 'poseMode',
-    command: 'scene.poseMode',
-    labelKey: 'sceneTools.poseMode',
-    descriptionKey: 'sceneTools.poseModeHint',
-    icon: mdiHumanHandsup,
   },
   {
     id: 'frame',
@@ -210,58 +141,5 @@ export const SCENE_TOOLS: readonly SceneTool[] = [
     descriptionKey: 'sceneTools.frameHint',
     icon: mdiCropFree,
     separatorBefore: true,
-  },
-  {
-    id: 'add',
-    labelKey: 'sceneTools.add',
-    descriptionKey: 'sceneTools.addHint',
-    icon: mdiPlus,
-    separatorBefore: true,
-    modes: ADD_MODES,
-  },
-  {
-    id: 'group',
-    command: 'scene.group',
-    labelKey: 'sceneTools.group',
-    descriptionKey: 'sceneTools.groupHint',
-    icon: mdiFolderPlusOutline,
-  },
-  // Shown rather than left to the keyboard: the native Edit menu carries Copy and Paste of its
-  // own, which act on text, and nothing else would say the scene has its own.
-  {
-    id: 'duplicate',
-    command: 'scene.duplicate',
-    labelKey: 'sceneTools.duplicate',
-    descriptionKey: 'sceneTools.duplicateHint',
-    icon: mdiContentDuplicate,
-    separatorBefore: true,
-  },
-  {
-    id: 'copy',
-    command: 'scene.copy',
-    labelKey: 'sceneTools.copy',
-    descriptionKey: 'sceneTools.copyHint',
-    icon: mdiContentCopy,
-  },
-  {
-    id: 'cut',
-    command: 'scene.cut',
-    labelKey: 'sceneTools.cut',
-    descriptionKey: 'sceneTools.cutHint',
-    icon: mdiContentCut,
-  },
-  {
-    id: 'paste',
-    command: 'scene.paste',
-    labelKey: 'sceneTools.paste',
-    descriptionKey: 'sceneTools.pasteHint',
-    icon: mdiContentPaste,
-  },
-  {
-    id: 'delete',
-    command: 'scene.delete',
-    labelKey: 'sceneTools.delete',
-    descriptionKey: 'sceneTools.deleteHint',
-    icon: mdiDelete,
   },
 ]

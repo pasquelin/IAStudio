@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Us } from '@shared/domain/time'
-import { DEFAULT_PANE_VIEWS, type DisplayMode, type PaneView } from '@/engines/scene/scene-view'
+import { DEFAULT_PANE_VIEWS, type PaneView } from '@/engines/scene/scene-view'
+import { type DisplayMode } from '@shared/domain/scene'
 import type { ProjectionKind } from '@/engines/viewport/ViewportEngine'
 
 export type SceneView = {

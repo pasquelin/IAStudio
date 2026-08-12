@@ -15,19 +15,21 @@ import {
   applyDisplayMode,
   applyWireOverlay,
   directionOf,
-  DISPLAY_MODES,
   EDGE_LAYER,
   hidesSceneLights,
   showsEdges,
   substituteFor,
   substituteOf,
-  isDisplayMode,
-  isViewDirection,
   viewPosition,
-  VIEW_DIRECTIONS,
   framingDistance,
   framingPlacement,
 } from './scene-view'
+import {
+  DISPLAY_MODES,
+  VIEW_DIRECTIONS,
+  isDisplayMode,
+  isViewDirection,
+} from '@shared/domain/scene'
 
 const ORIGIN = new Vector3(0, 0, 0)
 

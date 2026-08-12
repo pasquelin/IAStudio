@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { addNode } from '@/engines/scene/commands'
@@ -148,11 +148,18 @@ describe('duplicating and pasting', () => {
     expect(meshesOf('doc-2')[0]?.parentId).toBeNull()
   })
 
-  it('greys Paste out until something has been copied', async () => {
+  /**
+   * The four buttons left the bar with the fifteen others, and no menu row replaced THESE: the
+   * Edit rows keep their native roles so a text field goes on copying, and a command row in
+   * their place would act on the scene with the caret in a field. The keys remain the way in,
+   * and `useShortcuts` is what arbitrates — highlighted text keeps ⌘C, everything else is the
+   * scene's.
+   */
+  it('pastes nothing while nothing has been copied', async () => {
     render(<SceneDocument documentId="doc-1" />)
-    expect(screen.getByRole('button', { name: /Coller/ })).toBeDisabled()
 
-    await userEvent.keyboard('{Meta>}{c}{/Meta}')
-    expect(screen.getByRole('button', { name: /Coller/ })).toBeEnabled()
+    await userEvent.keyboard('{Meta>}{v}{/Meta}')
+
+    expect(meshesOf('doc-1')).toHaveLength(1)
   })
 })

@@ -5,7 +5,7 @@ import type { FavoriteRecipe } from './domain/favorite'
 import type { FolderEntry } from './domain/folder'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
-import type { CommandId } from './domain/command'
+import type { CommandId, MenuCheck } from './domain/command'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
   CloseChoice,
@@ -31,7 +31,14 @@ import type {
   PromptTranslation,
   SuggestPromptsRequest,
 } from './domain/prompt-assist'
-import type { ExportFormat, LightKind, MeshKind, ObjectKind } from './domain/scene'
+import type {
+  DisplayMode,
+  ExportFormat,
+  LightKind,
+  MeshKind,
+  ObjectKind,
+  ViewDirection,
+} from './domain/scene'
 import type { TextureExportTarget } from './domain/texture-export'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
@@ -488,6 +495,8 @@ export const EVENTS = {
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
   sceneAdd: 'evt:scene-add',
+  sceneView: 'evt:scene-view',
+  sceneDisplay: 'evt:scene-display',
   sceneExport: 'evt:scene-export',
   textureExport: 'evt:texture-export',
   skyboxExport: 'evt:skybox-export',
@@ -506,6 +515,12 @@ export type ToolRequest = {
 
 /** Request to drop a node in the active scene, coming from the native menu. */
 export type SceneAddRequest = { kind: MeshKind | LightKind | ObjectKind }
+
+/** Which of the six sides the menu asks the scene in front to look from. */
+export type SceneViewRequest = { direction: ViewDirection }
+
+/** Which of the seven ways of drawing the menu asks the scene in front to switch to. */
+export type SceneDisplayRequest = { mode: DisplayMode }
 
 /** What the native menu asks of the scene in front: a format, and how much of the scene. */
 export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
@@ -963,16 +978,23 @@ export type StudioBridge = {
     state: () => Promise<WindowState>
     onState: (callback: (state: WindowState) => void) => Unsubscribe
     /**
-     * Tells the main process which workspace is up and which panels it can currently open, so
-     * the menu can follow both. The panels travel with it because the main process cannot
-     * work them out: whether the generator exists depends on a model being chosen.
+     * Tells the main process which workspace is up, which panels it can currently open, and
+     * which menu rows are ticked, so the menu can follow all three. None of them can be worked
+     * out on the other side: whether the generator exists depends on a model being chosen, and
+     * whether a scene is drawn in wireframe is a fact of the document in front.
      */
-    setWorkspace: (workspace: WorkspaceId, tools: readonly ToolId[]) => Promise<void>
+    setWorkspace: (
+      workspace: WorkspaceId,
+      tools: readonly ToolId[],
+      checked: readonly MenuCheck[],
+    ) => Promise<void>
   }
   menu: {
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe
+    onSceneView: (callback: (request: SceneViewRequest) => void) => Unsubscribe
+    onSceneDisplay: (callback: (request: SceneDisplayRequest) => void) => Unsubscribe
     onSceneExport: (callback: (command: SceneExportCommand) => void) => Unsubscribe
     onTextureExport: (callback: (command: TextureExportCommand) => void) => Unsubscribe
     onSkyboxExport: (callback: (command: SkyboxExportCommand) => void) => Unsubscribe

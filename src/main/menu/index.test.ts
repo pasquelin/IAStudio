@@ -25,8 +25,13 @@ vi.mock('@main/window/windows', () => ({
 vi.mock('@main/window/controls', () => ({ toggleFullScreen: vi.fn() }))
 
 /** What a window announces on startup and on every click of the space rail. */
-function announce(window: FakeWindow, workspace: string, tools: string[] = []): void {
-  invokeFrom(window, CHANNELS.windowWorkspace, workspace, tools)
+function announce(
+  window: FakeWindow,
+  workspace: string,
+  tools: string[] = [],
+  checked: string[] = [],
+): void {
+  invokeFrom(window, CHANNELS.windowWorkspace, workspace, tools, checked)
 }
 
 /**
@@ -227,6 +232,35 @@ describe('what makes the menu rebuild', () => {
     focusWindow(other)
 
     expect(menuBuilds()).toBe(before + 1)
+  })
+
+  /**
+   * Nor are the panels: two scenes side by side are two points of view, and a menu that only
+   * watched the workspace and the panels would tick the first window's wireframe on the second.
+   */
+  it('rebuilds when the same workspace reports different ticks', () => {
+    const one = openWindow()
+    const other = openWindow()
+    announce(one, '3d', ['scene'], ['scene.display:shaded'])
+    announce(other, '3d', ['scene'], ['scene.display:wireframe', 'scene.quad'])
+    focusWindow(one)
+    const before = menuBuilds()
+
+    focusWindow(other)
+
+    expect(menuBuilds()).toBe(before + 1)
+  })
+
+  /** And the reverse, which is what the comparison is for: an identical report costs no menu. */
+  it('rebuilds nothing when a window re-announces the same ticks', () => {
+    const window = openWindow()
+    announce(window, '3d', ['scene'], ['scene.quad'])
+    focusWindow(window)
+    const before = menuBuilds()
+
+    announce(window, '3d', ['scene'], ['scene.quad'])
+
+    expect(menuBuilds()).toBe(before)
   })
 })
 
