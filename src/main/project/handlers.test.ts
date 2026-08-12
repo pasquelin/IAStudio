@@ -261,6 +261,32 @@ describe('project handlers', () => {
   })
 
   /**
+   * The home's shelf points at projects that are NOT open, so this one names a folder outright
+   * instead of resolving against the open project.
+   */
+  describe('showing a recent project folder', () => {
+    it('shows the folder it was handed, not one under the open project', async () => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await invoke(CHANNELS.projectRevealFolder, '/elsewhere/summer')
+
+      expect(injected.reveal).toHaveBeenCalledWith('/elsewhere/summer')
+    })
+
+    // A relative path would resolve against wherever Electron was launched from, which is the
+    // very reason `parseProjectPath` demands an absolute one.
+    it.each(['', '   ', 'relative/summer'])('refuses %o as a folder', async path => {
+      const injected = deps(catalog)
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.projectRevealFolder, path)).rejects.toThrow()
+
+      expect(injected.reveal).not.toHaveBeenCalled()
+    })
+  })
+
+  /**
    * The one place the studio launches a third-party application. `shell.openPath` answers with
    * a sentence rather than throwing, so the refusal has to be read rather than caught.
    */

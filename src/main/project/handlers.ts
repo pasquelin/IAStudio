@@ -101,6 +101,14 @@ export function registerProjectHandlers({
     reveal(join(project.path(), parseFolderPath(relative)))
   })
 
+  // An absolute path, unlike the one above: the home's shelf points at projects that are NOT
+  // open, so there is no root to resolve against. `parseProjectPath` is the same refusal
+  // `projectOpen` already applies to a path the renderer names — showing a folder opens nothing
+  // and reads nothing, so this asks no more of the caller than opening it would.
+  handle(CHANNELS.projectRevealFolder, async (_event, path) => {
+    reveal(parseProjectPath(path))
+  })
+
   // All three answer whether it happened, and all three say why in the journal when it did not:
   // a gesture that does nothing and explains nothing is the worst of the three outcomes.
   handle(CHANNELS.projectRenameFile, async (_event, relative, name) => {

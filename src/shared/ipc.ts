@@ -101,6 +101,7 @@ export type Channels = {
   projectListFolder: 'project:list-folder'
   projectOpenFile: 'project:open-file'
   projectRevealFile: 'project:reveal-file'
+  projectRevealFolder: 'project:reveal-folder'
   projectRenameFile: 'project:rename-file'
   projectMoveFile: 'project:move-file'
   projectTrashFile: 'project:trash-file'
@@ -226,6 +227,7 @@ export const CHANNELS: Channels = {
   projectListFolder: 'project:list-folder',
   projectOpenFile: 'project:open-file',
   projectRevealFile: 'project:reveal-file',
+  projectRevealFolder: 'project:reveal-folder',
   projectRenameFile: 'project:rename-file',
   projectMoveFile: 'project:move-file',
   projectTrashFile: 'project:trash-file',
@@ -722,6 +724,12 @@ export type StudioBridge = {
     onFolderChanged: (callback: () => void) => Unsubscribe
     /** Shows the file in the system's own file manager, so the path never leaves the process. */
     revealFile: (relative: string) => Promise<void>
+    /**
+     * Shows a project FOLDER, named by its own absolute path — the home's shelf points at
+     * projects that are not open, and `revealFile` above can only name something inside the one
+     * that is. The same path `open` already takes, and refused by the same parser.
+     */
+    revealFolder: (path: string) => Promise<void>
     /**
      * Renames in place — the name only, never the folder it sits in. Answers whether it
      * happened: a name already taken is refused rather than overwritten, and the studio's own

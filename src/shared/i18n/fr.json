@@ -2124,7 +2124,14 @@
       "settingsHelp": "Clés, apparence, limites de génération et raccourcis."
     },
     "projects": {
-      "none": "Créer votre premier projet"
+      "none": "Créer votre premier projet",
+      "rowHint": "{{path}} — ouvert {{when}}",
+      "actions": "Actions du projet",
+      "actionsHint": "Montrer le dossier de ce projet, ou le retirer de la liste.",
+      "reveal": "Révéler dans le dossier",
+      "revealHint": "Ouvre le dossier du système de fichiers, sur ce projet",
+      "forget": "Retirer de la liste",
+      "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient"
     },
     "creations": {
       "recreate": "En refaire une avec {{model}}",

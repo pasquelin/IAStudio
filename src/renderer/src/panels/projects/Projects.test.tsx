@@ -70,12 +70,20 @@ describe('the projects panel', () => {
     expect(openPicked).toHaveBeenCalled()
   })
 
-  // A hand-edited settings file reaches here: the row must still name the project.
-  it('falls back to the path when the date cannot be read', () => {
-    setRecent([{ ...SUMMER, openedAt: 'not-a-date' }])
+  /**
+   * The row opens on a SINGLE click, and its menu offers to forget the project. Left to bubble,
+   * the press that opens the menu would open the very project it is about to drop — tearing down
+   * every panel and reloading a catalogue on the way.
+   */
+  it('does not open the project when its menu button is pressed', async () => {
+    const open = vi.fn(() => Promise.resolve(true))
+    useProject.setState({ open })
     render(<Projects />)
 
-    expect(screen.getByText('/projects/summer')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Retirer de la liste' })).toBeInTheDocument()
+    expect(open).not.toHaveBeenCalled()
   })
 })
 

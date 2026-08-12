@@ -2124,7 +2124,14 @@
       "settingsHelp": "Keys, appearance, generation limits and shortcuts."
     },
     "projects": {
-      "none": "Create your first project"
+      "none": "Create your first project",
+      "rowHint": "{{path}} — opened {{when}}",
+      "actions": "Project actions",
+      "actionsHint": "Show this project’s folder, or drop it from the list.",
+      "reveal": "Reveal in folder",
+      "revealHint": "Opens the system’s file manager on this project",
+      "forget": "Remove from the list",
+      "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched"
     },
     "creations": {
       "recreate": "Make another one with {{model}}",
