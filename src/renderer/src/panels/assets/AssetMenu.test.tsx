@@ -43,7 +43,7 @@ describe('what the shelf offers to do with an asset', () => {
 
     expect(screen.getByRole('menuitem', { name: /ciel/ })).toHaveAttribute(
       'data-tooltip-content',
-      'Ouvre l’espace Ciels et pose cette image comme source du panorama',
+      'Ouvre le document de skybox et pose cette image comme source du panorama',
     )
     expect(screen.getByRole('menuitem', { name: /calque/ })).toHaveAttribute(
       'data-tooltip-content',

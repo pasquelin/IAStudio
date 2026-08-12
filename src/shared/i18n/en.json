@@ -2046,7 +2046,7 @@
     "imageLayer": "Place as a layer",
     "videoClip": "Add to the montage",
     "textureChannel": "Use as base colour",
-    "skyboxSourceHint": "Opens the Skies space and sets this picture as the panorama source",
+    "skyboxSourceHint": "Opens the skybox document and sets this picture as the panorama source",
     "sceneMeshHint": "Opens the 3D scene and adds the model to it",
     "audioTakeHint": "Opens the audio editor and loads this take into it",
     "imageLayerHint": "Opens the image document and lays the asset in as a new layer",

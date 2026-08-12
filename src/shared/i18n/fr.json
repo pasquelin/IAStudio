@@ -2046,7 +2046,7 @@
     "imageLayer": "Placer comme calque",
     "videoClip": "Ajouter au montage",
     "textureChannel": "Utiliser comme couleur de base",
-    "skyboxSourceHint": "Ouvre l’espace Ciels et pose cette image comme source du panorama",
+    "skyboxSourceHint": "Ouvre le document de skybox et pose cette image comme source du panorama",
     "sceneMeshHint": "Ouvre la scène 3D et y ajoute le modèle",
     "audioTakeHint": "Ouvre l’éditeur audio et y charge cette prise",
     "imageLayerHint": "Ouvre le document image et pose l’asset en nouveau calque",
