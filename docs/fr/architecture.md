@@ -790,11 +790,18 @@ hexadécimale dans un composant**, et aucun pixel là où une gauge existe — c
 redéclaration est ce qui fait que le réglage de densité atteint tous les contrôles d’un coup.
 
 **Un cas y échappe, et il a un outil dédié : le code qui a besoin de la gauge en NOMBRE.**
-L’estimateur d’une liste virtualisée en est le seul exemple aujourd’hui — il prend un nombre,
-alors que la ligne qu’il estime est dimensionnée par une classe. Écrire ce nombre en dur, c’est
-n’avoir raison qu’à une densité : `useGauge` (`hooks/useGauge.ts`) relit la gauge et suit le
-réglage, par le même signal que les moteurs — `onPaletteChange`. **Ce n’est pas une porte de
-sortie pour écrire des pixels en JavaScript** : hors de ce cas, la classe reste la seule voie.
+L’estimateur d’une liste virtualisée en est le seul exemple — il prend un nombre, alors que la
+ligne qu’il estime est dimensionnée par une classe. Écrire ce nombre en dur, c’est n’avoir raison
+qu’à une densité : `useGauge` (`hooks/useGauge.ts`) relit la gauge et suit le réglage, par le même
+signal que les moteurs — `onPaletteChange`. **Ce n’est pas une porte de sortie pour écrire des
+pixels en JavaScript** : hors de ce cas, la classe reste la seule voie.
+
+**Deux virtualiseurs le font, pour trois gauges** — `Tree` et `Collection`, cette dernière lisant
+`--sc-control` et `--sc-row-stacked` **inconditionnellement**, une ligne qui empile un nom sur un
+sous-titre ne tenant pas dans la hauteur d’un contrôle. Un hook ne se met pas derrière une
+branche, donc les deux se lisent et la forme de la ligne choisit ensuite. Les constantes
+`LIST_ROW_HEIGHT` et `STACKED_ROW_HEIGHT` ne sont **que** le repli d’une gauge illisible : aucun
+appelant ne les passe plus, et trois le faisaient — chacun juste à une seule densité.
 
 Les surfaces sont **plus sombres** que le châssis, à l’inverse de l’habitude web. C’est cette
 inversion qui donne la lecture « panneaux posés sur un cadre ».
