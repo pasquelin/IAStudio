@@ -3,9 +3,13 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ANIMATION } from '@shared/domain/scene'
 import { SECOND } from '@shared/domain/time'
 import { animationTrack, timelineWith } from '@/engines/scene/animation-fixtures'
-import { setTimelineSettings } from '@/engines/scene/animation-commands'
+import {
+  addAnimationTrack,
+  setAnimationKey,
+  setTimelineSettings,
+} from '@/engines/scene/animation-commands'
 import { animationRows } from '@/engines/scene/animation-rows'
-import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
+import { meshNode, modelNodeFixture } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 import { useAnimationViews } from '@/stores/animation-view'
 import { installScene } from '@/stores/scene-fixtures'
@@ -210,5 +214,70 @@ describe('following a duration that changes', () => {
     press(canvas(), 'pointerdown', 900, 4)
 
     expect(playhead()).toBe(3 * SECOND)
+  })
+})
+
+describe('removing a picked key with the keyboard', () => {
+  beforeEach(() => {
+    installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube')] })
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({
+      views: { [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false } },
+    })
+  })
+
+  /** One channel holding two keys, at one and two seconds. */
+  function keyedRows() {
+    const state = useScenes.getState()
+    const opened = addAnimationTrack({ nodeId: 'cube', property: 'position' }, 'Cube', 't1')
+    act(() => state.runCommand(DOCUMENT, opened))
+    act(() => state.runCommand(DOCUMENT, setAnimationKey('t1', 1 * SECOND, { x: 1, y: 0, z: 0 })))
+    act(() => state.runCommand(DOCUMENT, setAnimationKey('t1', 2 * SECOND, { x: 2, y: 0, z: 0 })))
+
+    return animationRows(sceneOf(useScenes.getState(), DOCUMENT).animation, {
+      nodes: [{ id: 'cube', name: 'Cube' }],
+      expanded: new Set(),
+    })
+  }
+
+  const keys = () => sceneOf(useScenes.getState(), DOCUMENT).animation.tracks[0]?.keys ?? []
+
+  const press = (element: Element, key: string): void => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+  }
+
+  it('removes the key that was picked, and only it', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyedRows()} />)
+    act(() => useAnimationViews.getState().setSelected(DOCUMENT, ['cube@1000000']))
+
+    act(() => press(canvas(), 'Delete'))
+
+    expect(keys().map(key => key.time)).toEqual([2 * SECOND])
+  })
+
+  it('answers Backspace too, which is what a Mac keyboard offers', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyedRows()} />)
+    act(() => useAnimationViews.getState().setSelected(DOCUMENT, ['cube@2000000']))
+
+    act(() => press(canvas(), 'Backspace'))
+
+    expect(keys().map(key => key.time)).toEqual([1 * SECOND])
+  })
+
+  it('lets the selection go once the key it named is gone', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyedRows()} />)
+    act(() => useAnimationViews.getState().setSelected(DOCUMENT, ['cube@1000000']))
+
+    act(() => press(canvas(), 'Delete'))
+
+    expect(useAnimationViews.getState().views[DOCUMENT]?.selected).toEqual([])
+  })
+
+  it('does nothing at all when no key is picked', () => {
+    render(<AnimationCanvas documentId={DOCUMENT} rows={keyedRows()} />)
+
+    act(() => press(canvas(), 'Delete'))
+
+    expect(keys()).toHaveLength(2)
   })
 })

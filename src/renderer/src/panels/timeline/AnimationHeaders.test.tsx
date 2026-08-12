@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SECOND } from '@shared/domain/time'
@@ -31,8 +31,10 @@ const rowsOf = (expanded: string[] = []) =>
     expanded: new Set(expanded),
   })
 
-const headers = (expanded: string[] = []) =>
-  render(<AnimationHeaders documentId={DOCUMENT} rows={rowsOf(expanded)} />)
+const headers = (expanded: string[] = []) => {
+  cleanup()
+  return render(<AnimationHeaders documentId={DOCUMENT} rows={rowsOf(expanded)} />)
+}
 
 const subject = () => within(screen.getByTestId('anim-subject-cube-1'))
 
@@ -106,5 +108,65 @@ describe('the column beside the band', () => {
 
     expect(screen.getByTestId('anim-subject-cube-1')).toHaveTextContent('Cube')
     expect(screen.queryByTestId('anim-channel-t1')).not.toBeInTheDocument()
+  })
+})
+
+describe('taking a key back off', () => {
+  beforeEach(() => {
+    withTwoChannels()
+    useSceneViews.setState({ views: {} })
+    useAnimationViews.setState({ views: {} })
+  })
+
+  const keyed = async (): Promise<void> => {
+    await userEvent.click(subject().getByRole('button', { name: /Poser une clé sur/ }))
+  }
+
+  it('offers to remove where a key stands, having offered to pose where none did', async () => {
+    headers()
+    expect(subject().queryByRole('button', { name: /Retirer la clé/ })).not.toBeInTheDocument()
+
+    await keyed()
+    headers()
+
+    expect(subject().getByRole('button', { name: /Retirer la clé/ })).toBeInTheDocument()
+  })
+
+  it('takes the key off every channel it was posed on', async () => {
+    headers()
+    await keyed()
+    expect(tracks().every(track => track.keys.length === 1)).toBe(true)
+
+    headers()
+    await userEvent.click(subject().getByRole('button', { name: /Retirer la clé/ }))
+
+    expect(tracks().every(track => track.keys.length === 0)).toBe(true)
+  })
+
+  it('costs ONE undo, like posing it did', async () => {
+    headers()
+    await keyed()
+    const before = sceneHistoryOf(useScenes.getState(), DOCUMENT).past.length
+
+    headers()
+    await userEvent.click(subject().getByRole('button', { name: /Retirer la clé/ }))
+
+    expect(sceneHistoryOf(useScenes.getState(), DOCUMENT).past).toHaveLength(before + 1)
+  })
+
+  it('leaves a key standing elsewhere alone', async () => {
+    useSceneViews.getState().setPlayhead(DOCUMENT, 0)
+    headers()
+    await keyed()
+
+    useSceneViews.getState().setPlayhead(DOCUMENT, 2 * SECOND)
+    headers()
+    await userEvent.click(subject().getByRole('button', { name: /Poser une clé sur/ }))
+
+    // Two keys now; removing the one at two seconds must not touch the one at zero.
+    headers()
+    await userEvent.click(subject().getByRole('button', { name: /Retirer la clé/ }))
+
+    expect(tracks()[0]?.keys.map(key => key.time)).toEqual([0])
   })
 })

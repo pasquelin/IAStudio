@@ -1,7 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, type PointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent,
+} from 'react'
 import { snapToFrame, type Us } from '@shared/domain/time'
-import { moveAnimationKey } from '@/engines/scene/animation-commands'
+import { moveAnimationKey, unkeySubject } from '@/engines/scene/animation-commands'
 import { multi, setModelAnimation } from '@/engines/scene/commands'
+import type { Command } from '@/engines/core/history'
+import type { SceneState } from '@/engines/scene/scene-state'
 import { clampPlayhead } from '@/engines/scene/animation-eval'
 import { hitAnimation, type AnimationHit } from '@/engines/scene/animation-hit'
 import { paintAnimation, keyId } from '@/engines/scene/animation-painter'
@@ -149,6 +158,41 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     return () => canvas.removeEventListener('wheel', onWheel)
   }, [setViewport])
 
+  /**
+   * Removes what is picked. Bound on the canvas rather than on a global scope: the band is one
+   * surface among several that answer to Delete, and a key must not vanish because a viewport
+   * happened to have focus.
+   */
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLCanvasElement>): void => {
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return
+
+    const current = latest.current
+    const picked = [...current.selected]
+    if (picked.length === 0) return
+
+    event.preventDefault()
+    const store = useScenes.getState()
+    const drops: Command<SceneState>[] = []
+
+    for (const id of picked) {
+      const cut = id.lastIndexOf('@')
+      const rowId = id.slice(0, cut)
+      const time = Number(id.slice(cut + 1))
+      const row = current.rows.find(candidate => candidate.id === rowId)
+      if (!row) continue
+
+      const command = unkeySubject(sceneOf(store, documentId), trackIdsOf(row), time)
+      if (command) drops.push(command)
+    }
+
+    if (drops.length === 0) return
+    store.runCommand(
+      documentId,
+      drops.length === 1 && drops[0] ? drops[0] : multi('key:drop', drops),
+    )
+    useAnimationViews.getState().setSelected(documentId, [])
+  }
+
   const hitAt = (event: PointerEvent<HTMLCanvasElement>): AnimationHit | null => {
     const bounds = event.currentTarget.getBoundingClientRect()
     const current = latest.current
@@ -261,6 +305,9 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
       ref={canvasRef}
       data-testid="animation-canvas"
       className="block h-full w-full outline-none"
+      // Focusable, or the canvas would never receive a key at all.
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

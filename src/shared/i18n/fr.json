@@ -2262,6 +2262,8 @@
     "duration": "Durée",
     "fps": "Images/s",
     "keyAll": "Poser une clé sur tout ce qui est animé",
-    "keyAllHint": "Pose une clé sur chaque objet animé, à la position de la tête"
+    "keyAllHint": "Pose une clé sur chaque objet animé, à la position de la tête",
+    "unkeySubject": "Retirer la clé de {{name}}",
+    "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet"
   }
 }

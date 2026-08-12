@@ -2262,6 +2262,8 @@
     "duration": "Duration",
     "fps": "FPS",
     "keyAll": "Key everything animated",
-    "keyAllHint": "Keys every animated object at the playhead"
+    "keyAllHint": "Keys every animated object at the playhead",
+    "unkeySubject": "Remove {{name}}'s key",
+    "unkeySubjectHint": "Removes the key standing here, on every property of this object"
   }
 }
