@@ -5,7 +5,7 @@ import { createDefaultScene } from '@/engines/scene/default-scene'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import { EMPTY_SCENE, IDENTITY_TRANSFORM } from '@/engines/scene/scene-state'
 import { clearScenes } from './scene-fixtures'
-import { sceneHistoryOf, isDirty, sceneOf, sceneStore, useScenes } from './scenes'
+import { sceneHistoryOf, isSceneDirty, sceneOf, sceneStore, useScenes } from './scenes'
 
 const box = meshNode('box-1')
 
@@ -50,8 +50,8 @@ describe('scenes store', () => {
   })
 })
 
-describe('isDirty', () => {
-  const dirty = (documentId: string): boolean => isDirty(useScenes.getState(), documentId)
+describe('isSceneDirty', () => {
+  const dirty = (documentId: string): boolean => isSceneDirty(useScenes.getState(), documentId)
 
   beforeEach(() => {
     clearScenes()

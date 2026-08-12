@@ -47,7 +47,7 @@ export const useSettingsDraft = create<DraftState>()((set, get) => ({
 
   apply: async () => {
     const { pending } = get()
-    if (!isDirty(get())) return
+    if (!isDraftDirty(get())) return
 
     // Cleared before the write rather than after: the write comes back as a broadcast, and a
     // buffer still holding the same values would keep every row marked as modified.
@@ -63,7 +63,7 @@ export const useSettingsDraft = create<DraftState>()((set, get) => ({
  * alone carries what a bespoke screen staged through `stageBranch` — a default model staged and
  * no Apply button to write it with was exactly that gap.
  */
-export function isDirty(state: Pick<DraftState, 'pending' | 'touched'>): boolean {
+export function isDraftDirty(state: Pick<DraftState, 'pending' | 'touched'>): boolean {
   return state.touched.size > 0 || Object.keys(state.pending).length > 0
 }
 

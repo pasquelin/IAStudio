@@ -14,7 +14,7 @@ export const sceneStore = store
 export const useScenes = store.use
 export const sceneOf = store.stateOf
 export const sceneHistoryOf = store.historyOf
-export const isDirty = store.isDirty
+export const isSceneDirty = store.isDirty
 
 /**
  * Selection stays out of the history, so it writes the whole scene back — and the scene has to
