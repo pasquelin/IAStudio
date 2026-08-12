@@ -109,14 +109,13 @@ export function layerCornersOf(
   frame: Rect = wholeOf(document),
 ): Corners {
   const matrix = layerMatrix(transform, document)
-  const right = frame.x + frame.width
-  const bottom = frame.y + frame.height
+  const corners = cornersOfRect(frame)
 
   return {
-    nw: applyTo(matrix, { x: frame.x, y: frame.y }),
-    ne: applyTo(matrix, { x: right, y: frame.y }),
-    se: applyTo(matrix, { x: right, y: bottom }),
-    sw: applyTo(matrix, { x: frame.x, y: bottom }),
+    nw: applyTo(matrix, corners.nw),
+    ne: applyTo(matrix, corners.ne),
+    se: applyTo(matrix, corners.se),
+    sw: applyTo(matrix, corners.sw),
   }
 }
 

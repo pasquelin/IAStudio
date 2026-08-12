@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS } from '@shared/ipc'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
 import { ProjectOpenError, type ProjectOpenFailure } from './store'
@@ -508,19 +509,11 @@ describe('project handlers', () => {
   })
 
   /**
-   * A real PNG opening: the eight-byte signature, then the IHDR chunk carrying the two
-   * dimensions. The signature alone does for the guard, but not for the probe both picture
-   * handlers now read off the very bytes they write.
+   * The signature alone does for the guard, but not for the probe both picture handlers now read
+   * off the very bytes they write. A `Buffer` because that is what the handler decodes its base64
+   * into, and a `Uint8Array` beside it would fail the deep equality on the call.
    */
-  const pngBytes = (width: number, height: number): Buffer => {
-    const bytes = Buffer.alloc(24)
-    bytes.set([137, 80, 78, 71, 13, 10, 26, 10])
-    bytes.writeUInt32BE(13, 8)
-    bytes.write('IHDR', 12, 'ascii')
-    bytes.writeUInt32BE(width, 16)
-    bytes.writeUInt32BE(height, 20)
-    return bytes
-  }
+  const png = (width: number, height: number): Buffer => Buffer.from(pngBytes({ width, height }))
 
   describe('a channel the renderer computed', () => {
     const backend = () => ({
@@ -569,7 +562,7 @@ describe('project handlers', () => {
       await invoke(CHANNELS.assetsSaveTexture, {
         name: 'Brique — Normale',
         map: 'normal',
-        png: pngBytes(2048, 2048),
+        png: png(2048, 2048),
       })
 
       expect(assets.importFromBytes).toHaveBeenCalledWith(
@@ -682,7 +675,7 @@ describe('project handlers', () => {
    * decoding belongs on this side — a `Buffer` does not cross the bridge.
    */
   describe('a picture the editor edited', () => {
-    const PNG = pngBytes(1024, 768)
+    const PNG = png(1024, 768)
     const PNG_BASE64 = PNG.toString('base64')
 
     const backend = () => ({
@@ -734,7 +727,7 @@ describe('project handlers', () => {
       await invoke(CHANNELS.assetsSavePicture, {
         replaces: 'asset-1',
         name: 'Gemini 3.1',
-        png: pngBytes(4112, 2658).toString('base64'),
+        png: png(4112, 2658).toString('base64'),
       })
 
       expect(assets.replaceBytes).toHaveBeenCalledWith(

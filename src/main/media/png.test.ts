@@ -1,20 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { isPngBytes, probePng } from './png'
-
-/** A PNG opening: the eight-byte signature, then an IHDR chunk carrying the two dimensions. */
-function png(options: { width: number; height: number; trailing?: number }): Uint8Array {
-  const bytes = new ArrayBuffer(24 + (options.trailing ?? 0))
-  const view = new DataView(bytes)
-  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
-  signature.forEach((byte, index) => view.setUint8(index, byte))
-
-  view.setUint32(8, 13)
-  ;[0x49, 0x48, 0x44, 0x52].forEach((byte, index) => view.setUint8(12 + index, byte))
-  view.setUint32(16, options.width)
-  view.setUint32(20, options.height)
-
-  return new Uint8Array(bytes)
-}
+import { pngBytes as png } from './png-fixtures'
 
 describe('isPngBytes', () => {
   it('accepts the eight-byte signature', () => {
