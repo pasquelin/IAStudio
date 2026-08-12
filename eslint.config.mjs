@@ -8,10 +8,15 @@ export default defineConfig([
   // `scripts/copy-decoders.mjs`. Vendored code, and minified: linting it says nothing.
   globalIgnores(['out', 'dist', 'node_modules', 'docs', 'src/renderer/public']),
   js.configs.recommended,
+  // `recommended`, not `recommendedTypeChecked`: no rule here reads a type, so the parser is
+  // given no program to build. `parserOptions.projectService` used to sit below and cost one —
+  // the very program `pnpm typecheck` builds a moment earlier. Removing it halved the lint, and
+  // all eight rules fire identically without it, `consistent-type-imports` included: it works by
+  // scope analysis, which is what typescript-eslint documents. Add a typed rule and the service
+  // comes back with it — `src/main/gate-caches.test.ts` holds the pair together.
   tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-    languageOptions: { parserOptions: { projectService: true } },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
