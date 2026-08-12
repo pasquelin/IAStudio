@@ -78,3 +78,20 @@ describe('the projects panel', () => {
     expect(screen.getByText('/projects/summer')).toBeInTheDocument()
   })
 })
+
+describe('the room a project row is given', () => {
+  /**
+   * The one list in the studio that stacks a name over a subtitle, and the one the report came
+   * from: its rows were touching. At the control height two steps of `leading-tight` text fill
+   * the row edge to edge, so the shape it declares is the whole fix — and nothing else here
+   * would notice it going away.
+   */
+  it('asks for the stacked height, not the height of a one-line row', () => {
+    setRecent([SUMMER, { ...SUMMER, path: '/projects/winter', name: 'Winter' }])
+
+    render(<Projects />)
+
+    // 36 shipped + 4 of gap, twice: the stacked gauge, not the 28 of `--sc-control`.
+    expect(screen.getByRole('list')).toHaveStyle({ height: '80px' })
+  })
+})

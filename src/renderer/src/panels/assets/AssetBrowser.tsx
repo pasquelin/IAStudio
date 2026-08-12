@@ -6,7 +6,6 @@ import { useToolLying } from '@/app/tool-zone'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
-import { LIST_ROW_HEIGHT } from '@/design/styles'
 import { filterLocally, isFiltered } from '@/helpers/collection-state'
 import { applySelection } from '@/helpers/selection'
 import { openAsset } from '@/helpers/open-asset'
@@ -99,7 +98,6 @@ export function AssetBrowser() {
           useSelection.getState().selectAssets(applySelection(selectedIds, ids, mode))
         }
         onActivate={openAsset}
-        rowHeight={LIST_ROW_HEIGHT}
         renderCard={asset => (
           <AssetCard asset={asset} ownerId={ownerId} badgeLabels={badgeLabels} />
         )}
