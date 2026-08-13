@@ -10,7 +10,6 @@
     "audio": "Audio",
     "textures": "Textures",
     "skyboxes": "Skyboxes",
-    "graph": "Graph",
     "moveLeft": "Move left",
     "moveRight": "Move right",
     "moved": "{{label}} moved, position {{position}} of {{total}}",
@@ -33,7 +32,6 @@
     "channels": "Channels",
     "styles": "Styles",
     "view": "View",
-    "apps": "Apps",
     "projects": "Your projects",
     "library": "Your library",
     "documents": "Your documents"
@@ -60,124 +58,6 @@
     "noCredentials": "Enter your API credentials to see your models.",
     "dropPicture": "Drop a picture, or paste its id",
     "estimatedCost": "~{{units}} CU"
-  },
-  "apps": {
-    "what": "Generating is one model, one step. An App is several models chained together, already assembled: one form, and the whole chain runs.",
-    "none": "No App published yet.",
-    "back": "All Apps",
-    "run": "Run",
-    "draft": "This App is a draft: it cannot be run.",
-    "runHint": "Runs the App with the values entered; the result comes back as a generation"
-  },
-  "graph": {
-    "nodes": {
-      "text": "Text",
-      "asset": "Asset",
-      "model": "Model",
-      "stickyNote": "Note",
-      "approval": "Approval",
-      "ifElse": "Condition",
-      "transformText": "Transform",
-      "forEach": "Loop",
-      "forEachEnd": "End of loop",
-      "textHint": "A piece of text the nodes downstream will read — a prompt, most of the time",
-      "assetHint": "A picture, a video or a sound of the project, fed into the graph",
-      "stickyNoteHint": "A note for whoever reads the graph; it takes part in no run",
-      "approvalHint": "Pauses the run until someone approves what came before",
-      "transformTextHint": "Rewrites the text it receives before passing it on"
-    },
-    "approve": "Approve",
-    "approveHint": "Let the rest of the graph use this result",
-    "decline": "Decline",
-    "declineHint": "Stop everything that reads this node",
-    "askApproval": "Approve this result?",
-    "noConditions": "No condition",
-    "logic": {
-      "and": "and",
-      "or": "or"
-    },
-    "condition": {
-      "isEmpty": "is empty",
-      "isNotEmpty": "is not empty",
-      "equals": "equals",
-      "notEquals": "differs from",
-      "contains": "contains",
-      "notContains": "does not contain",
-      "greaterThan": "greater than",
-      "greaterThanOrEqual": "greater than or equal to",
-      "lessThan": "less than",
-      "lessThanOrEqual": "less than or equal to",
-      "between": "between"
-    },
-    "noField": "Nothing",
-    "listKind": {
-      "image": "Pictures",
-      "text": "Texts"
-    },
-    "noLoop": "No loop",
-    "generators": {
-      "image": "Generates a picture from its inputs — the model is picked in the Models panel",
-      "video": "Generates a video from its inputs — the model is picked in the Models panel",
-      "3d": "Generates a 3D model from its inputs — the model is picked in the Models panel",
-      "audio": "Generates a sound from its inputs — the model is picked in the Models panel"
-    }
-  },
-  "graphPublish": {
-    "done": "Published to Scenario",
-    "refused": "Scenario refused it — see the journal"
-  },
-  "graphCompile": {
-    "steps_one": "{{count, number}} step",
-    "steps_many": "{{count, number}} steps",
-    "steps_other": "{{count, number}} steps",
-    "problem": {
-      "no-output": "No output marked",
-      "empty": "Nothing reaches the output",
-      "invalid": "The graph does not compile",
-      "loop-end-outside": "An end of loop does not close what it names",
-      "loop-two-ends": "Two ends close the same loop"
-    },
-    "blamed": "The refusal is about this node"
-  },
-  "graphRun": {
-    "queued": "queued",
-    "running": "running",
-    "awaiting": "to approve",
-    "cached": "unchanged",
-    "done": "done",
-    "skipped": "not taken",
-    "failure": {
-      "cycle": "loop",
-      "unsupported": "not runnable",
-      "unwired": "branch with no output",
-      "no-model": "no model",
-      "blocked": "upstream failed",
-      "rejected": "failed",
-      "declined": "declined",
-      "invalid-expression": "invalid expression"
-    }
-  },
-  "graphTools": {
-    "run": "Run the graph",
-    "runHint": "Run every node in the order its wires allow — what has not changed is not run again",
-    "stop": "Stop the run",
-    "stopHint": "Submit nothing more and cancel what is under way",
-    "export": "Export the graph",
-    "exportHint": "Write it as a .workflow.json the Scenario webapp can open",
-    "publish": "Publish to Scenario",
-    "publishHint": "Create it as an App of your account, ready to run",
-    "import": "Import a graph",
-    "importHint": "Open a .workflow.json — it replaces what is on the canvas, and ⌘Z puts it back",
-    "add": "Add a node",
-    "addHint": "Drop a node on the canvas — right-click does the same",
-    "select": "Select",
-    "selectHint": "Pick and move nodes",
-    "pan": "Pan",
-    "panHint": "Drag the canvas under the pointer",
-    "zoomIn": "Zoom in",
-    "zoomInHint": "Bring the graph closer",
-    "zoomOut": "Zoom out",
-    "zoomOutHint": "Push the graph away"
   },
   "jobs": {
     "none": "No job running.",
@@ -295,12 +175,6 @@
       "project.forget": "The project could not be removed from the list",
       "project.rename": "The project could not be renamed",
       "font.face": "A font could not be loaded",
-      "graph.node": "A node could not be created",
-      "graph.run": "The graph could not be run",
-      "graph.compile": "The graph could not be checked",
-      "graph.export": "The graph could not be exported",
-      "graph.publish": "The graph could not be published",
-      "graph.import": "The graph could not be imported",
       "document.close": "Closing the document failed",
       "document.delete": "Deleting the document failed",
       "document.load": "The document could not be opened",
@@ -1144,7 +1018,6 @@
     "licences": "Licences",
     "imageTools": "Tools",
     "usage": "Usage…",
-    "graph": "Graph",
     "sceneDisplay": "Display mode",
     "sceneView": "Point of view"
   },
@@ -1286,7 +1159,6 @@
       "sequence": "In the edit",
       "canvas": "In the picture",
       "skybox": "In the sky",
-      "graph": "In the graph",
       "audio": "In the take editor",
       "texture": "In the material"
     },
@@ -1517,10 +1389,6 @@
     "sceneDelete": {
       "title": "Delete",
       "help": "Removes everything selected from the scene. Nothing is lost for good: ⌘Z brings it back."
-    },
-    "graphRun": {
-      "title": "Run / Stop the graph",
-      "help": "Runs every node in the order its wires allow, and stops a run already under way. What has not changed since the last run is not run again."
     },
     "undo": {
       "title": "Undo",
@@ -2144,7 +2012,6 @@
       "audio": "Compose and edit sound across tracks.",
       "textures": "Produce seamless material channels.",
       "skyboxes": "Generate skies and light a scene with them.",
-      "graph": "Chain models into a graph, and run it.",
       "newProject": "New project",
       "newProjectHelp": "A folder that holds your documents and everything you bring in.",
       "openProject": "Open project",

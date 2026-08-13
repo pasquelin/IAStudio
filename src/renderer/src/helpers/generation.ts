@@ -1,6 +1,6 @@
 import type { Asset, AssetGeneration } from '@shared/domain/asset'
 import type { Job } from '@shared/domain/job'
-import type { ModelScope } from '@shared/domain/model'
+import type { ModelFamily } from '@shared/domain/model'
 import { revealTool } from '@/helpers/reveal-panel'
 import { useModels } from '@/stores/models'
 
@@ -34,11 +34,11 @@ function seedIn(body: Record<string, unknown>): number | undefined {
  * The seed is deliberately not part of it: replaying one asks for the picture one already has.
  */
 export function openGeneratorOn(
-  scope: ModelScope,
+  family: ModelFamily,
   modelId: string,
   params: Record<string, unknown>,
 ): void {
-  useModels.getState().prepare(scope, modelId, params)
+  useModels.getState().prepare(family, modelId, params)
   // The generator may well be closed — it is a tool window like any other.
   revealTool('generator')
 }
@@ -61,10 +61,6 @@ export function generationOf(
   const job = jobs.find(candidate => candidate.id === asset.jobId)
   const body = bodies[asset.jobId]
   if (!job || !body) return null
-
-  // A workflow's id is not a model's: "regenerate with these parameters" would open the
-  // generator on a model the catalogue has never heard of, and the panel would sit on an error.
-  if (job.kind !== 'model') return null
 
   return {
     modelId: job.targetId,

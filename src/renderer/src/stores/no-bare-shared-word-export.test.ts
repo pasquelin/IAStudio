@@ -32,8 +32,9 @@ const exportsOf = (source: string): string[] => [
  * The words two of this studio's domains both own. Each is a reader that answers for ONE kind of
  * document while its name says which of several it could be — so each needs the domain in front.
  *
- * `node`: `nodeById` exists for a scene (`engines/scene/scene-state.ts`) and for a graph
- * (`shared/domain/graph.ts`). `history`: six stores published `historyOf`, while `audio-edits.ts`
+ * `node`: `nodeById` reads a scene node (`engines/scene/scene-state.ts`) while the word names a
+ * DOM node and a timeline node just as readily. `history`: six stores published `historyOf`,
+ * while `audio-edits.ts`
  * had already written `audioHistoryOf` — the observed form the rest then followed. `view`: three
  * did, returning three different types, while `animation-view.ts:79` had already written
  * `animationViewOf`. **Each rule here was read off the repo before it was written down.**
@@ -121,7 +122,7 @@ const bareExports = (sources: readonly (readonly [string, string])[]): string[] 
 /**
  * A store export whose name starts with a word two domains share says nothing about which of them
  * it answers, and an editor's auto-import reaches whichever comes first — a suite then reads a
- * graph where it meant a scene, and asserts about the wrong document.
+ * sequence where it meant a scene, and asserts about the wrong document.
  *
  * **What this holds, exactly, and it is less than its subject.** The words of `SHARED_WORDS`, in
  * one folder: `stores/`. It does NOT hold the two `nodeById` upstream — they are in `engines/`
@@ -184,7 +185,7 @@ describe('what a store exports about a shared word', () => {
     const offender: [string, string][] = [
       [
         '../stores/zz.ts',
-        'export const nodeIn = 1\nexport const graphNodeIn = 2\nexport const historyOf = 3\n' +
+        'export const nodeIn = 1\nexport const sceneNodeIn = 2\nexport const historyOf = 3\n' +
           'export const nodesOf = 4\nexport const viewportOf = 5\nexport const viewOf = 6\n',
       ],
     ]
@@ -217,9 +218,6 @@ describe('what a store exports about a shared word', () => {
     // harness walked straight through it. The floor refuses an emptied list; dropping the
     // containment outright is a deleted assertion, which is a different and far louder act.
     const RENAMED = [
-      'graphNodeIn',
-      'graphNodeNow',
-      'graphHistoryOf',
       'canvasHistoryOf',
       'sceneHistoryOf',
       'sequenceHistoryOf',
@@ -233,7 +231,7 @@ describe('what a store exports about a shared word', () => {
       'isSettingsDraftDirty',
     ]
 
-    expect(RENAMED.length).toBeGreaterThan(13)
+    expect(RENAMED.length).toBeGreaterThan(10)
     expect(names).toEqual(expect.arrayContaining(RENAMED))
   })
 })

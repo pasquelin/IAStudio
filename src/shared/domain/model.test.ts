@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ALL_FAMILIES,
   FAMILY_TAGS,
   MODEL_FAMILIES,
-  scopeOf,
+  preferredModelOf,
   tagLabel,
   TAGS_BY_FAMILY,
   TAG_LABEL_KEY_LIST,
@@ -68,20 +67,13 @@ describe('the tags a facet menu offers', () => {
   })
 })
 
-describe('the scope a surface browses by', () => {
-  it('is the family itself wherever there is one', () => {
-    for (const family of MODEL_FAMILIES) expect(scopeOf(family)).toBe(family)
+describe('the model a family starts from', () => {
+  it('reads the preference of that family', () => {
+    expect(preferredModelOf('image', { image: 'flux-dev' })).toBe('flux-dev')
   })
 
-  it('stands in for the absence of a family, so a choice still has somewhere to be filed', () => {
-    expect(scopeOf(null)).toBe(ALL_FAMILIES)
-  })
-
-  /**
-   * No model carries it, and nothing must start listing it beside the ten: an eleventh entry in
-   * the family menu would offer a filter whose only answer is none.
-   */
-  it('is not an eleventh family', () => {
-    expect(MODEL_FAMILIES).not.toContain(ALL_FAMILIES)
+  /** The home browses no catalogue, and a default "for every family" would mean nothing. */
+  it('answers nothing where there is no family at all', () => {
+    expect(preferredModelOf(null, { image: 'flux-dev' })).toBeUndefined()
   })
 })

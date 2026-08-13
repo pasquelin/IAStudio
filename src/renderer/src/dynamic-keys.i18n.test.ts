@@ -12,11 +12,8 @@ import {
 import { TRACK_KINDS, type TrackKind } from '@/engines/timeline/timeline-state'
 import { LAYER_LOCKS } from '@/panels/layers/layer-locks'
 import { LAYER_OPERATIONS, type LayerOperation } from '@/panels/layers/LayerStackActions'
-import { LOOP_LIST_KINDS } from '@/engines/graph/loops'
 import { ADD_ENTRIES } from '@/engines/scene/node-kinds'
 import { ASSET_INTENTS } from '@/helpers/asset-intents'
-import { NODE_LABEL_KEY_LIST } from '@/spaces/graph/node-labels'
-import { PALETTE, paletteHintKey } from '@/spaces/graph/palette'
 import { TRACK_FLAGS } from '@/panels/timeline/track-flags'
 
 function resolve(code: Language, key: string): unknown {
@@ -52,17 +49,8 @@ const COMPOSED_KEYS: readonly string[] = [
   ...TRACK_FLAGS.map(flag => `inspector.${flag.key}`),
   ...LAYER_OPERATIONS.map(operation => `layers.${operation}`),
   ...PBR_CHANNELS.map(channel => `texture.channel.${channel}`),
-  // The node palette and the node inspector both name a type through this record, and
-  // nothing named these four until now — the palette composed its key and walked free.
-  ...NODE_LABEL_KEY_LIST,
-  // What a loop walks, offered per list by the loop inspector. `graph.condition.*` and
-  // `graph.logic.*` are its two neighbours, covered beside the bundles because their list lives
-  // in `shared/`; this one is the renderer's, so it belongs here.
-  ...LOOP_LIST_KINDS.map(kind => `graph.listKind.${kind}`),
-  // Every row of the two menus that say where an asset may go and what a graph may gain. The
-  // palette's sentence is not `<label>Hint`: a generator explains a NODE, not a model family.
+  // Every row of the menu that says where an asset may go.
   ...ASSET_INTENTS.map(intent => `${intent.labelKey}Hint`),
-  ...PALETTE.map(paletteHintKey),
   // Everything a scene can gain: the panels' add menus draw the mesh and light families, and
   // the 3D bar's own add menu draws all three — `objects` included, which is why it is here.
   ...ADD_ENTRIES.flatMap(({ labelKey }) => [labelKey, `${labelKey}Hint`]),

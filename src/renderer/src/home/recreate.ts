@@ -16,5 +16,5 @@ export function recreate(type: AssetType, generation: AssetGeneration): void {
   const workspace = workspaceOfType(type)
 
   enterWorkspace(workspace)
-  openGeneratorOn(workspaceById(workspace).scope, generation.modelId, generation.params)
+  openGeneratorOn(workspaceById(workspace).family, generation.modelId, generation.params)
 }

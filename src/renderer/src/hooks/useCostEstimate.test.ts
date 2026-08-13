@@ -88,16 +88,16 @@ describe('what the form in front of the user would cost', () => {
   })
 
   /**
-   * The generator and an App are in different columns, so both forms are on screen at once — an
-   * ordinary layout. A floor kept per hook would let each spend the whole interactive share, and
-   * the poll loop is sized against that share once: it is the one that would pay.
+   * Two generator forms are on screen at once as soon as a panel is detached into a second
+   * window. A floor kept per hook would let each spend the whole interactive share, and the poll
+   * loop is sized against that share once: it is the one that would pay.
    */
   it('spends one share between two forms, not one each', async () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 1 }))
     installFakeBridge({ scenario: { estimateCost } })
 
     const generator = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
-    const app = renderHook(() => useCostEstimate('workflow', 'workflow_1', [PROMPT]))
+    const second = renderHook(() => useCostEstimate('model', 'model_sdxl', [PROMPT]))
 
     act(() => generator.result.current.onValuesChange({ prompt: 'a rock' }))
     await act(async () => {
@@ -106,7 +106,7 @@ describe('what the form in front of the user would cost', () => {
     expect(estimateCost).toHaveBeenCalledOnce()
 
     // The second form asks straight away; the floor is what must hold it back all the same.
-    act(() => app.result.current.onValuesChange({ prompt: 'a boulder' }))
+    act(() => second.result.current.onValuesChange({ prompt: 'a boulder' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_DEBOUNCE_MS)
     })

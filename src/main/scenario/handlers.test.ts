@@ -343,5 +343,4 @@ describe('scenario handlers', () => {
       expect(estimate).not.toHaveBeenCalled()
     })
   })
-
 })

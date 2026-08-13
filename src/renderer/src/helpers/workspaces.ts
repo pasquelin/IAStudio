@@ -8,24 +8,14 @@ import {
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/asset-kind'
-import { scopeOf, type ModelFamily, type ModelScope } from '@shared/domain/model'
+import { type ModelFamily } from '@shared/domain/model'
 import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
 
 export type Workspace = {
   id: WorkspaceId
   icon: string
-  /**
-   * Scenario model family the generator offers in this workspace, or `null` where the space
-   * belongs to none — a catalogue asked for no family in particular answers with all of it
-   * (`ModelQuery.family` is optional).
-   */
-  family: ModelFamily | null
-  /**
-   * Where this space's choice of model is filed. Derived here rather than at each reader: it
-   * was re-composed at four call sites, and the fifth forgot — a `null` family then read as
-   * "nothing to generate with".
-   */
-  scope: ModelScope
+  /** Scenario model family the generator offers in this workspace, and files its choice under. */
+  family: ModelFamily
 }
 
 const ICONS: Record<WorkspaceId, string> = {
@@ -76,7 +66,7 @@ export function assetTypesOf(workspace: WorkspaceId): readonly AssetType[] {
   return USED_BY_WORKSPACE[workspace]
 }
 
-const FAMILIES: Record<WorkspaceId, ModelFamily | null> = {
+const FAMILIES: Record<WorkspaceId, ModelFamily> = {
   image: 'image',
   video: 'video',
   '3d': '3d',
@@ -95,7 +85,6 @@ export const WORKSPACES: readonly Workspace[] = WORKSPACE_IDS.map(id => ({
   id,
   icon: ICONS[id],
   family: FAMILIES[id],
-  scope: scopeOf(FAMILIES[id]),
 }))
 
 /**

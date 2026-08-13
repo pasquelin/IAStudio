@@ -11,14 +11,13 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | @hookform/resolvers | 5.7.1 | MIT |
 | @mdi/js | 7.4.47 | Apache-2.0 |
 | @mdi/react | 1.6.1 | MIT |
-| @scenario-labs/sdk | 2.7.0 | MIT |
+| @scenario-labs/sdk | 3.0.0 | MIT |
 | @tanstack/react-query | 5.101.4 | MIT |
 | @tanstack/react-virtual | 3.14.9 | MIT |
-| @xyflow/react | 12.11.2 | MIT |
 | better-sqlite3 | 13.0.3 | MIT |
 | daisyui | 5.7.16 | MIT |
-| dockview-react | 7.0.4 | MIT |
-| electron | 43.3.0 | MIT |
+| dockview-react | 8.1.0 | MIT |
+| electron | 43.4.0 | MIT |
 | electron-store | 11.0.2 | MIT |
 | electron-updater | 6.8.9 | MIT |
 | FFmpeg | 7.1.1 / 7.1.5 | GPL-3.0-or-later / LGPL-2.1-or-later |
@@ -27,19 +26,19 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | IBM Plex Serif | shipped with the application | OFL-1.1 |
 | immer | 11.1.16 | MIT |
 | Lato | shipped with the application | OFL-1.1 |
-| mediabunny | 1.52.3 | MPL-2.0 |
+| mediabunny | 1.53.1 | MPL-2.0 |
 | ONNX Runtime | 1.27.0 | MIT |
 | opentype.js | 2.0.0 | MIT |
 | Parakeet TDT 0.6b v3 | int8 | CC-BY-4.0 |
 | pixi.js | 8.19.0 | MIT |
 | react | 19.2.8 | MIT |
 | react-dom | 19.2.8 | MIT |
-| react-hook-form | 7.84.0 | MIT |
+| react-hook-form | 7.85.0 | MIT |
 | react-i18next | 17.0.11 | MIT |
 | react-is | 19.2.8 | MIT |
 | react-tooltip | 6.0.8 | MIT |
 | recharts | 3.10.1 | MIT |
-| sherpa-onnx-node | 1.13.4 | Apache-2.0 |
+| sherpa-onnx-node | 1.13.5 | Apache-2.0 |
 | Silero VAD | v5 | MIT |
 | tailwind-merge | 3.6.0 | MIT |
 | tailwindcss | 4.3.3 | MIT |
@@ -47,7 +46,7 @@ Studio itself (LICENSE) nor by the application's terms of use (EULA.md).
 | three-mesh-bvh | 0.9.14 | MIT |
 | wavesurfer.js | 7.12.11 | BSD-3-Clause |
 | zod | 4.4.3 | MIT |
-| zustand | 5.0.14 | MIT |
+| zustand | 5.0.15 | MIT |
 
 ## @hookform/resolvers
 
@@ -134,7 +133,7 @@ SOFTWARE.
 ```
 ## @scenario-labs/sdk
 
-Version: 2.7.0  
+Version: 3.0.0  
 Licence: MIT
 
 ```
@@ -183,34 +182,6 @@ Licence: MIT
 MIT License
 
 Copyright (c) 2021-present Tanner Linsley
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-## @xyflow/react
-
-Version: 12.11.2  
-Licence: MIT
-
-```
-MIT License
-
-Copyright (c) 2019-2025 webkid GmbH
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -288,7 +259,7 @@ SOFTWARE.
 ```
 ## dockview-react
 
-Version: 7.0.4  
+Version: 8.1.0  
 Licence: MIT
 
 ```
@@ -296,7 +267,7 @@ See README.md of the package.
 ```
 ## electron
 
-Version: 43.3.0  
+Version: 43.4.0  
 Licence: MIT
 
 ```
@@ -768,7 +739,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 ## mediabunny
 
-Version: 1.52.3  
+Version: 1.53.1  
 Licence: MPL-2.0
 
 Corresponding sources, unmodified:
@@ -1305,7 +1276,7 @@ SOFTWARE.
 ```
 ## react-hook-form
 
-Version: 7.84.0  
+Version: 7.85.0  
 Licence: MIT
 
 ```
@@ -1445,7 +1416,7 @@ SOFTWARE.
 ```
 ## sherpa-onnx-node
 
-Version: 1.13.4  
+Version: 1.13.5  
 Licence: Apache-2.0
 
 ```
@@ -1646,7 +1617,7 @@ SOFTWARE.
 ```
 ## zustand
 
-Version: 5.0.14  
+Version: 5.0.15  
 Licence: MIT
 
 ```

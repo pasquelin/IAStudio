@@ -237,7 +237,7 @@ describe('the left column', () => {
         WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
     )
 
-    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'apps'])
+    expect(lower.map(placement => placement.id)).toEqual(['explorer'])
   })
 })
 

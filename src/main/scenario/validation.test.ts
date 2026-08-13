@@ -76,4 +76,3 @@ describe('jobs read back from disk', () => {
     expect(parseStoredJobs(JSON.stringify([NOTE]))).toEqual([])
   })
 })
-

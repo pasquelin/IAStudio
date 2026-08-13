@@ -1,7 +1,4 @@
 @import 'tailwindcss';
-/* The node canvas will not lay out at all without it — its transforms and its handle geometry
-   live here. `base.css` and not `style.css`: the latter carries a light theme of its own. */
-@import '@xyflow/react/dist/base.css';
 @plugin 'daisyui' {
   themes: false;
 }

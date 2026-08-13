@@ -161,18 +161,6 @@ export type CommandDescriptor = {
    * therefore has to carry a modifier, or it would swallow a letter.
    */
   held?: boolean
-  /**
-   * Heard while the focus sits in a text field, where every other tapped command is silent.
-   *
-   * Declared per command rather than deduced from the chord, because the chord is the wrong
-   * axis twice over: bindings are remappable, so a rule written on `Meta+…` follows the key
-   * instead of the command it opened the field for; and most ⌘ chords have no business firing
-   * from a field — `canvas.mergeDown` on ⌘E would flatten a layer while its name is being
-   * typed, and the ⌘Z reflex would undo the typing rather than the merge.
-   *
-   * It must carry a modifier for the same reason `held` must, or it would swallow a letter.
-   */
-  runsWhileTyping?: boolean
 }
 
 function command(descriptor: CommandDescriptor): CommandDescriptor {
@@ -964,11 +952,6 @@ export function commandIn(scope: CommandScope, suffix: string): CommandId | null
 
 export function commandDescriptor(id: CommandId): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null
-}
-
-/** Whether a command is one of the few heard from inside a text field. */
-export function runsWhileTyping(id: CommandId): boolean {
-  return commandDescriptor(id)?.runsWhileTyping === true
 }
 
 export function commandsIn(scope: CommandScope): readonly CommandDescriptor[] {

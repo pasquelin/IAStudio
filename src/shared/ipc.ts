@@ -78,7 +78,6 @@ export type Channels = {
   scenarioUsageReport: 'scenario:usage-report'
   scenarioUsageEvents: 'scenario:usage-events'
 
-
   projectCreate: 'project:create'
   projectOpen: 'project:open'
   projectCurrent: 'project:current'

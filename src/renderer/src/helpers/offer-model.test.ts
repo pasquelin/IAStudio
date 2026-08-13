@@ -13,8 +13,8 @@ let opened: string[] = []
 beforeEach(() => {
   opened = []
   installFakeBridge({ settings: { open: section => (opened.push(section), Promise.resolve()) } })
-  useTools.setState({ arrangements: arrangedFor('graph', { open: {} }), focusedZone: null })
-  useLayouts.setState({ activeWorkspace: 'graph', home: false })
+  useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
+  useLayouts.setState({ activeWorkspace: 'image', home: false })
   useModels.setState({ collection: DEFAULT_COLLECTION_STATE, selected: {} })
 })
 
@@ -23,28 +23,6 @@ beforeEach(() => {
  * user to where one IS chosen. A failure message would say what went wrong and not what to do.
  */
 describe('offering a model of one family', () => {
-  describe('where the space browses every family', () => {
-    it('opens the browser in the column this space puts it in', () => {
-      offerModelsOfFamily('video')
-
-      expect(arrangementOf(useTools.getState(), 'graph').open.left?.primary).toBe('models')
-    })
-
-    it('narrows the catalogue to the family that was asked for', () => {
-      offerModelsOfFamily('video')
-
-      expect(selectedValues(useModels.getState().collection, FAMILY_FACET)).toEqual(['video'])
-    })
-
-    /** Asking for another family replaces the narrowing rather than adding to it. */
-    it('replaces the family it was narrowed to before', () => {
-      offerModelsOfFamily('video')
-      offerModelsOfFamily('audio')
-
-      expect(selectedValues(useModels.getState().collection, FAMILY_FACET)).toEqual(['audio'])
-    })
-  })
-
   describe('where the space browses one family of its own', () => {
     beforeEach(() => {
       useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
@@ -70,7 +48,7 @@ describe('offering a model of one family', () => {
 
     /**
      * The facet is not offered where the space has a family, so writing one would leave a filter
-     * the user can neither see nor release — and it would follow them into the graph.
+     * the user can neither see nor release — and it would follow them into every other space.
      */
     it('narrows nothing it could not show', () => {
       offerModelsOfFamily('upscale')

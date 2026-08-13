@@ -25,7 +25,7 @@ describe('the sweep the guards read the project through', () => {
 
     expect(counts).toHaveLength(4)
     expect(counts.every(count => count > 0)).toBe(true)
-    expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(700)
+    expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(600)
   })
 
   /**

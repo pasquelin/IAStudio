@@ -1,12 +1,7 @@
 import { type CommandId, type CommandScope } from '@shared/domain/command'
 import { copiesText, type MotionId, signatureOf } from '@shared/domain/shortcut'
 import { useEffect, useRef, type RefObject } from 'react'
-import {
-  commandDescriptor,
-  commandFor,
-  heldCommandFor,
-  runsWhileTyping,
-} from '@shared/domain/command'
+import { commandDescriptor, commandFor, heldCommandFor } from '@shared/domain/command'
 import { isTyping } from '@/helpers/typing'
 import { subscribeToCommands } from '@/services/command-bus'
 import { currentOverrides, motionFor } from '@/stores/bindings'
@@ -74,10 +69,10 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
         handlers.current.onMotionChange?.(held)
       }
 
-      // A field keeps every command but the few that declare otherwise — the prompt one types
-      // into is where ⌘Enter is pressed, and waiting for a click away is the friction it removes.
+      // A field keeps every command: ⌘E would flatten a layer while its name is being typed, and
+      // the ⌘Z reflex would undo the typing rather than the merge.
       const command = commandFor(signature, scope, currentOverrides())
-      if (!command || (typing && !runsWhileTyping(command))) return
+      if (!command || typing) return
       if (copiesText(signature) && holdsText()) return
       event.preventDefault()
       // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport

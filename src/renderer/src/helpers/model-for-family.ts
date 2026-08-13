@@ -1,15 +1,15 @@
-import { preferredModelOf, type ModelScope } from '@shared/domain/model'
+import { preferredModelOf, type ModelFamily } from '@shared/domain/model'
 import { useModels } from '@/stores/models'
 import { useSettings } from '@/stores/settings'
 
 /**
  * Written once because three callers must agree on it, and did not: the rail decides whether to
- * draw the generator at all from this answer, and a graph's generator node read the session
- * choice alone — so it failed in a space where the rail already said a model was there.
+ * draw the generator at all from this answer, and a caller reading the session choice alone
+ * failed in a space where the rail already said a model was there.
  */
-export function modelForScope(scope: ModelScope): string | undefined {
+export function modelForFamily(family: ModelFamily): string | undefined {
   const { defaultModels } = useSettings.getState().settings.generation
-  return useModels.getState().selected[scope] ?? preferredModelOf(scope, defaultModels)
+  return useModels.getState().selected[family] ?? preferredModelOf(family, defaultModels)
 }
 
 /**
@@ -19,10 +19,10 @@ export function modelForScope(scope: ModelScope): string | undefined {
  * Two selectors rather than one over both stores: zustand compares what a selector returns, and
  * a single one spanning two stores cannot be subscribed to either.
  */
-export function useModelForScope(scope: ModelScope | null): string | null {
-  const chosen = useModels(state => (scope ? state.selected[scope] : undefined))
+export function useModelForFamily(family: ModelFamily | null): string | null {
+  const chosen = useModels(state => (family ? state.selected[family] : undefined))
   const preferred = useSettings(state =>
-    scope ? preferredModelOf(scope, state.settings.generation.defaultModels) : undefined,
+    preferredModelOf(family, state.settings.generation.defaultModels),
   )
   return chosen ?? preferred ?? null
 }
