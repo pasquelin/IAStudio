@@ -3,12 +3,13 @@ import { access, readdir, rename } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import {
   canMoveInto,
-  compareEntries,
+  entriesByName,
   isHiddenEntry,
   isStudioFolder,
   parentOf,
   type FolderEntry,
 } from '@shared/domain/folder'
+import { windowLanguage } from '@main/window/language'
 
 export type FolderReader = {
   /** One level of the project folder. `''` is the project root. */
@@ -37,7 +38,7 @@ export function createFolderReader(rootOf: () => string): FolderReader {
           name: entry.name,
           kind: entry.isDirectory() ? 'folder' : 'file',
         }))
-        .sort(compareEntries)
+        .sort(entriesByName(windowLanguage()))
     },
   }
 }

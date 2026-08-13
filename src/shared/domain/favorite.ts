@@ -1,3 +1,4 @@
+import { byCodeUnit } from '../text'
 import { hostedIdFromUrl, hostedUrl, type AssetGeneration, type AssetType } from './asset'
 
 /**
@@ -65,5 +66,5 @@ export function sameRecipe(one: AssetGeneration, other: AssetGeneration): boolea
 }
 
 function normalized(params: Record<string, unknown>): string {
-  return JSON.stringify(Object.entries(params).sort(([one], [other]) => one.localeCompare(other)))
+  return JSON.stringify(Object.entries(params).sort(([one], [other]) => byCodeUnit(one, other)))
 }

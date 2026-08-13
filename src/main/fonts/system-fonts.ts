@@ -38,8 +38,14 @@ export type FontDisk = {
 export type SystemFace = { family: string; path: string; sfntOffset: number }
 
 export type SystemFonts = {
-  /** Every family the machine offers, sorted, one entry each. */
-  families: () => Promise<readonly string[]>
+  /**
+   * Every family the machine offers, one entry each, sorted for a reader of `language`.
+   *
+   * The language is asked for rather than inherited: these names are read down a picker, and the
+   * order a bare `localeCompare` gives is the one the OS was installed in — which the studio's
+   * own two languages have no say in.
+   */
+  families: (language: string) => Promise<readonly string[]>
   /** The face's outlines as a font file `opentype.js` will take, or `null` if it is gone. */
   bytesOf: (family: string) => Promise<Uint8Array | null>
 }
@@ -98,7 +104,8 @@ export function createSystemFonts(disk: FontDisk, folders: readonly string[]): S
   const read = (): Promise<Map<string, SystemFace>> => (index ??= buildIndex(disk, folders))
 
   return {
-    families: async () => [...(await read()).keys()].sort((one, other) => one.localeCompare(other)),
+    families: async language =>
+      [...(await read()).keys()].sort((one, other) => one.localeCompare(other, language)),
 
     bytesOf: async family => {
       const face = (await read()).get(family)

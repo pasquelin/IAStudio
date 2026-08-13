@@ -1,5 +1,6 @@
 import type { ApiFailure, JobFailure } from '@shared/domain/failure'
 import { clamp } from '@shared/numeric'
+import { byCodeUnit } from '@shared/text'
 import type { WorkspaceId } from '@shared/domain/workspace'
 import {
   INTERACTIVE_REQUESTS_PER_MINUTE,
@@ -284,7 +285,7 @@ export function createJobManager({
   const listed = (): Job[] =>
     [...entries.values()]
       .map(entry => entry.job)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .sort((left, right) => byCodeUnit(right.createdAt, left.createdAt))
 
   /**
    * Writes down what would otherwise be lost with the process.

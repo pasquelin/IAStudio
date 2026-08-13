@@ -9,6 +9,7 @@ import type {
   UsageReport,
   UsageTally,
 } from '@shared/domain/usage'
+import { byCodeUnit } from '@shared/text'
 
 /**
  * The shape read out of `usages.list`, narrowed to what is painted.
@@ -115,7 +116,7 @@ function dailyOf(accounts: readonly AccountUsage[]): DailySpend[] {
 
   return [...perDay]
     .map(([date, units]) => ({ date, units }))
-    .sort((left, right) => left.date.localeCompare(right.date))
+    .sort((left, right) => byCodeUnit(left.date, right.date))
 }
 
 /**
@@ -267,5 +268,5 @@ export function eventsOf(accounts: readonly AccountUsage[]): UsageEvent[] {
     }
   }
 
-  return events.sort((left, right) => right.time.localeCompare(left.time))
+  return events.sort((left, right) => byCodeUnit(right.time, left.time))
 }

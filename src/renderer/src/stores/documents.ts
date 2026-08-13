@@ -318,9 +318,13 @@ function untitled(
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that
  * reshuffles between two reads is a list nobody can point at.
+ *
+ * In the reader's language, and not in the machine's: left bare, `localeCompare` answers in the
+ * locale the OS was installed in, so the same project listed two orders on two desks — measured,
+ * a Swedish one files `Ärger` past `Zoo`.
  */
 function sorted(found: readonly DocumentDescriptor[]): DocumentDescriptor[] {
-  return [...found].sort((left, right) => left.title.localeCompare(right.title))
+  return [...found].sort((left, right) => left.title.localeCompare(right.title, i18next.language))
 }
 
 /**
