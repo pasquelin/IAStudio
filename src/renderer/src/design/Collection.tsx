@@ -319,11 +319,10 @@ export function Collection<T extends { id: string }>({
                       // is an opaque tile of exactly the cell's size: flush, it covered
                       // `bg-accent-soft` to the last pixel and three picked assets looked like
                       // every other. The inset is constant, so nothing moves on being picked.
-                      // `px-1` on the row and not in `Row` itself: the cell is what paints the
-                      // fill, so it is what owes its content the distance from its own edge —
-                      // exactly what the tree's row already does. Not folded into the card's
-                      // `p-1`, which is a different job: that one keeps an OPAQUE tile off the
-                      // selection underneath, and doubling the two would shrink every card.
+                      // Two insets, two jobs: a CARD's keeps an opaque tile off the selection
+                      // painted under it, so nothing moves on being picked; a ROW's is the
+                      // distance this cell owes its content from the fill it draws, which is
+                      // why it lives here rather than in `Row` — as the tree's row already does.
                       className={grid ? 'p-1' : 'h-full w-full px-1'}
                       role={roles.cell}
                       // The virtualizer mounts a window, so the cells cannot be counted from the

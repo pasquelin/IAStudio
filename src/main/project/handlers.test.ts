@@ -275,13 +275,10 @@ describe('project handlers', () => {
    */
   describe('renaming a project', () => {
     const renaming = (current: string | null, rename = vi.fn(async () => RENAMED)) => {
-      const injected = deps(catalog, {
-        project: {
-          ...deps(catalog).project,
-          rename,
-          current: () => (current === null ? null : { path: current, manifest: MANIFEST }),
-        } as unknown as ProjectHandlerDeps['project'],
-      })
+      const injected = deps(catalog)
+      injected.project.rename = rename
+      injected.project.current = () =>
+        current === null ? null : { path: current, manifest: MANIFEST }
       registerProjectHandlers(injected)
       return { injected, rename }
     }

@@ -11,12 +11,24 @@ import { ProjectMenu, ProjectMenuRows, PROJECT_MENU_ROWS } from './ProjectMenu'
 
 export type ProjectRowProps = {
   project: RecentProject
-  /** Whether this row is the one being renamed. Owned by the panel — see `Projects`. */
-  renaming?: boolean
-  /** Asks for the field. Absent leaves the menu row refused rather than dead. */
-  onRenameStart?: () => void
-  /** Fired with the new name, or with the old one when the edit was abandoned. */
-  onRenameCommit?: (name: string) => void
+  /**
+   * Asks for the field, naming the row it should open on. Absent leaves the menu row refused
+   * rather than dead.
+   *
+   * The path travels as an argument rather than in a closure, and so does the project below: the
+   * panel builds these once, and a handler rebuilt per render would memoise this row against
+   * nothing — which is the only thing `memo` here is for.
+   */
+  onRenameStart?: (path: string) => void
+  /**
+   * Fired with the new name, or with the old one when the edit was abandoned. **Its presence is
+   * what puts this row into its field** — the panel hands it to the one row being renamed and to
+   * no other, exactly as the explorer does (`Explorer.tsx`).
+   *
+   * A separate `renaming` flag beside it would let a caller ask for a field with nothing to
+   * commit to, a state the row would then have to defend against on every render.
+   */
+  onRenameCommit?: (project: RecentProject, name: string) => void
 }
 
 /**
@@ -34,7 +46,6 @@ export type ProjectRowProps = {
  */
 export const ProjectRow = memo(function ProjectRow({
   project,
-  renaming,
   onRenameStart,
   onRenameCommit,
 }: ProjectRowProps) {
@@ -44,10 +55,21 @@ export const ProjectRow = memo(function ProjectRow({
   // Stable, or the open menu re-subscribes its listeners on every settings write.
   const closeMenu = useCallback(() => setMenuAt(null), [])
 
+  // Where the row's own identity joins the panel's handlers: bound HERE and not in `renderRow`,
+  // which runs on every render of the collection and would hand this row a new prop each time.
+  const startRename = useCallback(
+    () => onRenameStart?.(project.path),
+    [onRenameStart, project.path],
+  )
+  const commitRename = useCallback(
+    (name: string) => onRenameCommit?.(project, name),
+    [onRenameCommit, project],
+  )
+
   // A hand-edited settings file reaches here: the path alone is what an unreadable date leaves.
   const when = timeAgo(project.openedAt, i18n.language)
 
-  if (renaming && onRenameCommit)
+  if (onRenameCommit)
     return (
       // Both handlers stopped, as the menu button below does it and for a sharper reason: this
       // list opens a project on a SINGLE click, so a click landing in the field would tear down
@@ -63,7 +85,7 @@ export const ProjectRow = memo(function ProjectRow({
         <InlineRename
           value={project.name}
           label={t('home.projects.rename')}
-          onCommit={onRenameCommit}
+          onCommit={commitRename}
         />
       </span>
     )
@@ -81,7 +103,7 @@ export const ProjectRow = memo(function ProjectRow({
       //
       // The single click underneath still opens, and for the row that is already open — the one
       // whose name you double-click — the store refuses to reopen it, so the gesture costs nothing.
-      onDoubleClick={() => onRenameStart?.()}
+      onDoubleClick={startRename}
     >
       <Row
         icon={mdiFolderOutline}
@@ -105,7 +127,11 @@ export const ProjectRow = memo(function ProjectRow({
               rowCount={PROJECT_MENU_ROWS}
               opensOnClick
               rows={close => (
-                <ProjectMenuRows path={project.path} onClose={close} onRename={onRenameStart} />
+                <ProjectMenuRows
+                  path={project.path}
+                  onClose={close}
+                  onRename={onRenameStart && startRename}
+                />
               )}
             />
           </span>
@@ -115,7 +141,12 @@ export const ProjectRow = memo(function ProjectRow({
           the shelf with the arrows would never reach the answer it exists to give. */}
       {when && <span className="sr-only">{t('home.projects.openedAt', { when })}</span>}
       {menuAt && (
-        <ProjectMenu path={project.path} at={menuAt} onClose={closeMenu} onRename={onRenameStart} />
+        <ProjectMenu
+          path={project.path}
+          at={menuAt}
+          onClose={closeMenu}
+          onRename={onRenameStart && startRename}
+        />
       )}
     </div>
   )

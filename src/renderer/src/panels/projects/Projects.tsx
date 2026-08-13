@@ -1,5 +1,5 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { projectsByCreation, type RecentProject } from '@shared/domain/project'
 import { Collection } from '@/design/Collection'
@@ -50,10 +50,19 @@ export function Projects() {
     [recent],
   )
 
-  // The field is closed first, whatever comes back: `InlineRename` commits the ORIGINAL name when
-  // the edit was abandoned, and a write fired for that would stamp the manifest for a gesture that
-  // said no. The failure goes to the journal — the field is gone by the time an answer arrives.
-  const commitRename = (project: Card, name: string): void => {
+  /**
+   * The field is closed first, whatever comes back: `InlineRename` commits the ORIGINAL name when
+   * the edit was abandoned, and a write fired for that would stamp the manifest for a gesture that
+   * said no. The failure goes to the journal — the field is gone by the time an answer arrives.
+   *
+   * Both of these take the row they act on rather than closing over it, and are held for the
+   * panel's lifetime: `renderRow` runs on every render of the collection, so a handler built there
+   * hands each row a prop of a new identity and memoises `ProjectRow` against nothing — the very
+   * trap the note above `items` was written for, entered by the other door.
+   */
+  const startRename = useCallback((path: string) => setRenaming(path), [])
+
+  const commitRename = useCallback((project: RecentProject, name: string): void => {
     setRenaming(null)
     if (name === project.name) return
 
@@ -61,14 +70,15 @@ export function Projects() {
       .getState()
       .rename(project.path, name)
       .catch(error => reportFailure('project.rename', project.path, error))
-  }
+  }, [])
 
   return (
     <Collection
       label={t('panels.projects')}
       items={items}
-      // `filled`, not `stacked`: the open project is painted edge to edge, and a fill takes off
-      // the room the same two steps of text keep in the explorer, which paints none.
+      // `filled` goes with the `strong` tone below and is only ever right beside it: the tone is
+      // what paints a fill that stands there, and the height is the room that fill takes off the
+      // two steps of text. Every other stacked list paints one only under a pointer.
       rowHeight="filled"
       // The open project, which is at most one — an array because that is the shape a collection
       // takes, not because two could ever be in it.
@@ -78,11 +88,12 @@ export function Projects() {
       // opening fails, not only where it was clicked.
       onOpen={project => void useProject.getState().open(project.path)}
       renderRow={project => (
+        // The commit handler goes to the row being renamed and to no other: its presence is what
+        // opens the field, which is how the explorer says the same thing.
         <ProjectRow
           project={project}
-          renaming={renaming === project.path}
-          onRenameStart={() => setRenaming(project.path)}
-          onRenameCommit={name => commitRename(project, name)}
+          onRenameStart={startRename}
+          onRenameCommit={renaming === project.path ? commitRename : undefined}
         />
       )}
       // The one screen a first launch actually shows. It says what to do rather than that there

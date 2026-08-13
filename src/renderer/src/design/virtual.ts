@@ -94,12 +94,13 @@ export type RowHeight = 'control' | 'stacked' | 'filled' | number
  * beside `--sc-row-stacked`.
  */
 export function useRowHeight(shape: RowHeight): number {
-  // Both read unconditionally: a hook cannot sit behind a branch.
-  const control = useGauge('--sc-control', LIST_ROW_HEIGHT)
-  const stacked = useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT)
-  const filled = useGauge('--sc-row-filled', FILLED_ROW_HEIGHT)
+  // A table rather than a chain, and every gauge read unconditionally: a hook cannot sit behind a
+  // branch, so the next shape adds a line here and nothing else.
+  const heights = {
+    control: useGauge('--sc-control', LIST_ROW_HEIGHT),
+    stacked: useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT),
+    filled: useGauge('--sc-row-filled', FILLED_ROW_HEIGHT),
+  }
 
-  if (typeof shape === 'number') return shape
-  if (shape === 'stacked') return stacked
-  return shape === 'filled' ? filled : control
+  return typeof shape === 'number' ? shape : heights[shape]
 }

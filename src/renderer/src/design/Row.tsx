@@ -46,10 +46,9 @@ export function Row({
   tip = TIP_RIGHT,
 }: RowProps) {
   return (
-    // One step, and the cell that PAINTS the fill adds the second — `Collection`'s cell and the
-    // tree's row both do. Raised to two here once, for a name touching its own highlight in the
-    // projects: inside a tree that stacked on the row's own step and pushed every name a further
-    // 4px off its chevron, in a panel whose rows are not filled at all.
+    // One step; the host that PAINTS the fill adds the second — `Collection`'s cell and `Tree`'s
+    // row both do. Raising it to two here instead stacked on the tree's own step and pushed every
+    // name a further 4px off its chevron.
     <div className="flex h-full items-center gap-2 px-1">
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}

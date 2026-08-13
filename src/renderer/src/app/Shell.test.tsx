@@ -144,15 +144,14 @@ describe('the Video layout', () => {
   })
 })
 
+/** Both halves of one column open — the only shape in which a half can be told from its neighbour. */
+const COLUMN_OF_TWO = { right: { primary: 'layers', secondary: 'inspector' } } satisfies OpenByZone
+
 describe('a side column', () => {
   // The cut a band refuses is exactly what a column is for: two panels stacked, and a divider
   // to share the height between them.
   it('keeps both halves and the divider between them', () => {
-    useTools.setState({
-      arrangements: arrangedFor('image', {
-        open: { right: { primary: 'layers', secondary: 'inspector' } },
-      }),
-    })
+    useTools.setState({ arrangements: arrangedFor('image', { open: COLUMN_OF_TWO }) })
     renderShell()
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
@@ -167,20 +166,18 @@ describe('a side column', () => {
    * one of them proves nothing about the other.
    */
   it('closes the half whose button was pressed, and leaves the other standing', () => {
-    useTools.setState({
-      arrangements: arrangedFor('image', {
-        open: { right: { primary: 'layers', secondary: 'inspector' } },
-      }),
-    })
+    useTools.setState({ arrangements: arrangedFor('image', { open: COLUMN_OF_TWO }) })
     renderShell()
 
     const [upper, lower] = screen.getAllByRole('button', { name: 'Retirer le module' })
-    fireEvent.click(lower as HTMLElement)
+    if (!upper || !lower) throw new Error('both halves must draw a close button')
+
+    fireEvent.click(lower)
 
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
     expect(screen.queryByLabelText('Inspecteur')).not.toBeInTheDocument()
 
-    fireEvent.click(upper as HTMLElement)
+    fireEvent.click(upper)
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
   })

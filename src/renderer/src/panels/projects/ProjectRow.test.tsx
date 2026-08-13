@@ -85,33 +85,14 @@ describe('one row of the projects shelf', () => {
 })
 
 /**
- * Renaming is the panel's, not the row's — the double-click that starts it lands on the collection
- * cell, and only one row may hold a field at a time. What the row still owns is the two ways of
- * ASKING for it, and both are wired here rather than to anything the row can do alone.
+ * Renaming belongs to the panel — the double-click that starts it lands on the collection cell,
+ * and only one row may hold a field at a time. What is left here is the row's PROP CONTRACT; that
+ * the two gestures reach a field is asserted where the state lives, in `Projects.test.tsx`.
  */
-describe('the two ways a row asks to be renamed', () => {
-  it('asks on a double-click', async () => {
-    const onRenameStart = vi.fn()
-    render(<ProjectRow project={SUMMER} onRenameStart={onRenameStart} />)
-
-    await userEvent.dblClick(screen.getByText('Summer'))
-
-    expect(onRenameStart).toHaveBeenCalled()
-  })
-
-  it('asks from its menu', async () => {
-    const onRenameStart = vi.fn()
-    render(<ProjectRow project={SUMMER} onRenameStart={onRenameStart} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
-
-    expect(onRenameStart).toHaveBeenCalled()
-  })
-
+describe('what the row does with the rename props it is handed', () => {
   // Refused rather than dead where the panel offers no field: a row that explains nothing and does
   // nothing is the worst of the outcomes this menu can produce.
-  it('refuses the menu row where the panel offers no field', async () => {
+  it('refuses the menu row where the panel offers none', async () => {
     render(<ProjectRow project={SUMMER} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
@@ -119,9 +100,22 @@ describe('the two ways a row asks to be renamed', () => {
     expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
   })
 
-  it('draws the field holding the current name once the panel says so', () => {
-    render(<ProjectRow project={SUMMER} renaming onRenameCommit={vi.fn()} />)
+  // The commit handler is the whole signal: handed one, the row IS the field. No second flag says
+  // so, which is the state a caller could otherwise ask for and never get.
+  it('becomes the field on being handed somewhere to commit', () => {
+    render(<ProjectRow project={SUMMER} onRenameCommit={vi.fn()} />)
 
     expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Summer')
+  })
+
+  // Named rather than closed over, so the panel builds one handler for the whole list and this row
+  // stays memoised against something.
+  it('names itself when it asks, rather than closing over its own path', async () => {
+    const onRenameStart = vi.fn()
+    render(<ProjectRow project={SUMMER} onRenameStart={onRenameStart} />)
+
+    await userEvent.dblClick(screen.getByText('Summer'))
+
+    expect(onRenameStart).toHaveBeenCalledExactlyOnceWith('/projects/summer')
   })
 })

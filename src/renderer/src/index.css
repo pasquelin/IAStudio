@@ -410,14 +410,18 @@
      means registering it with `@property` first, and that has to be measured in Electron: jsdom
      evaluates no calc, so no suite here would see the difference. */
   --sc-row-stacked: 36px;
-  /* The same two steps of text in a row that is FILLED edge to edge — the open project on the
-     home, and nothing else today. At 36 the fill leaves ~4px above and below the text, which
-     reads as words pressed against their own highlight; 44 leaves ~8, the step `Row` takes
-     horizontally, so the fill is inset by the same amount on all four sides.
+  /* The same two steps of text under a fill that STANDS THERE — the open project on the home,
+     which `selectionTone: 'strong'` paints for as long as the project is open. At 36 that fill
+     leaves ~4px above and below the text, which reads as words pressed against their own
+     highlight rather than as a line standing in it; 44 leaves ~8.
 
-     Its own gauge and not a taller `--sc-row-stacked`, which is the mistake this replaces: the
-     explorer and the documents panel stack the same two steps WITHOUT a fill behind them, and
-     raising the shared gauge for the home's sake loosened all three. Flat, for the reason above. */
+     Not "the rows that have a fill", which would be all of them: `rowSkin` paints hover and
+     selection edge to edge in every list, the explorer's tree included. What is answered here is
+     a fill nobody has to hover to see, and only the home has one.
+
+     Its own gauge and not a taller `--sc-row-stacked`: raising the shared one for the home's sake
+     also loosened the explorer and the documents panel, which stack the same two steps. Flat, for
+     the reason above. */
   --sc-row-filled: 44px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;

@@ -210,8 +210,9 @@ export const LIST_ROW_HEIGHT = 28
 export const STACKED_ROW_HEIGHT = 36
 
 /**
- * `--sc-row-filled` at its tallest, as a number — the same two steps of text in a row painted
- * edge to edge, which needs the room the fill takes off it.
+ * `--sc-row-filled` at its tallest, as a number — the same two steps of text under a fill that
+ * stands there rather than one a pointer has to summon, which needs the room that fill takes off
+ * them. Goes with `selectionTone: 'strong'`, and only the home asks for either.
  */
 export const FILLED_ROW_HEIGHT = 44
 
