@@ -26,6 +26,5 @@ export function foldForSearch(text: string): string {
  * reader chose, which `no-bare-locale-compare.test.ts` is what makes sure of.
  */
 export function byCodeUnit(one: string, other: string): number {
-  if (one < other) return -1
-  return one > other ? 1 : 0
+  return one < other ? -1 : one > other ? 1 : 0
 }

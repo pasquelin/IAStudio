@@ -52,20 +52,36 @@ function readsAnchoredFile(code: string): boolean {
 }
 
 /**
+ * A suite that borrows the sweep instead of writing one.
+ *
+ * `source-files.ts` holds the walk, the four trees and their timeout, so a guard importing it has
+ * no `readdirSync` and no `import.meta.url` of its own left to recognise. Measured the day the
+ * module was extracted: the detector found 36 guards and `no-bare-locale-compare.test.ts` was not
+ * among them — a guard silently outside the short loop, which is the exact failure the four ways
+ * below exist to prevent. Extracting shared reading is a good move that MUST come with this line.
+ */
+function borrowsTheSweep(code: string): boolean {
+  return /from '\.\/source-files'|from '@main\/source-files'/.test(code)
+}
+
+/**
  * Whether a test reads sources it never imports.
  *
- * Four ways, and the fourth was missing until a review found it on 2026-08-13: a wide
+ * Five ways. The fourth was missing until a review found it on 2026-08-13: a wide
  * `import.meta.glob`, a walk of the disk, a read of a file that is data rather than a module
  * (`vitest.config.ts` for the coverage budgets, `index.css` for the design tokens), and a read
  * anchored on the suite's own location. That last one covers `csp.test.ts`, `licences.test.ts`,
  * `permission-strings.test.ts` and `gate-caches.test.ts` — four guards that sat outside the net
- * while the floor read 32 and looked healthy. A count above `LEAST_GUARDS` proves nothing about
- * what the detector cannot see, which is why the ways are enumerated here rather than counted.
+ * while the floor read 32 and looked healthy. The fifth arrived with `source-files.ts`, for the
+ * suites that no longer read anything themselves. A count above `LEAST_GUARDS` proves nothing
+ * about what the detector cannot see, which is why the ways are enumerated here rather than
+ * counted.
  */
 export function readsTheTree(code: string): boolean {
   return (
     walksTheTree(code) ||
     readsAnchoredFile(code) ||
+    borrowsTheSweep(code) ||
     /readdirSync|vitest\.config\.ts|index\.css/.test(code)
   )
 }
