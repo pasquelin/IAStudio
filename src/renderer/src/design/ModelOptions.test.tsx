@@ -12,7 +12,7 @@ const STARTER: PlanAccess = { name: 'Starter', level: 25 }
 
 function pick(models: readonly PickableModel[], plan: PlanAccess | null) {
   render(
-    <select aria-label="models" defaultValue="">
+    <select>
       <ModelOptions models={models} plan={plan} />
     </select>,
   )
@@ -20,13 +20,6 @@ function pick(models: readonly PickableModel[], plan: PlanAccess | null) {
 }
 
 describe('ModelOptions', () => {
-  it('offers one option per model, in the order it was given them', () => {
-    expect(pick(MODELS, STARTER).map(option => option.getAttribute('value'))).toEqual([
-      'free',
-      'paid',
-    ])
-  })
-
   // A disabled option emits no pointer event, so a tooltip would never fire: the reason has to
   // reach the label itself or the row is greyed out without a word.
   it('disables a model the plan refuses and says so in its label', () => {

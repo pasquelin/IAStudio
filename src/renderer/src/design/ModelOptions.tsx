@@ -17,12 +17,10 @@ export type ModelOptionsProps = {
  * A native `<option>` carries no tooltip — react-tooltip needs pointer events a disabled option
  * never emits — so the reason is suffixed onto the label. Saying it is the point: a picker that
  * greys a name out without a word is a dead end.
- *
- * Shared rather than written per picker: the inspector and the preferences both offer models, and
- * two copies of this wording drift into greying the same model out differently.
  */
 export function ModelOptions({ models, plan }: ModelOptionsProps) {
   const { t } = useTranslation()
+  const locked = t('models.planLocked')
 
   return (
     <>
@@ -30,7 +28,7 @@ export function ModelOptions({ models, plan }: ModelOptionsProps) {
         const refused = isBeyondPlan(model.requiredPlanLevel, plan)
         return (
           <option key={model.id} value={model.id} disabled={refused}>
-            {refused ? `${model.name} — ${t('models.planLocked')}` : model.name}
+            {refused ? `${model.name} — ${locked}` : model.name}
           </option>
         )
       })}

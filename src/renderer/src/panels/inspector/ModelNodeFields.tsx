@@ -118,9 +118,9 @@ export function ModelNodeFields({ documentId, node, edit }: ModelNodeFieldsProps
               back to the first option, so the panel names a model the node does not run — and
               that one model is then the only one clicking cannot choose. */}
           {modelId === undefined && <option value="">{t('inspector.noModel')}</option>}
-          {/* A graph runs its nodes itself — `graph-runs.ts` submits straight to the job queue,
-              never through the generator — so this is where a refused model has to be caught.
-              Without it, a five-node graph pays for the first three and dies on the fourth. */}
+          {/* Why this picker gates at all: a graph runs its nodes itself — `graph-runs.ts` submits
+              straight to the job queue, never through the generator — so a five-node graph would
+              otherwise pay for the first three and die on the fourth. */}
           <ModelOptions models={options} plan={plan} />
         </select>
       </PropertyRow>

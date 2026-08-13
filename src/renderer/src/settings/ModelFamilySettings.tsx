@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
-import { ModelOptions } from '@/design/ModelOptions'
+import { ModelOptions, type PickableModel } from '@/design/ModelOptions'
 import { getBridge } from '@/services/bridge'
 import { usePlanAccess } from '@/helpers/plan-access'
 import { useSettings } from '@/stores/settings'
@@ -51,19 +51,9 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
  * `selectedIndex === -1` and renders blank, and the next stray change overwrites it unseen.
  * `ModelNodeFields` does the same for the model a graph node runs.
  */
-function withStored(models: readonly ModelSummary[], stored: string): readonly ModelSummary[] {
+function withStored(models: readonly PickableModel[], stored: string): readonly PickableModel[] {
   if (!stored || models.some(model => model.id === stored)) return models
-  return [{ ...PLACEHOLDER, id: stored, name: stored }, ...models]
-}
-
-/** Enough of a summary to name a row; the picker reads nothing else off it. */
-const PLACEHOLDER: Omit<ModelSummary, 'id' | 'name'> = {
-  family: 'other',
-  source: 'other',
-  origin: 'community',
-  featured: false,
-  capabilities: [],
-  tags: [],
+  return [{ id: stored, name: stored }, ...models]
 }
 
 /** Per-family generation settings. Today: which model the generator preselects. */
