@@ -80,7 +80,7 @@
   },
   "activity": {
     "unknownMessage": "Entry written by an earlier version",
-    "open": "Show the journal",
+    "open": "Show the log",
     "openHint": "Opens the log — and marks everything in it as read",
     "none": "Nothing to report.",
     "noMatch": "Nothing matches this filter.",
@@ -111,12 +111,12 @@
     },
     "projectNotAProject": "This folder is not a Scenario project",
     "projectUnreadable": "This project’s manifest cannot be read: it was truncated or edited by hand",
-    "projectTooNew": "This project was made by a newer build of the studio; update it to open this project",
+    "projectTooNew": "This project was made by a newer build of the studio; update the studio to open it",
     "projectNotCreated": "The project could not be created in this folder",
     "projectNotRenamed": "The project could not be renamed: its folder is missing or unreadable",
     "projectNotRevealed": "The project folder cannot be found",
     "projectAccountRestored": "Project reopened on the “{{name}}” account",
-    "projectAccountSwitched": "This project now uses the “{{name}}” account: assets pushed under the previous account will no longer show in the remote library. Your local files are untouched",
+    "projectAccountSwitched": "This project now uses the “{{name}}” account: assets sent under the previous account will no longer show in the remote library. Your local files are untouched",
     "projectAccountMissing": "This project used an account the studio no longer knows; it opens on “{{name}}”",
     "fileNotOpened": "The system could not open this file",
     "fileNotMoved": "This file could not be moved — that name may be taken already in the folder it was dropped on",
@@ -158,7 +158,7 @@
       "scene.texture": "A texture could not be loaded",
       "scene.export": "Exporting the scene failed",
       "texture.map": "A texture channel could not be loaded",
-      "texture.channel": "A picture had to stay out of a channel",
+      "texture.channel": "A picture could not go into a channel",
       "texture.seam": "The seams could not be measured",
       "texture.shader": "The material preview lost one of its settings",
       "texture.export": "Exporting the texture failed",
@@ -272,7 +272,7 @@
     "publisher": "Publisher"
   },
   "modelTags": {
-    "textToImage": "From a text",
+    "textToImage": "From text",
     "imageToImage": "From an image",
     "editing": "Editing",
     "postProcessing": "Post-processing",
@@ -285,7 +285,7 @@
     "lastFrame": "Last frame",
     "videoEditing": "Video editing",
     "imageTo3d": "3D from an image",
-    "textTo3d": "3D from a text",
+    "textTo3d": "3D from text",
     "threeDToThreeD": "3D from a model",
     "multiview": "Multiview",
     "motion": "Motion",
@@ -364,7 +364,7 @@
     "more": "More filters",
     "fewer": "Fewer filters",
     "moreHint": "Shows the remaining filters and the display options",
-    "fewerHint": "Folds the filters away, to leave the room to the collection"
+    "fewerHint": "Folds the filters away, to make room for the collection"
   },
   "documents": {
     "copyName": "{{name}} copy",
@@ -434,7 +434,7 @@
     "shapeStarHint": "Drag a star out from its centre",
     "shapeImage": "Image…",
     "shapeImageHint": "Place an image — not available yet",
-    "paint": "Draw",
+    "paint": "Drawing",
     "paintHint": "Paint freehand",
     "brush": "Brush",
     "brushHint": "Paint with the current colour, soft edge",
@@ -495,7 +495,7 @@
     "flatten": "Flatten image",
     "groupName": "Group",
     "copyName": "{{name}} copy",
-    "flatName": "Flattened",
+    "flatName": "Flattened image",
     "rename": "Rename layer",
     "groupHint": "Puts the active layer into a new group",
     "ungroupHint": "Takes the layers out of the group and removes the group",
@@ -601,7 +601,7 @@
     "noTexture": "None",
     "modelTextures": "Model textures",
     "fileTexture": "The file’s own",
-    "fileTextureHint": "Leaves this map as the model’s own file carries it",
+    "fileTextureHint": "Leaves this channel as the model’s own file carries it",
     "chooseTexture": "Choose a texture",
     "clearTexture": "Remove the texture",
     "fields": {
@@ -694,7 +694,7 @@
     "compositing": "Compositing",
     "blend": "Blend",
     "fillOpacity": "Fill opacity",
-    "clipped": "Clip to layer below",
+    "clipped": "Clipped to layer below",
     "locks": "Locks",
     "lock_pixels": "Pixels",
     "lock_position": "Position",
@@ -756,12 +756,12 @@
     "lock_pixelsHint": "Stops paint from landing on this layer, without pinning it in place",
     "lock_positionHint": "Stops the layer from being moved; it can still be painted on",
     "lock_alphaHint": "Paints only where the layer already has something",
-    "lists": "Walked lists",
+    "lists": "Iterated lists",
     "list": "List {{number}}",
-    "addList": "Add a list to walk, with the port giving its item",
+    "addList": "Add a list to iterate over, with the port giving its item",
     "addListRow": "Add a list",
     "removeList": "Remove this list and the port giving its item",
-    "loop": "Loop closed",
+    "loop": "Closed loop",
     "listContents": "What this list holds"
   },
   "transport": {
@@ -991,17 +991,17 @@
     "newProject": "New project…",
     "openProject": "Open project…",
     "saveDocument": "Save",
-    "saveDocumentAs": "Save as",
+    "saveDocumentAs": "Save as…",
     "settings": "Settings…",
     "tools": "Tool windows",
     "add": "Add",
     "mesh": "Mesh",
     "light": "Light",
     "object": "Object",
-    "exportScene": "Export the scene",
-    "exportSelection": "Export the selection",
-    "exportTexture": "Export the texture",
-    "exportSkybox": "Export the sky",
+    "exportScene": "Export scene",
+    "exportSelection": "Export selection",
+    "exportTexture": "Export texture",
+    "exportSkybox": "Export sky",
     "resetLayout": "Reset layout",
     "fullScreen": "Full screen",
     "zoomIn": "Zoom in",
@@ -1056,7 +1056,7 @@
     },
     "concurrentJobs": {
       "title": "Concurrent generations",
-      "help": "How many creations work at the same time. The higher it is, the more you can start at once — but each may take longer to come back, and the service can turn away the ones arriving on top. Three is a good balance."
+      "help": "How many creations work at the same time. The higher it is, the more you can start at once — but each may take longer to come back, and the service can turn away the ones beyond its limit. Three is a good balance."
     },
     "captionArrivals": {
       "title": "Describe fetched assets",
@@ -1158,7 +1158,7 @@
       "sequence": "In the edit",
       "canvas": "In the picture",
       "skybox": "In the sky",
-      "audio": "In the take editor",
+      "audio": "In the audio editor",
       "texture": "In the material"
     },
     "spaces": "Workspaces",
@@ -1195,7 +1195,7 @@
       "help": "How far an object travels in one step while snapping is on, in metres. Snapping itself is switched on from the scene toolbar; this only says how fine it is."
     },
     "snapRotate": {
-      "title": "Turn step",
+      "title": "Rotate step",
       "help": "The angle of one step of rotation while snapping is on, in degrees. Rotation steps on from wherever it started: 15° gives twenty-four steps per turn, 90° quarter turns."
     },
     "snapScale": {
@@ -1463,68 +1463,68 @@
     },
     "canvasDeselect": {
       "title": "Deselect",
-      "help": "Drop the selected region, so the brush reaches the whole layer again"
+      "help": "Drops the selected region, so the brush reaches the whole layer again."
     },
     "canvasCropApply": {
       "title": "Apply the crop",
-      "help": "Trim the document to the placed frame. ⌘Z gives the frame back, not the pixels"
+      "help": "Trims the document to the placed frame. ⌘Z gives the frame back, not the pixels."
     },
     "canvasCropCancel": {
       "title": "Abandon the crop",
-      "help": "Take the crop frame away without trimming anything at all"
+      "help": "Takes the crop frame away without trimming anything at all."
     },
     "canvasMaskFromSelection": {
       "title": "Make a mask of the selection",
-      "help": "Hide the armed layer outside the selected region"
+      "help": "Hides the active layer outside the selected region."
     },
     "canvasRegenerate": {
       "title": "Regenerate the region",
-      "help": "Ask the model to repaint the masked region of the armed layer"
+      "help": "Asks the model to repaint the masked region of the active layer."
     },
     "canvasCutout": {
       "title": "Cut out",
-      "help": "Remove the background of the flattened image with the default model"
+      "help": "Removes the background of the flattened image with the default model."
     },
     "canvasEnlarge": {
-      "title": "Enlarge",
-      "help": "Raise the definition of the flattened image with the default model"
+      "title": "Upscale",
+      "help": "Raises the resolution of the flattened image with the default model."
     },
     "canvasVectorize": {
       "title": "Vectorize",
-      "help": "Turn the flattened image into paths with the default model"
+      "help": "Turns the flattened image into paths with the default model."
     },
     "canvasExtend": {
       "title": "Extend",
-      "help": "Ask the model to paint beyond the edges of the flattened image"
+      "help": "Asks the model to paint beyond the edges of the flattened image."
     },
     "canvasMergeDown": {
       "title": "Merge down",
-      "help": "Join the active layer and the one just below it into one, keeping the lower one’s name"
+      "help": "Joins the active layer and the one just below it into one, keeping the lower one’s name."
     },
     "canvasFlatten": {
       "title": "Flatten image",
-      "help": "Reduce the whole stack to a single layer: hidden layers are dropped, not merged",
+      "help": "Reduces the whole stack to a single layer: hidden layers are dropped, not merged.",
       "layerName": "Background"
     },
     "canvasFlipHorizontal": {
       "title": "Flip horizontal",
-      "help": "Mirror the whole document left to right, layers included"
+      "help": "Mirrors the whole document left to right, layers included."
     },
     "canvasFlipVertical": {
       "title": "Flip vertical",
-      "help": "Mirror the whole document top to bottom, layers included"
+      "help": "Mirrors the whole document top to bottom, layers included."
     },
     "canvasRotateCw": {
       "title": "Rotate clockwise",
-      "help": "Turn the document a quarter turn to the right: the frame turns with it"
+      "help": "Turns the document a quarter turn to the right: the frame turns with it."
     },
     "canvasRotateCcw": {
       "title": "Rotate counter-clockwise",
-      "help": "Turn the document a quarter turn to the left: the frame turns with it"
+      "help": "Turns the document a quarter turn to the left: the frame turns with it."
     },
     "canvasExport": {
       "title": "Export the image",
-      "help": "Write the flattened document to disk, as a PNG"
+      "help": "Writes the flattened document to disk, as a PNG."
     },
     "skyboxView": {
       "title": "Change the view",
@@ -1536,7 +1536,7 @@
     },
     "canvasToolMove": {
       "title": "Move tool",
-      "help": "Arms the pointer: a drag moves the armed layer, and its grips resize or turn it."
+      "help": "Arms the pointer: a drag moves the active layer, and its handles resize or turn it."
     },
     "canvasToolHand": {
       "title": "Hand tool",
@@ -1544,7 +1544,7 @@
     },
     "canvasToolScale": {
       "title": "Scale tool",
-      "help": "Arms scaling: the armed layer’s grips resize it, and Shift keeps its proportions."
+      "help": "Arms scaling: the active layer’s handles resize it, and Shift keeps its proportions."
     },
     "canvasToolCrop": {
       "title": "Crop tool",
@@ -1564,7 +1564,7 @@
     },
     "canvasToolShapeRectangle": {
       "title": "Rectangle shape",
-      "help": "Arms drawing a rectangle on the armed layer; Shift makes it a square."
+      "help": "Arms drawing a rectangle on the active layer; Shift makes it a square."
     },
     "canvasToolShapeLine": {
       "title": "Line shape",
@@ -1576,7 +1576,7 @@
     },
     "canvasToolShapeEllipse": {
       "title": "Ellipse shape",
-      "help": "Arms drawing an ellipse on the armed layer; Shift makes it a circle."
+      "help": "Arms drawing an ellipse on the active layer; Shift makes it a circle."
     },
     "canvasToolShapePolygon": {
       "title": "Polygon shape",
@@ -1588,7 +1588,7 @@
     },
     "canvasToolBrush": {
       "title": "Brush tool",
-      "help": "Arms the brush, with a softened edge. It paints on the armed layer, bounded by the selection when there is one."
+      "help": "Arms the brush, with a softened edge. It paints on the active layer, bounded by the selection when there is one."
     },
     "canvasToolPencil": {
       "title": "Pencil tool",
@@ -1603,8 +1603,8 @@
       "help": "Arms the point eraser: it clears where the hand passes, bounded by the selection when there is one."
     },
     "canvasToolEraserSelection": {
-      "title": "Erase the selection",
-      "help": "Arms the selection eraser: one click clears everything the selection encloses at once, rather than rubbing it out."
+      "title": "Selective eraser",
+      "help": "Arms the selective eraser: one click clears everything the selection encloses at once, rather than rubbing it out."
     },
     "canvasToolFill": {
       "title": "Paint bucket tool",
@@ -1624,11 +1624,11 @@
     },
     "sceneSkeletons": {
       "title": "Show skeletons",
-      "help": "Draws the bones of every rigged model over the scene"
+      "help": "Draws the bones of every rigged model over the scene."
     },
     "scenePoseMode": {
       "title": "Pose mode",
-      "help": "Switches between picking objects and picking the bones of a rig"
+      "help": "Switches between picking objects and picking the bones of a rig."
     }
   },
   "styles": {
@@ -1761,7 +1761,7 @@
     "total": "Total spent",
     "discount": "Discounts",
     "jobs": "Generations",
-    "indicative": "Indicative amount, derived from the public prepaid pack grid.",
+    "indicative": "Indicative amount, derived from the public prepaid pack price list.",
     "daily": "Per day",
     "perAccount": "Per account",
     "silent": "These keys did not answer: {{names}}. The figures above are the other keys’.",
@@ -1769,7 +1769,7 @@
       "model": "Model",
       "units": "Units",
       "jobs": "Generations",
-      "apiKey": "Via API key",
+      "apiKey": "API key units",
       "action": "Action",
       "count": "Count",
       "kind": "Asset kind",
@@ -1930,13 +1930,13 @@
     "sceneMesh": "Add to the scene",
     "audioTake": "Open in the audio editor",
     "imageLayer": "Place as a layer",
-    "videoClip": "Add to the montage",
+    "videoClip": "Add to the edit",
     "textureChannel": "Use as base colour",
     "skyboxSourceHint": "Opens the skybox document and sets this picture as the panorama source",
     "sceneMeshHint": "Opens the 3D scene and adds the model to it",
     "audioTakeHint": "Opens the audio editor and loads this take into it",
     "imageLayerHint": "Opens the image document and lays the asset in as a new layer",
-    "videoClipHint": "Opens the montage and adds the asset to it as a clip",
+    "videoClipHint": "Opens the edit and adds the asset to it as a clip",
     "textureChannelHint": "Opens the texture document and fills its base colour channel"
   },
   "prompt": {
@@ -2045,7 +2045,7 @@
       "runningBody": "They carry on while you work, and land in the document that asked for them.",
       "connect": "Connect an API key",
       "connectBody": "Models, generation and the shared library need a Scenario key and secret. Paste them into Settings ▸ Account — they are encrypted by the system keychain and never leave this machine. Everything on your disk works without one.",
-      "connectAction": "Enter my API key",
+      "connectAction": "Enter the API key",
       "ready": "Ready when you are",
       "readyBody": "{{project}} is open and holds nothing yet. Pick a workspace and make the first thing in it.",
       "readyAction": "Make an image"
