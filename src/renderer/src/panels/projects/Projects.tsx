@@ -67,7 +67,9 @@ export function Projects() {
     <Collection
       label={t('panels.projects')}
       items={items}
-      rowHeight="stacked"
+      // `filled`, not `stacked`: the open project is painted edge to edge, and a fill takes off
+      // the room the same two steps of text keep in the explorer, which paints none.
+      rowHeight="filled"
       // The open project, which is at most one — an array because that is the shape a collection
       // takes, not because two could ever be in it.
       selectedIds={open === undefined ? [] : [open]}

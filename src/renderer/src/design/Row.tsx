@@ -46,11 +46,11 @@ export function Row({
   tip = TIP_RIGHT,
 }: RowProps) {
   return (
-    // `px-2`, not `px-1`: the fill this row sits in is painted by the list cell and reaches the
-    // row's own edge, so at one step the name touched the highlight it stands in. Raised for every
-    // list at once rather than for the one panel it was noticed in — a row that breathes in the
-    // projects and not in the models is the drift this component exists to prevent.
-    <div className="flex h-full items-center gap-2 px-2">
+    // One step, and the cell that PAINTS the fill adds the second — `Collection`'s cell and the
+    // tree's row both do. Raised to two here once, for a name touching its own highlight in the
+    // projects: inside a tree that stacked on the row's own step and pushed every name a further
+    // 4px off its chevron, in a panel whose rows are not filled at all.
+    <div className="flex h-full items-center gap-2 px-1">
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">

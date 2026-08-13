@@ -574,7 +574,18 @@ describe('Collection, the height it estimates', () => {
   it('leaves a stacked row taller than a plain one at the same density', () => {
     listOf(3, { rowHeight: 'stacked' })
 
-    // The shipped fallback, 44 + 4 of gap, three times — no gauge is declared under jsdom.
+    // The shipped fallback, 36 + 4 of gap, three times — no gauge is declared under jsdom.
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '120px' })
+  })
+
+  /**
+   * The same two steps of text, in a row painted edge to edge: the fill takes off the room a bare
+   * row keeps, so it asks for its own gauge. Kept apart from `stacked` because raising THAT one
+   * for the home's filled rows loosened the explorer and the documents panel, which fill nothing.
+   */
+  it('leaves a filled row taller still, on a gauge of its own', () => {
+    listOf(3, { rowHeight: 'filled' })
+
     expect(screen.getByRole('listbox')).toHaveStyle({ height: '144px' })
   })
 

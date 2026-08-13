@@ -207,7 +207,13 @@ export const LIST_ROW_HEIGHT = 28
  * value to write at a call site: `useRowHeight` reads the gauge, and a caller passing a number
  * would go back to being right at one density only.
  */
-export const STACKED_ROW_HEIGHT = 44
+export const STACKED_ROW_HEIGHT = 36
+
+/**
+ * `--sc-row-filled` at its tallest, as a number — the same two steps of text in a row painted
+ * edge to edge, which needs the room the fill takes off it.
+ */
+export const FILLED_ROW_HEIGHT = 44
 
 /**
  * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn
