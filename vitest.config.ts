@@ -67,10 +67,22 @@ process.env.TZ = TEST_TZ
  * mechanism rather than the crash: counting the PIDs that log `ExperimentalWarning: SQLite`, the
  * twelve loads happen in TWELVE processes here, against ONE process on twelve threads when all
  * projects use threads. **It does NOT prevent the crash, and that is now measured rather than
- * doubted**: 25 consecutive whole-suite runs under this very shape on 2026-08-13 ended one run in
- * `EXIT=139` — SIGSEGV, twelve processes killed mid-flight, no summary printed, the `node:sqlite`
- * warnings the only thing on screen. Cumulative rate under the parade: 1 in 56. An insurance, not
- * a fix — and the earlier "none in 5 + 26 runs" was too small a sample to say otherwise.
+ * doubted**: on 2026-08-13, one whole-suite run in fifty ended in `EXIT=139` — SIGSEGV, twelve
+ * processes killed mid-flight, no summary printed. Cumulative rate under the parade: **1 in 81**.
+ * An insurance, not a fix.
+ *
+ * **What the hunt for it established, so that nobody pays for it twice** — two series of 25 runs,
+ * one crash in the first, none in the second:
+ * - macOS wrote **no crash report** for it (`~/Library/Logs/DiagnosticReports`, empty at that
+ *   minute while `node` reports from other days sit right there). There is no stack to read.
+ * - `node:sqlite` is the suspect the paragraph above names, and nothing measured incriminates it.
+ *   Its warnings were the only thing on screen because **nothing else prints before the summary**,
+ *   which designates it no more than any other module.
+ * - The concrete hypothesis was tested and is dead: 500 `DatabaseSync` opened without `close()`
+ *   and finalised under a forced GC, five times, crash none. The native finaliser is not it.
+ *
+ * At one in eighty-one, with no report and no isolated repro, **catching it in the act costs more
+ * than waiting for it**. Reopen only with a mechanism in hand, never with more runs.
  *
  * Stated per project, and that is not redundancy: a project inherits nothing from the root `test`
  * block unless it says `extends`, and none here does. A review asked each project which side it
