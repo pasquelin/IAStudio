@@ -9,11 +9,14 @@ export type PictureFieldProps = {
   value: string | null
   onChange: (assetId: string | null) => void
   /**
-   * What the empty row reads, already translated. Given only where "empty" does not mean "no
-   * picture": a model's slot left empty wears the map its own file carries, and reading « none »
-   * over a textured model would be a plain lie.
+   * What the empty row reads, and what its hint explains — both already translated. Given only
+   * where "empty" does not mean "no picture": a model's slot left empty wears the map its own file
+   * carries, and reading « none » over a textured model would be a plain lie. The hint travels
+   * with the label because it says the same thing at more length, and one without the other is
+   * the very lie the label was overridden to avoid.
    */
   emptyLabel?: string
+  emptyHint?: string
 }
 
 /**
@@ -21,7 +24,7 @@ export type PictureFieldProps = {
  * what it dresses. One component rather than one per section, so a mesh's five maps and a
  * sprite's one never disagree on what counts as a picture, or on what the empty row reads.
  */
-export function PictureField({ label, value, onChange, emptyLabel }: PictureFieldProps) {
+export function PictureField({ label, value, onChange, emptyLabel, emptyHint }: PictureFieldProps) {
   const { t } = useTranslation()
   const assets = useAssets(state => state.items)
 
@@ -42,7 +45,7 @@ export function PictureField({ label, value, onChange, emptyLabel }: PictureFiel
       emptyLabel={emptyLabel ?? t('inspector.noTexture')}
       chooseLabel={t('inspector.chooseTexture')}
       clearLabel={t('inspector.clearTexture')}
-      emptyHint={t('inspector.noTextureHint')}
+      emptyHint={emptyHint ?? t('inspector.noTextureHint')}
       optionHint={t('inspector.pickTextureHint')}
     />
   )

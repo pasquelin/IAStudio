@@ -1,14 +1,13 @@
 import { Mesh, MeshStandardMaterial, type Material, type Object3D, type Texture } from 'three'
 import { TEXTURE_SLOTS, type ModelRef, type TextureSlot } from '@shared/domain/scene'
-import { spaceOf } from './material-textures'
-import { createTextureBinding } from './texture-binding'
+import { createSlotBindings } from './texture-binding'
 import type { TextureCache } from './texture-cache'
 import { giveSecondUvSet } from './three-sync'
 
 export type ModelTextures = {
   /** The overrides a node holds, or none. An empty set puts every map back to the file's own. */
   apply: (overrides: ModelRef['textures']) => void
-  /** Gives every reference back and hands the instance its file's materials again. */
+  /** Gives every reference back. The materials go with the instance that wore them. */
   dispose: () => void
 }
 
@@ -23,75 +22,71 @@ type Dressed = {
 /**
  * The project's own maps over the ones a model's file carries, on every material of ONE instance.
  *
- * Its materials are cloned before the first map is written, and that is the whole reason this is
- * not `createMaterialTextures` with another argument: `instanceOf` clones a model's tree but
- * SHARES its materials, so writing a map into one would repaint every other node built from the
- * same file — including the ones the user never touched.
+ * Its materials are cloned, and that is the whole reason this is not `createMaterialTextures` with
+ * another argument: `instanceOf` copies a model's tree but SHARES its materials, so writing a map
+ * into one would repaint every other node built from the same file — the ones the user never
+ * touched included.
  *
- * Cloning is lazy, so a model with no override costs nothing at all: the overwhelming case is a
- * file shown exactly as it was generated.
+ * **Cloned the moment the file lands, never later**, and this is not an optimisation left on the
+ * table. A display mode swaps `mesh.material` for a stand-in shared by the whole scene
+ * (`pane-dress`): a clone taken while one is on would copy the CLAY, record its empty slots as the
+ * file's own, and hand `PaneMemory` a material it takes for the model's — losing the real one for
+ * the rest of the session. Taking the copy at build time, before anything dresses the scene, is
+ * what makes the slots hold their own material like `createMaterialTextures` does.
+ *
+ * The clones are not disposed: what they hold beyond their own uniforms belongs to the file, and
+ * the instance wearing them is dropped whole with the node.
  */
 export function createModelTextures(
   cache: TextureCache,
   root: Object3D,
   onChange: () => void,
+  /** Said when a model carries nothing a map can be written into — see `dressed` below. */
+  onUndressable: () => void = () => {},
 ): ModelTextures {
-  let dressed: Dressed[] | null = null
+  const dressed: Dressed[] = []
 
-  const own = (): readonly Dressed[] => {
-    if (dressed) return dressed
+  root.traverse(object => {
+    if (!(object instanceof Mesh)) return
 
-    const taken: Dressed[] = []
-    root.traverse(object => {
-      if (!(object instanceof Mesh)) return
+    const clone = (one: Material): Material => {
+      // A material of another class — `KHR_materials_unlit` brings `MeshBasicMaterial` — has no
+      // slot to write into and is left shared: copying it would buy nothing.
+      if (!(one instanceof MeshStandardMaterial)) return one
 
-      const before = object.material
-      const clone = (one: Material): Material => {
-        if (!(one instanceof MeshStandardMaterial)) return one
+      const copy = one.clone()
+      const fileMaps = new Map<TextureSlot, Texture | null>(
+        TEXTURE_SLOTS.map(slot => [slot, copy[slot]]),
+      )
+      dressed.push({ mesh: object, material: copy, fileMaps })
+      return copy
+    }
 
-        const copy = one.clone()
-        const fileMaps = new Map<TextureSlot, Texture | null>(
-          TEXTURE_SLOTS.map(slot => [slot, copy[slot]]),
-        )
-        taken.push({ mesh: object, material: copy, fileMaps })
-        return copy
-      }
+    const worn = object.material
+    object.material = Array.isArray(worn) ? worn.map(clone) : clone(worn)
+  })
 
-      object.material = Array.isArray(before) ? before.map(clone) : clone(before)
-    })
+  const slots = createSlotBindings(cache, (slot, texture) => {
+    // Nothing to dress, and the inspector still offers five slots: said out loud rather than
+    // letting every one of them do nothing in silence.
+    if (dressed.length === 0) return onUndressable()
 
-    dressed = taken
-    return dressed
-  }
+    for (const { mesh, material, fileMaps } of dressed) {
+      const next = texture ?? fileMaps.get(slot) ?? null
+      if (material[slot] === next) continue
 
-  const slots = TEXTURE_SLOTS.map(slot => ({
-    slot,
-    bind: createTextureBinding(cache, spaceOf(slot), texture => {
-      for (const { mesh, material, fileMaps } of own()) {
-        const next = texture ?? fileMaps.get(slot) ?? null
-        if (material[slot] === next) continue
+      // Same reason as a mesh's own maps: occlusion reads the second UV set, and a generated
+      // model rarely carries one — left alone, an AO map would do nothing at all.
+      if (next && slot === 'aoMap') giveSecondUvSet(mesh.geometry)
 
-        // Same reason as a mesh's own maps: occlusion reads the second UV set, and a generated
-        // model rarely carries one — left alone, an AO map would do nothing at all.
-        if (next && slot === 'aoMap') giveSecondUvSet(mesh.geometry)
-
-        material[slot] = next
-        material.needsUpdate = true
-      }
-      onChange()
-    }),
-  }))
+      material[slot] = next
+      material.needsUpdate = true
+    }
+    onChange()
+  })
 
   return {
-    apply: overrides => {
-      for (const { slot, bind } of slots) bind(overrides?.[slot]?.assetId ?? null)
-    },
-    dispose: () => {
-      // Emptied first: the bindings put the file's own maps back, so what is disposed below is a
-      // clone holding nothing the file did not already hold.
-      for (const { bind } of slots) bind(null)
-      for (const { material } of dressed ?? []) material.dispose()
-      dressed = null
-    },
+    apply: overrides => slots.apply(overrides ?? {}),
+    dispose: slots.clear,
   }
 }

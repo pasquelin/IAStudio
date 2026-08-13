@@ -153,13 +153,40 @@ describe('createMaterialTextures', () => {
 
     scripted.versions.set('tex-1', 'before')
     textures.apply(withMap('tex-1'))
-    await scripted.settle('tex-1')
+    const before = await scripted.settle('tex-1')
 
     scripted.versions.set('tex-1', 'after')
     textures.apply(withMap('tex-1'))
 
+    // What is on screen stays until the new version has decoded, and the old reference goes back
+    // only then: a ⌘S over a texture must not flash the mesh bare, nor draw a freed texture.
+    expect(material.map).toBe(before)
+    expect(scripted.released).toEqual([])
+
+    const after = await scripted.settle('tex-1')
     expect(scripted.acquired).toEqual(['tex-1', 'tex-1'])
     expect(scripted.released).toEqual(['tex-1'])
+    expect(material.map).toBe(after)
+  })
+
+  /**
+   * The shelf is scoped by type and empty until its first read lands, so it legitimately says
+   * nothing about a picture a slot names. Re-asking then would fetch the BARE URL — exactly where
+   * the stale bitmap sits in the browser's cache — and trade a fresh texture for the old one.
+   */
+  it('keeps the texture it holds when the catalogue says nothing about it', async () => {
+    const scripted = scriptedTextureCache()
+    const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
+
+    scripted.versions.set('tex-1', 'known')
+    textures.apply(withMap('tex-1'))
+    const loaded = await scripted.settle('tex-1')
+
+    scripted.versions.delete('tex-1')
+    textures.apply(withMap('tex-1'))
+
+    expect(scripted.acquired).toEqual(['tex-1'])
+    expect(material.map).toBe(loaded)
   })
 
   it('asks for nothing again when the picture has not been rewritten', () => {

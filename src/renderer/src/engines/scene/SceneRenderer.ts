@@ -1329,7 +1329,13 @@ export class SceneRenderer {
 
       // The instance, never the cached source: its materials are shared with every other node
       // built from the same file, and `createModelTextures` is what clones them before writing.
-      const maps = createModelTextures(this.textureCache, holder, this.viewport.requestRender)
+      const maps = createModelTextures(this.textureCache, holder, this.viewport.requestRender, () =>
+        reportFailure(
+          'scene.texture',
+          assetId,
+          new Error('this model carries no material a map can be written into'),
+        ),
+      )
       this.modelMaps.set(node.id, maps)
       if (applied.type === 'model') maps.apply(applied.model.textures)
 

@@ -6,8 +6,9 @@ export type TextureSlotFieldsProps = {
   /** What each slot points at today. An absent or `null` slot leaves its row empty. */
   slots: Partial<Record<TextureSlot, TextureRef | null>>
   onChange: (slot: TextureSlot, assetId: string | null) => void
-  /** What an empty row reads, already translated — see `PictureField`. */
+  /** What an empty row reads and explains, already translated — see `PictureField`. */
   emptyLabel?: string
+  emptyHint?: string
 }
 
 /**
@@ -17,7 +18,12 @@ export type TextureSlotFieldsProps = {
  * different fields of a document, and there the resemblance ends — a mesh's material also carries
  * a colour and a finish, a model's file already carries both.
  */
-export function TextureSlotFields({ slots, onChange, emptyLabel }: TextureSlotFieldsProps) {
+export function TextureSlotFields({
+  slots,
+  onChange,
+  emptyLabel,
+  emptyHint,
+}: TextureSlotFieldsProps) {
   const { t } = useTranslation()
 
   return (
@@ -29,6 +35,7 @@ export function TextureSlotFields({ slots, onChange, emptyLabel }: TextureSlotFi
           value={slots[slot]?.assetId ?? null}
           onChange={assetId => onChange(slot, assetId)}
           emptyLabel={emptyLabel}
+          emptyHint={emptyHint}
         />
       ))}
     </>

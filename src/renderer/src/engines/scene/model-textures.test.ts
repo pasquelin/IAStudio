@@ -94,17 +94,35 @@ describe('createModelTextures', () => {
     expect(materialOf(instance).map).toBe(fileMap)
   })
 
-  // A model shown as it was generated is the overwhelming case, and cloning its materials there
-  // would cost a shader program per node for nothing.
-  it('clones nothing while no slot is overridden', () => {
+  /**
+   * Taken at build time rather than at the first override, and the display modes are why: one
+   * swaps `mesh.material` for a stand-in shared by the whole scene, so a late copy would clone the
+   * CLAY and hand `PaneMemory` a material it takes for the model's own.
+   */
+  it('takes its own copy of the materials as soon as the file lands', () => {
     const scripted = scriptedTextureCache()
     const { source } = loadedModel()
     const instance = instanceOf(source)
-    const before = materialOf(instance)
+    const shared = materialOf(instance)
 
-    createModelTextures(scripted.cache, instance, onChange).apply(undefined)
+    createModelTextures(scripted.cache, instance, onChange)
 
-    expect(materialOf(instance)).toBe(before)
-    expect(materialOf(source)).toBe(before)
+    expect(materialOf(instance)).not.toBe(shared)
+    expect(materialOf(source)).toBe(shared)
+  })
+
+  // `KHR_materials_unlit` brings a `MeshBasicMaterial`, which has no slot to write into. The
+  // inspector still offers five of them, so the refusal is said rather than left silent.
+  it('says so when the model carries nothing a map can be written into', () => {
+    const scripted = scriptedTextureCache()
+    const unlit = new Object3D()
+    unlit.add(new Mesh(geometryFor({ kind: 'box', width: 1, height: 1, depth: 1 })))
+    const undressable = vi.fn()
+
+    createModelTextures(scripted.cache, unlit, onChange, undressable).apply({
+      map: { assetId: 'tex-1' },
+    })
+
+    expect(undressable).toHaveBeenCalled()
   })
 })

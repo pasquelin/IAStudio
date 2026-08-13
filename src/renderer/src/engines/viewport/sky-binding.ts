@@ -25,18 +25,30 @@ export type SkyBinding = {
  * but hangs nothing behind it, so without this the backdrop stays whatever was there — black.
  */
 export function createSkyBinding(cache: TextureCache, paintBackground: () => void): SkyBinding {
+  /**
+   * A reference the cache is holding for us: the asset AND the version it was taken under, which
+   * has to be given back exactly as it was asked for — the cache keys on both, so releasing a sky
+   * under a stamp that has moved since would free an entry nobody holds and leak the one we do.
+   *
+   * Carried for the same reason a material slot carries it: a sky and a mesh's base map can be
+   * the same file, and two spellings of the same reference would decode it twice.
+   */
+  type Held = { assetId: string; version: string | undefined }
+
   /** Settles the races. */
   let wanted: string | null = null
   /** What `scene.background` holds, which is not what was last asked for while one decodes. */
-  let shown: string | null = null
+  let shown: Held | null = null
   /** Every reference a decode still carries: one name could hold only the last of them. */
-  const inFlight = new Map<symbol, string>()
+  const inFlight = new Map<symbol, Held>()
+
+  const give = (held: Held): void => cache.release(held.assetId, SRGBColorSpace, held.version)
 
   const release = (): void => {
-    if (shown) cache.release(shown, SRGBColorSpace)
+    if (shown) give(shown)
     // Drained here rather than left to each continuation: the viewport may be going away, and a
     // reference handed back a decode later is one held too long.
-    for (const assetId of inFlight.values()) cache.release(assetId, SRGBColorSpace)
+    for (const held of inFlight.values()) give(held)
     inFlight.clear()
     shown = null
     wanted = null
@@ -61,9 +73,10 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
       }
 
       wanted = assetId
+      const held: Held = { assetId, version: cache.versionOf(assetId) }
       const token = Symbol(assetId)
-      inFlight.set(token, assetId)
-      const loaded = await cache.acquire(assetId, SRGBColorSpace)
+      inFlight.set(token, held)
+      const loaded = await cache.acquire(held.assetId, SRGBColorSpace, held.version)
 
       // Drained by `release` while this decoded: the reference is already back, and giving it
       // twice would take the count to zero under whoever else holds the same sky.
@@ -81,7 +94,7 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
 
       // Overtaken while decoding: gives back what it acquired, which it never put on screen.
       if (wanted !== assetId) {
-        cache.release(assetId, SRGBColorSpace)
+        give(held)
         return
       }
 
@@ -90,8 +103,8 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
 
       // After the swap, never before: the old texture is bound to the background until then.
       const previous = shown
-      shown = assetId
-      if (previous) cache.release(previous, SRGBColorSpace)
+      shown = held
+      if (previous) give(previous)
     },
   }
 }

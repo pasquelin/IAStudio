@@ -203,7 +203,13 @@ function isOptionalTextureOverrides(value: unknown): boolean {
   if (value == null) return true
   if (!isRecord(value)) return false
 
-  return TEXTURE_SLOTS.every(slot => value[slot] === undefined || isTextureRef(value[slot]))
+  // `null` is refused where a material's own slots take it: there, `null` means « no map », and
+  // here « the file's own » is what an ABSENT slot already says. Accepting it would load a state
+  // its own type forbids, and one `setModelTextures` never empties — the dead field would be
+  // written back on every save.
+  return TEXTURE_SLOTS.every(
+    slot => value[slot] === undefined || (value[slot] !== null && isTextureRef(value[slot])),
+  )
 }
 
 /**

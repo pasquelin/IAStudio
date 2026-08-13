@@ -728,6 +728,7 @@
     "noTexture": "None",
     "modelTextures": "Model textures",
     "fileTexture": "The file’s own",
+    "fileTextureHint": "Leaves this map as the model’s own file carries it",
     "chooseTexture": "Choose a texture",
     "clearTexture": "Remove the texture",
     "fields": {

@@ -24,6 +24,7 @@ export function ModelTexturesSection({ textures, onChange }: ModelTexturesSectio
       <TextureSlotFields
         slots={textures ?? {}}
         emptyLabel={t('inspector.fileTexture')}
+        emptyHint={t('inspector.fileTextureHint')}
         onChange={(slot, assetId) => {
           const rest = { ...textures }
           delete rest[slot]

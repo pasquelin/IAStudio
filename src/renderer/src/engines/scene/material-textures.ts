@@ -1,18 +1,6 @@
-import {
-  NoColorSpace,
-  SRGBColorSpace,
-  type ColorSpace,
-  type Mesh,
-  type MeshStandardMaterial,
-  type SpriteMaterial,
-} from 'three'
-import {
-  TEXTURE_SLOTS,
-  type MaterialDescriptor,
-  type SpriteDescriptor,
-  type TextureSlot,
-} from '@shared/domain/scene'
-import { createTextureBinding } from './texture-binding'
+import { SRGBColorSpace, type Mesh, type MeshStandardMaterial, type SpriteMaterial } from 'three'
+import type { MaterialDescriptor, SpriteDescriptor } from '@shared/domain/scene'
+import { createSlotBindings, createTextureBinding } from './texture-binding'
 import type { TextureCache } from './texture-cache'
 import { giveSecondUvSet } from './three-sync'
 
@@ -22,14 +10,6 @@ export type MaterialTextures = {
   dispose: () => void
 }
 
-/**
- * The base colour map is authored in sRGB; every other map carries data, not colour, and
- * decoding it would wash out the normals and lighten the roughness.
- */
-export function spaceOf(slot: TextureSlot): ColorSpace {
-  return slot === 'map' ? SRGBColorSpace : NoColorSpace
-}
-
 /** The texture slots of one mesh, kept in line with its descriptor. */
 export function createMaterialTextures(
   cache: TextureCache,
@@ -37,30 +17,23 @@ export function createMaterialTextures(
   material: MeshStandardMaterial,
   onChange: () => void,
 ): MaterialTextures {
-  const slots = TEXTURE_SLOTS.map(slot => ({
-    slot,
-    bind: createTextureBinding(cache, spaceOf(slot), texture => {
-      if (material[slot] === texture) return
-      // Ambient occlusion reads the second UV set, which no primitive of the studio carries:
-      // left alone, ticking an AO map would do nothing at all.
-      if (texture && slot === 'aoMap') giveSecondUvSet(mesh.geometry)
+  const slots = createSlotBindings(cache, (slot, texture) => {
+    if (material[slot] === texture) return
+    // Ambient occlusion reads the second UV set, which no primitive of the studio carries:
+    // left alone, ticking an AO map would do nothing at all.
+    if (texture && slot === 'aoMap') giveSecondUvSet(mesh.geometry)
 
-      material[slot] = texture
-      // A slot that goes from empty to filled changes the shader program itself.
-      material.needsUpdate = true
-      onChange()
-    }),
-  }))
+    material[slot] = texture
+    // A slot that goes from empty to filled changes the shader program itself.
+    material.needsUpdate = true
+    onChange()
+  })
 
   return {
-    apply: descriptor => {
-      for (const { slot, bind } of slots) bind(descriptor[slot]?.assetId ?? null)
-    },
+    apply: descriptor => slots.apply(descriptor),
     // Emptied rather than only given back: a material left pointing at a freed texture is one
     // the next frame would still try to draw with.
-    dispose: () => {
-      for (const { bind } of slots) bind(null)
-    },
+    dispose: slots.clear,
   }
 }
 

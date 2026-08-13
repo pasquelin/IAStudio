@@ -1,4 +1,5 @@
-import type { ColorSpace, Texture } from 'three'
+import { NoColorSpace, SRGBColorSpace, type ColorSpace, type Texture } from 'three'
+import { TEXTURE_SLOTS, type TextureRef, type TextureSlot } from '@shared/domain/scene'
 import type { TextureCache } from './texture-cache'
 
 /**
@@ -24,28 +25,90 @@ export function createTextureBinding(
   colorSpace: ColorSpace,
   install: (texture: Texture | null) => void,
 ): TextureBinding {
-  let held: { assetId: string; version: string | undefined } | null = null
+  type Wanted = { assetId: string; version: string | undefined }
+  let held: Wanted | null = null
 
-  const release = (): void => {
-    if (held) cache.release(held.assetId, colorSpace, held.version)
-    held = null
+  const release = (given: Wanted | null): void => {
+    if (given) cache.release(given.assetId, colorSpace, given.version)
   }
 
   return assetId => {
-    const version = assetId === null ? undefined : cache.versionOf(assetId)
-    if (held?.assetId === assetId && held.version === version) return
-    if (held === null && assetId === null) return
+    const wanted = assetId === null ? null : { assetId, version: cache.versionOf(assetId) }
+    // Compared through the optional chain so an empty slot asked to stay empty also stops here:
+    // falling through would write `null` into the material on every apply, and recompile its
+    // shader for it.
+    if (held?.assetId === wanted?.assetId && held?.version === wanted?.version) return
 
-    release()
-    install(null)
-    if (assetId === null) return
+    /**
+     * The catalogue says nothing about a picture this slot already holds — the shelf is scoped by
+     * type, so it legitimately holds rows a slot can name without it (see `usePosterUrl`), and it
+     * is also empty until its first read lands. Kept as it is rather than reloaded: the bare URL
+     * is exactly where the stale bitmap sits in the browser's cache, so re-asking would trade a
+     * fresh texture for the one it replaced.
+     */
+    if (wanted && held?.assetId === wanted.assetId && wanted.version === undefined) return
 
-    const wanted = { assetId, version }
+    const previous = held
     held = wanted
-    void cache.acquire(assetId, colorSpace, version).then(texture => {
+    /**
+     * The same picture in a newer version: what is on screen stays until the replacement has
+     * decoded, and only then is the old reference given back — emptied first, a ⌘S over a texture
+     * would flash the model bare, and freeing it first would leave the frames in between drawing
+     * a texture the cache has already disposed. Same order, same reason as `sky-binding`.
+     */
+    const swapping = previous !== null && wanted !== null && previous.assetId === wanted.assetId
+    if (!swapping) {
+      release(previous)
+      install(null)
+    }
+    if (!wanted) return
+
+    void cache.acquire(wanted.assetId, colorSpace, wanted.version).then(texture => {
+      if (swapping) release(previous)
       // Stale: the slot has moved on, and the reference it took went back with the move.
       if (held !== wanted || !texture) return
       install(texture)
     })
+  }
+}
+
+/**
+ * The base colour map is authored in sRGB; every other map carries data, not colour, and
+ * decoding it would wash out the normals and lighten the roughness.
+ */
+export function spaceOf(slot: TextureSlot): ColorSpace {
+  return slot === 'map' ? SRGBColorSpace : NoColorSpace
+}
+
+export type SlotBindings = {
+  /** Points every slot at what the maps say, and empties the ones they say nothing about. */
+  apply: (maps: Partial<Record<TextureSlot, TextureRef | null>>) => void
+  /** Empties them all and gives every reference back. */
+  clear: () => void
+}
+
+/**
+ * The five slots of a standard material, each holding one reference, driven as one.
+ *
+ * What differs between a mesh's own material and a model's overrides is where the texture is
+ * WRITTEN, which is the callback — everything around it, down to which colour space each slot
+ * reads in, is the same rule twice. Written here so a sixth slot reaches both.
+ */
+export function createSlotBindings(
+  cache: TextureCache,
+  install: (slot: TextureSlot, texture: Texture | null) => void,
+): SlotBindings {
+  const slots = TEXTURE_SLOTS.map(slot => ({
+    slot,
+    bind: createTextureBinding(cache, spaceOf(slot), texture => install(slot, texture)),
+  }))
+
+  return {
+    apply: maps => {
+      for (const { slot, bind } of slots) bind(maps[slot]?.assetId ?? null)
+    },
+    clear: () => {
+      for (const { bind } of slots) bind(null)
+    },
   }
 }

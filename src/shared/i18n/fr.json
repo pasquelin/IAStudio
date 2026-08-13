@@ -728,6 +728,7 @@
     "noTexture": "Aucune",
     "modelTextures": "Textures du modèle",
     "fileTexture": "Celle du fichier",
+    "fileTextureHint": "Laisse ce canal tel que le fichier du modèle le porte",
     "chooseTexture": "Choisir une texture",
     "clearTexture": "Retirer la texture",
     "fields": {
