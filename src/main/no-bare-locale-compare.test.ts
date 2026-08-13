@@ -17,16 +17,60 @@ function namesNoLanguage(call: ts.CallExpression): boolean {
   return ts.isIdentifier(language) && language.text === 'undefined'
 }
 
-/** Every `localeCompare` called without being told which language to answer in. */
-function bareCallsIn(path: string, source: string): string[] {
-  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
+/**
+ * What a call is named, whether it is written `a.localeCompare(b)` or `a['localeCompare'](b)`.
+ *
+ * The second spelling is nobody's habit, which is exactly why a guard has to read it: a rule that
+ * a rename tool or a minifier can slip past is a rule that stops holding without saying so.
+ */
+function calledName(call: ts.CallExpression): string | null {
+  const target = call.expression
+  if (ts.isPropertyAccessExpression(target)) return target.name.text
+  if (ts.isElementAccessExpression(target) && ts.isStringLiteral(target.argumentExpression))
+    return target.argumentExpression.text
+
+  return null
+}
+
+/**
+ * A collator built with no locale, which is the same defect wearing the other constructor.
+ *
+ * `new Intl.Collator().compare` answers in the OS locale exactly as a bare `localeCompare` does.
+ * `no-uncached-formatter.test.ts` bans a loose `new Intl` in the renderer, but it says nothing
+ * about the argument and nothing about the other three trees.
+ */
+function localelessCollatorsIn(file: ts.SourceFile, path: string): string[] {
   const found: string[] = []
 
   const walk = (node: ts.Node): void => {
     if (
-      ts.isCallExpression(node) &&
+      ts.isNewExpression(node) &&
       ts.isPropertyAccessExpression(node.expression) &&
-      node.expression.name.text === 'localeCompare' &&
+      ts.isIdentifier(node.expression.expression) &&
+      node.expression.expression.text === 'Intl' &&
+      node.expression.name.text === 'Collator' &&
+      (node.arguments?.length ?? 0) === 0
+    ) {
+      const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
+      found.push(`${path}:${line + 1}`)
+    }
+
+    ts.forEachChild(node, walk)
+  }
+
+  walk(file)
+  return found
+}
+
+/** Every comparison of two strings that leaves the language to the machine. */
+function bareCallsIn(path: string, source: string): string[] {
+  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
+  const found: string[] = localelessCollatorsIn(file, path)
+
+  const walk = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      calledName(node) === 'localeCompare' &&
       namesNoLanguage(node)
     ) {
       const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
@@ -63,14 +107,23 @@ function bareCallsIn(path: string, source: string): string[] {
  *   names against a held `Intl.Collator`, and under 0.1 ms at the 4000 rushes of `assets/vid`,
  *   the largest list the studio sorts. Too small to route a sort through `kept`, and the figures
  *   are here so the next reader can re-decide rather than re-measure.
- * - **this closes one SPELLING, not the class of defect.** `.sort()` with no comparator sorts by
- *   code unit too, and nothing here sees it. Counted rather than assumed: five bare `.sort()` calls
- *   live in `src/`, and four are on keys a machine orders — `Object.keys(patch)`, a hash, a stable
- *   id — where determinism is the point. The fifth, `main/project/catalog.ts:518`, sorts the asset
- *   tags a person types and reads, and it IS the same defect. A rule banning the bare `.sort()`
- *   would cry wolf four times out of five, which is a rule somebody turns off; that site is a
- *   batch of its own, because the catalogue is a SQL port that knows nothing but `@shared` and
- *   whether it should order names at all is a question about layers, not about a comparator.
+ * - **this reads TWO spellings, and the class of defect has more.** Both found by the batch's own
+ *   adversarial review, both in `main/project/catalog.ts`, both on the asset tags a person types
+ *   and reads: `.sort()` with no comparator at line 518, and `ORDER BY tag` at line 461, which
+ *   SQLite answers in BINARY collation. A French project tagged `Éclairage`, `Extérieur`, `Zoom`
+ *   lists as `Extérieur, Zoom, Éclairage`. Neither is reachable from here — one is a call this
+ *   rule does not name, the other is a string in a query — and **a rule banning the bare `.sort()`
+ *   would cry wolf four times out of five**: counted, five live in `src/` and four order keys a
+ *   machine reads, where determinism is the point. Those two sites are a batch of their own,
+ *   because the catalogue is a SQL port that knows nothing but `@shared`, and whether it should
+ *   order names at all is a question about layers rather than about a comparator.
+ *
+ * And one it CANNOT close, rather than a choice: this reads a file at a time, so it sees that a
+ * language was named, never what that name holds at runtime. `localeCompare(other, language)`
+ * passes here whatever `language` turns out to be — which is how `stores/documents.ts` handed it
+ * `i18next.language`, `undefined` until `initI18n` resolves and `pseudo` under the DEV flag, both
+ * of which `Intl` resolves to `en-US`. `resolveLanguage` (`shared/i18n`) is the way through, and
+ * only a reader can tell that the expression goes through it.
  */
 describe('no sort hands its language to the machine', () => {
   const findingsOf = (): string[] =>
@@ -107,7 +160,25 @@ describe('no sort hands its language to the machine', () => {
 
   it('leaves the call that names a language alone', () => {
     expect(bareCallsIn('probe.ts', "const n = a.localeCompare(b, 'fr')")).toEqual([])
-    expect(bareCallsIn('probe.ts', 'const n = a.localeCompare(b, i18next.language)')).toEqual([])
+    expect(bareCallsIn('probe.ts', 'const n = a.localeCompare(b, language)')).toEqual([])
+  })
+
+  // Nobody writes it this way, which is the reason a guard has to: a rule a rename tool can slip
+  // past is a rule that stops holding without saying so. Found by the batch's own review.
+  it('reads the call spelled through an element access', () => {
+    expect(bareCallsIn('probe.ts', "const n = a['localeCompare'](b)")).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', "const n = a['localeCompare'](b, 'fr')")).toEqual([])
+  })
+
+  /**
+   * The same defect wearing the other constructor, and the second evasion the review measured.
+   * `new Intl.Collator()` with no locale answers in the OS locale exactly as the bare call does —
+   * `en-US`, measured. A collator handed a language is the cheaper form and stays welcome.
+   */
+  it('reads a collator built with no locale, and lets the one with a language through', () => {
+    expect(bareCallsIn('probe.ts', 'const c = new Intl.Collator()')).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', "const c = new Intl.Collator('fr')")).toEqual([])
+    expect(bareCallsIn('probe.ts', 'const c = new Intl.NumberFormat()')).toEqual([])
   })
 
   // A guard that reads its own prose is a guard that fails on a sentence about it.

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
@@ -268,6 +268,13 @@ describe('the registries', () => {
   // Three trees where the bound-sentence check below reads four: `main` writes its screens through
   // `TRANSLATIONS`, not through a registry. That it stops at three is its own question.
   const trees = PROJECT_TREES.slice(1)
+
+  // The `slice` above is a POSITION, and a position is not a promise: reorder `PROJECT_TREES` and
+  // this check silently stops reading `renderer` while every assertion below stays green. Named
+  // rather than counted, because the count would survive the reorder. Asked for by the review.
+  it('drops the main tree and keeps the other three, whatever their order becomes', () => {
+    expect(trees.map(tree => basename(tree))).toEqual(['renderer', 'shared', 'preload'])
+  })
 
   it(
     'name their words rather than writing them',

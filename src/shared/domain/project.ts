@@ -1,3 +1,4 @@
+import { byCodeUnit } from '../text'
 import { ASSET_FOLDERS } from './asset'
 import { DOCUMENTS_FOLDER } from './document'
 
@@ -73,11 +74,16 @@ export function listedAt(entry: RecentProject): string {
  * under the click that opens something, and creation date is the only key a click cannot move.
  *
  * The path breaks a tie, so two projects made in the same second do not swap between renders.
+ *
+ * Neither key is read as words, so neither takes a collator: a stamp sorts chronologically by code
+ * unit, and the path is here to be STABLE rather than to be read — a tie broken in the locale the
+ * OS was installed in would break it two ways on two machines, which is the one thing a
+ * tie-breaker must not do.
  */
 export function projectsByCreation(recent: readonly RecentProject[]): RecentProject[] {
   return [...recent].sort((one, other) => {
-    const when = listedAt(other).localeCompare(listedAt(one))
-    return when === 0 ? one.path.localeCompare(other.path) : when
+    const when = byCodeUnit(listedAt(other), listedAt(one))
+    return when === 0 ? byCodeUnit(one.path, other.path) : when
   })
 }
 
