@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PICTURES, type Asset, type AssetType } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/asset-drag'
@@ -37,20 +37,25 @@ describe('a surface an asset can be dropped onto', () => {
 
   // The id is all the drag carries; every surface used to resolve it against the catalogue
   // itself, and two of them did it by subscribing — a re-render on every catalogue refresh.
-  it('hands over the asset, not the id the drag carried', () => {
+  // Awaited, because the drop resolves through `droppedAsset`: a LIBRARY asset is fetched
+  // before it is handed over, so every drop settles a promise even when nothing was fetched.
+  it('hands over the asset, not the id the drag carried', async () => {
     const { surface, onDrop } = target(PICTURES)
 
     fireEvent.drop(surface, { dataTransfer: dragging('image') })
 
-    expect(onDrop).toHaveBeenCalledWith(asset)
+    await waitFor(() => expect(onDrop).toHaveBeenCalledWith(asset))
   })
 
-  it('says nothing when the id names an asset the catalogue does not hold', () => {
+  it('says nothing when the id names an asset the catalogue does not hold', async () => {
     useAssets.setState({ items: [] })
     const { surface, onDrop } = target(PICTURES)
 
     fireEvent.drop(surface, { dataTransfer: dragging('image') })
 
+    // Settled rather than asserted straight away: the answer arrives a microtask later, and a
+    // synchronous `not.toHaveBeenCalled` would pass even if the drop did hand something over.
+    await Promise.resolve()
     expect(onDrop).not.toHaveBeenCalled()
   })
 

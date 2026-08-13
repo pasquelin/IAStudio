@@ -587,6 +587,60 @@ describe('project handlers', () => {
     expect(injected.reveal).not.toHaveBeenCalled()
   })
 
+  describe('which assets have lost their file', () => {
+    it('names the rows the disk no longer answers for, and only those', async () => {
+      await catalog.add(asset({ id: 'asset-1', type: 'image', path: 'assets/img/here.png' }))
+      await catalog.add(asset({ id: 'asset-2', type: 'image', path: 'assets/img/gone.png' }))
+      const injected = deps(catalog)
+      injected.exists = (path: string) => path.endsWith('here.png')
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.assetsAbsent, ['asset-1', 'asset-2'])).resolves.toEqual([
+        'asset-2',
+      ])
+    })
+
+    // A cloud-only row is elsewhere, not lost. Marking it would put a warning on the one state
+    // that is perfectly fine, and the browser reads this answer to decide what to warn about.
+    it('never calls an asset with no file of its own absent', async () => {
+      await catalog.add(asset({ id: 'asset-1', location: 'cloud' }))
+      const injected = deps(catalog)
+      injected.exists = () => false
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.assetsAbsent, ['asset-1'])).resolves.toEqual([])
+    })
+
+    // A linked rush lives outside the project, and its own path is what has to be looked at —
+    // not a path resolved against a folder it was never in.
+    it('looks a linked medium up where the user actually put it', async () => {
+      await catalog.add(asset({ id: 'asset-1', sourcePath: '/Volumes/Rushes/A001.mov' }))
+      const injected = deps(catalog)
+      const asked: string[] = []
+      injected.exists = (path: string) => {
+        asked.push(path)
+        return false
+      }
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.assetsAbsent, ['asset-1'])).resolves.toEqual(['asset-1'])
+      expect(asked).toEqual(['/Volumes/Rushes/A001.mov'])
+    })
+
+    it('says nothing about an id the catalogue does not hold', async () => {
+      const injected = deps(catalog)
+      injected.exists = () => false
+      registerProjectHandlers(injected)
+
+      await expect(invoke(CHANNELS.assetsAbsent, ['asset-gone'])).resolves.toEqual([])
+    })
+
+    it('refuses a list that is not one, rather than passing junk to the catalogue', async () => {
+      registerProjectHandlers(deps(catalog))
+      await expect(invoke(CHANNELS.assetsAbsent, 'asset-1')).rejects.toThrow()
+    })
+  })
+
   it('refuses an identifier that is not one, rather than passing junk to the catalogue', async () => {
     registerProjectHandlers(deps(catalog))
     await expect(invoke(CHANNELS.assetsReveal, '')).rejects.toThrow()

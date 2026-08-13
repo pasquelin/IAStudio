@@ -221,9 +221,32 @@ export function isLocalPicture(asset: Asset): boolean {
   return PICTURES.includes(asset.type) && asset.location === 'local'
 }
 
-/** What the browser paints in the corner of a cell. One name per state the user can act on. */
+/**
+ * What the browser paints in the corner of a cell. One name per state the user can act on.
+ *
+ * Most of them describe a row the catalogue holds. Two stand for a line it does NOT — a library
+ * asset and a running generation — and that is deliberate: the browser lists both alongside what
+ * is on disk, so the vocabulary that says WHERE a thing is has to reach what is not here yet.
+ *
+ * The count is left out of this sentence on purpose: it went stale twice in one afternoon, and
+ * `exhaustive.test.ts` is what actually holds the list to the union.
+ */
 export type AssetBadge =
-  'local-only' | 'synced' | 'to-push' | 'to-pull' | 'conflict' | 'error' | 'other-account'
+  | 'local-only'
+  | 'synced'
+  | 'to-push'
+  | 'to-pull'
+  | 'conflict'
+  | 'error'
+  | 'other-account'
+  /** In the account's library, with no copy on this disk. Nothing local answers for it. */
+  | 'remote-only'
+  /** A job is still running. The row stands for an output that does not exist yet. */
+  | 'generating'
+  /** Its bytes are on their way down right now. Transient, and never read off a stored row. */
+  | 'fetching'
+  /** The catalogue records a file the disk no longer has — deleted or moved outside the studio. */
+  | 'missing'
 
 /**
  * Whether this asset's twin lives in a project the active key does not open onto.
@@ -274,6 +297,10 @@ export const ASSET_BADGES: readonly AssetBadge[] = [
   'conflict',
   'error',
   'other-account',
+  'remote-only',
+  'generating',
+  'fetching',
+  'missing',
 ]
 
 /**

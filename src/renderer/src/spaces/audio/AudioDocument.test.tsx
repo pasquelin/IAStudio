@@ -185,12 +185,16 @@ describe('dropping a take on the editor', () => {
 
   // The last space that accepted nothing: a take had to be double-clicked from the shelf, and
   // nothing on screen said the editor would have taken it.
-  it('loads the take that was dropped on the empty editor', () => {
+  it('loads the take that was dropped on the empty editor', async () => {
     useAssets.setState({ items: [asset] })
     const dataTransfer = dragTransfer()
     startAssetDrag({ dataTransfer }, { id: 'asset-1', type: 'audio' })
 
     fireEvent.drop(emptyEditor(), { dataTransfer })
+
+    // Settled first: a drop resolves through `droppedAsset`, which may fetch a library asset
+    // before handing it over, so the answer lands a microtask later even when nothing was fetched.
+    await Promise.resolve()
 
     expect(editsOf().assetId).toBe('asset-1')
   })

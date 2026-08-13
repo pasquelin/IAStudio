@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
+import { parseAssetIds } from '@main/assets/validation'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
@@ -205,6 +206,31 @@ export function registerProjectHandlers({
 
     reveal(file)
     return true
+  })
+
+  handle(CHANNELS.assetsAbsent, async (_event, assetIds) => {
+    const ids = parseAssetIds(assetIds)
+
+    // Asked all at once, and that is the point: `find` is a round trip to the catalogue worker,
+    // so a `for…await` over a window of sixty cells chains sixty of them — with a synchronous
+    // `exists` wedged between each, on the process every window shares.
+    const catalogue = project.catalog()
+    const found = await Promise.all(ids.map(assetId => catalogue.find(assetId)))
+    const root = project.path()
+
+    // Through the injected `exists`, like every other thing here that touches the disk — and it
+    // is what makes this testable without a file system.
+    return (
+      found
+        .filter(asset => asset !== null)
+        // A row that never had a file cannot have lost one: a cloud-only asset is elsewhere, not
+        // absent, and marking it would put a warning on the one state that is fine.
+        .filter(asset => {
+          const file = ownFileOf(root, asset)
+          return file !== null && !exists(file)
+        })
+        .map(asset => asset.id)
+    )
   })
 
   handle(CHANNELS.assetsPeaks, async (_event, assetId) => {

@@ -20,10 +20,12 @@ function registration(onChange = vi.fn()) {
   return { name: 'image', onChange, onBlur: vi.fn(), ref: vi.fn() }
 }
 
-function drop(target: Element, assetId: string): void {
+/** Awaited by every caller: `droppedAsset` may fetch before it answers, so a drop is async. */
+async function drop(target: Element, assetId: string): Promise<void> {
   const dataTransfer = dragTransfer()
   startAssetDrag({ dataTransfer }, { id: assetId, type: 'image' })
   fireEvent.drop(target, { dataTransfer })
+  await Promise.resolve()
 }
 
 describe('AssetDropField', () => {
@@ -31,7 +33,7 @@ describe('AssetDropField', () => {
     useAssets.setState({ items: [picture] })
   })
 
-  it('takes the id of a picture dropped on it', () => {
+  it('takes the id of a picture dropped on it', async () => {
     const onChange = vi.fn()
     const { container } = render(
       <AssetDropField registration={registration(onChange)} placeholder="Drop one" />,
@@ -39,7 +41,7 @@ describe('AssetDropField', () => {
 
     const surface = container.firstElementChild
     expect(surface).not.toBeNull()
-    if (surface) drop(surface, 'asset-7')
+    if (surface) await drop(surface, 'asset-7')
 
     expect(onChange).toHaveBeenCalledWith({ target: { name: 'image', value: 'asset-7' } })
   })
@@ -60,7 +62,7 @@ describe('AssetDropField', () => {
     expect(screen.getByPlaceholderText('Drop one')).toBeInTheDocument()
   })
 
-  it('ignores a drag carrying something that is not one of ours', () => {
+  it('ignores a drag carrying something that is not one of ours', async () => {
     const onChange = vi.fn()
     const { container } = render(
       <AssetDropField registration={registration(onChange)} placeholder="Drop one" />,
@@ -69,6 +71,7 @@ describe('AssetDropField', () => {
     const surface = container.firstElementChild
     if (surface) fireEvent.drop(surface, { dataTransfer: dragTransfer() })
 
+    await Promise.resolve()
     expect(onChange).not.toHaveBeenCalled()
   })
 })

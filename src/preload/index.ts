@@ -114,6 +114,7 @@ const bridge: StudioBridge = {
     counts: () => ipcRenderer.invoke(CHANNELS.assetsCounts),
     peaks: assetId => ipcRenderer.invoke(CHANNELS.assetsPeaks, assetId),
     reveal: assetId => ipcRenderer.invoke(CHANNELS.assetsReveal, assetId),
+    absent: assetIds => ipcRenderer.invoke(CHANNELS.assetsAbsent, assetIds),
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
     savePicture: request => ipcRenderer.invoke(CHANNELS.assetsSavePicture, request),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),

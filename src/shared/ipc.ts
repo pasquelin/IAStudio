@@ -120,6 +120,7 @@ export type Channels = {
   assetsCounts: 'assets:counts'
   assetsPeaks: 'assets:peaks'
   assetsReveal: 'assets:reveal'
+  assetsAbsent: 'assets:absent'
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
   assetsSaveTexture: 'assets:save-texture'
@@ -248,6 +249,7 @@ export const CHANNELS: Channels = {
   assetsCounts: 'assets:counts',
   assetsPeaks: 'assets:peaks',
   assetsReveal: 'assets:reveal',
+  assetsAbsent: 'assets:absent',
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
   assetsSaveTexture: 'assets:save-texture',
@@ -846,6 +848,16 @@ export type StudioBridge = {
      * this boundary for, see `withoutSourcePath`. False when there was no file to show.
      */
     reveal: (assetId: string) => Promise<boolean>
+    /**
+     * Which of these assets no longer have the file the catalogue records — the ids, never the
+     * paths, which do not cross this boundary (see `withoutSourcePath`).
+     *
+     * Asked of a handful at a time rather than of the whole catalogue: a project holds hundreds
+     * of rows and only the cells on screen need an answer, so the shelf asks for what it draws.
+     * A row with no file to begin with — one that lives only in the library — is never absent:
+     * nothing was expected of it.
+     */
+    absent: (assetIds: readonly string[]) => Promise<string[]>
     /** Writes an edited take back: over its source when `replaces` is set, beside it otherwise. */
     saveAudio: (request: SaveAudioRequest) => Promise<Asset>
     /**

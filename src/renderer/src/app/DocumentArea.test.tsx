@@ -1,10 +1,14 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import type { Asset } from '@shared/domain/asset'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { layoutShowing } from '@/stores/layout-fixtures'
+import { useAssets } from '@/stores/assets'
 import { useLayouts } from '@/stores/layouts'
+import { startAssetDrag } from '@/helpers/asset-drag'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { DocumentArea } from './DocumentArea'
 import { openDocument, setDocumentTitle } from './dockview-api'
 
@@ -139,5 +143,65 @@ describe('DocumentArea', () => {
 
     setDocumentTitle('doc-3', 'Set dressing', false)
     expect(setTitle).toHaveBeenLastCalledWith('Set dressing')
+  })
+})
+
+describe('the last surface a dropped asset reaches', () => {
+  const picture: Asset = {
+    id: 'asset_1',
+    name: 'moss.png',
+    type: 'image',
+    location: 'local',
+    tags: [],
+    createdAt: '2026-08-07T10:00:00.000Z',
+  }
+
+  beforeEach(() => {
+    useAssets.setState({ items: [picture] })
+    useDocuments.setState({ documents: {}, activeId: null })
+  })
+
+  /**
+   * Everything else in the studio answers a different question with a drop — which channel,
+   * which track, where on the graph. This one answers the fallback: what no surface took gets
+   * opened, which is what an editor does with a file dropped on it.
+   */
+  it('opens what no other surface took', async () => {
+    const openAsset = vi.fn()
+    vi.doMock('@/helpers/open-asset', () => ({ openAsset }))
+
+    render(<DocumentArea />)
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_1', type: 'image' })
+
+    fireEvent.drop(screen.getByTestId('dockview').parentElement as Element, { dataTransfer })
+
+    await vi.waitFor(() => expect(openAsset).toHaveBeenCalledWith(picture))
+    vi.doUnmock('@/helpers/open-asset')
+  })
+
+  // A frame here would outline the whole middle of the window, which says nothing the user
+  // cannot already see. The pointer's own "+" carries the answer instead.
+  it('draws no frame while an asset flies over it', () => {
+    render(<DocumentArea />)
+    const surface = screen.getByTestId('dockview').parentElement as Element
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_1', type: 'image' })
+
+    fireEvent.dragOver(surface, { dataTransfer })
+
+    expect(surface.className).not.toContain('outline-')
+  })
+
+  // Dropping adds; it takes nothing away from the shelf. `move` would show the arrow that says
+  // otherwise, which is what the platform draws from this.
+  it('offers the pointer that means "add"', () => {
+    render(<DocumentArea />)
+    const dataTransfer = dragTransfer()
+    startAssetDrag({ dataTransfer }, { id: 'asset_1', type: 'image' })
+
+    fireEvent.dragOver(screen.getByTestId('dockview').parentElement as Element, { dataTransfer })
+
+    expect(dataTransfer.dropEffect).toBe('copy')
   })
 })
