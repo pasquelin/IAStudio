@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { CloseChoice } from '@shared/domain/document'
 import { emptyAssetCounts } from '@shared/domain/asset'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
+import { DEFAULT_LANGUAGE } from '@shared/i18n/languages'
 import type { LogEntry, StudioBridge } from '@shared/ipc'
 
 const noSubscription = (): (() => void) => () => {}
@@ -181,6 +182,8 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       toggleFullScreen: () => Promise.resolve(),
       state: () => Promise.resolve({ active: true, fullScreen: false, maximized: false }),
       onState: noSubscription,
+      language: () => Promise.resolve(DEFAULT_LANGUAGE),
+      onLanguage: noSubscription,
       setWorkspace: () => Promise.resolve(),
       ...overrides.window,
     },

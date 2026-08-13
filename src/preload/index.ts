@@ -7,6 +7,7 @@ import type { Project } from '@shared/domain/project'
 import type { Job, JobProgress } from '@shared/domain/job'
 import type { IngestProgress } from '@shared/domain/media'
 import type { Settings } from '@shared/domain/settings'
+import type { Language } from '@shared/i18n/languages'
 import type { UpdateState } from '@shared/domain/update'
 import type { WindowState } from '@shared/domain/window'
 import type { SettingsSectionId } from '@shared/domain/settings'
@@ -176,6 +177,8 @@ const bridge: StudioBridge = {
     toggleFullScreen: () => ipcRenderer.invoke(CHANNELS.windowToggleFullScreen),
     state: () => ipcRenderer.invoke(CHANNELS.windowState),
     onState: callback => subscribe<WindowState>(EVENTS.windowState, callback),
+    language: () => ipcRenderer.invoke(CHANNELS.windowLanguage),
+    onLanguage: callback => subscribe<Language>(EVENTS.windowLanguage, callback),
     setWorkspace: (workspace, tools, checked) =>
       ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked),
   },

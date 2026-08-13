@@ -314,6 +314,26 @@ async function download(url: string): Promise<Uint8Array> {
  * Notified from the store rather than from the IPC handler: the project store writes
  * `lastProject` on its own, and every window replicates these settings.
  */
+/**
+ * What this machine asks to be spoken to in: the application's own locale first, the system's
+ * preferences behind it.
+ *
+ * The order is a trade-off rather than a clean win, and the reason is that `getLocale()` is
+ * **ambiguous**. It answers the same `en-US` for "this reader set the studio to English" and for
+ * "Chromium ships no bundle for what they set, here is the fallback", and nothing tells the two
+ * apart — `getSystemLocale()` answers the system in both cases. Leading with it keeps a
+ * per-application choice, which macOS offers and which no system preference should overrule.
+ *
+ * The cost is paid in the other half: a choice Chromium cannot honour reaches this list as
+ * `en-US`, and English wins before the system preferences are read. Measured on a French
+ * machine — `--lang=de` gives `['de', 'fr-FR']` and now opens in French where it opened in
+ * English, while `['en-US', 'fr-FR']` still opens in English. Kept knowingly, and covered by a
+ * test in `languages.test.ts` so the next reader meets the trade-off rather than a surprise.
+ */
+function machineLanguages(): string[] {
+  return [app.getLocale(), ...app.getPreferredSystemLanguages()]
+}
+
 export function createSettings(): SettingsStore {
   // `isDevelopment`, arrived on main: the fallback reads a `.env` only outside a packaged run.
   const fallback = createFileSystemFallback(app.getAppPath(), !isDevelopment)
@@ -327,7 +347,7 @@ export function createSettings(): SettingsStore {
       applyTheme(current.appearance.theme)
       setLogVerbosity(current.advanced.logLevel)
       // Every native surface follows this one call, the menu bar included.
-      setWindowLanguage(effectiveLanguage(current.general.language, app.getLocale()))
+      setWindowLanguage(effectiveLanguage(current.general.language, machineLanguages()))
       buildMenu(current.shortcuts.overrides)
       broadcast(EVENTS.settingsChanged, current)
     },
@@ -339,7 +359,7 @@ export function createSettings(): SettingsStore {
   // flashes the wrong colour for a frame — the splash did exactly that.
   applyTheme(stored.appearance.theme)
   setLogVerbosity(stored.advanced.logLevel)
-  setWindowLanguage(effectiveLanguage(stored.general.language, app.getLocale()))
+  setWindowLanguage(effectiveLanguage(stored.general.language, machineLanguages()))
 
   // Carries a pre-multi-account install over to a book of one. Erases nothing it has not read:
   // a keychain the OS will not open this launch leaves every key exactly where it is.

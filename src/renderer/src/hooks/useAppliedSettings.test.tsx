@@ -1,37 +1,41 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import i18next from 'i18next'
 import { afterEach, describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS } from '@shared/domain/settings'
-import type { LanguagePreference } from '@shared/i18n/languages'
-import { useSettings } from '@/stores/settings'
+import type { Language } from '@shared/i18n/languages'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useAppliedSettings } from './useAppliedSettings'
 
-function withLanguage(language: LanguagePreference) {
-  useSettings.setState({
-    settings: { ...DEFAULT_SETTINGS, general: { ...DEFAULT_SETTINGS.general, language } },
-  })
-  return renderHook(() => useAppliedSettings())
-}
-
 afterEach(async () => {
-  useSettings.setState({ settings: DEFAULT_SETTINGS })
   await i18next.changeLanguage('fr')
 })
 
 describe('applying the language', () => {
-  it('follows the setting rather than the machine', async () => {
-    withLanguage('en')
+  it('takes the language the main process pushes', async () => {
+    let push: ((language: Language) => void) | undefined
+    installFakeBridge({
+      window: {
+        onLanguage: callback => {
+          push = callback
+          return () => {}
+        },
+      },
+    })
+
+    renderHook(() => useAppliedSettings())
+    push?.('en')
 
     await waitFor(() => expect(i18next.language).toBe('en'))
   })
 
-  // `navigator.language` is pinned to French by the test setup, standing in for the machine.
-  it('defers to the machine when the setting says system', async () => {
-    withLanguage('en')
+  /**
+   * `main.tsx` reads the language before React mounts, so a change landing between that read
+   * and this subscription would reach no listener and stay wrong for the whole session.
+   */
+  it('reads it again on mount, in case one changed while nobody was listening', async () => {
+    installFakeBridge({ window: { language: (): Promise<Language> => Promise.resolve('en') } })
+
+    renderHook(() => useAppliedSettings())
+
     await waitFor(() => expect(i18next.language).toBe('en'))
-
-    withLanguage('system')
-
-    await waitFor(() => expect(i18next.language).toBe('fr'))
   })
 })

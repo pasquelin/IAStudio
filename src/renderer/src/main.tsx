@@ -3,8 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { isLicencesRoute } from '@shared/domain/licence'
 import { isSettingsRoute } from '@shared/domain/settings'
 import { isUsageRoute } from '@shared/domain/usage'
-import { resolveLanguage } from '@shared/i18n'
+import { UNKNOWN_SYSTEM_LANGUAGE } from '@shared/i18n'
 import { Application } from '@/app/Application'
+import { getBridge } from '@/services/bridge'
 import { ROOT_ERROR_REPORTING } from '@/app/root-errors'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
 import { Failure } from '@/design/Failure'
@@ -14,11 +15,14 @@ import './index.css'
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element not found in index.html')
 
-// Same locale as the native menu, which the main process resolves from `app.getLocale()`:
-// an English menu above a French interface reads as a bug.
-// The machine's language, for the very first frame: the settings have not been read yet, and
-// `useAppliedSettings` corrects it as soon as they land.
-await initI18n(resolveLanguage(navigator.language))
+// Asked, never worked out here — see `StudioBridge['window']['language']`. Falling back rather
+// than letting it throw: this runs during module evaluation, which the boundary below cannot
+// catch, and a rejected read would leave a permanently empty window. The fallback is the one
+// for a machine whose language we do not know, which is exactly what an unanswered read leaves.
+const language = await getBridge()
+  ?.window.language()
+  .catch(() => UNKNOWN_SYSTEM_LANGUAGE)
+await initI18n(language ?? UNKNOWN_SYSTEM_LANGUAGE)
 
 /** Same reason as the licences below, for another window's folder: registry, sections, draft. */
 const SettingsWindow = lazy(async () => ({

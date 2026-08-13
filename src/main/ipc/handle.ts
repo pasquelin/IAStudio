@@ -117,6 +117,7 @@ type ChannelMethod = {
 
   [CHANNELS.windowToggleFullScreen]: StudioBridge['window']['toggleFullScreen']
   [CHANNELS.windowState]: StudioBridge['window']['state']
+  [CHANNELS.windowLanguage]: StudioBridge['window']['language']
   [CHANNELS.windowWorkspace]: StudioBridge['window']['setWorkspace']
 
   [CHANNELS.updateState]: StudioBridge['updates']['state']

@@ -34,6 +34,7 @@ import type {
   ViewDirection,
 } from './domain/scene'
 import type { TextureExportTarget } from './domain/texture-export'
+import type { Language } from './i18n/languages'
 import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './domain/settings'
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
@@ -160,6 +161,7 @@ export type Channels = {
 
   windowToggleFullScreen: 'window:toggle-full-screen'
   windowState: 'window:state'
+  windowLanguage: 'window:language'
   windowWorkspace: 'window:workspace'
 
   updateState: 'update:state'
@@ -281,6 +283,7 @@ export const CHANNELS: Channels = {
 
   windowToggleFullScreen: 'window:toggle-full-screen',
   windowState: 'window:state',
+  windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
 
   updateState: 'update:state',
@@ -499,6 +502,7 @@ export const EVENTS = {
   openTool: 'evt:open-tool',
   menuCommand: 'evt:menu-command',
   windowState: 'evt:window-state',
+  windowLanguage: 'evt:window-language',
   sceneAdd: 'evt:scene-add',
   sceneView: 'evt:scene-view',
   sceneDisplay: 'evt:scene-display',
@@ -980,6 +984,17 @@ export type StudioBridge = {
     toggleFullScreen: () => Promise<void>
     state: () => Promise<WindowState>
     onState: (callback: (state: WindowState) => void) => Unsubscribe
+    /**
+     * The language this window draws in. Resolved by the main process and asked for rather than
+     * worked out here, because the setting may say `'system'` and only that side sees what the
+     * machine really prefers: the list this side can read starts with Chromium's UI locale,
+     * which answers `en-US` for every system language Chromium ships no bundle for.
+     *
+     * The same value the native menu was built with, which is the point — an English menu above
+     * a French window reads as a bug.
+     */
+    language: () => Promise<Language>
+    onLanguage: (callback: (language: Language) => void) => Unsubscribe
     /**
      * Tells the main process which surface is up, which panels it can currently open, and
      * which menu rows are ticked, so the menu can follow all three. None of them can be worked
