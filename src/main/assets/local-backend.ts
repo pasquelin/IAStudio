@@ -7,6 +7,7 @@ import {
   type AssetType,
   type MediaProbe,
 } from '@shared/domain/asset'
+import { POSTERS_FOLDER } from '@shared/domain/project'
 import type { PbrChannel } from '@shared/domain/texture'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 
@@ -46,6 +47,11 @@ export type ImportRequest = {
   generation?: AssetGeneration
   map?: PbrChannel
   mapInverted?: boolean
+  /**
+   * The library's own still for this asset. Brought down for the kinds no browser can decode —
+   * a mesh — so a tile that was a picture in the library stays one once the file is here.
+   */
+  thumbnailUrl?: string
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
@@ -130,9 +136,39 @@ export function createLocalBackend({
   catalog,
   now,
 }: LocalBackendDeps): LocalBackend {
+  /**
+   * The library's still, brought down beside the bytes — for a mesh, and for a mesh alone.
+   *
+   * A picture IS its own poster. A rush and a take have one waiting for them at ingest, and a
+   * still recorded here would be painted UNDER the waveform of every audio clip on the timeline
+   * (`posterUrl` is what a clip reads) — a picture of the take before any edit, at that. Only
+   * `.glb` has nothing any surface can decode, which is the whole reason this exists.
+   *
+   * Best effort, and that is the whole design: the thumbnail is a convenience, the model is the
+   * asset. A CDN that answers 404 must leave the import that carries it untouched.
+   */
+  const savePoster = async (request: WriteRequest): Promise<string | undefined> => {
+    if (!request.thumbnailUrl || request.type !== 'mesh') return undefined
+
+    try {
+      const poster = await download(request.thumbnailUrl)
+      const relative = `${POSTERS_FOLDER}/${request.id}${extensionOf(request.thumbnailUrl, 'image')}`
+      await writeFile(join(projectPath(), relative), poster)
+      return relative
+    } catch {
+      return undefined
+    }
+  }
+
   const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
     const relativePath = relativePathFor(request.id, request.extension, request.type)
-    await writeFile(join(projectPath(), relativePath), bytes)
+
+    // Together: the still is a second download over the network, and waiting for it after the
+    // bytes are already on disk would add its latency to every import that carries one.
+    const [, posterPath] = await Promise.all([
+      writeFile(join(projectPath(), relativePath), bytes),
+      savePoster(request),
+    ])
 
     const at = now()
     // What the row already held survives being written again. Pulling a twin a second time
@@ -140,6 +176,14 @@ export function createLocalBackend({
     // the tags the user had put on it and moved its creation date to now — which also sent it
     // back to the top of a shelf sorted newest first, for a file that had not changed.
     const existing = await catalog().find(request.id)
+
+    // The still's name follows the extension the CDN's URL carried, and a second pull of the
+    // same twin can carry another one. The file the row stops pointing at is ours and nothing
+    // would ever come back for it — the same reason `replaceBytes` drops the file it replaces.
+    if (posterPath && existing?.posterPath && existing.posterPath !== posterPath) {
+      await rm(join(projectPath(), existing.posterPath), { force: true })
+    }
+
     const asset: Asset = {
       ...existing,
       id: request.id,
@@ -152,6 +196,9 @@ export function createLocalBackend({
       createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
       ...(request.probe ? { probe: request.probe } : {}),
+      // Absent rather than cleared: a still that failed to come down this time leaves the one
+      // an earlier pull already put on disk, which is still a true picture of the same asset.
+      ...(posterPath ? { posterPath } : {}),
       ...(request.jobId ? { jobId: request.jobId } : {}),
       ...(request.derivedFrom ? { derivedFrom: request.derivedFrom } : {}),
       ...(request.groupId ? { groupId: request.groupId } : {}),

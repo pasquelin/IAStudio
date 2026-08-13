@@ -83,7 +83,7 @@ function materialsOf(mesh: Mesh): readonly Material[] {
 }
 
 /** Every map a standard material may carry. Read off the object: a `Material` declares none. */
-function texturesOf(material: Material): Texture[] {
+export function texturesOf(material: Material): Texture[] {
   const found: Texture[] = []
   for (const value of Object.values(material)) {
     if (isTexture(value)) found.push(value)

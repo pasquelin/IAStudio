@@ -179,6 +179,12 @@ const MIGRATIONS: readonly string[] = [
   -- process — \`catalog-client\` is what keeps that true, and it is why no window freezes here.
   CREATE INDEX assets_path_idx ON assets(path);
   `,
+  `
+  -- The still of an asset whose own file no browser can decode — a mesh's, above all. Kept as a
+  -- path like the proxy and the waveform, and rebuildable like both: the file is the library's
+  -- own thumbnail, brought down beside the bytes so a downloaded model stays a picture in a grid.
+  ALTER TABLE assets ADD COLUMN poster_path TEXT;
+  `,
 ]
 
 const DEFAULT_LIMIT = 200
@@ -252,6 +258,7 @@ function assetOf(row: SqlRow, tags: string[]): Asset {
       probe: parseProbe(optionalText(row, 'probe')),
       proxyPath: optionalText(row, 'proxy_path'),
       peaksPath: optionalText(row, 'peaks_path'),
+      posterPath: optionalText(row, 'poster_path'),
     }),
     // The column is a free string in SQLite; a channel this build no longer knows leaves the
     // asset as an ordinary picture rather than making the whole row unreadable.
@@ -448,12 +455,12 @@ export function createCatalog(driver: SqliteDriver): Catalog {
   const insertAsset = driver.prepare(`
     INSERT OR REPLACE INTO assets
       (id, name, type, location, path, remote_asset_id, job_id, width, height, bytes,
-       created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path,
+       created_at, derived_from, source_path, hash, probe, proxy_path, peaks_path, poster_path,
        map, map_inverted,
        model_id, model_label, prompt, seed, gen_params,
        remote_owner_id, remote_updated_at, remote_synced_at, local_changed_at,
        sync_state, sync_error, group_id, output_index)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const deleteTags = driver.prepare('DELETE FROM asset_tags WHERE asset_id = ?')
@@ -539,6 +546,7 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         asset.probe ? JSON.stringify(asset.probe) : null,
         asset.proxyPath ?? null,
         asset.peaksPath ?? null,
+        asset.posterPath ?? null,
         asset.map ?? null,
         asset.mapInverted ? 1 : null,
         asset.generation?.modelId ?? null,

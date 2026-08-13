@@ -114,6 +114,9 @@ export function createCloudBackend({
         name: cloudAsset.name,
         type: cloudAsset.type,
         remoteAssetId: cloudAsset.id,
+        // What the library tile was already showing. Without it a mesh that was a picture in the
+        // browser becomes an icon the moment it lands on disk.
+        ...(cloudAsset.thumbnailUrl ? { thumbnailUrl: cloudAsset.thumbnailUrl } : {}),
         ...(cloudAsset.ownerId ? { remoteOwnerId: cloudAsset.ownerId } : {}),
         ...(cloudAsset.updatedAt ? { remoteUpdatedAt: cloudAsset.updatedAt } : {}),
         ...(cloudAsset.generation ? { generation: cloudAsset.generation } : {}),

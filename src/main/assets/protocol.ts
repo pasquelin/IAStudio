@@ -31,6 +31,15 @@ export function servedFileOf(projectPath: string, asset: Asset): string | null {
 }
 
 /**
+ * The still that stands for an asset, when one was written beside it — what the `poster` host
+ * serves. Never falls back to the asset's own file: a `.glb` handed to an `<img>` is the broken
+ * tile this exists to replace, and answering nothing lets the browser draw its icon instead.
+ */
+export function posterFileOf(projectPath: string, asset: Asset): string | null {
+  return asset.posterPath ? assetFilePath(projectPath, asset.posterPath) : null
+}
+
+/**
  * The file the user would call theirs: what the project holds, else the media they linked —
  * never the proxy, which is ours and which they never put there. This is what "show it in the
  * Finder" means; the scheme wants the opposite order, and that is `servedFileOf`.

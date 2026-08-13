@@ -1,13 +1,15 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import type { AssetType } from '@shared/domain/asset'
 import type { AsyncCatalog } from '@main/project/catalog-client'
 import { memoryCatalog } from '@main/project/catalog-fixtures'
 import {
   createLocalBackend,
   extensionOf,
   relativePathFor,
+  type Download,
   type LocalBackend,
 } from './local-backend'
 
@@ -52,6 +54,8 @@ describe('local backend', () => {
     await mkdir(join(root, 'assets/img'), { recursive: true })
     await mkdir(join(root, 'assets/aud'), { recursive: true })
     await mkdir(join(root, 'assets/tex'), { recursive: true })
+    await mkdir(join(root, 'assets/3d'), { recursive: true })
+    await mkdir(join(root, '.index/posters'), { recursive: true })
 
     catalog = memoryCatalog()
     backend = createLocalBackend({
@@ -355,5 +359,158 @@ describe('local backend', () => {
     )
 
     expect(asset.probe).toMatchObject({ duration: 2_000_000, channels: 2 })
+  })
+})
+
+/**
+ * The still of an asset whose own file no browser can decode. Without it, a mesh that WAS a
+ * picture in the library becomes an icon the instant it is downloaded — which is how this was
+ * reported, and what the poster path answers.
+ */
+describe('the still brought down beside the bytes', () => {
+  const POSTER = new Uint8Array([7, 7, 7])
+
+  let root: string
+  let catalog: AsyncCatalog
+  let backend: LocalBackend
+  let download: Mock<Download>
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'scenario-posters-'))
+    for (const folder of ['assets/3d', 'assets/img', 'assets/tex', 'assets/sky', 'assets/vid']) {
+      await mkdir(join(root, folder), { recursive: true })
+    }
+    await mkdir(join(root, 'assets/aud'), { recursive: true })
+    await mkdir(join(root, '.index/posters'), { recursive: true })
+
+    catalog = memoryCatalog()
+    download = vi.fn<Download>(url => Promise.resolve(url.includes('thumb') ? POSTER : BYTES))
+    backend = createLocalBackend({
+      download,
+      projectPath: () => root,
+      catalog: () => catalog,
+      now: () => '2026-08-06T10:00:00.000Z',
+    })
+  })
+
+  afterEach(async () => {
+    await catalog.close()
+    await rm(root, { recursive: true, force: true })
+  })
+
+  it('writes it under the project and records where', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+    })
+
+    expect(asset.posterPath).toBe('.index/posters/asset_1.jpg')
+    expect(await readFile(join(root, '.index/posters/asset_1.jpg'))).toEqual(Buffer.from(POSTER))
+  })
+
+  /**
+   * A picture answers for itself, and a rush and a take get their still at ingest — one recorded
+   * here would be painted UNDER the waveform of every audio clip, since a timeline clip reads
+   * `posterUrl` like every other surface. Only a `.glb` has nothing that decodes.
+   */
+  it('writes none for a kind that has a picture of its own', async () => {
+    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'video', 'audio']
+    for (const type of alreadyShowable) {
+      const asset = await backend.importFromUrl({
+        id: `asset_${type}`,
+        url: `https://cdn.example/render.${type === 'audio' ? 'mp3' : 'png'}`,
+        name: 'Boulder',
+        type,
+        thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+      })
+
+      expect(asset.posterPath).toBeUndefined()
+    }
+
+    // One download per asset, and not one thumbnail among them.
+    expect(download).toHaveBeenCalledTimes(5)
+  })
+
+  // The model is the asset; the still is a convenience. A CDN answering 404 must not cost the
+  // import that carries it.
+  it('imports the asset all the same when the still cannot be fetched', async () => {
+    download.mockImplementation((url: string) =>
+      url.includes('thumb') ? Promise.reject(new Error('404')) : Promise.resolve(BYTES),
+    )
+
+    const asset = await backend.importFromUrl({
+      id: 'asset_3',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+      thumbnailUrl: 'https://cdn.example/thumb/gone.jpg',
+    })
+
+    expect(asset.path).toBe('assets/3d/asset_3.glb')
+    expect(asset.posterPath).toBeUndefined()
+  })
+
+  // Pulling the same twin twice is ordinary. A still that failed the second time must leave the
+  // one already on disk, which is a true picture of the same asset.
+  it('keeps the still an earlier pull wrote when a later one fails', async () => {
+    await backend.importFromUrl({
+      id: 'asset_4',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+    })
+
+    download.mockImplementation((url: string) =>
+      url.includes('thumb') ? Promise.reject(new Error('404')) : Promise.resolve(BYTES),
+    )
+    const again = await backend.importFromUrl({
+      id: 'asset_4',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+    })
+
+    expect(again.posterPath).toBe('.index/posters/asset_4.jpg')
+  })
+
+  // The name follows the extension the CDN's URL carried, and a second pull can carry another.
+  // The file the row stops pointing at is ours, and nothing would ever come back for it.
+  it('drops the still it replaces when the new one lands under another name', async () => {
+    await backend.importFromUrl({
+      id: 'asset_6',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+    })
+    expect(await readFile(join(root, '.index/posters/asset_6.jpg'))).toEqual(Buffer.from(POSTER))
+
+    const again = await backend.importFromUrl({
+      id: 'asset_6',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.webp',
+    })
+
+    expect(again.posterPath).toBe('.index/posters/asset_6.webp')
+    await expect(readFile(join(root, '.index/posters/asset_6.jpg'))).rejects.toThrow()
+  })
+
+  it('asks for nothing when the request carries no still', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_5',
+      url: 'https://cdn.example/model.glb',
+      name: 'Skeleton',
+      type: 'mesh',
+    })
+
+    expect(asset.posterPath).toBeUndefined()
+    expect(download).toHaveBeenCalledTimes(1)
   })
 })

@@ -133,6 +133,24 @@ describe('bringing an asset down', () => {
     })
   })
 
+  /**
+   * The tile the user was looking at one gesture earlier. Dropped here, a mesh downloaded from
+   * the library turns into an icon on arrival, with the picture still sitting on the CDN.
+   */
+  it('carries the still the library was already showing', async () => {
+    const { backend, imported } = harness()
+    await backend.pull(cloudAsset({ type: 'mesh', thumbnailUrl: 'https://cdn/thumbnails/rem_1' }))
+
+    expect(imported[0]?.thumbnailUrl).toBe('https://cdn/thumbnails/rem_1')
+  })
+
+  it('carries none when the library has none', async () => {
+    const { backend, imported } = harness()
+    await backend.pull(cloudAsset({ type: 'mesh', thumbnailUrl: undefined }))
+
+    expect(imported[0]?.thumbnailUrl).toBeUndefined()
+  })
+
   it('refreshes the row it already has rather than making a second one', async () => {
     const { backend, catalog, imported } = harness()
     await catalog.add({
