@@ -189,8 +189,8 @@ La différence avec un *asset* est celle qui sépare la matière de l’ouvrage 
 un asset ; l’image que vous êtes en train de peindre, avec ses *calques* et son historique, est un
 document.
 
-Sept sortes, une par *espace de travail* : `.img` (image), `.scene` (scène 3D), `.seq` (séquence),
-`.aud` (audio), `.tex` (matière), `.sky` (ciel), `.graph` (graphe).
+Six sortes, une par *espace de travail* : `.img` (image), `.scene` (scène 3D), `.seq` (séquence),
+`.aud` (audio), `.tex` (matière), `.sky` (ciel).
 
 ---
 
@@ -222,10 +222,10 @@ comme une carte du monde contient la Terre. C’est sous cette forme qu’une *s
 avant d’être repliée autour de vous.
 
 **Espace de travail**
-Un des sept arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
-**Skyboxes**, **Graphe**. Changer d’espace réorganise les *panneaux* et refiltre le *catalogue*.
+Un des six arrangements du studio : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+**Skyboxes**. Changer d’espace réorganise les *panneaux* et refiltre le *catalogue*.
 
-Ce n’est pas sept logiciels : c’est un logiciel qui se réarrange.
+Ce n’est pas six logiciels : c’est un logiciel qui se réarrange.
 
 **Étagère**
 Le surnom du panneau **Assets**. On y range ce qu’on a fabriqué et importé ; on y pioche pour
@@ -278,14 +278,6 @@ forme de *tâche*, et le résultat atterrit dans vos *assets*.
 **Gouttière**
 L’espace entre deux *panneaux*. C’est lui-même la poignée qui les redimensionne : il n’y a pas de
 petite prise à viser.
-
-**Graphe** *(node editor, workflow)*
-Le septième *espace de travail* : une toile où l’on pose des *nœuds*, où on les relie, et où la
-sortie de l’un devient l’entrée du suivant. Un document `.graph`.
-
-Il s’ouvre, il enregistre, et **il s’exécute** : un bouton lance la chaîne, chaque nœud part
-quand ce qu’il lit est prêt, et **ce qui n’a pas changé n’est pas relancé**. Ce qui lui manque
-est au chapitre [Ce qui n’existe pas encore](18-limites.md).
 
 **Graine** *(seed)*
 Le point de départ du hasard d’une génération. C’est un nombre.
@@ -406,10 +398,8 @@ Réglable par *famille*, dans Réglages → **Génération**.
 ## N
 
 **Nœud** *(node)*
-Une boîte de la toile du *graphe*. Chacune fait une chose — tenir un texte, lancer un *modèle*,
-porter une note — et expose des **ports** par lesquels elle reçoit et rend. Changer le modèle d’un
-nœud refait ses ports, et les liens que ces ports ne portent plus s’en vont avec eux : celui dont
-le port a disparu, comme celui dont le port n’accepte plus ce qui est au bout.
+Un élément de l’arbre d’une *scène* 3D : un maillage, une lumière, un sprite, un groupe. C’est ce
+que l’*outliner* liste et ce que l’*inspecteur* décrit.
 
 **Normales** *(canal de texture)*
 Une image aux couleurs étranges — des bleus, des violets — qui encode les **micro-reliefs** d’une

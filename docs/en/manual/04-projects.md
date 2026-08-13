@@ -162,7 +162,6 @@ It is saved with `⌘S` / `Ctrl+S`, into `documents/`, under an extension that s
 | sound being edited | `.aud` | Audio |
 | sky | `.sky` | Skyboxes |
 | material | `.tex` | Textures |
-| graph | `.graph` | Graph |
 
 The extension is there so the folder **reads at a glance**. `a3f1.scene` next to `b204.tex` says
 what each one is; `a3f1.json` next to `b204.json` says nothing.

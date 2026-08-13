@@ -15,7 +15,7 @@ It is the equivalent of a content browser — the library of raw material you dr
 
 | Workspace | Where the shelf is |
 |---|---|
-| Image, Textures, Skyboxes, Graph | in the **bottom strip** |
+| Image, Textures, Skyboxes | in the **bottom strip** |
 | Video, Audio, 3D | in the **right column**, upper half |
 
 This is not a whim: in the Video, Audio and 3D workspaces the bottom strip belongs to the timeline,
@@ -67,7 +67,7 @@ unlike the Models panel which queries the Scenario catalogue remotely.
 > **Search does not ask you for accents.** Typing `foret` finds "Forêt d'hiver", and `ete` finds
 > "Été". That holds here and in the settings search: you search by typing, not by spelling. The
 > **Models** panel says nothing about it, because it does not search itself — it hands the word to
-> the API and shows what comes back. **Apps** has no search field at all.
+> the API and shows what comes back.
 >
 > It applies to files coming from the Finder too. macOS writes names in a form where the accent is
 > a character of its own — invisible to the eye, different to the machine — so an imported asset
@@ -187,7 +187,6 @@ editor takes, or an asset not yet down on your disk — not a broken one.
 | a panoramic image | a **sky** preview | it becomes the sky |
 | a mesh | the **3D view** | it enters the scene, at the origin |
 | a sound | the **audio editor** | it becomes the open take |
-| any asset | the **Graph canvas** | an asset node appears where you released it |
 | an asset | an **asset field** of a generation form | it becomes that field's input |
 
 **The timeline does not sort.** It takes what it is given: an asset with no duration of its own

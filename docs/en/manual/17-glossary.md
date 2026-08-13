@@ -180,8 +180,8 @@ A work in progress, open in a tab in the centre of the window.
 The difference from an *asset* is the one between material and work: a generated image is an asset;
 the image you are painting on, with its *layers* and its history, is a document.
 
-Seven kinds, one per *workspace*: `.img` (image), `.scene` (3D scene), `.seq` (sequence), `.aud`
-(audio), `.tex` (material), `.sky` (sky), `.graph` (graph).
+Six kinds, one per *workspace*: `.img` (image), `.scene` (3D scene), `.seq` (sequence), `.aud`
+(audio), `.tex` (material), `.sky` (sky).
 
 ---
 
@@ -258,14 +258,6 @@ The document keeps its layers. Flattening is not destructive here.
 **Generate**
 To ask a *model* to make something. The request leaves for Scenario, comes back as a *job*, and the
 result lands in your *assets*.
-
-**Graph** *(node editor, workflow)*
-The seventh *workspace*: a canvas where you place *nodes*, wire them together, and one's output
-becomes the next one's input. A `.graph` document.
-
-It opens, it saves, and **it runs**: a button starts the chain, each node leaves when what it
-reads is ready, and **what has not changed is not rerun**. What it still lacks is in
-[What does not exist yet](18-limits.md).
 
 **Group**
 Several objects filed under one parent. In the 3D workspace (`⌘G`) as in the layer stack: moving
@@ -407,10 +399,8 @@ What you want to avoid. Short, in keywords: `blurry, text, watermark`. It is not
 describe a scene in reverse.
 
 **Node**
-A box on the *graph*'s canvas. Each does one thing — hold a text, run a *model*, carry a note —
-and exposes **ports** through which it takes and gives. Changing a node's model rebuilds its
-ports, and the links those ports no longer answer for leave with them: the one whose port is gone,
-and the one whose port no longer accepts what is at the other end.
+An element of a 3D *scene*'s tree: a mesh, a light, a sprite, a group. It is what the *outliner*
+lists and what the *inspector* describes.
 
 **Normalise** *(audio)*
 Bringing a sound's perceived loudness to a reference level, here −14 *LUFS*. It stops two sounds
@@ -613,10 +603,10 @@ The drawing of a sound: those waves showing where it is loud and where it is sil
 you spot a phrase or a beat without listening. Making it requires *ffmpeg*.
 
 **Workspace**
-One of the studio's seven arrangements: **Image**, **Video**, **3D**, **Audio**, **Textures**,
-**Skyboxes**, **Graph**. Switching workspace rearranges the *panels* and refilters the *catalogue*.
+One of the studio's six arrangements: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+**Skyboxes**. Switching workspace rearranges the *panels* and refilters the *catalogue*.
 
-It is not seven applications: it is one application that rearranges itself.
+It is not six applications: it is one application that rearranges itself.
 
 ---
 

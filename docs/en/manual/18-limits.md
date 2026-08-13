@@ -38,7 +38,6 @@ true.** All seven write into the project folder and open back exactly as they we
 | Video sequence | `.seq` | **yes** |
 | Edited sound | `.aud` | **yes** |
 | Sky | `.sky` | **yes** |
-| Graph | `.graph` | **yes** — what a run produced is not saved with it |
 
 **What does not save, and that is deliberate:**
 

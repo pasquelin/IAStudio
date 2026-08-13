@@ -235,142 +235,9 @@ logiciel de montage.
 
 ## La barre de titre
 
-Elle ne porte pas le nom du fichier. Elle porte les **sept espaces de travail** :
+Elle ne porte pas le nom du fichier. Elle porte les **six espaces de travail** :
 
-**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes** · **Graphe**
-
-> **Le Graphe est en construction.** Il s’ouvre, on y pose des nœuds, on les relie, on les
-> enregistre, et **sélectionner un nœud l’ouvre dans l’Inspecteur** — son identifiant, son genre,
-> et un titre qui se tape. Un nœud de texte y montre son prompt, une note son texte. Un **nœud de
-> modèle** va plus loin : le modèle **se choisit** dans une liste, et le formulaire du modèle
-> choisi s’ouvre dessous, exactement celui du panneau Génération. Ce qu’on y tape passe par le
-> même ⌘Z que le nœud qu’on déplace.
->
-> **Changer le modèle d’un nœud refait ses ports**, et les liens que ces ports ne portent plus s’en
-> vont avec eux — celui dont le port a disparu, comme celui dont le port a changé de nature et
-> n’accepte plus ce qui est au bout. En un seul geste, donc annulable d’un seul `⌘Z`.
->
-> **Une boucle dit ce qu’elle parcourt.** Sélectionner un nœud de boucle ouvre la liste de ce
-> qu’elle traverse — des images ou des textes, au choix, chacune avec le port qui en donne
-> l’élément à chaque tour. Sa **fin de boucle** ne porte qu’un champ, et c’est le plus important :
-> quelle boucle elle referme.
->
-> **Il s’exécute.** Le premier bouton de sa barre lance le graphe — ou `⌘Entrée`, ou **Graphe ▸
-> Exécuter** : chaque nœud part quand ce qu’il lit est prêt, les branches indépendantes partent
-> ensemble, et les générations passent par la même file que le reste du studio — elles s’affichent
-> dans la barre des tâches et se comptent dans le même budget. Le bouton devient **Arrêter**
-> pendant ce temps : plus rien n’est soumis, et ce qui est en vol est annulé. Sur un graphe vide,
-> il est **grisé** : il n’y a rien à exécuter — comme sur un canevas qui ne porte que des
-> *Notes* et des *Approbations* que rien ne relie, puisque l’exécution passe sur les deux sans
-> un mot.
->
-> **En bas à gauche, une ligne dit si le graphe s'exporterait**, et elle se met à jour pendant
-> qu'on câble plutôt qu'au bout d'un export raté : le nombre d'étapes quand tout va bien, la
-> raison sinon — aucune sortie marquée, rien qui mène à la sortie, ou le graphe ne compile pas.
->
-> **Deux de ces raisons sont au studio seul.** Une fin de boucle qui ne ferme pas ce qu'elle
-> nomme, et deux fins qui ferment la même boucle, sont acceptées sans un mot par le validateur de
-> Scenario — et pourtant un fil s'y retrouve branché ailleurs que là où il est dessiné. Le studio
-> les refuse lui-même, parce que personne d'autre ne le dirait.
->
-> **Et le refus montre OÙ.** Les nœuds en cause sont cerclés de rouge sur la toile, avec une
-> pastille d'alerte qui dit « le refus porte sur ce nœud » — la ligne dit *quoi*, les nœuds disent
-> *où*. Deux refus n'ont personne à montrer, et c'est normal : *aucune sortie marquée* est une
-> absence, et *le graphe ne compile pas* vient du validateur de Scenario, dont la phrase nomme le
-> nœud en anglais, dans le journal. Sélectionner un nœud cerclé lui rend sa bordure de sélection ;
-> la pastille, elle, reste.
->
-> **Arrêter rend la main tout de suite**, sans attendre que l’API réponde sur les générations
-> déjà lancées. L’annulation leur est bien envoyée, mais l’exécution ne reste pas suspendue à
-> leur réponse : le bouton redevient **Exécuter** dès la pression, y compris si le service ne
-> donne plus jamais de nouvelles de l’une d’elles.
->
-> **Chaque nœud dit où il en est**, dans le coin de son en-tête : *en file*, *en cours*, *terminé*,
-> *inchangé* — c’est-à-dire réutilisé tel quel parce que rien de ce dont il dépend n’a bougé —,
-> ou la raison pour laquelle il n’a rien produit : *boucle*, *sans modèle*, *non exécutable*,
-> *branche sans sortie* — la branche choisie n’a aucun port par où partir —, *échec*,
-> *expression invalide*, et **amont en échec** — celui-là ne veut pas dire « ça arrive »,
-> mais « ça n’arrivera
-> pas » : ce dont il dépend a échoué, donc il ne partira jamais de cette exécution. Relancer après
-> avoir changé le prompt du dernier nœud ne relance **que** lui.
->
-> ***En file* est l’état de départ de tous.** Presser **Exécuter** les fait tous passer là d’un
-> coup : c’est ce qui distingue un nœud qui attend son tour d’un nœud que l’exécution n’a pas
-> retenu. Un nœud y reste tant que ce dont il dépend n’a pas fini — puis, s’il génère, tant que
-> la génération elle-même attend son tour, car le studio ne lance qu’un nombre borné de
-> générations à la fois (**Réglages ▸ Génération ▸ Générations simultanées**) et le service a sa
-> propre file.
-> **Deux nœuds seulement ne l’affichent jamais** : une *Note*, qui n’entre dans aucune exécution,
-> et une *Approbation* que rien ne relie à un nœud à valider, donc qui n’est jamais posée.
->
-> **Un nœud *Si / Sinon* choisit une branche, et une seule.** Sa condition est évaluée sur ce que
-> son fil d’entrée lui apporte, et ce qu’il a reçu part par la branche choisie — les autres ne
-> reçoivent rien. Les nœuds qui les lisent affichent alors **non prise** : ce n’est pas un échec,
-> c’est le branchement qui a fait son travail, et l’état se propage à tout ce qui suit. Une branche
-> laissée vide dans l’inspecteur ne peut pas être prise : l’exécution passe à la branche
-> suivante, et au **Sinon** s’il n’en reste aucune.
->
-> **Un nœud d’approbation arrête l’exécution pour demander votre avis.** On le pose comme les
-> autres, on le relie au nœud dont il doit faire valider le résultat, et l’Inspecteur donne la
-> **question posée** — laissée vide, le nœud demande simplement « Approuver ce résultat ? ».
-> À l’exécution, le nœud qu’il garde produit d’abord, puis le graphe s’arrête : le nœud affiche
-> *à approuver* et ses deux boutons, **Approuver** et **Rejeter**. Approuver laisse repartir tout
-> ce qui lit le nœud gardé ; rejeter les arrête — le nœud dit *rejeté*, et ceux qui le lisent
-> disent *amont en échec*. **La question est reposée à chaque exécution**, même quand rien n’a
-> changé et que tout le reste est réutilisé : une approbation est un geste, pas un résultat
-> qu’on garde. Arrêter l’exécution pendant qu’une question est posée n’est pas un refus : le
-> nœud redevient simplement inactif.
->
-> **Un nœud de transformation réécrit du texte.** On le pose comme les autres, on relie à son
-> entrée le nœud dont il doit reprendre le résultat, et l’Inspecteur donne son **expression** —
-> une expression CEL, le petit langage que Scenario emploie dans ses propres workflows. Ce que
-> les fils apportent s’y lit sous le nom que Scenario donne au fil : `<identifiant du nœud>_` suivi
-> du nom de sa sortie, `output` la plupart du temps. Écrire `'photo de ' + text1_output` fabrique
-> donc un prompt à partir de ce qu’un nœud Texte porte. **C’est l’évaluateur de Scenario qui
-> calcule**, le même que sur son site : ce qui marche ici marche à l’identique une fois l’App
-> publiée. Une expression laissée vide ne produit rien et n’écrase donc pas ce que le formulaire
-> du nœud suivant contient déjà ; une expression fautive — parenthèse manquante, variable qu’aucun
-> fil n’apporte, résultat qui n’est pas du texte — fait dire au nœud *expression invalide*, et
-> ceux qui le lisent disent *amont en échec*. **Il ne prend qu’un seul fil pour l’instant** :
-> assembler deux textes en une expression viendra avec les nœuds de logique.
->
-> **Un graphe sort du studio par deux de ces boutons, et y revient par le troisième.** Ils sont
-> dans la même barre que **Exécuter**. Les deux qui font sortir sont grisés tant que le canevas ne
-> porte rien ; celui qui fait entrer l’est pendant une exécution.
->
-> - **Exporter le graphe** l’écrit en `.workflow.json` — c’est le format que la webapp Scenario
->   sait ouvrir, donc le chemin pour reprendre ailleurs ce qui a été dessiné ici. Une fenêtre
->   système demande où, en proposant le nom du document suivi de `.workflow.json` ; fermer cette
->   fenêtre sans choisir n’écrit rien.
-> - **Publier sur Scenario** ne passe pas par un fichier : la publication crée une **App de votre
->   compte**, prête à être exécutée depuis le site. **Chaque clic en crée une nouvelle** — publier
->   deux fois donne deux Apps, ce n’est pas une mise à jour de la première. La ligne sous le
->   canevas — celle qui dit déjà si le graphe s’exporterait, pas la barre d’état de la fenêtre —
->   répond **Publié sur Scenario** si c’est passé. Sinon elle donne la raison, et il y en a deux sortes :
->   **Scenario l’a refusé — voir le journal** quand c’est l’API qui dit non, ou l’une des phrases
->   que vous connaissez déjà — *Aucune sortie marquée*, *Le graphe ne compile pas*… — quand c’est
->   **le studio qui refuse d’envoyer**, avant tout appel. C’est le même verdict que la ligne
->   affiche pendant que vous câblez : publier ne demande rien de plus que ce qu’elle annonçait.
->   **L’export, lui, ne refuse rien** — un graphe qui ne se publierait pas s’écrit quand même dans
->   un fichier.
-> - **Importer un graphe** ouvre un `.workflow.json` — le vôtre, ou celui d’une App publiée.
->   **Il remplace ce qui est sur le canevas**, et c’est le seul de ces gestes qui détruise quelque
->   chose. `⌘Z` remet le graphe précédent — **mais pas les états de sa dernière exécution** : ils
->   sont oubliés à l’import, et pour une bonne raison. Les identifiants de nœuds se ressemblent
->   d’un graphe à l’autre (`text1`, `imageGenerator1`), donc un nœud importé porterait le résultat
->   d’un nœud qui n’est pas lui.
->
-> **Ce que le studio ne sait pas encore créer, l’import l’apporte.** Le menu **Ajouter un nœud**
-> propose neuf entrées, pour six types de nœuds seulement — les quatre générateurs posent tous le
-> même. Le format, lui, en connaît quinze. Un branchement, une boucle, un découpage de texte
-> arrivent donc par un fichier et se dessinent sur le canevas.
->
-> **Arriver n’est pas s’exécuter.** Un branchement importé s’exécute ; une boucle, non — elle
-> affiche *non exécutable*, comme tous les types que le studio ne sait pas encore faire tourner.
-> Le graphe se lance quand même : c’est le nœud qui s’arrête, pas l’exécution.
->
-> Le Graphe **n’a pas encore son chapitre** : il viendra quand le studio saura créer ces nœuds
-> autrement que par un fichier.
+**Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes**
 
 Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
 
@@ -406,8 +273,7 @@ l’autre, avec vos réglages.
 
 > **Un espace ajouté par une mise à jour n’atterrit pas au bout de votre barre.** Il se pose là où
 > le studio le range d’origine — après le dernier de ses voisins que vous avez gardés. Un ordre
-> enregistré est la photo des espaces d’un jour donné : le Graphe a été le septième et ne sera pas
-> le dernier.
+> enregistré est la photo des espaces d’un jour donné, et cette photo vieillit.
 
 ### Le sélecteur de compte
 
@@ -460,7 +326,7 @@ De haut en bas :
 | *séparateur* | |
 | Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; l’accueil y met **Vos projets** |
 | *séparateur* | |
-| Les icônes de la **moitié basse** | Explorateur, puis Apps — les mêmes dans tous les espaces ; l’accueil y met ses trois étagères : recettes, assistance de prompt, puis « dans la même veine » |
+| Les icônes de la **moitié basse** | l’Explorateur — le même dans tous les espaces ; l’accueil y met ses trois étagères : recettes, assistance de prompt, puis « dans la même veine » |
 | Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
 
 **Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la
@@ -569,9 +435,8 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Mailles** | droite | 1re | 3D | les objets de la scène, et le bouton qui en ajoute |
 | **Assets** | droite | 1re | Vidéo, Audio, 3D | l’étagère du projet, en colonne |
 | **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
-| **Apps** | gauche | 2de | partout | les chaînes toutes faites de Scenario, à lancer telles quelles |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
-| **Assets** | bas | 1re | Image, Textures, Skyboxes, Graphe | la même étagère, en bande |
+| **Assets** | bas | 1re | Image, Textures, Skyboxes | la même étagère, en bande |
 | **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation de la scène |
 
 > **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
@@ -591,11 +456,10 @@ chose que tous les espaces font : elle a donc la même place dans chacun, juste 
 **+** qui crée un document. Ce sont deux moments du même travail, choisir puis remplir, donc ils
 se relaient dans la même moitié.
 
-**En bas, l’Explorateur et les Apps**, qui se relaient de la même façon. Une App produit des
-assets : c’est de la génération, donc la colonne de gauche. Et une moitié plutôt que deux tours
-de plus en haut, parce que quatre icônes empilées dans un rail, c’est le moment où une colonne
-cesse d’être un endroit qu’on connaît pour devenir une pile qu’on fouille — tandis que deux
-moitiés de deux gardent la génération visible **pendant** qu’on lit l’Explorateur.
+**En bas, l’Explorateur** : les documents dans lesquels on produit. Sa propre moitié plutôt qu’un
+tour de plus en haut, parce qu’empiler les icônes dans un rail est le moment où une colonne cesse
+d’être un endroit qu’on connaît pour devenir une pile qu’on fouille — et parce que la moitié
+haute garde ainsi la génération visible **pendant** qu’on lit l’Explorateur.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
 qui est sélectionné. Les panneaux y prennent leur tour dans la moitié haute — un espace ne
@@ -638,7 +502,7 @@ le premier du rail.
 C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸ Réinitialiser la
 disposition** rétablit :
 
-La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espaces, les Apps derrière lui.
+La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espaces.
 
 | Espace | La moitié haute de droite s’ouvre sur | La bande basse sur |
 |---|---|---|
@@ -648,7 +512,6 @@ La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espac
 | **Audio** | Assets | Timeline |
 | **Textures** | Canaux | Assets |
 | **Skyboxes** | Skybox | Assets |
-| **Graphe** | *rien — il n’y déclare aucun panneau* | Assets |
 
 **Pourquoi ce n’est pas un panneau fixé une fois pour toutes.** Votre disposition est retenue une
 seule fois pour tous les espaces, alors que le panneau qui vient en premier diffère dans chacun.
@@ -825,7 +688,6 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
 | **Affichage** | Modules (rouvrir un panneau), Réinitialiser la disposition, Plein écran, et le zoom de l’image |
 | **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l’espace 3D |
-| **Graphe** | Exécuter / Arrêter le graphe — dans l’espace Graphe |
 | **Fenêtre** | les commandes de fenêtre du système |
 | **Aide** | À propos de Scenario Studio, Consommation…, Licences |
 

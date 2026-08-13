@@ -29,9 +29,8 @@ button says what it keeps. The detail is in [chapter 3](03-the-window.md#the-jou
 The panel closes three ways: a click beside it, `Escape`, or switching to another application.
 Clicking the icon again works too. The same holds for the generations bar to its left.
 
-> **A successful generation says which shelf it landed in.** That matters most for **Apps**: an
-> App produces what it produces, whichever workspace you launched it from — a pipeline started
-> from 3D can drop a picture in the Image shelf.
+> **A successful generation says which shelf it landed in** — useful as soon as a model produces
+> something other than what the workspace you are in shows.
 
 **A failure also raises a toast** in the corner, which does not fade on its own. If you missed
 it, the red counter in the status line holds it until you open the journal.

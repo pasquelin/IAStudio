@@ -39,7 +39,6 @@ according to what you are making. Those seven arrangements are called **workspac
 | **Audio** | sounds and music | an ambience, a sound effect, a musical bed |
 | **Textures** | materials | wood, rusted metal, fabric — to dress a 3D object |
 | **Skyboxes** | 360° skies | what you see around you when you look up in a scene |
-| **Graph** | chains of models | a picture generated then taken up by a second model, in one button |
 
 You switch workspace by clicking its name, at the top of the window. The panels rearrange
 themselves, and the model catalogue filters down to what can make that kind of thing.
@@ -85,7 +84,6 @@ There are seven kinds of document, one per workspace:
 | Audio | a sound being edited | `.aud` |
 | Skyboxes | a sky | `.sky` |
 | Textures | a material | `.tex` |
-| Graph | a node graph | `.graph` |
 
 ### 4. A **model**
 

@@ -53,18 +53,6 @@ part.
 | 12 | [Espace Textures](manuel/12-espace-textures.md) | Juger une matière sur un objet éclairé |
 | 13 | [Espace Skyboxes](manuel/13-espace-skyboxes.md) | Fabriquer un ciel à 360° et le régler |
 
-> **Le septième espace, le Graphe, n’a pas encore son chapitre.** Il s’ouvre, on y pose des
-> nœuds, on les relie, on les enregistre, et **il les exécute** — chaque nœud part quand ce qu’il
-> lit est prêt, ce qui n’a pas changé n’est pas relancé, et **un nœud d’approbation l’arrête pour
-> demander votre avis**. Il sait **s’exporter puis se réimporter**, et il exécute un
-> **branchement** — un nœud qui choisit une route selon une condition.
->
-> **Deux réserves.** Ce branchement ne se pose pas depuis la palette : il n’arrive que par un
-> workflow importé. Et le nœud de **boucle**, lui, n’est pas exécuté du tout — ce qui le suit
-> reste en attente, le reste du graphe continue. Ce qui manque encore au Graphe : ces deux gestes, son chapitre, et le fait que
-> **ce qu’une exécution a produit ne s’enregistre pas**. Ce qu’il fait aujourd’hui est au
-> [chapitre 3](manuel/03-la-fenetre.md) et ses limites au [chapitre 18](manuel/18-limites.md).
-
 ### Les annexes
 
 | | Chapitre | Ce que vous y trouverez |
@@ -94,8 +82,8 @@ tout de suite et pose une pastille verte **Utilisé** sur la ligne.
 tout ce que vous fabriquerez atterrira dedans.
 
 **3. Choisissez un espace.**
-En haut de la fenêtre, sept onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
-**Skyboxes**, **Graphe**. Cliquez **Image**.
+En haut de la fenêtre, six onglets : **Image**, **Vidéo**, **3D**, **Audio**, **Textures**,
+**Skyboxes**. Cliquez **Image**.
 
 **4. Choisissez un modèle.**
 À gauche, le panneau **Modèles** montre le catalogue. Cliquez sur une vignette qui vous plaît.

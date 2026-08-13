@@ -61,16 +61,6 @@ It searches the model's **name**.
 The **More filters** button opens the per-criterion menus. They are not the same in every
 workspace, because they do not make sense everywhere.
 
-### Family — only where the workspace imposes none
-
-**In the Graph only**, for now. A workspace like Image or Video shows only the models of its own
-family: a menu repeating which one could only contradict it. The Graph belongs to no family — it
-chains them — so it is up to you to say which one you are after.
-
-> **This filter sometimes sets itself.** Place a video generator node without ever having chosen a
-> video model, and the studio opens the **Models** panel already narrowed to that family. A failure
-> message says what is wrong; it does not say what to do — opening the place where you choose does.
-
 ### Origin — available everywhere
 
 | Value | What it means |

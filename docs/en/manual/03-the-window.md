@@ -228,134 +228,9 @@ deliberate: it gives the reading "panels laid on a table", as in an editing suit
 
 ## The title bar
 
-It does not carry the file name. It carries the **seven workspaces**:
+It does not carry the file name. It carries the **six workspaces**:
 
-**Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes** · **Graph**
-
-> **The Graph is under construction.** It opens, nodes can be placed, wired and saved, and
-> **selecting a node opens it in the Inspector** — its id, its kind, and a title you can type. A
-> text node shows its prompt there, a sticky note its text. A **model node** goes further: the
-> model is **chosen** from a list, and the chosen model's form opens below it, exactly the one the
-> Generation panel shows. What you type there goes through the same ⌘Z as the node you drag.
->
-> **Changing a node's model rebuilds its ports**, and the links those ports no longer answer for
-> leave with them — the one whose port is gone, and the one whose port changed what it takes and
-> no longer accepts what is at the other end. In one gesture, so one `⌘Z` takes it all back.
->
-> **A loop says what it walks.** Selecting a loop node opens the lists it goes through — pictures
-> or texts, your choice, each with the port handing out its item on every turn. Its **end of loop**
-> carries one field, and it is the one that matters: which loop it closes.
->
-> **It runs.** The first button of its bar runs the graph — or `⌘Enter`, or **Graph ▸ Run**: each
-> node starts once what it reads is
-> ready, independent branches start together, and the generations go through the same queue as the
-> rest of the studio — they show in the jobs bar and count against the same budget. The button
-> becomes **Stop** while it goes: nothing more is submitted, and what is in flight is cancelled.
-> On an empty graph it is **greyed out**: there is nothing to run — as on a canvas holding only
-> *Notes* and *Approvals* wired to nothing, both of which a run passes over without a word.
->
-> **Bottom left, a line says whether the graph would export**, and it keeps up while you wire
-> rather than arriving as a failed export: the number of steps when all is well, the reason when
-> it is not — no output marked, nothing reaches the output, or the graph does not compile.
->
-> **Two of those reasons are the studio's own.** An end of loop that does not close what it names,
-> and two ends closing the same loop, are both accepted without a word by Scenario's validator —
-> and a wire ends up plugged somewhere other than where it is drawn. The studio refuses them
-> itself, because nothing else would say so.
->
-> **And the refusal shows WHERE.** The nodes at fault are ringed in red on the canvas, with a
-> warning pip reading "the refusal is about this node" — the line says *what*, the nodes say
-> *where*. Two refusals have nobody to point at, and that is right: *no output marked* is an
-> absence, and *the graph does not compile* comes from Scenario's validator, whose sentence names
-> the node in English, in the journal. Selecting a ringed node gives it back its selection border;
-> the pip stays.
->
-> **Stop hands control back at once**, without waiting for the API to answer on the generations
-> already sent. They are told to cancel, but the run does not stay parked on their answer: the
-> button turns back to **Run** the moment you press it, even if the service never says another
-> word about one of them.
->
-> **Every node says where it stands**, in the corner of its header: *queued*, *running*, *done*,
-> *unchanged* — reused as it stands, because nothing it depends on has moved — or the reason it
-> produced nothing: *loop*, *no model*, *not runnable*, *branch with no output* — the branch it
-> chose has no port to leave by —, *failed*, *invalid expression*, and
-> **upstream failed** — which
-> does not mean "it is coming", but "it is not": something it depends on failed, so it will never
-> leave in this run. Running it again after changing the last node's prompt runs **only** that
-> node.
->
-> ***Queued* is where they all start.** Pressing **Run** moves every one of them there at once:
-> that is what tells a node waiting its turn from a node the run left out. A node stays there
-> while what it depends on is still going — then, if it generates, while the generation itself
-> waits its turn, since the studio only ever runs a bounded number at a time (**Settings ▸
-> Generation ▸ Concurrent generations**) and the service has a queue of its own. **Only two nodes never show
-> it**: a *Note*, which takes no part in a run, and an *Approval* with nothing wired to it to
-> approve, which is therefore never put.
->
-> **An *If / Else* node picks one branch, and only one.** Its condition is evaluated over what its
-> incoming wire carries, and what it received leaves by the branch that was chosen — the others get
-> nothing. The nodes reading them then show **not taken**: that is not a failure, it is the branch
-> doing its job, and the state carries on to everything downstream. A branch left empty in the
-> inspector cannot be taken: the run moves on to the next branch, and to the **Else** if there is
-> none left.
->
-> **An approval node stops the run to ask you.** You put one down like any other, wire it to the
-> node whose result it should hold, and the Inspector gives it its **question asked** — left
-> empty, the node simply asks "Approve this result?". When the graph runs, the node it guards
-> produces first, then the graph stops: the node reads *to approve* and shows its two answers,
-> **Approve** and **Decline**. Approving lets everything reading the guarded node go; declining
-> holds them back — the node reads *declined*, and whatever reads it reads *upstream failed*.
-> **The question is asked again on every run**, even where nothing has changed and everything
-> else is reused: an approval is a gesture, not a result to keep. Stopping the run while a
-> question is open is not a refusal — the node simply goes idle.
->
-> **A transform node rewrites text.** You put one down like any other, wire the node whose result
-> it should take into its input, and the Inspector gives it its **expression** — a CEL expression,
-> the small language Scenario uses in its own workflows. What the wires bring reads under the name
-> Scenario gives the wire: the provider's id, then `_` and the name of its output, `output` most of
-> the time. So `'a photo of ' + text1_output` builds a prompt out of what a Text node holds.
-> **Scenario's own evaluator does the computing**, the very one its site runs: what works here
-> works identically once the App is published. An expression left empty produces nothing, so it
-> overwrites nothing the next node's form already holds; one that will not evaluate — a missing
-> bracket, a variable no wire feeds, a result that is not text — makes the node read *invalid
-> expression*, and whatever reads it reads *upstream failed*. **It takes one wire for now**:
-> assembling two texts in one expression comes with the logic nodes.
->
-> **A graph leaves the studio by two of these buttons, and comes back by the third.** They sit in
-> the same bar as **Run**. The two that send out are greyed out while the canvas holds nothing;
-> the one that brings in is greyed out while a run is under way.
->
-> - **Export the graph** writes it as a `.workflow.json` — the format Scenario's webapp opens, so
->   the way to pick up elsewhere what was drawn here. A system window asks where, offering the
->   document's name followed by `.workflow.json`; closing that window without choosing writes
->   nothing.
-> - **Publish to Scenario** goes through no file: it creates an **App on your account**, ready to
->   run from the site. **Every click creates a new one** — publishing twice gives two Apps, not an
->   update of the first. The line under the canvas — the one already saying whether the graph
->   would export, not the window's status bar — answers **Published to Scenario** when it went
->   through. Otherwise it gives the reason, and there are two kinds: **Scenario refused it —
->   see the journal** when the API says no, or one of the sentences you already know — *No output
->   marked*, *The graph does not compile*… — when it is **the studio refusing to send**, before any
->   call. That is the very verdict the line shows while you wire: publishing asks nothing more than
->   what it was already announcing. **Export refuses nothing** — a graph that would not publish is
->   written to a file all the same.
-> - **Import a graph** opens a `.workflow.json` — yours, or a published App's. **It replaces what
->   is on the canvas**, and it is the only one of these gestures that destroys anything. `⌘Z`
->   brings the previous graph back — **but not the states of its last run**: those are forgotten on
->   import, and for good reason. Node ids look alike from one graph to the next (`text1`,
->   `imageGenerator1`), so an imported node would wear the result of a node that is not it.
->
-> **What the studio cannot create yet, an import brings in.** The **Add a node** menu offers nine
-> entries for six node types only — the four generators all place the same one. The format knows
-> fifteen. A branch, a loop, a text split therefore arrive by file and draw themselves on the
-> canvas.
->
-> **Arriving is not running.** An imported branch runs; a loop does not — it reads *not runnable*,
-> as does every type the studio cannot run yet. The graph still starts: it is the node that stops,
-> not the run.
->
-> The Graph **has no chapter of its own yet**: it comes when the studio can create these nodes by
-> something other than a file.
+**Image** · **Video** · **3D** · **Audio** · **Textures** · **Skyboxes**
 
 One click switches workspace. The active one is the button lighter than the others.
 
@@ -390,8 +265,7 @@ session to the next, along with your settings.
 
 > **A workspace added by an update does not land at the end of your bar.** It lands where the
 > studio files it by default — after the last of its earlier neighbours you kept. A stored order is
-> a photograph of the workspaces that existed the day it was written: the Graph was the seventh and
-> will not be the last.
+> a photograph of the workspaces that existed the day it was written, and that photograph ages.
 
 ### The account switcher
 
@@ -443,7 +317,7 @@ From top to bottom:
 | *separator* | |
 | The **upper half** icons of the left column | Models, then Generate — the same two in every workspace; the home puts **Your projects** there |
 | *separator* | |
-| The **lower half** icons | Explorer, then Apps — the same in every workspace; the home puts its three shelves there: recipes, prompt help, then "in the same vein" |
+| The **lower half** icons | the Explorer — the same in every workspace; the home puts its three shelves there: recipes, prompt help, then "in the same vein" |
 | At the bottom: the **bottom strip** icons | Assets or Timeline, depending on the workspace |
 
 **One separator per cut of the column, never one more.** The rail is the column's legend: it cuts
@@ -549,9 +423,8 @@ instead.
 | **Meshes** | right | 1st | 3D | the scene's objects, and the button that adds one |
 | **Assets** | right | 1st | Video, Audio, 3D | the project's shelf, as a column |
 | **Explorer** | left | 2nd | everywhere | the project folder, folders and files |
-| **Apps** | left | 2nd | everywhere | Scenario's ready-made pipelines, run as they are |
 | **Inspector** | right | 2nd | everywhere | what is selected, adjustable live |
-| **Assets** | bottom | 1st | Image, Textures, Skyboxes, Graph | the same shelf, as a strip |
+| **Assets** | bottom | 1st | Image, Textures, Skyboxes | the same shelf, as a strip |
 | **Timeline** | bottom | 1st | Video, Audio, 3D | the sequence being edited, or the scene's animation |
 
 > **"Everywhere" means the workspaces, not the home screen**, unless the row says otherwise. A
@@ -571,10 +444,9 @@ does, so it gets the same place in each, right under the **+** button that makes
 They are two moments of the same work, choosing then filling in, so they take turns in the same
 half.
 
-**Below, the Explorer and the Apps**, taking turns the same way. An App produces assets, which
-is generating, so it belongs to the column one produces from. And a half rather than two more
-turns above, because four icons stacked in a rail is the moment a column stops being a place you
-know and becomes a pile you search — while two halves of two keep generation visible **while**
+**Below, the Explorer**: the documents one produces into. Its own half rather than one more turn
+above, because stacking icons in a rail is the moment a column stops being a place you know and
+becomes a pile you search — and because the upper half then keeps generation visible **while**
 the Explorer is read.
 
 **The right column belongs to the open document**: what it holds, what lights it, what is
@@ -615,7 +487,7 @@ the workspace declares there — the topmost in the table above, and so the firs
 
 That is what you see on first launch, and what **View ▸ Reset layout** restores:
 
-The lower left half opens on the **Explorer** in every workspace, the Apps behind it.
+The lower left half opens on the **Explorer** in every workspace.
 
 | Workspace | The upper right half opens on | The bottom strip on |
 |---|---|---|
@@ -625,7 +497,6 @@ The lower left half opens on the **Explorer** in every workspace, the Apps behin
 | **Audio** | Assets | Timeline |
 | **Textures** | Channels | Assets |
 | **Skyboxes** | Skybox | Assets |
-| **Graph** | *nothing — it declares no panel there* | Assets |
 
 **Why this is not a panel pinned once and for all.** Your layout is remembered once for all
 workspaces, while the panel that comes first differs in each. Writing one into the default layout
@@ -796,7 +667,6 @@ The system menu — at the top of the screen on macOS, at the top of the window 
 | **Edit** | Undo, Redo, and the system's text commands |
 | **View** | Tool windows (reopen a panel), Reset layout, Full screen, and image zoom |
 | **Objects** | Add ▸ Mesh, Add ▸ Light — in the 3D workspace |
-| **Graph** | Run / Stop the graph — in the Graph workspace |
 | **Window** | the system's window commands |
 | **Help** | About Scenario Studio, Usage…, Licences |
 

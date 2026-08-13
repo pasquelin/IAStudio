@@ -30,9 +30,8 @@ menu dont le bouton dit ce qu'il retient. Le détail est au
 Le volet se referme de trois façons : un clic à côté, `Échap`, ou le passage à une autre
 application. Recliquer l’icône marche aussi. C’est vrai de la barre des générations à sa gauche.
 
-> **Une génération réussie dit dans quelle étagère elle a atterri.** Ça compte surtout pour les
-> **Apps** : une App produit ce qu’elle produit, quel que soit l’espace d’où vous l’avez lancée —
-> une chaîne démarrée depuis la 3D peut déposer une image dans l’étagère Image.
+> **Une génération réussie dit dans quelle étagère elle a atterri** — utile dès qu’un modèle
+> produit autre chose que ce que l’espace où vous êtes montre.
 
 **Un échec fait aussi apparaître une bulle** dans le coin, qui ne s’efface pas toute seule. Si
 vous ne l’avez pas vue, le compteur rouge de la ligne d’état la garde en mémoire jusqu’à ce que

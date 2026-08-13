@@ -176,7 +176,7 @@ Vingt et un préfixes, dont les plus chargés :
 | `settings:*` / `accounts:*` | 6 + 5 | lecture, écriture, identifiants, état d’authentification |
 | `document:*` | 6 | ouvrir, écrire, lister les documents du projet |
 | `styles:*` | 4 | les réglages de matière, enregistrés et rejoués |
-| `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
+| `favorites:*`, `project:*`, `media:*`, `window:*` | 3 chacun | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 chacun | — |
 | `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 chacun | — |
 
@@ -217,7 +217,6 @@ src/main/
 │   ├── uploader.ts          l'envoi d'un fichier vers la bibliothèque
 │   ├── cost.ts              ce qu'une génération coûterait, sans la lancer
 │   ├── usage.ts             les unités consommées et la grille de prix
-│   ├── workflow-registry.ts un workflow de l'API traduit en graphe
 │   └── handlers.ts          les canaux scenario:*
 ├── project/
 │   ├── store.ts             créer et ouvrir un dossier de projet, lire/écrire le manifeste
@@ -349,15 +348,14 @@ src/renderer/src/
 │   ├── TitleBar.tsx     espaces de travail, feux natifs
 │   └── documents.tsx    quel éditeur rend quel type de document
 ├── design/       le design system maison — voir plus bas
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, et `core/` — ce que tous les moteurs partagent
-├── spaces/       un éditeur par type de document — SEPT, autant que d'espaces
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, gpu, et `core/` — ce que tous les moteurs partagent
+├── spaces/       un éditeur par type de document — SIX, autant que d'espaces
 │   ├── image/      le canvas Pixi et ses outils
 │   ├── three/      la vue three.js et ses outils
 │   ├── video/      la timeline, le moniteur, ses outils
 │   ├── audio/      la forme d'onde, ses outils, le décodeur
 │   ├── textures/   les canaux d'un matériau, et leur aperçu répété
-│   ├── skyboxes/   le ciel immersif et ses trois projections à plat
-│   └── graph/      le node editor — il pose, enregistre et exécute
+│   └── skyboxes/   le ciel immersif et ses trois projections à plat
 ├── panels/       les vingt-sept outils ancrables
 ├── home/         l'accueil et ses deux bandes — une page, pas une disposition
 ├── settings/     la fenêtre des réglages, chargée à la demande
@@ -384,7 +382,7 @@ Sept choses en sont tenues dehors, chacune parce qu’une session ordinaire ne l
 
 | Ce qui est chargé à la demande | Pourquoi |
 |---|---|
-| Les **sept éditeurs** | une session en ouvre un ou deux ; les sept pèsent cinq mégaoctets |
+| Les **six éditeurs** | une session en ouvre un ou deux ; les six pèsent plusieurs mégaoctets |
 | Les **quinze panneaux** | un espace en montre trois ou quatre, jamais les quinze |
 | Le **formulaire de génération**, et zod, `react-hook-form`, `@hookform/resolvers` avec lui | on ouvre un générateur, on n’arrive pas dessus |
 | La fenêtre des **Réglages** — son registre, ses sections, son brouillon | une cinquantaine de kilooctets d’une autre fenêtre |
@@ -422,13 +420,6 @@ premier écran va chercher à côté d’un éditeur. Ils étaient six ; **quatr
 panneaux**, puisqu’ils entraient par un panneau et non par le shell. Le test en fait un
 **budget** : la liste peut rétrécir, jamais grandir. Une troisième entrée veut dire que le premier
 écran est allé chercher plus loin que nécessaire.
-
-**Le graphe est le seul espace dont le lecteur n’est pas derrière son éditeur** : `document-io.ts`
-parse un graphe comme il parse les autres genres, donc `engines/graph/serialize.ts` entre. Le
-moteur de mutation et le canvas, eux, restent dehors — `@xyflow/react` n’est jamais dans le chunk
-d’entrée. C’était deux modules de plus jusqu’à ce que l’id de nœud réservé descende dans
-`shared/domain/graph.ts` : un prédicat atteint depuis le lecteur tirait `mutations.ts`, qui tirait
-`connect.ts` et `handles.ts` — la moitié du moteur, pour une comparaison de chaînes.
 
 **Il vise des dossiers, pas des fichiers.** Une garde posée sur quatre fichiers du dossier des
 réglages laisse entrer le cinquième ; c’est ce qui a été corrigé en même temps que les réglages
@@ -502,13 +493,9 @@ Les trois qui montrent de la 3D partagent `engines/viewport/` — canevas, camé
 redimensionnement, boucle à la demande, éclairage par image. Chacun écrivant le sien, c’était
 trois chances de ne pas être d’accord sur un redimensionnement ou une libération.
 
-**Six moteurs, dix dossiers sous `engines/` : les quatre autres ne sont pas des moteurs.**
-`core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, `gpu/` les passes de
-shader et le compteur de frame, et `graph/` — **le seul qui pourrait tromper** — n’est que des
-fonctions : commandes, mutations, sérialisation, validation d’une arête, et depuis `f17de270` le
-plan d’exécution et son exécuteur. Le node editor n’a pas de moteur pour autant, parce qu’il n’a
-rien à dessiner lui-même : `@xyflow/react` rend, le domaine décide, et l’exécution n’est qu’un
-ordre de passage calculé puis parcouru.
+**Six moteurs, neuf dossiers sous `engines/` : les trois autres ne sont pas des moteurs.**
+`core/` porte l’historique partagé, `viewport/` le socle des trois vues 3D, et `gpu/` les passes
+de shader et le compteur de frame.
 
 Celui du son est une paire de modules plutôt qu’une classe — `audio-data.ts` fait le travail sur
 les échantillons, `edits.ts` tient un `AudioEditState` rejouable depuis le fichier source. Même
@@ -641,11 +628,11 @@ jusqu’au journal.
 > **C’est en ne lisant que le 402 documenté qu’aucun badge n’a jamais affiché de prix.** Le défaut
 > était invisible par construction : un bouton sans chiffre se lit comme un modèle que l’API
 > refuse de tarifer, exactement comme les trois autres cas qui donnent `null`. Il a fallu lancer
-> une App pour de vrai pour le voir. **Devant une API, la référence dit ce qui était prévu, pas ce
-> qui répond.**
+> une génération pour de vrai pour le voir. **Devant une API, la référence dit ce qui était prévu,
+> pas ce qui répond.**
 
-Le port est une fonction, pas une méthode, parce que `generate.runModel` et `workflows.run`
-tarifent un dry run de la même façon : lequel des deux est visé regarde la cible, pas le port.
+Le port est une fonction, pas une méthode : quel point de terminaison tarife le dry run regarde
+la cible, pas le port.
 
 Côté renderer, `useCostEstimate` débounce à 600 ms **et** garde un plancher entre deux envois,
 dérivé de `INTERACTIVE_REQUESTS_PER_MINUTE` : un débounce seul n’a pas de plafond, seulement une
@@ -688,8 +675,8 @@ coupure en cours d’écriture ne laisse jamais un document tronqué là où ét
 
 Le corps du fichier appartient à l’espace qui l’a écrit : le processus principal ne le lit pas, il
 l’estampille et le rend tel quel. Un espace qui apprend à s’enregistrer n’a donc pas de canal à
-lui. **Les sept genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel, matière
-et graphe, déclarés en un seul endroit, `IO_BY_KIND` dans `app/document-io.ts`. Un genre absent de
+lui. **Les six genres savent s’écrire aujourd’hui** — image, scène, séquence, son, ciel et
+matière, déclarés en un seul endroit, `IO_BY_KIND` dans `app/document-io.ts`. Un genre absent de
 cette table a un Enregistrer qui ne fait rien, plutôt qu’un qui écrit un corps vide.
 
 ---
@@ -715,7 +702,7 @@ Les primitives, toutes dans `design/` :
 | `ProgressRow`, `ProgressBar` | « quelque chose se passe, voilà où ça en est » — partagés par le résumé des générations, sa liste dépliée et l’import de médias |
 | `PropertySection` et les champs | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — ce dont l’inspecteur est fait |
 | `DynamicForm` | le seul formulaire de génération qui existe |
-| `FormHeader` | la ligne qui nomme ce que le formulaire sert — le modèle dans Génération, l’App dans son lanceur |
+| `FormHeader` | la ligne qui nomme ce que le formulaire sert — le modèle, dans Génération |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | les chaînes de classes partagées par plus d’un composant : `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 
@@ -764,23 +751,16 @@ propre rayon et sa propre animation, à combattre contre les jetons — exacteme
 laquelle un dock ne porte pas de contrôle DaisyUI. `ActivityToasts` réutilise `MENU_SURFACE`,
 donc une bulle et un menu ont le même aspect parce qu’ils partagent la même chaîne de classes.
 
-Trois bibliothèques ont fait le chemin inverse et sont entrées, chacune pour une chose qu’on
+Deux bibliothèques ont fait le chemin inverse et sont entrées, chacune pour une chose qu’on
 n’écrit pas soi-même :
 
 | | |
 |---|---|
 | `recharts` | les courbes de la fenêtre de consommation — dépense par jour, par compte |
 | `opentype.js` | la lecture des tables d’une police, pour le texte en volume et la légende d’une image |
-| `@xyflow/react` | le canvas du node editor : viewport, arêtes bézier, poignées, sélection au lasso |
 
 `opentype.js` est **chargé à la demande** : il ne pèse pas sur le premier écran, qui n’a aucune
 police à disséquer.
-
-`@xyflow/react` est **le canvas de Scenario lui-même** — la webapp le rend, DOM à l’appui — et
-c’est ce qui rend l’aller-retour possible : le format natif du studio est l’`editorInfo` de
-Scenario, écrit à la main dans `shared/domain/graph.ts` parce qu’un graphe traverse l’IPC et que
-`shared/` ne porte aucune dépendance runtime. Le canvas **n’est monté nulle part aujourd’hui** :
-le graphe deviendra un septième espace, et rien de cette pile n’est atteignable avant.
 
 ### Jetons et densité
 
@@ -911,9 +891,8 @@ Trois conséquences, dont une à accepter :
   français.** Un test tient la liste, pour qu’en traduire un soit une décision prise contre un
   test rouge ;
 - **la traduction s’applique au rendu, pas à la construction des descripteurs.** Changer de
-  langue redit le formulaire ouvert au lieu d’attendre que le modèle soit rechargé — et les Apps
-  en profitent sans une ligne de plus, leurs champs venant du même endroit. L’invariant 5 est
-  intact : rien n’est écrit à la main pour un modèle donné.
+  langue redit le formulaire ouvert au lieu d’attendre que le modèle soit rechargé. L’invariant 5
+  est intact : rien n’est écrit à la main pour un modèle donné.
 
 **Tout texte distant n’appelle pas ce remède, et prendre le mauvais coûte la garde.** Le rapport
 d’usage affichait « images-generation » et « video » dans une fenêtre française : même symptôme,
@@ -933,16 +912,13 @@ La règle qui départage les deux :
 |---|---|
 | appartient à une **liste fermée** que l’API documente | une clé de bundle par valeur, plus une garde exhaustive |
 | est **écrit librement** et change avec chaque modèle publié | le dictionnaire indexé sur le texte source |
-| est **lu par le code autant que par l’œil** | rien — il sort brut, et c’est délibéré |
 
-Dans les deux premiers cas le repli est **le texte brut de l’API, jamais une clé** : un écran en
-anglais reste lisible, un écran qui affiche `usage.action.images-generation` ne l’est pas.
+Dans les deux cas le repli est **le texte brut de l’API, jamais une clé** : un écran en anglais
+reste lisible, un écran qui affiche `usage.action.images-generation` ne l’est pas.
 
-**La troisième ligne est celle qu’on oublie, et elle casse en silence.** Un port de nœud de
-workflow montre le nom que le workflow lui a donné — celui-là passe par le dictionnaire. Mais un
-port **sans** nom affiche ce qu’il accepte, `image` ou `video`, et **cette chaîne est ce que la
-vérification de connexion compare** : traduite d’un côté de l’arête et pas de l’autre, elle ne dit
-plus si deux ports vont ensemble. `NodePorts.tsx` porte la règle en JSDoc, là où elle se paierait.
+**Et une troisième catégorie attend son prochain cas** : un texte distant que le CODE lit autant
+que l’œil ne se traduit pas du tout. Traduit d’un côté d’une comparaison et pas de l’autre, il
+cesse silencieusement de dire ce qu’il disait.
 
 C’est le même partage que `name` et `message` dans les gardes de texte en dur : **une chaîne qui
 est aussi une donnée n’est pas un libellé**, et la traduire la casse comme donnée.

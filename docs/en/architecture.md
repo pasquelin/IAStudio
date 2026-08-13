@@ -172,7 +172,7 @@ Twenty-one prefixes, the busiest being:
 | `settings:*` / `accounts:*` | 6 + 5 | read, write, credentials, authentication state |
 | `document:*` | 6 | opening, writing and listing the project's documents |
 | `styles:*` | 4 | material settings, saved and replayed |
-| `favorites:*`, `workflows:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
+| `favorites:*`, `project:*`, `media:*`, `window:*` | 3 each | — |
 | `dialog:*`, `fonts:*`, `update:*` | 2 each | — |
 | `activity:*`, `diagnostics:*`, `scene:*`, `texture:*`, `skybox:*` | 1 each | — |
 
@@ -213,7 +213,6 @@ src/main/
 │   ├── uploader.ts          sending a file up to the library
 │   ├── cost.ts              what a generation would cost, without running it
 │   ├── usage.ts             the units spent, and the price list
-│   ├── workflow-registry.ts an API workflow translated into a graph
 │   └── handlers.ts          the scenario:* channels
 ├── project/
 │   ├── store.ts             create and open a project folder, read/write the manifest
@@ -340,15 +339,14 @@ src/renderer/src/
 │   ├── TitleBar.tsx     workspace switcher, native traffic lights
 │   └── documents.tsx    which editor renders which document kind
 ├── design/       the in-house design system — see below
-├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, graph, gpu, and `core/` — what every engine shares
-├── spaces/       one editor per document kind — SEVEN, as many as there are workspaces
+├── engines/      canvas, scene, timeline, audio, viewport, skybox, texture, gpu, and `core/` — what every engine shares
+├── spaces/       one editor per document kind — SIX, as many as there are workspaces
 │   ├── image/      Pixi-backed canvas and its tools
 │   ├── three/      the three.js viewport and its tools
 │   ├── video/      the timeline canvas, the monitor, its tools
 │   ├── audio/      the waveform, its tools, the decoder
 │   ├── textures/   a material's channels, and their tiled preview
-│   ├── skyboxes/   the immersive sky and its three flat projections
-│   └── graph/      the node editor — it places, saves and runs
+│   └── skyboxes/   the immersive sky and its three flat projections
 ├── panels/       the twenty-seven dockable tools
 ├── home/         the home screen and its two bands — a page, not a layout
 ├── settings/     the settings window, loaded on demand
@@ -375,7 +373,7 @@ Seven things are kept out, each because an ordinary session does not open them a
 
 | Loaded on demand | Why |
 |---|---|
-| The **seven editors** | a session opens one or two; all seven weigh five megabytes |
+| The **six editors** | a session opens one or two; all six weigh several megabytes |
 | The **fifteen panels** | a workspace shows three or four, never fifteen |
 | The **generation form**, and zod, `react-hook-form`, `@hookform/resolvers` with it | you open a generator, you do not land on one |
 | The **Settings** window — its registry, its sections, its draft | fifty kilobytes of another window |
@@ -411,13 +409,6 @@ screen. Measured at the same commit on both sides, preloads counted, no sourcema
 screen reaches for next to one. There were six; **four left with the panels**, since they came in
 through a panel rather than through the shell. The test makes it a **budget**: the list may
 shrink, never grow. A third entry means the first screen reached further than it needed to.
-
-**The graph is the one workspace whose reader is not behind its editor**: `document-io.ts` parses
-a graph as it parses every other kind, so `engines/graph/serialize.ts` comes in. The mutation
-engine and the canvas stay out — `@xyflow/react` is never in the entry chunk. It was two modules
-wider until the reserved node id moved down into `shared/domain/graph.ts`: a predicate reached
-from the reader pulled `mutations.ts`, which pulled `connect.ts` and `handles.ts` — half the
-engine, for a string comparison.
 
 **It aims at folders, not files.** A guard set on four files of the settings folder lets the fifth
 back in; that was fixed at the same time as the settings themselves.
@@ -486,12 +477,9 @@ The three that show 3D share `engines/viewport/` — canvas, camera, orbit, resi
 loop, image-based lighting. Each writing its own was three chances to disagree about a resize
 or a disposal.
 
-**Six engines, ten folders under `engines/`: the other four are not engines.** `core/` carries the
-shared history, `viewport/` the base of the three 3D views, `gpu/` the shader passes and the frame
-counter, and `graph/` — **the one that could mislead** — is functions only: commands, mutations,
-serialisation, edge validation, and since `f17de270` the run plan and its executor. The node editor
-still has no engine, because it has nothing of its own to draw: `@xyflow/react` renders, the domain
-decides, and running is an order of passage computed and then walked.
+**Six engines, nine folders under `engines/`: the other three are not engines.** `core/` carries
+the shared history, `viewport/` the base of the three 3D views, and `gpu/` the shader passes and
+the frame counter.
 
 The audio one is a pair of modules rather than a class — `audio-data.ts` does the sample work,
 `edits.ts` holds an `AudioEditState` replayable from the source file. Same invariant as the other
@@ -617,11 +605,12 @@ other failure.
 
 > **Reading only the documented 402 is how no badge ever showed a price.** The defect was
 > invisible by construction: a button with no figure reads as a model the API declines to price,
-> exactly like the three other cases that yield `null`. It took running a real App to see it.
+> exactly like the three other cases that yield `null`. It took running a real generation to see
+> it.
 > **In front of an API, the reference says what was intended, not what answers.**
 
-The port is a function rather than a method because `generate.runModel` and `workflows.run` price
-a dry run the same way: which of the two is targeted is the target's business, not the port's.
+The port is a function rather than a method: which endpoint prices a dry run is the target's
+business, not the port's.
 
 On the renderer side, `useCostEstimate` debounces at 600 ms **and** keeps a floor between two
 requests, derived from `INTERACTIVE_REQUESTS_PER_MINUTE`: a trailing debounce alone has no
@@ -662,8 +651,8 @@ leave a truncated document where the work was.
 
 The body belongs to the space that wrote it: the main process never reads into it, it stamps an
 envelope and hands it back untouched. A space that learns to save therefore needs no channel of
-its own. **All seven kinds can write themselves today** — image, scene, sequence, audio, skybox,
-texture and graph, declared in one place, `IO_BY_KIND` in `app/document-io.ts`. A kind absent from
+its own. **All six kinds can write themselves today** — image, scene, sequence, audio, skybox and
+texture, declared in one place, `IO_BY_KIND` in `app/document-io.ts`. A kind absent from
 that table has a Save that does nothing, rather than one that writes an empty body.
 
 ---
@@ -688,7 +677,7 @@ Key primitives, all in `design/`:
 | `ProgressRow`, `ProgressBar` | "something is happening, here is how far" — shared by the generations summary, its expanded list and media import |
 | `PropertySection` and the fields | `TextField`, `NumberField`, `SliderField`, `RangeField`, `ColorField`, `VectorField`, `ToggleField`, `TextureField`, `AssetDropField`, `PropertyRow` — what the inspector is built from |
 | `DynamicForm` | the only generation form there is |
-| `FormHeader` | the line naming what the form is for — the model in Generate, the App in its runner |
+| `FormHeader` | the line naming what the form is for — the model, in Generate |
 | `Tree`, `Flyout`, `MenuButton`, `MenuRow`, `EmptyState`, `Timecode`, `Separator`, `TooltipHost` | |
 | `styles.ts` | class strings shared by more than one component: `FOCUS_RING`, `CONTROL`, `MEDIA_FRAME` |
 
@@ -733,22 +722,15 @@ animation to fight the tokens with — exactly why a dock carries no DaisyUI con
 `ActivityToasts` reuses `MENU_SURFACE`, so a toast and a menu look alike because they share the
 same class string.
 
-Three libraries went the other way and came in, each for something one does not write oneself:
+Two libraries went the other way and came in, each for something one does not write oneself:
 
 | | |
 |---|---|
 | `recharts` | the curves in the usage window — spend per day, per account |
 | `opentype.js` | reading a typeface's tables, for 3D text and an image's caption |
-| `@xyflow/react` | the node editor canvas: viewport, bézier edges, handles, lasso selection |
 
 `opentype.js` is **loaded on demand**: it does not weigh on the first screen, which has no
 typeface to dissect.
-
-`@xyflow/react` is **Scenario's own canvas** — the webapp renders it, DOM in evidence — and that
-is what makes the round trip possible: the studio's native format is Scenario's `editorInfo`,
-written by hand in `shared/domain/graph.ts` because a graph crosses the IPC and `shared/` carries
-no runtime dependency. The canvas is **mounted nowhere today**: the graph will become a seventh
-workspace, and none of that stack is reachable before it is.
 
 ### Tokens and density
 
@@ -872,9 +854,8 @@ Three consequences, one of them to be accepted:
   no glossary entry gives it a French name.** A test holds the list, so translating one is a
   decision taken against a red test;
 - **translation applies at render, not when descriptors are built.** Switching language restates
-  the open form instead of waiting for the model to be reloaded — and the Apps benefit without a
-  line more, their fields coming from the same place. Invariant 5 is intact: nothing is written by
-  hand for a given model.
+  the open form instead of waiting for the model to be reloaded. Invariant 5 is intact: nothing is
+  written by hand for a given model.
 
 **Not all remote text calls for that remedy, and picking the wrong one costs you the guard.** The
 usage report was showing "images-generation" and "video" in a French window: same symptom,
@@ -894,16 +875,13 @@ The rule that tells them apart:
 |---|---|
 | belongs to a **closed list** the API documents | one bundle key per value, plus an exhaustive guard |
 | is **written freely** and changes with every published model | the dictionary indexed on the source text |
-| is **read by the code as much as by the eye** | nothing — it comes out raw, deliberately |
 
-In the first two cases the fallback is **the API's raw text, never a key**: an English screen stays
+In both cases the fallback is **the API's raw text, never a key**: an English screen stays
 readable, a screen showing `usage.action.images-generation` does not.
 
-**The third row is the one that gets forgotten, and it breaks silently.** A workflow node's port
-shows the name the workflow gave it — that one goes through the dictionary. But a port **without**
-a name shows what it accepts, `image` or `video`, and **that string is what the connection check
-compares**: translated on one side of an edge and not the other, it no longer says whether two
-ports go together. `NodePorts.tsx` carries the rule in JSDoc, where it would be paid for.
+**And a third category waits for its next case**: remote text the CODE reads as much as the eye
+is not translated at all. Translated on one side of a comparison and not the other, it silently
+stops saying what it said.
 
 It is the same split as `name` and `message` in the hardcoded-text guards: **a string that is also
 data is not a label**, and translating it breaks it as data.

@@ -51,18 +51,6 @@ machine, without sending them anywhere.
 | 12 | [Textures workspace](manual/12-textures-workspace.md) | Judge a material on a lit object |
 | 13 | [Skyboxes workspace](manual/13-skyboxes-workspace.md) | Make a 360° sky and adjust it |
 
-> **The seventh workspace, the Graph, has no chapter yet.** It opens, holds nodes, wires them,
-> saves them, and **runs them** — each node leaves when what it reads is ready, what has not changed
-> is not rerun, and **an approval node stops it to ask you**. It can **export then reimport
-> itself**, and it runs a **branch** — a node that picks a route from a condition.
->
-> **Two caveats.** That branch cannot be laid down from the palette: it only ever arrives with an
-> imported workflow. And the **loop** node is not run at all — whatever follows it waits, while the
-> rest of the graph carries on.
-> What the Graph still lacks: those two gestures, its chapter, and the fact that **what a run
-> produced is not saved**. What it does today is in
-> [chapter 3](manual/03-the-window.md), and its limits in [chapter 18](manual/18-limits.md).
-
 ### Appendices
 
 | | Chapter | What you will find |
@@ -92,8 +80,8 @@ straight away and puts a green **In use** badge on the row.
 you make will land inside it.
 
 **3. Choose a workspace.**
-At the top of the window, seven tabs: **Image**, **Video**, **3D**, **Audio**, **Textures**,
-**Skyboxes**, **Graph**. Click **Image**.
+At the top of the window, six tabs: **Image**, **Video**, **3D**, **Audio**, **Textures**,
+**Skyboxes**. Click **Image**.
 
 **4. Choose a model.**
 On the left, the **Models** panel shows the catalogue. Click a thumbnail you like. The chosen

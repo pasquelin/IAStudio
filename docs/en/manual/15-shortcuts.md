@@ -38,7 +38,7 @@ The studio files each action under a **context** — the surface where it makes 
 surface listens at a time, the one you are looking at. A key shared between two contexts can
 therefore never be ambiguous.
 
-Nine contexts:
+Eight contexts:
 
 | Context | Where it applies |
 |---|---|
@@ -48,7 +48,6 @@ Nine contexts:
 | **In the edit** | the timeline of the Video and Audio workspaces |
 | **In the picture** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
-| **In the graph** | the canvas of the Graph workspace |
 | **In the take editor** | the waveform of the Audio workspace |
 | **In the material** | the preview and channels of the Textures workspace |
 
@@ -95,7 +94,7 @@ It is **held** rather than tapped: press, speak, let go. It can be set to toggle
 ### Walking a list with the keyboard
 
 Every list in the studio is crossed the same way: the shelf, the Explorer, the layers, the models,
-the Apps, the scene tree.
+the scene tree.
 
 | Key | Effect |
 |---|---|
@@ -420,29 +419,9 @@ The Skyboxes workspace answers the keyboard like the others.
 
 ---
 
-## In the graph
-
-The seventh context: the Graph workspace listens for the run and for undo.
-
-| Action | Key | What it does |
-|---|---|---|
-| **Run / Stop the graph** | `⌘Enter` | runs every node in the order its wires allow, and stops a run already under way — what has not changed since the last run is not run again |
-| **Undo** | `⌘Z` | |
-| **Redo** | `⇧⌘Z` | |
-
-`⌘Enter` does nothing on an empty graph, just as the bar's button is greyed out there.
-
-The three of them cover everything the graph can do — placing a node, moving it, wiring it,
-renaming it, changing its model, running all of it — because all of it goes through a command.
-Nodes are placed with the mouse
-from the palette: there is no key yet that arms one, the way there is one per tool in the Image
-workspace.
-
----
-
 ## In the take editor
 
-The eighth context: the audio editor listens for undo alone.
+The seventh context: the audio editor listens for undo alone.
 
 | Action | Key | What it does |
 |---|---|---|
@@ -460,7 +439,7 @@ taken from the bar, under the waveform.
 
 ## In the material
 
-The ninth context, and the shortest: the Textures workspace listens for undo alone.
+The eighth context, and the shortest: the Textures workspace listens for undo alone.
 
 | Action | Key | What it does |
 |---|---|---|
@@ -490,10 +469,8 @@ as long as the caret is in a text field, and takes over again the moment you lea
 The same holds for `⌘X`, `⌘C` and `⌘V`: in a field they work on the text; anywhere else, on what
 the workspace has selected.
 
-**One exception, and only one: `⌘Enter` runs the graph from the field you are writing in.** That is
-where the gesture starts — the prompt is typed into a node — and asking you to click away before
-running it would be the very friction this key exists to remove. No other shortcut crosses a text
-field: a command has to declare it to be heard there, and `⌘Enter` is the only one that does today.
+**No shortcut crosses a text field**: a command has to declare it to be heard there, and none
+does today.
 
 ---
 
@@ -561,48 +538,47 @@ are bound to the band, not to a context.
 
 ## Crib sheet, all on one page
 
-| Key | Anywhere | Bar | 3D view | Edit | Image | Sky | Graph | Audio | Material |
-|---|---|---|---|---|---|---|---|---|---|
-| `⌘N` | New project |  |  |  |  |  |  |  |  |
-| `⌘O` | Open project |  |  |  |  |  |  |  |  |
-| `⌘S` | Save |  |  |  |  |  |  |  |  |
-| `⇧⌘S` | Save as |  |  |  |  |  |  |  |  |
-| `⌘,` | Settings |  |  |  |  |  |  |  |  |
-| `⌃⌘F` | Full screen |  |  |  |  |  |  |  |  |
-| `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo | Undo |
-| `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo | Redo | Redo |
-| `⌘Enter` |  |  |  |  |  |  | Run |  |  |
-| `⌘G` |  |  | Group |  |  |  |  |  |  |
-| `⌘D` |  |  | Duplicate |  | Deselect |  |  |  |  |
-| `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |  |  |
-| `O` |  |  | Projection |  |  |  |  |  |  |
-| `Z` |  |  | Display mode |  |  |  |  |  |  |
-| `B` |  |  | Show skeletons |  |  |  |  |  |  |
-| `V` |  |  | Select |  |  | Change the view |  |  |  |
-| `P` |  |  | Pose mode |  |  | Light probes |  |  |  |
-| `G` |  |  | Move |  |  |  |  |  |  |
-| `R` |  |  | Rotate |  |  |  |  |  |  |
-| `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |  |
-| `M` |  |  | Snap |  |  |  |  |  |  |
-| `L` |  |  | Local frame |  |  |  |  |  |  |
-| `F` |  |  | Frame selection |  |  |  |  |  |  |
-| `Delete` |  |  | Delete object | Delete clip |  |  |  |  |  |
-| `W A S D` |  |  | Fly |  |  |  |  |  |  |
-| `Q` / `E` |  |  | Down / Up |  |  |  |  |  |  |
-| left `⇧` |  |  | Boost |  |  |  |  |  |  |
-| `Space` |  |  |  | Play / Pause |  |  |  |  |  |
-| `Home` / `End` |  |  |  | Start / End of edit |  |  |  |  |  |
-| `⌘=` |  |  |  | Zoom in | Zoom in |  |  |  |  |
-| `⌘−` |  |  |  | Zoom out | Zoom out |  |  |  |  |
-| `⇧Z` |  |  |  | Fit to view |  |  |  |  |  |
-| `⌘0` |  |  |  |  | Fit to window |  |  |  |  |
-| `⌘1` |  |  |  |  | Actual size |  |  |  |  |
-| `⌘R` |  |  |  |  | Rulers |  |  |  |  |
-| `⌘;` |  |  |  |  | Guides |  |  |  |  |
-| `⇧⌘;` |  |  |  |  | Snap |  |  |  |  |
-| `⇧⌘E` |  |  |  |  | Export the image |  |  |  |  |
-| `⌥←` |  | Move left |  |  |  |  |  |  |  |
-| `⌥→` |  | Move right |  |  |  |  |  |  |  |
+| Key | Anywhere | Bar | 3D view | Edit | Image | Sky | Audio | Material |
+|---|---|---|---|---|---|---|---|---|
+| `⌘N` | New project |  |  |  |  |  |  |  |
+| `⌘O` | Open project |  |  |  |  |  |  |  |
+| `⌘S` | Save |  |  |  |  |  |  |  |
+| `⇧⌘S` | Save as |  |  |  |  |  |  |  |
+| `⌘,` | Settings |  |  |  |  |  |  |  |
+| `⌃⌘F` | Full screen |  |  |  |  |  |  |  |
+| `⌘Z` |  |  | Undo | Undo | Undo | Undo | Undo | Undo |
+| `⇧⌘Z` |  |  | Redo | Redo | Redo | Redo | Redo | Redo |
+| `⌘G` |  |  | Group |  |  |  |  |  |
+| `⌘D` |  |  | Duplicate |  | Deselect |  |  |  |
+| `⌘C` / `⌘X` / `⌘V` |  |  | Copy / Cut / Paste |  |  |  |  |  |
+| `O` |  |  | Projection |  |  |  |  |  |
+| `Z` |  |  | Display mode |  |  |  |  |  |
+| `B` |  |  | Show skeletons |  |  |  |  |  |
+| `V` |  |  | Select |  |  | Change the view |  |  |
+| `P` |  |  | Pose mode |  |  | Light probes |  |  |
+| `G` |  |  | Move |  |  |  |  |  |
+| `R` |  |  | Rotate |  |  |  |  |  |
+| `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |
+| `M` |  |  | Snap |  |  |  |  |  |
+| `L` |  |  | Local frame |  |  |  |  |  |
+| `F` |  |  | Frame selection |  |  |  |  |  |
+| `Delete` |  |  | Delete object | Delete clip |  |  |  |  |
+| `W A S D` |  |  | Fly |  |  |  |  |  |
+| `Q` / `E` |  |  | Down / Up |  |  |  |  |  |
+| left `⇧` |  |  | Boost |  |  |  |  |  |
+| `Space` |  |  |  | Play / Pause |  |  |  |  |
+| `Home` / `End` |  |  |  | Start / End of edit |  |  |  |  |
+| `⌘=` |  |  |  | Zoom in | Zoom in |  |  |  |
+| `⌘−` |  |  |  | Zoom out | Zoom out |  |  |  |
+| `⇧Z` |  |  |  | Fit to view |  |  |  |  |
+| `⌘0` |  |  |  |  | Fit to window |  |  |  |
+| `⌘1` |  |  |  |  | Actual size |  |  |  |
+| `⌘R` |  |  |  |  | Rulers |  |  |  |
+| `⌘;` |  |  |  |  | Guides |  |  |  |
+| `⇧⌘;` |  |  |  |  | Snap |  |  |  |
+| `⇧⌘E` |  |  |  |  | Export the image |  |  |  |
+| `⌥←` |  | Move left |  |  |  |  |  |  |
+| `⌥→` |  | Move right |  |  |  |  |  |  |
 
 ---
 

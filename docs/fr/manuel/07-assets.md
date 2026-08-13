@@ -16,7 +16,7 @@ laquelle vous piochez.
 
 | Espace | Où se trouve l’étagère |
 |---|---|
-| Image, Textures, Skyboxes, Graphe | dans la **bande basse** |
+| Image, Textures, Skyboxes | dans la **bande basse** |
 | Vidéo, Audio, 3D | dans la **colonne de droite**, moitié haute |
 
 Ce n’est pas un caprice : dans les espaces Vidéo, Audio et 3D, la bande basse appartient à la
@@ -70,7 +70,7 @@ mémoire, contrairement au panneau Modèles qui interroge le catalogue Scenario 
 > **La recherche ne réclame pas vos accents.** Taper `foret` trouve « Forêt d’hiver », et `ete`
 > trouve « Été ». C’est vrai ici et dans la recherche des préférences : on cherche en tapant, pas
 > en épelant. Le panneau **Modèles** n’en dit rien, parce qu’il ne cherche pas lui-même — il passe
-> le mot à l’API et affiche ce qu’elle rend. **Apps** n’a pas de champ de recherche du tout.
+> le mot à l’API et affiche ce qu’elle rend.
 >
 > Cela vaut aussi pour les fichiers venus du Finder. macOS écrit les noms sous une forme où
 > l’accent est un caractère à part, invisible à l’œil mais différent pour la machine — un asset
@@ -195,7 +195,6 @@ disque — pas d’un asset abîmé.
 | une image panoramique | l’aperçu d’un **ciel** | elle devient le ciel |
 | un maillage | la **vue 3D** | il entre dans la scène, à l’origine |
 | un son | l’**éditeur audio** | il devient la prise ouverte |
-| n’importe quel asset | la **toile du Graphe** | un nœud d’asset apparaît à l’endroit du lâcher |
 | un asset | un **champ d’asset** d’un formulaire de génération | il devient l’entrée du champ |
 
 **La timeline ne trie pas.** Elle prend ce qu’on lui donne : un asset sans durée propre reçoit une
