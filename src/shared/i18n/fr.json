@@ -604,6 +604,9 @@
     "fileTextureHint": "Laisse ce canal tel que le fichier du modèle le porte",
     "chooseTexture": "Choisir une texture",
     "clearTexture": "Retirer la texture",
+    "modelOverrides": "Remplacer un canal",
+    "noModelTexture": "Aucune image extraite de ce modèle.",
+    "openTextureHint": "Double-cliquez pour ouvrir cette image dans l’espace Textures",
     "fields": {
       "width": "Largeur",
       "height": "Hauteur",

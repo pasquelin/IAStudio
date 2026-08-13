@@ -61,6 +61,7 @@ import { openPeaksProcess } from './media/peaks-process'
 import type { PeaksClient } from './media/peaks-client'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
+import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
 import { broadcast } from './ipc/broadcast'
 import { setLogVerbosity } from './log'
 import type Scenario from '@scenario-labs/sdk'
@@ -163,6 +164,12 @@ export type Services = {
   flushJobs: () => Promise<void>
   documents: DocumentFiles
   assets: LocalBackend
+  /**
+   * A model's pictures, taken out into the project. Published because the menu row calls the
+   * very same one an import runs on its own — two paths that must never disagree about what a
+   * model already has.
+   */
+  extractTextures: TextureExtraction
   /** Minted here so the collector and the audio editor cannot name assets differently. */
   newAssetId: () => string
   media: MediaService
@@ -618,6 +625,33 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
+    // Every mesh that lands in the project sheds its pictures on the spot, so the inspector has
+    // something to show beside a model without anyone having gone looking for a menu row. Not
+    // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
+    // download that produced it, and a failure here must not cost the model itself.
+    onImported: asset => {
+      if (asset.type !== 'mesh') return
+      void extractTextures(asset)
+        .then(textures => {
+          // The one write no window ordered, so the one nothing else would say out loud: the
+          // import that started this is long answered, and its shelf refreshed, by the time a
+          // GLB has been read and its pictures written.
+          if (textures.length > 0) broadcast(EVENTS.assetsChanged)
+        })
+        .catch((error: unknown) =>
+          // The journal already carries the line `extractTextures` writes; this is the rejection
+          // itself, which nothing else would ever hear.
+          log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+        )
+    },
+  })
+
+  const extractTextures = createTextureExtraction({
+    fileOf: asset => ownFileOf(project.path(), asset),
+    search: query => project.catalog().search(query),
+    write: (request, bytes) => assets.importFromBytes(request, bytes),
+    newAssetId,
+    record: report => journal.record(report),
   })
 
   const documents = createDocumentFiles({
@@ -956,6 +990,7 @@ export function createServices(settings: SettingsStore): Services {
     flushJobs: () => jobStore.flush(),
     documents,
     assets,
+    extractTextures,
     newAssetId,
     media,
     dictation,

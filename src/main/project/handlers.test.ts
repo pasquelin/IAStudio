@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
+import { ownFileOf } from '@main/assets/protocol'
+import { createTextureExtraction } from '@main/assets/texture-extraction'
 import { invoke, openWindow, resetHandlers } from '@main/ipc/test-harness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
@@ -45,6 +47,25 @@ function projectAt(root: string, catalog?: AsyncCatalog): ProjectHandlerDeps['pr
 }
 
 function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}) {
+  const merged = { ...base(catalog), ...overrides }
+
+  return {
+    ...merged,
+    // The real one unless a case hands its own: the channel is a thin wrapper over it now, so a
+    // stub here would leave every case about a model's pictures asserting nothing.
+    extractTextures:
+      overrides.extractTextures ??
+      createTextureExtraction({
+        fileOf: source => ownFileOf(merged.project.path(), source),
+        search: query => catalog.search(query),
+        write: (request, bytes) => merged.assets.importFromBytes(request, bytes),
+        newAssetId: merged.newAssetId,
+        record: merged.record,
+      }),
+  }
+}
+
+function base(catalog: AsyncCatalog) {
   return {
     project: {
       create: vi.fn(),
@@ -80,7 +101,6 @@ function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}
     // Cancel: the safe answer, so a test that does not care about the dialog cannot destroy
     // anything by not caring.
     askUser: vi.fn(async () => 2),
-    ...overrides,
   }
 }
 
@@ -729,6 +749,51 @@ describe('project handlers', () => {
         derivedFrom: 'asset-1',
       })
       expect(wrote(assets).bytes).toEqual([...JPEG])
+      await rm(root, { recursive: true, force: true })
+    })
+
+    /**
+     * An import extracts on its own now, and the row is what catches up the models a project held
+     * before it did. Both call the same thing, so without this a model imported since would have
+     * every one of its pictures doubled by one click.
+     */
+    it('leaves a model that already has its pictures alone, and answers with them', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
+      await catalog.add(
+        asset({ id: 'asset-tex', type: 'texture', derivedFrom: 'asset-1', name: 'Skeleton base' }),
+      )
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
+
+      const answered = await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(assets.importFromBytes).not.toHaveBeenCalled()
+      expect(answered).toMatchObject([{ id: 'asset-tex' }])
+      await rm(root, { recursive: true, force: true })
+    })
+
+    /**
+     * The catalogue can only answer for what is COMMITTED, and reading a real model then writing
+     * its pictures takes seconds: the automatic run and the menu row clicked while it was going
+     * both saw a mesh with no derived picture — which it was, for a few seconds more.
+     */
+    it('shares a run already going rather than extracting the same model twice', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
+      const assets = backend()
+      const merged = deps(catalog, {
+        assets,
+        project: projectAt(root, catalog),
+        newAssetId: () => 'asset-new',
+      })
+      registerProjectHandlers(merged)
+
+      const [first, second] = await Promise.all([
+        invoke(CHANNELS.assetsExtractTextures, 'asset-1'),
+        invoke(CHANNELS.assetsExtractTextures, 'asset-1'),
+      ])
+
+      expect(assets.importFromBytes).toHaveBeenCalledTimes(1)
+      expect(second).toEqual(first)
       await rm(root, { recursive: true, force: true })
     })
 

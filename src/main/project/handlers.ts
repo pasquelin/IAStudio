@@ -1,11 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { CHANNELS, EVENTS } from '@shared/ipc'
-import { PICTURES, withoutSourcePath, type Asset } from '@shared/domain/asset'
-import { TRANSLATIONS } from '@shared/i18n'
-import { embeddedTextures, type EmbeddedTexture } from '@main/assets/glb-textures'
+import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
-import { windowLanguage } from '@main/window/language'
+import type { TextureExtraction } from '@main/assets/texture-extraction'
 import { parseAssetIds } from '@main/assets/validation'
 import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
@@ -40,39 +38,17 @@ const WAV_EXTENSION = '.wav'
 /** What `saveTexture` writes. Lossless, because a channel is data before it is a picture. */
 const PNG_EXTENSION = '.png'
 
-/** What each picture a model carries is written as. Anything else keeps the model's own bytes. */
-const EXTENSION_OF_MIME: Record<string, string> = {
-  'image/png': PNG_EXTENSION,
-  'image/jpeg': '.jpg',
-  'image/webp': '.webp',
-  'image/ktx2': '.ktx2',
-}
-
-function extensionOfMime(mimeType: string): string {
-  return EXTENSION_OF_MIME[mimeType] ?? PNG_EXTENSION
-}
-
-/**
- * What a picture taken out of a model is called: the model's name and the role it played.
- *
- * The same shape a derived channel already uses, and the same words — a base colour extracted
- * from a `.glb` and one computed in the texture space are the same thing on the shelf, so they
- * must not read as two different notions. A slot the studio has no channel for keeps its glTF
- * name, which is a fact about the file rather than a phrase anyone has to translate.
- */
-function extractedTextureName(modelName: string, texture: EmbeddedTexture): string {
-  const t = TRANSLATIONS[windowLanguage()].texture
-  const role = texture.channel ? t.channel[texture.channel] : texture.slot
-
-  return t.derivedName.replace('{{name}}', modelName).replace('{{channel}}', role)
-}
-
 export type ProjectHandlerDeps = {
   project: ProjectStore
   /** The journal's own `record`, injected as every other consumer of it takes it. */
   record: (entry: ActivityReport) => void
   /** Where an edited take is written back. Injected, like everything that touches the disk. */
   assets: LocalBackend
+  /**
+   * A model's own pictures, taken out into the project. The same one an import runs on its own,
+   * so the menu row and the automatic path can never disagree about what a model already has.
+   */
+  extractTextures: TextureExtraction
   newAssetId: () => string
   documents: DocumentFiles
   /** `shell.showItemInFolder`, injected rather than imported: it needs a live app. */
@@ -99,6 +75,7 @@ export function registerProjectHandlers({
   project,
   record,
   assets,
+  extractTextures,
   newAssetId,
   documents,
   reveal,
@@ -398,62 +375,9 @@ export function registerProjectHandlers({
     const source = await project.catalog().find(assetId)
     if (!source || source.type !== 'mesh') throw new Error(`asset ${assetId} is not a mesh`)
 
-    const file = ownFileOf(project.path(), source)
-    if (!file) throw new Error(`asset ${assetId} has no file to read`)
-
-    // `Buffer` IS a `Uint8Array`, and the reader takes it as one: wrapping it would copy the
-    // whole model — several hundred megabytes for a scan, on the process every window waits on.
-    const found = await readFile(file).then(embeddedTextures, (error: unknown) => {
-      // Recorded and rethrown: the window says it too, but a project reopened tomorrow keeps
-      // the line — and a file the disk refuses is exactly what one goes back to the journal for.
-      record({
-        level: 'error',
-        topic: 'import',
-        messageKey: 'activity.extractFailed',
-        params: { name: source.name },
-      })
-      throw error
-    })
-
-    const created: Asset[] = []
-    for (const texture of found) {
-      // Sequential on purpose: a model can carry half a dozen 2048² pictures, and writing them
-      // all at once is a burst of tens of megabytes at whatever the disk will take.
-      created.push(
-        await assets.importFromBytes(
-          {
-            id: newAssetId(),
-            name: extractedTextureName(source.name, texture),
-            type: 'texture',
-            extension: extensionOfMime(texture.mimeType),
-            // Traceable both ways: the shelf can show which model a channel came out of.
-            derivedFrom: source.id,
-            ...(texture.channel ? { map: texture.channel } : {}),
-            // A PNG carries its size in its header, which `probePng` reads. A JPEG's is not read
-            // at all — nothing probes an extracted picture afterwards, so its row shows none.
-            ...(isPngBytes(texture.bytes) ? { probe: probePng(texture.bytes) ?? undefined } : {}),
-          },
-          texture.bytes,
-        ),
-      )
-    }
-
-    // Said either way. A model with no picture inside it is a normal answer, and one the shelf
-    // cannot show on its own: nothing appears, and a gesture that changes nothing without a word
-    // reads as a broken menu row.
-    record({
-      level: 'info',
-      // `import`, like every other line about bytes landing in the project.
-      topic: 'import',
-      ...(created.length > 0
-        ? {
-            messageKey: 'activity.extractedTextures',
-            params: { count: created.length, name: source.name },
-          }
-        : { messageKey: 'activity.extractedNothing', params: { name: source.name } }),
-    })
-
-    return created.map(withoutSourcePath)
+    // The row catches up the models a project held before extracting was something an import did
+    // on its own — and answers with what is already there for the ones that do not need it.
+    return (await extractTextures(source)).map(withoutSourcePath)
   })
 
   handle(CHANNELS.documentList, () => documents.list())

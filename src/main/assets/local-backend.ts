@@ -27,6 +27,17 @@ export type LocalBackendDeps = {
   projectPath: () => string
   catalog: () => AsyncCatalog
   now: () => string
+  /**
+   * What has just landed in the project, once the catalogue holds it.
+   *
+   * The one hook here, and it exists because this is the single door every asset comes through:
+   * a download, a generation collected, a picture saved — whoever wants to act on an arrival
+   * would otherwise have to catch it at each of them, and would miss the next one added.
+   *
+   * NOT awaited: an import must not wait on what somebody does afterwards, and a listener that
+   * throws must not cost the asset. Whatever it starts is its own to see through.
+   */
+  onImported?: (asset: Asset) => void
 }
 
 export type ImportRequest = {
@@ -55,7 +66,7 @@ export type ImportRequest = {
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
-type WriteRequest = Omit<ImportRequest, 'url'> & {
+export type WriteRequest = Omit<ImportRequest, 'url'> & {
   extension: string
   /** What the bytes say about themselves, when the caller could read it. */
   probe?: MediaProbe
@@ -135,6 +146,7 @@ export function createLocalBackend({
   projectPath,
   catalog,
   now,
+  onImported,
 }: LocalBackendDeps): LocalBackend {
   /**
    * The library's still, brought down beside the bytes — for a mesh, and for a mesh alone.
@@ -212,7 +224,18 @@ export function createLocalBackend({
       ...twinOf(request, at),
     }
 
-    return await catalog().add(asset)
+    const added = await catalog().add(asset)
+    // After the catalogue, never before: a listener that goes looking for what just arrived —
+    // extracting a model's pictures does exactly that — would find nothing at all. Caught, as
+    // the deps promise: the row is committed by now, so a listener throwing here would fail an
+    // import that has already happened.
+    try {
+      onImported?.(added)
+    } catch {
+      // Nothing to say from here: what a listener does is its own errand, and the one this
+      // exists for reports its own failures to the journal.
+    }
+    return added
   }
 
   return {

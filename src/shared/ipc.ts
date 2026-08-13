@@ -497,6 +497,7 @@ export const EVENTS = {
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
   projectFolderChanged: 'evt:project-folder-changed',
+  assetsChanged: 'evt:assets-changed',
   settingsChanged: 'evt:settings-changed',
   accountsChanged: 'evt:accounts-changed',
   openTool: 'evt:open-tool',
@@ -744,6 +745,15 @@ export type StudioBridge = {
   }
   assets: {
     search: (query: AssetQuery) => Promise<Asset[]>
+    /**
+     * Says the catalogue was written by the MAIN process, with no window having asked — the
+     * pictures a model sheds on import are the case this exists for. Every other write is
+     * answered where it was ordered, and the shelf invalidates itself there.
+     *
+     * No payload: what changed is a query away, and a window that was told « these six rows »
+     * would still have to ask for the ones it is scoped to.
+     */
+    onChanged: (callback: () => void) => Unsubscribe
     /**
      * How many assets of each kind the project holds — counted in SQL, so the answer is six
      * numbers rather than the catalogue itself.

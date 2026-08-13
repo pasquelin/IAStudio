@@ -402,6 +402,13 @@ export type AssetQuery = {
   /** The siblings of one generation — the seven channels of a PBR pack. */
   groupId?: string
   /**
+   * What came OUT of one asset — the pictures taken out of a model's file above all.
+   *
+   * The column is already there and indexed; nothing asked it anything until a model's own
+   * textures had to be shown beside it in the inspector.
+   */
+  derivedFrom?: string
+  /**
    * What a model produced, as opposed to what was imported. Only ever asked for affirmatively:
    * "everything that was NOT generated" is a question no surface asks, and a branch nothing
    * reaches is a branch nothing tests.
