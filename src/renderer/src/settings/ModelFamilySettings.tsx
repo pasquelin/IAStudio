@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ModelFamily, ModelSummary } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
+import { ModelOptions } from '@/design/ModelOptions'
 import { getBridge } from '@/services/bridge'
 import { usePlanAccess } from '@/helpers/plan-access'
 import { useSettings } from '@/stores/settings'
@@ -107,17 +108,7 @@ export function ModelFamilySettings({ family }: { family: ModelFamily }) {
           }}
         >
           <option value="">{t('settings.noDefaultModel')}</option>
-          {models.map(model => {
-            const refused = isBeyondPlan(model.requiredPlanLevel, plan)
-            return (
-              // A native `<option>` carries no tooltip — react-tooltip needs pointer events a
-              // disabled option never emits — so the reason is suffixed onto the label. Saying
-              // it is the point: a picker that greys a name out without a word is a dead end.
-              <option key={model.id} value={model.id} disabled={refused}>
-                {refused ? `${model.name} — ${t('models.planLocked')}` : model.name}
-              </option>
-            )
-          })}
+          <ModelOptions models={models} plan={plan} />
         </select>
       </label>
 

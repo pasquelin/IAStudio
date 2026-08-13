@@ -4,10 +4,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { GraphNode, GraphState } from '@shared/domain/graph'
 import type { FieldDescriptor, ModelDescriptor, ModelPage } from '@shared/domain/model'
-import { isBeyondPlan } from '@shared/domain/plan'
 import { DynamicForm } from '@/design/dynamic-form-lazy'
 import { EmptyState } from '@/design/EmptyState'
 import { ErrorBoundary } from '@/design/ErrorBoundary'
+import { ModelOptions } from '@/design/ModelOptions'
 import { PropertyGroup } from '@/design/PropertyGroup'
 import { PropertyRow } from '@/design/PropertyRow'
 import { CONTROL } from '@/design/styles'
@@ -118,17 +118,10 @@ export function ModelNodeFields({ documentId, node, edit }: ModelNodeFieldsProps
               back to the first option, so the panel names a model the node does not run — and
               that one model is then the only one clicking cannot choose. */}
           {modelId === undefined && <option value="">{t('inspector.noModel')}</option>}
-          {options.map(model => {
-            // A graph runs its nodes itself — `graph-runs.ts` submits straight to the job queue,
-            // never through the generator — so this is where a refused model has to be caught.
-            // Without it, a five-node graph pays for the first three and dies on the fourth.
-            const refused = isBeyondPlan(model.requiredPlanLevel, plan)
-            return (
-              <option key={model.id} value={model.id} disabled={refused}>
-                {refused ? `${model.name} — ${t('models.planLocked')}` : model.name}
-              </option>
-            )
-          })}
+          {/* A graph runs its nodes itself — `graph-runs.ts` submits straight to the job queue,
+              never through the generator — so this is where a refused model has to be caught.
+              Without it, a five-node graph pays for the first three and dies on the fourth. */}
+          <ModelOptions models={options} plan={plan} />
         </select>
       </PropertyRow>
 
