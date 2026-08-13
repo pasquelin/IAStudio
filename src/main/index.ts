@@ -100,9 +100,8 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   // After the window, so Chromium starts parsing the renderer bundle sooner. Neither the
   // application menu nor the About panel is reachable before a window exists.
-  const language = services.language()
-  registerAboutPanel(language)
-  buildMenu(language, services.settings.read().shortcuts.overrides)
+  registerAboutPanel()
+  buildMenu(services.settings.read().shortcuts.overrides)
 
   // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
   // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.

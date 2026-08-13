@@ -12,6 +12,7 @@ import {
   resetHandlers,
   type FakeWindow,
 } from '@main/ipc/test-harness'
+import { setWindowLanguage } from '@main/window/language'
 import { buildMenu, registerMenuHandlers } from './index'
 
 vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockElectron())
@@ -80,8 +81,9 @@ function findByLabel(label: string): MenuRow | null {
  */
 beforeEach(() => {
   resetHandlers()
+  setWindowLanguage('fr')
   registerMenuHandlers()
-  buildMenu('fr', {})
+  buildMenu({})
 })
 
 describe('the window the menu belongs to', () => {
@@ -341,11 +343,27 @@ describe('a window that goes away', () => {
  * the first time they clicked another window.
  */
 describe('what a rebuild must not drop', () => {
-  it('keeps the language a previous build was given', () => {
+  /**
+   * The menu is built once, so it is told rather than asked. Measured: with the rebuild taken
+   * out, the whole suite stayed green while an English studio kept a French menu bar.
+   */
+  it('rebuilds on the language alone, with nothing else having happened', () => {
+    const window = openWindow()
+    focusWindow(window)
+    announce(window, 'image')
+    const before = menuBuilds()
+
+    setWindowLanguage('en')
+
+    expect(menuBuilds()).toBe(before + 1)
+    expect(findByLabel(TRANSLATIONS.en.menu.file)).not.toBeNull()
+  })
+
+  it('keeps speaking the language the windows speak', () => {
     const window = openWindow()
     focusWindow(window)
     announce(window, '3d')
-    buildMenu('en')
+    setWindowLanguage('en')
 
     announce(window, 'image')
 
@@ -357,7 +375,7 @@ describe('what a rebuild must not drop', () => {
     const window = openWindow()
     focusWindow(window)
     announce(window, 'image', ['assets'])
-    buildMenu('fr', { 'canvas.undo': 'Shift+KeyZ' })
+    buildMenu({ 'canvas.undo': 'Shift+KeyZ' })
     const remapped = undoItem()?.accelerator
 
     // A rebuild driven by the focus, which passes neither the language nor the overrides —

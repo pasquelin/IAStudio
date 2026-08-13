@@ -2,10 +2,10 @@ import { app, BrowserWindow, Menu } from 'electron'
 import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
 import type { BindingOverrides, MenuCheck } from '@shared/domain/command'
-import { DEFAULT_LANGUAGE, type Language } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { isDevelopment } from '@main/environment'
+import { followWindowLanguage, windowLanguage } from '@main/window/language'
 import { toggleFullScreen } from '@main/window/controls'
 import { openLicencesWindow, openSettingsWindow, openUsageWindow } from '@main/window/windows'
 import { menuTemplate } from './template'
@@ -49,10 +49,10 @@ const checkedRows = new Map<number, readonly MenuCheck[]>()
 let shown: ToolSurface | null = null
 let shownTools: readonly ToolId[] = []
 let shownChecks: readonly MenuCheck[] = []
-let language: Language = DEFAULT_LANGUAGE
 /**
- * Remembered between builds, like the language: the menu is rebuilt whenever the focus moves
- * between workspaces, and that rebuild must not drop the user's remaps.
+ * Remembered between builds: the menu is rebuilt whenever the focus moves between workspaces,
+ * and that rebuild must not drop the user's remaps. The language is NOT remembered here — it is
+ * read from `windowLanguage()`, so this menu and the native dialogs cannot answer differently.
  */
 let overrides: BindingOverrides = {}
 
@@ -75,15 +75,14 @@ function focusedChecks(): readonly MenuCheck[] {
  * Native application menu. Together with the icon rails, it is one of the two ways back for a
  * tool removed with its close button — a panel closed with no way to reopen it would be lost.
  */
-export function buildMenu(next: Language = language, remapped: BindingOverrides = overrides): void {
-  language = next
+export function buildMenu(remapped: BindingOverrides = overrides): void {
   overrides = remapped
   shown = focusedWorkspace()
   shownTools = focusedTools()
   shownChecks = focusedChecks()
 
   const template = menuTemplate({
-    language,
+    language: windowLanguage(),
     workspace: shown,
     tools: shownTools,
     checked: shownChecks,
@@ -132,10 +131,22 @@ function rebuildIfStale(): void {
 }
 
 /**
+ * Named rather than inline, and it is not `buildMenu` itself: the follower set dedupes by
+ * identity, and a follower taking the language would read it as the overrides.
+ */
+function rebuildInNewLanguage(): void {
+  buildMenu()
+}
+
+/**
  * The menu shows what the focused window can do, and only that window knows which workspace it
  * is in. It announces the restored one on startup and again on every click of the space rail.
  */
 export function registerMenuHandlers(): void {
+  // The menu is built once and never re-reads anything: without this the window changes
+  // language and the menu bar above it does not.
+  followWindowLanguage(rebuildInNewLanguage)
+
   handle(CHANNELS.windowWorkspace, (event, next, tools, checked) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
     // preload from an older build could name a surface this one has dropped.

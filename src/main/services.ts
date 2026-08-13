@@ -367,11 +367,10 @@ export function createSettings(): SettingsStore {
       // and Chromium only answers with the new value once `themeSource` has moved.
       applyTheme(current.appearance.theme)
       setLogVerbosity(current.advanced.logLevel)
-      // The native menu is built once and never re-reads anything: without this the window
-      // changes language and the menu bar above it does not.
-      const spoken = effectiveLanguage(current.general.language, app.getLocale())
-      setWindowLanguage(spoken)
-      buildMenu(spoken, current.shortcuts.overrides)
+      // Every native surface follows this one call: the menu and the About panel are each built
+      // once, and they subscribe rather than hold their own copy of the language.
+      setWindowLanguage(effectiveLanguage(current.general.language, app.getLocale()))
+      buildMenu(current.shortcuts.overrides)
       broadcast(EVENTS.settingsChanged, current)
     },
   })
