@@ -35,16 +35,8 @@
     "view": "View",
     "apps": "Apps",
     "projects": "Your projects",
-    "creations": "What you have made",
-    "counts": "By kind",
     "library": "Your library",
-    "documents": "Your documents",
-    "activity": "Recent activity",
-    "spark": "An idea to start from",
-    "favorites": "Your recipes",
-    "similar": "In the same vein",
-    "usage": "What you have spent",
-    "jobs": "Running now"
+    "documents": "Your documents"
   },
   "view": {
     "empty": "Open a skybox to change how it is being displayed.",
@@ -241,6 +233,7 @@
     "projectUnreadable": "This project’s manifest cannot be read: it was truncated or edited by hand",
     "projectTooNew": "This project was made by a newer build of the studio; update it to open this project",
     "projectNotCreated": "The project could not be created in this folder",
+    "projectNotRenamed": "The project could not be renamed: its folder is missing or unreadable",
     "projectNotRevealed": "The project folder cannot be found",
     "fileNotOpened": "The system could not open this file",
     "fileNotMoved": "This file could not be moved — that name may be taken already in the folder it was dropped on",
@@ -291,6 +284,7 @@
       "assets.save": "The asset could not be rewritten",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",
+      "project.rename": "The project could not be renamed",
       "font.face": "A font could not be loaded",
       "graph.node": "A node could not be created",
       "graph.run": "The graph could not be run",
@@ -2142,19 +2136,13 @@
       "reveal": "Reveal in folder",
       "revealHint": "Opens the file manager on this project",
       "forget": "Remove from the list",
-      "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched"
-    },
-    "creations": {
-      "recreate": "Make another one with {{model}}",
-      "none": "Whatever you generate in this project will show up here."
+      "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched",
+      "rename": "Rename",
+      "renameHint": "Change the project name, leaving its folder on disk where it is"
     },
     "library": {
       "fetch": "Fetch “{{name}}” into the project",
       "none": "Your Scenario account library is empty, or no API key has been entered yet."
-    },
-    "favorites": {
-      "none": "No recipe pinned yet. Pin a generation to find it here, in every project.",
-      "unpin": "Take “{{name}}” off your recipes"
     },
     "spotlight": {
       "resume": "Pick up where you left off",
@@ -2182,29 +2170,7 @@
     "restore": "Show them again",
     "retry": "Try again",
     "refused": "This panel did not get an answer.",
-    "reading": "Reading…",
     "open": "Open “{{name}}”",
-    "spark": {
-      "noModel": "Choose an image model to get starting points written for it.",
-      "ask": "Suggest an idea",
-      "asking": "One moment…",
-      "help": "Starting points written for the model the generator will open on. Free: no creative unit is spent.",
-      "use": "Open the generator on “{{prompt}}”"
-    },
-    "similar": {
-      "none": "Nothing to compare against yet: your Scenario library is empty, or no API key is set.",
-      "title": "In the vein of “{{name}}”",
-      "refused": "The library did not answer. The panel comes back as soon as you try again."
-    },
-    "usage": {
-      "none": "Nothing spent over the period, or no API key is set.",
-      "summary_one": "{{units}} units over {{days, number}} days, for {{count, number}} generation.",
-      "summary_many": "{{units}} units over {{days, number}} days, for {{count, number}} generations.",
-      "summary_other": "{{units}} units over {{days, number}} days, for {{count, number}} generations.",
-      "model_one": "{{units}} units · {{count, number}} generation",
-      "model_many": "{{units}} units · {{count, number}} generations",
-      "model_other": "{{units}} units · {{count, number}} generations"
-    },
     "explore": {
       "loading": "Loading the feed…",
       "none": "Nothing published in this category yet."
@@ -2214,11 +2180,7 @@
     "documents": {
       "none": "This project holds no document yet. Pick a tool in the centre to make one."
     },
-    "counts": {
-      "reveal": "Open the project’s asset shelf, narrowed to this kind"
-    },
     "closingActionHint": "Opens the creation space, the one where generating happens",
-    "sparkAskHint": "Asks the API for three starting points, written for the generator’s model",
     "spotlightResumeHint": "Reopens the document as it was when it was closed",
     "spotlightConnectHint": "Opens the settings, at the account section",
     "spotlightReadyHint": "Opens the creation space, the one where generating happens",

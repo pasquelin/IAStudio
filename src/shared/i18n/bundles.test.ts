@@ -383,7 +383,6 @@ describe('the translation bundles', () => {
         'the model family, named as the other families are — `Background removal`, ' +
         '`Vectorization` — and the billed action, named as the API names it, beside `Reframe`',
     },
-    'en cours': { reads: ['running now', 'running'], separates: 'a panel title, and a status' },
     échec: { reads: ['failed', 'failure'], separates: 'a status value, and a log level' },
     édition: { reads: ['editing', 'edit'], separates: 'a model tag, and the native Edit menu' },
     'outils de développement': {

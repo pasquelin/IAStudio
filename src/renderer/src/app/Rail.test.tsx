@@ -85,21 +85,16 @@ describe('Rail', () => {
       expect(createPicked).toHaveBeenCalled()
     })
 
-    // The upper half is what every space keeps for generation, and the home generates nothing:
-    // it gives it to what one produces IN. The projects stand there alone, above the cut, so a
-    // click on any of the three below can never take them off the screen.
-    it('cuts the left rail: the projects above, what one browses below', () => {
+    /**
+     * ONE separator, and it is the one that fences the create button off from the panels — not a
+     * cut between two halves, since the home has no lower half left. The projects stand alone in
+     * the column, which is the whole point of what came down on 13 August: nothing here can take
+     * them off the screen.
+     */
+    it('cuts the left rail below the create button, and nowhere else', () => {
       const { container } = render(<Rail side="left" />)
 
-      expect(marksOf(container)).toEqual([
-        'Nouveau projet',
-        'separator',
-        'Vos projets',
-        'separator',
-        'Vos recettes',
-        'Une idée pour commencer',
-        'Dans la même veine',
-      ])
+      expect(marksOf(container)).toEqual(['Nouveau projet', 'separator', 'Vos projets'])
 
       // `marksOf` reads buttons and separators, so it cannot see the hole an empty zone leaves:
       // a childless flex item still eats one of the rail's gaps.
@@ -109,55 +104,43 @@ describe('Rail', () => {
     })
 
     /**
-     * The right rail is the legend of the right column, and it draws the same cut: what the open
-     * project holds and what it cost above, what is going on now below. The separator is the cut
-     * itself — five icons and two, not seven in a pile.
+     * The right rail is the legend of the right column: two ways into something, and no separator
+     * — a lone populated half has nothing to be cut from, which is the same drawing the graph's
+     * own rail gets further down.
      */
-    it('cuts the right rail where the column is cut: the project above, the journal below', () => {
+    it('draws the right rail as one half, with no cut', () => {
       const { container } = render(<Rail side="right" />)
 
-      expect(marksOf(container)).toEqual([
-        'Ce que vous avez produit',
-        'Par type',
-        'Ce que vous avez consommé',
-        'Votre bibliothèque',
-        'Vos documents',
-        'separator',
-        'Activité récente',
-        'En cours',
-      ])
+      expect(marksOf(container)).toEqual(['Votre bibliothèque', 'Vos documents'])
     })
 
     // No half names a panel on the default layout, so what reads as up is the first one the
-    // registry declares there — never the three that take turns behind it.
+    // registry declares there — never the one taking its turn behind it.
     it('marks the first panel of each half as up on the default layout', () => {
       useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
       render(<Rail side="right" />)
 
-      expect(screen.getByRole('button', { name: 'Ce que vous avez produit' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Votre bibliothèque' })).toHaveAttribute(
         'aria-pressed',
         'true',
       )
-      expect(screen.getByRole('button', { name: 'Activité récente' })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      )
-      expect(screen.getByRole('button', { name: 'Par type' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Vos documents' })).toHaveAttribute(
         'aria-pressed',
         'false',
       )
     })
 
     // A click swaps the half rather than opening a second window: one panel per half, always.
-    it('swaps what the upper half shows rather than stacking a second panel', async () => {
+    // No `secondary` key in the result, and that is the home's shape rather than an omission —
+    // naming a half this surface does not have keeps the column reserving its width for nothing.
+    it('swaps what the half shows rather than stacking a second panel', async () => {
       useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
       render(<Rail side="right" />)
 
-      await userEvent.click(screen.getByRole('button', { name: 'Votre bibliothèque' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Vos documents' }))
 
       expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.right).toEqual({
-        primary: 'library',
-        secondary: null,
+        primary: 'documents',
       })
     })
   })

@@ -117,8 +117,14 @@ describe('every workspace', () => {
 
 describe('the home', () => {
   /**
-   * Two columns and no band, which is what makes it a surface like the others: what one opens on
-   * the left, what the open project holds on the right, and the centre kept for the page.
+   * Two columns and no band, which is what makes it a surface like the others: what one opens
+   * FROM on the left, what one opens on the right, and the centre kept for the page.
+   *
+   * THREE placements, where there were eleven until 13 August. The eight that went answered a
+   * question about the studio — what it spent, how many assets it holds by kind, the newest ones,
+   * favourites, ideas, look-alikes, and two journals the status bar already carries — and this
+   * screen is where one comes to OPEN something. The list is spelled out rather than counted: an
+   * id creeping back in is the exact regression this holds against.
    *
    * The order is the order of the rail, and the first of a half is what an unchosen half draws —
    * so this holds both the icon stack and what the screen opens on.
@@ -128,37 +134,27 @@ describe('the home', () => {
 
     expect(served.map(placement => [placement.id, placement.zone, placement.slot])).toEqual([
       ['projects', 'left', 'primary'],
-      ['favorites', 'left', 'secondary'],
-      ['spark', 'left', 'secondary'],
-      ['similar', 'left', 'secondary'],
-      ['creations', 'right', 'primary'],
-      ['counts', 'right', 'primary'],
-      ['usage', 'right', 'primary'],
       ['library', 'right', 'primary'],
       ['documents', 'right', 'primary'],
-      ['activity', 'right', 'secondary'],
-      ['jobs', 'right', 'secondary'],
     ])
   })
 
   /**
-   * The rule every space follows, and the home is the one surface that never had it applied: the
-   * left is what one produces with and what one browses, the right is what speaks about what is
-   * open. Its panels arrived one at a time, six on the right against one on the left, until the
-   * last six bands came down from the centre.
+   * The rule every space follows: the left is what one opens FROM, the right is what one opens.
    *
-   * Its left column is cut like every other, and the cut is what the projects buy: alone in the
-   * upper half, they are never the panel a click on the recipes takes away. Held here rather than
-   * left to the rail, since a fifth placement landing in the lower half would silently put them
-   * back in a rota of four.
+   * The home now uses ONE half per column, and that is the assertion — no `secondary` anywhere on
+   * this surface. It is what a rail with no separator draws honestly, and it is what the panels
+   * that went were taking: a lower half is a rota, and a rota is where the projects stopped being
+   * the thing this screen opens on.
    */
   it('reads its two columns the way every space reads its own', () => {
     const served = TOOL_PLACEMENTS.filter(placement => serves(placement, HOME_SURFACE))
     const inZone = (zone: ToolZone): number =>
       served.filter(placement => placement.zone === zone).length
 
-    expect(inZone('left')).toBe(4)
-    expect(inZone('right')).toBe(7)
+    expect(inZone('left')).toBe(1)
+    expect(inZone('right')).toBe(2)
+    expect(served.every(placement => placement.slot === 'primary')).toBe(true)
     expect(
       served
         .filter(placement => placement.zone === 'left' && placement.slot === 'primary')
@@ -172,8 +168,7 @@ describe('the home', () => {
    * for: a panel of recent projects beside an editor is a panel about somewhere else.
    */
   it('keeps its panels to itself, and takes none of the workspaces', () => {
-    const home = ['projects', 'creations', 'counts', 'library', 'documents', 'activity']
-    for (const id of [...home, 'spark', 'favorites', 'similar', 'usage', 'jobs']) {
+    for (const id of ['projects', 'library', 'documents']) {
       expect(placementsOf(id)).toHaveLength(1)
       for (const workspace of WORKSPACE_IDS) expect(placementIn(id, workspace)).toBeNull()
     }

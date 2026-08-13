@@ -5,6 +5,7 @@ import { Separator } from '@/design/Separator'
 import { TitleBarSelect } from '@/design/TitleBarSelect'
 import { UiIcon } from '@/design/UiIcon'
 import { HINT_RIGHT } from '@/helpers/tooltip'
+import { projectsByCreation } from '@shared/domain/project'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 
@@ -19,13 +20,18 @@ import { useSettings } from '@/stores/settings'
  * ONE project is open at a time — the main process owns that, and opening another closes the
  * first. So the menu lists what has been opened before rather than what is open now: the ticked
  * row IS the open one, and every other row is a switch.
+ *
+ * Ordered by creation date, the same key the home's panel uses. One list must not be read in two
+ * orders — and the stored order reshuffles on every opening, which in a MENU means the row under
+ * the pointer is not the row that was aimed at.
  */
 export function ProjectSelect() {
   const { t } = useTranslation()
 
   const project = useProject(state => state.project)
   const known = useProject(state => state.known)
-  const recent = useSettings(state => state.settings.storage.recentProjects)
+  const stored = useSettings(state => state.settings.storage.recentProjects)
+  const recent = projectsByCreation(stored)
 
   // Nothing until the main process has said which project is open, as the home waits for the
   // same answer. The initial `null` is "not asked yet", and the studio reopens the last project

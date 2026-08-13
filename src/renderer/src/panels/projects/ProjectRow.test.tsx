@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { ProjectRow } from './ProjectRow'
@@ -81,5 +81,41 @@ describe('one row of the projects shelf', () => {
 
     expect(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: 'Retirer de la liste' })).toBeInTheDocument()
+  })
+})
+
+/**
+ * Renaming belongs to the panel — the double-click that starts it lands on the collection cell,
+ * and only one row may hold a field at a time. What is left here is the row's PROP CONTRACT; that
+ * the two gestures reach a field is asserted where the state lives, in `Projects.test.tsx`.
+ */
+describe('what the row does with the rename props it is handed', () => {
+  // Refused rather than dead where the panel offers no field: a row that explains nothing and does
+  // nothing is the worst of the outcomes this menu can produce.
+  it('refuses the menu row where the panel offers none', async () => {
+    render(<ProjectRow project={SUMMER} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
+  })
+
+  // The commit handler is the whole signal: handed one, the row IS the field. No second flag says
+  // so, which is the state a caller could otherwise ask for and never get.
+  it('becomes the field on being handed somewhere to commit', () => {
+    render(<ProjectRow project={SUMMER} onRenameCommit={vi.fn()} />)
+
+    expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Summer')
+  })
+
+  // Named rather than closed over, so the panel builds one handler for the whole list and this row
+  // stays memoised against something.
+  it('names itself when it asks, rather than closing over its own path', async () => {
+    const onRenameStart = vi.fn()
+    render(<ProjectRow project={SUMMER} onRenameStart={onRenameStart} />)
+
+    await userEvent.dblClick(screen.getByText('Summer'))
+
+    expect(onRenameStart).toHaveBeenCalledExactlyOnceWith('/projects/summer')
   })
 })

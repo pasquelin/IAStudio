@@ -77,6 +77,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       onFolderChanged: noSubscription,
       revealFile: () => Promise.resolve(),
       revealFolder: () => Promise.resolve(true),
+      rename: () => Promise.reject(new Error('no project')),
       renameFile: () => Promise.resolve(true),
       moveFile: () => Promise.resolve(true),
       trashFile: () => Promise.resolve(true),

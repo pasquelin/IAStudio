@@ -1,8 +1,8 @@
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { CHANNELS } from '@shared/ipc'
-import { invoke, resetHandlers } from '@main/ipc/test-harness'
+import { CHANNELS, EVENTS } from '@shared/ipc'
+import { invoke, openWindow, resetHandlers } from '@main/ipc/test-harness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
 import { registerProjectHandlers, type ProjectHandlerDeps } from './handlers'
@@ -14,6 +14,8 @@ vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockEle
 const PROJECT = '/Users/someone/Films/Reel.scenario'
 
 const MANIFEST = { version: 1, name: 'Reel', createdAt: '', updatedAt: '' }
+
+const RENAMED = { path: PROJECT, manifest: { ...MANIFEST, name: 'Summer' } }
 
 const asset = (overrides: Partial<Asset> = {}): Asset => ({
   id: 'asset-1',
@@ -267,6 +269,88 @@ describe('project handlers', () => {
    * The home's shelf points at projects that are NOT open, so this one names a folder outright
    * instead of resolving against the open project.
    */
+  /**
+   * The name in the manifest, never the folder on disk: `recentProjects`, `storage.lastProject`
+   * and every absolute path the catalogue holds are keyed on that folder.
+   */
+  describe('renaming a project', () => {
+    const renaming = (current: string | null, rename = vi.fn(async () => RENAMED)) => {
+      const injected = deps(catalog)
+      injected.project.rename = rename
+      injected.project.current = () =>
+        current === null ? null : { path: current, manifest: MANIFEST }
+      registerProjectHandlers(injected)
+      return { injected, rename }
+    }
+
+    it('writes the new name and answers the renamed project', async () => {
+      const { rename } = renaming(null)
+
+      await expect(invoke(CHANNELS.projectRename, PROJECT, 'Summer')).resolves.toEqual(RENAMED)
+
+      expect(rename).toHaveBeenCalledWith(PROJECT, 'Summer')
+    })
+
+    /**
+     * Every window replicates the open project, so the title bar of a second one would go on
+     * naming the name that was just replaced.
+     */
+    it('tells every window, when the renamed project is the one open', async () => {
+      const window = openWindow()
+      renaming(PROJECT)
+
+      await invoke(CHANNELS.projectRename, PROJECT, 'Summer')
+
+      expect(window.sent).toContainEqual({ channel: EVENTS.projectChanged, payload: RENAMED })
+    })
+
+    // The shelf renames projects that are not open, which is most of them: announcing one of
+    // those as the project in front would swap the studio out from under whoever renamed it.
+    it('tells nobody when it is another project on the shelf', async () => {
+      const window = openWindow()
+      renaming('/Users/someone/Films/Other.scenario')
+
+      await invoke(CHANNELS.projectRename, PROJECT, 'Summer')
+
+      expect(window.sent).toEqual([])
+    })
+
+    // The folder can have gone since the shelf last saw it — the same failure opening reports,
+    // and the shelf is exactly where a stale row lives.
+    it('says so in the journal, and still refuses', async () => {
+      const { injected } = renaming(
+        PROJECT,
+        vi.fn(() => Promise.reject(new Error('read-only disk'))),
+      )
+
+      await expect(invoke(CHANNELS.projectRename, PROJECT, 'Summer')).rejects.toThrow()
+
+      expect(injected.record).toHaveBeenCalledWith({
+        level: 'error',
+        topic: 'project',
+        messageKey: 'activity.projectNotRenamed',
+      })
+    })
+
+    // A name is a manifest field, not a path segment: it is parsed, and an empty one would leave
+    // a row on the shelf that nothing can be found by.
+    it.each(['', '   '])('refuses %o as a name', async name => {
+      const { rename } = renaming(PROJECT)
+
+      await expect(invoke(CHANNELS.projectRename, PROJECT, name)).rejects.toThrow()
+
+      expect(rename).not.toHaveBeenCalled()
+    })
+
+    it('refuses a folder that is not absolute', async () => {
+      const { rename } = renaming(PROJECT)
+
+      await expect(invoke(CHANNELS.projectRename, 'relative/summer', 'Summer')).rejects.toThrow()
+
+      expect(rename).not.toHaveBeenCalled()
+    })
+  })
+
   describe('showing a recent project folder', () => {
     it('shows the folder it was handed, not one under the open project', async () => {
       const injected = deps(catalog)

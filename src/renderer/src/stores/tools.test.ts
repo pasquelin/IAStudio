@@ -212,10 +212,9 @@ describe('the home and the workspaces arrange their zones apart', () => {
       primary: 'generator',
       secondary: null,
     })
+    // The home's left column has one half, so this is the whole of it.
     expect(arrangementOf(useTools.getState(), HOME_SURFACE).open.left).toEqual({
-      // Its own lower half is untouched: what the home named is the upper one.
       primary: 'projects',
-      secondary: null,
     })
   })
 

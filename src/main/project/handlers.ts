@@ -1,8 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { CHANNELS } from '@shared/ipc'
+import { CHANNELS, EVENTS } from '@shared/ipc'
 import { PICTURES, withoutSourcePath } from '@shared/domain/asset'
 import { assetFilePath, ownFileOf } from '@main/assets/protocol'
+import { broadcast } from '@main/ipc/broadcast'
 import { handle } from '@main/ipc/handle'
 import { peaksFromBytes } from '@main/media/peaks'
 import { isPngBytes, probePng } from '@main/media/png'
@@ -23,6 +24,7 @@ import {
   parseFolderPath,
   parseProjectName,
   parseProjectPath,
+  parseProjectTitle,
   parseSaveAudio,
   parseSavePicture,
   parseSaveTexture,
@@ -125,6 +127,30 @@ export function registerProjectHandlers({
 
     reveal(folderPath)
     return true
+  })
+
+  /**
+   * The PROJECT's name, in its manifest. The folder is left where it is — see the channel's doc.
+   *
+   * Broadcast rather than answered alone, and only for the project that is open: every window
+   * replicates it, and the title bar of a second one would go on naming the old name. The
+   * `recentProjects` entry is the renderer's own write, as forgetting a project already is — the
+   * settings are replicated too, so doing it here would be the same write twice.
+   */
+  handle(CHANNELS.projectRename, async (_event, path, name) => {
+    const folderPath = parseProjectPath(path)
+    const title = parseProjectTitle(name)
+
+    try {
+      const renamed = await project.rename(folderPath, title)
+      if (project.current()?.path === folderPath) broadcast(EVENTS.projectChanged, renamed)
+      return renamed
+    } catch (error) {
+      // The folder can have gone or stopped opening since the shelf last saw it, which is the
+      // same failure `projectOpen` reports — and the shelf is where a stale row lives.
+      record({ level: 'error', topic: 'project', messageKey: 'activity.projectNotRenamed' })
+      throw error
+    }
   })
 
   // All three answer whether it happened, and all three say why in the journal when it did not:

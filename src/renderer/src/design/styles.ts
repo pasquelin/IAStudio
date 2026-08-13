@@ -6,8 +6,21 @@ import { cn } from '@/helpers/cn'
  * apart, and every name here has to be unique across the folder.
  */
 
-/** The focus ring on its own, for controls that carry their own shape. */
-export const FOCUS_RING = 'outline-none focus-visible:ring-accent focus-visible:ring-1'
+/**
+ * The focus ring on its own, for controls that carry their own shape.
+ *
+ * The second line is for a control sitting INSIDE a row filled with the accent — the rename field
+ * of the open project, its menu button. The ring draws in `accent`, so on that fill it is 1:1 and
+ * therefore no indicator at all (WCAG 2.4.7). Read off `rowSkin`'s group, as the two row inks are,
+ * so no list passes state down; outside such a row the attribute never appears.
+ *
+ * It does NOT cover the row cell itself, and cannot: `group/row` and `data-accented` sit on the
+ * same element there, and a `group-*` variant only looks at ancestors. `rowSkin` overrides its own.
+ */
+export const FOCUS_RING = cn(
+  'outline-none focus-visible:ring-accent focus-visible:ring-1',
+  'group-data-accented/row:focus-visible:ring-accent-content',
+)
 
 /**
  * The chrome every button of the docks shares, whether it carries a glyph or a label. Its own
@@ -80,10 +93,31 @@ export const TITLE_BAR_GHOST = cn(
 )
 
 /**
+ * How loudly a picked row is filled.
+ *
+ * `soft` is a row PICKED inside a list — one of several a gesture can move through, and the fill
+ * has to stay quiet enough that the list is still read as a list. `strong` is a row that says
+ * WHERE ONE IS: the project the studio has open, of which there is exactly one and which nothing
+ * in the list can move. The difference is not emphasis for its own sake — a soft fill answered the
+ * pointer so faintly that the open project was indistinguishable from a hovered one.
+ */
+export type RowTone = 'soft' | 'strong'
+
+/**
  * Hover, selection and keyboard focus of one line in a list. The same line must not light up
  * differently depending on whether a `Tree` or a `Collection` is holding it.
+ *
+ * `strong` costs two things beyond the fill, and both are measured rather than chosen: the ink and
+ * the focus ring. Nothing but pure white clears WCAG 1.4.3 on `accent` — the token is pinned at
+ * 4.508:1 against white, so `text` at 3.44 does not — hence `data-accented`, which `ROW_INK` and
+ * `ROW_QUIET` read to swap BOTH the name and its subtitle to `accent-content`. The size is what
+ * keeps the two apart on that fill, since the colour no longer can. And `FOCUS_RING` draws in
+ * `accent`, which on an accent fill is 1:1 and therefore no ring at all: it is overridden here,
+ * last-wins through `cn`, so a keyboard can still see where it is on the one row it matters on.
  */
-export function rowSkin(selected: boolean, disabled = false): string {
+export function rowSkin(selected: boolean, disabled = false, tone: RowTone = 'soft'): string {
+  const accented = selected && tone === 'strong'
+
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
@@ -97,12 +131,13 @@ export function rowSkin(selected: boolean, disabled = false): string {
     // and it is left alone knowingly: `opacity-40` is already on it, and WCAG 1.4.3 exempts a
     // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
-    selected ? 'bg-accent-soft' : 'hover:bg-elevated',
+    selected ? (accented ? 'bg-accent' : 'bg-accent-soft') : 'hover:bg-elevated',
     // After the hover, which it undoes: a refused line that still lights up under the pointer
     // reads as pickable right until the click that does nothing. `MenuRow` reached the same
     // triplet on its own — this is where a list row gets it, so `Tree` inherits it too.
     disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
     FOCUS_RING,
+    accented && 'focus-visible:ring-accent-content',
   )
 }
 
@@ -120,6 +155,34 @@ export function rowSkin(selected: boolean, disabled = false): string {
 export const ROW_QUIET = cn(
   'text-muted transition-colors',
   'group-hover/row:text-text group-data-selected/row:text-text',
+  /**
+   * On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
+   * pinned so that only pure white clears 4.5.
+   *
+   * Written TWICE, and the second spelling is the one that works. Being last in the class string
+   * decides nothing — the cascade never reads attribute order — and Tailwind emits the accented
+   * rule BEFORE the selected one at equal specificity, so `text` won and this subtitle rendered at
+   * 3.44:1 on the open project. Measured in Electron on 13 August, and reproduced by compiling
+   * both candidates with the repo's own Tailwind. Stacking the two variants raises the accented
+   * rule to (0,3,0) against the lift's (0,2,0), which no emission order can undo.
+   *
+   * The bare spelling stays for a row accented without being selected, which no surface draws
+   * today: `CollectionCell` derives one from the other.
+   */
+  'group-data-accented/row:text-accent-content',
+  'group-data-accented/row:group-data-selected/row:text-accent-content',
+)
+
+/**
+ * The ink of the NAME in a row — the counterpart of `ROW_QUIET`, and it exists for one reason: on
+ * a strongly filled row the name has to leave `text` as well, or it sits at 3.44:1 on the accent.
+ *
+ * At rest it is simply `text`, which is what every row wore before. A site that renders no
+ * strongly-filled row carries the variant harmlessly: the attribute never appears.
+ */
+export const ROW_INK = cn(
+  'text-text transition-colors',
+  'group-data-accented/row:text-accent-content',
 )
 
 /**
@@ -158,6 +221,13 @@ export const LIST_ROW_HEIGHT = 28
  * would go back to being right at one density only.
  */
 export const STACKED_ROW_HEIGHT = 36
+
+/**
+ * `--sc-row-filled` at its tallest, as a number — the same two steps of text under a fill that
+ * stands there rather than one a pointer has to summon, which needs the room that fill takes off
+ * them. Goes with `selectionTone: 'strong'`, and only the home asks for either.
+ */
+export const FILLED_ROW_HEIGHT = 44
 
 /**
  * A panel's scrolling body. The right padding is the point: on macOS the scrollbar is drawn

@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
-import { withoutRecentProject, type Project } from '@shared/domain/project'
+import { renamedRecentProject, withoutRecentProject, type Project } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
@@ -45,6 +45,20 @@ type ProjectState = {
    * a confirmation.
    */
   forget: (path: string) => Promise<void>
+  /**
+   * Gives a project a new name — the one in its manifest, never its folder on disk.
+   *
+   * Two writes, and they belong together: the main process owns the manifest, and this owns the
+   * `recentProjects` entry, which stores the name rather than deriving it from the folder. Skipping
+   * the second would list the project under its old name until it was next opened.
+   *
+   * Here rather than in the row that offered it, for the same reason the forgetting above is: two
+   * surfaces list projects, and a rename wired into one of them would be missing from the other.
+   *
+   * Answers whether it happened. The folder can have gone since the shelf last saw it, which is
+   * why the manifest is written FIRST: the settings must not claim a name the disk refused.
+   */
+  rename: (path: string, name: string) => Promise<boolean>
 }
 
 /**
@@ -128,8 +142,17 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // arrangement: nothing of the previous one may be left showing.
     const stop = bridge.project.onChange(project => {
       announced = true
+      const before = get().project?.path
       set({ project, known: true })
-      void followProject(project)
+
+      /**
+       * Only when ANOTHER project is in front. The same folder announcing itself again is a
+       * manifest that changed under it — a rename is the one that does — and following that would
+       * empty the scene clipboard, dismiss every toast and refetch three lists in every window,
+       * to update a word. The main process already declines to fire its own `onChange` for a
+       * rename (`main/project/store.ts`); this is the same decision on the side that pays for it.
+       */
+      if (project?.path !== before) void followProject(project)
     })
 
     // A refusal is an answer too. Left to throw, `connect` never hands back the unsubscribe —
@@ -176,6 +199,41 @@ export const useProject = create<ProjectState>()((set, get) => ({
         ...(settings.storage.lastProject === path ? { lastProject: undefined } : {}),
       },
     })
+  },
+
+  rename: async (path, name) => {
+    const bridge = getBridge()
+    if (!bridge) return false
+
+    let renamed: Project
+    try {
+      renamed = await bridge.project.rename(path, name)
+    } catch {
+      // Already in the journal, put there by the handler: this answers the caller and stops. The
+      // settings are deliberately left alone — a name the disk refused must not be listed.
+      return false
+    }
+
+    // Only when it is the open one. The broadcast the handler sends reaches the OTHER windows;
+    // this one is already past it, and waiting for a round trip would leave the title bar naming
+    // the old name for a frame.
+    if (get().project?.path === path) set({ project: renamed })
+
+    const { settings, write } = useSettings.getState()
+    await write({
+      storage: {
+        // The name the MANIFEST took, not the one that was asked for: the main process trims it
+        // (`parseProjectTitle`), and the shelf storing what was typed would list a project under
+        // a name its own manifest does not carry.
+        recentProjects: renamedRecentProject(
+          settings.storage.recentProjects,
+          path,
+          renamed.manifest.name,
+        ),
+      },
+    })
+
+    return true
   },
 
   openPicked: async () => {

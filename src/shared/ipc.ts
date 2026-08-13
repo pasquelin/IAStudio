@@ -102,6 +102,7 @@ export type Channels = {
   projectOpenFile: 'project:open-file'
   projectRevealFile: 'project:reveal-file'
   projectRevealFolder: 'project:reveal-folder'
+  projectRename: 'project:rename'
   projectRenameFile: 'project:rename-file'
   projectMoveFile: 'project:move-file'
   projectTrashFile: 'project:trash-file'
@@ -229,6 +230,7 @@ export const CHANNELS: Channels = {
   projectOpenFile: 'project:open-file',
   projectRevealFile: 'project:reveal-file',
   projectRevealFolder: 'project:reveal-folder',
+  projectRename: 'project:rename',
   projectRenameFile: 'project:rename-file',
   projectMoveFile: 'project:move-file',
   projectTrashFile: 'project:trash-file',
@@ -438,9 +440,10 @@ export type LogScope =
   // fail apart: the file can be written while the picture behind it is not.
   | 'assets.save'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
-  // both of its gestures need somewhere to say they did nothing.
+  // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
   | 'project.forget'
+  | 'project.rename'
   | 'font.face'
   | 'graph.node'
   | 'graph.run'
@@ -477,6 +480,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.save',
   'project.reveal',
   'project.forget',
+  'project.rename',
   'font.face',
   'graph.node',
   'graph.run',
@@ -765,6 +769,19 @@ export type StudioBridge = {
      * ordinary case for that shelf.
      */
     revealFolder: (path: string) => Promise<boolean>
+    /**
+     * Renames a PROJECT — the name in its manifest, never the folder on disk. Named by its own
+     * absolute path, so the home's shelf can rename one it has not opened.
+     *
+     * The folder is deliberately left alone: `recentProjects`, `storage.lastProject` and every
+     * absolute path the catalogue holds are keyed on it, and moving it would strand all three for
+     * a display name. The manifest already allows the two to differ, which is exactly why
+     * `RecentProject` stores the name instead of deriving it from the folder.
+     *
+     * Answers the project as it now reads. Throws when the folder will not open — a project
+     * renamed out from under the studio is the same failure `open` reports.
+     */
+    rename: (path: string, name: string) => Promise<Project>
     /**
      * Renames in place — the name only, never the folder it sits in. Answers whether it
      * happened: a name already taken is refused rather than overwritten, and the studio's own

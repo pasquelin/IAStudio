@@ -1,5 +1,5 @@
 import { useGauge } from '@/hooks/useGauge'
-import { LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from './styles'
+import { FILLED_ROW_HEIGHT, LIST_ROW_HEIGHT, STACKED_ROW_HEIGHT } from './styles'
 import { useEffect } from 'react'
 
 /**
@@ -75,8 +75,14 @@ export function useRemeasure(virtualizer: { measure: () => void }, key: string |
   useEffect(() => virtualizer.measure(), [virtualizer, key])
 }
 
-/** How tall a list row is — a SHAPE by preference, a number only for what no gauge describes. */
-export type RowHeight = 'control' | 'stacked' | number
+/**
+ * How tall a list row is — a SHAPE by preference, a number only for what no gauge describes.
+ *
+ * `stacked` and `filled` hold the same two steps of text and part on what is BEHIND them: a row
+ * painted edge to edge loses to its own fill the room a bare row keeps. Naming one `stacked` and
+ * raising it for the other's sake is what loosened the explorer and the documents panel.
+ */
+export type RowHeight = 'control' | 'stacked' | 'filled' | number
 
 /**
  * The pixels a row shape measures, read back from the gauge that sizes it.
@@ -88,10 +94,13 @@ export type RowHeight = 'control' | 'stacked' | number
  * beside `--sc-row-stacked`.
  */
 export function useRowHeight(shape: RowHeight): number {
-  // Both read unconditionally: a hook cannot sit behind a branch.
-  const control = useGauge('--sc-control', LIST_ROW_HEIGHT)
-  const stacked = useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT)
+  // A table rather than a chain, and every gauge read unconditionally: a hook cannot sit behind a
+  // branch, so the next shape adds a line here and nothing else.
+  const heights = {
+    control: useGauge('--sc-control', LIST_ROW_HEIGHT),
+    stacked: useGauge('--sc-row-stacked', STACKED_ROW_HEIGHT),
+    filled: useGauge('--sc-row-filled', FILLED_ROW_HEIGHT),
+  }
 
-  if (typeof shape === 'number') return shape
-  return shape === 'stacked' ? stacked : control
+  return typeof shape === 'number' ? shape : heights[shape]
 }

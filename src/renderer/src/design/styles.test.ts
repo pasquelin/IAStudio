@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BUTTON_NEUTRAL, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
+import { BUTTON_NEUTRAL, FOCUS_RING, ROW_INK, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -42,13 +42,15 @@ describe('the quiet ink of a row', () => {
   /**
    * Five sites had reached these three classes on their own, one of them twice — and a sixth was
    * about to. Read off the constant rather than spelled out again, so a change of rule moves
-   * every word with it.
+   * every word with it. Three wear it today: two of the six went with the home's panels on
+   * 13 August, and the floor below moved with them rather than being left to pass on a studio
+   * that had lost half its wearers.
    *
    * **What this holds is narrow, and the narrowness matters**: it refuses the literal re-copy of
    * this one class, nothing else. A site that writes `text-muted` ALONE under a row — the very
    * state `AssetRow` was in before this batch — passes it untouched, and so would a variant
    * (`group-hover/row:text-accent-content`) or a group under another name. What catches those is
-   * a test at the site, and each of the six sites has one.
+   * a test at the site, and each of the three sites has one.
    *
    * `WRITTEN_SOURCES` reads `renderer/src` only: a class string written in `shared/` would not be
    * seen. No JSX lives there today, which is why the gap is tolerated rather than closed.
@@ -68,7 +70,7 @@ describe('the quiet ink of a row', () => {
       ([path, source]) => path !== GUARDED && source.includes('ROW_QUIET'),
     )
 
-    expect(wearing.length).toBeGreaterThanOrEqual(4)
+    expect(wearing.length).toBeGreaterThanOrEqual(3)
   })
 })
 
@@ -117,9 +119,111 @@ describe('the row skin and the state it publishes', () => {
 })
 
 /**
+ * The loud fill, for the one list whose selection says WHERE ONE IS rather than what a gesture
+ * gathered. Every assertion here is a measurement, not a taste: `--color-accent` is pinned at
+ * 4.508:1 against pure white, so on that fill nothing but `accent-content` clears WCAG 1.4.3 —
+ * `text` reads 3.44 — and `FOCUS_RING` draws in `accent`, which on an accent fill is 1:1.
+ *
+ * `design/tokens.test.ts` owns the ratios themselves; what this file owns is that the skin and the
+ * two inks actually ASK for them.
+ */
+describe('the loud fill of a row that says where one is', () => {
+  it('fills with the accent itself, where the soft tone fills with its muted twin', () => {
+    expect(rowSkin(true, false, 'strong')).toContain('bg-accent')
+    expect(rowSkin(true, false, 'strong')).not.toContain('bg-accent-soft')
+    expect(rowSkin(true, false, 'soft')).toContain('bg-accent-soft')
+  })
+
+  // Soft is the default, so no existing caller can be repainted by this landing.
+  it('is not what a caller gets without asking', () => {
+    expect(rowSkin(true)).toBe(rowSkin(true, false, 'soft'))
+  })
+
+  /**
+   * The ring would otherwise be `accent` on `accent` — 1:1, and therefore no focus indicator at
+   * all on the single row where a keyboard most needs one. Overridden last so `cn` keeps it.
+   */
+  it('takes the ring off the accent it would otherwise be invisible against', () => {
+    expect(rowSkin(true, false, 'strong')).toContain('focus-visible:ring-accent-content')
+    expect(rowSkin(true, false, 'strong')).not.toContain('focus-visible:ring-accent ')
+    expect(rowSkin(true, false, 'soft')).toContain('focus-visible:ring-accent')
+  })
+
+  // Only a SELECTED row is filled, so an unselected one must keep the ordinary ring and hover.
+  it('changes nothing about a row that is not the one open', () => {
+    expect(rowSkin(false, false, 'strong')).toBe(rowSkin(false, false, 'soft'))
+  })
+
+  /**
+   * Both inks, and it has to be both: the colour can no longer separate a name from its subtitle
+   * on that fill, so the size does — which is only true if neither is left behind at 3.44:1.
+   */
+  it('takes both the name and its subtitle to the ink the accent needs', () => {
+    for (const ink of [ROW_INK, ROW_QUIET]) {
+      expect(ink).toContain('group-data-accented/row:text-accent-content')
+    }
+    // At rest they are still what they always were — the variant only fires under the attribute.
+    expect(ROW_INK).toContain('text-text')
+    expect(ROW_QUIET).toContain('text-muted')
+  })
+
+  /**
+   * The subtitle needs a SECOND spelling, and this is the whole of why: it also carries a
+   * `data-selected` lift to `text`, the two variants compile to the same specificity, and Tailwind
+   * emits the accented one FIRST — so `text` won and the path under the open project's name
+   * rendered at 3.44:1. Being written last in the class string decides nothing; the cascade never
+   * reads attribute order. Stacking the variants takes the accented rule to (0,3,0).
+   *
+   * What this can and cannot see: jsdom applies no stylesheet, so no suite here resolves a
+   * cascade. Asserted is the SHAPE that outranks the lift — the ratio itself was measured in
+   * Electron, and `ROW_INK` needs none of this since its base `text-text` is (0,1,0).
+   */
+  it('outranks its own selected lift rather than trusting the order it is written in', () => {
+    expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
+    expect(ROW_QUIET).toContain(
+      'group-data-accented/row:group-data-selected/row:text-accent-content',
+    )
+  })
+
+  /**
+   * A control INSIDE such a row — the rename field, its menu button — draws the studio's one focus
+   * ring, and that ring is the accent: on an accent fill it is 1:1, so a keyboard sees nothing at
+   * all (WCAG 2.4.7). Fixed on the indicator rather than at each caller, since "must not draw in
+   * accent over an accent fill" is a property of the ring.
+   */
+  it('takes the ring of a control standing inside such a row off the accent too', () => {
+    expect(FOCUS_RING).toContain('group-data-accented/row:focus-visible:ring-accent-content')
+  })
+
+  /**
+   * The partner of the rule above, and the failure it guards is silent: the skin paints the accent
+   * while the words stay at 3.44:1, with nothing on screen saying so. `data-selected` alone cannot
+   * drive it — every picked row in the studio carries that one.
+   */
+  /**
+   * Whoever PAINTS the tone, not whoever asks for it: a panel writes `selectionTone="strong"` and
+   * leaves the attribute to the surface that draws the cell, which is the only place that can
+   * emit it. Filtering on the word alone caught the panel and let the painter through — and it
+   * caught nothing at all before that, since it looked for `'strong'` in single quotes while the
+   * one site that asks writes it as a JSX attribute.
+   */
+  it('is never painted without the attribute the two inks read', () => {
+    const painters = WRITTEN_SOURCES.filter(
+      ([path, source]) =>
+        path !== GUARDED && /\browSkin\(/.test(source) && /["']strong["']/.test(source),
+    )
+
+    expect(painters.map(([path]) => path)).not.toEqual([])
+    expect(painters.filter(([, source]) => !source.includes('data-accented'))).toEqual([])
+  })
+})
+
+/**
  * The fill a button of the docks takes when it is not the primary action. Two sites reached it on
  * their own — `Button`'s neutral variant and the idea card of `Spark` — and the second had written
- * beside itself that it was avoiding a copy while writing one.
+ * beside itself that it was avoiding a copy while writing one. `Spark` went with the home's panels
+ * on 13 August, so `Button` is the one wearer left; the constant is kept because the rule below is
+ * what stops the second site from being written again.
  */
 const REWRITTEN = /(bg-surface[^'"`]*hover:bg-elevated|hover:bg-elevated[^'"`]*bg-surface)/
 
@@ -160,11 +264,11 @@ describe('the neutral fill of a button', () => {
 
   // The partner of the rule above: it stays green on a studio where nobody wears the constant,
   // which is what a dead export looks like from here.
-  it('is worn by the two sites it was extracted from', () => {
+  it('is worn by the site it was extracted for', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('BUTTON_NEUTRAL'),
     )
 
-    expect(wearing.length).toBeGreaterThanOrEqual(2)
+    expect(wearing.length).toBeGreaterThanOrEqual(1)
   })
 })

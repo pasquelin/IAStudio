@@ -233,7 +233,6 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
  */
 const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
-  '/Counts.tsx': 'a count of nothing, `disabled` on the button twelve lines up',
 }
 
 /**
@@ -421,6 +420,20 @@ describe('the contrast of the inks', () => {
       expect(
         contrastRatio(tokens['accent-content'] ?? '', tokens.accent ?? ''),
       ).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+    }
+  })
+
+  /**
+   * The other half of that pair, and it is the reason `rowSkin`'s loud fill swaps BOTH inks rather
+   * than only the fill: the studio's ordinary ink does NOT clear the bar on the accent. Measured
+   * rather than written in a comment beside the skin — a token nudged until `text` happened to pass
+   * would leave `ROW_INK`'s variant looking like decoration.
+   */
+  it('leaves the ordinary ink unreadable on that same fill, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      expect(contrastRatio(tokens.text ?? '', tokens.accent ?? '')).toBeLessThan(AA_NORMAL_TEXT)
     }
   })
 

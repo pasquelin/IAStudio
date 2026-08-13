@@ -35,16 +35,8 @@
     "view": "Vue",
     "apps": "Apps",
     "projects": "Vos projets",
-    "creations": "Ce que vous avez produit",
-    "counts": "Par type",
     "library": "Votre bibliothèque",
-    "documents": "Vos documents",
-    "activity": "Activité récente",
-    "spark": "Une idée pour commencer",
-    "favorites": "Vos recettes",
-    "similar": "Dans la même veine",
-    "usage": "Ce que vous avez consommé",
-    "jobs": "En cours"
+    "documents": "Vos documents"
   },
   "view": {
     "empty": "Ouvrez une skybox pour régler la façon dont elle est affichée.",
@@ -241,6 +233,7 @@
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
+    "projectNotRenamed": "Le projet n’a pas pu être renommé : son dossier est introuvable ou illisible",
     "projectNotRevealed": "Le dossier du projet est introuvable",
     "fileNotOpened": "Ce fichier n’a pas pu être ouvert par le système",
     "fileNotMoved": "Ce fichier n’a pas pu être déplacé — ce nom est peut-être déjà pris dans le dossier d’arrivée",
@@ -291,6 +284,7 @@
       "assets.save": "L’asset n’a pas pu être réécrit",
       "project.reveal": "Le dossier du projet n’a pas pu être montré",
       "project.forget": "Le projet n’a pas pu être retiré de la liste",
+      "project.rename": "Le projet n’a pas pu être renommé",
       "font.face": "Une police n’a pas pu être chargée",
       "graph.node": "Un nœud n’a pas pu être créé",
       "graph.run": "Le graphe n’a pas pu être lancé",
@@ -2142,19 +2136,13 @@
       "reveal": "Révéler dans le dossier",
       "revealHint": "Ouvre le gestionnaire de fichiers sur ce projet",
       "forget": "Retirer de la liste",
-      "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient"
-    },
-    "creations": {
-      "recreate": "En refaire une avec {{model}}",
-      "none": "Ce que vous générerez dans ce projet s’affichera ici."
+      "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient",
+      "rename": "Renommer",
+      "renameHint": "Changer le nom du projet, sans toucher à son dossier sur le disque"
     },
     "library": {
       "fetch": "Récupérer « {{name}} » dans le projet",
       "none": "La bibliothèque de votre compte Scenario est vide, ou aucune clé API n’est renseignée."
-    },
-    "favorites": {
-      "none": "Aucune recette épinglée. Épinglez une génération pour la retrouver ici, dans tous vos projets.",
-      "unpin": "Retirer « {{name}} » de vos recettes"
     },
     "spotlight": {
       "resume": "Reprendre où vous en étiez",
@@ -2182,29 +2170,7 @@
     "restore": "Les réafficher",
     "retry": "Réessayer",
     "refused": "Ce panneau n’a pas obtenu de réponse.",
-    "reading": "Lecture en cours…",
     "open": "Ouvrir « {{name}} »",
-    "spark": {
-      "noModel": "Choisissez un modèle d’image pour obtenir des départs écrits pour lui.",
-      "ask": "Proposez-moi une idée",
-      "asking": "Un instant…",
-      "help": "Des départs écrits pour le modèle que le générateur ouvrira. Gratuit : aucune unité créative n’est consommée.",
-      "use": "Ouvrir le générateur sur « {{prompt}} »"
-    },
-    "similar": {
-      "none": "Rien à comparer pour l’instant : votre bibliothèque Scenario est vide, ou aucune clé API n’est renseignée.",
-      "title": "Dans la veine de « {{name}} »",
-      "refused": "La bibliothèque n’a pas répondu. Le panneau revient dès que vous réessayez."
-    },
-    "usage": {
-      "none": "Rien de consommé sur la période, ou aucune clé API n’est renseignée.",
-      "summary_one": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} génération.",
-      "summary_many": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} générations.",
-      "summary_other": "{{units}} unités sur {{days, number}} jours, pour {{count, number}} générations.",
-      "model_one": "{{units}} unités · {{count, number}} génération",
-      "model_many": "{{units}} unités · {{count, number}} générations",
-      "model_other": "{{units}} unités · {{count, number}} générations"
-    },
     "explore": {
       "loading": "Chargement du fil…",
       "none": "Rien de publié dans cette catégorie pour le moment."
@@ -2214,11 +2180,7 @@
     "documents": {
       "none": "Ce projet ne contient encore aucun document. Choisissez un outil au centre pour en créer un."
     },
-    "counts": {
-      "reveal": "Ouvrir la bibliothèque d’assets du projet, filtrée sur ce type"
-    },
     "closingActionHint": "Ouvre l’espace de création, celui où l’on génère",
-    "sparkAskHint": "Demande trois départs à l’API, écrits pour le modèle du générateur",
     "spotlightResumeHint": "Rouvre le document tel qu’il était à la fermeture",
     "spotlightConnectHint": "Ouvre les réglages, à la section du compte",
     "spotlightReadyHint": "Ouvre l’espace de création, celui où l’on génère",

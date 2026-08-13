@@ -9,14 +9,13 @@ import type { ShelfState } from '@/hooks/use-shelf'
 import { RefusedPanel } from './RefusedPanel'
 
 /**
- * A panel that is a grid of pictures and nothing else: the creations of a project, the library
- * an API key opens onto.
+ * A panel that is a grid of pictures and nothing else: the library an API key opens onto.
  *
  * The frame was written twice, line for line — the refusal, the grid, the empty state, the name
- * announced to a screen reader. Four panels share it now. What differs between them is the read
- * behind it and the tile it draws, and those stay with the caller; a shelf that took over the
- * read would have to know about projects, accounts and a cloud page, none of which is a frame's
- * business.
+ * announced to a screen reader. Four panels shared it; the Library is the last one left, the other
+ * three having gone with the home's readings of the studio on 13 August. Kept generic rather than
+ * folded back in: what differs between callers is the read behind it and the tile it draws, and a
+ * shelf that took over the read would have to know about accounts and a cloud page.
  *
  * `tool` rather than an icon and a title: `RefusedPanel` already takes the glyph from the rail's
  * own table, and a panel whose empty state wears a different icon from its rail button is the
