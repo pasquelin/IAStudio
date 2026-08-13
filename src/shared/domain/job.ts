@@ -3,26 +3,16 @@ import type { JobFailure } from './failure'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
 /**
- * What a job runs. One value today, kept as a union because a job read back off disk may name a
- * kind this build no longer runs — `storedJob` folds those onto `model` rather than dropping a
- * generation that is running and already paid for.
+ * What to run. One shape for the two questions asked of it — what would this cost, and run it —
+ * so a second runnable thing is a value here rather than a second channel, a second estimator
+ * and a second branch in every caller.
  */
-export type JobKind = 'model'
-
-export const JOB_KINDS: readonly JobKind[] = ['model']
-
-/**
- * What to run, and under which vocabulary of id. One shape for the two questions asked of it —
- * what would this cost, and run it — so a third runnable thing is a value here rather than a
- * second channel, a second estimator and a second branch in every caller.
- */
-export type JobTarget = { kind: JobKind; id: string }
+export type JobTarget = { id: string }
 
 /** A Scenario job, as the studio sees it. */
 export type Job = {
   id: string
-  kind: JobKind
-  /** The id of whatever `kind` names — a model of the catalogue. */
+  /** The model of the catalogue this job runs. */
   targetId: string
   label: string
   status: JobStatus

@@ -33,7 +33,6 @@ function remote(status: string, overrides: Partial<RemoteJob> = {}): RemoteJob {
 const RUNNING: PersistedJob = {
   id: 'job_left_running',
   remoteId: 'job_remote',
-  kind: 'model',
   targetId: 'model_veo',
   label: 'Veo',
   accountId: 'fingerprint_studio',
@@ -174,10 +173,9 @@ describe('progress normalisation', () => {
 describe('job manager', () => {
   it('reports the job as queued the moment it is submitted', () => {
     const { manager } = harness()
-    const job = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { prompt: 'a rock' })
+    const job = manager.submit({ id: 'model_flux' }, 'Flux', { prompt: 'a rock' })
 
     expect(job).toMatchObject({
-      kind: 'model',
       targetId: 'model_flux',
       label: 'Flux',
       status: 'queued',
@@ -190,10 +188,10 @@ describe('job manager', () => {
     const submit = vi.fn(() => Promise.resolve(remote('success')))
     const { manager } = harness({ runner: { submit } })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { image: 'a' })
+    manager.submit({ id: 'model_flux' }, 'Flux', { image: 'a' })
     await settled()
 
-    expect(submit).toHaveBeenCalledWith({ kind: 'model', id: 'model_flux' }, { image: 'a' })
+    expect(submit).toHaveBeenCalledWith({ id: 'model_flux' }, { image: 'a' })
   })
 
   /**
@@ -209,7 +207,7 @@ describe('job manager', () => {
     )
     const { manager } = harness({ runner: { submit }, resolveAssetInputs })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {
+    manager.submit({ id: 'model_flux' }, 'Flux', {
       image: 'asset_local',
       prompt: 'a fox',
     })
@@ -217,7 +215,7 @@ describe('job manager', () => {
 
     expect(resolveAssetInputs).toHaveBeenCalledWith({ image: 'asset_local', prompt: 'a fox' })
     expect(submit).toHaveBeenCalledWith(
-      { kind: 'model', id: 'model_flux' },
+      { id: 'model_flux' },
       { image: 'asset_remote', prompt: 'a fox' },
     )
   })
@@ -234,7 +232,7 @@ describe('job manager', () => {
     })
     const { manager, progress } = harness({ resolveAssetInputs })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { image: 'asset_local' })
+    manager.submit({ id: 'model_flux' }, 'Flux', { image: 'asset_local' })
     await settled()
 
     expect(attempts).toBe(2)
@@ -250,7 +248,7 @@ describe('job manager', () => {
       resolveAssetInputs: () => Promise.reject(new Error('upload-too-large')),
     })
 
-    const job = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {
+    const job = manager.submit({ id: 'model_flux' }, 'Flux', {
       image: 'asset_local',
     })
     expect(job.status).toBe('queued')
@@ -274,7 +272,7 @@ describe('job manager', () => {
       resolveAssetInputs: () => held.then(() => Promise.reject(new Error('upload-too-large'))),
     })
 
-    const job = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { image: 'asset_x' })
+    const job = manager.submit({ id: 'model_flux' }, 'Flux', { image: 'asset_x' })
     await settled()
     await manager.cancel(job.id)
     release()
@@ -292,10 +290,10 @@ describe('job manager', () => {
       persist: jobs => void written.push([...jobs]),
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
-    expect(written[0]?.[0]).toMatchObject({ kind: 'model', targetId: 'model_flux' })
+    expect(written[0]?.[0]).toMatchObject({ targetId: 'model_flux' })
   })
 
   it('never runs more jobs at once than it is allowed to', async () => {
@@ -321,8 +319,7 @@ describe('job manager', () => {
       },
     })
 
-    for (let index = 0; index < 6; index++)
-      manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    for (let index = 0; index < 6; index++) manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(peak).toBe(2)
@@ -346,7 +343,7 @@ describe('job manager', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(progress.map(entry => [entry.status, entry.progress])).toEqual([
@@ -370,7 +367,7 @@ describe('job manager', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(progress.map(entry => [entry.status, entry.progress])).toEqual([
@@ -397,7 +394,7 @@ describe('job manager', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(sleeps).toEqual([1000, 2000])
@@ -412,7 +409,7 @@ describe('job manager', () => {
       runner: { submit, poll: () => Promise.resolve(remote('success')), cancel: vi.fn() },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(submit).toHaveBeenCalledOnce()
@@ -427,11 +424,11 @@ describe('job manager', () => {
       runner: { submit, poll: () => Promise.resolve(remote('success')), cancel },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     // Awaited, because the first job now translates its asset ids before it submits: without
     // this it would still be holding the slot on that step, and the runner untouched either way.
     await settled()
-    const queued = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    const queued = manager.submit({ id: 'model_flux' }, 'Flux', {})
     await manager.cancel(queued.id)
 
     expect(submit).toHaveBeenCalledOnce()
@@ -449,7 +446,7 @@ describe('job manager', () => {
       },
     })
 
-    const job = manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    const job = manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
     await manager.cancel(job.id)
 
@@ -471,7 +468,7 @@ describe('job manager', () => {
       onProgress: entry => void order.push(`progress:${entry.status}`),
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(order).toEqual(['progress:queued', 'collect:remote_1', 'progress:succeeded'])
@@ -502,7 +499,7 @@ describe('job manager', () => {
         },
       })
 
-      manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+      manager.submit({ id: 'model_flux' }, 'Flux', {})
       await settled()
 
       const [job] = manager.list()
@@ -519,7 +516,7 @@ describe('job manager', () => {
       collect: () => Promise.reject(new Error('disk full')),
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'storage' })
@@ -536,7 +533,7 @@ describe('job manager', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     const failed = manager.list()[0]
@@ -553,7 +550,7 @@ describe('job manager', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'rejected' })
@@ -561,8 +558,8 @@ describe('job manager', () => {
 
   it('lists the most recent job first', async () => {
     const { manager } = harness()
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
-    const second = manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    const second = manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     expect(manager.list()[0]?.id).toBe(second.id)
@@ -616,7 +613,7 @@ describe('the account a job runs on', () => {
   it('polls the account that submitted it, not the one active when the poll comes round', async () => {
     const { manager, studio, other } = switching()
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     expect(studio.runner.poll).toHaveBeenCalledTimes(2)
@@ -629,7 +626,7 @@ describe('the account a job runs on', () => {
   it('collects the outputs on that same account', async () => {
     const { manager, studio, other } = switching()
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     expect(studio.collect).toHaveBeenCalledOnce()
@@ -644,7 +641,7 @@ describe('the account a job runs on', () => {
       switch: switchAccount,
     } = switching(() => new Promise<RemoteJob>(() => {}))
 
-    const job = manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    const job = manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
     switchAccount()
     await manager.cancel(job.id)
@@ -656,7 +653,7 @@ describe('the account a job runs on', () => {
   it('fails a job submitted without a key rather than borrowing one added since', async () => {
     const { manager } = harness({ accounts: { active: () => null, of: () => null } })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'missing' })
@@ -683,7 +680,7 @@ describe('a job that outlives the session', () => {
       runner: { submit: () => Promise.resolve(remote('success', { cost: 12 })) },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]?.cost).toBe(12)
@@ -693,7 +690,7 @@ describe('a job that outlives the session', () => {
   it('leaves the cost unsaid when the API priced nothing', async () => {
     const { manager } = harness()
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]?.cost).toBeUndefined()
@@ -725,7 +722,7 @@ describe('a job that outlives the session', () => {
   it('writes a job down once it exists at the API, and not before', async () => {
     const { manager, remembered } = harness(holding())
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     // Nothing was written at submission: no request had gone out, so nothing had been spent.
     expect(remembered()).toEqual([])
 
@@ -734,7 +731,6 @@ describe('a job that outlives the session', () => {
     expect(remembered()).toEqual([
       expect.objectContaining({
         remoteId: 'job_remote',
-        kind: 'model',
         targetId: 'model_veo',
         label: 'Veo',
         accountId: 'fingerprint_studio',
@@ -746,7 +742,7 @@ describe('a job that outlives the session', () => {
   it('forgets it again once it is finished', async () => {
     const { manager, remembered } = harness()
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]?.status).toBe('succeeded')
@@ -798,7 +794,7 @@ describe('a job that outlives the session', () => {
   it('forgets a cancelled job as soon as the API has taken the cancellation', async () => {
     const { manager, remembered } = harness(holding())
 
-    const job = manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    const job = manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
     expect(remembered()).toHaveLength(1)
 
@@ -817,7 +813,7 @@ describe('a job that outlives the session', () => {
       },
     })
 
-    const job = manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    const job = manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
     await manager.cancel(job.id)
 
@@ -839,7 +835,7 @@ describe('a job that outlives the session', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'network' })
@@ -856,7 +852,7 @@ describe('a job that outlives the session', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(remembered()).toEqual([])
@@ -866,7 +862,7 @@ describe('a job that outlives the session', () => {
   it('keeps the note of a job whose outputs would not come down', async () => {
     const { manager, remembered } = harness({ collect: () => Promise.reject(new Error('disk')) })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(manager.list()[0]).toMatchObject({ status: 'failed', error: 'storage' })
@@ -893,7 +889,7 @@ describe('a job that outlives the session', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     expect(collect).not.toHaveBeenCalled()
@@ -996,7 +992,7 @@ describe('how often it asks the API where a job is', () => {
   it('asks as fast as it may when a single job is running', async () => {
     const { manager, sleeps } = harness({ ...polling(2), concurrency: () => 1 })
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     expect(sleeps).toEqual([2000, 2000, 2000])
@@ -1010,8 +1006,7 @@ describe('how often it asks the API where a job is', () => {
   it('stretches the interval rather than ask for more than it is granted', async () => {
     const { manager, sleeps } = harness({ ...polling(18), concurrency: () => 6 })
 
-    for (let index = 0; index < 6; index++)
-      manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    for (let index = 0; index < 6; index++) manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     // The widest, which is the interval while all six were being followed at once. Six jobs, one
@@ -1058,7 +1053,7 @@ describe('what the list itself announces', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
     await settled()
 
     // The submission announced it first; what matters is that its removal was announced too.
@@ -1072,7 +1067,7 @@ describe('what the list itself announces', () => {
   it('announces a submission too, for the windows that did not make it', async () => {
     const { manager, announced } = harness({ concurrency: () => 0 })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
 
     expect(announced).toEqual([[expect.objectContaining({ label: 'Flux' })]])
   })
@@ -1092,7 +1087,7 @@ describe('what a finished job leaves behind to read', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(recorded).toContainEqual({
@@ -1113,7 +1108,7 @@ describe('what a finished job leaves behind to read', () => {
       collect: () => landing(['asset_1', 'asset_2'], ['image', '3d']),
     })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(recorded).toContainEqual({
@@ -1128,7 +1123,7 @@ describe('what a finished job leaves behind to read', () => {
   it('leaves the shelves out when the collector named none', async () => {
     const { manager, recorded } = harness({ collect: () => landing(['asset_1'], []) })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(recorded).toContainEqual({
@@ -1144,7 +1139,7 @@ describe('what a finished job leaves behind to read', () => {
   it('says nothing about a success that produced no asset', async () => {
     const { manager, recorded } = harness({ collect: () => landing([], []) })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     expect(recorded).toEqual([])
@@ -1160,8 +1155,8 @@ describe('what a finished job leaves behind to read', () => {
       },
     })
 
-    manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
-    const queued = manager.submit({ kind: 'model', id: 'model_veo' }, 'Veo', {})
+    manager.submit({ id: 'model_veo' }, 'Veo', {})
+    const queued = manager.submit({ id: 'model_veo' }, 'Veo', {})
     await manager.cancel(queued.id)
 
     expect(recorded).toContainEqual({
@@ -1177,7 +1172,7 @@ describe('what a finished job leaves behind to read', () => {
   it('never stores a sentence, only a key and what fills it', async () => {
     const { manager, recorded } = harness({ collect: () => landing(['asset_1']) })
 
-    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
     await settled()
 
     for (const report of recorded) expect(report.messageKey).toMatch(/^activity\./)

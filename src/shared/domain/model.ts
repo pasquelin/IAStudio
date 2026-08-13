@@ -73,20 +73,6 @@ export const MODEL_FAMILIES: readonly ModelFamily[] = [
 ]
 
 /**
- * The model a family starts from, which is a preference and never a choice already made.
- *
- * Written once because three surfaces read it — the rail deciding whether to draw the
- * generator, the generator itself, and the image edits — and `null` is the home, which browses
- * no catalogue at all and therefore has no preference to read.
- */
-export function preferredModelOf(
-  family: ModelFamily | null,
-  defaults: Partial<Record<ModelFamily, string>>,
-): string | undefined {
-  return family ? defaults[family] : undefined
-}
-
-/**
  * Who published the model. The API exposes no author name — only an opaque `authorId` — so
  * the `sc:scenario` tag is the single authorship signal there is to filter on.
  */

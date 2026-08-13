@@ -11,9 +11,8 @@ export type CostEstimator = (
 /**
  * Fires the call an estimate rides on, whatever it is a dry run of.
  *
- * A function rather than a named method, because both `generate.runModel` and `workflows.run`
- * price a dry run the same way. Which of the two is the target's business, exactly as it is for
- * running one.
+ * A function rather than a named method: which endpoint prices the dry run is the target's
+ * business, exactly as it is for running one.
  */
 export type DryRun = (target: JobTarget, body: Record<string, unknown>) => Promise<unknown>
 

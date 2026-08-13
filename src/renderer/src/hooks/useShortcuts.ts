@@ -69,10 +69,13 @@ export function useShortcuts({ scope, enabled, onCommand, onMotionChange }: Shor
         handlers.current.onMotionChange?.(held)
       }
 
-      // A field keeps every command: ⌘E would flatten a layer while its name is being typed, and
-      // the ⌘Z reflex would undo the typing rather than the merge.
+      // A field keeps every command, and the lookup is skipped rather than thrown away: ⌘E would
+      // flatten a layer while its name is being typed, and the ⌘Z reflex would undo the typing
+      // rather than the merge. `commandFor` walks the whole registry, on every keystroke typed.
+      if (typing) return
+
       const command = commandFor(signature, scope, currentOverrides())
-      if (!command || typing) return
+      if (!command) return
       if (copiesText(signature) && holdsText()) return
       event.preventDefault()
       // A held key repeats keydown. Space is held far more readily than ⌘Z, and a transport

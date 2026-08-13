@@ -3,9 +3,8 @@
  *
  * The API grades every model with `accessRestrictions` and refuses a generation whose model
  * outranks the caller's plan — HTTP 403, `ModelAccessRestrictedError`. Honoured in the interface
- * rather than discovered as a 403, the same choice a locked workflow makes in `workflow.ts`:
- * measured on a `cu-basic` account, 41 of the 100 first public models are out of reach, so the
- * refusal is the common case rather than the edge one.
+ * rather than discovered as a 403: measured on a `cu-basic` account, 41 of the 100 first public
+ * models are out of reach, so the refusal is the common case rather than the edge one.
  */
 
 /** The account's plan, as `GET /teams` spells it, and what it is worth on the model scale. */

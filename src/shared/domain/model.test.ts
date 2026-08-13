@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   FAMILY_TAGS,
   MODEL_FAMILIES,
-  preferredModelOf,
   tagLabel,
   TAGS_BY_FAMILY,
   TAG_LABEL_KEY_LIST,
@@ -64,16 +63,5 @@ describe('the tags a facet menu offers', () => {
     expect(tagLabel('Multiview', key => `<${key}>`)).toBe('<modelTags.multiview>')
     // A tag the table has never heard of still has to read as something.
     expect(tagLabel('Nano Banana Pro', () => 'unreachable')).toBe('Nano Banana Pro')
-  })
-})
-
-describe('the model a family starts from', () => {
-  it('reads the preference of that family', () => {
-    expect(preferredModelOf('image', { image: 'flux-dev' })).toBe('flux-dev')
-  })
-
-  /** The home browses no catalogue, and a default "for every family" would mean nothing. */
-  it('answers nothing where there is no family at all', () => {
-    expect(preferredModelOf(null, { image: 'flux-dev' })).toBeUndefined()
   })
 })

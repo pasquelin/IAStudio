@@ -26,18 +26,12 @@ export const PERIOD_FACET = 'period'
 /** Translates a key into user text. Taking it as an argument keeps this module renderless. */
 type Translate = (key: string) => string
 
-/** A family's own vocabulary. */
-const ownedBy = (
-  table: Record<ModelFamily, readonly string[]>,
-  family: ModelFamily,
-): readonly string[] => table[family]
-
 /**
  * The facets the API can actually answer. Category, author, rating and generation time are
  * absent on purpose: measured over the 642 public models, `class`, `performanceStats` and the
  * author name come back empty on every single one — a filter for them would filter nothing.
  */
-export function facetsFor(narrowed: ModelFamily, t: Translate): FacetDescriptor[] {
+export function facetsFor(family: ModelFamily, t: Translate): FacetDescriptor[] {
   const facets: FacetDescriptor[] = []
 
   facets.push({
@@ -49,7 +43,7 @@ export function facetsFor(narrowed: ModelFamily, t: Translate): FacetDescriptor[
     ],
   })
 
-  const capabilities = ownedBy(CAPABILITIES_BY_FAMILY, narrowed)
+  const capabilities = CAPABILITIES_BY_FAMILY[family]
   if (capabilities.length) {
     facets.push({
       key: CAPABILITY_FACET,
@@ -58,7 +52,7 @@ export function facetsFor(narrowed: ModelFamily, t: Translate): FacetDescriptor[
     })
   }
 
-  const tags = ownedBy(TAGS_BY_FAMILY, narrowed)
+  const tags = TAGS_BY_FAMILY[family]
   if (tags.length) {
     facets.push({
       key: TAG_FACET,
@@ -68,7 +62,7 @@ export function facetsFor(narrowed: ModelFamily, t: Translate): FacetDescriptor[
   }
 
   // The publisher is a tag like any other, so both facets narrow through the same parameter.
-  const publishers = ownedBy(PUBLISHERS_BY_FAMILY, narrowed)
+  const publishers = PUBLISHERS_BY_FAMILY[family]
   if (publishers.length) {
     facets.push({
       key: PUBLISHER_FACET,
@@ -122,11 +116,11 @@ function chosen<T extends string>(
  * lists it and shows nothing selected, while the query still carried it and emptied the panel.
  */
 export function queryFrom(state: CollectionState, family: ModelFamily, search: string): ModelQuery {
-  const capabilities = offered(state, CAPABILITY_FACET, ownedBy(CAPABILITIES_BY_FAMILY, family))
+  const capabilities = offered(state, CAPABILITY_FACET, CAPABILITIES_BY_FAMILY[family])
   // One parameter for both: the API matches a publisher exactly as it matches any other tag.
   const tags = [
-    ...offered(state, TAG_FACET, ownedBy(TAGS_BY_FAMILY, family)),
-    ...offered(state, PUBLISHER_FACET, ownedBy(PUBLISHERS_BY_FAMILY, family)),
+    ...offered(state, TAG_FACET, TAGS_BY_FAMILY[family]),
+    ...offered(state, PUBLISHER_FACET, PUBLISHERS_BY_FAMILY[family]),
   ]
   const origin = chosen(state, ORIGIN_FACET, MODEL_ORIGINS)
   const since = chosen<ModelPeriod>(state, PERIOD_FACET, MODEL_PERIODS)

@@ -97,7 +97,7 @@ describe('a half open on no panel in particular', () => {
     expect(shownTool(null, 'bottom', 'secondary', 'image', true)).toBeNull()
   })
 
-  // The lower half of the left column, which the Explorer and the Apps took over.
+  // The lower half of the left column, which the Explorer took over.
   it('opens the lower left on the first panel that half declares', () => {
     expect(shownTool(null, 'left', 'secondary', 'image', true)).toBe('explorer')
   })

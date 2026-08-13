@@ -25,7 +25,7 @@ export type RemoteJob = {
   jobId: string
   status: string
   progress?: number
-  /** What it has produced so far, as remote asset ids — a workflow job fills it node by node. */
+  /** What it has produced so far, as remote asset ids. */
   assetIds: readonly string[]
   /** On a submission, and on a poll too — which is where a resumed job finds its own. */
   cost?: number
@@ -164,10 +164,10 @@ const SETTLED_FOR_GOOD: ReadonlySet<ApiFailure> = new Set(['not-found'])
  * states, not states of their own; an unknown one is treated as running, so a status Scenario
  * adds keeps the job polling instead of declaring an outcome nobody understood.
  *
- * `succeeded` and `failed` are insurance, not observation: the SDK types give a workflow job
- * the same eight spellings as a generation, while the prose guide gives it these two. They cost
- * two rows and no collision — and without them, the guide being right means a workflow job
- * polls for ever while holding its place in the concurrency count.
+ * `succeeded` and `failed` are insurance, not observation: the SDK types spell eight states and
+ * the prose guide has been seen using these two instead. They cost two rows and no collision —
+ * and without them, the guide being right means a job polls for ever while holding its place in
+ * the concurrency count.
  */
 const STATUS: Record<string, JobStatus> = {
   pending: 'queued',
@@ -197,8 +197,8 @@ const PERCENTAGE_ABOVE = 2
 /**
  * Progress as the fraction `Job.progress` promises, which several surfaces sum.
  *
- * The SDK types say 0–1 for every job type; the prose guide says 0–100 for a workflow one, and
- * reading the larger scale costs nothing if the types are right. Anything outside either scale
+ * The SDK types say 0–1; the prose guide has been seen saying 0–100, and reading the larger
+ * scale costs nothing if the types are right. Anything outside either scale
  * is out of contract and clamped rather than passed on — NaN included, which would otherwise
  * emit on every poll, `NaN !== NaN` defeating the guard that only emits on change.
  */
@@ -304,7 +304,6 @@ export function createJobManager({
       unfinished.push({
         id: entry.job.id,
         remoteId,
-        kind: entry.job.kind,
         targetId: entry.job.targetId,
         label: entry.job.label,
         accountId,
@@ -494,7 +493,7 @@ export function createJobManager({
     try {
       if (remoteId !== null) return await follow(entry, bound, remoteId)
 
-      const target: JobTarget = { kind: entry.job.kind, id: entry.job.targetId }
+      const target: JobTarget = { id: entry.job.targetId }
       // Here rather than at the IPC boundary, because sending a picture up is a file transfer of
       // any size: done before the job exists, it holds the channel open with nothing queued on
       // screen and outside this loop's concurrency bound. Retried like the submission beside it —
@@ -553,7 +552,6 @@ export function createJobManager({
     submit: (target, label, body) => {
       const job: Job = {
         id: newId(),
-        kind: target.kind,
         targetId: target.id,
         label,
         status: 'queued',
@@ -594,7 +592,6 @@ export function createJobManager({
 
         const job: Job = {
           id: remembered.id,
-          kind: remembered.kind,
           targetId: remembered.targetId,
           label: remembered.label,
           status: 'queued',

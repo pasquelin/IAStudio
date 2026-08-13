@@ -3,7 +3,7 @@ import type { ClientOptions } from '@scenario-labs/sdk'
 import { accountFingerprint, type Credentials } from '@main/settings/accounts'
 
 /**
- * What the API accepts per minute and per project, from `workflows-and-apps.md` § Rate Limits.
+ * What the API accepts per minute and per project, as its reference documents it.
  * A different quantity from the batch sizes of `limits.ts` and from the job concurrency of the
  * `JobManager`: ten concurrent jobs polling every two seconds spend three hundred of these on
  * their own, before the catalogue, the previews and the assist queue ask for any.

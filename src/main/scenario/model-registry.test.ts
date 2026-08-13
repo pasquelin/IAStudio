@@ -637,36 +637,4 @@ describe('model registry', () => {
       expect(catalog).toHaveBeenCalledOnce()
     })
   })
-
-  describe('inputsOf', () => {
-    /**
-     * The API's own type, untranslated — `kind` is the studio's reading of it and is all a form
-     * needs, while Scenario's workflow converter matches an edge to an input by this very field.
-     */
-    it('answers the inputs as the API spells them, not as a form reads them', async () => {
-      const registry = registryOf({ catalog: publicCatalog([FLUX]) })
-
-      await expect(registry.inputsOf('model_flux')).resolves.toEqual(FLUX.inputs)
-    })
-
-    it('answers no input for a model that declares none, rather than failing', async () => {
-      const registry = registryOf({ catalog: publicCatalog([VEO]) })
-
-      await expect(registry.inputsOf('model_veo')).resolves.toEqual([])
-    })
-
-    /**
-     * One fetch for both readings. Two caches would let the form and the compiler disagree about
-     * the same model, and would spend a round trip to do it.
-     */
-    it('shares its fetch with describe', async () => {
-      const catalog = vi.fn(publicCatalog([FLUX]))
-      const registry = registryOf({ catalog })
-
-      await registry.describe('model_flux')
-      await registry.inputsOf('model_flux')
-
-      expect(catalog).toHaveBeenCalledOnce()
-    })
-  })
 })

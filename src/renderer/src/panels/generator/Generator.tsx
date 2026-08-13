@@ -96,7 +96,7 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
   // Before the guards below return early: a hook cannot be called conditionally.
-  const cost = useCostEstimate('model', modelId, descriptor.data?.fields)
+  const cost = useCostEstimate(modelId, descriptor.data?.fields)
   const plan = usePlanAccess()
 
   /**
@@ -104,9 +104,6 @@ export function Generator() {
    * a stored default, "recreate", "regenerate with these parameters", a Spark idea and the canvas
    * edits all land here. Greying the picker alone would leave every one of them to discover the
    * 403.
-   *
-   * NOT every path, though — a graph runs its own nodes through `graph-runs.ts`, straight to the
-   * job queue, and is gated where its model is chosen (`ModelNodeFields`) instead.
    */
   const refused = plan !== null && isBeyondPlan(descriptor.data?.requiredPlanLevel, plan)
 
@@ -135,7 +132,7 @@ export function Generator() {
   // put a result is not this panel's business — it serves every one of them.
   const generate = (body: FormValues): void => {
     const claim = claimOnSubmit()
-    void submit({ kind: 'model', id: modelId }, body).then(claim)
+    void submit({ id: modelId }, body).then(claim)
   }
 
   // Adopting the settings goes through the preset "regenerate with these parameters" already

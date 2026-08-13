@@ -14,15 +14,12 @@ type RemoteJobPayload = {
 }
 
 /**
- * The assets a job leaves behind.
+ * The assets a job leaves behind, as a list the manager can hold either way.
  *
- * Deduplicated: nothing says the API never names the same asset twice, and a repeat would have
- * the collector fetch and file it more than once.
- *
- * Normalized here rather than in the job manager: this file is the one that speaks SDK.
+ * Read here rather than in the job manager: this file is the one that speaks SDK.
  */
 export function outputsOf(payload: RemoteJobPayload): string[] {
-  return [...new Set(payload.metadata?.assetIds ?? [])]
+  return [...(payload.metadata?.assetIds ?? [])]
 }
 
 /**

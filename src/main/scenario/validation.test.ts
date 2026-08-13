@@ -46,19 +46,20 @@ describe('jobs read back from disk', () => {
   it('reads a note an earlier version wrote', () => {
     const [job] = parseStoredJobs(JSON.stringify([{ ...NOTE, modelId: 'model_flux' }]))
 
-    expect(job).toMatchObject({ kind: 'model', targetId: 'model_flux' })
+    expect(job).toMatchObject({ targetId: 'model_flux' })
   })
 
   /**
-   * A kind this build no longer runs — a note left by a version that had Apps. Folded onto
-   * `model` rather than dropped, so a generation already paid for is not abandoned.
+   * A note left by a version that ran more than models carries a `kind` this build has no field
+   * for. Read for what it does hold rather than dropped, so a generation already paid for is
+   * not abandoned — and the stray field is stripped rather than carried.
    */
-  it('folds a kind it no longer knows onto the one it runs', () => {
-    const stored = [{ ...NOTE, kind: 'workflow', targetId: 'workflow_1' }]
+  it('reads a note carrying a field this build no longer knows', () => {
+    const stored = [{ ...NOTE, kind: 'workflow', targetId: 'job_target' }]
 
-    expect(parseStoredJobs(JSON.stringify(stored))[0]).toMatchObject({
-      kind: 'model',
-      targetId: 'workflow_1',
+    expect(parseStoredJobs(JSON.stringify(stored))[0]).toEqual({
+      ...NOTE,
+      targetId: 'job_target',
     })
   })
 

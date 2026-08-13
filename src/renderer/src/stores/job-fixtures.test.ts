@@ -91,14 +91,14 @@ const SUITES: Record<string, string> = import.meta.glob(['../**/*.test.ts', '../
 /**
  * What says "this object is a `Job`", and nothing else in the studio.
  *
- * Four keys rather than the whole shape: a suite is allowed to say LESS than the type — `label`
+ * Three keys rather than the whole shape: a suite is allowed to say LESS than the type — `label`
  * or `assetIds` left out — but no other object of the renderer carries `targetId` beside
- * `progress`. The submission targets that read `{ kind, id }` have neither.
+ * `progress`. The submission targets that read `{ id }` have neither.
  *
  * Typed `keyof Job` rather than `string[]`, as `plan.ts` types its own field list: renaming one
  * of these in `Job` stops this file compiling instead of leaving the walk watching nothing.
  */
-const JOB_KEYS: readonly (keyof Job)[] = ['kind', 'targetId', 'status', 'progress']
+const JOB_KEYS: readonly (keyof Job)[] = ['targetId', 'status', 'progress']
 
 /** Named as `no-hardcoded-text.test.ts` names it, so a grep finds both copies. */
 const scriptKindOf = (file: string): ts.ScriptKind =>

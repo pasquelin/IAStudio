@@ -1,8 +1,7 @@
 import type { ModelFamily } from '@shared/domain/model'
 import { sectionOfFamily } from '@shared/domain/settings-registry'
-import { HOME_SURFACE } from '@shared/domain/tool'
 import { revealTool } from '@/helpers/reveal-panel'
-import { workspaceById } from '@/helpers/workspaces'
+import { familyOfSurface } from '@/helpers/workspaces'
 import { toolSurface } from '@/stores/layouts'
 import { useSettings } from '@/stores/settings'
 
@@ -19,10 +18,7 @@ import { useSettings } from '@/stores/settings'
  * screen waits for (`eager-graph`). Its caller is a space, loaded on demand.
  */
 export function offerModelsOfFamily(family: ModelFamily): void {
-  const surface = toolSurface()
-  const browsed = surface === HOME_SURFACE ? null : workspaceById(surface).family
-
-  if (browsed === family) return revealTool('models')
+  if (familyOfSurface(toolSurface()) === family) return revealTool('models')
 
   const section = sectionOfFamily(family)
   if (section) useSettings.getState().openSection(section)

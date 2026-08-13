@@ -15,9 +15,8 @@ export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
       {/* Titled because the column truncates at four rems, exactly as `PropertyRow` learned to
-          be: seen on screen, « Sortie du workflow » read « Sortie du … », which on a canvas whose
-          nodes already carry a port labelled « Sortie » says the wrong thing rather than half of
-          the right one. */}
+          be: a label cut mid-word can read as a shorter label that means something else, which
+          says the wrong thing rather than half of the right one. */}
       <span title={label} className={FIELD_LABEL}>
         {label}
       </span>

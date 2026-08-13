@@ -9,6 +9,7 @@ import {
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/asset-kind'
 import { type ModelFamily } from '@shared/domain/model'
+import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
 
 export type Workspace = {
@@ -109,4 +110,15 @@ export function workspaceById(id: string): Workspace {
   const workspace = WORKSPACES.find(candidate => candidate.id === id)
   if (!workspace) throw new Error(`Unknown workspace: ${id}`)
   return workspace
+}
+
+/**
+ * What a surface browses models by. The home generates nothing: it opens documents, it makes
+ * none — and that is the ONE surface with no family at all.
+ *
+ * Written once because two readers ask it — the rail deciding whether to draw the generator, and
+ * the edit that sends the user off to pick a model — and a second spelling is a second answer.
+ */
+export function familyOfSurface(surface: ToolSurface): ModelFamily | null {
+  return surface === HOME_SURFACE ? null : workspaceById(surface).family
 }

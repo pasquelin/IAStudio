@@ -1,4 +1,3 @@
-import type { Job, JobTarget } from '@shared/domain/job'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
 import { reducedBy } from './client'
@@ -83,31 +82,21 @@ export function registerScenarioHandlers({
   )
 
   /**
-   * Queues a job under the name of what it runs.
+   * Queues the job under the name of the model it runs.
    *
    * `describe` rather than `list`: the panel just used it to render the form, so it is warm,
    * whereas a cold listing paginates a whole catalogue before the job is even queued. A missing
    * name is a cosmetic problem; refusing to run over one is not.
    */
-  const submitNamed = async (
-    target: JobTarget,
-    describe: (id: string) => Promise<{ name: string }>,
-    body: Record<string, unknown>,
-  ): Promise<Job> => {
-    const label = await describe(target.id)
+  handle(CHANNELS.scenarioGenerate, async (_event, modelId, body) => {
+    const id = parseModelId(modelId)
+    const label = await models
+      .describe(id)
       .then(descriptor => descriptor.name)
-      .catch(() => target.id)
+      .catch(() => id)
 
-    return jobs.submit(target, label, body)
-  }
-
-  handle(CHANNELS.scenarioGenerate, (_event, modelId, body) =>
-    submitNamed(
-      { kind: 'model', id: parseModelId(modelId) },
-      id => models.describe(id),
-      parseGenerationBody(body),
-    ),
-  )
+    return jobs.submit({ id }, label, parseGenerationBody(body))
+  })
 
   // What is priced is a target, exactly as what is submitted is. Where the figure sits in the
   // answer is `cost.ts`'s business, not this one's.

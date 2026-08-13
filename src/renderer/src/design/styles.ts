@@ -291,12 +291,10 @@ export const MENU_SURFACE = cn(
 )
 
 /**
- * Where a workspace's own bar floats over its pane. The graph, the image and the 3D space put it
- * in the same corner with the same inset, and a bar that moves has to move in all three.
+ * Where a workspace's own bar floats over its pane. The image and the 3D space put it in the
+ * same corner with the same inset, and a bar that moves has to move in both.
  *
- * The inset only, never the skin: `Toolbar` wears that. The graph adds a `z-10` of its own —
- * React Flow paints its pane above anything without one, and the other two spaces have nothing
- * to climb over.
+ * The inset only, never the skin: `Toolbar` wears that.
  */
 export const PANE_TOOLBAR = 'absolute top-2 left-2'
 

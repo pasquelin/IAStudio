@@ -90,11 +90,9 @@ describe('the default layout', () => {
     expect(screen.getByLabelText('Calques')).toBeInTheDocument()
     expect(screen.getByLabelText('Inspecteur')).toBeInTheDocument()
     expect(screen.getByLabelText('Assets')).toBeInTheDocument()
-    // The lower half of the left column, open like every other half a surface has: two halves of
-    // two exist so the generator stays visible WHILE the Explorer is read.
+    // The lower half of the left column, open like every other half a surface has: two halves
+    // exist so the generator stays visible WHILE the Explorer is read.
     expect(screen.getByLabelText('Explorateur')).toBeInTheDocument()
-    // Its half shows the first panel it declares, so the Apps wait one click away.
-    expect(screen.queryByLabelText('Apps')).not.toBeInTheDocument()
   })
 
   it('opens Video on the montage and the shelf beside it', () => {

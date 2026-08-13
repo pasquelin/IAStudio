@@ -86,7 +86,7 @@ function keysIn(
   // No `ScriptKind`: TypeScript reads it off the name, and forcing TSX on a `.ts` was worse than
   // useless — `const f = <T,>(x: T) => x` opens a tag, the parser drops into error recovery, and
   // nothing after it is visited. Measured on this glob: 697 nodes of `app/document-io.ts` seen
-  // out of 1653, and 483 of `engines/graph/serialize.ts` out of 866.
+  // out of 1653.
   const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
   const keys: { key: string; line: number }[] = []
   const filled: Interpolated[] = []

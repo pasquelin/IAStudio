@@ -6,7 +6,6 @@ const DEFAULT_FAILURE: JobFailure = 'rejected'
 
 const RUNNING: Job = {
   id: 'job_1',
-  kind: 'model',
   targetId: 'model_flux',
   label: 'Flux',
   status: 'running',

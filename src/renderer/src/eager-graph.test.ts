@@ -187,8 +187,8 @@ describe('the opening chunk', () => {
     expect(files).not.toContain('../../shared/domain/settings-search.ts')
   })
 
-  // The heaviest row of the table, and the one that was described but never held: seven editors,
-  // five megabytes between them, of which a session opens one or two.
+  // The heaviest row of the table, and the one that was described but never held: six editors,
+  // megabytes between them, of which a session opens one or two.
   it('never reaches an editor', () => {
     const { files } = GRAPH
 
@@ -199,7 +199,6 @@ describe('the opening chunk', () => {
       './spaces/audio/AudioDocument.tsx',
       './spaces/skyboxes/SkyboxDocument.tsx',
       './spaces/textures/TextureDocument.tsx',
-      './spaces/graph/GraphDocument.tsx',
     ]
 
     expect(editors.filter(editor => files.has(editor))).toEqual([])

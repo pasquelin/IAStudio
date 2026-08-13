@@ -32,12 +32,15 @@ const exportsOf = (source: string): string[] => [
  * The words two of this studio's domains both own. Each is a reader that answers for ONE kind of
  * document while its name says which of several it could be — so each needs the domain in front.
  *
- * `node`: `nodeById` reads a scene node (`engines/scene/scene-state.ts`) while the word names a
- * DOM node and a timeline node just as readily. `history`: six stores published `historyOf`,
- * while `audio-edits.ts`
- * had already written `audioHistoryOf` — the observed form the rest then followed. `view`: three
- * did, returning three different types, while `animation-view.ts:79` had already written
- * `animationViewOf`. **Each rule here was read off the repo before it was written down.**
+ * `history`: six stores published `historyOf`, while `audio-edits.ts` had already written
+ * `audioHistoryOf` — the observed form the rest then followed. `view`: three did, returning three
+ * different types, while `animation-view.ts:79` had already written `animationViewOf`.
+ * **Each rule here was read off the repo before it was written down.**
+ *
+ * `node` was a third, and it LEFT the list the day its second claimant did: `nodeById` reads a
+ * scene node and nothing else in `stores/` publishes the word. Kept on the strength of what the
+ * word could mean rather than of what two domains do mean, it would have been the anticipation
+ * the next rule forbids.
  *
  * A word joins this list when a SECOND domain claims it, never in anticipation, and it joins WITH
  * its rename: added alone it reddens this guard, which is the intended behaviour. **That only
@@ -49,7 +52,7 @@ const exportsOf = (source: string): string[] => [
  * publishing one name is a different question with a different shape — `claimImageOnSubmit` puts
  * its domain in the middle — and it is computed below rather than listed.
  */
-const SHARED_WORDS: readonly string[] = ['node', 'history', 'view']
+const SHARED_WORDS: readonly string[] = ['history', 'view']
 
 /**
  * The first camelCase word of a name — `viewportOf` opens on `viewport`, not on `view`.
@@ -178,26 +181,22 @@ describe('what a store exports about a shared word', () => {
   /*
    * The rule proven on a name that breaks it, and it is not ceremony: asserting only that nothing
    * was found lets the predicate itself rot — narrow it to a word no file carries and the empty
-   * list still comes back green. Measured: without this case, narrowing `node` to `nodeZZ`
+   * list still comes back green. Measured: without this case, narrowing `history` to `historyZZ`
    * survived the whole suite.
    */
   it('would say so of a store that broke it', () => {
     const offender: [string, string][] = [
       [
         '../stores/zz.ts',
-        'export const nodeIn = 1\nexport const sceneNodeIn = 2\nexport const historyOf = 3\n' +
-          'export const nodesOf = 4\nexport const viewportOf = 5\nexport const viewOf = 6\n',
+        'export const historyOf = 1\nexport const sceneHistoryOf = 2\n' +
+          'export const historiesIn = 3\nexport const viewportOf = 4\nexport const viewOf = 5\n',
       ],
     ]
 
     // `viewportOf` is the one that must NOT be there: it opens on `viewport`, a word of one
     // domain, and a letter-prefix rule condemned it the day `view` joined the list.
-    expect(bareExports(offender)).toEqual([
-      '../stores/zz.ts: nodeIn',
-      '../stores/zz.ts: historyOf',
-      '../stores/zz.ts: nodesOf',
-      '../stores/zz.ts: viewOf',
-    ])
+    // `historiesIn` escapes too: the plural is irregular, and the collision rule below holds it.
+    expect(bareExports(offender)).toEqual(['../stores/zz.ts: historyOf', '../stores/zz.ts: viewOf'])
   })
 
   /*

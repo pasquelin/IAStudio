@@ -30,13 +30,6 @@ describe('the assets a finished job leaves behind', () => {
     expect(outputsOf({ ...REMOTE, metadata: { assetIds: ['asset_1'] } })).toEqual(['asset_1'])
   })
 
-  // The same asset would otherwise be fetched, filed and charged for twice.
-  it('never names the same asset twice', () => {
-    expect(outputsOf({ ...REMOTE, metadata: { assetIds: ['asset_1', 'asset_1'] } })).toEqual([
-      'asset_1',
-    ])
-  })
-
   it('answers nothing for a job the API said nothing about', () => {
     expect(outputsOf(REMOTE)).toEqual([])
     expect(outputsOf({ ...REMOTE, metadata: {} })).toEqual([])
@@ -51,9 +44,7 @@ describe('the runner that binds the job manager to the SDK', () => {
   it('keeps what the submission said the request cost', async () => {
     const runner = runnerOf(client(() => Promise.resolve({ job: REMOTE, creativeUnitsCost: 12 })))
 
-    await expect(
-      runner.submit({ kind: 'model', id: 'model_flux' }, { prompt: 'a rock' }),
-    ).resolves.toMatchObject({
+    await expect(runner.submit({ id: 'model_flux' }, { prompt: 'a rock' })).resolves.toMatchObject({
       jobId: 'job_remote',
       cost: 12,
     })
@@ -62,9 +53,7 @@ describe('the runner that binds the job manager to the SDK', () => {
   it('leaves the cost unsaid when the API priced nothing', async () => {
     const runner = runnerOf(client(() => Promise.resolve({ job: REMOTE })))
 
-    await expect(
-      runner.submit({ kind: 'model', id: 'model_flux' }, {}),
-    ).resolves.not.toHaveProperty('cost')
+    await expect(runner.submit({ id: 'model_flux' }, {})).resolves.not.toHaveProperty('cost')
   })
 
   // The bar sums what it is given, and a job that reports nothing must not read as zero.
@@ -72,12 +61,12 @@ describe('the runner that binds the job manager to the SDK', () => {
     const reported = client(() => Promise.resolve({ job: { ...REMOTE, progress: 0.4 } }))
     const silent = client(() => Promise.resolve({ job: { jobId: 'job_remote', status: 'queued' } }))
 
-    await expect(
-      runnerOf(reported).submit({ kind: 'model', id: 'model_flux' }, {}),
-    ).resolves.toMatchObject({ progress: 0.4 })
-    await expect(
-      runnerOf(silent).submit({ kind: 'model', id: 'model_flux' }, {}),
-    ).resolves.not.toHaveProperty('progress')
+    await expect(runnerOf(reported).submit({ id: 'model_flux' }, {})).resolves.toMatchObject({
+      progress: 0.4,
+    })
+    await expect(runnerOf(silent).submit({ id: 'model_flux' }, {})).resolves.not.toHaveProperty(
+      'progress',
+    )
   })
 
   /**
@@ -87,9 +76,9 @@ describe('the runner that binds the job manager to the SDK', () => {
   it('reads what the job says it cost when the submission said nothing', async () => {
     const priced = client(() => Promise.resolve({ job: { ...REMOTE, billing: { cuCost: 7 } } }))
 
-    await expect(
-      runnerOf(priced).submit({ kind: 'model', id: 'model_flux' }, {}),
-    ).resolves.toMatchObject({ cost: 7 })
+    await expect(runnerOf(priced).submit({ id: 'model_flux' }, {})).resolves.toMatchObject({
+      cost: 7,
+    })
   })
 
   // And on the poll as well, which is the path a resumed job only ever takes.
@@ -111,9 +100,9 @@ describe('the runner that binds the job manager to the SDK', () => {
       Promise.resolve({ job: { ...REMOTE, billing: { cuCost: Number.NaN } } }),
     )
 
-    await expect(
-      runnerOf(broken).submit({ kind: 'model', id: 'model_flux' }, {}),
-    ).resolves.not.toHaveProperty('cost')
+    await expect(runnerOf(broken).submit({ id: 'model_flux' }, {})).resolves.not.toHaveProperty(
+      'cost',
+    )
   })
 
   // A generation that really is free says so on its own job, and that zero is a price.
@@ -122,9 +111,9 @@ describe('the runner that binds the job manager to the SDK', () => {
       Promise.resolve({ job: { ...REMOTE, jobType: 'custom', billing: { cuCost: 0 } } }),
     )
 
-    await expect(
-      runnerOf(free).submit({ kind: 'model', id: 'model_free' }, {}),
-    ).resolves.toMatchObject({ cost: 0 })
+    await expect(runnerOf(free).submit({ id: 'model_free' }, {})).resolves.toMatchObject({
+      cost: 0,
+    })
   })
 
   // An observed figure always wins over a declared one.
@@ -133,9 +122,9 @@ describe('the runner that binds the job manager to the SDK', () => {
       Promise.resolve({ job: { ...REMOTE, billing: { cuCost: 7 } }, creativeUnitsCost: 12 }),
     )
 
-    await expect(
-      runnerOf(both).submit({ kind: 'model', id: 'model_flux' }, {}),
-    ).resolves.toMatchObject({ cost: 12 })
+    await expect(runnerOf(both).submit({ id: 'model_flux' }, {})).resolves.toMatchObject({
+      cost: 12,
+    })
   })
 
   // Whichever endpoint started it, a job is followed and stopped through the jobs API alone.

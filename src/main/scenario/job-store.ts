@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { JobKind } from '@shared/domain/job'
 import { isMissing, writeAtomic, writeQueue } from '@main/persistence'
 import { parseStoredJobs } from './validation'
 
@@ -15,7 +14,6 @@ import { parseStoredJobs } from './validation'
 export type PersistedJob = {
   id: string
   remoteId: string
-  kind: JobKind
   targetId: string
   label: string
   /**

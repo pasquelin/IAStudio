@@ -128,11 +128,6 @@ export type Services = {
   settings: SettingsStore
   client: ClientProvider
   models: ModelRegistry
-  /**
-   * Bounded background work the studio asks for on its own — captions above all. Never the
-   * JobManager's business: none of it produces an asset or has a status to poll.
-   */
-  queue: <T>(task: () => Promise<T>) => Promise<T>
   jobs: JobManager
   prompts: PromptAssist
   /** What every stored key spent. Consumption only — the API exposes no balance to read. */
@@ -924,7 +919,6 @@ export function createServices(settings: SettingsStore): Services {
     styles,
     client,
     models,
-    queue: assistQueue.run,
     jobs,
     prompts,
     usage,

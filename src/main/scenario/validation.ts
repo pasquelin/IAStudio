@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
-import { JOB_KINDS, type JobTarget } from '@shared/domain/job'
+import type { JobTarget } from '@shared/domain/job'
 import type { PersistedJob } from './job-store'
 import {
   MODEL_FAMILIES,
@@ -92,7 +92,7 @@ export function parseModelQuery(value: unknown): ModelQuery {
 }
 
 /** What a job runs, as the renderer names it — the same shape the manager submits. */
-const jobTarget = z.object({ kind: z.enum(JOB_KINDS), id: z.string().trim().min(1) })
+const jobTarget = z.object({ id: z.string().trim().min(1) })
 
 export function parseJobTarget(value: unknown): JobTarget {
   return jobTarget.parse(value)
@@ -157,17 +157,17 @@ const storedJob = z
   .object({
     id: z.string().trim().min(1),
     remoteId: z.string().trim().min(1),
-    kind: z.enum(JOB_KINDS).catch('model'),
     targetId: z.string().trim().min(1).optional(),
-    /** What `targetId` was called before workflows existed. Read, never written. */
+    /** What `targetId` was called in an earlier version. Read, never written. */
     modelId: z.string().trim().min(1).optional(),
     label: z.string(),
     accountId: z.string().trim().min(1),
     projectPath: z.string().trim().min(1),
     createdAt: z.string().trim().min(1),
   })
-  // A note written by an earlier version names a model and knows nothing of workflows. Dropping
-  // it rather than reading it would abandon a generation that is running and already paid for.
+  // A note written by an earlier version spells its target differently, and may carry fields this
+  // build no longer knows — zod strips those. Dropping the whole entry rather than reading what
+  // it does hold would abandon a generation that is running and already paid for.
   .transform(({ targetId, modelId, ...job }) => {
     const target = targetId ?? modelId
     return target === undefined ? null : { ...job, targetId: target }

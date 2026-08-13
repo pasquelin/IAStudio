@@ -612,9 +612,9 @@ export type StudioBridge = {
     describeStyle: (images: readonly string[]) => Promise<PromptStyle>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     /**
-     * What running that exact form would cost, without running it — a model or a workflow, the
-     * target says which. `null` when the API declines to price it; a rejection when the call
-     * itself failed, which a caller may treat as no figure.
+     * What running that exact form would cost, without running it. `null` when the API declines
+     * to price it; a rejection when the call itself failed, which a caller may treat as no
+     * figure.
      */
     estimateCost: (target: JobTarget, body: Record<string, unknown>) => Promise<CostEstimate>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */

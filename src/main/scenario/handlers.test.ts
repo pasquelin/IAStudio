@@ -24,7 +24,6 @@ function registry(overrides: Partial<ModelRegistry> = {}): ModelRegistry {
     search: () => Promise.resolve({ items: [], cursor: null }),
     previews: () => Promise.resolve({}),
     describe: () => Promise.reject(new Error('unused')),
-    inputsOf: () => Promise.reject(new Error('unused')),
     ...overrides,
   }
 }
@@ -318,7 +317,7 @@ describe('scenario handlers', () => {
         estimateCost: estimate,
       })
 
-      const target = { kind: 'model', id: 'model_flux' }
+      const target = { id: 'model_flux' }
       await expect(
         invoke(CHANNELS.scenarioEstimateCost, target, { prompt: 'a rock' }),
       ).resolves.toEqual({ creativeUnits: 12 })
@@ -331,14 +330,9 @@ describe('scenario handlers', () => {
         estimateCost: estimate,
       })
 
+      await expect(invoke(CHANNELS.scenarioEstimateCost, { id: '  ' }, {})).rejects.toThrow()
       await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { kind: 'model', id: '  ' }, {}),
-      ).rejects.toThrow()
-      await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { kind: 'app', id: 'model_flux' }, {}),
-      ).rejects.toThrow()
-      await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { kind: 'model', id: 'model_flux' }, 'not a body'),
+        invoke(CHANNELS.scenarioEstimateCost, { id: 'model_flux' }, 'not a body'),
       ).rejects.toThrow()
       expect(estimate).not.toHaveBeenCalled()
     })

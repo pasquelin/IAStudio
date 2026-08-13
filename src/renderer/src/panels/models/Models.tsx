@@ -140,9 +140,7 @@ export function Models() {
   // Memoised, unlike the query above: building the facets translates up to twenty-five labels
   // through i18next — measured at 376 µs, against 1 µs for the query — and this panel re-renders
   // on every keystroke in its search field.
-  // The family is read again inside rather than closed over: a value destructured off a record
-  // is one the compiler rule will not accept as a dependency, and the workspace it comes from is.
-  const facets = useMemo(() => facetsFor(workspaceById(workspace).family, t), [workspace, t])
+  const facets = useMemo(() => facetsFor(family, t), [family, t])
   const sorts = useMemo(() => sortOptions(t), [t])
 
   const catalogue = useInfiniteQuery<ModelPage>({

@@ -1,25 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import {
-  FINISHED_STATUSES,
-  isFinished,
-  JOB_KINDS,
-  JOB_STATUSES,
-  type JobKind,
-  type JobStatus,
-  settlementOf,
-} from './job'
+import { FINISHED_STATUSES, isFinished, JOB_STATUSES, type JobStatus, settlementOf } from './job'
 
 const AT = '2026-08-12T10:00:00.000Z'
-
-describe('the kinds of thing a job runs', () => {
-  // Missing from the list, a kind is skipped by every walk that reads it — and the gap reads
-  // as coverage. `Record<Union, true>` is what stops compiling when one is added.
-  it('names every one of them', () => {
-    const all: Record<JobKind, true> = { model: true }
-
-    expect([...JOB_KINDS].sort()).toEqual(Object.keys(all).sort())
-  })
-})
 
 /**
  * The bundles are checked against `JOB_STATUSES`, so a status missing from it is a status

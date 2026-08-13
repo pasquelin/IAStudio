@@ -64,8 +64,7 @@ export type ToolId =
  * projects.
  *
  * The upper half of every space's left column, so generating — the one thing every space does —
- * keeps the same place in each, under the same button that creates a document. The half below
- * is the Explorer, which is what makes the whole column "where one produces".
+ * keeps the same place in each, under the same button that creates a document.
  */
 export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
 
@@ -110,8 +109,8 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
-  // The lower half: the documents to produce into. A half rather than more turns in the upper
-  // one — two halves of two keep the generator visible WHILE the Explorer is read.
+  // The lower half: the documents to produce into. Its own half rather than a third turn in the
+  // upper one, so the generator stays visible WHILE the Explorer is read.
   { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: WORKSPACE_IDS },
 
   // The upper right, in rail order. Every tool here takes its turn with the others its space

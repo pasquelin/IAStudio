@@ -17,7 +17,6 @@ import {
 } from '@mdi/js'
 import { useMemo } from 'react'
 import {
-  HOME_SURFACE,
   placementIn,
   serves,
   TOOL_PLACEMENTS,
@@ -26,10 +25,9 @@ import {
   type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
-import type { ModelFamily } from '@shared/domain/model'
 import { modelForFamily, useModelForFamily } from '@/helpers/model-for-family'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
-import { workspaceById } from './workspaces'
+import { familyOfSurface } from './workspaces'
 
 export type Tool = {
   id: ToolId
@@ -108,14 +106,6 @@ export function toolIcon(id: ToolId): string {
 }
 
 /**
- * What a surface browses models by. The home generates nothing: it opens documents, it makes
- * none — and that is the ONE surface with no family at all.
- */
-function familyFor(surface: ToolSurface): ModelFamily | null {
-  return surface === HOME_SURFACE ? null : workspaceById(surface).family
-}
-
-/**
  * Whether this surface has a model to generate with — one chosen in the Models panel, or one
  * preferred in the settings, which is what that preference is for.
  *
@@ -124,7 +114,7 @@ function familyFor(surface: ToolSurface): ModelFamily | null {
  * it.
  */
 export function hasModelFor(surface: ToolSurface): boolean {
-  const family = familyFor(surface)
+  const family = familyOfSurface(surface)
   return Boolean(family && modelForFamily(family))
 }
 
@@ -143,7 +133,7 @@ function canOffer(id: ToolId, hasModel: boolean): boolean {
  * happened to re-render.
  */
 export function useHasModel(surface: ToolSurface): boolean {
-  return Boolean(useModelForFamily(familyFor(surface)))
+  return Boolean(useModelForFamily(familyOfSurface(surface)))
 }
 
 /**
