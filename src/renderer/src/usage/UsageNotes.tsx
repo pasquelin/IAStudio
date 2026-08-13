@@ -7,11 +7,16 @@ import { formatList } from '@/helpers/format'
  *
  * None of them is decoration. Without the first, a reader takes a spend for a balance; without
  * the second, a cross-account total reads as an invoice; without the third, a partial report
- * reads as a complete one; without the fourth, an evening's work lands on yesterday's bar and
- * nothing on screen explains why.
+ * reads as a complete one; without the fourth, a day's work sits on a bar the reader's own
+ * calendar does not agree with, and nothing on screen explains why.
  *
- * That fourth one is unconditional, and the other two of its kind are not: a zone is not a
- * circumstance, it is how every figure here was counted.
+ * That fourth one names no hour, on purpose — a review caught the first draft claiming an evening's
+ * work lands on the day before, which is true east of Greenwich and BACKWARDS west of it: measured,
+ * 21:00 in New York is already tomorrow in UTC. An example that is wrong for half the readers is
+ * worse than no example.
+ *
+ * It is also unconditional, where the other two of its kind are not: a zone is not a circumstance,
+ * it is how every figure here was counted.
  */
 export function UsageNotes({ report }: { report: UsageReport }) {
   const { t, i18n } = useTranslation()

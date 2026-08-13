@@ -165,13 +165,26 @@ describe('formatMoment', () => {
   })
 
   /**
+   * The pin the case below rests on, asserted rather than assumed — asked for by the batch's
+   * adversarial review.
+   *
+   * `vitest.config.ts` sets `TZ` on the config process, and only a comment said so. Move that
+   * assignment into a project's `env:` block — the mistake its own JSDoc records having made — and
+   * the case below stays GREEN on every machine east of Greenwich, going red only for the reader
+   * who happens to sit elsewhere. This one goes red for everybody, at once.
+   *
+   * The zone is written out rather than imported from the config, and that is the point: changing
+   * it has to make somebody reread the two days asserted below, which an import would let slide.
+   */
+  it('runs in the zone the config pins, so the case below means something', () => {
+    expect(Intl.DateTimeFormat().resolvedOptions().timeZone).toBe('Asia/Tokyo')
+  })
+
+  /**
    * The zone is a decision, so the two answers have to differ — and this is the case the usage
    * window had no way of stating while the zone was inherited from the machine.
-   *
-   * `TZ` is set for the whole run (`vitest.config.ts`), because a stamp read in the runner's own
-   * zone is a test that passes in London and fails in Paris.
    */
-  it('reads a stamp against the clock it is handed, not the machine s', () => {
+  it('reads a stamp against the clock it is handed, not the machine own', () => {
     const lateEvening = '2026-08-13T23:30:00Z'
 
     expect(formatMoment(lateEvening, 'fr', 'utc')).toMatch(/^13\/08\/2026/)
