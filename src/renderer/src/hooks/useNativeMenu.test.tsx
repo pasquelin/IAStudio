@@ -210,22 +210,24 @@ describe('what the native menu is told', () => {
   const setWorkspace = vi.fn(() => Promise.resolve())
 
   function lastPublished(): {
-    workspace: string
+    surface: string
     tools: readonly ToolId[]
     checked: readonly MenuCheck[]
   } {
     // Typed by the stub rather than by the bridge; the call is what the hook actually sent.
-    const [workspace, tools, checked] = (setWorkspace.mock.lastCall ?? []) as unknown as [
+    const [surface, tools, checked] = (setWorkspace.mock.lastCall ?? []) as unknown as [
       string,
       readonly ToolId[],
       readonly MenuCheck[],
     ]
-    return { workspace, tools, checked }
+    return { surface, tools, checked }
   }
 
   beforeEach(() => {
     installFakeBridge({ window: { setWorkspace } })
-    useLayouts.setState({ activeWorkspace: 'image' })
+    // `home: false` explicitly: the flag starts true on every launch, and what these cases are
+    // about is the space in front — the home has its own case below.
+    useLayouts.setState({ activeWorkspace: 'image', home: false })
     useModels.setState({ selected: {} })
   })
 
@@ -233,13 +235,31 @@ describe('what the native menu is told', () => {
   // persisted state without ever going through `setActiveWorkspace`.
   it('announces the restored section without waiting for a switch', () => {
     renderHook(() => useNativeMenu())
-    expect(lastPublished().workspace).toBe('image')
+    expect(lastPublished().surface).toBe('image')
+  })
+
+  /**
+   * The surface, not the space behind it. The home covers a workspace rather than replacing it,
+   * so `activeWorkspace` still names one there — and the menu built on that name offered the
+   * whole image toolbox, plus the Image menu, over a screen that edits no image.
+   */
+  it('names the home rather than the space it covers', () => {
+    useLayouts.setState({ home: true })
+    renderHook(() => useNativeMenu())
+    expect(lastPublished().surface).toBe('home')
+  })
+
+  it('names the space again once the home is dismissed', () => {
+    useLayouts.setState({ home: true })
+    renderHook(() => useNativeMenu())
+    useLayouts.getState().setHome(false)
+    expect(lastPublished().surface).toBe('image')
   })
 
   it('follows a change of section', () => {
     renderHook(() => useNativeMenu())
     useLayouts.getState().setActiveWorkspace('3d')
-    expect(lastPublished().workspace).toBe('3d')
+    expect(lastPublished().surface).toBe('3d')
   })
 
   it('leaves the generator out while the section has no model', () => {

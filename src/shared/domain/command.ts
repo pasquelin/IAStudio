@@ -1,5 +1,6 @@
 import type { DisplayMode } from './scene'
 import type { Signature } from './shortcut'
+import { HOME_SURFACE, type ToolSurface } from './tool'
 import type { WorkspaceId } from './workspace'
 
 /**
@@ -987,9 +988,12 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   textures: 'texture',
 }
 
-/** The surface a workspace edits through, or `null` where nothing is undoable. */
-export function scopeOfWorkspace(workspace: WorkspaceId | null): CommandScope | null {
-  return workspace ? SCOPE_BY_WORKSPACE[workspace] : null
+/**
+ * The surface a workspace edits through, or `null` where nothing is undoable — which the home
+ * is: it covers the spaces rather than editing one, so it holds no history of its own.
+ */
+export function scopeOfWorkspace(surface: ToolSurface | null): CommandScope | null {
+  return surface && surface !== HOME_SURFACE ? SCOPE_BY_WORKSPACE[surface] : null
 }
 
 /** The command of that scope, when it declares one. Every editing scope declares undo and redo. */
