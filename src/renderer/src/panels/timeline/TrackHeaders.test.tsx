@@ -146,4 +146,19 @@ describe('TrackHeaders', () => {
 
     expect(trackOf('V1')).toBeUndefined()
   })
+
+  /**
+   * The rename field sits inside the header, so this row's own menu would take a press meant for
+   * the native clipboard one — and `preventDefault` is what keeps Chromium from ever asking the
+   * main process for it (`main/window/context-menu.ts`).
+   */
+  it('leaves a right-click in the rename field to the native menu', async () => {
+    render(<TrackHeaders documentId="doc-1" />)
+    await userEvent.dblClick(screen.getByText('V1'))
+
+    const raised = fireEvent.contextMenu(screen.getByRole('textbox'))
+
+    expect(raised).toBe(true)
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument()
+  })
 })
