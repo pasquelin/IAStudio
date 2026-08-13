@@ -7,8 +7,8 @@
  * dockview and the rest with Vite, so they sit in `devDependencies` while shipping in the binary
  * all the same. Deriving from the manifest would quietly omit most of the notice.
  *
- * Under `src/main` for the reason `coverage-budgets.ts` gives: it describes what the repository
- * root ships, and `src/shared` compiles for the renderer, which has no use for the list. Nothing
+ * Under `src/main` rather than `src/shared`: it describes what the repository root ships, and
+ * `src/shared` compiles for the renderer, which has no use for the list. Nothing
  * of the application imports it — `scripts/collect-licences.mjs` does, and so does
  * `licences.test.ts`, so the list the tests check is the one the collector reads.
  */

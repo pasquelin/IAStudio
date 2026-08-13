@@ -6,8 +6,8 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
 import { DECODER_MODULES, UNSET_DECODER_URL, withoutDecoderUrls } from './decoder-urls'
 
-// Under `src/main` for the reason `coverage-budgets.ts` gives: it reads what sits beside the
-// repository root, and `src/shared` compiles for the renderer, which has no filesystem.
+// Under `src/main` rather than `src/shared`: it reads what sits beside the repository root, and
+// `src/shared` compiles for the renderer, which has no filesystem.
 const require = createRequire(import.meta.url)
 const loaders = dirname(require.resolve('three/addons/loaders/GLTFLoader.js'))
 

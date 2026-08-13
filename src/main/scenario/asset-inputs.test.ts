@@ -240,8 +240,7 @@ describe('resolvePictureIds', () => {
    * The hole this door does NOT close, pinned so it cannot be lost: both vocabularies share the
    * `asset_` prefix, so an id no row answers to is indistinguishable from one pasted from the
    * webapp. Drop a picture on the form, delete it from the assets panel, then click — the local
-   * id goes out and the API answers as though no reference had been given. Written down in
-   * `docs/todo.md` under 6.2.
+   * id goes out and the API answers as though no reference had been given.
    */
   it('lets an id the catalogue no longer answers to go out as it stands', async () => {
     const { resolve, push } = resolverOver([])

@@ -139,7 +139,7 @@ describe('the runner that binds the job manager to the SDK', () => {
   })
 
   /**
-   * The doubt `todo.md` § 3 left open: both references declare `billing.cuCost` on the job
+   * A doubt left open: both references declare `billing.cuCost` on the job
    * itself, and nothing had ever been read from it. A workflow prices nothing beside its job,
    * so this is the only figure an App could show — when the API fills it in, which for a
    * workflow it was observed not to. See the two tests below.

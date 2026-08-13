@@ -6,9 +6,9 @@
  * to it by construction — the decoders that made this necessary arrived one from
  * `copy-decoders.mjs`, outside every import, and one from three.js's own `new URL('../libs/…')`.
  *
- * The rule lives here rather than in the script for the reason `coverage-budgets.ts` gives about
- * `coverage-slack.mjs`: a rule kept inside its launcher is a rule no test can reach, and a walk
- * that returns nothing then reads exactly like a clean artefact.
+ * The rule lives here rather than in the script that launches it: a rule kept inside its launcher
+ * is a rule no test can reach, and a walk that returns nothing then reads exactly like a clean
+ * artefact.
  *
  * It sees one class of waste and not the other. Of the 1 899 658 bytes this lot removed, it would
  * have caught 835 738 — the four byte-identical twins. The rest had no twin at all, and it is

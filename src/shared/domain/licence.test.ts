@@ -20,7 +20,6 @@ const BUILD_ONLY = new Set([
   '@types/react-is',
   '@types/three',
   '@vitejs/plugin-react',
-  '@vitest/coverage-v8',
   'electron-builder',
   'electron-vite',
   'eslint',

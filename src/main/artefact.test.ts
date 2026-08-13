@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest'
 import { filesUnder, shippedTwice, wastedBytes } from './artefact'
 import manifest from '../../package.json'
 
-// Under `src/main` for the reason `coverage-budgets.ts` gives: it judges what sits at the
-// repository root, and `src/shared` compiles for the renderer, which has no filesystem.
+// Under `src/main` rather than `src/shared`: it judges what sits at the repository root, and
+// `src/shared` compiles for the renderer, which has no filesystem.
 function folderHolding(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), 'artefact-'))
 

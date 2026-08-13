@@ -971,13 +971,13 @@ porte la phrase, et la phrase vient d'un bundle.
 **Les fixtures sont hors de TOUS les balayages, `*-fixtures.ts` comme `*-fixtures.tsx`, et des deux
 gardes à la fois.** Une fixture construit la donnée qu'une suite affirme et n'atteint aucun écran —
 mesuré : aucun des 23 fichiers de fixtures de `src/` n'est importé par du code de production. Le
-libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit. La couverture
-exclut exactement les mêmes fichiers (`vitest.config.ts`). C'est une **décision**, prise le 11/08 :
-forcer une fixture à passer par une clé de bundle ne rend rien plus vrai et se lit plus mal.
+libellé qu'elle porte est celui que l'API rend, pas un mot que ce studio écrit. C'est une
+**décision**, prise le 11/08 : forcer une fixture à passer par une clé de bundle ne rend rien plus
+vrai et se lit plus mal.
 
 **Ce que l'exclusion coûterait si elle dérivait, et le garde qui l'en empêche** : un fichier
-nommé `*-fixtures.ts` qu'un panneau importerait serait invisible aux deux gardes ET absent de tout
-budget de couverture — trois angles morts sur un même fichier, dont aucun ne dirait un mot.
+nommé `*-fixtures.ts` qu'un panneau importerait serait invisible aux deux gardes — deux angles
+morts sur un même fichier, dont aucun ne dirait un mot.
 `main/import-cycles.test.ts`, § *what a shipped file may reach*, refuse cet import. Il juge sur le
 chemin RÉSOLU, si bien qu'un alias, un `.js` écrit pour un `.ts` et le suffixe `?worker` de Vite
 atterrissent tous au même endroit. **Ce qu'il ne voit pas**, et il le dit : un worker nommé par
@@ -1086,21 +1086,15 @@ alors quelle partie du pipeline est indisponible, et peut le dire au lieu d’é
 
 ## Les tests
 
-**Plus de 5 600 tests, sur plus de 440 fichiers**, exécutés par Vitest — le chiffre exact bouge à
+**Plus de 8 100 tests, sur plus de 570 fichiers**, exécutés par Vitest — le chiffre exact bouge à
 chaque fusion, `pnpm test` le dit. Les tests unitaires sont colocalisés (`*.test.ts` à côté du
 code) et écrits dans le même mouvement que le code, jamais après.
 
-`pnpm validate` — typecheck, lint, vérification de format, tests avec budgets de couverture,
-et le jeu que ces budgets ont laissé (`scripts/coverage-slack.mjs`) —
-doit être vert avant tout commit.
+`pnpm validate` — typecheck, lint, vérification de format, tests — doit être vert avant tout
+commit.
 
-**Les budgets se déclarent par glob dans `vitest.config.ts`, et leur signe est tout leur sens.**
-Un seuil **positif ou nul** est un **pourcentage minimum** ; un seuil **négatif** est un **nombre
-maximum** de lignes ou de branches non couvertes. Un budget de zéro ne s’écrit donc pas : `0` se
-lit « au moins 0 % », c’est-à-dire rien du tout, et un glob couvert entièrement s’écrit `100`.
-Trois gardes ont été décoratives pour cette raison, et `src/main/coverage-thresholds.test.ts` les
-relit désormais depuis le fichier de configuration — commentaires retirés d’abord, puisqu’ils
-citent des seuils.
+**Aucune mesure de couverture**, retirée le 2026-08-13 : elle était payée à chaque tour de boucle
+pour un bénéfice qui ne compensait pas le temps pris sur les fonctionnalités ([ADR-14](../ci/adr/ADR-14-portee-de-la-validation-continue.md)).
 
 Ce qui est couvert, en pratique : chaque helper, chaque module d’état et de commandes de chaque
 moteur, la traduction de schéma, la file et le backoff du job manager, le catalogue, le contrat

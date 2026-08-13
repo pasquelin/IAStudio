@@ -80,8 +80,9 @@ départ : les ADR de `docs/ci/adr/` s’y réfèrent au lieu de le reparaphraser
 5. **Licence ffmpeg macOS = GPL-3.0-or-later** (Windows et Linux en LGPL). Publier sur GitHub
    Releases est l’acte de distribution qui déclenche l’obligation de fournir les sources
    correspondantes. Décision prise en connaissance de cause, cf. ADR-12.
-6. **Budgets de couverture absolus.** `vitest.config.ts` fixe des seuils négatifs par glob,
-   sensibles à la plateforme. Traité par [ADR-14](adr/ADR-14-portee-de-la-validation-continue.md).
+6. **Budgets de couverture absolus.** `vitest.config.ts` fixait des seuils négatifs par glob,
+   sensibles à la plateforme. Traité par [ADR-14](adr/ADR-14-portee-de-la-validation-continue.md),
+   puis clos autrement le 2026-08-13 : toute la mesure de couverture a été retirée du dépôt.
 7. **Le token `gh` n’a pas le scope `workflow`** (`admin:public_key, gist, read:org, repo`).
    Pousser `.github/workflows/` via l’API `gh` échoue ; via SSH, aucune restriction.
 

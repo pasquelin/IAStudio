@@ -7,8 +7,7 @@
  * exists. Both sites are asserted by `artefact.test.ts`.
  *
  * The rule itself is `src/main/artefact.ts`, where the suite can reach it — this file only points
- * it at `out/` and turns its answer into an exit code, the way `coverage-slack.mjs` does for
- * `coverage-budgets.ts`.
+ * it at `out/` and turns its answer into an exit code.
  */
 import { join, relative } from 'node:path'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in, and the rule the tests check is

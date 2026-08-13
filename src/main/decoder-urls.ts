@@ -14,8 +14,8 @@
  * `copy-decoders.mjs` and `gltf-source.ts` — and a wrong one, since three.js names two different
  * Draco builds where the served folder keeps one.
  *
- * Under `src/main` for the reason `coverage-budgets.ts` gives: it belongs to the build rather
- * than to a process, and `src/shared` compiles into the renderer, which has no use for it.
+ * Under `src/main` rather than `src/shared`: it belongs to the build rather than to a process,
+ * and `src/shared` compiles into the renderer, which has no use for it.
  */
 
 /** What a removed default becomes: no scheme resolves it, so an accidental use fails by name. */

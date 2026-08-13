@@ -38,8 +38,6 @@ jobs:
 
       - run: pnpm format:check
 
-      # `test`, not `test:coverage`: the coverage budgets are absolute counts of uncovered items
-      # and shift with the platform. They stay a gate on the developer's machine — ADR-14.
       - run: pnpm test
 
       # `electron-vite build` rather than `pnpm build`, which would run the typecheck a second

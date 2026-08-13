@@ -1,7 +1,18 @@
 # ADR-14 — Portée de la validation continue
 
-- **Statut** : Accepté — amende le cadrage initial
+- **Statut** : Caduc depuis le 2026-08-13 — la couverture a été retirée du dépôt
 - **Date** : 2026-08-08
+
+> **Au 2026-08-13, toute la mesure de couverture a été supprimée** : `vitest run --coverage`, les
+> budgets absolus par glob, `scripts/coverage-slack.mjs`, `src/main/coverage-budgets.ts` et ses
+> gardes. `pnpm validate` vaut désormais `typecheck && lint && format:check && test`. La CI et le
+> poste de développement exécutent donc la MÊME chose, ce qui vide de son objet la décision
+> ci-dessous : elle n'existait que pour trancher l'écart entre les deux. Le texte reste tel qu'il
+> a été écrit, comme tout contenu d'ADR.
+>
+> Raison : le coût de la couverture était payé à chaque tour de boucle et son bénéfice — faire
+> baisser la dette — ne compensait pas le temps qu'elle prenait sur les fonctionnalités. Décision
+> du propriétaire du dépôt, pas un arbitrage technique.
 
 ## Contexte
 

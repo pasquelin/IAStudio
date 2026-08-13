@@ -1,8 +1,6 @@
 node_modules/
 dist/
 out/
-coverage/
-coverage-audit/
 release/
 .DS_Store
 *.log
@@ -11,17 +9,10 @@ secrets/*
 !secrets/README.md
 .playwright-mcp/
 # Doc externe régénérable (pnpm docs:scenario) — pas de la doc de projet
-docs/scenario-api/
 docs/specs
 docs/superpowers
-# Le dépôt ne publie que la DOC DU PROJET. Ce qui suit est du travail en cours ou de
-# l'état d'outillage : utile sur la machine, hors sujet pour qui clone le dépôt.
-docs/todo.md
-docs/todo-savoirs.md
-docs/todo-archive-*.md
-docs/plans/
-docs/design-system/
-docs/prompt-loop.md
+# Le dépôt ne publie que la DOC DU PROJET. Ce qui suit est de l'état d'outillage : utile sur la
+# machine, hors sujet pour qui clone le dépôt.
 CLAUDE.md
 .idea/
 .vscode/
@@ -44,4 +35,3 @@ src/renderer/public/decoders/
 *.cer
 *.provisionprofile
 *.mobileprovision
-docs/todo-archive-*.md

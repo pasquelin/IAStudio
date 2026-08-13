@@ -17,8 +17,8 @@ const LIBRARY_DEFAULT_MS = 1000
 
 /**
  * What the runner allows a case, read off the config rather than repeated. Comments are stripped
- * first, as `coverage-thresholds.test.ts` does for the very same file: a sentence quoting a
- * duration would be read as one.
+ * first: that config explains its own timeout in prose, so a sentence quoting a duration would be
+ * read as one.
  */
 const CASE_MS = Number(
   config

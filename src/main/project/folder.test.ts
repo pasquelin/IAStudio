@@ -156,8 +156,8 @@ describe('following the project folder', () => {
    * one announcement, and the second is what clears the first one's timer.
    *
    * Driven rather than provoked, because whether two writes arrive as two events or as one is
-   * the platform's decision: when it coalesced them, `clearTimeout` was never reached and the
-   * coverage of this file moved by a statement and a branch between two identical runs.
+   * the platform's decision: when it coalesced them, `clearTimeout` was never reached and two
+   * identical runs took different paths through this file.
    */
   it('collapses a burst into one announcement', () => {
     vi.useFakeTimers()

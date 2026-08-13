@@ -17,8 +17,7 @@ import { join } from 'node:path'
  * The floor `scripts/check.mjs` refuses to run below.
  *
  * A detector that recognises nothing prints the same green as one that works, and every hardcoded
- * word would sail through it — the failure this whole module exists to prevent, and the same
- * reasoning as `LEAST_BUDGETS` in `coverage-budgets.ts`.
+ * word would sail through it — the failure this whole module exists to prevent.
  *
  * Measured at 29 on 2026-08-13. Set well under it: guards come and go, and a floor tracking the
  * count exactly would fail for a suite legitimately deleted.
@@ -72,7 +71,7 @@ function borrowsTheSweep(code: string): boolean {
  *
  * Five ways. The fourth was missing until a review found it on 2026-08-13: a wide
  * `import.meta.glob`, a walk of the disk, a read of a file that is data rather than a module
- * (`vitest.config.ts` for the coverage budgets, `index.css` for the design tokens), and a read
+ * (`vitest.config.ts` for the test projects, `index.css` for the design tokens), and a read
  * anchored on the suite's own location. That last one covers `csp.test.ts`, `licences.test.ts`,
  * `permission-strings.test.ts` and `gate-caches.test.ts` — four guards that sat outside the net
  * while the floor read 32 and looked healthy. The fifth arrived with `source-files.ts`, for the

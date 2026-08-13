@@ -603,8 +603,7 @@ const asList = (value: unknown): readonly string[] => {
  * a form is submitted; this has no `FieldDescriptor` to read that from — the schema lives in the
  * main process and an engine may not reach for it (invariant 4) — so a node nobody opened in the
  * inspector, which carries `defaultValues` for EVERY field, submits its hidden ones too. Two
- * paths, two bodies for one form. Closing it means handing the descriptors down as a port, and
- * that is written up in `docs/todo.md` rather than left for someone to rediscover.
+ * paths, two bodies for one form. Closing it means handing the descriptors down as a port.
  *
  * What it does do is drop the blanks, which is the half that would otherwise 400 on its own: an
  * optional enum sitting at `''` is refused outright.

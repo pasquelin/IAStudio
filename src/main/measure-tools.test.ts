@@ -14,8 +14,8 @@ import manifest from '../../package.json'
  * an ignore that swallows the tree — each is one line, and each turns a measurement into a green
  * tick nobody can tell from a clean repository.
  *
- * Under `src/main` for the reason `coverage-budgets.ts` gives: these files sit at the repository
- * root, and `src/shared` compiles for the renderer, which cannot read a disk.
+ * Under `src/main` rather than `src/shared`: these files sit at the repository root, and
+ * `src/shared` compiles for the renderer, which cannot read a disk.
  */
 const ROOT = join(import.meta.dirname, '..', '..')
 

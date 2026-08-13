@@ -125,7 +125,7 @@ const bareExports = (sources: readonly (readonly [string, string])[]): string[] 
  *
  * **What this holds, exactly, and it is less than its subject.** The words of `SHARED_WORDS`, in
  * one folder: `stores/`. It does NOT hold the two `nodeById` upstream — they are in `engines/`
- * and `shared/`, across 53 sites and a coverage budget at zero margin — nor `clip` and `track`,
+ * and `shared/`, across 53 sites — nor `clip` and `track`,
  * which two domains share and whose files are held by another branch today. Each is written at
  * the chantier as its own lot. **A green run here means these words are clean in this one
  * folder — nothing wider**, and saying so is the point: a guard whose silence could be read as

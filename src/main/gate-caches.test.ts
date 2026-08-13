@@ -14,8 +14,8 @@ import manifest from '../../package.json'
  * None of this changes a verdict; it changes what gets recomputed. So nothing else in the suite
  * would go red the day a flag is dropped, which is why these cases exist.
  *
- * Under `src/main` for the reason `coverage-budgets.ts` gives: these files sit at the repository
- * root, and `src/shared` compiles for the renderer.
+ * Under `src/main` rather than `src/shared`: these files sit at the repository root, and
+ * `src/shared` compiles for the renderer.
  */
 const ROOT = join(import.meta.dirname, '..', '..')
 const read = (name: string) => readFileSync(join(ROOT, name), 'utf8')
@@ -81,9 +81,8 @@ describe('the gate not rereading what it has already judged', () => {
 describe('the eslint parser being given a program only when a rule needs one', () => {
   /**
    * Comments dropped first, and this took four tries — each version green while the setting it
-   * guards was back in place. The trap is the one `coverage-thresholds.test.ts` names on the
-   * config it reads: this file explains the very rule it enforces, so its own prose names both
-   * words.
+   * guards was back in place. The trap: this file explains the very rule it enforces, so its own
+   * prose names both words.
    *
    * 1. Line comments only: a `/* … *\/` on one line slipped through.
    * 2. A regex over the whole text: `'**\/*.{ts,tsx}'` contains `/*`, so the block pattern ate the

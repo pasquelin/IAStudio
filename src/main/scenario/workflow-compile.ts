@@ -72,8 +72,7 @@ function asEditorNode(node: GraphNode): WorkflowEditorNode | undefined {
       return undefined
   }
 
-  // Outside the `switch` rather than a `default` arm, which would be a branch no test can enter
-  // and which the coverage budget of this folder counts as one.
+  // Outside the `switch` rather than a `default` arm, which would be a branch no test can enter.
   return unhandled(node)
 }
 

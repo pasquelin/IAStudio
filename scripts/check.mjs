@@ -1,13 +1,13 @@
 /**
  * The short loop: what `pnpm validate` asks, restricted to what the working tree touched.
  *
- * `validate` is the gate before a merge and stays that. It is not a loop to work in: measured on
- * 2026-08-13, a warm run costs 60 s, of which 48 s is the whole suite under coverage. Paid after
- * every edit of a batch, that is the hour a five-minute change turns into.
+ * `validate` is the gate before a merge and stays that. It is not a loop to work in: it runs the
+ * whole suite, and paid after every edit of a batch that is the hour a five-minute change turns
+ * into.
  *
  * What this runs instead, for a touched component: the tests that transitively import it, the
  * guards no import graph reaches, and the three cached gates — 8,0 s wall clock on an idle
- * machine, against 60,5 s.
+ * machine.
  *
  * The two suites run side by side rather than one after the other, and that was measured rather
  * than assumed: two alternating pairs on 2026-08-13 read 21,7 / 13,5 s sequential against
@@ -15,14 +15,14 @@
  * the real split is lopsided, a handful of related tests beside the guards, so the small one
  * fills cores the big one leaves idle.
  *
- * It is NOT a replacement for `validate`, and two things it cannot see say why: coverage budgets,
- * which only a whole run measures, and a test whose file nothing under `src/` imports.
+ * It is NOT a replacement for `validate`, and one thing it cannot see says why: a test whose file
+ * nothing under `src/` imports.
  */
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-// A `.ts` from a `.mjs`, as `coverage-slack.mjs` does: Node 24 strips the types on the way in, so
+// A `.ts` from a `.mjs`, as `check-artefact.mjs` does: Node 24 strips the types on the way in, so
 // the rule the tests check is the one that runs rather than a twin of it.
 import { LEAST_GUARDS, wideGuardsUnder } from '../src/main/wide-guards.ts'
 
@@ -113,7 +113,7 @@ function report(results) {
   process.stdout.write(
     failed.length === 0
       ? '\nThe short loop is green. `pnpm validate` is still the gate before a merge:\n' +
-          'coverage budgets are measured by a whole run and by nothing else.\n\n'
+          'a test no file under src/ imports is reached by a whole run and by nothing else.\n\n'
       : `\n${failed.length} of ${results.length} failed.\n\n`,
   )
   return failed.length === 0 ? 0 : 1

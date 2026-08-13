@@ -43,7 +43,7 @@ function standingTwinOf(asset: Asset, activeOwnerId: string | null): string | un
  * What deliberately does NOT come through here: a cost estimate, which is asked on every
  * keystroke and must not send a file up for a figure nobody is waiting on. The estimate of a
  * form holding a picture is therefore made without it, and `referenceImages` is priced
- * (`cost_impact: true`) — so it can read low. That one is written down in `docs/todo.md`.
+ * (`cost_impact: true`) — so it can read low. Known, and not closed.
  */
 export type AssetInputResolver = {
   /** A generation body, whose picture keys are the model's own and cannot be named in advance. */
@@ -99,8 +99,8 @@ export function createAssetInputResolver({
       // Unanswered means "already the API's own", which is what an id pasted from the webapp is —
       // and both vocabularies share the `asset_` prefix, so nothing here can tell that apart from
       // a local id whose row was deleted while the form still held it. That one goes out as it
-      // stands and is answered as though no reference had been given. Written down in
-      // `docs/todo.md` under 6.2 rather than guessed at from the id's shape.
+      // stands and is answered as though no reference had been given, rather than being guessed
+      // at from the id's shape.
       if (!asset) return localId
 
       const standing = standingTwinOf(asset, owner)

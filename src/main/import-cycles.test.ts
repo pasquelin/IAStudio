@@ -122,9 +122,8 @@ const cyclesIn = (graph: Map<string, string[]>): string[] => {
 }
 
 /**
- * What `vitest.config.ts` calls test material — fixtures, harnesses, the fake bridge, and the
- * suites themselves. The regex is that exclusion list, kept here because this is where the
- * question « who may import this » is asked (`vitest.config.ts`, `coverage.exclude`).
+ * Test material — fixtures, harnesses, the fake bridge, and the suites themselves. Kept here
+ * because this is where the question « who may import this » is asked.
  */
 const TEST_MATERIAL = /(\.(test|bench)\.tsx?|-fixtures\.tsx?|test-harness\.ts|fake-bridge\.ts)$/
 
@@ -134,9 +133,9 @@ const IS_FIXTURE = /-fixtures\.tsx?$/
 /**
  * The fixtures one file reaches, resolved.
  *
- * Fixtures are out of both text guards and out of every coverage budget — a decision, and its
- * whole safety rests on nothing shipped importing one. Such a file would put words on screen that
- * no guard reads and no budget counts: three blind spots meeting, none of which would say a word.
+ * Fixtures are out of both text guards — a decision, and its whole safety rests on nothing
+ * shipped importing one. Such a file would put words on screen that no guard reads: two blind
+ * spots meeting, neither of which would say a word.
  *
  * Resolved rather than matched on the specifier, so `?worker`, a `.js` spelt for a `.ts` and the
  * three aliases all land the same. The hole is the one written above `resolveImport`: a worker

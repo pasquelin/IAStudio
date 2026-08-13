@@ -13,13 +13,12 @@ import config from '../../vitest.config'
  * No count of either side is written here. Both move every time a session adds a test file, and
  * a cardinal that rots is what a reader trusts and a reviewer has to re-derive.
  *
- * This list is read as TEXT, exactly as `coverage-budgets.ts` reads the same file: `DOM_BOUND` is
- * a local constant, and what reaches `include` is already flattened with a glob beside it. The
- * pool cases below import the config instead — see their own note; a file needing both is worth
- * one sentence, not a rule.
+ * This list is read as TEXT rather than imported: `DOM_BOUND` is a local constant, and what
+ * reaches `include` is already flattened with a glob beside it. The pool cases below import the
+ * config instead — see their own note; a file needing both is worth one sentence, not a rule.
  *
- * Under `src/main` for the reason `coverage-budgets.ts` gives: the file it guards sits at the
- * repository root, and `src/shared` compiles for the renderer.
+ * Under `src/main` rather than `src/shared`: the file it guards sits at the repository root, and
+ * `src/shared` compiles for the renderer.
  */
 const ROOT = join(import.meta.dirname, '..', '..')
 const CONFIG = readFileSync(join(ROOT, 'vitest.config.ts'), 'utf8')
@@ -32,18 +31,16 @@ const listed = [
 
 describe('the renderer tests that are told they need a browser', () => {
   /**
-   * A guard that reads nothing passes everything — the failure `coverage-budgets.ts` exists to
-   * prevent, one file over. If the parser stops understanding how the list is written, every case
-   * below turns green over an empty array.
+   * A guard that reads nothing passes everything. If the parser stops understanding how the list
+   * is written, every case below turns green over an empty array.
    */
   it('is read at all, so the cases below are not judging an empty list', () => {
     expect(listed.length).toBeGreaterThan(40)
   })
 
   /**
-   * The trap `vitest.config.ts` already names about a coverage glob, in its other form: a path
-   * that no longer exists excludes nothing. The file it named would quietly move to the fast
-   * project — where it belongs only if it stopped needing a browser, which nobody checked.
+   * A path that no longer exists excludes nothing. The file it named would quietly move to the
+   * fast project — where it belongs only if it stopped needing a browser, which nobody checked.
    */
   it('names files that exist', () => {
     for (const path of listed) {
