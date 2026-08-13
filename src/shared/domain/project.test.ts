@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   listedAt,
   projectsByCreation,
+  renamedRecentProject,
   RECENT_PROJECTS_MAX,
   withRecentProject,
   type Project,
@@ -124,5 +125,53 @@ describe('listing the projects for the eye', () => {
     projectsByCreation(stored)
 
     expect(stored.map(entry => entry.path)).toEqual(['/a', '/b'])
+  })
+})
+
+/**
+ * Renaming an entry of the shelf. The name is STORED rather than derived from the folder, so the
+ * manifest write and this one belong together — otherwise the project goes on being listed under
+ * its old name until it is next opened.
+ */
+describe('renaming a remembered project', () => {
+  const entry = (path: string, name: string): RecentProject => ({
+    path,
+    name,
+    openedAt: '2026-08-01T00:00:00Z',
+    createdAt: '2026-05-01T00:00:00Z',
+  })
+
+  it('renames the one entry and no other', () => {
+    const list = renamedRecentProject([entry('/a', 'A'), entry('/b', 'B')], '/b', 'Renamed')
+
+    expect(list.map(one => one.name)).toEqual(['A', 'Renamed'])
+  })
+
+  /**
+   * A rename is not an opening. Stamping either date would move the row in the order the screens
+   * read — `createdAt` is the sort key, `openedAt` decides eviction — so a gesture that changes a
+   * word would silently reshuffle the list or throw away a different project.
+   */
+  it('touches neither date, so nothing moves and nothing is evicted differently', () => {
+    const before = entry('/a', 'A')
+
+    expect(renamedRecentProject([before], '/a', 'Renamed')[0]).toEqual({
+      ...before,
+      name: 'Renamed',
+    })
+  })
+
+  // The open project need not be a remembered one, so an unknown path is not an error.
+  it('leaves a list that does not hold the path alone', () => {
+    const list = [entry('/a', 'A')]
+
+    expect(renamedRecentProject(list, '/elsewhere', 'Renamed')).toEqual(list)
+  })
+
+  it('leaves the list it was given alone', () => {
+    const list = [entry('/a', 'A')]
+    renamedRecentProject(list, '/a', 'Renamed')
+
+    expect(list[0]?.name).toBe('A')
   })
 })

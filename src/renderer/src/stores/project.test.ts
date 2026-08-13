@@ -228,3 +228,99 @@ describe('dropping a project from the shelf', () => {
     expect(write).toHaveBeenCalledWith({ storage: { recentProjects: [WINTER] } })
   })
 })
+
+/**
+ * Renaming a project, which is TWO writes that belong together: the manifest, which only the main
+ * process can touch, and the `recentProjects` entry, which stores the name rather than deriving it
+ * from the folder. Skipping the second lists the project under its old name until it is reopened.
+ */
+describe('giving a project a new name', () => {
+  const SUMMER: RecentProject = {
+    path: '/projects/summer',
+    name: 'Summer',
+    openedAt: '2026-08-10T09:00:00.000Z',
+    createdAt: '2026-05-01T09:00:00.000Z',
+  }
+
+  const RENAMED = { path: SUMMER.path, manifest: { ...MANIFEST, name: 'Winter' } }
+
+  beforeEach(() => {
+    useSettings.setState(state => ({
+      settings: {
+        ...state.settings,
+        storage: { ...state.settings.storage, recentProjects: [SUMMER] },
+      },
+    }))
+  })
+
+  it('writes the manifest, then the shelf entry that carries the name', async () => {
+    const rename = vi.fn(() => Promise.resolve(RENAMED))
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({ project: { rename }, settings: { write } })
+
+    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toBe(true)
+
+    expect(rename).toHaveBeenCalledWith(SUMMER.path, 'Winter')
+    expect(write).toHaveBeenCalledWith({
+      storage: { recentProjects: [{ ...SUMMER, name: 'Winter' }] },
+    })
+  })
+
+  // The title bar reads `project.manifest.name`. Waiting for the broadcast to come back would
+  // leave it naming the old name for a frame.
+  it('takes the new name straight away when the renamed project is the open one', async () => {
+    installFakeBridge({ project: { rename: () => Promise.resolve(RENAMED) } })
+    useProject.setState({ project: { path: SUMMER.path, manifest: MANIFEST }, known: true })
+
+    await useProject.getState().rename(SUMMER.path, 'Winter')
+
+    expect(useProject.getState().project?.manifest.name).toBe('Winter')
+  })
+
+  // The shelf lists projects that are not open, and renaming one must not put it in front.
+  it('leaves the open project alone when another one is renamed', async () => {
+    const open = { path: '/projects/other', manifest: MANIFEST }
+    installFakeBridge({ project: { rename: () => Promise.resolve(RENAMED) } })
+    useProject.setState({ project: open, known: true })
+
+    await useProject.getState().rename(SUMMER.path, 'Winter')
+
+    expect(useProject.getState().project).toBe(open)
+  })
+
+  /**
+   * The manifest is written FIRST for this reason: a folder gone since the shelf last saw it is the
+   * ordinary case there, and the settings must not end up claiming a name the disk refused.
+   */
+  it('leaves the shelf alone when the disk refused the name', async () => {
+    const write = vi.fn(() => Promise.resolve(useSettings.getState().settings))
+    installFakeBridge({
+      project: { rename: () => Promise.reject(new Error('not a project')) },
+      settings: { write },
+    })
+
+    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toBe(false)
+
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  // The row says the folder is left where it is. Nothing here may reach it.
+  it('touches nothing on the disk', async () => {
+    const renameFile = vi.fn(() => Promise.resolve(true))
+    const trashFile = vi.fn(() => Promise.resolve(true))
+    installFakeBridge({
+      project: { rename: () => Promise.resolve(RENAMED), renameFile, trashFile },
+    })
+
+    await useProject.getState().rename(SUMMER.path, 'Winter')
+
+    expect(renameFile).not.toHaveBeenCalled()
+    expect(trashFile).not.toHaveBeenCalled()
+  })
+
+  it('says nothing and does nothing with no bridge to write through', async () => {
+    vi.unstubAllGlobals()
+
+    await expect(useProject.getState().rename(SUMMER.path, 'Winter')).resolves.toBe(false)
+  })
+})

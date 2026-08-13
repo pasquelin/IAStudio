@@ -191,7 +191,9 @@ describe('the room a project row is given', () => {
 
     render(<Projects />)
 
-    // 36 shipped + 4 of gap, twice: the stacked gauge, not the 28 of `--sc-control`.
-    expect(screen.getByRole('list')).toHaveStyle({ height: '80px' })
+    // 44 shipped + 4 of gap, twice: the stacked gauge, not the 28 of `--sc-control`. 44 and not
+    // the 36 it shipped at — two steps of text left ~4px of room, which on a FILLED row reads as
+    // words pressed against the edge of their own highlight.
+    expect(screen.getByRole('list')).toHaveStyle({ height: '96px' })
   })
 })

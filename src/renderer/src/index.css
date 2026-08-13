@@ -402,6 +402,11 @@
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
      NUMBER and a padding would not reach it.
 
+     44, raised from 36 on 13 August: at 36 the two steps left ~4px above and below, and once the
+     row is FILLED — which the open project now is — that reads as text pressed against the edges
+     of its own highlight rather than as a line standing in it. 44 leaves ~8px, the same step
+     `Row` takes horizontally, so the fill is inset by the same amount on all four sides.
+
      Flat, where `--sc-indent` next door is derived, and the difference is NOT an oversight:
      nothing reads `--sc-indent` from JavaScript, whereas `useGauge` reads this one and tests
      `endsWith('px')`. An unregistered property computes to its value with variables substituted
@@ -409,7 +414,7 @@
      fails the test, and falls to the shipped number at every density — silently. Deriving it
      means registering it with `@property` first, and that has to be measured in Electron: jsdom
      evaluates no calc, so no suite here would see the difference. */
-  --sc-row-stacked: 36px;
+  --sc-row-stacked: 44px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
   --sc-rail-button: 36px;
@@ -441,7 +446,7 @@
 
 :root[data-density='compact'] {
   --sc-control: 24px;
-  --sc-row-stacked: 32px;
+  --sc-row-stacked: 38px;
   --sc-rail: 42px;
   --sc-rail-button: 32px;
   --sc-gutter: 4px;

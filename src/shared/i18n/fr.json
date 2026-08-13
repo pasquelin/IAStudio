@@ -233,6 +233,7 @@
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
     "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
+    "projectNotRenamed": "Le projet n’a pas pu être renommé : son dossier est introuvable ou illisible",
     "projectNotRevealed": "Le dossier du projet est introuvable",
     "fileNotOpened": "Ce fichier n’a pas pu être ouvert par le système",
     "fileNotMoved": "Ce fichier n’a pas pu être déplacé — ce nom est peut-être déjà pris dans le dossier d’arrivée",
@@ -283,6 +284,7 @@
       "assets.save": "L’asset n’a pas pu être réécrit",
       "project.reveal": "Le dossier du projet n’a pas pu être montré",
       "project.forget": "Le projet n’a pas pu être retiré de la liste",
+      "project.rename": "Le projet n’a pas pu être renommé",
       "font.face": "Une police n’a pas pu être chargée",
       "graph.node": "Un nœud n’a pas pu être créé",
       "graph.run": "Le graphe n’a pas pu être lancé",
@@ -2134,7 +2136,9 @@
       "reveal": "Révéler dans le dossier",
       "revealHint": "Ouvre le gestionnaire de fichiers sur ce projet",
       "forget": "Retirer de la liste",
-      "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient"
+      "forgetHint": "Retire le projet de cette liste, sans toucher au dossier ni à ce qu’il contient",
+      "rename": "Renommer",
+      "renameHint": "Changer le nom du projet, sans toucher à son dossier sur le disque"
     },
     "library": {
       "fetch": "Récupérer « {{name}} » dans le projet",

@@ -112,6 +112,25 @@ export function withRecentProject(
 }
 
 /**
+ * The list with one entry wearing a new name, and nothing else touched — not its dates, and above
+ * all not its ORDER: a rename is not an opening.
+ *
+ * The name is stored rather than derived from the folder, so renaming a project in its manifest and
+ * leaving this list alone would go on listing it under the old one until it was next opened. The
+ * two writes therefore belong together, which is why this sits beside the manifest's own constants
+ * rather than inside whichever surface offered the rename.
+ *
+ * A path the list does not hold is not an error: the open project need not be a remembered one.
+ */
+export function renamedRecentProject(
+  recent: readonly RecentProject[],
+  path: string,
+  name: string,
+): RecentProject[] {
+  return recent.map(entry => (entry.path === path ? { ...entry, name } : entry))
+}
+
+/**
  * The list without one folder — what a project moved or deleted since it was last opened comes
  * to. Beside the other half of the policy rather than written into whichever surface noticed:
  * an opening can fail anywhere, and a list that only forgets when the home clicked it is a list

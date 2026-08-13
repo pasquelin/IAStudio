@@ -14,8 +14,8 @@ const install = (overrides: BridgeOverrides = {}): void => {
   installFakeBridge({ ...overrides, diagnostics: { report } })
 }
 
-const open = (onClose = vi.fn()): void => {
-  render(<ProjectMenu path={PATH} at={{ x: 10, y: 10 }} onClose={onClose} />)
+const open = (onClose = vi.fn(), onRename?: () => void): void => {
+  render(<ProjectMenu path={PATH} at={{ x: 10, y: 10 }} onClose={onClose} onRename={onRename} />)
 }
 
 beforeEach(() => {
@@ -59,6 +59,43 @@ describe('the menu of a recent project', () => {
 
     expect(revealFolder).toHaveBeenCalledWith(PATH)
     expect(onClose).toHaveBeenCalled()
+  })
+
+  /**
+   * The rename opens a FIELD rather than reaching the disk: the row owns it, as the explorer's
+   * does. So the menu's whole job here is to hand the gesture back and get out of the way.
+   */
+  it('hands the rename back to the row, and closes behind itself', async () => {
+    const onRename = vi.fn()
+    const onClose = vi.fn()
+    open(onClose, onRename)
+
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+
+    expect(onRename).toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  // Refused rather than silently doing nothing where no field can open — a row that explains
+  // nothing and does nothing is the worst of the outcomes this menu can produce.
+  it('refuses the rename where no field can open', () => {
+    open()
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
+  })
+
+  /**
+   * The row a reader is most likely to take for "rename the folder on disk". It has to say that it
+   * does not: `recentProjects`, `storage.lastProject` and every absolute path the catalogue holds
+   * are keyed on that folder.
+   */
+  it('says the rename leaves the folder alone', () => {
+    open(vi.fn(), vi.fn())
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toHaveAttribute(
+      'data-tooltip-content',
+      'Changer le nom du projet, sans toucher à son dossier sur le disque',
+    )
   })
 
   it('drops the project from the shelf and closes behind itself', async () => {
@@ -119,12 +156,18 @@ describe('the menu of a recent project', () => {
   // What the row promises in words, held in code: the studio does not erase a folder someone made.
   it('offers nothing that reaches the folder itself', async () => {
     const trashFile = vi.fn(() => Promise.resolve(true))
-    useProject.setState({ forget: () => Promise.resolve() })
+    const rename = vi.fn(() => Promise.resolve(true))
+    useProject.setState({ forget: () => Promise.resolve(), rename })
     install({ project: { trashFile } })
-    open()
+    // Every row enabled, so the sweep below actually presses all three rather than bouncing off
+    // a disabled one and reporting that nothing reached the disk.
+    open(vi.fn(), vi.fn())
 
     for (const row of screen.getAllByRole('menuitem')) await userEvent.click(row)
 
     expect(trashFile).not.toHaveBeenCalled()
+    // The rename reaches the manifest and never the folder: it opens a field here, and even the
+    // store's own call renames in place.
+    expect(rename).not.toHaveBeenCalled()
   })
 })

@@ -233,6 +233,7 @@
     "projectUnreadable": "This project’s manifest cannot be read: it was truncated or edited by hand",
     "projectTooNew": "This project was made by a newer build of the studio; update it to open this project",
     "projectNotCreated": "The project could not be created in this folder",
+    "projectNotRenamed": "The project could not be renamed: its folder is missing or unreadable",
     "projectNotRevealed": "The project folder cannot be found",
     "fileNotOpened": "The system could not open this file",
     "fileNotMoved": "This file could not be moved — that name may be taken already in the folder it was dropped on",
@@ -283,6 +284,7 @@
       "assets.save": "The asset could not be rewritten",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",
+      "project.rename": "The project could not be renamed",
       "font.face": "A font could not be loaded",
       "graph.node": "A node could not be created",
       "graph.run": "The graph could not be run",
@@ -2134,7 +2136,9 @@
       "reveal": "Reveal in folder",
       "revealHint": "Opens the file manager on this project",
       "forget": "Remove from the list",
-      "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched"
+      "forgetHint": "Removes the project from this list, leaving its folder and everything in it untouched",
+      "rename": "Rename",
+      "renameHint": "Change the project name, leaving its folder on disk where it is"
     },
     "library": {
       "fetch": "Fetch “{{name}}” into the project",

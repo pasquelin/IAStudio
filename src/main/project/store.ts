@@ -76,6 +76,15 @@ export type ProjectStoreDeps = {
 export type ProjectStore = {
   create: (parentFolder: string, name: string) => Promise<Project>
   open: (path: string) => Promise<Project>
+  /**
+   * Writes a new name into a project's manifest — the FOLDER is never touched, see the channel's
+   * own doc for why. Works on a project that is not open, which the home's shelf needs.
+   *
+   * When the renamed one IS open, its in-memory copy is replaced too. `onChange` is deliberately
+   * NOT fired: it means "another project is in front now", and it resumes remembered jobs and
+   * re-arms the folder watch — a rename would double-track running jobs to update a word.
+   */
+  rename: (path: string, name: string) => Promise<Project>
   current: () => Project | null
   /** The open project's folder. Throws rather than letting a write land outside a project. */
   path: () => string
@@ -282,6 +291,21 @@ export function createProjectStore({
       await ensureFolders(path)
 
       return await activate({ path, manifest })
+    },
+
+    rename: async (path, name) => {
+      // Read from disk rather than from the open project, even when they are the same folder: this
+      // is the only way one path serves both cases, and the manifest on disk is the truth anyway.
+      const manifest = await loadManifest(path)
+      const renamed: Project = { path, manifest: { ...manifest, name, updatedAt: now() } }
+
+      // Through the queue, and it is not optional: `touch` writes this same file on every document
+      // saved, so a rename racing a save would lose whichever landed first.
+      await writes.next(() => writeManifest(renamed))
+
+      if (project?.path === path) project = renamed
+
+      return renamed
     },
 
     current: () => project,

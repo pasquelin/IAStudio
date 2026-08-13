@@ -92,6 +92,7 @@ const bridge: StudioBridge = {
     onFolderChanged: callback => subscribe<void>(EVENTS.projectFolderChanged, callback),
     revealFile: relative => ipcRenderer.invoke(CHANNELS.projectRevealFile, relative),
     revealFolder: path => ipcRenderer.invoke(CHANNELS.projectRevealFolder, path),
+    rename: (path, name) => ipcRenderer.invoke(CHANNELS.projectRename, path, name),
     renameFile: (relative, name) => ipcRenderer.invoke(CHANNELS.projectRenameFile, relative, name),
     moveFile: (relative, folder) => ipcRenderer.invoke(CHANNELS.projectMoveFile, relative, folder),
     trashFile: relative => ipcRenderer.invoke(CHANNELS.projectTrashFile, relative),

@@ -455,3 +455,101 @@ describe('project store', () => {
     await expect(store.catalog().search({})).resolves.toEqual([])
   })
 })
+
+/**
+ * Renaming a project — the manifest's `name`, never the folder. The folder is what
+ * `recentProjects`, `storage.lastProject` and every absolute path in the catalogue are keyed on.
+ */
+describe('renaming a project', () => {
+  let root: string
+  let onChange: (project: unknown) => void
+  let store: ProjectStore
+  let clock: string
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), 'scenario-rename-'))
+    onChange = vi.fn()
+    clock = '2026-08-13T10:00:00.000Z'
+    store = createProjectStore({
+      openCatalog: async () => memoryCatalog(),
+      now: () => clock,
+      onChange,
+    })
+  })
+
+  afterEach(async () => {
+    store.close()
+    await rm(root, { recursive: true, force: true })
+    execFileMock.mockClear()
+  })
+
+  const manifestAt = async (path: string): Promise<unknown> =>
+    JSON.parse(await readFile(join(path, MANIFEST_FILE), 'utf8'))
+
+  it('writes the new name into the manifest and leaves the folder where it is', async () => {
+    const made = await store.create(root, 'Before')
+
+    const renamed = await store.rename(made.path, 'After')
+
+    expect(renamed.path).toBe(made.path)
+    expect(renamed.manifest.name).toBe('After')
+    expect(await exists(made.path)).toBe(true)
+    expect(await manifestAt(made.path)).toMatchObject({ name: 'After' })
+  })
+
+  /**
+   * `createdAt` is what both surfaces ORDER the projects by since 13 August. A rename that stamped
+   * it would move the row it renamed to the top of the list — the exact reshuffle that key exists
+   * to prevent, arriving through the one gesture that reads as harmless.
+   */
+  it('never touches the date the project was made', async () => {
+    const made = await store.create(root, 'Before')
+    clock = '2026-12-25T00:00:00.000Z'
+
+    const renamed = await store.rename(made.path, 'After')
+
+    expect(renamed.manifest.createdAt).toBe(made.manifest.createdAt)
+    expect(renamed.manifest.updatedAt).toBe('2026-12-25T00:00:00.000Z')
+  })
+
+  it('replaces the open project in memory, so the studio reads the new name at once', async () => {
+    const made = await store.create(root, 'Before')
+
+    await store.rename(made.path, 'After')
+
+    expect(store.current()?.manifest.name).toBe('After')
+  })
+
+  /**
+   * `onChange` means "another project is in front now": it resumes remembered jobs and re-arms the
+   * folder watch. Firing it for a rename would double-track running jobs to update a word.
+   */
+  it('does not announce a project change', async () => {
+    const made = await store.create(root, 'Before')
+    vi.mocked(onChange).mockClear()
+
+    await store.rename(made.path, 'After')
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  // The home's shelf lists projects that are not open, and renaming one must not open it.
+  it('renames a project that is not open, without opening it', async () => {
+    const other = await store.create(root, 'Other')
+    const open = await store.create(root, 'Open')
+
+    const renamed = await store.rename(other.path, 'Renamed')
+
+    expect(renamed.manifest.name).toBe('Renamed')
+    expect(await manifestAt(other.path)).toMatchObject({ name: 'Renamed' })
+    // Still the one that was open, and its manifest untouched.
+    expect(store.current()?.path).toBe(open.path)
+    expect(await manifestAt(open.path)).toMatchObject({ name: 'Open' })
+  })
+
+  // A folder gone since the shelf last saw it is the ordinary case there, and it must not be
+  // reported as anything other than what opening it would report.
+  it('refuses a folder that is not a project', async () => {
+    await expect(store.rename(join(root, 'nowhere'), 'Name')).rejects.toThrow(ProjectOpenError)
+  })
+})

@@ -1,6 +1,6 @@
 import i18next from 'i18next'
 import { create } from 'zustand'
-import { withoutRecentProject, type Project } from '@shared/domain/project'
+import { renamedRecentProject, withoutRecentProject, type Project } from '@shared/domain/project'
 import type { StudioBridge } from '@shared/ipc'
 import { refreshDocuments } from '@/app/document-io'
 import { closeOrphanTabs } from '@/app/orphan-tabs'
@@ -45,6 +45,20 @@ type ProjectState = {
    * a confirmation.
    */
   forget: (path: string) => Promise<void>
+  /**
+   * Gives a project a new name — the one in its manifest, never its folder on disk.
+   *
+   * Two writes, and they belong together: the main process owns the manifest, and this owns the
+   * `recentProjects` entry, which stores the name rather than deriving it from the folder. Skipping
+   * the second would list the project under its old name until it was next opened.
+   *
+   * Here rather than in the row that offered it, for the same reason the forgetting above is: two
+   * surfaces list projects, and a rename wired into one of them would be missing from the other.
+   *
+   * Answers whether it happened. The folder can have gone since the shelf last saw it, which is
+   * why the manifest is written FIRST: the settings must not claim a name the disk refused.
+   */
+  rename: (path: string, name: string) => Promise<boolean>
 }
 
 /**
@@ -176,6 +190,34 @@ export const useProject = create<ProjectState>()((set, get) => ({
         ...(settings.storage.lastProject === path ? { lastProject: undefined } : {}),
       },
     })
+  },
+
+  rename: async (path, name) => {
+    const bridge = getBridge()
+    if (!bridge) return false
+
+    let renamed: Project
+    try {
+      renamed = await bridge.project.rename(path, name)
+    } catch {
+      // Already in the journal, put there by the handler: this answers the caller and stops. The
+      // settings are deliberately left alone — a name the disk refused must not be listed.
+      return false
+    }
+
+    // Only when it is the open one. The broadcast the handler sends reaches the OTHER windows;
+    // this one is already past it, and waiting for a round trip would leave the title bar naming
+    // the old name for a frame.
+    if (get().project?.path === path) set({ project: renamed })
+
+    const { settings, write } = useSettings.getState()
+    await write({
+      storage: {
+        recentProjects: renamedRecentProject(settings.storage.recentProjects, path, name),
+      },
+    })
+
+    return true
   },
 
   openPicked: async () => {

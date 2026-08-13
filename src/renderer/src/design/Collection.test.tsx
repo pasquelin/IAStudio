@@ -574,7 +574,8 @@ describe('Collection, the height it estimates', () => {
   it('leaves a stacked row taller than a plain one at the same density', () => {
     listOf(3, { rowHeight: 'stacked' })
 
-    expect(screen.getByRole('listbox')).toHaveStyle({ height: '120px' })
+    // The shipped fallback, 44 + 4 of gap, three times — no gauge is declared under jsdom.
+    expect(screen.getByRole('listbox')).toHaveStyle({ height: '144px' })
   })
 
   /** A number still passes through, for the picture rows no gauge describes. */
