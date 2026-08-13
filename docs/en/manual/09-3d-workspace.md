@@ -64,7 +64,7 @@ Three settings govern flying: **Settings ▸ Workspaces ▸ 3D**
 | **Move** | `G` | drags the object along the coloured arrows |
 | **Rotate** | `R` | turns the object with the coloured circles |
 | **Scale** | `S` | grows or shrinks it with the handles |
-| **Snapping** | `M` | moves the handles **in steps** instead of leaving them free |
+| **Snap** | `M` | moves the handles **in steps** instead of leaving them free |
 | **Local frame** | `L` | lines the handles up with the **object's** orientation rather than the world's |
 | **Display mode** | `Z` | cycles the seven ways of drawing; hovering offers them one by one |
 | **Frame selection** | `F` | recentres the camera on the chosen object |

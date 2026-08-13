@@ -314,6 +314,138 @@ describe('the translation bundles', () => {
   })
 
   /**
+   * One French label, one English word — the pendant of `SETTLED_WORDS`, across the pair rather
+   * than inside a bundle. The generator panel read `Generate` while five other keys said
+   * `Generation`, and the 3D snap command read `Snapping` beside a canvas one saying `Snap`.
+   * Neither sentence was wrong on its own; what was wrong was reading them one after the other.
+   *
+   * Text with a hole and text ending on punctuation stay out: a sentence says one thing many
+   * ways on purpose, while a label is what a reader recognises from one screen to the next, and
+   * one written twice is a convention whether or not anyone wrote it down.
+   *
+   * A word count is NOT part of that filter, and the first draft had one. Measured on these
+   * bundles, a ceiling of three, four, five, eight words and no ceiling at all return the SAME
+   * nineteen splits — the ceiling only ever shrank the net, to 784 terms watched instead of
+   * 1223. A number that changes no verdict is a number nobody rechecks the day it starts to.
+   *
+   * Case and a trailing ellipsis fold away: the native menu's `Show All`, whose wording macOS
+   * owns, is the same word as the settings' `Show all`. `foldForSearch` is NOT the fold to reach
+   * for — it drops diacritics, so `échec` would meet `echec` and every accented exemption below
+   * would quietly stop matching the term it names.
+   *
+   * What this does NOT catch: a label used once — nothing to be inconsistent with — a term
+   * inside a sentence, and the reverse direction, one English word for two French labels. That
+   * last one is usually right, English being the poorer in flexions: `Move` renders `Déplacer`
+   * and `Déplacement` both, and demanding otherwise would make the English worse.
+   */
+  const isComparable = (text: string): boolean =>
+    text.length > 1 && holes(text).length === 0 && !/[.!?:]$/.test(text)
+
+  const asTerm = (text: string): string => text.replace(/…+$/, '').trim().toLocaleLowerCase('fr')
+
+  /**
+   * French labels that name two things — each entry naming the readings it allows, and what
+   * separates them. **An entry covers the forms it lists and nothing else**: a third English
+   * word appearing under an exempted term is drift again, and the test says so.
+   *
+   * That is not a precaution, it is the hole the first draft had. `tout afficher` read THREE
+   * ways — `show everything` on the activity filter, `show all` in the settings and the native
+   * menu, `fit to view` on the sequence command. The entry named two of them, and the first two
+   * are the same act on the same kind of surface: a real split that the exemption swallowed
+   * whole. It was caught by eye, outside this file, which is exactly what a guard is for.
+   *
+   * A label earns its place here by naming a difference, never by being noisy — and it leaves
+   * the day one of its readings stops being written, which the second test makes happen.
+   */
+  const TWO_THINGS: Record<string, { reads: readonly string[]; separates: string }> = {
+    annuler: { reads: ['cancel', 'undo'], separates: 'closes a dialog, and undoes an edit' },
+    supprimer: { reads: ['delete', 'remove'], separates: 'destroys, and takes off a list' },
+    repères: { reads: ['helpers', 'guides'], separates: "the 3D scene's, and the canvas'" },
+    déplacement: {
+      reads: ['move', 'displacement'],
+      separates: "the tool, and a texture's displacement map",
+    },
+    image: {
+      reads: ['image', 'picture'],
+      separates: 'the asset, and the picture track of a sequence — as `Sound` is for audio',
+    },
+    nœud: { reads: ['node', 'knot'], separates: 'a graph node, and the torus knot shape' },
+    teinte: { reads: ['tint', 'hue'], separates: 'a tint laid over, and the hue component' },
+    début: { reads: ['start', 'home'], separates: 'a time, and the Home key' },
+    tout: { reads: ['all', 'everything'], separates: 'a filter, and a log level' },
+    recadrage: {
+      reads: ['crop', 'reframe'],
+      separates: 'the tool, and the Scenario action, which the API names reframe',
+    },
+    agrandissement: {
+      reads: ['upscaling', 'upscale'],
+      separates:
+        'the model family, named as the other families are — `Background removal`, ' +
+        '`Vectorization` — and the billed action, named as the API names it, beside `Reframe`',
+    },
+    'en cours': { reads: ['running now', 'running'], separates: 'a panel title, and a status' },
+    échec: { reads: ['failed', 'failure'], separates: 'a status value, and a log level' },
+    édition: { reads: ['editing', 'edit'], separates: 'a model tag, and the native Edit menu' },
+    'outils de développement': {
+      reads: ['toggle developer tools', 'developer tools'],
+      separates: 'the native menu, worded as Electron words it, and the setting',
+    },
+    couleur: {
+      reads: ['colour', 'color'],
+      separates: 'everywhere, and the blend modes, which carry the CSS mix-blend-mode names',
+    },
+    'tout afficher': {
+      reads: ['show all', 'fit to view'],
+      separates: 'lifting a filter, and fitting the view',
+    },
+  }
+
+  const ENGLISH_FORMS = ((): Map<string, Set<string>> => {
+    const forms = new Map<string, Set<string>>()
+
+    for (const [key, source] of REFERENCE) {
+      const target = BUNDLES.en.get(key)
+      if (target === undefined || !isComparable(source) || !isComparable(target)) continue
+      const term = asTerm(source)
+      const written = forms.get(term) ?? new Set<string>()
+      written.add(asTerm(target))
+      forms.set(term, written)
+    }
+
+    return forms
+  })()
+
+  it('renders a repeated French label the same way in English', () => {
+    const drifted = [...ENGLISH_FORMS]
+      .filter(([, written]) => written.size > 1)
+      .filter(([term, written]) => {
+        const allowed = TWO_THINGS[term]?.reads
+        return allowed === undefined || [...written].some(form => !allowed.includes(form))
+      })
+      .map(([term, written]) => `${term} — ${[...written].join(' / ')}`)
+
+    expect(drifted).toEqual([])
+  })
+
+  /**
+   * An exemption that stopped naming a real split is the one nobody would think to delete. It
+   * names the reading that went missing rather than saying "stale": a form also leaves when its
+   * key gains a `{{hole}}` or a full stop, and told apart from a split that closed, those two
+   * ask for opposite fixes.
+   */
+  it('drops an exemption once the label stops reading both ways', () => {
+    const settled = Object.entries(TWO_THINGS)
+      .map(([term, allowed]) => {
+        const written = ENGLISH_FORMS.get(term) ?? new Set<string>()
+        return { term, missing: allowed.reads.filter(form => !written.has(form)) }
+      })
+      .filter(({ missing }) => missing.length > 0)
+      .map(({ term, missing }) => `${term} — nothing reads ${missing.join(', ')} any more`)
+
+    expect(settled).toEqual([])
+  })
+
+  /**
    * A plural base names every form the language HAS, asked of `Intl` rather than assumed. French
    * carries three — `one`, `many`, `other` — and the third language is not where this breaks: it
    * is French, at a million, where `select` answers `many` and a bundle without it renders the

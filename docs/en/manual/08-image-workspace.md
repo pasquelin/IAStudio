@@ -76,7 +76,7 @@ pixel.
 | **Rulers** | `⌘R` / `Ctrl+R` | two graduated strips, top and left |
 | **Guides** | `⌘;` / `Ctrl+;` | alignment lines you place |
 | **Clear guides** | — | removes every guide |
-| **Snapping** | `⇧⌘;` / `Ctrl+Shift+;` | what you drag sticks to the guides |
+| **Snap** | `⇧⌘;` / `Ctrl+Shift+;` | what you drag sticks to the guides |
 
 **To place a guide**: drag from a ruler onto the image. Drag it off the image to remove it.
 

@@ -207,7 +207,7 @@ where you take it from to send it to anyone.
 > To transform the picture rather than paint it: go back to the **Generate** panel with an
 > *image to image* model, and give it your picture as the starting point.
 
-<!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running
+<!-- SCREENSHOT: the Generation panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->
 
 ---
