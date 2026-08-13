@@ -108,6 +108,8 @@ export function scriptedTextureCache() {
   const acquired: string[] = []
   const released: string[] = []
   const spaces = new Map<string, ColorSpace>()
+  /** What the catalogue would say each asset was last written at — set by the test that cares. */
+  const versions = new Map<string, string>()
 
   const cache: TextureCache = {
     acquire: (assetId, colorSpace) => {
@@ -118,6 +120,7 @@ export function scriptedTextureCache() {
     release: assetId => {
       released.push(assetId)
     },
+    versionOf: assetId => versions.get(assetId),
     dispose: () => {},
   }
 
@@ -126,6 +129,7 @@ export function scriptedTextureCache() {
     acquired,
     released,
     spaces,
+    versions,
     settle: async (assetId: string, texture: Texture | null = new Texture()) => {
       pending.get(assetId)?.(texture)
       await Promise.resolve()

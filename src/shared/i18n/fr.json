@@ -356,7 +356,9 @@
     "fetchAction": "Récupérer dans le projet",
     "fetchActionHint": "Télécharge cet asset de votre bibliothèque Scenario dans le projet ouvert",
     "extractTextures": "Extraire ses textures",
-    "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes"
+    "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes",
+    "editPixels": "Modifier l’image",
+    "editPixelsHint": "Ouvre cette image dans l’espace Image, où ⌘S la réécrit sur place"
   },
   "dialog": {
     "allMedia": "Tous les médias",

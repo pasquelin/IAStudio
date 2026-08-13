@@ -356,7 +356,9 @@
     "fetchAction": "Fetch into the project",
     "fetchActionHint": "Downloads this asset from your Scenario library into the open project",
     "extractTextures": "Extract its textures",
-    "extractTexturesHint": "Takes the pictures inside this model out into the project, where they can be opened and painted on"
+    "extractTexturesHint": "Takes the pictures inside this model out into the project, where they can be opened and painted on",
+    "editPixels": "Edit the picture",
+    "editPixelsHint": "Opens this picture in the Image space, where ⌘S writes it back over itself"
   },
   "dialog": {
     "allMedia": "All media",
@@ -725,7 +727,7 @@
     "scale": "Scale",
     "noTexture": "None",
     "modelTextures": "Model textures",
-    "fileTexture": "The file's own",
+    "fileTexture": "The file’s own",
     "chooseTexture": "Choose a texture",
     "clearTexture": "Remove the texture",
     "fields": {

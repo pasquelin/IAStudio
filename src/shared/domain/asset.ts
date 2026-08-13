@@ -500,18 +500,28 @@ export function assetUrl(assetId: string): string {
  * three, and `.map(assetUrl)` would then quietly pass the index as the version.
  */
 export function posterUrl(asset: Asset): string | null {
-  if (isLocalPicture(asset)) return stamped(assetUrl(asset.id), asset)
+  if (isLocalPicture(asset)) return versionedUrl(assetUrl(asset.id), asset.localChangedAt)
   // `local` said out loud rather than left to the fact that nothing writes a poster path on a
   // cloud row: the still is a file inside the open project, so a row from anywhere else would
   // send the window after a picture no resolver can answer for — a 404 where an icon belongs.
   if (asset.posterPath && asset.location === 'local') {
-    return stamped(hostedUrl(POSTER_HOST, asset.id), asset)
+    return versionedUrl(hostedUrl(POSTER_HOST, asset.id), asset.localChangedAt)
   }
   return null
 }
 
-function stamped(url: string, asset: Asset): string {
-  return asset.localChangedAt ? `${url}?v=${encodeURIComponent(asset.localChangedAt)}` : url
+/**
+ * The same URL, told apart from the one that named the file before it was overwritten.
+ *
+ * The version is `localChangedAt` at every call site: an id alone is a stable URL, so whoever
+ * decoded it once — a browser cell, a WebGL texture cache — keeps the bitmap it holds, and a ⌘S
+ * that rewrote the file looks like a gesture that did nothing.
+ *
+ * Apart from `posterUrl` because a texture slot has no `Asset` in hand, only an id and a stamp
+ * looked up beside it. The resolver never reads the query; it resolves the path.
+ */
+export function versionedUrl(url: string, version: string | undefined): string {
+  return version ? `${url}?v=${encodeURIComponent(version)}` : url
 }
 
 /**

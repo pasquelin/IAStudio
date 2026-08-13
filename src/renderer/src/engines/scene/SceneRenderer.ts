@@ -143,6 +143,13 @@ export type SceneRendererOptions = {
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
+  /**
+   * When each asset was last written, read off the catalogue by whoever mounts the engine.
+   *
+   * A port rather than a store read, like everything else here: `engines/` knows no store. It is
+   * what makes an edited picture reach the scene — see `refreshTextures`.
+   */
+  assetVersion?: (assetId: string) => string | undefined
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
   /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
@@ -325,8 +332,10 @@ export class SceneRenderer {
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
-    this.textureCache = createTextureCache(options.loadTexture ?? loadTexture, (assetId, error) =>
-      reportFailure('scene.texture', assetId, error),
+    this.textureCache = createTextureCache(
+      options.loadTexture ?? loadTexture,
+      (assetId, error) => reportFailure('scene.texture', assetId, error),
+      options.assetVersion,
     )
     this.gltf = options.loadModel
       ? { load: options.loadModel, dispose: () => {} }
@@ -981,6 +990,30 @@ export class SceneRenderer {
     this.grid = null
 
     this.viewport.dispose()
+  }
+
+  /**
+   * The catalogue moved: every slot asks again for what it holds, and reloads the ones whose
+   * picture was overwritten since.
+   *
+   * Nothing at all when no version changed — a binding compares what it holds before it lets go —
+   * so this may be called on every write to the shelf, which is exactly what it is for. Without
+   * it a texture edited and saved stayed on screen as it was until the engine was rebuilt, since
+   * the id a slot points at does not move when ⌘S rewrites the file behind it.
+   */
+  refreshTextures(): void {
+    for (const [id, maps] of this.textures) {
+      const node = this.applied.get(id)
+      if (node?.type === 'mesh') maps.apply(node.material)
+    }
+    for (const [id, maps] of this.spriteMaps) {
+      const node = this.applied.get(id)
+      if (node?.type === 'sprite') maps.apply(node.sprite)
+    }
+    for (const [id, maps] of this.modelMaps) {
+      const node = this.applied.get(id)
+      if (node?.type === 'model') maps.apply(node.model.textures)
+    }
   }
 
   /**

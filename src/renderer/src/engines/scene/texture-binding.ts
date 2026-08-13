@@ -14,29 +14,37 @@ export type TextureBinding = (assetId: string | null) => void
  * it holds exactly one reference — on the asset it wants now, loaded or not — and drops any
  * other arrival. That race is the whole reason this is a thing of its own rather than a few
  * lines at each call site.
+ *
+ * What it holds is the asset AND the version the catalogue gave it: an id does not move when ⌘S
+ * overwrites the picture behind it, so comparing ids alone left every scene showing the image the
+ * edit replaced until the engine was rebuilt.
  */
 export function createTextureBinding(
   cache: TextureCache,
   colorSpace: ColorSpace,
   install: (texture: Texture | null) => void,
 ): TextureBinding {
-  let held: string | null = null
+  let held: { assetId: string; version: string | undefined } | null = null
 
   const release = (): void => {
-    if (held !== null) cache.release(held, colorSpace)
+    if (held) cache.release(held.assetId, colorSpace, held.version)
     held = null
   }
 
   return assetId => {
-    if (held === assetId) return
+    const version = assetId === null ? undefined : cache.versionOf(assetId)
+    if (held?.assetId === assetId && held.version === version) return
+    if (held === null && assetId === null) return
+
     release()
     install(null)
     if (assetId === null) return
 
-    held = assetId
-    void cache.acquire(assetId, colorSpace).then(texture => {
+    const wanted = { assetId, version }
+    held = wanted
+    void cache.acquire(assetId, colorSpace, version).then(texture => {
       // Stale: the slot has moved on, and the reference it took went back with the move.
-      if (held !== assetId || !texture) return
+      if (held !== wanted || !texture) return
       install(texture)
     })
   }

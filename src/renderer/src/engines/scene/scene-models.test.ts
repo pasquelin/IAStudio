@@ -161,6 +161,41 @@ describe('a model node', () => {
     renderer.dispose()
   })
 
+  /**
+   * The last link of « extract a texture, edit it, and the model follows »: ⌘S rewrites the file
+   * behind an id that never moves, so nothing here would ever ask for it again on its own.
+   */
+  it('loads its picture again once the catalogue says it was rewritten', async () => {
+    const asked: string[] = []
+    let version = 'before'
+    const renderer = new SceneRenderer({
+      onSelect: vi.fn(),
+      onTransform: vi.fn(),
+      loadModel: async () => source(),
+      loadTexture: url => {
+        asked.push(url)
+        return Promise.resolve(new Texture())
+      },
+      assetVersion: () => version,
+    })
+
+    const node = modelNodeFixture('a', 'asset-a')
+    node.model = { ...node.model, textures: { map: { assetId: 'tex-1' } } }
+    renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+
+    // The shelf was re-read and nothing moved: the slot must not decode the picture again.
+    renderer.refreshTextures()
+    expect(asked).toHaveLength(1)
+
+    version = 'after'
+    renderer.refreshTextures()
+
+    await vi.waitFor(() => expect(asked).toHaveLength(2))
+    expect(asked[1]).toContain('v=after')
+    renderer.dispose()
+  })
+
   it('leaves the rest of the scene standing when a file cannot be read', async () => {
     const load = vi.fn(async () => {
       throw new Error('gone')

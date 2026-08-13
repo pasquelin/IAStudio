@@ -111,8 +111,15 @@ export function documentOfKind(
 export function documentForAsset(
   state: Pick<DocumentsState, 'documents' | 'stored'>,
   assetId: string,
+  /**
+   * Narrows to documents of one kind. One asset can legitimately be edited by two of them — a
+   * texture is a channel in the Textures space and pixels in the Images one — and a gesture
+   * asking for the second must not be handed the first.
+   */
+  kind?: DocumentKind,
 ): DocumentDescriptor | null {
-  const isIt = (document: DocumentDescriptor): boolean => document.sourceAssetId === assetId
+  const isIt = (document: DocumentDescriptor): boolean =>
+    document.sourceAssetId === assetId && (kind === undefined || document.kind === kind)
   return Object.values(state.documents).find(isIt) ?? state.stored.find(isIt) ?? null
 }
 

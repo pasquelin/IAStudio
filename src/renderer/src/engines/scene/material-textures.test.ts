@@ -143,6 +143,36 @@ describe('createMaterialTextures', () => {
     expect(mesh.geometry.attributes.uv1).toBe(own)
   })
 
+  /**
+   * The last link of « edit the picture and the model follows »: ⌘S rewrites the file behind an
+   * id that never moves, so a slot comparing ids alone kept the image the edit replaced.
+   */
+  it('loads the picture again when the catalogue says it was rewritten', async () => {
+    const scripted = scriptedTextureCache()
+    const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
+
+    scripted.versions.set('tex-1', 'before')
+    textures.apply(withMap('tex-1'))
+    await scripted.settle('tex-1')
+
+    scripted.versions.set('tex-1', 'after')
+    textures.apply(withMap('tex-1'))
+
+    expect(scripted.acquired).toEqual(['tex-1', 'tex-1'])
+    expect(scripted.released).toEqual(['tex-1'])
+  })
+
+  it('asks for nothing again when the picture has not been rewritten', () => {
+    const scripted = scriptedTextureCache()
+    const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
+
+    scripted.versions.set('tex-1', 'stable')
+    textures.apply(withMap('tex-1'))
+    textures.apply(withMap('tex-1'))
+
+    expect(scripted.acquired).toEqual(['tex-1'])
+  })
+
   it('gives every reference back when the mesh goes', async () => {
     const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)

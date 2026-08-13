@@ -9,6 +9,7 @@ import { bridgeWatchingLogs } from '@/services/fake-bridge'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
@@ -42,6 +43,7 @@ const setPickedBone = vi.fn()
 const setQuadView = vi.fn()
 const setPaneViews = vi.fn()
 const setPlayhead = vi.fn()
+const refreshTextures = vi.fn()
 /** Every engine built, so a test can fire the callbacks the real one would. */
 const built = vi.hoisted((): SceneRendererOptions[] => [])
 const viewFrom = vi.fn()
@@ -75,6 +77,7 @@ vi.mock('@/engines/scene/SceneRenderer', () => ({
     setQuadView = setQuadView
     setPaneViews = setPaneViews
     setPlayhead = setPlayhead
+    refreshTextures = refreshTextures
     viewFrom = viewFrom
     frameSelection = frameSelection
     exportTo = exportTo
@@ -478,6 +481,28 @@ describe('exporting the scene', () => {
 
     await userEvent.keyboard('{Shift>}{Q}{/Shift}')
     expect(setQuadView).toHaveBeenLastCalledWith(false)
+  })
+})
+
+/**
+ * The engine cannot see the catalogue, and the id a texture slot points at does not move when ⌘S
+ * rewrites the picture behind it. Without this the scene showed the image an edit replaced until
+ * something rebuilt the engine.
+ */
+describe('SceneDocument and a picture edited elsewhere', () => {
+  it('tells the engine to ask again for its maps when the shelf is re-read', () => {
+    render(<SceneDocument documentId="doc-1" />)
+    refreshTextures.mockClear()
+
+    act(() => useAssets.setState({ items: [] }))
+
+    expect(refreshTextures).toHaveBeenCalled()
+  })
+
+  it('hands the engine a way to read what the catalogue knows of a picture', () => {
+    render(<SceneDocument documentId="doc-1" />)
+
+    expect(built.at(-1)?.assetVersion?.('never-heard-of')).toBeUndefined()
   })
 })
 
