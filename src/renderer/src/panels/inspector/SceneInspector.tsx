@@ -18,6 +18,7 @@ import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
+import { ModelOverridesSection } from './ModelOverridesSection'
 import { ModelTexturesSection } from './ModelTexturesSection'
 import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
@@ -125,8 +126,8 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
               own file carries, so spreading one over a selection would dress meshes that never
               had that slot. */}
-          <ModelTexturesSection
-            assetId={model.model.assetId}
+          <ModelTexturesSection assetId={model.model.assetId} />
+          <ModelOverridesSection
             textures={model.model.textures}
             onChange={textures => edit.run(setModelTextures(model.id, textures))}
           />

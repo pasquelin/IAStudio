@@ -1,10 +1,11 @@
 import { mdiTextureBox } from '@mdi/js'
 import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PICTURES, type Asset } from '@shared/domain/asset'
+import { assetUrl, PICTURES, posterUrl, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
+import { activation } from '@/helpers/activation'
 import { pixelEditorIntent } from '@/helpers/asset-intents'
 import { cn } from '@/helpers/cn'
 import { openAsset } from '@/helpers/open-asset'
@@ -20,7 +21,6 @@ import { TextureRenderer } from '@/engines/texture/TextureRenderer'
 import { inspectedChannel, useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
-import { usePosterUrl } from '@/hooks/usePosterUrl'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
@@ -134,12 +134,15 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   }
 
   const flat = inspected ? texture.channels[inspected] : undefined
-  const flatPoster = usePosterUrl(flat?.assetId)
+  // One look-up for both the picture and the gesture over it — `usePosterUrl` did the very same
+  // one, and two subscriptions to a single catalogue row are two re-renders of a viewport.
   const flatAsset = useAssets(state => (flat ? assetsById(state).get(flat.assetId) : undefined))
+  const flatPoster = flat && ((flatAsset && posterUrl(flatAsset)) ?? assetUrl(flat.assetId))
   // Where its PIXELS are edited, which is not this space: a texture is assembled here and painted
-  // in Images. Null leaves the picture there to be looked at and nothing more — a channel whose
+  // in Images. Absent leaves the picture there to be looked at and nothing more — a channel whose
   // asset the shelf is not holding, or one that is not on this disk.
-  const pixels = flatAsset ? pixelEditorIntent(flatAsset) : null
+  const intent = flatAsset ? pixelEditorIntent(flatAsset) : null
+  const editPixels = flatAsset && intent ? () => void openAsset(flatAsset, intent) : undefined
 
   return (
     <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
@@ -154,20 +157,12 @@ export function TextureDocument({ documentId }: { documentId: string }) {
         // the model follows ». The same gesture the shelf offers, so it is the same two words.
         <button
           type="button"
-          disabled={!pixels}
+          disabled={!editPixels}
           {...TIP_TOP(t('assets.editPixels'), false, t('assets.editPixelsHint'))}
-          onDoubleClick={() => {
-            if (flatAsset && pixels) void openAsset(flatAsset, pixels)
-          }}
-          // Enter is what the keyboard has instead of the double-click, as `Collection` has it.
-          onKeyDown={event => {
-            if (event.key !== 'Enter' || !flatAsset || !pixels) return
-            event.preventDefault()
-            void openAsset(flatAsset, pixels)
-          }}
+          {...(editPixels ? activation(editPixels) : {})}
           className={cn(
             'bg-viewport absolute inset-0 flex items-center justify-center border-none p-4',
-            pixels ? 'cursor-pointer' : 'cursor-default',
+            'cursor-pointer disabled:cursor-default',
             FOCUS_RING,
           )}
         >

@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from '@/stores/assets'
@@ -23,14 +23,14 @@ const texture = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
-/** What the catalogue answers, and what it was asked. */
+/** What the catalogue answers, and to whom. */
 let derived: Asset[] = []
 const search = vi.fn((query: AssetQuery) =>
   Promise.resolve(query.derivedFrom === MODEL ? derived : []),
 )
 
 function show(): void {
-  render(<ModelTexturesSection assetId={MODEL} textures={{}} onChange={vi.fn()} />)
+  render(<ModelTexturesSection assetId={MODEL} />)
 }
 
 describe('ModelTexturesSection', () => {
@@ -42,32 +42,24 @@ describe('ModelTexturesSection', () => {
     useAssets.setState({ items: [] })
   })
 
-  afterEach(() => vi.unstubAllGlobals())
-
-  it('shows a model’s own pictures, each one under the channel it plays', async () => {
-    derived = [texture(), texture({ id: 'asset-orm', map: 'roughness', name: 'Robot — ORM' })]
+  /**
+   * The channel, not the file name: a model's pictures are all called « Robot — … » and differ by
+   * that word alone. A slot the studio has no channel for keeps the name the extraction gave it.
+   */
+  it('shows a model’s own pictures, each under the channel it plays', async () => {
+    derived = [texture(), texture({ id: 'asset-ao', map: undefined, name: 'Robot — occlusion' })]
 
     show()
 
     expect(await screen.findByText('Couleur de base')).toBeInTheDocument()
-    expect(screen.getByText('Rugosité')).toBeInTheDocument()
-    // The channel over the file name: seven pictures of one model differ by that word alone.
-    expect(screen.queryByText('Robot — ORM')).not.toBeInTheDocument()
-  })
-
-  /** A slot the studio has no channel for keeps the name the extraction gave it. */
-  it('falls back to the picture’s name when it holds no channel', async () => {
-    derived = [texture({ map: undefined, name: 'Robot — occlusion' })]
-
-    show()
-
-    expect(await screen.findByText('Robot — occlusion')).toBeInTheDocument()
+    expect(screen.getByText('Robot — occlusion')).toBeInTheDocument()
+    expect(screen.queryByText('Robot — Couleur de base')).not.toBeInTheDocument()
   })
 
   it('opens a picture where it is edited, on the double-click every asset answers to', async () => {
     show()
 
-    await userEvent.dblClick(await screen.findByLabelText('Ouvrir Couleur de base'))
+    await userEvent.dblClick(await screen.findByRole('button', { name: /Couleur de base/ }))
 
     expect(openAsset).toHaveBeenCalledWith(derived[0])
   })
@@ -87,17 +79,5 @@ describe('ModelTexturesSection', () => {
     useAssets.setState({ items: [texture()] })
 
     expect(await screen.findByText('Couleur de base')).toBeInTheDocument()
-  })
-
-  it('keeps the five overrides folded away, under the pictures', async () => {
-    show()
-
-    await waitFor(() => expect(search).toHaveBeenCalled())
-
-    expect(screen.queryByText('Normales')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /Remplacer un canal/ }))
-
-    expect(screen.getByText('Normales')).toBeInTheDocument()
   })
 })

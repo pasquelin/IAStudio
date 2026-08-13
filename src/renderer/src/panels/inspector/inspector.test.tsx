@@ -772,6 +772,7 @@ describe('the inspector on an imported model', () => {
     render(<Content />)
 
     expect(screen.getByText('Textures du modèle')).toBeInTheDocument()
+    expect(screen.queryByText('Celle du fichier')).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /Remplacer un canal/ }))
 

@@ -606,7 +606,6 @@
     "clearTexture": "Retirer la texture",
     "modelOverrides": "Remplacer un canal",
     "noModelTexture": "Aucune image extraite de ce modèle.",
-    "openTexture": "Ouvrir {{name}}",
     "openTextureHint": "Double-cliquez pour ouvrir cette image dans l’espace Textures",
     "fields": {
       "width": "Largeur",

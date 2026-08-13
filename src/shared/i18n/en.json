@@ -606,7 +606,6 @@
     "clearTexture": "Remove the texture",
     "modelOverrides": "Swap a map",
     "noModelTexture": "No picture was taken out of this model.",
-    "openTexture": "Open {{name}}",
     "openTextureHint": "Double-click opens this picture in the Textures space",
     "fields": {
       "width": "Width",

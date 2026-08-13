@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { MediaTile } from './MediaTile'
 import { FOCUS_RING } from './styles'
+import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM, type TooltipFactory } from '@/helpers/tooltip'
 
@@ -14,6 +15,12 @@ export type ShelfTileProps = {
   label: string
   /** Absent leaves the picture inert: the library shows what an account holds with no project. */
   onClick?: () => void
+  /**
+   * OPENING what the tile shows — the double-click, and Enter with it. A second gesture rather
+   * than a second meaning of `onClick`: a shelf whose single click already does something must
+   * not have that something happen twice on the way to opening.
+   */
+  onActivate?: () => void
   /** A second action, laid over the corner. Beside the tile rather than inside it: no nesting. */
   corner?: ReactNode
   /**
@@ -37,6 +44,7 @@ export function ShelfTile({
   hint,
   label,
   onClick,
+  onActivate,
   corner,
   tip = TIP_BOTTOM,
 }: ShelfTileProps) {
@@ -46,10 +54,11 @@ export function ShelfTile({
     // Its own hover group, which `SHELF_OVERLAY` reads: in a panel's grid there is no carousel
     // around the tile to hover, and the corner action would never appear.
     <div className="group/tile relative size-full">
-      {onClick ? (
+      {onClick || onActivate ? (
         <button
           type="button"
           onClick={onClick}
+          {...(onActivate ? activation(onActivate) : {})}
           {...tip(label, false, hint)}
           className={cn(
             'absolute inset-0 cursor-pointer rounded-(--radius-sc-md) border-none',

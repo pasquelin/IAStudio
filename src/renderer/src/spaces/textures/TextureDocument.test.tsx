@@ -142,7 +142,7 @@ describe('TextureDocument', () => {
       )
     })
 
-    /** A row the catalogue holds nowhere, and one whose bytes are not on this disk. */
+    /** A picture whose bytes are not on this disk has no pixels to open. */
     it('refuses the gesture rather than opening a tab on pixels it cannot reach', () => {
       fill('normal', 'normal-1')
       useAssets.setState({ items: [shelved({ location: 'cloud' })] })
