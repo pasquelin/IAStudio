@@ -27,6 +27,22 @@ describe('the language the native surfaces speak', () => {
     expect(heard).toEqual(['menu:en', 'about:en'])
   })
 
+  /**
+   * The About panel follows second. Before this, a throw from it aborted the loop and travelled
+   * back into the settings `onChange`, which then never broadcast the change — every window kept
+   * the previous language, with nothing logged.
+   */
+  it('carries on when a surface fails, so its neighbours and the broadcast still happen', () => {
+    const heard: string[] = []
+    followWindowLanguage(() => {
+      throw new Error('setAboutPanelOptions refused')
+    })
+    followWindowLanguage(language => heard.push(language))
+
+    expect(() => setWindowLanguage('en')).not.toThrow()
+    expect(heard).toEqual(['en'])
+  })
+
   it('says nothing when the language has not moved, so no surface rebuilds for nothing', () => {
     setWindowLanguage('en')
     const heard: string[] = []
