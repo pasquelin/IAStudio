@@ -44,12 +44,11 @@ import type { AuthState, PartialSettings, Settings, SettingsSectionId } from './
 import type { PathKind, SettingActionId } from './domain/settings-registry'
 import type { SyncOutcome, SyncPlan, SyncPolicy } from './domain/sync'
 import type { PbrChannel } from './domain/texture'
-import type { ToolId, ToolZone } from './domain/tool'
+import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
 import type { WindowState } from './domain/window'
 import type { WorkflowDescriptor, WorkflowPage, WorkflowQuery } from './domain/workflow'
-import type { WorkspaceId } from './domain/workspace'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -1049,13 +1048,16 @@ export type StudioBridge = {
     state: () => Promise<WindowState>
     onState: (callback: (state: WindowState) => void) => Unsubscribe
     /**
-     * Tells the main process which workspace is up, which panels it can currently open, and
+     * Tells the main process which surface is up, which panels it can currently open, and
      * which menu rows are ticked, so the menu can follow all three. None of them can be worked
      * out on the other side: whether the generator exists depends on a model being chosen, and
      * whether a scene is drawn in wireframe is a fact of the document in front.
+     *
+     * The surface, not the workspace: the home covers the space behind it, and a menu built on
+     * that space offered the image tools over a screen that edits no image.
      */
     setWorkspace: (
-      workspace: WorkspaceId,
+      surface: ToolSurface,
       tools: readonly ToolId[],
       checked: readonly MenuCheck[],
     ) => Promise<void>

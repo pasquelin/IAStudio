@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu } from 'electron'
-import { WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
-import { placementOf, type ToolId } from '@shared/domain/tool'
+import { WORKSPACE_IDS } from '@shared/domain/workspace'
+import { HOME_SURFACE, placementOf, type ToolId, type ToolSurface } from '@shared/domain/tool'
 import type { BindingOverrides, MenuCheck } from '@shared/domain/command'
 import { DEFAULT_LANGUAGE, type Language } from '@shared/i18n'
 import { CHANNELS, EVENTS } from '@shared/ipc'
@@ -32,12 +32,12 @@ function sendToFocused(channel: string, payload: unknown): void {
 }
 
 /**
- * Which workspace each window is showing. Per window and not per app: the menu is a single
+ * Which surface each window is showing. Per window and not per app: the menu is a single
  * application-wide object, so a second window in another space would otherwise decide what the
  * first one is offered. A window that announces nothing — the splash, the settings window —
  * has no entry, and the menu drops what only a workspace can do.
  */
-const workspaces = new Map<number, WorkspaceId>()
+const workspaces = new Map<number, ToolSurface>()
 
 /** The panels each window reported it can open. Same per-window reasoning as `workspaces`. */
 const availableTools = new Map<number, readonly ToolId[]>()
@@ -46,7 +46,7 @@ const availableTools = new Map<number, readonly ToolId[]>()
 const checkedRows = new Map<number, readonly MenuCheck[]>()
 
 /** What the menu currently shows, so a focus change that alters nothing rebuilds nothing. */
-let shown: WorkspaceId | null = null
+let shown: ToolSurface | null = null
 let shownTools: readonly ToolId[] = []
 let shownChecks: readonly MenuCheck[] = []
 let language: Language = DEFAULT_LANGUAGE
@@ -56,7 +56,7 @@ let language: Language = DEFAULT_LANGUAGE
  */
 let overrides: BindingOverrides = {}
 
-function focusedWorkspace(): WorkspaceId | null {
+function focusedWorkspace(): ToolSurface | null {
   const target = focusedWindow()
   return target ? (workspaces.get(target.webContents.id) ?? null) : null
 }
@@ -138,8 +138,8 @@ function rebuildIfStale(): void {
 export function registerMenuHandlers(): void {
   handle(CHANNELS.windowWorkspace, (event, next, tools, checked) => {
     // Checked against the registry: this is the only main-process state a renderer sets, and a
-    // preload from an older build could name a workspace this one has dropped.
-    if (!WORKSPACE_IDS.includes(next)) return
+    // preload from an older build could name a surface this one has dropped.
+    if (next !== HOME_SURFACE && !WORKSPACE_IDS.includes(next)) return
     workspaces.set(event.sender.id, next)
     availableTools.set(
       event.sender.id,

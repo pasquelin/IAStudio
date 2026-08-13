@@ -102,19 +102,19 @@ let publishedChecks = ''
  * the generator into existence, and the menu has to learn it at that moment.
  */
 function publishMenuContext(): void {
-  const workspace = useLayouts.getState().activeWorkspace
-  // What the surface in front can open, not what the space behind it could: the home carries
-  // the Explorer alone, and offering the other panels there would be menu entries that do
-  // nothing visible.
-  const tools = availableToolIds(toolSurface())
+  // The surface in front, not the space behind it: the home carries the Explorer alone, and a
+  // menu built on the space it covers offered the whole image toolbox over a screen that edits
+  // no image — along with every other row only a document can answer.
+  const surface = toolSurface()
+  const tools = availableToolIds(surface)
   const checked = sceneChecks()
 
-  const signature = JSON.stringify([workspace, tools, checked])
+  const signature = JSON.stringify([surface, tools, checked])
   if (signature === published) return
   published = signature
   publishedChecks = checked.join('|')
 
-  void getBridge()?.window.setWorkspace(workspace, tools, checked)
+  void getBridge()?.window.setWorkspace(surface, tools, checked)
 }
 
 /**

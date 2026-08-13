@@ -16,8 +16,7 @@ import {
   type SceneEntry,
   type ViewDirection,
 } from '@shared/domain/scene'
-import { placementIn, type ToolId, type ToolPlacement } from '@shared/domain/tool'
-import type { WorkspaceId } from '@shared/domain/workspace'
+import { placementIn, type ToolId, type ToolPlacement, type ToolSurface } from '@shared/domain/tool'
 import {
   bindingOf,
   commandIn,
@@ -67,8 +66,12 @@ export type MenuActions = {
  */
 export type MenuOptions = {
   language: Language
-  /** `null` when the focused window edits no workspace at all — the settings window. */
-  workspace: WorkspaceId | null
+  /**
+   * The surface in front, `null` when the focused window shows none at all — the settings
+   * window. `home` is one of them: it edits no document, so every row that belongs to a space
+   * drops, which is the whole point of naming the surface rather than the workspace.
+   */
+  workspace: ToolSurface | null
   /**
    * The panels the focused window can currently open, as it reported them. Not derived from the
    * registry here: whether the generator exists depends on a model being chosen, which only the
@@ -122,7 +125,7 @@ function developerItems(
  * Where each reported panel sits in this section. A window that announced no workspace — the
  * settings window, the splash — gets nothing: there is no column to open a panel into.
  */
-function placementsFor(tools: readonly ToolId[], workspace: WorkspaceId | null): ToolPlacement[] {
+function placementsFor(tools: readonly ToolId[], workspace: ToolSurface | null): ToolPlacement[] {
   if (!workspace) return []
   return tools.flatMap(id => placementIn(id, workspace) ?? [])
 }

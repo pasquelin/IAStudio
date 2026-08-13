@@ -778,3 +778,55 @@ describe('every native role', () => {
     expect(app.find(item => item.role === 'hide')?.label).toBe(`Masquer ${APP_NAME}`)
   })
 })
+
+/**
+ * The home covers a workspace rather than replacing it, so the renderer used to publish the
+ * space behind it: the studio offered the twenty-two image tools and the whole Image menu over
+ * a screen that edits no picture, and every one of them fired into nothing.
+ *
+ * Named as a surface for that reason — `home` is not a workspace, so each section that belongs
+ * to a document drops on its own, with no list of exceptions to keep in step.
+ */
+describe('the home', () => {
+  const home = (): MenuItemConstructorOptions[] => menuTemplate(options({ workspace: 'home' }))
+
+  it('offers neither the image tools nor the Image menu', () => {
+    expect(labels(home())).not.toContain('Outils')
+    expect(labels(home())).not.toContain('Image')
+  })
+
+  it('offers no section that only a document can answer', () => {
+    const sections = labels(home())
+
+    expect(sections).not.toContain('Graphe')
+    expect(sections).not.toContain('Ajouter')
+    expect(submenuOf(home(), 'Fichier').map(entry => entry.label)).not.toContain(
+      'Exporter la scène',
+    )
+  })
+
+  /**
+   * Undo belongs to the surface being edited, and the home edits none. The rows keep their
+   * NATIVE roles there — the platform's own undo is the only one there is — where a workspace
+   * turns them into command rows that hand ⌘Z to the document in front.
+   */
+  it('leaves undo to the platform', () => {
+    const rows = submenuOf(home(), 'Édition').filter(entry =>
+      ['Annuler', 'Rétablir'].includes(String(entry.label)),
+    )
+
+    expect(rows.map(entry => entry.role)).toEqual(['undo', 'redo'])
+    expect(rows.map(entry => entry.click)).toEqual([undefined, undefined])
+  })
+
+  /**
+   * The gain, and the reason the surface is published rather than `null`: the home carries
+   * panels of its own, and a window announcing no surface at all is offered none.
+   */
+  it('still offers the panels the home itself carries', () => {
+    const reported = menuTemplate(options({ workspace: 'home', tools: ['projects', 'meshes'] }))
+    const panels = submenuOf(submenuOf(reported, 'Affichage'), 'Modules')
+
+    expect(labels(panels)).toEqual(['Vos projets'])
+  })
+})
