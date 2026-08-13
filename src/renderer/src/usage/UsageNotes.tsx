@@ -5,18 +5,18 @@ import { formatList } from '@/helpers/format'
 /**
  * The four things a figure on this screen does not say on its own.
  *
- * None of them is decoration. Without the first, a reader takes a spend for a balance; without
- * the second, a cross-account total reads as an invoice; without the third, a partial report
- * reads as a complete one; without the fourth, a day's work sits on a bar the reader's own
- * calendar does not agree with, and nothing on screen explains why.
+ * None of them is decoration, and they are named rather than numbered — a review found the prose
+ * counting off a "fourth" that renders second. Without `noBalance`, a reader takes a spend for a
+ * balance; without `countedInUtc`, a day's work sits on a bar their own calendar disagrees with;
+ * without `mixedAccounts`, a cross-account total reads as an invoice; without `silent`, a partial
+ * report reads as a complete one.
  *
- * That fourth one names no hour, on purpose — a review caught the first draft claiming an evening's
- * work lands on the day before, which is true east of Greenwich and BACKWARDS west of it: measured,
- * 21:00 in New York is already tomorrow in UTC. An example that is wrong for half the readers is
- * worse than no example.
+ * `countedInUtc` names no hour, on purpose — the first draft claimed an evening's work lands on the
+ * day before, which holds east of Greenwich and runs BACKWARDS west of it: measured, 21:00 in New
+ * York is already tomorrow in UTC. An example wrong for half the readers is worse than none.
  *
- * It is also unconditional, where the other two of its kind are not: a zone is not a circumstance,
- * it is how every figure here was counted.
+ * It sits second because it qualifies every figure above and below it, and it is unconditional
+ * where two of the others are not: a zone is not a circumstance, it is how all of this was counted.
  */
 export function UsageNotes({ report }: { report: UsageReport }) {
   const { t, i18n } = useTranslation()

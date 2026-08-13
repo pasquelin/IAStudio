@@ -52,4 +52,27 @@ describe('what the journal calls an event', () => {
 
     expect(await screen.findByText('holodeck-booked')).toBeDefined()
   })
+
+  /**
+   * The half of the fix a reader actually sees, and nothing asserted it — asked for by review.
+   *
+   * The suite runs at UTC+9 (`vitest.config.ts`), so a stamp late in the UTC evening is already
+   * tomorrow on the wall: a row printing the local hour would read `14/08`, and that is precisely
+   * the disagreement with the bar of the 13th this column was changed to end.
+   */
+  it('prints its hours in UTC, the frame the bars beside it are counted in', async () => {
+    install([event({ time: '2026-08-13T23:30:00Z' })])
+    render(<UsageJournal period={31} />)
+
+    expect(await screen.findByText('13/08/2026 23:30')).toBeDefined()
+    expect(screen.queryByText('14/08/2026 08:30')).toBeNull()
+  })
+
+  // And it says so ON the column, because the footnote that explains it renders after the table.
+  it('says on the time column which frame those hours are read in', async () => {
+    render(<UsageJournal period={31} />)
+
+    const header = await screen.findByText('Date')
+    expect(header.getAttribute('data-tooltip-content')).toContain('UTC')
+  })
 })

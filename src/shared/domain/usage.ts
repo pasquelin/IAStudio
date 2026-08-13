@@ -300,10 +300,20 @@ export type UsageEventPage = {
 /**
  * The day an ISO stamp falls on, **in UTC** — the granularity every chart in the window uses.
  *
- * The slice IS the decision: the API dates its points in UTC, so the first ten characters are
- * already the day it counted them under. Reading the stamp into a `Date` and asking for its local
- * day would move an event across midnight for every reader east or west of Greenwich, and the
- * totals would stop matching what the account was billed.
+ * UTC because that is where the API counts, and where the period is bounded (`periodBounds`): a day
+ * cut in the reader's own zone would move an event across midnight and the totals would stop
+ * matching what the account was billed.
+ *
+ * **Converted rather than sliced, and the first version did slice.** Ten characters off the front
+ * are the day AS WRITTEN, which is the UTC day only while every stamp ends in `Z`. Measured on a
+ * stamp carrying an offset: `2026-08-14T05:00:00+09:00` slices to the 14th and belongs to the 13th,
+ * and `2026-08-13T20:00:00-05:00` slices to the 13th and belongs to the 14th — the divergence runs
+ * both ways, and it is exactly the chart-against-journal disagreement this function exists to
+ * prevent. Every fixture ends in `Z` today, so nothing would ever have caught it. Found by review.
+ *
+ * A stamp already cut to a day parses as UTC midnight, so it comes back untouched. One that cannot
+ * be read at all falls back to the front of the string: a bar labelled oddly still carries its
+ * spend, where a throw from `toISOString` would take down the whole report.
  *
  * It lives here rather than beside the aggregation because the WINDOW has to agree with it: a
  * journal row printed in another zone than the bar it sits under is a screen contradicting itself,
@@ -311,7 +321,10 @@ export type UsageEventPage = {
  * boundary would be a copy, and a copy is what stops agreeing.
  */
 export function dayOf(time: string): string {
-  return time.slice(0, 10)
+  const parsed = new Date(time)
+  if (Number.isNaN(parsed.getTime())) return time.slice(0, 10)
+
+  return parsed.toISOString().slice(0, 10)
 }
 
 export const USAGE_ROUTE = 'usage'

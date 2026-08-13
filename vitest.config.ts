@@ -22,8 +22,11 @@ const TEST_TIMEOUT = 15_000
  * The zone every suite reads its clocks in, so a date test answers the same everywhere.
  *
  * Left to the machine, a test about time passes for whoever wrote it and fails for the next reader.
- * Measured before fixing it: the whole suite is green under `UTC` and under `Asia/Tokyo` alike, and
- * exactly ONE case tells them apart — `format.test.ts`, which carries the proof.
+ * Measured before fixing it: the whole suite is green under `UTC` and under `Asia/Tokyo` alike.
+ *
+ * **What depends on this pin is any case asserting a LOCAL reading**, not a number of them: this
+ * paragraph said "exactly one case" and a review counted three, across two files. A count drifts
+ * the moment another case leans on the pin, and it sends the next reader to the wrong file.
  *
  * Tokyo rather than UTC, and rather than Paris. **Not UTC**: a zone at zero offset makes every
  * assertion about zones agree by accident, which is the defect the case above exists to catch.

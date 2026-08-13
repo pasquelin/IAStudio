@@ -29,7 +29,10 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
       <UsageTable
         head={
           <>
-            <HeadCell label={t('usage.columns.time')} />
+            {/* The frame these hours are read in, ON the column: the footnote saying so renders
+                after the table, and this list pages — so a reader scrolling rows whose hours
+                disagree with their own clock had the explanation off screen. */}
+            <HeadCell label={t('usage.columns.time')} hint={t('usage.countedInUtc')} />
             <HeadCell label={t('usage.columns.action')} />
             <HeadCell label={t('usage.columns.model')} />
             <HeadCell label={t('usage.columns.account')} />

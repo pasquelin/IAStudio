@@ -26,6 +26,27 @@ describe('the day a usage point falls on', () => {
   it('leaves a stamp already cut to a day alone', () => {
     expect(dayOf('2026-08-13')).toBe('2026-08-13')
   })
+
+  /**
+   * The case the first version failed, and it took a review to ask for it: ten characters off the
+   * front are the day AS WRITTEN, which is the UTC day only while every stamp ends in `Z`.
+   *
+   * Both directions, because an offset moves the day either way — and both are the same defect: a
+   * bar counted under one day beside a journal row printed under another.
+   */
+  it('converts a stamp carrying an offset instead of reading its first ten characters', () => {
+    expect(dayOf('2026-08-14T05:00:00+09:00')).toBe('2026-08-13')
+    expect(dayOf('2026-08-13T20:00:00-05:00')).toBe('2026-08-14')
+  })
+
+  // A bar labelled oddly still carries its spend; a throw from `toISOString` would take down the
+  // whole report, which is the one outcome worse than a wrong label.
+  it('falls back to the front of a stamp it cannot read at all', () => {
+    expect(dayOf('not-a-date')).toBe('not-a-date')
+    // Longer than a day, so the fallback is visibly a slice rather than the whole string.
+    expect(dayOf('nonsense-that-runs-on')).toBe('nonsense-t')
+    expect(dayOf('')).toBe('')
+  })
 })
 
 describe('the usage route', () => {
