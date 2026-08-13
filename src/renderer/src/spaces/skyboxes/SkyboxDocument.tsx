@@ -46,7 +46,7 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
 
     const { createSkyboxExportPort } = await import('@/engines/skybox/export-port')
 
-    const files = await createSkyboxExportPort({ loadTexture })({
+    const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({
       assetId: sky.source.assetId,
       adjustments: sky.adjustments,
       name,

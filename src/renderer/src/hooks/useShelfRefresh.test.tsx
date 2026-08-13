@@ -21,6 +21,27 @@ describe('useShelfRefresh', () => {
   })
 
   /**
+   * The catalogue coalesces its invalidations at 200 ms, so a subscription that re-rendered would
+   * repaint a viewport, its toolbar and its counters five times a second during an ingest — for a
+   * callback that usually finds nothing to reload.
+   */
+  it('fires without re-rendering the document that asked for it', () => {
+    const rendered = vi.fn()
+    function Counting() {
+      rendered()
+      useShelfRefresh(() => {})
+      return null
+    }
+
+    render(<Counting />)
+    rendered.mockClear()
+
+    act(() => useAssets.setState({ items: [] }))
+
+    expect(rendered).not.toHaveBeenCalled()
+  })
+
+  /**
    * Every caller writes an inline arrow — `() => engine.current?.refreshMaps()` — so a callback
    * read as a dependency would refresh on every render of its component instead of on a write to
    * the shelf, and a document dragging its sun would re-ask for every picture per frame.

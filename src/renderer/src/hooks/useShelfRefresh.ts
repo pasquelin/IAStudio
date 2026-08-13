@@ -10,19 +10,23 @@ import { useAssets } from '@/stores/assets'
  *
  * Costs nothing when no version moved: every binding compares what it holds before letting go.
  *
+ * Subscribed rather than selected, and that is the point: a selector would re-render the whole
+ * document tree on every catalogue read — an ingest coalesces at 200 ms, so five renders a second
+ * of a viewport, its toolbar and its counters, to fire a callback that usually does nothing.
+ *
  * The callback is held in a ref so the catalogue is the ONLY thing that fires it: read as a
  * dependency, a fresh arrow at the call site — which is what every caller writes — would refresh
  * on each render of its component instead.
  */
 export function useShelfRefresh(refresh: () => void): void {
-  const items = useAssets(state => state.items)
   const latest = useRef(refresh)
 
   useEffect(() => {
     latest.current = refresh
   })
 
-  useEffect(() => {
-    latest.current()
-  }, [items])
+  useEffect(
+    () => useAssets.subscribe((state, before) => state.items !== before.items && latest.current()),
+    [],
+  )
 }

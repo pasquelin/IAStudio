@@ -40,10 +40,13 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
    */
   type Held = { assetId: string; version: string | undefined }
 
-  /** Settles the races. */
-  let wanted: string | null = null
-  /** The version `wanted` was asked for under, so a rewrite of the same file is a change. */
-  let askedUnder: string | undefined
+  /**
+   * Settles the races, and does it by IDENTITY rather than by asset id: two loads of the SAME sky
+   * can be in flight at once now that a rewritten file is a change — the picture and its
+   * replacement — and comparing ids would let whichever decodes last win, which is the pre-edit
+   * one about half the time. `texture-binding` settles its own races the same way.
+   */
+  let wanted: Held | null = null
   /** What the last `apply` was given, so a refresh can play it again. */
   let last: { environment: ViewportEnvironment; asked: EnvironmentRef } | null = null
   /** What `scene.background` holds, which is not what was last asked for while one decodes. */
@@ -61,7 +64,6 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
     inFlight.clear()
     shown = null
     wanted = null
-    askedUnder = undefined
   }
 
   const apply = async (environment: ViewportEnvironment, asked: EnvironmentRef): Promise<void> => {
@@ -70,7 +72,7 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
     const version = assetId === null ? undefined : cache.versionOf(assetId)
     // The version too, or a sky whose file was rewritten under the same id would be recognised
     // as « already shown » and the edit would never reach the backdrop.
-    if (assetId === wanted && version === askedUnder) return
+    if (assetId === (wanted?.assetId ?? null) && version === wanted?.version) return
 
     if (!assetId) {
       release()
@@ -80,9 +82,8 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
       return
     }
 
-    wanted = assetId
-    askedUnder = version
     const held: Held = { assetId, version }
+    wanted = held
     const token = Symbol(assetId)
     inFlight.set(token, held)
     const loaded = await cache.acquire(held.assetId, SRGBColorSpace, held.version)
@@ -97,15 +98,13 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
     // can be asked for again; only if it is still the one wanted, or a loser would clear the
     // winner's claim.
     if (!loaded) {
-      if (wanted === assetId) {
-        wanted = null
-        askedUnder = undefined
-      }
+      if (wanted === held) wanted = null
       return
     }
 
-    // Overtaken while decoding: gives back what it acquired, which it never put on screen.
-    if (wanted !== assetId) {
+    // Overtaken while decoding: gives back what it acquired, which it never put on screen. By
+    // identity, so a second load of the same sky under a newer version overtakes the first.
+    if (wanted !== held) {
       give(held)
       return
     }
