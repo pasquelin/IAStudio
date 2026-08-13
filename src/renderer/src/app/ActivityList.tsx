@@ -33,11 +33,10 @@ export const GLYPHS: Record<ActivityLevel, string> = {
 }
 
 /**
- * Read by the rows of this file alone. It was exported beside `GLYPHS` for a home that would
- * draw the same levels, and no site ever did — the toasts, the only other reader, hold nothing
- * but failures and paint them all in the one red.
+ * Shared with the toasts, which stopped holding failures alone: a warning that paints itself red
+ * says the studio broke where it meant to say the studio is about to do something surprising.
  */
-const TINTS: Record<ActivityLevel, string> = {
+export const TINTS: Record<ActivityLevel, string> = {
   info: 'text-muted',
   warn: 'text-warning',
   error: 'text-danger',

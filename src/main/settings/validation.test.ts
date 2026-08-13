@@ -243,3 +243,24 @@ describe('the keys a settings file remaps', () => {
     expect(written.shortcuts?.overrides).toEqual({ 'canvas.undo': 'Meta+KeyZ' })
   })
 })
+
+/**
+ * A zod object STRIPS what it does not name, and this branch is reparsed on every settings write
+ * — which the project store does on every document saved. A field declared on the type but not on
+ * the schema therefore survives exactly until the next save, and nothing anywhere says why.
+ */
+describe('the account each project works under', () => {
+  it('keeps the links', () => {
+    const parsed = parsePartialSettings({
+      storage: { projectAccounts: { '/projects/a': 'account_two' } },
+    })
+
+    expect(parsed.storage?.projectAccounts).toEqual({ '/projects/a': 'account_two' })
+  })
+
+  it('refuses an empty account id rather than storing a link to nothing', () => {
+    expect(() =>
+      parsePartialSettings({ storage: { projectAccounts: { '/projects/a': '' } } }),
+    ).toThrow()
+  })
+})

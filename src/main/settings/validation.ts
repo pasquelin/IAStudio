@@ -73,6 +73,10 @@ const storage = z.object({
   // Bounded here as well as where it is written: the list is session state a hand-edited file
   // could grow without limit, and the home draws every entry it is given.
   recentProjects: z.array(recentProject).max(RECENT_PROJECTS_MAX).optional(),
+  // Declared here or dropped in silence: a zod object STRIPS what it does not name, and this
+  // branch is reparsed on every settings write — which the project store does on every document
+  // saved. The links would survive exactly until the next one.
+  projectAccounts: z.record(z.string().min(1), z.string().min(1)).optional(),
 })
 
 // Not checked for existence here: a path typed while the binary is not plugged in yet must be

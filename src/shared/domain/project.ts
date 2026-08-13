@@ -1,4 +1,5 @@
 import { byCodeUnit } from '../text'
+import type { AccountSummary } from './account'
 import { ASSET_FOLDERS } from './asset'
 import { DOCUMENTS_FOLDER } from './document'
 
@@ -115,6 +116,40 @@ export function withRecentProject(
   }
 
   return [entry, ...withoutRecentProject(recent, project.path)].slice(0, RECENT_PROJECTS_MAX)
+}
+
+/**
+ * What opening a project asks of the account list.
+ *
+ * `adopt` and `missing` both end with the project pointed at whatever is active. They stay apart
+ * because only one of them owes the user a sentence: a project that never had a key is not a
+ * project whose key went away.
+ */
+export type ProjectAccountPlan =
+  | { kind: 'keep' }
+  | { kind: 'adopt' }
+  | { kind: 'restore'; account: AccountSummary }
+  | { kind: 'missing' }
+
+/**
+ * Which account a project should open on, given the accounts held.
+ *
+ * Here rather than in the main process, for the reason `withRecentProject` gives above: this is
+ * the whole of the policy, and it is the sort of rule only a test ever checks.
+ *
+ * An absent link means "nothing said", never "no account" — removing a key and adding it back
+ * mints a fresh id, so a live key can leave a link naming nothing.
+ */
+export function planProjectAccount(
+  link: string | undefined,
+  accounts: readonly AccountSummary[],
+): ProjectAccountPlan {
+  if (link === undefined) return { kind: 'adopt' }
+
+  const held = accounts.find(account => account.id === link)
+  if (!held) return { kind: 'missing' }
+
+  return held.active ? { kind: 'keep' } : { kind: 'restore', account: held }
 }
 
 /**

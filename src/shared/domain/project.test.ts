@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { AccountSummary } from './account'
 import {
   listedAt,
+  planProjectAccount,
   projectsByCreation,
   renamedRecentProject,
   RECENT_PROJECTS_MAX,
@@ -173,5 +175,45 @@ describe('renaming a remembered project', () => {
     renamedRecentProject(list, '/a', 'Renamed')
 
     expect(list[0]?.name).toBe('A')
+  })
+})
+
+/**
+ * Which API key a project works under. The link itself lives in `storage.projectAccounts`, a
+ * branch of its own rather than a field of the shelf above: that list is bounded, evicted by
+ * opening date, and emptied of an entry whenever an OPENING FAILS. A project on a drive that was
+ * not plugged in would have come back on someone else's key, in silence.
+ */
+describe('planning the account a project opens on', () => {
+  const accounts = (activeId: string): AccountSummary[] =>
+    [
+      { id: 'account_one', name: 'Studio' },
+      { id: 'account_two', name: 'Client' },
+    ].map(account => ({ ...account, active: account.id === activeId }))
+
+  it('restores the linked account when it is held and not in force', () => {
+    expect(planProjectAccount('account_two', accounts('account_one'))).toEqual({
+      kind: 'restore',
+      account: { id: 'account_two', name: 'Client', active: false },
+    })
+  })
+
+  // The common case, and the one that must cost nothing: reopening a project already on its key.
+  it('keeps the active account when the link already names it', () => {
+    expect(planProjectAccount('account_one', accounts('account_one'))).toEqual({ kind: 'keep' })
+  })
+
+  // A project made before this was recorded, or made a moment ago.
+  it('adopts the active account when nothing is linked', () => {
+    expect(planProjectAccount(undefined, accounts('account_one'))).toEqual({ kind: 'adopt' })
+  })
+
+  /**
+   * Removing a key and adding it back mints a fresh id, so a live key can leave a link naming
+   * nothing. Told apart from "no link at all" because only one of the two owes the user a
+   * sentence: collapsing them would either warn on every project ever made, or never warn.
+   */
+  it('reports a link naming an account that is no longer held', () => {
+    expect(planProjectAccount('account_gone', accounts('account_one'))).toEqual({ kind: 'missing' })
   })
 })

@@ -9,7 +9,12 @@ import type { AccountSummary } from '@shared/domain/account'
 import { ASSET_HOST, ASSET_ID_PREFIX, type Asset, type AssetType } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
-import { withRecentProject } from '@shared/domain/project'
+import {
+  planProjectAccount,
+  withRecentProject,
+  type Project,
+  type ProjectAccountPlan,
+} from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settings-registry'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
@@ -96,7 +101,7 @@ import { createAssistQueue } from './scenario/assist-queue'
 import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
 import { promptAssistApiOf } from './scenario/prompt-assist-api'
 import { createElectronAdapter } from './settings/adapter'
-import { createSettingsStore, type SettingsStore } from './settings/store'
+import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
 import { setWindowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
@@ -459,6 +464,93 @@ export function createServices(settings: SettingsStore): Services {
   // time rather than at construction, which is the only order that ties the knot.
   let opened: ActivityLog | null = null
 
+  /**
+   * What pointing the open project at the key in force amounted to. `moved` is the only one worth
+   * a sentence: the project was working under another key, and the remote library just changed
+   * under it.
+   */
+  type Relink = { kind: 'unchanged' | 'adopted' | 'moved'; active: AccountSummary | null }
+
+  /**
+   * Points the open project at whichever account is active now.
+   *
+   * The link is the project's memory of its key, so it FOLLOWS a switch rather than fighting it:
+   * someone who moved to another account and worked an hour there must not find yesterday's key
+   * back tomorrow. Saying so is the caller's business — only a switch a USER made is worth a
+   * sentence, not one the studio made restoring a link.
+   *
+   * The active account is handed back with the verdict rather than looked up again: reading the
+   * book means decrypting the OS keychain, and the caller needs it to name the key it moved to.
+   */
+  const linkOpenProject = (): Relink => {
+    const current = project.current()
+    const accounts = settings.accounts()
+    const active = accounts.find(account => account.active) ?? null
+    if (!current || !active) return { kind: 'unchanged', active }
+
+    const links = settings.read().storage.projectAccounts
+    const before = links[current.path]
+    if (before === active.id) return { kind: 'unchanged', active }
+
+    settings.write({
+      storage: { projectAccounts: { ...links, [current.path]: active.id } },
+    })
+
+    // Whether the link EXISTED, not whether the account behind it is still held: removing the
+    // active account is a switch too, and the key it fell back to reads another library. Looking
+    // the previous account up would answer `null` there and swallow the very warning owed.
+    return { kind: before === undefined ? 'adopted' : 'moved', active }
+  }
+
+  /**
+   * Puts the studio back on the account a project last worked under, so reopening it lands on the
+   * library it was filled from rather than on whichever key was last switched to elsewhere.
+   *
+   * The plan is handed in rather than worked out here: the caller needs it to decide what to
+   * write, and reading the account book twice means opening the OS keychain twice.
+   */
+  const applyProjectAccount = (
+    plan: ProjectAccountPlan,
+    active: AccountSummary | undefined,
+    projectPath: string,
+  ): void => {
+    if (plan.kind === 'restore') {
+      let change: AccountChange
+      try {
+        change = settings.activateAccount(plan.account.id)
+      } catch (error) {
+        // A keychain the OS will not open this launch. The project still opens, on the active
+        // key: refusing to open a folder over which library it reads would be a worse trade.
+        log.warn('project', `restoring the account of ${projectPath} failed: ${String(error)}`)
+        return
+      }
+
+      // The same two beats `mutate` runs in the settings handlers, and conditioned the same way:
+      // the store derives whether the KEY moved, and purging every cache when it did not would
+      // cost a refetch of the model catalogue, the plan and the workflows for nothing.
+      if (change.credentialsChanged) credentials.changed()
+      broadcast(EVENTS.accountsChanged, change.accounts)
+
+      opened?.record({
+        level: 'info',
+        topic: 'project',
+        messageKey: 'activity.projectAccountRestored',
+        params: { name: plan.account.name },
+      })
+      return
+    }
+
+    // The key went away — removed, or removed and added back, which mints a new id.
+    if (plan.kind === 'missing' && active) {
+      opened?.record({
+        level: 'warn',
+        topic: 'project',
+        messageKey: 'activity.projectAccountMissing',
+        params: { name: active.name },
+      })
+    }
+  }
+
   // Same knot: the project store is built before the job manager and has to reach it. Read at
   // call time, and a no-op until there is one to reach.
   const resumeJobsOf = async (projectPath: string): Promise<void> => {
@@ -468,24 +560,44 @@ export function createServices(settings: SettingsStore): Services {
 
   let folderWatch: FolderWatch | null = null
 
+  /**
+   * Records the project that just opened: the shelf, the folder to reopen next launch, and which
+   * account it works under — in ONE settings write.
+   *
+   * One and not two, which is what a second call would cost: every write rebuilds the native menu
+   * and broadcasts the whole settings object to every window.
+   */
+  const settleOpenedProject = (current: Project): void => {
+    const stored = settings.read()
+    const accounts = settings.accounts()
+    const active = accounts.find(account => account.active)
+    const links = stored.storage.projectAccounts
+    const plan = planProjectAccount(links[current.path], accounts)
+
+    // `adopt` alone records a link. A `missing` one is NOT repointed: `persistedBook` answers an
+    // empty book when the keychain will not open this launch, so a link would be rewritten to the
+    // development account over a lock that lifts on the next launch — destroying what the user
+    // chose. The warning repeats until they pick a key, and picking one is what repoints it.
+    const adopted = plan.kind === 'adopt' ? active?.id : undefined
+
+    settings.write({
+      storage: {
+        lastProject: current.path,
+        // Written on the same beat as `lastProject`, and replicated with it: the home reads the
+        // shelf from the settings every window already holds.
+        recentProjects: withRecentProject(stored.storage.recentProjects, current, timestamp()),
+        ...(adopted ? { projectAccounts: { ...links, [current.path]: adopted } } : {}),
+      },
+    })
+
+    applyProjectAccount(plan, active, current.path)
+  }
+
   const project = createProjectStore({
     openCatalog: openCatalogThread,
     now: timestamp,
     onChange: current => {
-      if (current) {
-        settings.write({
-          storage: {
-            lastProject: current.path,
-            // Written on the same beat as `lastProject`, and replicated with it: the home reads
-            // the shelf from the settings every window already holds.
-            recentProjects: withRecentProject(
-              settings.read().storage.recentProjects,
-              current,
-              timestamp(),
-            ),
-          },
-        })
-      }
+      if (current) settleOpenedProject(current)
       broadcast(EVENTS.projectChanged, current)
 
       // Jobs left running by a previous session, picked up here rather than at boot: their
@@ -907,8 +1019,23 @@ export function createServices(settings: SettingsStore): Services {
     askUser,
     pickMedia: () => pickMedia(language()),
     // Another key means another catalogue: keeping a cache would show the previous account's
-    // contents under the new one.
-    onCredentialsChanged: credentials.changed,
+    // contents under the new one. And the open project remembers the switch, so reopening it
+    // tomorrow lands on the key it was actually worked under.
+    onCredentialsChanged: () => {
+      credentials.changed()
+
+      // Only a project that HAD a key is warned. Adopting one for the first time changes nothing
+      // about what the library holds, and a sentence there would fire on every project ever made.
+      const relink = linkOpenProject()
+      if (relink.kind === 'moved' && relink.active) {
+        opened?.record({
+          level: 'warn',
+          topic: 'project',
+          messageKey: 'activity.projectAccountSwitched',
+          params: { name: relink.active.name },
+        })
+      }
+    },
     authState: async () => {
       const state = await client.authState()
       const owner = ownerScope.current()
