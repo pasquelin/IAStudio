@@ -41,8 +41,44 @@ export type Project = {
 export type RecentProject = {
   path: string
   name: string
-  /** ISO 8601, stamped when it was last opened. */
+  /** ISO 8601, stamped when it was last opened. What decides which entry is evicted. */
   openedAt: string
+  /**
+   * ISO 8601, copied from the manifest — when the PROJECT was made, not when it was last touched.
+   * What decides the order it is listed in.
+   *
+   * Optional because a settings file written before 13 August has no such field, and dropping
+   * those entries to make it required would empty the list of anyone upgrading. Read through
+   * `listedAt`, never directly.
+   */
+  createdAt?: string
+}
+
+/**
+ * The date a project is ORDERED by, falling back to when it was last opened for an entry stored
+ * before `createdAt` existed. A missing value must not sort as the epoch: that would bury every
+ * project this studio already knows under the first one made after the upgrade.
+ */
+export function listedAt(entry: RecentProject): string {
+  return entry.createdAt ?? entry.openedAt
+}
+
+/**
+ * The list as the studio SHOWS it: newest project first, by the date it was created.
+ *
+ * Apart from the stored order on purpose, and the two answer different questions. Storage is
+ * ordered by opening because that is what decides which entry `RECENT_PROJECTS_MAX` evicts —
+ * sorting the stored array by creation instead would throw away the oldest project one owns, which
+ * may well be the one opened every morning. What the eye wants is a list that does not reshuffle
+ * under the click that opens something, and creation date is the only key a click cannot move.
+ *
+ * The path breaks a tie, so two projects made in the same second do not swap between renders.
+ */
+export function projectsByCreation(recent: readonly RecentProject[]): RecentProject[] {
+  return [...recent].sort((one, other) => {
+    const when = listedAt(other).localeCompare(listedAt(one))
+    return when === 0 ? one.path.localeCompare(other.path) : when
+  })
 }
 
 /**
@@ -52,7 +88,9 @@ export type RecentProject = {
 export const RECENT_PROJECTS_MAX = 12
 
 /**
- * The list after a project has been opened: newest first, one entry per path, bounded.
+ * The list after a project has been opened: most recently opened first, one entry per path,
+ * bounded. This is STORAGE order — what gets evicted — and not what any screen draws; see
+ * `projectsByCreation`.
  *
  * Pure, and here rather than in the main process, because it is the whole of the policy — and
  * because "opening a project I already have must not list it twice" is the sort of rule that
@@ -63,7 +101,12 @@ export function withRecentProject(
   project: Project,
   openedAt: string,
 ): RecentProject[] {
-  const entry: RecentProject = { path: project.path, name: project.manifest.name, openedAt }
+  const entry: RecentProject = {
+    path: project.path,
+    name: project.manifest.name,
+    openedAt,
+    createdAt: project.manifest.createdAt,
+  }
 
   return [entry, ...withoutRecentProject(recent, project.path)].slice(0, RECENT_PROJECTS_MAX)
 }

@@ -236,7 +236,9 @@ export function Tree<T extends TreeNode>({
   }
 
   return (
-    <div ref={scroller} className="h-full overflow-auto p-1">
+    // `p-2`, and it moves with `Collection`'s: the same row has to sit at the same distance
+    // from the panel edge whichever of the two is holding it.
+    <div ref={scroller} className="h-full overflow-auto p-2">
       <ul role="tree" style={{ height: virtualizer.getTotalSize() }} className="relative">
         {virtualizer.getVirtualItems().map(virtual => {
           const row = rows[virtual.index]

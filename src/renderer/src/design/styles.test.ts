@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BUTTON_NEUTRAL, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
+import { BUTTON_NEUTRAL, ROW_INK, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -115,6 +115,70 @@ describe('the row skin and the state it publishes', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+/**
+ * The loud fill, for the one list whose selection says WHERE ONE IS rather than what a gesture
+ * gathered. Every assertion here is a measurement, not a taste: `--color-accent` is pinned at
+ * 4.508:1 against pure white, so on that fill nothing but `accent-content` clears WCAG 1.4.3 —
+ * `text` reads 3.44 — and `FOCUS_RING` draws in `accent`, which on an accent fill is 1:1.
+ *
+ * `design/tokens.test.ts` owns the ratios themselves; what this file owns is that the skin and the
+ * two inks actually ASK for them.
+ */
+describe('the loud fill of a row that says where one is', () => {
+  it('fills with the accent itself, where the soft tone fills with its muted twin', () => {
+    expect(rowSkin(true, false, 'strong')).toContain('bg-accent')
+    expect(rowSkin(true, false, 'strong')).not.toContain('bg-accent-soft')
+    expect(rowSkin(true, false, 'soft')).toContain('bg-accent-soft')
+  })
+
+  // Soft is the default, so no existing caller can be repainted by this landing.
+  it('is not what a caller gets without asking', () => {
+    expect(rowSkin(true)).toBe(rowSkin(true, false, 'soft'))
+  })
+
+  /**
+   * The ring would otherwise be `accent` on `accent` — 1:1, and therefore no focus indicator at
+   * all on the single row where a keyboard most needs one. Overridden last so `cn` keeps it.
+   */
+  it('takes the ring off the accent it would otherwise be invisible against', () => {
+    expect(rowSkin(true, false, 'strong')).toContain('focus-visible:ring-accent-content')
+    expect(rowSkin(true, false, 'strong')).not.toContain('focus-visible:ring-accent ')
+    expect(rowSkin(true, false, 'soft')).toContain('focus-visible:ring-accent')
+  })
+
+  // Only a SELECTED row is filled, so an unselected one must keep the ordinary ring and hover.
+  it('changes nothing about a row that is not the one open', () => {
+    expect(rowSkin(false, false, 'strong')).toBe(rowSkin(false, false, 'soft'))
+  })
+
+  /**
+   * Both inks, and it has to be both: the colour can no longer separate a name from its subtitle
+   * on that fill, so the size does — which is only true if neither is left behind at 3.44:1.
+   */
+  it('takes both the name and its subtitle to the ink the accent needs', () => {
+    for (const ink of [ROW_INK, ROW_QUIET]) {
+      expect(ink).toContain('group-data-accented/row:text-accent-content')
+    }
+    // At rest they are still what they always were — the variant only fires under the attribute.
+    expect(ROW_INK).toContain('text-text')
+    expect(ROW_QUIET).toContain('text-muted')
+  })
+
+  /**
+   * The partner of the rule above, and the failure it guards is silent: the skin paints the accent
+   * while the words stay at 3.44:1, with nothing on screen saying so. `data-selected` alone cannot
+   * drive it — every picked row in the studio carries that one.
+   */
+  it('is never worn without the attribute the two inks read', () => {
+    const offenders = WRITTEN_SOURCES.filter(
+      ([path, source]) =>
+        path !== GUARDED && source.includes("'strong'") && !source.includes('data-accented'),
+    ).map(([path]) => path)
+
+    expect(offenders).toEqual([])
   })
 })
 

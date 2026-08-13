@@ -424,6 +424,20 @@ describe('the contrast of the inks', () => {
   })
 
   /**
+   * The other half of that pair, and it is the reason `rowSkin`'s loud fill swaps BOTH inks rather
+   * than only the fill: the studio's ordinary ink does NOT clear the bar on the accent. Measured
+   * rather than written in a comment beside the skin — a token nudged until `text` happened to pass
+   * would leave `ROW_INK`'s variant looking like decoration.
+   */
+  it('leaves the ordinary ink unreadable on that same fill, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+
+      expect(contrastRatio(tokens.text ?? '', tokens.accent ?? '')).toBeLessThan(AA_NORMAL_TEXT)
+    }
+  })
+
+  /**
    * The same ink under the POINTER, which was nobody's question and is where it failed. The
    * primary button hovered at `bg-accent/85` — an alpha, so the surface showed through: it
    * darkened the blue on a dark panel and LIGHTENED it on a light one, taking the white label to

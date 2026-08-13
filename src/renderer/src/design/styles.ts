@@ -80,10 +80,31 @@ export const TITLE_BAR_GHOST = cn(
 )
 
 /**
+ * How loudly a picked row is filled.
+ *
+ * `soft` is a row PICKED inside a list — one of several a gesture can move through, and the fill
+ * has to stay quiet enough that the list is still read as a list. `strong` is a row that says
+ * WHERE ONE IS: the project the studio has open, of which there is exactly one and which nothing
+ * in the list can move. The difference is not emphasis for its own sake — a soft fill answered the
+ * pointer so faintly that the open project was indistinguishable from a hovered one.
+ */
+export type RowTone = 'soft' | 'strong'
+
+/**
  * Hover, selection and keyboard focus of one line in a list. The same line must not light up
  * differently depending on whether a `Tree` or a `Collection` is holding it.
+ *
+ * `strong` costs two things beyond the fill, and both are measured rather than chosen: the ink and
+ * the focus ring. Nothing but pure white clears WCAG 1.4.3 on `accent` — the token is pinned at
+ * 4.508:1 against white, so `text` at 3.44 does not — hence `data-accented`, which `ROW_INK` and
+ * `ROW_QUIET` read to swap BOTH the name and its subtitle to `accent-content`. The size is what
+ * keeps the two apart on that fill, since the colour no longer can. And `FOCUS_RING` draws in
+ * `accent`, which on an accent fill is 1:1 and therefore no ring at all: it is overridden here,
+ * last-wins through `cn`, so a keyboard can still see where it is on the one row it matters on.
  */
-export function rowSkin(selected: boolean, disabled = false): string {
+export function rowSkin(selected: boolean, disabled = false, tone: RowTone = 'soft'): string {
+  const accented = selected && tone === 'strong'
+
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
   return cn(
     'rounded-(--radius-sc-sm)',
@@ -97,12 +118,13 @@ export function rowSkin(selected: boolean, disabled = false): string {
     // and it is left alone knowingly: `opacity-40` is already on it, and WCAG 1.4.3 exempts a
     // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
-    selected ? 'bg-accent-soft' : 'hover:bg-elevated',
+    selected ? (accented ? 'bg-accent' : 'bg-accent-soft') : 'hover:bg-elevated',
     // After the hover, which it undoes: a refused line that still lights up under the pointer
     // reads as pickable right until the click that does nothing. `MenuRow` reached the same
     // triplet on its own — this is where a list row gets it, so `Tree` inherits it too.
     disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
     FOCUS_RING,
+    accented && 'focus-visible:ring-accent-content',
   )
 }
 
@@ -120,6 +142,21 @@ export function rowSkin(selected: boolean, disabled = false): string {
 export const ROW_QUIET = cn(
   'text-muted transition-colors',
   'group-hover/row:text-text group-data-selected/row:text-text',
+  // On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
+  // pinned so that only pure white clears 4.5. Last in the string, so it beats both lifts.
+  'group-data-accented/row:text-accent-content',
+)
+
+/**
+ * The ink of the NAME in a row — the counterpart of `ROW_QUIET`, and it exists for one reason: on
+ * a strongly filled row the name has to leave `text` as well, or it sits at 3.44:1 on the accent.
+ *
+ * At rest it is simply `text`, which is what every row wore before. A site that renders no
+ * strongly-filled row carries the variant harmlessly: the attribute never appears.
+ */
+export const ROW_INK = cn(
+  'text-text transition-colors',
+  'group-data-accented/row:text-accent-content',
 )
 
 /**

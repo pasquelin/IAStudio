@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { LIST_ONLY, type CollectionState } from '@/helpers/collection-state'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
-import { rowSkin } from './styles'
+import { rowSkin, type RowTone } from './styles'
 import {
   columnsIn,
   GAP,
@@ -87,6 +87,12 @@ export type CollectionProps<T extends { id: string }> = {
    * Resolved by `useRowHeight`, which reads the gauge the stylesheet already applies.
    */
   rowHeight?: RowHeight
+  /**
+   * How loudly a picked row is filled. `strong` is for a list whose selection says WHERE ONE IS
+   * rather than which rows a gesture has gathered — see `RowTone`. Left at `soft` by every list
+   * that picks, which is all of them but the projects.
+   */
+  selectionTone?: RowTone
 }
 
 type CollectionRoles = { list?: 'listbox' | 'list'; cell?: 'option' | 'listitem' }
@@ -169,6 +175,7 @@ export function Collection<T extends { id: string }>({
   empty,
   footer,
   rowHeight = 'control',
+  selectionTone = 'soft',
 }: CollectionProps<T>) {
   const scroller = useRef<HTMLDivElement>(null)
   // Kept as the narrowed function rather than a boolean, so the cell below needs no second guard.
@@ -262,9 +269,10 @@ export function Collection<T extends { id: string }>({
   }
 
   return (
-    // A list is inset like the tree is, so the same row sits at the same distance from the
-    // panel edge in both; only a grid of cards needs room to breathe.
-    <div ref={scroller} className={cn('h-full overflow-auto', grid ? 'p-2' : 'p-1')}>
+    // A list is inset like the tree is, so the same row sits at the same distance from the panel
+    // edge in both — `Tree` carries the same step, and moving one without the other is what makes
+    // two lists of the same studio sit at two distances from the same edge.
+    <div ref={scroller} className="h-full overflow-auto p-2">
       {items.length === 0 ? (
         empty
       ) : (
@@ -303,6 +311,7 @@ export function Collection<T extends { id: string }>({
                       key={item.id}
                       index={index}
                       selected={selected.has(item.id)}
+                      tone={selectionTone}
                       disabled={isDisabled?.(item) === true}
                       tabbable={index === tabStop}
                       // A list row spans the collection; a card is sized by its grid column, and
@@ -344,6 +353,8 @@ type CollectionCellProps = {
   /** Position in `items`, so the arrows can name the cell they want focused. */
   index: number
   selected: boolean
+  /** How loudly the fill answers, when this cell is the selected one. */
+  tone: RowTone
   /**
    * Listed, reachable, announced — and inert. The handlers are still passed and ignored here
    * rather than withheld by the caller: dropping them would take the cell out of its `listbox`
@@ -371,6 +382,7 @@ type CollectionCellProps = {
 function CollectionCell({
   index,
   selected,
+  tone,
   disabled,
   tabbable,
   role,
@@ -388,13 +400,19 @@ function CollectionCell({
    * from `rowSkin`, which the tree draws its own rows with — the same line must not light up
    * differently depending on which panel it is listed in.
    */
-  const skin = cn('min-w-0', rowSkin(selected, disabled), className)
+  const skin = cn('min-w-0', rowSkin(selected, disabled, tone), className)
+  /**
+   * Published beside `data-selected` rather than folded into it: `ROW_INK` and `ROW_QUIET` have to
+   * tell an accent FILL from a soft one, since only the first takes their ink to white. A single
+   * attribute would make every picked row in the studio claim the louder ink.
+   */
+  const accented = (selected && tone === 'strong') || undefined
 
   // What the cell answers to is not what puts it in reach: a row that only opens is walked to
   // and pressed like one that only selects.
   if (!onSelect && !onActivate)
     return (
-      <div className={skin} data-selected={selected || undefined}>
+      <div className={skin} data-selected={selected || undefined} data-accented={accented}>
         {children}
       </div>
     )
@@ -408,6 +426,7 @@ function CollectionCell({
       // Read by `rowSkin`'s group where the ARIA below cannot be: a `listitem` has no selected
       // state to announce, and the explorer still paints what is open through this skin.
       data-selected={selected || undefined}
+      data-accented={accented}
       data-cell={index}
       tabIndex={tabbable ? 0 : -1}
       // An option has a selected state; a listitem has none. The explorer paints what is OPEN

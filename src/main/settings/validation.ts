@@ -61,6 +61,9 @@ const recentProject = z.object({
   path: z.string().min(1),
   name: z.string().min(1),
   openedAt: z.string().min(1),
+  // Optional, and it has to stay so: a file written before 13 August carries no such field, and
+  // requiring it would fail validation for every entry a user already had.
+  createdAt: z.string().min(1).optional(),
 })
 
 const storage = z.object({

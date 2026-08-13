@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { ROW_QUIET } from './styles'
+import { ROW_INK, ROW_QUIET } from './styles'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
@@ -46,7 +46,11 @@ export function Row({
   tip = TIP_RIGHT,
 }: RowProps) {
   return (
-    <div className="flex h-full items-center gap-2 px-1">
+    // `px-2`, not `px-1`: the fill this row sits in is painted by the list cell and reaches the
+    // row's own edge, so at one step the name touched the highlight it stands in. Raised for every
+    // list at once rather than for the one panel it was noticed in — a row that breathes in the
+    // projects and not in the models is the drift this component exists to prevent.
+    <div className="flex h-full items-center gap-2 px-2">
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">
@@ -56,13 +60,13 @@ export function Row({
         <p
           {...tip(title, false, hint)}
           className={cn(
-            'truncate text-xs leading-tight transition-colors',
+            'truncate text-xs leading-tight',
             // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a
             // scene node still selected and dragged, so the exemption WCAG 1.4.3 grants a disabled
             // control does not cover either. Lifted on the same two states as the subtitle below —
             // 3.51:1 on `elevated`, 3.25 on `accent-soft` — and the strike-through, with the
             // crossed-out eye beside it, is what goes on saying the row is hidden.
-            muted ? cn(ROW_QUIET, 'line-through') : 'text-text',
+            muted ? cn(ROW_QUIET, 'line-through') : ROW_INK,
           )}
         >
           {title}
