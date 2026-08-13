@@ -6,6 +6,11 @@ import type { ViewportEnvironment } from './environment'
 export type SkyBinding = {
   /** Shows what the document asks for, loading the sky if it is one. Safe to call on every apply. */
   apply: (environment: ViewportEnvironment, wanted: EnvironmentRef) => Promise<void>
+  /**
+   * Asks again for the sky it shows, and loads it afresh if the catalogue says the file was
+   * rewritten since. Nothing at all otherwise, and nothing before the first `apply`.
+   */
+  refresh: () => Promise<void>
   /** Whether a sky owns the background — true from the moment one is asked for, not once it decodes. */
   showsSky: () => boolean
   /** Gives the reference back. The viewport is going away, or is being shown something else. */
@@ -35,8 +40,15 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
    */
   type Held = { assetId: string; version: string | undefined }
 
-  /** Settles the races. */
-  let wanted: string | null = null
+  /**
+   * Settles the races, and does it by IDENTITY rather than by asset id: two loads of the SAME sky
+   * can be in flight at once now that a rewritten file is a change — the picture and its
+   * replacement — and comparing ids would let whichever decodes last win, which is the pre-edit
+   * one about half the time. `texture-binding` settles its own races the same way.
+   */
+  let wanted: Held | null = null
+  /** What the last `apply` was given, so a refresh can play it again. */
+  let last: { environment: ViewportEnvironment; asked: EnvironmentRef } | null = null
   /** What `scene.background` holds, which is not what was last asked for while one decodes. */
   let shown: Held | null = null
   /** Every reference a decode still carries: one name could hold only the last of them. */
@@ -54,57 +66,66 @@ export function createSkyBinding(cache: TextureCache, paintBackground: () => voi
     wanted = null
   }
 
+  const apply = async (environment: ViewportEnvironment, asked: EnvironmentRef): Promise<void> => {
+    last = { environment, asked }
+    const assetId = asked.kind === 'skybox' ? asked.assetId : null
+    const version = assetId === null ? undefined : cache.versionOf(assetId)
+    // The version too, or a sky whose file was rewritten under the same id would be recognised
+    // as « already shown » and the edit would never reach the backdrop.
+    if (assetId === (wanted?.assetId ?? null) && version === wanted?.version) return
+
+    if (!assetId) {
+      release()
+      environment.setTexture(null)
+      environment.setStudio()
+      paintBackground()
+      return
+    }
+
+    const held: Held = { assetId, version }
+    wanted = held
+    const token = Symbol(assetId)
+    inFlight.set(token, held)
+    const loaded = await cache.acquire(held.assetId, SRGBColorSpace, held.version)
+
+    // Drained by `release` while this decoded: the reference is already back, and giving it
+    // twice would take the count to zero under whoever else holds the same sky.
+    if (!inFlight.delete(token)) return
+
+    // Failure first, because it holds nothing to give back — `ref-cache` drops the entry. Asked
+    // after the overtaken case, a sky that both failed and lost would hand back a reference it
+    // never took. `wanted` stops claiming it so `release` does not either, and so the same sky
+    // can be asked for again; only if it is still the one wanted, or a loser would clear the
+    // winner's claim.
+    if (!loaded) {
+      if (wanted === held) wanted = null
+      return
+    }
+
+    // Overtaken while decoding: gives back what it acquired, which it never put on screen. By
+    // identity, so a second load of the same sky under a newer version overtakes the first.
+    if (wanted !== held) {
+      give(held)
+      return
+    }
+
+    environment.setTexture(loaded)
+    environment.refresh()
+
+    // After the swap, never before: the old texture is bound to the background until then.
+    const previous = shown
+    shown = held
+    if (previous) give(previous)
+  }
+
   return {
     // Either: a sky still decoding must not have its backdrop repainted underneath it, and one
     // already painted still owns the background even when the sky asked for after it failed.
     showsSky: () => wanted !== null || shown !== null,
     release,
-
-    apply: async (environment, asked) => {
-      const assetId = asked.kind === 'skybox' ? asked.assetId : null
-      if (assetId === wanted) return
-
-      if (!assetId) {
-        release()
-        environment.setTexture(null)
-        environment.setStudio()
-        paintBackground()
-        return
-      }
-
-      wanted = assetId
-      const held: Held = { assetId, version: cache.versionOf(assetId) }
-      const token = Symbol(assetId)
-      inFlight.set(token, held)
-      const loaded = await cache.acquire(held.assetId, SRGBColorSpace, held.version)
-
-      // Drained by `release` while this decoded: the reference is already back, and giving it
-      // twice would take the count to zero under whoever else holds the same sky.
-      if (!inFlight.delete(token)) return
-
-      // Failure first, because it holds nothing to give back — `ref-cache` drops the entry. Asked
-      // after the overtaken case, a sky that both failed and lost would hand back a reference it
-      // never took. `wanted` stops claiming it so `release` does not either, and so the same sky
-      // can be asked for again; only if it is still the one wanted, or a loser would clear the
-      // winner's claim.
-      if (!loaded) {
-        if (wanted === assetId) wanted = null
-        return
-      }
-
-      // Overtaken while decoding: gives back what it acquired, which it never put on screen.
-      if (wanted !== assetId) {
-        give(held)
-        return
-      }
-
-      environment.setTexture(loaded)
-      environment.refresh()
-
-      // After the swap, never before: the old texture is bound to the background until then.
-      const previous = shown
-      shown = held
-      if (previous) give(previous)
-    },
+    apply,
+    // Played again rather than compared here: `apply` is what knows whether the version moved,
+    // and a viewport that has shown nothing yet has nothing to ask for.
+    refresh: () => (last ? apply(last.environment, last.asked) : Promise.resolve()),
   }
 }

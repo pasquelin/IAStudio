@@ -1,6 +1,6 @@
 import { SRGBColorSpace } from 'three'
 import type { AdjustmentStack } from '@shared/domain/adjustments'
-import { assetUrl } from '@shared/domain/asset'
+import { assetUrl, versionedUrl } from '@shared/domain/asset'
 import { faceFileNames } from '@shared/domain/skybox'
 import type { ExportedFile } from '@shared/ipc'
 import { createAdjustPass } from '../gpu/passes/adjust'
@@ -35,11 +35,20 @@ export type SkyboxExportPort = (request: SkyboxExportRequest) => Promise<Exporte
 export type SkyboxExportPortOptions = {
   /** Injected for the same reason the renderer's is: jsdom decodes no image. */
   loadTexture: TextureSource
+  /**
+   * When the source was last written, as the viewport reads it. Absent asks for the bare URL —
+   * which is where the browser keeps the picture an edit REPLACED, so an export run after a ⌘S
+   * would write the six faces from the old panorama while the viewport shows the new one.
+   */
+  assetVersion?: (assetId: string) => string | undefined
 }
 
 const PNG_EXTENSION = '.png'
 
-export function createSkyboxExportPort({ loadTexture }: SkyboxExportPortOptions): SkyboxExportPort {
+export function createSkyboxExportPort({
+  loadTexture,
+  assetVersion,
+}: SkyboxExportPortOptions): SkyboxExportPort {
   return ({ assetId, adjustments, name, size }) => {
     // Filled while the sources are in hand: `draw` is handed the frame's size — one face — and
     // the graded picture in between is the source's, which nothing else carries across.
@@ -47,7 +56,7 @@ export function createSkyboxExportPort({ loadTexture }: SkyboxExportPortOptions)
 
     return runOffscreenPass({
       load: loadTexture,
-      urls: [assetUrl(assetId)],
+      urls: [versionedUrl(assetUrl(assetId), assetVersion?.(assetId))],
 
       pass: sources => {
         const [source] = sources

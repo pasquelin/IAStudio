@@ -1,4 +1,4 @@
-import { SRGBColorSpace, type ColorSpace } from 'three'
+import { SRGBColorSpace, Texture, type ColorSpace } from 'three'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { EnvironmentRef } from '@shared/domain/scene'
 import { createTextureCache } from '../scene/texture-cache'
@@ -41,6 +41,62 @@ describe('createSkyBinding', () => {
     await sky.apply(environment, SKY)
 
     expect(source.load).toHaveBeenCalledTimes(1)
+  })
+
+  /**
+   * A sky edited in Images and saved keeps its id, so « already shown » was true forever: the
+   * backdrop stayed on the picture the edit replaced until the document was reopened.
+   */
+  it('reads the file again once the catalogue says it was rewritten', async () => {
+    let version = 'before'
+    const sky = createSkyBinding(
+      createTextureCache(source.load, silent, () => version),
+      paint,
+    )
+    const environment = fakeEnvironment()
+
+    await sky.apply(environment, SKY)
+    await sky.refresh()
+    expect(source.load).toHaveBeenCalledTimes(1)
+
+    version = 'after'
+    await sky.refresh()
+
+    expect(source.load).toHaveBeenCalledTimes(2)
+    expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
+  })
+
+  it('refreshes nothing before a sky has been asked for', async () => {
+    await binding().refresh()
+
+    expect(source.load).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A 4K panorama decodes for hundreds of milliseconds, so a ⌘S landing mid-decode puts TWO loads
+   * of the same sky in flight. Settled by asset id, the older one wins whenever it resolves last —
+   * and the backdrop stays on exactly the picture the edit replaced.
+   */
+  it('shows the newer version even when the older one decodes last', async () => {
+    let version = 'v1'
+    const settle = new Map<string, (texture: Texture) => void>()
+    const load = vi.fn((url: string) => new Promise<Texture>(resolve => settle.set(url, resolve)))
+    const sky = createSkyBinding(
+      createTextureCache(load, silent, () => version),
+      paint,
+    )
+    const environment = fakeEnvironment()
+
+    const first = sky.apply(environment, SKY)
+    version = 'v2'
+    const second = sky.apply(environment, SKY)
+
+    const newer = new Texture()
+    settle.get('scenario://asset/sky-1?v=v2')?.(newer)
+    settle.get('scenario://asset/sky-1?v=v1')?.(new Texture())
+    await Promise.all([first, second])
+
+    expect(environment.setTexture).toHaveBeenLastCalledWith(newer)
   })
 
   /**

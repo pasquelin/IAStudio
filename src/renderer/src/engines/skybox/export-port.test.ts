@@ -31,6 +31,20 @@ describe('the skybox export port', () => {
     expect(loadTexture.mock.calls[0]?.[0]).toContain('a-sky')
   })
 
+  /**
+   * The viewport reloads a rewritten panorama under `?v=…`; a bare URL here is where the browser
+   * keeps the picture that edit replaced. Without the stamp, what one sees and what one exports
+   * were two different skies.
+   */
+  it('asks for the version the viewport is showing, not for the bare url', async () => {
+    const loadTexture = vi.fn((_url: string) => Promise.resolve(decoded(4096, 2048)))
+    const port = createSkyboxExportPort({ loadTexture, assetVersion: () => 'after' })
+
+    await expect(port(request)).rejects.toThrow()
+
+    expect(loadTexture.mock.calls[0]?.[0]).toBe('scenario://asset/a-sky?v=after')
+  })
+
   it('decodes the sky as a colour, which is what the shared loader does not do', async () => {
     const texture = decoded(4096, 2048)
     const port = createSkyboxExportPort({ loadTexture: () => Promise.resolve(texture) })

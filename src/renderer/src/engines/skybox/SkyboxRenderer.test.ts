@@ -226,6 +226,31 @@ describe('the renderer of a skybox', () => {
       expect(source.load).toHaveBeenCalledWith('scenario://asset/sky-1')
     })
 
+    /**
+     * A panorama opened in Images, retouched and saved keeps its id, so the engine would never
+     * ask for it again — the sky judged an edit that had already happened.
+     */
+    it('reads the picture again once the catalogue says it was rewritten', async () => {
+      let version = 'before'
+      const renderer = new SkyboxRenderer({
+        onSunChange,
+        loadTexture: source.load,
+        assetVersion: () => version,
+      })
+      mountedRenderers.push(renderer)
+      renderer.mount(host)
+      await applied(renderer, skyOf('sky-1'))
+
+      renderer.refreshSource()
+      expect(source.load).toHaveBeenCalledTimes(1)
+
+      version = 'after'
+      renderer.refreshSource()
+
+      await vi.advanceTimersByTimeAsync(0)
+      expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
+    })
+
     it('grades the picture it was given into the background', async () => {
       await applied(mounted(), skyOf('sky-1'))
 

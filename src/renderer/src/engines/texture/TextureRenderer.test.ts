@@ -364,5 +364,28 @@ describe('the texture preview', () => {
 
       expect(source.load).toHaveBeenCalledTimes(1)
     })
+
+    /**
+     * A channel opened in Images, painted and saved keeps its id — so nothing here would ever ask
+     * for it again, and the preview judged a material on the picture the edit replaced.
+     */
+    it('reads a channel again once the catalogue says its picture was rewritten', async () => {
+      let version = 'before'
+      const renderer = new TextureRenderer({
+        loadTexture: source.load,
+        assetVersion: () => version,
+      })
+      renderer.mount(host)
+      await applied(renderer, channelOf('baseColor', 'base-1'))
+
+      renderer.refreshMaps()
+      expect(source.load).toHaveBeenCalledTimes(1)
+
+      version = 'after'
+      renderer.refreshMaps()
+
+      await vi.waitFor(() => expect(source.load).toHaveBeenCalledTimes(2))
+      expect(source.load).toHaveBeenLastCalledWith('scenario://asset/base-1?v=after')
+    })
   })
 })

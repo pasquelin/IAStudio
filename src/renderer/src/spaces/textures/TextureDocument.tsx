@@ -18,6 +18,8 @@ import { textureOf, useTextures } from '@/stores/textures'
 import { placeTextureChannel } from './place-channel'
 import { usePosterUrl } from '@/hooks/usePosterUrl'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+import { useShelfRefresh } from '@/hooks/useShelfRefresh'
+import { assetVersionOf } from '@/stores/assets'
 
 /**
  * A texture handed to an engine, from the row of the native menu that was picked.
@@ -101,7 +103,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
     const element = host.current
     if (!element) return
 
-    const renderer = new TextureRenderer({ loadTexture })
+    const renderer = new TextureRenderer({ loadTexture, assetVersion: assetVersionOf })
     renderer.mount(element)
     engine.current = renderer
 
@@ -115,6 +117,8 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.apply(texture)
   }, [texture])
+
+  useShelfRefresh(() => engine.current?.refreshMaps())
 
   /**
    * A picture dropped on the viewport becomes the base colour. It is the one channel a texture

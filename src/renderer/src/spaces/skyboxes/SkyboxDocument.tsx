@@ -15,7 +15,9 @@ import { setSkyboxSource, skyboxOf, useSkyboxes } from '@/stores/skyboxes'
 import { useDocuments } from '@/stores/documents'
 import { useSkyboxViews, skyboxViewOf } from '@/stores/skybox-views'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
+import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { assetVersionOf } from '@/stores/assets'
 import type { CommandId } from '@shared/domain/command'
 
 /**
@@ -44,7 +46,7 @@ async function exportSkybox(documentId: string, size: number): Promise<void> {
 
     const { createSkyboxExportPort } = await import('@/engines/skybox/export-port')
 
-    const files = await createSkyboxExportPort({ loadTexture })({
+    const files = await createSkyboxExportPort({ loadTexture, assetVersion: assetVersionOf })({
       assetId: sky.source.assetId,
       adjustments: sky.adjustments,
       name,
@@ -91,6 +93,7 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
 
     const renderer = new SkyboxRenderer({
       loadTexture,
+      assetVersion: assetVersionOf,
       onSunChange: (angles: SphericalAngles) =>
         useSkyboxes.getState().runCommand(documentId, setSunAngles(angles)),
     })
@@ -107,6 +110,8 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   useEffect(() => {
     engine.current?.apply(content)
   }, [content])
+
+  useShelfRefresh(() => engine.current?.refreshSource())
 
   useEffect(() => {
     engine.current?.setFieldOfView(fieldOfView)

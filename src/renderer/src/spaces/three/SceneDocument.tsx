@@ -19,7 +19,8 @@ import { reportFailure } from '@/services/diagnostics'
 import { useSettings } from '@/stores/settings'
 import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
-import { assetsById, useAssets } from '@/stores/assets'
+import { assetVersionOf } from '@/stores/assets'
+import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 import { selectedNodes, type NodeMove } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
@@ -93,7 +94,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   })
 
   const scene = useScenes(state => sceneOf(state, documentId))
-  const assets = useAssets(state => state.items)
   const modified = useScenes(state => isSceneDirty(state, documentId))
   const title = useDocuments(state => state.documents[documentId]?.title)
   const bindings = useBindingOverrides()
@@ -124,9 +124,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
       onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
       onStats: (scene, selected) => setStats({ scene, selected }),
-      // Read at the moment a slot asks, never captured: the shelf is re-read after every write,
-      // and a stamp closed over here would be the one from the mount.
-      assetVersion: assetId => assetsById(useAssets.getState()).get(assetId)?.localChangedAt,
+      assetVersion: assetVersionOf,
     })
 
     renderer.mount(element)
@@ -148,14 +146,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     engine.current?.apply(scene)
   }, [scene])
 
-  /**
-   * The shelf was re-read, so a picture a slot names may have been overwritten since. Costs
-   * nothing when no stamp moved — every binding compares what it holds before letting go — and it
-   * is the last link of « extract a texture, edit it, and the model follows ».
-   */
-  useEffect(() => {
-    engine.current?.refreshTextures()
-  }, [assets])
+  useShelfRefresh(() => engine.current?.refreshTextures())
 
   // Same for the viewport settings, which were three constants inside the engine.
   useEffect(() => {

@@ -1014,6 +1014,9 @@ export class SceneRenderer {
       const node = this.applied.get(id)
       if (node?.type === 'model') maps.apply(node.model.textures)
     }
+    // The environment too: a skybox asset is a picture of the project like any other, and the
+    // lighting it drives is what would otherwise stay on the image the edit replaced.
+    void this.sky.refresh()
   }
 
   /**
