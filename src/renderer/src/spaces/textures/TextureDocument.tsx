@@ -5,6 +5,10 @@ import { PICTURES, type Asset } from '@shared/domain/asset'
 import type { CommandId } from '@shared/domain/command'
 import { safeFileName, type TextureExportTarget } from '@shared/domain/texture-export'
 import { exportChannelsOf } from '@/engines/texture/export/channels'
+import { pixelEditorIntent } from '@/helpers/asset-intents'
+import { cn } from '@/helpers/cn'
+import { openAsset } from '@/helpers/open-asset'
+import { TIP_TOP } from '@/helpers/tooltip'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -19,7 +23,8 @@ import { placeTextureChannel } from './place-channel'
 import { usePosterUrl } from '@/hooks/usePosterUrl'
 import { useRestoredDocument } from '@/hooks/useRestoredDocument'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
-import { assetVersionOf } from '@/stores/assets'
+import { assetsById, assetVersionOf, useAssets } from '@/stores/assets'
+import { FOCUS_RING } from '@/design/styles'
 
 /**
  * A texture handed to an engine, from the row of the native menu that was picked.
@@ -130,6 +135,11 @@ export function TextureDocument({ documentId }: { documentId: string }) {
 
   const flat = inspected ? texture.channels[inspected] : undefined
   const flatPoster = usePosterUrl(flat?.assetId)
+  const flatAsset = useAssets(state => (flat ? assetsById(state).get(flat.assetId) : undefined))
+  // Where its PIXELS are edited, which is not this space: a texture is assembled here and painted
+  // in Images. Null leaves the picture there to be looked at and nothing more — a channel whose
+  // asset the shelf is not holding, or one that is not on this disk.
+  const pixels = flatAsset ? pixelEditorIntent(flatAsset) : null
 
   return (
     <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
@@ -139,7 +149,28 @@ export function TextureDocument({ documentId }: { documentId: string }) {
       {/* Laid over the viewport rather than unmounting it: a WebGL context does not survive being
           rebuilt for a glance at a normal map, and the engine would reload all eight channels. */}
       {flat && (
-        <div className="bg-viewport absolute inset-0 flex items-center justify-center p-4">
+        // A button rather than a frame: the picture on show is one double-click from the space
+        // that repaints it, which is the last step of « take a model's texture out, edit it, and
+        // the model follows ». The same gesture the shelf offers, so it is the same two words.
+        <button
+          type="button"
+          disabled={!pixels}
+          {...TIP_TOP(t('assets.editPixels'), false, t('assets.editPixelsHint'))}
+          onDoubleClick={() => {
+            if (flatAsset && pixels) void openAsset(flatAsset, pixels)
+          }}
+          // Enter is what the keyboard has instead of the double-click, as `Collection` has it.
+          onKeyDown={event => {
+            if (event.key !== 'Enter' || !flatAsset || !pixels) return
+            event.preventDefault()
+            void openAsset(flatAsset, pixels)
+          }}
+          className={cn(
+            'bg-viewport absolute inset-0 flex items-center justify-center border-none p-4',
+            pixels ? 'cursor-pointer' : 'cursor-default',
+            FOCUS_RING,
+          )}
+        >
           <img
             src={flatPoster}
             alt=""
@@ -147,7 +178,7 @@ export function TextureDocument({ documentId }: { documentId: string }) {
             // smoothing hides exactly the noise one is looking for.
             className="max-h-full max-w-full object-contain [image-rendering:pixelated]"
           />
-        </div>
+        </button>
       )}
 
       {!texture.channels.baseColor && !flat && (

@@ -1,11 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import type { TextureExportCommand, FolderExportRequest } from '@shared/ipc'
 import type { TextureExportTarget } from '@shared/domain/texture-export'
 import { setChannel } from '@/engines/texture/commands'
 import { reportFailure } from '@/services/diagnostics'
 import { installFakeBridge } from '@/services/fake-bridge'
+import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
@@ -25,6 +27,9 @@ vi.mock('@/engines/texture/TextureRenderer', () => ({
   },
 }))
 
+const openAsset = vi.fn()
+vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+
 const DOCUMENT = 'tex-1'
 
 const fill = (channel: 'baseColor' | 'normal', assetId = 'img-1'): void => {
@@ -33,9 +38,21 @@ const fill = (channel: 'baseColor' | 'normal', assetId = 'img-1'): void => {
     .runCommand(DOCUMENT, setChannel(channel, { assetId, origin: 'imported', width: 8, height: 8 }))
 }
 
+const shelved = (overrides: Partial<Asset> = {}): Asset => ({
+  id: 'normal-1',
+  name: 'Robot — Normale',
+  type: 'texture',
+  location: 'local',
+  tags: [],
+  createdAt: '2026-08-13T10:00:00.000Z',
+  ...overrides,
+})
+
 beforeEach(() => {
   installTexture(DOCUMENT)
   useTextureViews.setState({ inspected: {} })
+  useAssets.setState({ items: [] })
+  openAsset.mockClear()
 })
 
 /**
@@ -104,6 +121,35 @@ describe('TextureDocument', () => {
       render(<TextureDocument documentId={DOCUMENT} />)
 
       expect(screen.queryByRole('presentation')).toBeNull()
+    })
+
+    /**
+     * The last step of « take a model's texture out, edit it, and the model follows »: a texture
+     * is assembled here and its pixels are painted in Images, which nothing but the shelf's own
+     * menu row could reach.
+     */
+    it('opens the picture where its pixels are edited, on a double-click', async () => {
+      fill('normal', 'normal-1')
+      useAssets.setState({ items: [shelved()] })
+      useTextureViews.getState().inspect(DOCUMENT, 'normal')
+      render(<TextureDocument documentId={DOCUMENT} />)
+
+      await userEvent.dblClick(screen.getByRole('button', { name: 'Modifier l’image' }))
+
+      expect(openAsset).toHaveBeenCalledWith(
+        shelved(),
+        expect.objectContaining({ workspace: 'image' }),
+      )
+    })
+
+    /** A row the catalogue holds nowhere, and one whose bytes are not on this disk. */
+    it('refuses the gesture rather than opening a tab on pixels it cannot reach', () => {
+      fill('normal', 'normal-1')
+      useAssets.setState({ items: [shelved({ location: 'cloud' })] })
+      useTextureViews.getState().inspect(DOCUMENT, 'normal')
+      render(<TextureDocument documentId={DOCUMENT} />)
+
+      expect(screen.getByRole('button', { name: 'Modifier l’image' })).toBeDisabled()
     })
 
     // Two documents, one session store: the flat view of one must not follow into the other.

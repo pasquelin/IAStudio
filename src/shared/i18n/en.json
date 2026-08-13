@@ -604,6 +604,10 @@
     "fileTextureHint": "Leaves this channel as the model’s own file carries it",
     "chooseTexture": "Choose a texture",
     "clearTexture": "Remove the texture",
+    "modelOverrides": "Swap a map",
+    "noModelTexture": "No picture was taken out of this model.",
+    "openTexture": "Open {{name}}",
+    "openTextureHint": "Double-click opens this picture in the Textures space",
     "fields": {
       "width": "Width",
       "height": "Height",

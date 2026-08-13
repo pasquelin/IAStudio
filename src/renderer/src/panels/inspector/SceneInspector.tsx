@@ -126,6 +126,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
               own file carries, so spreading one over a selection would dress meshes that never
               had that slot. */}
           <ModelTexturesSection
+            assetId={model.model.assetId}
             textures={model.model.textures}
             onChange={textures => edit.run(setModelTextures(model.id, textures))}
           />
