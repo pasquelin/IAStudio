@@ -10,6 +10,7 @@ import { isDevelopment } from '@main/environment'
 import { registerIpc } from '@main/ipc/register'
 import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
+import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
 import { lockNavigation } from '@main/window/navigation'
 import { lockPermissions, rendererOrigin } from '@main/window/permissions'
@@ -52,32 +53,17 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
   // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
-  //
-  // Electron only waits for this if it is told to. Without the `preventDefault`, the process is
-  // torn down while the round trip to the catalogue thread is still out, and the line this is
-  // here to save is the one that goes.
-  // `will-quit` rather than `before-quit`, and the difference is the whole point: `before-quit`
-  // fires before the windows are asked, so a window that refuses to close — one holding unsaved
-  // work — left the journal already flushed and the dictation already disposed for a quit that
-  // never happened, and the flag below never let a later quit flush again.
-  let leaving = false
-  app.on('will-quit', event => {
-    if (leaving) return
-
-    event.preventDefault()
-    leaving = true
+  const settleBeforeQuit = (): Promise<unknown> => {
     // Not awaited with the rest: the recognition process holds no state worth settling, and a
     // model still loading would otherwise keep the studio on screen for seconds.
     services.dictation.dispose()
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.
-    void Promise.all([
-      services.journal.flush(),
-      services.flushJobs(),
-      services.project.settled(),
-    ]).finally(() => app.quit())
-  })
+    return Promise.all([services.journal.flush(), services.flushJobs(), services.project.settled()])
+  }
+
+  app.on('will-quit', createShutdown({ settle: settleBeforeQuit, quit: () => app.quit() }))
 
   // `deferShow`: the window stays hidden until the splash is gone, so one does not appear over
   // the other. Only a second launch overrides that — see `revealWindow`.
@@ -105,6 +91,7 @@ function startUp(splash: Splash, settings: SettingsStore): void {
 
   // Subscribed here, not beside the lock: reached any earlier, `showMainWindow` would find no
   // window yet and open one before `registerIpc` above — a renderer whose every `invoke` fails.
+  // Never fires in development, where no lock is held: this path is exercised by a packaged run.
   app.on('second-instance', showMainWindow)
 }
 
@@ -144,5 +131,20 @@ function bootstrap(): void {
 
 // One studio per machine: two would share one settings file and one WAL catalogue opened
 // without a busy timeout. Must stay below `setName` — the lock file lives under `userData`.
+//
+// Development starts anyway, and that is what keeps hot reload alive: a rebuild of anything the
+// main process bundles — `shared/` included, so a translation counts — makes electron-vite kill
+// this process and start the next in the same breath. Electron takes seconds to die, so the new
+// one finds the lock still held; exiting here would make electron-vite take the dev server down
+// with us, and the window left on screen would point at a server that no longer answers.
+//
+// Said out loud rather than waved through: the overlap is usually the second or two an old
+// process needs to die, but two `pnpm start` runs — one per worktree, which this repository
+// invites — overlap for as long as both are up, and they then reopen the same project catalogue.
+// SQLite takes one writer; the loser comes back with no project open, and `services` reduces
+// that to a warning. Without this line nothing anywhere would say why.
 if (app.requestSingleInstanceLock()) bootstrap()
-else app.quit()
+else if (isDevelopment) {
+  log.warn('startup', 'another studio holds the single-instance lock: starting anyway (dev)')
+  bootstrap()
+} else app.quit()
