@@ -1866,6 +1866,7 @@
     "noAccount": "Aucune clé API enregistrée. Ajoutez-en une dans les réglages pour voir votre consommation.",
     "noBalance": "L’API Scenario n’expose pas de solde : ces chiffres sont ce qui a été dépensé, jamais ce qu’il reste.",
     "mixedAccounts": "Le total additionne des clés facturées séparément — il ne correspond à aucune facture.",
+    "countedInUtc": "Les jours et les heures de cet écran sont comptés en UTC, comme l’API les date. Une génération lancée en soirée peut donc figurer sur la journée précédente.",
     "total": "Total consommé",
     "discount": "Remises",
     "jobs": "Générations",

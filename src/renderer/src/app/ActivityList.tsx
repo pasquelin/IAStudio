@@ -54,6 +54,9 @@ function timeOf(at: string, language: string): string {
   const stamp = new Date(at)
   if (Number.isNaN(stamp.getTime())) return ''
 
+  // No `timeZone`, and that is the decision rather than the omission: this is the clock on the
+  // wall of whoever is working, for things that just happened in front of them. The usage window
+  // is the one that had to leave it — its rows sit beside totals the API counted in UTC.
   return kept(
     FORMATTERS,
     language,

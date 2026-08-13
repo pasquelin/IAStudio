@@ -160,15 +160,29 @@ describe('formatMoment', () => {
    * decided; the seconds go with it, which no reader of a creation date was counting.
    */
   it('writes a stamp the way the reader reads one', () => {
-    expect(formatMoment('2026-08-12T10:47:33Z', 'fr')).toMatch(/^12\/08\/2026/)
-    expect(formatMoment('2026-08-12T10:47:33Z', 'en-US')).toMatch(/^8\/12\/26/)
+    expect(formatMoment('2026-08-12T10:47:33Z', 'fr', 'utc')).toMatch(/^12\/08\/2026/)
+    expect(formatMoment('2026-08-12T10:47:33Z', 'en-US', 'utc')).toMatch(/^8\/12\/26/)
+  })
+
+  /**
+   * The zone is a decision, so the two answers have to differ — and this is the case the usage
+   * window had no way of stating while the zone was inherited from the machine.
+   *
+   * `TZ` is set for the whole run (`vitest.config.ts`), because a stamp read in the runner's own
+   * zone is a test that passes in London and fails in Paris.
+   */
+  it('reads a stamp against the clock it is handed, not the machine s', () => {
+    const lateEvening = '2026-08-13T23:30:00Z'
+
+    expect(formatMoment(lateEvening, 'fr', 'utc')).toMatch(/^13\/08\/2026/)
+    expect(formatMoment(lateEvening, 'fr', 'local')).toMatch(/^14\/08\/2026/)
   })
 
   // The API is what supplies these, and a row missing its stamp still names what happened —
   // which `Invalid Date`, translated, does not.
   it('hands back what it cannot read', () => {
-    expect(formatMoment('not-a-date', 'fr')).toBe('not-a-date')
-    expect(formatMoment('', 'fr')).toBe('')
+    expect(formatMoment('not-a-date', 'fr', 'utc')).toBe('not-a-date')
+    expect(formatMoment('', 'fr', 'utc')).toBe('')
   })
 
   /**
@@ -189,9 +203,9 @@ describe('formatMoment', () => {
     })
     const spy = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(built)
 
-    formatMoment('2026-08-12T10:47:33Z', 'de')
-    formatMoment('2026-08-12T11:00:00Z', 'de')
-    formatMoment('2026-08-12T11:00:00Z', 'de')
+    formatMoment('2026-08-12T10:47:33Z', 'de', 'utc')
+    formatMoment('2026-08-12T11:00:00Z', 'de', 'utc')
+    formatMoment('2026-08-12T11:00:00Z', 'de', 'utc')
 
     expect(built).toHaveBeenCalledTimes(1)
     spy.mockRestore()
