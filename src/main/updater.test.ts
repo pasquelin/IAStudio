@@ -192,4 +192,31 @@ describe('the updater', () => {
       expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled()
     })
   })
+
+  /**
+   * Why `services.ts` reaches the real updater through `default`.
+   *
+   * `electron-updater` publishes `autoUpdater` with `Object.defineProperty(exports, …, { get })`,
+   * built lazily so that loading the module costs nothing. That shape is the whole reason for the
+   * indirection, and it is what this checks: `default` is the interop object, getter kept.
+   *
+   * Read as a descriptor rather than as a value — touching it would build a `MacUpdater`, which
+   * wants an Electron `app` that a test runner has no business starting.
+   *
+   * **The blind spot, and it is the important half**: whether the getter also survives as a NAMED
+   * export is decided by the loader, not by the package, and the two loaders disagree. Vite
+   * resolves this file's `import` itself and does expose `autoUpdater`; Electron 43's native ESM
+   * loader does not, and answers `undefined` — measured on 2026-08-13 with a probe run under the
+   * real binary, which is what left the auto-updater dead for every installed copy while writing
+   * one log line. No assertion here can see that: the runner is not the runtime. A named read
+   * would pass this suite and ship broken, so `no-app-is-packaged.test.ts` guards the flag and
+   * this one only pins the shape the wiring depends on.
+   */
+  it('reaches the real updater through a getter, which is why the wiring goes via default', async () => {
+    const electronUpdater = await import('electron-updater')
+    const published = Object.getOwnPropertyDescriptor(electronUpdater.default, 'autoUpdater')
+
+    expect(typeof published?.get).toBe('function')
+    expect(published?.enumerable).toBe(true)
+  })
 })

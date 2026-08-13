@@ -1046,8 +1046,10 @@ export function createServices(settings: SettingsStore): Services {
     // settings window both show which account is active.
     broadcastAccounts: accounts => broadcast(EVENTS.accountsChanged, accounts),
     updates: createUpdates({
-      loadUpdater: async () => (await import('electron-updater')).autoUpdater,
-      isPackaged: app.isPackaged,
+      // Through `default`: `autoUpdater` is a defineProperty getter, which the ESM loader cannot
+      // see as a named export. Measured under Electron 43 — the named read answers `undefined`.
+      loadUpdater: async () => (await import('electron-updater')).default.autoUpdater,
+      isPackaged: !isDevelopment,
       onChange: state => broadcast(EVENTS.updateState, state),
     }),
   }
