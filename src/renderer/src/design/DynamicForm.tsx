@@ -26,8 +26,8 @@ import { HINT_TOP, TIP_LEFT } from '@/helpers/tooltip'
 export type DynamicFormProps = {
   fields: readonly FieldDescriptor[]
   /**
-   * Absent where the form is not run but read into something — a node's parameters, which the
-   * graph executes later. The button then has nothing to say and is not drawn.
+   * Absent where the form is not run but read into something — parameters kept for a caller that
+   * submits later. The button then has nothing to say and is not drawn.
    */
   onSubmit?: (body: FormValues) => void
   submitLabel?: string

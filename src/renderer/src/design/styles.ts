@@ -323,8 +323,8 @@ export const SHELF_OVERLAY = cn(
 
 /**
  * How a status reads. The caller names the MEANING — queued, running, cached, failed — and the
- * colour stays here: the jobs bar, the media import and a node of the graph all say "this one
- * went wrong", and they must say it in the same red.
+ * colour stays here: the jobs bar and the media import both say "this one went wrong", and they
+ * must say it in the same red.
  */
 export type StatusTone = 'muted' | 'accent' | 'success' | 'warning' | 'danger'
 

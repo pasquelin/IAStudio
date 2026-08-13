@@ -24,7 +24,7 @@ const PLURAL_SUFFIXES = ['', '_zero', '_one', '_two', '_few', '_many', '_other']
  *
  * The hyphen and the underscore are NOT decoration: 147 of the bundle's keys carry one, between
  * i18next's plural suffixes (`jobs.running_one`) and the hyphenated failure codes the account
- * settings and the graph both use (`accounts.errors.too-long`). Refusing them would have skipped
+ * settings use (`accounts.errors.too-long`). Refusing them would have skipped
  * four keys of `AccountSettings` in silence — a guard that looks wider and covers less.
  */
 const KEY_SHAPED = /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_-]+)+$/
