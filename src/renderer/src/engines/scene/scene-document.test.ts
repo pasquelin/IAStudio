@@ -108,6 +108,24 @@ describe('sceneFromPayload', () => {
     expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
   })
 
+  it('carries the maps put over a model own through a round trip', () => {
+    const model = modelNodeFixture('m')
+    model.model = { ...model.model, textures: { map: { assetId: 'tex-1' } } }
+
+    expect(reread({ ...EMPTY_SCENE, nodes: [model], selectedIds: [] }).nodes).toEqual([model])
+  })
+
+  // A slot spelled with something that is not a reference would come back as a model missing one
+  // map with nothing said — the node is refused instead, like a malformed animation.
+  it('drops a model whose override is not a reference', () => {
+    const nodes: unknown[] = [
+      mesh('a'),
+      { ...modelNodeFixture('m'), model: { assetId: 'x', textures: { map: 'tex-1' } } },
+    ]
+
+    expect(sceneFromPayload({ nodes }).nodes.map(node => node.id)).toEqual(['a'])
+  })
+
   it('keeps a model pointing at an asset nothing answers to, which is a project that moved', () => {
     const ghost = modelNodeFixture('m', 'gone')
     expect(reread({ ...EMPTY_SCENE, nodes: [ghost], selectedIds: [] }).nodes).toEqual([ghost])

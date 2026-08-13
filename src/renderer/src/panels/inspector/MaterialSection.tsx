@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TEXTURE_SLOTS, type MaterialDescriptor } from '@shared/domain/scene'
+import type { MaterialDescriptor } from '@shared/domain/scene'
 import type { GestureProps } from '@/design/styles'
 import { materialFields, withField } from '@/engines/scene/property-fields'
-import { PictureField } from './PictureField'
 import { DescriptorSection } from './DescriptorSection'
+import { TextureSlotFields } from './TextureSlotFields'
 
 export type MaterialSectionProps = {
   material: MaterialDescriptor
@@ -33,16 +33,12 @@ export function MaterialSection({
       onChange={(name, value) => onChange(withField(material, name, value))}
       gesture={gesture}
     >
-      {TEXTURE_SLOTS.map(slot => (
-        <PictureField
-          key={slot}
-          label={t(`inspector.fields.${slot}`, slot)}
-          value={material[slot]?.assetId ?? null}
-          onChange={assetId =>
-            onChange({ ...material, [slot]: assetId === null ? null : { assetId } })
-          }
-        />
-      ))}
+      <TextureSlotFields
+        slots={material}
+        onChange={(slot, assetId) =>
+          onChange({ ...material, [slot]: assetId === null ? null : { assetId } })
+        }
+      />
     </DescriptorSection>
   )
 }

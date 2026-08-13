@@ -724,6 +724,8 @@
     "rotation": "Rotation",
     "scale": "Échelle",
     "noTexture": "Aucune",
+    "modelTextures": "Textures du modèle",
+    "fileTexture": "Celle du fichier",
     "chooseTexture": "Choisir une texture",
     "clearTexture": "Retirer la texture",
     "fields": {

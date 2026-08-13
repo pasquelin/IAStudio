@@ -5,47 +5,13 @@ import {
   NoColorSpace,
   SRGBColorSpace,
   SpriteMaterial,
-  Texture,
-  type ColorSpace,
 } from 'three'
 import type { MaterialDescriptor, SpriteDescriptor } from '@shared/domain/scene'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMaterialTextures, createSpriteTexture } from './material-textures'
+import { scriptedTextureCache } from './scene-fixtures'
 import { DEFAULT_MATERIAL, DEFAULT_SPRITE } from './scene-state'
 import { geometryFor } from './three-factory'
-import type { TextureCache } from './texture-cache'
-
-/** A cache whose loads the test settles by hand, so arrival order is what is under test. */
-function scriptedCache() {
-  const pending = new Map<string, (texture: Texture | null) => void>()
-  const acquired: string[] = []
-  const released: string[] = []
-  const spaces = new Map<string, ColorSpace>()
-
-  const cache: TextureCache = {
-    acquire: (assetId, colorSpace) => {
-      acquired.push(assetId)
-      spaces.set(assetId, colorSpace)
-      return new Promise(resolve => pending.set(assetId, resolve))
-    },
-    release: assetId => {
-      released.push(assetId)
-    },
-    dispose: () => {},
-  }
-
-  return {
-    cache,
-    acquired,
-    released,
-    spaces,
-    settle: async (assetId: string, texture: Texture | null = new Texture()) => {
-      pending.get(assetId)?.(texture)
-      await Promise.resolve()
-      return texture
-    },
-  }
-}
 
 const withMap = (assetId: string | null): MaterialDescriptor => ({
   ...DEFAULT_MATERIAL,
@@ -64,7 +30,7 @@ beforeEach(() => {
 
 describe('createMaterialTextures', () => {
   it('installs the texture a slot asks for', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply(withMap('tex-1'))
@@ -75,7 +41,7 @@ describe('createMaterialTextures', () => {
   })
 
   it('asks for nothing again while the slot has not moved', () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply(withMap('tex-1'))
@@ -85,7 +51,7 @@ describe('createMaterialTextures', () => {
   })
 
   it('gives the reference back when a slot is emptied', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply(withMap('tex-1'))
@@ -98,7 +64,7 @@ describe('createMaterialTextures', () => {
 
   // Three textures picked in a row: the first to arrive must not overwrite the third.
   it('drops an arrival the slot has moved on from', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply(withMap('tex-1'))
@@ -113,7 +79,7 @@ describe('createMaterialTextures', () => {
   })
 
   it('takes and gives back one reference per change of mind', () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply(withMap('tex-1'))
@@ -126,7 +92,7 @@ describe('createMaterialTextures', () => {
 
   // A texture released mid-load resolves to nothing: nothing must be installed.
   it('installs nothing when the load came back empty', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply(withMap('tex-1'))
@@ -138,7 +104,7 @@ describe('createMaterialTextures', () => {
   // The colour space is asked of the cache rather than written onto the texture: the same asset
   // can dress one slot as colour and another as data, and they must not share one instance.
   it('asks for the base map as sRGB and the data maps as data', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply({
@@ -155,7 +121,7 @@ describe('createMaterialTextures', () => {
 
   // Without a second UV set, ambient occlusion is a slot that quietly does nothing.
   it('gives the geometry a second UV set for an occlusion map', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
     expect(mesh.geometry.attributes.uv1).toBeUndefined()
 
@@ -168,7 +134,7 @@ describe('createMaterialTextures', () => {
   it('leaves a second UV set the geometry already had alone', async () => {
     const own = new BufferAttribute(new Float32Array(48), 2)
     mesh.geometry.setAttribute('uv1', own)
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply({ ...DEFAULT_MATERIAL, aoMap: { assetId: 'ao' } })
@@ -178,7 +144,7 @@ describe('createMaterialTextures', () => {
   })
 
   it('gives every reference back when the mesh goes', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const textures = createMaterialTextures(scripted.cache, mesh, material, onChange)
 
     textures.apply({ ...DEFAULT_MATERIAL, map: { assetId: 'a' }, aoMap: { assetId: 'b' } })
@@ -197,7 +163,7 @@ describe('createSpriteTexture', () => {
   })
 
   it('installs the picture the descriptor asks for, read as colour', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const spriteMaterial = new SpriteMaterial()
     const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
 
@@ -209,7 +175,7 @@ describe('createSpriteTexture', () => {
   })
 
   it('gives the previous picture back when the sprite changes its mind', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const spriteMaterial = new SpriteMaterial()
     const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
 
@@ -222,7 +188,7 @@ describe('createSpriteTexture', () => {
 
   // What arrives for a sprite that has moved on must not land: the reference went back with it.
   it('drops a picture that lands after the sprite let it go', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const spriteMaterial = new SpriteMaterial()
     const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
 
@@ -234,7 +200,7 @@ describe('createSpriteTexture', () => {
   })
 
   it('empties the slot and gives its reference back when the sprite goes', async () => {
-    const scripted = scriptedCache()
+    const scripted = scriptedTextureCache()
     const spriteMaterial = new SpriteMaterial()
     const texture = createSpriteTexture(scripted.cache, spriteMaterial, onChange)
 

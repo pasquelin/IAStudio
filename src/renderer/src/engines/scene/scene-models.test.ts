@@ -1,4 +1,4 @@
-import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D } from 'three'
+import { Mesh, BoxGeometry, MeshStandardMaterial, Object3D, Texture } from 'three'
 import { describe, expect, it, vi } from 'vitest'
 import { nodeIdOf, SceneRenderer } from './SceneRenderer'
 import { modelNodeFixture } from './scene-fixtures'
@@ -26,6 +26,19 @@ function withModels(...ids: string[]): SceneState {
 
 function rendererLoading(load: (url: string) => Promise<Object3D>) {
   return new SceneRenderer({ onSelect: vi.fn(), onTransform: vi.fn(), loadModel: load })
+}
+
+/** The same, listening to which pictures the maps of a model ask for. */
+function rendererDressing(asked: string[]) {
+  return new SceneRenderer({
+    onSelect: vi.fn(),
+    onTransform: vi.fn(),
+    loadModel: async () => source(),
+    loadTexture: url => {
+      asked.push(url)
+      return Promise.resolve(new Texture())
+    },
+  })
 }
 
 describe('a model node', () => {
@@ -114,6 +127,37 @@ describe('a model node', () => {
 
     expect(copy.children[0]?.castShadow).toBe(true)
     expect(copy.children[0]?.receiveShadow).toBe(true)
+    renderer.dispose()
+  })
+
+  /**
+   * The override lands where the shadow flags do, and for the same reason: what a file brings
+   * arrives after the sync that built the holder, and the next sync skips an unchanged node.
+   */
+  it('dresses itself with the project picture as soon as its file lands', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing(asked)
+
+    const node = modelNodeFixture('a', 'asset-a')
+    node.model = { ...node.model, textures: { map: { assetId: 'tex-1' } } }
+    renderer.apply({ ...EMPTY_SCENE, nodes: [node], selectedIds: [] })
+
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+    expect(asked[0]).toContain('tex-1')
+    renderer.dispose()
+  })
+
+  it('asks for the picture a later edit points it at', async () => {
+    const asked: string[] = []
+    const renderer = rendererDressing(asked)
+
+    renderer.apply(withModels('a'))
+    const dressed = modelNodeFixture('a', 'asset-a')
+    dressed.model = { ...dressed.model, textures: { normalMap: { assetId: 'tex-2' } } }
+    renderer.apply({ ...EMPTY_SCENE, nodes: [dressed], selectedIds: [] })
+
+    await vi.waitFor(() => expect(asked).toHaveLength(1))
+    expect(asked[0]).toContain('tex-2')
     renderer.dispose()
   })
 

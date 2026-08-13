@@ -19,6 +19,8 @@ import {
   setLightOn,
   setMeshMaterial,
   setMaterialOn,
+  setModelAnimation,
+  setModelTextures,
   setNodeVisible,
   setEnvironment,
   setSelection,
@@ -27,7 +29,12 @@ import {
   setSpriteOn,
   setTransform,
 } from './commands'
-import { lightNodeFixture as light, meshNode as mesh, spriteNodeFixture } from './scene-fixtures'
+import {
+  lightNodeFixture as light,
+  meshNode as mesh,
+  modelNodeFixture,
+  spriteNodeFixture,
+} from './scene-fixtures'
 
 const sprite = (id: string) => spriteNodeFixture(id, 'pic-1')
 import {
@@ -716,5 +723,43 @@ describe('an edit spread over a selection', () => {
 
     expect(applied.nodes[0]?.type === 'mesh' && applied.nodes[0].material.color).toBe('#ff0000')
     expect(applied.nodes[1]).toBe(scene.nodes[1])
+  })
+})
+
+describe('setModelTextures', () => {
+  const withModel = (): SceneState => ({ ...EMPTY_SCENE, nodes: [modelNodeFixture('m')] })
+
+  const texturesOf = (state: SceneState) => {
+    const node = nodeById(state, 'm')
+    return node?.type === 'model' ? node.model.textures : undefined
+  }
+
+  it('writes the overrides and gives them back on undo', () => {
+    const before = withModel()
+    const applied = setModelTextures('m', { map: { assetId: 'tex-1' } })
+
+    const after = applied.apply(before)
+    expect(texturesOf(after)).toEqual({ map: { assetId: 'tex-1' } })
+    expect(texturesOf(applied.revert(after))).toBeUndefined()
+  })
+
+  // An empty set is « the file's own maps », which a document should not carry a field to say.
+  it('drops the field when the last override goes', () => {
+    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(withModel())
+
+    expect(texturesOf(setModelTextures('m', {}).apply(dressed))).toBeUndefined()
+  })
+
+  // Both edits write the same reference: rebuilding it from `assetId` alone dropped the other.
+  it('leaves the animation of the model alone, and is left alone by it', () => {
+    const clip = { clip: 'run', playing: true, time: 0, speed: 1, loop: true, start: 0 }
+    const playing = setModelAnimation('m', clip).apply(withModel())
+    const dressed = setModelTextures('m', { map: { assetId: 'tex-1' } }).apply(playing)
+
+    const node = nodeById(dressed, 'm')
+    expect(node?.type === 'model' && node.model.animation).toEqual(clip)
+    expect(texturesOf(setModelAnimation('m', null).apply(dressed))).toEqual({
+      map: { assetId: 'tex-1' },
+    })
   })
 })

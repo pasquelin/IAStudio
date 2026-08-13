@@ -26,7 +26,7 @@ export type MaterialTextures = {
  * The base colour map is authored in sRGB; every other map carries data, not colour, and
  * decoding it would wash out the normals and lighten the roughness.
  */
-function spaceOf(slot: TextureSlot): ColorSpace {
+export function spaceOf(slot: TextureSlot): ColorSpace {
   return slot === 'map' ? SRGBColorSpace : NoColorSpace
 }
 

@@ -8,6 +8,12 @@ export type PictureFieldProps = {
   label: string
   value: string | null
   onChange: (assetId: string | null) => void
+  /**
+   * What the empty row reads, already translated. Given only where "empty" does not mean "no
+   * picture": a model's slot left empty wears the map its own file carries, and reading « none »
+   * over a textured model would be a plain lie.
+   */
+  emptyLabel?: string
 }
 
 /**
@@ -15,7 +21,7 @@ export type PictureFieldProps = {
  * what it dresses. One component rather than one per section, so a mesh's five maps and a
  * sprite's one never disagree on what counts as a picture, or on what the empty row reads.
  */
-export function PictureField({ label, value, onChange }: PictureFieldProps) {
+export function PictureField({ label, value, onChange, emptyLabel }: PictureFieldProps) {
   const { t } = useTranslation()
   const assets = useAssets(state => state.items)
 
@@ -33,7 +39,7 @@ export function PictureField({ label, value, onChange }: PictureFieldProps) {
       value={value}
       options={options}
       onChange={onChange}
-      emptyLabel={t('inspector.noTexture')}
+      emptyLabel={emptyLabel ?? t('inspector.noTexture')}
       chooseLabel={t('inspector.chooseTexture')}
       clearLabel={t('inspector.clearTexture')}
       emptyHint={t('inspector.noTextureHint')}

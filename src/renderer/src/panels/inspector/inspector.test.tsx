@@ -817,4 +817,14 @@ describe('the inspector on an imported model', () => {
 
     expect(screen.getByLabelText('Séquence')).toBeInTheDocument()
   })
+
+  // The other half of extracting a model's textures: without a slot to point back at, an edited
+  // picture has nowhere to land.
+  it('offers a slot per map, reading « the file own » until one is overridden', () => {
+    install(modelNodeFixture('model-1'))
+    render(<Content />)
+
+    expect(screen.getByText('Textures du modèle')).toBeInTheDocument()
+    expect(screen.getAllByText('Celle du fichier')).toHaveLength(TEXTURE_SLOTS.length)
+  })
 })

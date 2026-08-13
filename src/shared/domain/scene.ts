@@ -78,7 +78,22 @@ export const DEFAULT_CAMERA: CameraDescriptor = Object.freeze({ fov: 50, near: 0
  * that is the right trade for a generation studio, and an explicit "explode" command is what
  * would lift it the day it matters.
  */
-export type ModelRef = { assetId: string; animation?: AnimationRef }
+export type ModelRef = {
+  assetId: string
+  animation?: AnimationRef
+  /**
+   * Maps of the project put over the ones the file carries, slot by slot.
+   *
+   * A slot that is absent leaves what the GLB brought, which is why this is a partial and not the
+   * `MaterialDescriptor` a mesh wears: overriding a model means REPLACING one picture, never
+   * restating a colour and a roughness the file already got right.
+   *
+   * It applies to every material of the model at once. A file whose materials want different
+   * maps is not addressable here — the inside of a model is not a thing this document holds
+   * (see above), so there is no name to hang a per-material override on.
+   */
+  textures?: Partial<Record<TextureSlot, TextureRef>>
+}
 
 /**
  * Which clip of a model plays, and how. Absent on a model carrying none, and on every document

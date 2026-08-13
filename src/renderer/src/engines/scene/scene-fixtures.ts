@@ -1,4 +1,6 @@
+import { Texture, type ColorSpace } from 'three'
 import type { LightDescriptor, TextDescriptor } from '@shared/domain/scene'
+import type { TextureCache } from './texture-cache'
 import {
   DEFAULT_MATERIAL,
   DEFAULT_SPRITE,
@@ -94,5 +96,40 @@ export function modelNodeFixture(id: string, assetId = 'asset-1'): ModelNode {
     ...shadowDefaults({ type: 'model' }),
     type: 'model',
     model: { assetId },
+  }
+}
+
+/**
+ * A texture cache whose loads the test settles by hand, so arrival order is what is under test —
+ * which is what every suite around a `TextureBinding` is really about.
+ */
+export function scriptedTextureCache() {
+  const pending = new Map<string, (texture: Texture | null) => void>()
+  const acquired: string[] = []
+  const released: string[] = []
+  const spaces = new Map<string, ColorSpace>()
+
+  const cache: TextureCache = {
+    acquire: (assetId, colorSpace) => {
+      acquired.push(assetId)
+      spaces.set(assetId, colorSpace)
+      return new Promise(resolve => pending.set(assetId, resolve))
+    },
+    release: assetId => {
+      released.push(assetId)
+    },
+    dispose: () => {},
+  }
+
+  return {
+    cache,
+    acquired,
+    released,
+    spaces,
+    settle: async (assetId: string, texture: Texture | null = new Texture()) => {
+      pending.get(assetId)?.(texture)
+      await Promise.resolve()
+      return texture
+    },
   }
 }
