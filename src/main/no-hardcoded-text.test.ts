@@ -1,8 +1,9 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
 
 const MAIN = dirname(fileURLToPath(import.meta.url))
 
@@ -32,32 +33,6 @@ const READ_FIELDS = new Set([
 ])
 
 /**
- * Test material is out, `-fixtures.ts` included: a fixture builds the data a suite asserts on and
- * never reaches a screen, so a job it names `Flux` is the label the API returns, not a word this
- * studio writes. Coverage draws the same line (`vitest.config.ts`), and the exclusion is a
- * DECISION, taken 11/08 — a fixture forced through a bundle key says nothing truer and reads worse.
- *
- * `.tsx` as well as `.ts`: the sweep was widened to components, and a fixture is a fixture on
- * either side.
- */
-function sourceFiles(directory: string, into: string[] = []): string[] {
-  for (const name of readdirSync(directory)) {
-    const path = join(directory, name)
-    if (statSync(path).isDirectory()) sourceFiles(path, into)
-    else if (/\.tsx?$/.test(path) && !/(\.(test|bench)|-fixtures)\.tsx?$/.test(path))
-      into.push(path)
-  }
-
-  return into
-}
-
-/**
- * Fields a registry fills for something on screen to read out. `name` is absent on purpose: a
- * scene node carries one as document data — a scene whose contents are called `Groupe` in French
- * could not be shared with an English studio — and a store carries one as its storage id.
- * `message` is absent for the same kind of reason: it names a worker's failure, never a screen.
- */
-/**
  * One parse per file for the two guards that walk the whole project — the registries and the
  * bindings. Parsing 706 files twice took this file past the shared 15 s timeout the moment the
  * machine was busy; 2.5 s when idle, and nothing in the result changed.
@@ -83,6 +58,12 @@ function parsedFile(absolute: string, shown: string): ts.SourceFile {
   return source
 }
 
+/**
+ * Fields a registry fills for something on screen to read out. `name` is absent on purpose: a
+ * scene node carries one as document data — a scene whose contents are called `Groupe` in French
+ * could not be shared with an English studio — and a store carries one as its storage id.
+ * `message` is absent for the same kind of reason: it names a worker's failure, never a screen.
+ */
 const REGISTRY_FIELDS = new Set([
   'buttonLabel',
   'caption',
@@ -279,20 +260,28 @@ describe('the main process', () => {
  */
 /**
  * Reading and parsing every file of the project is not a unit test's usual budget: 2.5 s idle,
- * and past the shared 15 s the moment a dozen other suites share the machine. Written here rather
- * than raised for everyone — the rest of the file has no business taking this long.
+ * and past the shared 15 s the moment a dozen other suites share the machine. `WHOLE_PROJECT`
+ * comes from `source-files.ts` with the sweep it belongs to, rather than being raised for
+ * everyone — the rest of this file has no business taking that long.
  */
-const WHOLE_PROJECT = 60_000
-
 describe('the registries', () => {
-  const trees = ['renderer', 'shared', 'preload'].map(tree => join(MAIN, '..', tree))
+  // Three trees where the bound-sentence check below reads four: `main` writes its screens through
+  // `TRANSLATIONS`, not through a registry. That it stops at three is its own question.
+  const trees = PROJECT_TREES.slice(1)
+
+  // The `slice` above is a POSITION, and a position is not a promise: reorder `PROJECT_TREES` and
+  // this check silently stops reading `renderer` while every assertion below stays green. Named
+  // rather than counted, because the count would survive the reorder. Asked for by the review.
+  it('drops the main tree and keeps the other three, whatever their order becomes', () => {
+    expect(trees.map(tree => basename(tree))).toEqual(['renderer', 'shared', 'preload'])
+  })
 
   it(
     'name their words rather than writing them',
     () => {
       const findings = trees.flatMap(tree =>
         sourceFiles(tree).flatMap(path =>
-          registryFindingsFrom(parsedFile(path, relative(join(MAIN, '..'), path))),
+          registryFindingsFrom(parsedFile(path, relative(SOURCE_ROOT, path))),
         ),
       )
 
@@ -350,7 +339,7 @@ describe('the registries', () => {
    * anything a screen reads, and `stores/` holds both kinds side by side.
    */
   it('steps over the fixtures and over nothing else', () => {
-    const stores = sourceFiles(join(MAIN, '..', 'renderer', 'src', 'stores'))
+    const stores = sourceFiles(join(SOURCE_ROOT, 'renderer', 'src', 'stores'))
 
     expect(stores.filter(path => path.endsWith('-fixtures.ts'))).toEqual([])
     expect(stores.some(path => path.endsWith('jobs.ts'))).toBe(true)
@@ -457,15 +446,13 @@ function boundSentencesFrom(source: ts.SourceFile): string[] {
  * array element — the last two being the registry guard's job. What it adds is the bare binding.
  */
 describe('the words nobody puts in a tag', () => {
-  // Four trees where the registry check reads three: `main` writes its screens through
+  // All four trees where the registry check reads three: `main` writes its screens through
   // `TRANSLATIONS`, so a sentence bound to a name there reaches a dialog exactly as one bound in
   // the window reaches a tag. The registry check stopping at three is its own question.
-  const trees = ['renderer', 'shared', 'preload'].map(tree => join(MAIN, '..', tree))
-
   const findingsOf = (): string[] =>
-    [MAIN, ...trees].flatMap(tree =>
+    PROJECT_TREES.flatMap(tree =>
       sourceFiles(tree).flatMap(path =>
-        boundSentencesFrom(parsedFile(path, relative(join(MAIN, '..'), path))),
+        boundSentencesFrom(parsedFile(path, relative(SOURCE_ROOT, path))),
       ),
     )
 
@@ -480,8 +467,9 @@ describe('the words nobody puts in a tag', () => {
   // An empty result proves nothing unless the files were opened: pointed at a folder that does
   // not exist, every assertion above stays green. The four trees are counted, not assumed.
   it('holds all four trees, modules and components alike', () => {
-    const counts = [MAIN, ...trees].map(tree => sourceFiles(tree).length)
+    const counts = PROJECT_TREES.map(tree => sourceFiles(tree).length)
 
+    expect(counts).toHaveLength(4)
     expect(counts.every(count => count > 0)).toBe(true)
     expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(700)
   })

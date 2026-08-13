@@ -4,6 +4,7 @@ import {
   type DocumentKind,
 } from '@shared/domain/document'
 import type { WorkspaceId } from '@shared/domain/workspace'
+import { resolveLanguage } from '@shared/i18n'
 import i18next from 'i18next'
 import { create as createStore } from 'zustand'
 import { getBridge } from '@/services/bridge'
@@ -318,9 +319,20 @@ function untitled(
 /**
  * Sorted by title rather than by whatever order the folder was read in: a listing that
  * reshuffles between two reads is a list nobody can point at.
+ *
+ * In the reader's language, and not in the machine's: left bare, `localeCompare` answers in the
+ * locale the OS was installed in, so the same project listed two orders on two desks — measured,
+ * a Swedish one files `Ärger` past `Zoo`.
+ *
+ * Through `resolveLanguage` rather than on `i18next.language` raw, and that is not belt and braces:
+ * the field is `undefined` until `initI18n` resolves, and it reads `pseudo` whenever the DEV
+ * pseudo-locale flag is set. Measured, `new Intl.Collator(undefined)` and `new Intl.Collator
+ * ('pseudo')` both resolve to `en-US` — handing the sort straight back to the machine, which is
+ * the whole defect this call was fixed for.
  */
 function sorted(found: readonly DocumentDescriptor[]): DocumentDescriptor[] {
-  return [...found].sort((left, right) => left.title.localeCompare(right.title))
+  const language = resolveLanguage(i18next.language)
+  return [...found].sort((left, right) => left.title.localeCompare(right.title, language))
 }
 
 /**

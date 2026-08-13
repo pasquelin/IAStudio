@@ -13,3 +13,18 @@ export function foldForSearch(text: string): string {
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
 }
+
+/**
+ * The order of two strings NOBODY reads as words — an ISO stamp, a schema key, an id.
+ *
+ * `localeCompare` is the wrong tool twice over here. It answers in the locale the OS happens to
+ * run in, so the same data would order differently on two machines; and it builds an ICU collator
+ * per comparison, which a sort pays n·log n times for an order no reader ever sees. Code units
+ * are what these strings mean: an ISO stamp sorts chronologically by construction.
+ *
+ * Text a person DOES read never comes here — it takes `localeCompare` with the language the
+ * reader chose, which `no-bare-locale-compare.test.ts` is what makes sure of.
+ */
+export function byCodeUnit(one: string, other: string): number {
+  return one < other ? -1 : one > other ? 1 : 0
+}

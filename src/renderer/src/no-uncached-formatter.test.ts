@@ -17,6 +17,13 @@ const SOURCES: Record<string, string> = import.meta.glob(
  * It is not: each call constructs an `Intl` formatter — 48 µs against 4, the figure `helpers/
  * format.ts` was written around — and the studio drew six of them per render of the scene
  * counters, over a viewport being turned.
+ *
+ * A FOURTH builds one the same way and is deliberately not here: `localeCompare`. It is held by
+ * `main/no-bare-locale-compare.test.ts` instead, which reads all four trees rather than this one —
+ * two of the three sites it was written for lived in `shared/` and `main/`. What that guard asks
+ * of it is a LANGUAGE, not a cache: the collator it rebuilds costs 0.12 ms over 200 names, too
+ * little to route a sort through `kept` for. Adding the name here would duplicate the finding
+ * under a rule that cannot say which language a sort should answer in.
  */
 const UNCACHED = new Set(['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'])
 

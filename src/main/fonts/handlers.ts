@@ -1,5 +1,6 @@
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
+import { windowLanguage } from '@main/window/language'
 import type { SystemFonts } from './system-fonts'
 
 /**
@@ -9,7 +10,7 @@ import type { SystemFonts } from './system-fonts'
  * hundred kilobytes and are wanted for the single face someone actually set text in.
  */
 export function registerFontHandlers(fonts: SystemFonts): void {
-  handle(CHANNELS.fontsList, () => fonts.families().then(families => [...families]))
+  handle(CHANNELS.fontsList, () => fonts.families(windowLanguage()).then(families => [...families]))
 
   handle(CHANNELS.fontsRead, (_event, family) => {
     // The sandboxed side is trusted for nothing, as in `registerDiagnosticsHandlers`. A family

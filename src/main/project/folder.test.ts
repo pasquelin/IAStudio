@@ -10,6 +10,14 @@ import {
   type WatchOpener,
 } from './folder'
 
+/**
+ * The language the listing is sorted for, named rather than inherited.
+ *
+ * It used to be `windowLanguage()`, a module global no test could set: every ordering case below
+ * rode on `DEFAULT_LANGUAGE` without saying so, and another suite's `beforeEach` could move it.
+ */
+const inFrench = (): string => 'fr'
+
 async function project(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'scenario-folder-'))
   await mkdir(join(root, 'assets'))
@@ -24,7 +32,7 @@ describe('reading the project folder', () => {
   it('lists one level, folders first and then by name', async () => {
     const root = await project()
 
-    const entries = await createFolderReader(() => root).list('')
+    const entries = await createFolderReader(() => root, inFrench).list('')
 
     expect(entries.map(entry => `${entry.kind}:${entry.name}`)).toEqual([
       'folder:assets',
@@ -34,13 +42,38 @@ describe('reading the project folder', () => {
   })
 
   /**
+   * The case injecting the language exists to make writable, and it could not be written while the
+   * reader took it off a module global.
+   *
+   * `Ä` files with `A` for both of the studio's languages and after `Z` for a Swedish reader, so a
+   * listing sorted in whatever locale the machine was installed in is a listing in an order nobody
+   * asked for — which is what a bare `localeCompare` did here.
+   */
+  it('sorts for the language it is handed, not the one the machine runs', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'scenario-folder-'))
+    await writeFile(join(root, 'Ärger.txt'), '')
+    await writeFile(join(root, 'Zoo.txt'), '')
+
+    const namesIn = async (language: string): Promise<string[]> =>
+      (
+        await createFolderReader(
+          () => root,
+          () => language,
+        ).list('')
+      ).map(entry => entry.name)
+
+    expect(await namesIn('fr')).toEqual(['Ärger.txt', 'Zoo.txt'])
+    expect(await namesIn('sv')).toEqual(['Zoo.txt', 'Ärger.txt'])
+  })
+
+  /**
    * The two the studio puts there and can rebuild. Hidden by the platforms' own rule — a
    * leading dot — rather than by a list, so a third one does not have to be remembered.
    */
   it('leaves out what the studio keeps for itself', async () => {
     const root = await project()
 
-    const entries = await createFolderReader(() => root).list('')
+    const entries = await createFolderReader(() => root, inFrench).list('')
 
     expect(entries.map(entry => entry.name)).not.toContain('.index')
     expect(entries.map(entry => entry.name)).not.toContain('.project.json')
@@ -51,7 +84,7 @@ describe('reading the project folder', () => {
     const root = await project()
     await writeFile(join(root, 'documents', 'a3f1.scene'), '{}')
 
-    const entries = await createFolderReader(() => root).list('documents')
+    const entries = await createFolderReader(() => root, inFrench).list('documents')
 
     expect(entries[0]?.path).toBe('documents/a3f1.scene')
   })
@@ -62,7 +95,7 @@ describe('reading the project folder', () => {
     await writeFile(join(second, 'only-here.txt'), '')
     let open = first
 
-    const reader = createFolderReader(() => open)
+    const reader = createFolderReader(() => open, inFrench)
     open = second
 
     expect((await reader.list('')).map(entry => entry.name)).toContain('only-here.txt')
@@ -221,7 +254,7 @@ describe('writing to the project folder', () => {
 
     expect(await editor.rename('notes.txt', 'brief.txt')).toBe(true)
 
-    const names = (await createFolderReader(() => root).list('')).map(entry => entry.name)
+    const names = (await createFolderReader(() => root, inFrench).list('')).map(entry => entry.name)
     expect(names).toContain('brief.txt')
     expect(names).not.toContain('notes.txt')
   })
@@ -233,7 +266,7 @@ describe('writing to the project folder', () => {
 
     expect(await editor.rename('documents/a3f1.scene', 'level.scene')).toBe(true)
 
-    const entries = await createFolderReader(() => root).list('documents')
+    const entries = await createFolderReader(() => root, inFrench).list('documents')
     expect(entries.map(entry => entry.path)).toEqual(['documents/level.scene'])
   })
 
@@ -245,7 +278,7 @@ describe('writing to the project folder', () => {
 
     expect(await editor.rename('notes.txt', 'brief.txt')).toBe(false)
 
-    const names = (await createFolderReader(() => root).list('')).map(entry => entry.name)
+    const names = (await createFolderReader(() => root, inFrench).list('')).map(entry => entry.name)
     expect(names).toContain('notes.txt')
   })
 
@@ -316,7 +349,7 @@ describe('moving inside the project folder', () => {
 
     expect(await editor.move('notes.txt', 'notes')).toBe(true)
 
-    const reader = createFolderReader(() => root)
+    const reader = createFolderReader(() => root, inFrench)
     expect((await reader.list('notes')).map(entry => entry.path)).toEqual(['notes/notes.txt'])
     expect((await reader.list('')).map(entry => entry.name)).not.toContain('notes.txt')
   })
@@ -329,9 +362,9 @@ describe('moving inside the project folder', () => {
 
     expect(await editor.move('notes/brief.txt', 'refs')).toBe(true)
 
-    expect((await createFolderReader(() => root).list('refs')).map(entry => entry.path)).toEqual([
-      'refs/brief.txt',
-    ])
+    expect(
+      (await createFolderReader(() => root, inFrench).list('refs')).map(entry => entry.path),
+    ).toEqual(['refs/brief.txt'])
   })
 
   it('carries a folder and everything under it', async () => {
@@ -342,7 +375,7 @@ describe('moving inside the project folder', () => {
 
     expect(await editor.move('notes', 'refs')).toBe(true)
 
-    const entries = await createFolderReader(() => root).list('refs/notes')
+    const entries = await createFolderReader(() => root, inFrench).list('refs/notes')
     expect(entries.map(entry => entry.path)).toEqual(['refs/notes/brief.txt'])
   })
 
@@ -355,7 +388,7 @@ describe('moving inside the project folder', () => {
 
     expect(await editor.move('notes.txt', 'notes')).toBe(false)
 
-    const kept = await createFolderReader(() => root).list('notes')
+    const kept = await createFolderReader(() => root, inFrench).list('notes')
     expect(kept.map(entry => entry.path)).toEqual(['notes/notes.txt'])
   })
 
@@ -366,9 +399,9 @@ describe('moving inside the project folder', () => {
 
     expect(await editor.move('notes/brief.txt', 'notes')).toBe(true)
 
-    expect((await createFolderReader(() => root).list('notes')).map(one => one.path)).toEqual([
-      'notes/brief.txt',
-    ])
+    expect(
+      (await createFolderReader(() => root, inFrench).list('notes')).map(one => one.path),
+    ).toEqual(['notes/brief.txt'])
   })
 
   it.each(['assets', 'documents', 'assets/img', ''])(

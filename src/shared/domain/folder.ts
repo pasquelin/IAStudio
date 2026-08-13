@@ -39,10 +39,17 @@ export function isHiddenEntry(name: string): boolean {
  *
  * `localeCompare` rather than `<`: a project written in French files `Étude` between `Etat` and
  * `Fond` for a reader, and after `Zoo` for a code unit comparison.
+ *
+ * The language is taken rather than left out, which is why this is a factory and not the
+ * comparator itself. A bare `localeCompare` answers in whatever locale the OS was installed in —
+ * a language the studio may not even speak: measured, a Swedish desktop files `Ärger` past `Zoo`
+ * and a Turkish one splits the two `i`s, neither of which French or English asks for.
  */
-export function compareEntries(one: FolderEntry, other: FolderEntry): number {
-  if (one.kind !== other.kind) return one.kind === 'folder' ? -1 : 1
-  return one.name.localeCompare(other.name)
+export function entriesByName(language: string): (one: FolderEntry, other: FolderEntry) => number {
+  return (one, other) => {
+    if (one.kind !== other.kind) return one.kind === 'folder' ? -1 : 1
+    return one.name.localeCompare(other.name, language)
+  }
 }
 
 /**

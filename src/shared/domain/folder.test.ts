@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   canMoveInto,
-  compareEntries,
+  entriesByName,
   isHiddenEntry,
   isUnder,
   parentOf,
@@ -24,17 +24,29 @@ describe('what the explorer does not show', () => {
 
 describe('the order a folder reads in', () => {
   it('puts folders before files', () => {
-    expect(compareEntries(entry('zoo', 'folder'), entry('alpha', 'file'))).toBeLessThan(0)
+    expect(entriesByName('fr')(entry('zoo', 'folder'), entry('alpha', 'file'))).toBeLessThan(0)
   })
 
   // A project written in French files `Étude` between `Etat` and `Fond` for a reader, and after
   // `Zoo` for a code unit comparison.
   it('sorts accented names where a reader looks for them', () => {
     const sorted = [entry('Zoo', 'file'), entry('Étude', 'file'), entry('Fond', 'file')].sort(
-      compareEntries,
+      entriesByName('fr'),
     )
 
     expect(sorted.map(one => one.name)).toEqual(['Étude', 'Fond', 'Zoo'])
+  })
+
+  /**
+   * The reason the language is an argument at all. `Ä` files with `A` for the studio's two
+   * languages and after `Z` for a Swedish reader — so the locale the OS happens to run in decides
+   * an order neither French nor English asked for, which is exactly what the bare call did.
+   */
+  it('answers in the language it is handed, not in the one the machine runs', () => {
+    const names = [entry('Zoo', 'file'), entry('Ärger', 'file')]
+
+    expect([...names].sort(entriesByName('fr')).map(one => one.name)).toEqual(['Ärger', 'Zoo'])
+    expect([...names].sort(entriesByName('sv')).map(one => one.name)).toEqual(['Zoo', 'Ärger'])
   })
 })
 

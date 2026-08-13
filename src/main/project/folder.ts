@@ -3,7 +3,7 @@ import { access, readdir, rename } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import {
   canMoveInto,
-  compareEntries,
+  entriesByName,
   isHiddenEntry,
   isStudioFolder,
   parentOf,
@@ -24,8 +24,14 @@ export type FolderReader = {
  * A symlink is reported as neither a folder nor a file by `withFileTypes`; it is listed as a
  * file, so a reader sees it exists rather than having it vanish. Following it is the system's
  * business, on the double-click.
+ *
+ * `languageOf` is injected beside `rootOf` rather than read off `windowLanguage()`, which is what
+ * the first version did. Two reasons, and the second is the one that decided it: `services.ts` is
+ * a composition root where nothing reaches for a singleton, and a global cannot be handed a value
+ * by a unit test — the ordering cases below rode silently on `DEFAULT_LANGUAGE` and could not
+ * express the language they depend on, while an unrelated suite's `beforeEach` was free to move it.
  */
-export function createFolderReader(rootOf: () => string): FolderReader {
+export function createFolderReader(rootOf: () => string, languageOf: () => string): FolderReader {
   return {
     list: async relative => {
       const entries = await readdir(join(rootOf(), relative), { withFileTypes: true })
@@ -37,7 +43,7 @@ export function createFolderReader(rootOf: () => string): FolderReader {
           name: entry.name,
           kind: entry.isDirectory() ? 'folder' : 'file',
         }))
-        .sort(compareEntries)
+        .sort(entriesByName(languageOf()))
     },
   }
 }

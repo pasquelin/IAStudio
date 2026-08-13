@@ -92,7 +92,7 @@ describe('which families are worth offering', () => {
       },
     })
 
-    expect(await createSystemFonts(disk, ['/fonts']).families()).toEqual(['Lato'])
+    expect(await createSystemFonts(disk, ['/fonts']).families('fr')).toEqual(['Lato'])
   })
 })
 
@@ -102,7 +102,25 @@ describe('the families a machine offers', () => {
       '/fonts': { '/fonts/lato.ttf': namedFont('Lato'), '/fonts/plex.ttf': namedFont('IBM Plex') },
     })
 
-    expect(await createSystemFonts(disk, ['/fonts']).families()).toEqual(['IBM Plex', 'Lato'])
+    expect(await createSystemFonts(disk, ['/fonts']).families('fr')).toEqual(['IBM Plex', 'Lato'])
+  })
+
+  /**
+   * Sorted for the reader rather than for the machine. `Ängström` files with `A` in both of the
+   * studio's languages and after `Z` in Swedish, so the bare call this replaced handed a Swedish
+   * desktop an order neither French nor English asked for.
+   */
+  it('sorts for the language it is handed, not the one the desktop runs', async () => {
+    const disk = fakeDisk({
+      '/fonts': {
+        '/fonts/ang.ttf': namedFont('Ängström'),
+        '/fonts/zap.ttf': namedFont('Zapfino'),
+      },
+    })
+    const fonts = createSystemFonts(disk, ['/fonts'])
+
+    expect(await fonts.families('fr')).toEqual(['Ängström', 'Zapfino'])
+    expect(await fonts.families('sv')).toEqual(['Zapfino', 'Ängström'])
   })
 
   // One cut per family: offering "Helvetica Neue Light" beside "Helvetica Neue" as two entries
@@ -115,7 +133,7 @@ describe('the families a machine offers', () => {
       },
     })
 
-    expect(await createSystemFonts(disk, ['/fonts']).families()).toEqual(['Helvetica Neue'])
+    expect(await createSystemFonts(disk, ['/fonts']).families('fr')).toEqual(['Helvetica Neue'])
   })
 
   it('names every face a collection holds', async () => {
@@ -123,7 +141,7 @@ describe('the families a machine offers', () => {
       '/fonts': { '/fonts/avenir.ttc': collection([namedFont('Avenir'), namedFont('Courier')]) },
     })
 
-    expect(await createSystemFonts(disk, ['/fonts']).families()).toEqual(['Avenir', 'Courier'])
+    expect(await createSystemFonts(disk, ['/fonts']).families('fr')).toEqual(['Avenir', 'Courier'])
   })
 
   it('walks past what is not a font at all', async () => {
@@ -131,7 +149,7 @@ describe('the families a machine offers', () => {
       '/fonts': { '/fonts/OFL.txt': namedFont('Lato'), '/fonts/real.ttf': namedFont('Lato') },
     })
 
-    expect(await createSystemFonts(disk, ['/fonts']).families()).toEqual(['Lato'])
+    expect(await createSystemFonts(disk, ['/fonts']).families('fr')).toEqual(['Lato'])
   })
 
   // One bad file in a folder of four hundred must not empty the picker.
@@ -143,13 +161,13 @@ describe('the families a machine offers', () => {
       },
     })
 
-    expect(await createSystemFonts(disk, ['/fonts']).families()).toEqual(['Lato'])
+    expect(await createSystemFonts(disk, ['/fonts']).families('fr')).toEqual(['Lato'])
   })
 
   it('walks past a folder the machine has not got', async () => {
     const disk = fakeDisk({ '/fonts': { '/fonts/lato.ttf': namedFont('Lato') } })
 
-    expect(await createSystemFonts(disk, ['/nowhere', '/fonts']).families()).toEqual(['Lato'])
+    expect(await createSystemFonts(disk, ['/nowhere', '/fonts']).families('fr')).toEqual(['Lato'])
   })
 
   // The folders are ordered system first, so a face someone installed for themselves does not
@@ -172,8 +190,8 @@ describe('the families a machine offers', () => {
     const list = vi.spyOn(disk, 'list')
 
     const fonts = createSystemFonts(disk, ['/fonts'])
-    await fonts.families()
-    await fonts.families()
+    await fonts.families('fr')
+    await fonts.families('fr')
 
     expect(list).toHaveBeenCalledTimes(1)
   })
@@ -209,7 +227,7 @@ describe('the outlines of an installed face', () => {
   it('answers nothing when the file went away after it was indexed', async () => {
     const disk = fakeDisk({ '/fonts': { '/fonts/lato.ttf': namedFont('Lato') } })
     const fonts = createSystemFonts(disk, ['/fonts'])
-    await fonts.families()
+    await fonts.families('fr')
 
     vi.spyOn(disk, 'readAll').mockRejectedValue(new Error('gone'))
 
@@ -222,7 +240,7 @@ describe('the outlines of an installed face', () => {
     const file = collection([namedFont('Avenir'), namedFont('Courier')])
     const disk = fakeDisk({ '/fonts': { '/fonts/avenir.ttc': file } })
     const fonts = createSystemFonts(disk, ['/fonts'])
-    await fonts.families()
+    await fonts.families('fr')
 
     vi.spyOn(disk, 'open').mockRejectedValue(new Error('gone'))
 
