@@ -119,7 +119,7 @@ describe('Generator', () => {
   it('drops the preparation once a model is picked in the panel', async () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
 
-    useModels.getState().select('image', 'model_flux', 'image')
+    useModels.getState().select('image', 'model_flux')
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()
@@ -144,8 +144,8 @@ describe('Generator', () => {
 
   /**
    * Asserted on the source for the same reason as the import above: the note only appears after
-   * a debounced dry run. Where the figure is FORMATTED moved to the hook, which both this form
-   * and the Apps panel read it from — `useCostEstimate.test.ts` holds that half.
+   * a debounced dry run. Where the figure is FORMATTED moved to the hook this form reads it
+   * from — `useCostEstimate.test.ts` holds that half.
    */
   it('draws whatever the cost watch says, and formats nothing itself', () => {
     expect(panelSource).toMatch(/submitNote=\{cost\.note\}/)

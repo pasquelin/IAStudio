@@ -237,14 +237,14 @@ describe('the left column', () => {
         WORKSPACE_IDS.some(workspace => serves(placement, workspace)),
     )
 
-    expect(lower.map(placement => placement.id)).toEqual(['explorer', 'apps'])
+    expect(lower.map(placement => placement.id)).toEqual(['explorer'])
   })
 })
 
 describe('the rail order of the upper right', () => {
-  // What the right keeps once the Explorer and the Apps have gone left: what acts on the
-  // document that is already open, and only that.
-  it('reads the panels of the document, and no longer the Explorer or the Apps', () => {
+  // What the right keeps once the Explorer has gone left: what acts on the document that is
+  // already open, and only that.
+  it('reads the panels of the document, and no longer the Explorer', () => {
     expect(upperRightIn('image')).toEqual(['layers'])
   })
 

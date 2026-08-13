@@ -52,9 +52,6 @@ describe('signatureOf', () => {
 
   it('fires the commands bound to Enter from the keypad', () => {
     expect(commandFor(signatureOf(event('NumpadEnter')), 'canvas', {})).toBe('canvas.cropApply')
-    expect(commandFor(signatureOf(event('NumpadEnter', { metaKey: true })), 'graph', {})).toBe(
-      'graph.run',
-    )
   })
 
   it('follows a remap onto Enter, having no second spelling of its own', () => {

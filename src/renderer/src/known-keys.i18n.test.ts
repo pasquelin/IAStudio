@@ -24,7 +24,7 @@ const PLURAL_SUFFIXES = ['', '_zero', '_one', '_two', '_few', '_many', '_other']
  *
  * The hyphen and the underscore are NOT decoration: 147 of the bundle's keys carry one, between
  * i18next's plural suffixes (`jobs.running_one`) and the hyphenated failure codes the account
- * settings and the graph both use (`accounts.errors.too-long`). Refusing them would have skipped
+ * settings use (`accounts.errors.too-long`). Refusing them would have skipped
  * four keys of `AccountSettings` in silence — a guard that looks wider and covers less.
  */
 const KEY_SHAPED = /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_-]+)+$/
@@ -86,7 +86,7 @@ function keysIn(
   // No `ScriptKind`: TypeScript reads it off the name, and forcing TSX on a `.ts` was worse than
   // useless — `const f = <T,>(x: T) => x` opens a tag, the parser drops into error recovery, and
   // nothing after it is visited. Measured on this glob: 697 nodes of `app/document-io.ts` seen
-  // out of 1653, and 483 of `engines/graph/serialize.ts` out of 866.
+  // out of 1653.
   const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
   const keys: { key: string; line: number }[] = []
   const filled: Interpolated[] = []

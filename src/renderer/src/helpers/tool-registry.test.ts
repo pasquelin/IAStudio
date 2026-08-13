@@ -40,35 +40,21 @@ describe('the generator', () => {
   })
 
   it('is the only panel its absence removes', () => {
-    expect(idsOf('left', 'image')).toEqual(['models', 'explorer', 'apps'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'explorer'])
     useModels.setState({ selected: { image: 'flux-dev' } })
-    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'explorer', 'apps'])
-  })
-
-  /**
-   * The graph belongs to no model family, and that is not the same as having no model: it
-   * chains every family, so its choice is filed under the whole catalogue. Read as a family,
-   * the `null` said "nothing to generate with" and `canOffer` took the panel out of the space
-   * for good — green at the registry layer, where the placement is there all along.
-   */
-  it('is offered in the space that belongs to no family, once a model is chosen there', () => {
-    expect(idsOf('left', 'graph')).toEqual(['models', 'explorer', 'apps'])
-    useModels.setState({ selected: { all: 'flux-dev' } })
-
-    expect(hasModelFor('graph')).toBe(true)
-    expect(idsOf('left', 'graph')).toEqual(['models', 'generator', 'explorer', 'apps'])
+    expect(idsOf('left', 'image')).toEqual(['models', 'generator', 'explorer'])
   })
 
   /** The home is the one surface with nothing to generate at all, and it stays that way. */
   it('is never offered on the home, whatever has been chosen elsewhere', () => {
-    useModels.setState({ selected: { all: 'flux-dev', image: 'flux-dev' } })
+    useModels.setState({ selected: { image: 'flux-dev' } })
 
     expect(hasModelFor(HOME_SURFACE)).toBe(false)
   })
 
-  /** A choice made in the graph is not a choice made in Image: the scopes are separate keys. */
-  it('keeps the whole-catalogue choice out of the spaces that have a family', () => {
-    useModels.setState({ selected: { all: 'flux-dev' } })
+  /** A choice made in one space is not a choice made in another: the scopes are separate keys. */
+  it('keeps a space’s choice out of the spaces that have another family', () => {
+    useModels.setState({ selected: { texture: 'flux-dev' } })
 
     expect(hasModelFor('image')).toBe(false)
   })
@@ -111,7 +97,7 @@ describe('a half open on no panel in particular', () => {
     expect(shownTool(null, 'bottom', 'secondary', 'image', true)).toBeNull()
   })
 
-  // The lower half of the left column, which the Explorer and the Apps took over.
+  // The lower half of the left column, which the Explorer took over.
   it('opens the lower left on the first panel that half declares', () => {
     expect(shownTool(null, 'left', 'secondary', 'image', true)).toBe('explorer')
   })

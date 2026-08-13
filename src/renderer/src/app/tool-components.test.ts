@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ToolId } from '@shared/domain/tool'
 import type { ToolDefinition } from '@/panels/definition'
-import { definition as apps } from '@/panels/apps'
 import { definition as assets } from '@/panels/assets'
 import { definition as channels } from '@/panels/channels'
 import { definition as documents } from '@/panels/documents'
@@ -44,7 +43,6 @@ const PANELS: Record<ToolId, ToolDefinition> = {
   channels,
   styles,
   view,
-  apps,
   projects,
   library,
   documents,

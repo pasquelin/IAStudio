@@ -78,17 +78,6 @@ describe('where an asset came from', () => {
     expect(generationOf(asset({ jobId: 'job-1' }), [job()], {})).toBeNull()
   })
 
-  /**
-   * A workflow's id is not a model's. Answered as a generation, "regenerate with these
-   * parameters" would open the generator on a model the catalogue has never heard of.
-   */
-  it('answers nothing for what an App produced', () => {
-    const workflowJob = job({ kind: 'workflow', targetId: 'workflow_1' })
-    const bodies = { 'job-1': { prompt: 'a soft pad' } }
-
-    expect(generationOf(asset({ jobId: 'job-1' }), [workflowJob], bodies)).toBeNull()
-  })
-
   it('keeps the whole body, so regenerating carries every parameter and not just the prompt', () => {
     const bodies = { 'job-1': { prompt: 'x', guidance: 7, negative: 'flou' } }
     expect(generationOf(asset({ jobId: 'job-1' }), [job()], bodies)?.params).toEqual(

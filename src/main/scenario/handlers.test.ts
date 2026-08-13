@@ -8,7 +8,6 @@ import {
 } from '@shared/domain/prompt-assist'
 import { invoke, resetHandlers } from '@main/ipc/test-harness'
 import { registerScenarioHandlers, type ScenarioHandlerDeps } from './handlers'
-import type { WorkflowRegistry } from './workflow-registry'
 import type { AssetUploader } from './uploader'
 import type { JobManager } from './job-manager'
 import type { ModelRegistry } from './model-registry'
@@ -25,7 +24,6 @@ function registry(overrides: Partial<ModelRegistry> = {}): ModelRegistry {
     search: () => Promise.resolve({ items: [], cursor: null }),
     previews: () => Promise.resolve({}),
     describe: () => Promise.reject(new Error('unused')),
-    inputsOf: () => Promise.reject(new Error('unused')),
     ...overrides,
   }
 }
@@ -67,55 +65,16 @@ const usage = reader()
 
 const estimateCost: CostEstimator = () => Promise.resolve(null)
 
-function workflowRegistry(overrides: Partial<WorkflowRegistry> = {}): WorkflowRegistry {
-  return {
-    search: () => Promise.resolve({ items: [], cursor: null }),
-    describe: () => Promise.reject(new Error('unused')),
-    create: () => Promise.resolve({ id: 'workflow_1' }),
-    update: () => Promise.resolve(),
-    ...overrides,
-  }
-}
-
-/**
- * Two generators on the SAME model, so a compile that asked per node rather than per model would
- * be caught by the call count. Marked as an output, or the compile stops before the converter.
- */
-const graphWithTwoGenerators = {
-  nodes: [
-    {
-      id: 'm1',
-      type: 'model',
-      position: { x: 0, y: 0 },
-      data: { modelId: 'model_flux', isOutput: true, form: { prompt: 'a knight' } },
-    },
-    {
-      id: 'm2',
-      type: 'model',
-      position: { x: 400, y: 0 },
-      data: { modelId: 'model_flux', isOutput: true, form: { prompt: 'a castle' } },
-    },
-  ],
-  edges: [],
-  inputKeys: [],
-}
-
 /** Every dependency stubbed, so a case names only the one it is about. */
 function register(overrides: Partial<ScenarioHandlerDeps> = {}): void {
   registerScenarioHandlers({
     models: registry(),
-    // Straight through, so a case measures what the handler asks for and not what a queue does.
-    queue: task => task(),
-    workflows: workflowRegistry(),
     jobs,
     prompts,
     uploads,
     usage,
     plan: { access: () => Promise.resolve(null) },
     estimateCost,
-    saveWorkflow: () => Promise.resolve('/tmp/graph.workflow.json'),
-    openWorkflow: () => Promise.resolve(null),
-    ownerScope: { current: () => 'project_1', observe: () => {} },
     ...overrides,
   })
 }
@@ -358,7 +317,7 @@ describe('scenario handlers', () => {
         estimateCost: estimate,
       })
 
-      const target = { kind: 'model', id: 'model_flux' }
+      const target = { id: 'model_flux' }
       await expect(
         invoke(CHANNELS.scenarioEstimateCost, target, { prompt: 'a rock' }),
       ).resolves.toEqual({ creativeUnits: 12 })
@@ -371,286 +330,11 @@ describe('scenario handlers', () => {
         estimateCost: estimate,
       })
 
+      await expect(invoke(CHANNELS.scenarioEstimateCost, { id: '  ' }, {})).rejects.toThrow()
       await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { kind: 'model', id: '  ' }, {}),
-      ).rejects.toThrow()
-      await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { kind: 'app', id: 'model_flux' }, {}),
-      ).rejects.toThrow()
-      await expect(
-        invoke(CHANNELS.scenarioEstimateCost, { kind: 'model', id: 'model_flux' }, 'not a body'),
+        invoke(CHANNELS.scenarioEstimateCost, { id: 'model_flux' }, 'not a body'),
       ).rejects.toThrow()
       expect(estimate).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('workflows', () => {
-    it('lists them, validating what the renderer asked with', async () => {
-      const search = vi.fn(() => Promise.resolve({ items: [], cursor: null }))
-      register({ workflows: workflowRegistry({ search }) })
-
-      await expect(invoke(CHANNELS.workflowsSearch, { privacy: 'public' })).resolves.toEqual({
-        items: [],
-        cursor: null,
-      })
-      await expect(invoke(CHANNELS.workflowsSearch, { limit: 10_000 })).rejects.toThrow()
-      expect(search).toHaveBeenCalledOnce()
-    })
-
-    /** The label follows the same rule as a generation's: read from the description. */
-    it('submits a workflow job named after the App', async () => {
-      // The handler answers whatever the manager returns; only the arguments are under test.
-      const submit = vi.fn(() => ({ id: 'job_1' }) as never)
-      register({
-        workflows: workflowRegistry({
-          describe: () =>
-            Promise.resolve({
-              id: 'workflow_1',
-              name: 'Background remover',
-              status: 'ready',
-              privacy: 'public',
-              tags: [],
-              outputKinds: [],
-              fields: [],
-            }),
-        }),
-        jobs: { ...jobs, submit },
-      })
-
-      await invoke(CHANNELS.workflowsRun, 'workflow_1', { image: 'asset_1' })
-
-      expect(submit).toHaveBeenCalledWith(
-        { kind: 'workflow', id: 'workflow_1' },
-        'Background remover',
-        {
-          image: 'asset_1',
-        },
-      )
-    })
-
-    // A description that will not come is a cosmetic problem; refusing to run over one is not.
-    it('runs it under its own id when the description cannot be read', async () => {
-      // The handler answers whatever the manager returns; only the arguments are under test.
-      const submit = vi.fn(() => ({ id: 'job_1' }) as never)
-      register({ jobs: { ...jobs, submit } })
-
-      await invoke(CHANNELS.workflowsRun, 'workflow_1', {})
-
-      expect(submit).toHaveBeenCalledWith({ kind: 'workflow', id: 'workflow_1' }, 'workflow_1', {})
-    })
-
-    /**
-     * The compile resolves the models of the graph BEFORE the converter runs, because the
-     * converter is synchronous and skips every wire whose input it cannot name.
-     */
-    it('asks the registry for the schema of each model the graph names, once', async () => {
-      const inputsOf = vi.fn(() => Promise.resolve([{ name: 'prompt', type: 'string' }]))
-      register({ models: registry({ inputsOf }) })
-
-      await invoke(CHANNELS.workflowsCompile, graphWithTwoGenerators)
-
-      expect(inputsOf).toHaveBeenCalledTimes(1)
-      expect(inputsOf).toHaveBeenCalledWith('model_flux')
-    })
-
-    it('runs those lookups through the bounded queue rather than around it', async () => {
-      // Counted by hand rather than by `vi.fn`, which does not keep the generic the queue is.
-      let queued = 0
-      const queue = <T>(task: () => Promise<T>): Promise<T> => {
-        queued++
-        return task()
-      }
-      register({ models: registry({ inputsOf: () => Promise.resolve([]) }), queue })
-
-      await invoke(CHANNELS.workflowsCompile, graphWithTwoGenerators)
-
-      expect(queued).toBe(1)
-    })
-
-    /**
-     * A model that was deleted, or a key that no longer reaches it: the graph must still say
-     * whether it compiles. What is lost is that node's wiring, exactly as before any of this.
-     */
-    it('still answers when a model cannot be described at all', async () => {
-      register({
-        models: registry({ inputsOf: () => Promise.reject(new Error('gone')) }),
-      })
-
-      await expect(invoke(CHANNELS.workflowsCompile, graphWithTwoGenerators)).resolves.toEqual({
-        ok: true,
-        steps: 2,
-      })
-    })
-
-    /** One channel prices both, and the target is what says which endpoint answers. */
-    it('prices one through the channel that prices a generation', async () => {
-      const estimate = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
-      register({ estimateCost: estimate })
-
-      const target = { kind: 'workflow', id: 'workflow_1' }
-      await expect(
-        invoke(CHANNELS.scenarioEstimateCost, target, { image: 'asset_1' }),
-      ).resolves.toEqual({ creativeUnits: 12 })
-      expect(estimate).toHaveBeenCalledWith(target, { image: 'asset_1' })
-    })
-  })
-
-  describe('exporting a graph to a file', () => {
-    const withInput = {
-      nodes: [
-        {
-          id: 'image2',
-          type: 'asset',
-          position: { x: 0, y: 0 },
-          data: { isInput: true, type: 'image', title: 'Hero' },
-        },
-      ],
-      edges: [],
-      inputKeys: [],
-    }
-
-    it('writes the graph under the name it was given, as a workflow file', async () => {
-      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
-        Promise.resolve('/tmp/Heroes.workflow.json'),
-      )
-      register({ saveWorkflow })
-
-      await expect(invoke(CHANNELS.workflowsExport, withInput, 'Heroes')).resolves.toBe(true)
-
-      const [name, contents] = saveWorkflow.mock.calls[0] ?? []
-      expect(name).toBe('Heroes')
-      expect(JSON.parse(String(contents))).toMatchObject({
-        version: '1.0',
-        name: 'Heroes',
-        editorInfo: { nodes: withInput.nodes, edges: [], inputKeys: [] },
-        inputs: [{ name: 'image2', label: 'Hero', type: 'file', kind: 'image' }],
-      })
-    })
-
-    /** Closing the picker is not a failure — nothing was written, and the screen says nothing. */
-    it('answers false where the picker was closed', async () => {
-      register({ saveWorkflow: () => Promise.resolve(null) })
-
-      await expect(invoke(CHANNELS.workflowsExport, withInput, 'Heroes')).resolves.toBe(false)
-    })
-
-    /** `exportedBy` is the project the active key opens onto, and it is only known here. */
-    it('stamps the file with the account the key belongs to', async () => {
-      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
-        Promise.resolve('/tmp/x.json'),
-      )
-      register({ saveWorkflow, ownerScope: { current: () => 'project_7', observe: () => {} } })
-
-      await invoke(CHANNELS.workflowsExport, withInput, 'Heroes')
-
-      const [, contents] = saveWorkflow.mock.calls[0] ?? []
-      expect(JSON.parse(String(contents)).exportedBy).toBe('project_7')
-    })
-
-    /** Before the library has answered once there is no owner, and a blank says exactly that. */
-    it('leaves the account blank rather than inventing one', async () => {
-      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
-        Promise.resolve('/tmp/x.json'),
-      )
-      register({ saveWorkflow, ownerScope: { current: () => null, observe: () => {} } })
-
-      await invoke(CHANNELS.workflowsExport, withInput, 'Heroes')
-
-      const [, contents] = saveWorkflow.mock.calls[0] ?? []
-      expect(JSON.parse(String(contents)).exportedBy).toBe('')
-    })
-
-    /**
-     * No node count is checked, and that is the decision rather than an omission: the ceiling of
-     * 50 in the prose has never been measured, and a local refusal on it would turn away graphs
-     * Scenario accepts.
-     */
-    /**
-     * The aller-retour, played across the REAL boundary. The renderer's own suite proved it by
-     * calling `workflowFileOf` directly — which skips `parseGraphState`, and `parseGraphState` is
-     * a zod object: it STRIPS what it does not declare. Boxes and sizes were dropped there, on the
-     * export's only path, while a green test said otherwise.
-     */
-    it('exports the boxes and the sizes, which the boundary used to strip', async () => {
-      const saveWorkflow = vi.fn((_name: string, _contents: string) => Promise.resolve('/tmp/x'))
-      const drawn = {
-        nodes: [
-          {
-            id: 'note1',
-            type: 'stickyNote',
-            position: { x: 0, y: 0 },
-            data: { group: 'g1' },
-            width: 320,
-            height: 180,
-          },
-        ],
-        edges: [],
-        inputKeys: [],
-        nodeGroups: { g1: { title: 'Heroes', color: '#3574f0' } },
-      }
-      register({ saveWorkflow })
-
-      await invoke(CHANNELS.workflowsExport, drawn, 'Heroes')
-
-      const [, contents] = saveWorkflow.mock.calls[0] ?? []
-      expect(JSON.parse(String(contents)).editorInfo).toMatchObject({
-        nodes: [expect.objectContaining({ width: 320, height: 180 })],
-        nodeGroups: { g1: { title: 'Heroes', color: '#3574f0' } },
-      })
-    })
-
-    it('publishes the graph as a workflow, models resolved first', async () => {
-      const create = vi.fn((_about: { name: string; description: string }) =>
-        Promise.resolve({ id: 'workflow_9' }),
-      )
-      const update = vi.fn((_id: string, _body: unknown) => Promise.resolve())
-      // Without a schema the converter names no wire and drops the whole incoming wiring, so the
-      // publication must resolve the models before it compiles — as the compile does.
-      const inputsOf = vi.fn(() => Promise.resolve([{ name: 'prompt', type: 'string' }]))
-      register({ workflows: workflowRegistry({ create, update }), models: registry({ inputsOf }) })
-
-      await expect(
-        invoke(CHANNELS.workflowsPublish, graphWithTwoGenerators, 'Heroes'),
-      ).resolves.toEqual({ ok: true, workflowId: 'workflow_9' })
-
-      expect(inputsOf).toHaveBeenCalledWith('model_flux')
-      expect(create).toHaveBeenCalledWith({ name: 'Heroes', description: '' })
-      expect(update.mock.calls[0]?.[0]).toBe('workflow_9')
-    })
-
-    /**
-     * The refusal the user can ACT on, and the same one the editor already paints. Answered
-     * `empty` until the publication rejoined the compile's own verdict, which is the difference
-     * between "mark a node as an output" and a code that says nothing.
-     */
-    it('refuses to publish a graph nothing reaches, in the compile’s own words', async () => {
-      const create = vi.fn(() => Promise.resolve({ id: 'workflow_9' }))
-      register({ workflows: workflowRegistry({ create }) })
-
-      await expect(invoke(CHANNELS.workflowsPublish, withInput, 'Heroes')).resolves.toEqual({
-        ok: false,
-        problem: 'no-output',
-        // Nothing to point at, and that IS the refusal: no node carries the mark.
-        nodes: [],
-      })
-      expect(create).not.toHaveBeenCalled()
-    })
-
-    it('exports a graph of many nodes rather than refusing it on an unmeasured ceiling', async () => {
-      const saveWorkflow = vi.fn((_name: string, _contents: string) =>
-        Promise.resolve('/tmp/x.json'),
-      )
-      const nodes = Array.from({ length: 80 }, (_unused, index) => ({
-        id: `text${index}`,
-        type: 'text',
-        position: { x: index, y: 0 },
-        data: {},
-      }))
-      register({ saveWorkflow })
-
-      await expect(
-        invoke(CHANNELS.workflowsExport, { nodes, edges: [], inputKeys: [] }, 'Big'),
-      ).resolves.toBe(true)
     })
   })
 })

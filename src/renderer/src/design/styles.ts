@@ -291,12 +291,10 @@ export const MENU_SURFACE = cn(
 )
 
 /**
- * Where a workspace's own bar floats over its pane. The graph, the image and the 3D space put it
- * in the same corner with the same inset, and a bar that moves has to move in all three.
+ * Where a workspace's own bar floats over its pane. The image and the 3D space put it in the
+ * same corner with the same inset, and a bar that moves has to move in both.
  *
- * The inset only, never the skin: `Toolbar` wears that. The graph adds a `z-10` of its own —
- * React Flow paints its pane above anything without one, and the other two spaces have nothing
- * to climb over.
+ * The inset only, never the skin: `Toolbar` wears that.
  */
 export const PANE_TOOLBAR = 'absolute top-2 left-2'
 
@@ -325,8 +323,8 @@ export const SHELF_OVERLAY = cn(
 
 /**
  * How a status reads. The caller names the MEANING — queued, running, cached, failed — and the
- * colour stays here: the jobs bar, the media import and a node of the graph all say "this one
- * went wrong", and they must say it in the same red.
+ * colour stays here: the jobs bar and the media import both say "this one went wrong", and they
+ * must say it in the same red.
  */
 export type StatusTone = 'muted' | 'accent' | 'success' | 'warning' | 'danger'
 

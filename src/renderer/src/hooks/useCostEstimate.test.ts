@@ -46,7 +46,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     act(() => {
       result.current.onValuesChange({ prompt: 'a' })
@@ -60,10 +60,7 @@ describe('what the form in front of the user would cost', () => {
     })
 
     expect(estimateCost).toHaveBeenCalledOnce()
-    expect(estimateCost).toHaveBeenCalledWith(
-      { kind: 'model', id: 'model_flux' },
-      { prompt: 'a rock' },
-    )
+    expect(estimateCost).toHaveBeenCalledWith({ id: 'model_flux' }, { prompt: 'a rock' })
     expect(result.current.note).toContain('12')
   })
 
@@ -76,7 +73,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 1 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     const text = 'a mossy boulder in a clearing at dawn'
     await typeAt(result.current.onValuesChange, text, ESTIMATE_DEBOUNCE_MS + 50)
@@ -88,16 +85,16 @@ describe('what the form in front of the user would cost', () => {
   })
 
   /**
-   * The generator and an App are in different columns, so both forms are on screen at once — an
-   * ordinary layout. A floor kept per hook would let each spend the whole interactive share, and
-   * the poll loop is sized against that share once: it is the one that would pay.
+   * Two generator forms are on screen at once as soon as a panel is detached into a second
+   * window. A floor kept per hook would let each spend the whole interactive share, and the poll
+   * loop is sized against that share once: it is the one that would pay.
    */
   it('spends one share between two forms, not one each', async () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 1 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const generator = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
-    const app = renderHook(() => useCostEstimate('workflow', 'workflow_1', [PROMPT]))
+    const generator = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
+    const second = renderHook(() => useCostEstimate('model_sdxl', [PROMPT]))
 
     act(() => generator.result.current.onValuesChange({ prompt: 'a rock' }))
     await act(async () => {
@@ -106,7 +103,7 @@ describe('what the form in front of the user would cost', () => {
     expect(estimateCost).toHaveBeenCalledOnce()
 
     // The second form asks straight away; the floor is what must hold it back all the same.
-    act(() => app.result.current.onValuesChange({ prompt: 'a boulder' }))
+    act(() => second.result.current.onValuesChange({ prompt: 'a boulder' }))
     await act(async () => {
       await vi.advanceTimersByTimeAsync(ESTIMATE_DEBOUNCE_MS)
     })
@@ -123,7 +120,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({}))
     await act(async () => {
@@ -138,7 +135,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
     await act(async () => {
@@ -167,7 +164,7 @@ describe('what the form in front of the user would cost', () => {
     )
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'slow' }))
     await act(async () => {
@@ -197,7 +194,7 @@ describe('what the form in front of the user would cost', () => {
     let answer = (): Promise<{ creativeUnits: number }> => Promise.resolve({ creativeUnits: 12 })
     installFakeBridge({ scenario: { estimateCost: () => answer() } })
 
-    const { result } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
     await act(async () => {
@@ -224,7 +221,7 @@ describe('what the form in front of the user would cost', () => {
     )
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result, rerender } = renderHook(({ id }) => useCostEstimate('model', id, [PROMPT]), {
+    const { result, rerender } = renderHook(({ id }) => useCostEstimate(id, [PROMPT]), {
       initialProps: { id: 'model_flux' },
     })
 
@@ -257,7 +254,7 @@ describe('what the form in front of the user would cost', () => {
     )
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result, rerender } = renderHook(({ id }) => useCostEstimate('model', id, [PROMPT]), {
+    const { result, rerender } = renderHook(({ id }) => useCostEstimate(id, [PROMPT]), {
       initialProps: { id: 'model_flux' },
     })
 
@@ -282,7 +279,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve({ creativeUnits: 12 }))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result, rerender } = renderHook(({ id }) => useCostEstimate('model', id, [PROMPT]), {
+    const { result, rerender } = renderHook(({ id }) => useCostEstimate(id, [PROMPT]), {
       initialProps: { id: 'model_flux' },
     })
 
@@ -300,7 +297,7 @@ describe('what the form in front of the user would cost', () => {
     const estimateCost = vi.fn(() => Promise.resolve(null))
     installFakeBridge({ scenario: { estimateCost } })
 
-    const { result, unmount } = renderHook(() => useCostEstimate('model', 'model_flux', [PROMPT]))
+    const { result, unmount } = renderHook(() => useCostEstimate('model_flux', [PROMPT]))
 
     act(() => result.current.onValuesChange({ prompt: 'a rock' }))
     unmount()

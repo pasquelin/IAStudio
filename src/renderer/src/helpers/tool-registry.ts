@@ -1,5 +1,4 @@
 import {
-  mdiApplicationBracesOutline,
   mdiCloudOutline,
   mdiCreationOutline,
   mdiCubeScan,
@@ -18,7 +17,6 @@ import {
 } from '@mdi/js'
 import { useMemo } from 'react'
 import {
-  HOME_SURFACE,
   placementIn,
   serves,
   TOOL_PLACEMENTS,
@@ -27,10 +25,9 @@ import {
   type ToolSurface,
   type ToolZone,
 } from '@shared/domain/tool'
-import type { ModelScope } from '@shared/domain/model'
-import { modelForScope, useModelForScope } from '@/helpers/model-for-scope'
+import { modelForFamily, useModelForFamily } from '@/helpers/model-for-family'
 import { NODE_KINDS } from '@/engines/scene/node-kinds'
-import { workspaceById } from './workspaces'
+import { familyOfSurface } from './workspaces'
 
 export type Tool = {
   id: ToolId
@@ -56,7 +53,6 @@ const ICONS: Record<ToolId, string> = {
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,
   styles: mdiPaletteSwatchOutline,
-  apps: mdiApplicationBracesOutline,
   // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
@@ -110,18 +106,6 @@ export function toolIcon(id: ToolId): string {
 }
 
 /**
- * What a surface browses models by. The home generates nothing: it opens documents, it makes
- * none — and that is the ONE surface with no scope at all.
- *
- * A workspace without a family is a different thing entirely: the graph chains them, so it has
- * every model to choose from rather than none. Reading its `null` family as "no models" is what
- * would drop the generator from its rail for good, since `canOffer` removes the panel outright.
- */
-function scopeFor(surface: ToolSurface): ModelScope | null {
-  return surface === HOME_SURFACE ? null : workspaceById(surface).scope
-}
-
-/**
  * Whether this surface has a model to generate with — one chosen in the Models panel, or one
  * preferred in the settings, which is what that preference is for.
  *
@@ -130,8 +114,8 @@ function scopeFor(surface: ToolSurface): ModelScope | null {
  * it.
  */
 export function hasModelFor(surface: ToolSurface): boolean {
-  const scope = scopeFor(surface)
-  return Boolean(scope && modelForScope(scope))
+  const family = familyOfSurface(surface)
+  return Boolean(family && modelForFamily(family))
 }
 
 /**
@@ -149,7 +133,7 @@ function canOffer(id: ToolId, hasModel: boolean): boolean {
  * happened to re-render.
  */
 export function useHasModel(surface: ToolSurface): boolean {
-  return Boolean(useModelForScope(scopeFor(surface)))
+  return Boolean(useModelForFamily(familyOfSurface(surface)))
 }
 
 /**

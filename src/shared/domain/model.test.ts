@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  ALL_FAMILIES,
   FAMILY_TAGS,
   MODEL_FAMILIES,
-  scopeOf,
   tagLabel,
   TAGS_BY_FAMILY,
   TAG_LABEL_KEY_LIST,
@@ -65,23 +63,5 @@ describe('the tags a facet menu offers', () => {
     expect(tagLabel('Multiview', key => `<${key}>`)).toBe('<modelTags.multiview>')
     // A tag the table has never heard of still has to read as something.
     expect(tagLabel('Nano Banana Pro', () => 'unreachable')).toBe('Nano Banana Pro')
-  })
-})
-
-describe('the scope a surface browses by', () => {
-  it('is the family itself wherever there is one', () => {
-    for (const family of MODEL_FAMILIES) expect(scopeOf(family)).toBe(family)
-  })
-
-  it('stands in for the absence of a family, so a choice still has somewhere to be filed', () => {
-    expect(scopeOf(null)).toBe(ALL_FAMILIES)
-  })
-
-  /**
-   * No model carries it, and nothing must start listing it beside the ten: an eleventh entry in
-   * the family menu would offer a filter whose only answer is none.
-   */
-  it('is not an eleventh family', () => {
-    expect(MODEL_FAMILIES).not.toContain(ALL_FAMILIES)
   })
 })

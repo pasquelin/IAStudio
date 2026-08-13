@@ -1,6 +1,6 @@
 import type { FieldDescriptor, ModelFamily } from '@shared/domain/model'
 import { layerById } from '@/engines/canvas/canvas-state'
-import { modelForScope } from '@/helpers/model-for-scope'
+import { modelForFamily } from '@/helpers/model-for-family'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useModels } from '@/stores/models'
 import { fillEditFields } from './ai-fields'
@@ -49,7 +49,7 @@ export async function prepareEdit(
   bridge: EditBridge,
 ): Promise<boolean> {
   const { family, masked } = AI_EDITS[edit]
-  const modelId = modelForScope(family)
+  const modelId = modelForFamily(family)
   if (!modelId) {
     offerModelsOfFamily(family)
     return false

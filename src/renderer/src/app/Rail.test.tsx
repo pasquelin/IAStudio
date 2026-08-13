@@ -104,9 +104,8 @@ describe('Rail', () => {
     })
 
     /**
-     * The right rail is the legend of the right column: two ways into something, and no separator
-     * — a lone populated half has nothing to be cut from, which is the same drawing the graph's
-     * own rail gets further down.
+     * The right rail is the legend of the right column: two ways into something, and no
+     * separator — a lone populated half has nothing to be cut from.
      */
     it('draws the right rail as one half, with no cut', () => {
       const { container } = render(<Rail side="right" />)
@@ -145,17 +144,6 @@ describe('Rail', () => {
     })
   })
 
-  /**
-   * A lone group has nothing to be cut from. The graph is where that case lives: no placement
-   * gives it an upper right, so its rail draws the inspector alone.
-   */
-  it('draws no separator in a column with a single populated half', () => {
-    useLayouts.setState({ activeWorkspace: 'graph', home: false })
-    const { container } = render(<Rail side="right" />)
-
-    expect(marksOf(container)).toEqual(['Inspecteur'])
-  })
-
   // Generating without a model is impossible, so the icon is absent rather than dead: the rail
   // says what the section can do.
   it('offers no generator icon while no model is chosen', () => {
@@ -179,8 +167,8 @@ describe('Rail', () => {
   }
 
   // The left rail is what one produces with, under the button that makes a document: generation
-  // above the cut, the Explorer and the Apps below it, with the band's own tools at its foot.
-  // The rail is the legend of the column, so it has to draw the same cut.
+  // above the cut, the Explorer below it, with the band's own tools at its foot. The rail is the
+  // legend of the column, so it has to draw the same cut.
   it('puts generation on the left rail, under the new-document button', () => {
     useModels.setState({ selected: { '3d': 'tripo-v3' } })
     const { container } = render(<Rail side="left" />)
@@ -192,7 +180,6 @@ describe('Rail', () => {
       'Génération',
       'separator',
       'Explorateur',
-      'Apps',
       'Timeline',
     ])
   })
@@ -213,17 +200,18 @@ describe('Rail', () => {
   })
 
   // On the default layout no half names a panel, so the icon that reads as up is the first one
-  // the section declares — the Explorer in the lower left, never the Apps under it.
+  // the section declares — the Models in the upper left, never the generator taking its turn.
   it('marks the section-first panel as up on the default layout', () => {
     useLayouts.setState({ activeWorkspace: 'image' })
+    useModels.setState({ selected: { image: 'flux-dev' } })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     render(<Rail side="left" />)
 
-    expect(screen.getByRole('button', { name: 'Explorateur' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Modèles' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Génération' })).toHaveAttribute(
       'aria-pressed',
-      'true',
+      'false',
     )
-    expect(screen.getByRole('button', { name: 'Apps' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   // The panel a section stands in for another is the one that is up, so its icon is the one

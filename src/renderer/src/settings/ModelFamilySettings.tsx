@@ -49,7 +49,6 @@ function useFamilyModels(family: ModelFamily): ModelSummary[] {
  * The stored default kept among the options whatever the page holds, so the screen never shows
  * an empty picker over a setting that IS set — a `<select>` whose value matches no option has
  * `selectedIndex === -1` and renders blank, and the next stray change overwrites it unseen.
- * `ModelNodeFields` does the same for the model a graph node runs.
  */
 function withStored(models: readonly PickableModel[], stored: string): readonly PickableModel[] {
   if (!stored || models.some(model => model.id === stored)) return models

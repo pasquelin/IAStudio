@@ -17,7 +17,6 @@ export const SHIPPED: string[] = [
   '@mdi/js',
   '@mdi/react',
   '@scenario-labs/sdk',
-  '@xyflow/react',
   'better-sqlite3',
   'electron-store',
   'electron-updater',

@@ -8,8 +8,8 @@
  * collision hands one entry another entry's result.
  *
  * BigInt costs several times what the same hash on two 32-bit lanes would, which has not been
- * worth taking so far — `engines/graph/plan.bench.ts` prices the largest graph the studio can
- * hold, and it is a small fraction of a frame. Re-run it before trading this for a faster one.
+ * worth taking so far: the bench that priced it read a small fraction of a frame. It went with
+ * the space that ran it, so a trade for a faster hash needs a fresh measurement first.
  */
 
 const OFFSET_BASIS = 14695981039346656037n

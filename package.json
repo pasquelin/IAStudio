@@ -39,7 +39,6 @@
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
     "@scenario-labs/sdk": "^3.0.0",
-    "@xyflow/react": "^12.11.3",
     "better-sqlite3": "^13.0.3",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",

@@ -71,17 +71,6 @@ const bridge: StudioBridge = {
     usageEvents: (period, cursors) =>
       ipcRenderer.invoke(CHANNELS.scenarioUsageEvents, period, cursors),
   },
-  workflows: {
-    search: query => ipcRenderer.invoke(CHANNELS.workflowsSearch, query),
-    describe: workflowId => ipcRenderer.invoke(CHANNELS.workflowsDescribe, workflowId),
-    run: (workflowId, body) => ipcRenderer.invoke(CHANNELS.workflowsRun, workflowId, body),
-    compile: graph => ipcRenderer.invoke(CHANNELS.workflowsCompile, graph),
-    export: (graph, name) => ipcRenderer.invoke(CHANNELS.workflowsExport, graph, name),
-    publish: (graph, name) => ipcRenderer.invoke(CHANNELS.workflowsPublish, graph, name),
-    import: () => ipcRenderer.invoke(CHANNELS.workflowsImport),
-    transform: (expression, variables) =>
-      ipcRenderer.invoke(CHANNELS.workflowsTransform, expression, variables),
-  },
   project: {
     create: (path, name) => ipcRenderer.invoke(CHANNELS.projectCreate, path, name),
     open: path => ipcRenderer.invoke(CHANNELS.projectOpen, path),

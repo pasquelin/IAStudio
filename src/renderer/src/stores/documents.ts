@@ -142,10 +142,6 @@ export const activeSequenceId = (state: DocumentsSlice): string | null =>
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')
 
-/** The graph in front, as a selector. Same reason again, for the node inspector. */
-export const activeGraphId = (state: DocumentsSlice): string | null =>
-  activeIdOfKind(state, 'graph')
-
 /** The texture in front, as a selector. Same reason again, for the material inspector. */
 export const activeTextureId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'texture')

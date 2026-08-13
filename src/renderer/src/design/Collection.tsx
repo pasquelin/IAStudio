@@ -59,7 +59,7 @@ export type CollectionProps<T extends { id: string }> = {
   onActivate?: (item: T) => void
   /**
    * Opening on a SINGLE click, for a list whose row leads somewhere instead of being picked —
-   * the Apps panel, whose row swaps the whole panel for the App it names.
+   * the projects shelf, whose row opens the project it names.
    *
    * Not `onSelect` with the opening wired into it: that announces a `listbox` whose every row
    * carries `aria-selected="false"` for ever, since nothing here is ever selected. Not

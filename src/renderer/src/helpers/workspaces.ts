@@ -1,6 +1,5 @@
 import {
   mdiCubeOutline,
-  mdiGraphOutline,
   mdiImageOutline,
   mdiPanoramaVariantOutline,
   mdiTextureBox,
@@ -9,24 +8,15 @@ import {
 } from '@mdi/js'
 import { ASSET_TYPES, type AssetType } from '@shared/domain/asset'
 import { workspaceOfType } from '@shared/domain/asset-kind'
-import { scopeOf, type ModelFamily, type ModelScope } from '@shared/domain/model'
+import { type ModelFamily } from '@shared/domain/model'
+import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { WORKSPACE_IDS, workspaceOrder, type WorkspaceId } from '@shared/domain/workspace'
 
 export type Workspace = {
   id: WorkspaceId
   icon: string
-  /**
-   * Scenario model family the generator offers in this workspace, or `null` where the space
-   * belongs to none — a graph chains the families rather than sitting in one, and a catalogue
-   * asked for no family in particular answers with all of it (`ModelQuery.family` is optional).
-   */
-  family: ModelFamily | null
-  /**
-   * Where this space's choice of model is filed. Derived here rather than at each reader: it
-   * was re-composed at four call sites, and the fifth forgot — which cost the graph its
-   * generator, since a `null` family read as "nothing to generate with".
-   */
-  scope: ModelScope
+  /** Scenario model family the generator offers in this workspace, and files its choice under. */
+  family: ModelFamily
 }
 
 const ICONS: Record<WorkspaceId, string> = {
@@ -36,7 +26,6 @@ const ICONS: Record<WorkspaceId, string> = {
   audio: mdiVolumeHigh,
   textures: mdiTextureBox,
   skyboxes: mdiPanoramaVariantOutline,
-  graph: mdiGraphOutline,
 }
 
 /**
@@ -72,23 +61,19 @@ const USED_BY_WORKSPACE: Record<WorkspaceId, readonly AssetType[]> = {
   audio: ['audio'],
   textures: ['texture', 'image'],
   skyboxes: ['skybox', 'image'],
-  // Read off the list rather than respelled: a node takes whatever the node before it produced,
-  // so this is the one row that must never narrow — a seventh asset type belongs here by default.
-  graph: ASSET_TYPES,
 }
 
 export function assetTypesOf(workspace: WorkspaceId): readonly AssetType[] {
   return USED_BY_WORKSPACE[workspace]
 }
 
-const FAMILIES: Record<WorkspaceId, ModelFamily | null> = {
+const FAMILIES: Record<WorkspaceId, ModelFamily> = {
   image: 'image',
   video: 'video',
   '3d': '3d',
   audio: 'audio',
   textures: 'texture',
   skyboxes: 'skybox',
-  graph: null,
 }
 
 /**
@@ -101,7 +86,6 @@ export const WORKSPACES: readonly Workspace[] = WORKSPACE_IDS.map(id => ({
   id,
   icon: ICONS[id],
   family: FAMILIES[id],
-  scope: scopeOf(FAMILIES[id]),
 }))
 
 /**
@@ -126,4 +110,15 @@ export function workspaceById(id: string): Workspace {
   const workspace = WORKSPACES.find(candidate => candidate.id === id)
   if (!workspace) throw new Error(`Unknown workspace: ${id}`)
   return workspace
+}
+
+/**
+ * What a surface browses models by. The home generates nothing: it opens documents, it makes
+ * none — and that is the ONE surface with no family at all.
+ *
+ * Written once because two readers ask it — the rail deciding whether to draw the generator, and
+ * the edit that sends the user off to pick a model — and a second spelling is a second answer.
+ */
+export function familyOfSurface(surface: ToolSurface): ModelFamily | null {
+  return surface === HOME_SURFACE ? null : workspaceById(surface).family
 }

@@ -70,7 +70,7 @@ describe('opening an asset', () => {
     useScenes.setState({ states: {}, histories: {} })
     useCanvases.setState({ states: {}, histories: {} })
     // Not the target of any case below: a test watching the workspace change must not start on it.
-    useLayouts.setState({ layouts: {}, activeWorkspace: 'graph' })
+    useLayouts.setState({ layouts: {}, activeWorkspace: 'video' })
     useProject.setState({ project: PROJECT, known: true })
     installFakeBridge()
     // jsdom decodes nothing, so an unlent `Image` never settles and every picture would open at

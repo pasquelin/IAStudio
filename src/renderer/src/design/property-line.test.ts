@@ -20,9 +20,8 @@ const propertyRow = Object.values(SOURCES)[0] ?? ''
 
 /**
  * Every field of the family, read the same way. The rule below was once fixed on ONE of them —
- * `ToggleField`, where « Sortie du workflow » had been seen truncated to « Sortie du … » — and
- * the eight others went on truncating in silence. A rule repaired on one exemplar is a rule
- * nothing holds.
+ * `ToggleField`, where a label had been seen truncated mid-word — and the eight others went on
+ * truncating in silence. A rule repaired on one exemplar is a rule nothing holds.
  */
 const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
   query: '?raw',

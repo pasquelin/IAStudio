@@ -46,9 +46,8 @@ export function DictationField() {
 /**
  * The dictation a `DynamicForm` hangs under its fields, or nothing.
  *
- * Written here rather than in each panel: `Generator` and `Apps` render the same form from the
- * same descriptors, and the second one had no dictation at all because the rule lived in the
- * first.
+ * Written here rather than in the panel that renders the form: the rule belongs to the field
+ * kind, not to whichever surface happens to draw it.
  */
 export function dictationAccessory(field: FieldDescriptor): ReactNode {
   return field.kind === 'longText' ? <DictationField /> : null

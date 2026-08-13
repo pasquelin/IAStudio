@@ -10,7 +10,6 @@
     "audio": "Audio",
     "textures": "Textures",
     "skyboxes": "Skyboxes",
-    "graph": "Graphe",
     "moveLeft": "Déplacer à gauche",
     "moveRight": "Déplacer à droite",
     "moved": "{{label}} en position {{position}} sur {{total}}",
@@ -33,7 +32,6 @@
     "channels": "Canaux",
     "styles": "Styles",
     "view": "Vue",
-    "apps": "Apps",
     "projects": "Vos projets",
     "library": "Votre bibliothèque",
     "documents": "Vos documents"
@@ -60,124 +58,6 @@
     "noCredentials": "Renseignez vos identifiants API pour voir vos modèles.",
     "dropPicture": "Déposez une image, ou collez son identifiant",
     "estimatedCost": "~{{units}} UC"
-  },
-  "apps": {
-    "what": "La Génération, c’est un modèle, une étape. Une App, c’est plusieurs modèles enchaînés, déjà montés : un seul formulaire, et toute la chaîne tourne.",
-    "none": "Aucune App publiée pour l’instant.",
-    "back": "Toutes les Apps",
-    "run": "Lancer",
-    "draft": "Cette App est un brouillon : elle ne peut pas être lancée.",
-    "runHint": "Lance l’App avec les valeurs saisies ; le résultat arrive comme une génération"
-  },
-  "graph": {
-    "nodes": {
-      "text": "Texte",
-      "asset": "Asset",
-      "model": "Modèle",
-      "stickyNote": "Note",
-      "approval": "Approbation",
-      "ifElse": "Condition",
-      "transformText": "Transformation",
-      "forEach": "Boucle",
-      "forEachEnd": "Fin de boucle",
-      "textHint": "Un texte que les nœuds suivants liront — un prompt, le plus souvent",
-      "assetHint": "Une image, une vidéo ou un son du projet, donné en entrée au graphe",
-      "stickyNoteHint": "Une note pour qui lira le graphe ; elle n’entre dans aucune exécution",
-      "approvalHint": "Met l’exécution en pause jusqu’à ce que quelqu’un valide ce qui précède",
-      "transformTextHint": "Réécrit le texte reçu avant de le transmettre plus loin"
-    },
-    "approve": "Approuver",
-    "approveHint": "Laisser la suite du graphe se servir de ce résultat",
-    "decline": "Rejeter",
-    "declineHint": "Arrêter l’exécution de tout ce qui lit ce nœud",
-    "askApproval": "Approuver ce résultat ?",
-    "noConditions": "Aucune condition",
-    "logic": {
-      "and": "et",
-      "or": "ou"
-    },
-    "condition": {
-      "isEmpty": "est vide",
-      "isNotEmpty": "n’est pas vide",
-      "equals": "égale",
-      "notEquals": "diffère de",
-      "contains": "contient",
-      "notContains": "ne contient pas",
-      "greaterThan": "supérieur à",
-      "greaterThanOrEqual": "supérieur ou égal à",
-      "lessThan": "inférieur à",
-      "lessThanOrEqual": "inférieur ou égal à",
-      "between": "entre"
-    },
-    "noField": "Rien",
-    "listKind": {
-      "image": "Images",
-      "text": "Textes"
-    },
-    "noLoop": "Aucune boucle",
-    "generators": {
-      "image": "Génère une image depuis ses entrées — le modèle se choisit dans le panneau Modèles",
-      "video": "Génère une vidéo depuis ses entrées — le modèle se choisit dans le panneau Modèles",
-      "3d": "Génère un modèle 3D depuis ses entrées — le modèle se choisit dans le panneau Modèles",
-      "audio": "Génère un son depuis ses entrées — le modèle se choisit dans le panneau Modèles"
-    }
-  },
-  "graphPublish": {
-    "done": "Publié sur Scenario",
-    "refused": "Scenario l’a refusé — voir le journal"
-  },
-  "graphCompile": {
-    "steps_one": "{{count, number}} étape",
-    "steps_many": "{{count, number}} étapes",
-    "steps_other": "{{count, number}} étapes",
-    "problem": {
-      "no-output": "Aucune sortie marquée",
-      "empty": "Rien ne mène à la sortie",
-      "invalid": "Le graphe ne compile pas",
-      "loop-end-outside": "Une fin de boucle ne ferme pas ce qu’elle nomme",
-      "loop-two-ends": "Deux fins ferment la même boucle"
-    },
-    "blamed": "Le refus porte sur ce nœud"
-  },
-  "graphRun": {
-    "queued": "en file",
-    "running": "en cours",
-    "awaiting": "à approuver",
-    "cached": "inchangé",
-    "done": "terminé",
-    "skipped": "non prise",
-    "failure": {
-      "cycle": "boucle",
-      "unsupported": "non exécutable",
-      "unwired": "branche sans sortie",
-      "no-model": "sans modèle",
-      "blocked": "amont en échec",
-      "rejected": "échec",
-      "declined": "rejeté",
-      "invalid-expression": "expression invalide"
-    }
-  },
-  "graphTools": {
-    "run": "Exécuter le graphe",
-    "runHint": "Lancer chaque nœud dans l’ordre de ses liens — ce qui n’a pas changé n’est pas relancé",
-    "stop": "Arrêter l’exécution",
-    "stopHint": "Ne rien soumettre de plus et annuler ce qui est en cours",
-    "export": "Exporter le graphe",
-    "exportHint": "L’écrire en .workflow.json, que la webapp Scenario sait ouvrir",
-    "publish": "Publier sur Scenario",
-    "publishHint": "La créer comme une App de votre compte, prête à être exécutée",
-    "import": "Importer un graphe",
-    "importHint": "Ouvrir un .workflow.json — il remplace ce qui est sur le canvas, et ⌘Z le remet",
-    "add": "Ajouter un nœud",
-    "addHint": "Poser un nœud sur le canevas — clic droit fait de même",
-    "select": "Sélectionner",
-    "selectHint": "Choisir et déplacer les nœuds",
-    "pan": "Déplacer la vue",
-    "panHint": "Faire glisser le canevas sous le pointeur",
-    "zoomIn": "Zoomer",
-    "zoomInHint": "Rapprocher la vue du graphe",
-    "zoomOut": "Dézoomer",
-    "zoomOutHint": "Éloigner la vue du graphe"
   },
   "jobs": {
     "none": "Aucune tâche en cours.",
@@ -295,12 +175,6 @@
       "project.forget": "Le projet n’a pas pu être retiré de la liste",
       "project.rename": "Le projet n’a pas pu être renommé",
       "font.face": "Une police n’a pas pu être chargée",
-      "graph.node": "Un nœud n’a pas pu être créé",
-      "graph.run": "Le graphe n’a pas pu être lancé",
-      "graph.compile": "Le graphe n’a pas pu être vérifié",
-      "graph.export": "Le graphe n’a pas pu être exporté",
-      "graph.publish": "Le graphe n’a pas pu être publié",
-      "graph.import": "Le graphe n’a pas pu être importé",
       "document.close": "La fermeture du document a échoué",
       "document.delete": "La suppression du document a échoué",
       "document.load": "Le document n’a pas pu être ouvert",
@@ -386,7 +260,6 @@
     "none": "Aucun modèle dans cet espace.",
     "noSelection": "Aucun modèle choisi",
     "pickOne": "Choisissez-en un dans la liste",
-    "family": "Famille",
     "origin": "Origine",
     "official": "Officiel",
     "community": "Communauté",
@@ -1144,7 +1017,6 @@
     "licences": "Licences",
     "imageTools": "Outils",
     "usage": "Consommation…",
-    "graph": "Graphe",
     "sceneDisplay": "Mode de rendu",
     "sceneView": "Point de vue"
   },
@@ -1286,7 +1158,6 @@
       "sequence": "Dans le montage",
       "canvas": "Dans l’image",
       "skybox": "Dans le ciel",
-      "graph": "Dans le graphe",
       "audio": "Dans l’éditeur audio",
       "texture": "Dans la matière"
     },
@@ -1517,10 +1388,6 @@
     "sceneDelete": {
       "title": "Supprimer",
       "help": "Retire de la scène tout ce qui est sélectionné. Rien n’est perdu pour de bon : ⌘Z le fait revenir."
-    },
-    "graphRun": {
-      "title": "Exécuter / Arrêter le graphe",
-      "help": "Lance chaque nœud dans l’ordre de ses liens, et arrête une exécution déjà en cours. Ce qui n’a pas changé depuis la dernière exécution n’est pas relancé."
     },
     "undo": {
       "title": "Annuler",
@@ -2144,7 +2011,6 @@
       "audio": "Composer et monter du son sur plusieurs pistes.",
       "textures": "Produire les canaux d’un matériau sans raccord.",
       "skyboxes": "Générer des ciels et éclairer une scène avec.",
-      "graph": "Enchaîner des modèles dans un graphe, et le lancer.",
       "newProject": "Nouveau projet",
       "newProjectHelp": "Un dossier qui réunit vos documents et tout ce que vous y importez.",
       "openProject": "Ouvrir un projet",

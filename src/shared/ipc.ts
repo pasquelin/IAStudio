@@ -14,12 +14,6 @@ import type {
   DocumentFile,
   DocumentKind,
 } from './domain/document'
-import type {
-  GraphCompileResult,
-  GraphPublishResult,
-  GraphState,
-  GraphTransformVariables,
-} from './domain/graph'
 import type { CostEstimate, Job, JobProgress, JobTarget } from './domain/job'
 import type { IngestProgress, MediaCapabilities } from './domain/media'
 import type { ModelDescriptor, ModelPage, ModelQuery } from './domain/model'
@@ -48,7 +42,6 @@ import type { ToolId, ToolSurface, ToolZone } from './domain/tool'
 import type { UpdateState } from './domain/update'
 import type { UsageCursors, UsageEventPage, UsagePeriod, UsageReport } from './domain/usage'
 import type { WindowState } from './domain/window'
-import type { WorkflowDescriptor, WorkflowPage, WorkflowQuery } from './domain/workflow'
 
 /**
  * Channel names, declared with literal types. The annotation is verbose on purpose: the
@@ -84,15 +77,6 @@ export type Channels = {
   scenarioListJobs: 'scenario:list-jobs'
   scenarioUsageReport: 'scenario:usage-report'
   scenarioUsageEvents: 'scenario:usage-events'
-
-  workflowsSearch: 'workflows:search'
-  workflowsDescribe: 'workflows:describe'
-  workflowsRun: 'workflows:run'
-  workflowsCompile: 'workflows:compile'
-  workflowsExport: 'workflows:export'
-  workflowsPublish: 'workflows:publish'
-  workflowsImport: 'workflows:import'
-  workflowsTransform: 'workflows:transform'
 
   projectCreate: 'project:create'
   projectOpen: 'project:open'
@@ -214,15 +198,6 @@ export const CHANNELS: Channels = {
   scenarioListJobs: 'scenario:list-jobs',
   scenarioUsageReport: 'scenario:usage-report',
   scenarioUsageEvents: 'scenario:usage-events',
-
-  workflowsSearch: 'workflows:search',
-  workflowsDescribe: 'workflows:describe',
-  workflowsRun: 'workflows:run',
-  workflowsCompile: 'workflows:compile',
-  workflowsExport: 'workflows:export',
-  workflowsPublish: 'workflows:publish',
-  workflowsImport: 'workflows:import',
-  workflowsTransform: 'workflows:transform',
 
   projectCreate: 'project:create',
   projectOpen: 'project:open',
@@ -449,12 +424,6 @@ export type LogScope =
   | 'project.forget'
   | 'project.rename'
   | 'font.face'
-  | 'graph.node'
-  | 'graph.run'
-  | 'graph.compile'
-  | 'graph.export'
-  | 'graph.publish'
-  | 'graph.import'
   // Not a document's: a render that threw and a stored layout React refused belong to the shell
   // holding the documents, and both used to leave nothing behind in a packaged build.
   | 'shell.render'
@@ -487,12 +456,6 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'project.forget',
   'project.rename',
   'font.face',
-  'graph.node',
-  'graph.run',
-  'graph.compile',
-  'graph.export',
-  'graph.publish',
-  'graph.import',
   'shell.render',
   'shell.layout',
 ]
@@ -649,9 +612,9 @@ export type StudioBridge = {
     describeStyle: (images: readonly string[]) => Promise<PromptStyle>
     generate: (modelId: string, body: Record<string, unknown>) => Promise<Job>
     /**
-     * What running that exact form would cost, without running it — a model or a workflow, the
-     * target says which. `null` when the API declines to price it; a rejection when the call
-     * itself failed, which a caller may treat as no figure.
+     * What running that exact form would cost, without running it. `null` when the API declines
+     * to price it; a rejection when the call itself failed, which a caller may treat as no
+     * figure.
      */
     estimateCost: (target: JobTarget, body: Record<string, unknown>) => Promise<CostEstimate>
     /** A picture, base64, up to 6 MB. Returns the id of the asset the API kept. */
@@ -679,66 +642,6 @@ export type StudioBridge = {
      * Cursors are opaque — hand back the ones the previous page returned, `{}` for the first.
      */
     usageEvents: (period: UsagePeriod, cursors: UsageCursors) => Promise<UsageEventPage>
-  }
-  /**
-   * Scenario's workflows, and the public ones — the Apps — above all: ready-made pipelines
-   * anyone may run. A workflow is run through the same job manager a generation goes through,
-   * so it lands in the jobs bar and its outputs in the project like everything else.
-   */
-  workflows: {
-    /** One page of the listing, `public` unless the query says otherwise. */
-    search: (query?: WorkflowQuery) => Promise<WorkflowPage>
-    /** Its inputs, translated into the very fields a model's form is built from. */
-    describe: (workflowId: string) => Promise<WorkflowDescriptor>
-    run: (workflowId: string, body: Record<string, unknown>) => Promise<Job>
-    /**
-     * Compiles a graph the way an export would, and says whether it holds together.
-     *
-     * Here rather than in the renderer because the compiler is Scenario's own and lives in the
-     * SDK, which only the main process speaks (invariant 2) — and because a compiler written on
-     * this side would drift from what the webapp produces on the first node type they add.
-     */
-    compile: (graph: GraphState) => Promise<GraphCompileResult>
-    /**
-     * Writes the graph to a `.workflow.json` the webapp can open, and answers whether it was
-     * written — `false` where the user closed the picker, which is not a failure.
-     *
-     * Here because the renderer has no filesystem (invariant 1), and because two of the fields
-     * only this side knows: the clock, and the account the active key belongs to.
-     */
-    export: (graph: GraphState, name: string) => Promise<boolean>
-    /**
-     * Publishes the graph as a workflow of the account: created, then filled and marked ready.
-     *
-     * Two calls on the other side and not one, because the API has no third — `create` takes only
-     * a name and a description. A refusal answers a code, never the API's sentence: that goes to
-     * the journal, like a compile's.
-     */
-    publish: (graph: GraphState, name: string) => Promise<GraphPublishResult>
-    /**
-     * Opens a `.workflow.json` and hands back what it holds, or `null` where the picker was
-     * closed. The CONTENTS, not a path: the renderer has no filesystem (invariant 1), and
-     * `parseGraph` is what turns this into a graph — it takes an `unknown` for that reason.
-     *
-     * Unparsed on purpose: a file a user may have edited is untrusted, and the reader is already
-     * written to drop what does not hold rather than to fail the whole read.
-     */
-    import: () => Promise<unknown>
-    /**
-     * Evaluates one `transformText` node's CEL expression, and answers the text it produced.
-     *
-     * Here for the reason `compile` is: the evaluator is Scenario's own — the very one its
-     * backend, its webapp and its MCP server share — and only this side speaks SDK (invariant 2).
-     * A second evaluator written on this side would drift from what a published App computes.
-     *
-     * `null` where the expression would not parse, reads a variable nothing feeds, or answers
-     * something no wire can carry. The sentence saying which goes to the journal, never the
-     * screen — the node shows a code, exactly as a failed compile does.
-     */
-    transform: (
-      expression: string,
-      variables: GraphTransformVariables,
-    ) => Promise<readonly string[] | null>
   }
   project: {
     create: (path: string, name: string) => Promise<Project>

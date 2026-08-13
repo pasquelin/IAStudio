@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { ModelDescriptor } from '@shared/domain/model'
 import { isBeyondPlan } from '@shared/domain/plan'
 import type { PromptStyle, PromptSuggestion, PromptTranslation } from '@shared/domain/prompt-assist'
-import { useModelForScope } from '@/helpers/model-for-scope'
+import { useModelForFamily } from '@/helpers/model-for-family'
 import { usePlanAccess } from '@/helpers/plan-access'
 import { workspaceById } from '@/helpers/workspaces'
 import { referencePictures, type FormValues } from '@/helpers/dynamic-form'
@@ -76,9 +76,9 @@ export function Generator() {
   const workspace = useLayouts(state => state.activeWorkspace)
 
   // What an edit asked this generator to open on — an upscaler for Enlarge — or the workspace's
-  // own scope. See `prepared`: it is a parenthesis, and it closes on its own.
+  // own family. See `prepared`: it is a parenthesis, and it closes on its own.
   const prepared = useModels(state => state.prepared)
-  const scope = prepared ?? workspaceById(workspace).scope
+  const family = prepared ?? workspaceById(workspace).family
 
   // Set by the inspector's "regenerate with these parameters"; ordinary generation leaves it
   // undefined and every field opens on its own default.
@@ -86,9 +86,9 @@ export function Generator() {
   // It is deliberately not cleared once used: `DynamicForm` rebuilds its defaults whenever the
   // preset changes, so dropping it would blank the form under the hand that is filling it. It
   // stays until the next "regenerate" replaces it, which reads as the last settings used.
-  const preset = useModels(state => state.preset[scope])
+  const preset = useModels(state => state.preset[family])
   const prepare = useModels(state => state.prepare)
-  const modelId = useModelForScope(scope)
+  const modelId = useModelForFamily(family)
 
   const authenticated = useSettings(state => state.auth.authenticated)
   const project = useProject(state => state.project)
@@ -96,7 +96,7 @@ export function Generator() {
 
   const descriptor = useDescriptor(modelId)
   // Before the guards below return early: a hook cannot be called conditionally.
-  const cost = useCostEstimate('model', modelId, descriptor.data?.fields)
+  const cost = useCostEstimate(modelId, descriptor.data?.fields)
   const plan = usePlanAccess()
 
   /**
@@ -104,9 +104,6 @@ export function Generator() {
    * a stored default, "recreate", "regenerate with these parameters", a Spark idea and the canvas
    * edits all land here. Greying the picker alone would leave every one of them to discover the
    * 403.
-   *
-   * NOT every path, though — a graph runs its own nodes through `graph-runs.ts`, straight to the
-   * job queue, and is gated where its model is chosen (`ModelNodeFields`) instead.
    */
   const refused = plan !== null && isBeyondPlan(descriptor.data?.requiredPlanLevel, plan)
 
@@ -135,14 +132,14 @@ export function Generator() {
   // put a result is not this panel's business — it serves every one of them.
   const generate = (body: FormValues): void => {
     const claim = claimOnSubmit()
-    void submit({ kind: 'model', id: modelId }, body).then(claim)
+    void submit({ id: modelId }, body).then(claim)
   }
 
   // Adopting the settings goes through the preset "regenerate with these parameters" already
   // uses: `DynamicForm` rebuilds on it, so the whole form fills without a line of its own. The
   // model is passed unchanged — `prepare` writes both, and the suggestion was made for it.
   const adoptCall = (promptKey: string, suggestion: PromptSuggestion): void => {
-    prepare(scope, modelId, { ...suggestion.parameters, [promptKey]: suggestion.text })
+    prepare(family, modelId, { ...suggestion.parameters, [promptKey]: suggestion.text })
   }
 
   return (

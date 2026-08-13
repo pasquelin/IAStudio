@@ -13,7 +13,7 @@ import type { WorkspaceId } from './workspace'
  * only ones a conflict check treats as competing with every scope.
  */
 export type CommandScope =
-  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph' | 'audio' | 'texture'
+  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'audio' | 'texture'
 
 export type CommandId =
   | 'project.new'
@@ -109,9 +109,6 @@ export type CommandId =
   | 'skybox.probes'
   | 'skybox.undo'
   | 'skybox.redo'
-  | 'graph.run'
-  | 'graph.undo'
-  | 'graph.redo'
   | 'audio.undo'
   | 'audio.redo'
   | 'texture.undo'
@@ -164,18 +161,6 @@ export type CommandDescriptor = {
    * therefore has to carry a modifier, or it would swallow a letter.
    */
   held?: boolean
-  /**
-   * Heard while the focus sits in a text field, where every other tapped command is silent.
-   *
-   * Declared per command rather than deduced from the chord, because the chord is the wrong
-   * axis twice over: bindings are remappable, so a rule written on `Meta+…` follows the key
-   * instead of the command it opened the field for; and most ⌘ chords have no business firing
-   * from a field — `canvas.mergeDown` on ⌘E would flatten a layer while its name is being
-   * typed, and the ⌘Z reflex would undo the typing rather than the merge.
-   *
-   * It must carry a modifier for the same reason `held` must, or it would swallow a letter.
-   */
-  runsWhileTyping?: boolean
 }
 
 function command(descriptor: CommandDescriptor): CommandDescriptor {
@@ -880,40 +865,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
-  /**
-   * The gesture the space exists for, and the only one that had no key at all.
-   *
-   * A chord rather than a bare letter, and unlike the five image commands that spend credit and
-   * ship with nothing: this one is also the Stop, which has to be fast, and `Meta+Enter` is not
-   * a key one lands on by accident. It fires nothing on a graph with no node — see `start`.
-   *
-   * It runs from inside a field because that is where the gesture starts: the prompt is typed
-   * into a node, and asking the user to click away before running it is the whole friction this
-   * key exists to remove.
-   */
-  command({
-    id: 'graph.run',
-    scope: 'graph',
-    titleKey: 'commands.graphRun.title',
-    helpKey: 'commands.graphRun.help',
-    defaultBinding: 'Meta+Enter',
-    runsWhileTyping: true,
-  }),
-  command({
-    id: 'graph.undo',
-    scope: 'graph',
-    titleKey: 'commands.undo.title',
-    helpKey: 'commands.undo.help',
-    defaultBinding: 'Meta+KeyZ',
-  }),
-  command({
-    id: 'graph.redo',
-    scope: 'graph',
-    titleKey: 'commands.redo.title',
-    helpKey: 'commands.redo.help',
-    defaultBinding: 'Shift+Meta+KeyZ',
-  }),
-
   // The take editor was one of two surfaces whose history had no key and no menu row: its two
   // buttons were the whole of it, so the bar could not be relieved of them without this pair.
   command({
@@ -956,7 +907,6 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'sequence',
   'canvas',
   'skybox',
-  'graph',
   'audio',
   'texture',
 ]
@@ -969,7 +919,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
  *
  * **Total, not partial, and that is the guard.** A workspace whose store holds a history and is
  * missing here reaches nothing: the native role keeps the accelerator, ⌘Z never reaches the
- * window, and the failure is silent. It cost Skyboxes once, the graph once, Audio until its bar
+ * window, and the failure is silent. It cost Skyboxes once, Audio until its bar
  * was asked to stop drawing the only undo it had, and Textures for as long as the manual
  * promised a key nothing answered. Written as a full `Record`, the next workspace added does
  * not COMPILE until someone answers the question for it — `Partial` let all four slip through.
@@ -983,7 +933,6 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   '3d': 'scene',
   video: 'sequence',
   skyboxes: 'skybox',
-  graph: 'graph',
   audio: 'audio',
   textures: 'texture',
 }
@@ -1003,11 +952,6 @@ export function commandIn(scope: CommandScope, suffix: string): CommandId | null
 
 export function commandDescriptor(id: CommandId): CommandDescriptor | null {
   return COMMAND_REGISTRY.find(descriptor => descriptor.id === id) ?? null
-}
-
-/** Whether a command is one of the few heard from inside a text field. */
-export function runsWhileTyping(id: CommandId): boolean {
-  return commandDescriptor(id)?.runsWhileTyping === true
 }
 
 export function commandsIn(scope: CommandScope): readonly CommandDescriptor[] {

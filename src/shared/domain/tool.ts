@@ -10,10 +10,9 @@ import { WORKSPACE_IDS, type WorkspaceId } from './workspace'
  * A surface panels can stand on: one of the workspaces, or the home screen.
  *
  * The home is deliberately NOT a `WorkspaceId`, and the criterion is what a workspace IS: a
- * place that opens documents of a kind of its own. The graph is one — it opens `.graph` files —
- * which is why it became an id of its own; the home opens the other spaces' documents and makes
- * none, so a workspace opening no document would be a fiction the union has to guard against.
- * It only ever needed to be a place a panel can sit, which is this and no more.
+ * place that opens documents of a kind of its own. The home opens the other spaces' documents
+ * and makes none, so a workspace opening no document would be a fiction the union has to guard
+ * against. It only ever needed to be a place a panel can sit, which is this and no more.
  */
 export type ToolSurface = WorkspaceId | 'home'
 
@@ -53,7 +52,6 @@ export type ToolId =
   | 'channels'
   | 'styles'
   | 'view'
-  | 'apps'
   | 'projects'
   | 'library'
   | 'documents'
@@ -66,8 +64,7 @@ export type ToolId =
  * projects.
  *
  * The upper half of every space's left column, so generating — the one thing every space does —
- * keeps the same place in each, under the same button that creates a document. The half below
- * is the Explorer and the Apps, which is what makes the whole column "where one produces".
+ * keeps the same place in each, under the same button that creates a document.
  */
 export const GENERATION_TOOLS: readonly ToolId[] = ['models', 'generator']
 
@@ -108,20 +105,13 @@ export const TOOL_SLOTS: readonly ToolSlot[] = ['primary', 'secondary']
  */
 export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // The upper half of the left column is generation, and only generation, in every space: the
-  // same two panels in the same place, right under the button that makes a document. The graph
-  // included — it belongs to no model family, which is not the same as having no model to choose.
+  // same two panels in the same place, right under the button that makes a document.
   { id: 'models', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
   { id: 'generator', zone: 'left', slot: 'primary', surfaces: WORKSPACE_IDS },
 
-  // The lower half. What one looks left for is something to produce with, and both of these are
-  // that: the documents to produce into, and the pipelines that produce. A half rather than two
-  // more turns in the upper one — four icons stacked in a rail is the moment a column stops
-  // being a place one knows and becomes a pile one searches, and two halves of two keep the
-  // generator visible WHILE the Explorer is read.
+  // The lower half: the documents to produce into. Its own half rather than a third turn in the
+  // upper one, so the generator stays visible WHILE the Explorer is read.
   { id: 'explorer', zone: 'left', slot: 'secondary', surfaces: WORKSPACE_IDS },
-  // Scenario's Apps — public workflows, run as they are. An App produces assets, which is
-  // generating, so it belongs to the column one produces from.
-  { id: 'apps', zone: 'left', slot: 'secondary', surfaces: WORKSPACE_IDS },
 
   // The upper right, in rail order. Every tool here takes its turn with the others its space
   // declares — the order below is the order their icons stack.
@@ -167,7 +157,7 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
     id: 'assets',
     zone: 'bottom',
     slot: 'primary',
-    surfaces: ['image', 'textures', 'skyboxes', 'graph'],
+    surfaces: ['image', 'textures', 'skyboxes'],
   },
   // The band is the timeline's, across the whole width — that is how time is read, in Audio and
   // Video as in 3D, where an animation runs along the same line a montage does.

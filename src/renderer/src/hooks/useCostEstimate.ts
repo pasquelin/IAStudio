@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatUnits } from '@/usage/format'
-import {
-  INTERACTIVE_REQUESTS_PER_MINUTE,
-  type CostEstimate,
-  type JobKind,
-} from '@shared/domain/job'
+import { INTERACTIVE_REQUESTS_PER_MINUTE, type CostEstimate } from '@shared/domain/job'
 import type { FieldDescriptor } from '@shared/domain/model'
 import type { FormValues } from '@/helpers/dynamic-form'
 import { getBridge } from '@/services/bridge'
@@ -69,11 +65,10 @@ function priceable(fields: readonly FieldDescriptor[], body: FormValues): boolea
  * Nothing to draw covers three cases the button treats alike — nothing asked yet, the API priced
  * nothing, the request failed. A price is a courtesy: none is a reason to say anything is wrong.
  *
- * A model and a workflow are priced by their own endpoints, and the kind is what picks between
- * them: two hooks would be two copies of the pacing below, which is the part that matters.
+ * What a second runnable thing would need is a wider `JobTarget`, never a second hook — the
+ * pacing below is the part that matters, and it is shared by every form on screen.
  */
 export function useCostEstimate(
-  kind: JobKind,
   targetId: string | null,
   fields: readonly FieldDescriptor[] = NO_FIELDS,
 ): CostWatch {
@@ -94,7 +89,7 @@ export function useCostEstimate(
       lastSentAt = Date.now()
       const ticket = ++asked.current
       void bridge.scenario
-        .estimateCost({ kind, id: targetId }, body)
+        .estimateCost({ id: targetId }, body)
         // Cleared rather than kept: a figure that could not be refreshed is a figure about a
         // form the user has since changed. The body is forgotten with it, or a call that failed
         // once would leave that exact form unpriceable until something else about it changed.
@@ -109,7 +104,7 @@ export function useCostEstimate(
           }
         })
     },
-    [kind, targetId],
+    [targetId],
   )
 
   /**
@@ -139,7 +134,7 @@ export function useCostEstimate(
         timer.current = null
       }
     },
-    [kind, targetId],
+    [targetId],
   )
 
   const onValuesChange = useCallback(
@@ -148,7 +143,7 @@ export function useCostEstimate(
 
       // Typing a word back to what it already was must not buy the same answer twice. Keyed by
       // what is being priced as well: two models price the very same body differently.
-      const shape = `${kind}:${targetId ?? ''}:${JSON.stringify(body)}`
+      const shape = `${targetId ?? ''}:${JSON.stringify(body)}`
       if (shape === priced.current) return
 
       if (timer.current !== null) clearTimeout(timer.current)
@@ -160,7 +155,7 @@ export function useCostEstimate(
         request(body)
       }, wait)
     },
-    [fields, kind, targetId, request],
+    [fields, targetId, request],
   )
 
   // Formatted here rather than by each form: the API prices a cheap call in fractions, and

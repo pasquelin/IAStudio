@@ -224,27 +224,6 @@ describe('Models panel', () => {
   })
 
   /**
-   * A space that browses every family files its choice under `'all'` — and the only thing that
-   * asks for it, a graph's generator node, asks for the model of ONE family. Filed there alone,
-   * a model picked here would be invisible to the very node that sent the user to pick it.
-   */
-  it('files a choice under the model’s own family, where the space has none', async () => {
-    useLayouts.setState({ activeWorkspace: 'graph' })
-    installFakeBridge({
-      scenario: {
-        searchModels: () =>
-          Promise.resolve({ items: [model('kling', { family: 'video' })], cursor: null }),
-      },
-    })
-
-    renderPanel()
-    await userEvent.click(await screen.findByText('Model kling'))
-
-    expect(useModels.getState().selected.video).toBe('kling')
-    expect(useModels.getState().selected.all).toBe('kling')
-  })
-
-  /**
    * The rail draws the generator off the preference alone, and the generator runs on it. This
    * panel said "no model chosen" about the very model the one beside it was running.
    */

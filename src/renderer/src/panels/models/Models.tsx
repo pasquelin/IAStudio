@@ -12,7 +12,7 @@ import { cn } from '@/helpers/cn'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { isFiltered } from '@/helpers/collection-state'
-import { useModelForScope } from '@/helpers/model-for-scope'
+import { useModelForFamily } from '@/helpers/model-for-family'
 import { MediaTile } from '@/design/MediaTile'
 import { Thumbnail } from '@/design/Thumbnail'
 import { Row } from '@/design/Row'
@@ -100,13 +100,13 @@ function useLazyPreviews() {
 export function Models() {
   const { t } = useTranslation()
   const workspace = useLayouts(state => state.activeWorkspace)
-  const { family, scope } = workspaceById(workspace)
+  const { family } = workspaceById(workspace)
 
   const collection = useModels(state => state.collection)
   const setCollection = useModels(state => state.setCollection)
   // Through the same answer the rail and the generator read. Reading the session choice alone
   // left this panel saying "no model chosen" about the very model the generator was running.
-  const selectedId = useModelForScope(scope)
+  const selectedId = useModelForFamily(family)
   const select = useModels(state => state.select)
   const authenticated = useSettings(state => state.auth.authenticated)
   const plan = usePlanAccess()
@@ -137,16 +137,10 @@ export function Models() {
   // costs nothing, and `queryFrom` translates nothing.
   const query = queryFrom(collection, family, search)
 
-  // Memoised, unlike the query above: the two share a signature and nothing else. Building the
-  // facets translates up to twenty-five labels through i18next — measured at 376 µs where the
-  // surface has no family of its own and one is picked, against 1 µs for the query — and this
-  // panel re-renders on every keystroke in its search field.
-  // The family is read again inside rather than closed over: a value destructured off a record
-  // is one the compiler rule will not accept as a dependency, and the workspace it comes from is.
-  const facets = useMemo(
-    () => facetsFor(collection, workspaceById(workspace).family, t),
-    [collection, workspace, t],
-  )
+  // Memoised, unlike the query above: building the facets translates up to twenty-five labels
+  // through i18next — measured at 376 µs, against 1 µs for the query — and this panel re-renders
+  // on every keystroke in its search field.
+  const facets = useMemo(() => facetsFor(family, t), [family, t])
   const sorts = useMemo(() => sortOptions(t), [t])
 
   const catalogue = useInfiniteQuery<ModelPage>({
@@ -244,7 +238,7 @@ export function Models() {
           items={items}
           state={collection}
           selectedIds={selectedId ? [selectedId] : []}
-          onSelect={model => select(scope, model.id, model.family)}
+          onSelect={model => select(model.family, model.id)}
           onReachEnd={loadMore}
           onVisible={onVisible}
           // The predicate directly, not `refusalOf`: this runs for every mounted cell and has no

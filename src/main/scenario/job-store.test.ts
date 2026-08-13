@@ -11,7 +11,6 @@ const NOW = Date.parse('2026-08-08T10:00:00.000Z')
 const RUNNING: PersistedJob = {
   id: 'job_local',
   remoteId: 'job_remote',
-  kind: 'model',
   targetId: 'model_flux',
   label: 'Flux',
   accountId: 'fingerprint_studio',

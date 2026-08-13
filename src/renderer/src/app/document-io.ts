@@ -7,9 +7,7 @@ import {
   type DocumentKind,
   type DocumentPart,
 } from '@shared/domain/document'
-import { EMPTY_GRAPH } from '@shared/domain/graph'
 import { parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
-import { parseGraph } from '@/engines/graph/serialize'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox } from '@/engines/skybox/skybox-state'
@@ -22,8 +20,6 @@ import { closePanel, openDocument } from './dockview-api'
 import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { audioEditStore } from '@/stores/audio-edits'
-import { useGraphRuns } from '@/stores/graph-runs'
-import { graphStore } from '@/stores/graphs'
 import { sceneStore } from '@/stores/scenes'
 import { sequenceStore } from '@/stores/sequences'
 import { skyboxStore } from '@/stores/skyboxes'
@@ -282,21 +278,6 @@ const IMAGE_IO: DocumentIo = {
 }
 
 /**
- * A graph carries a RUN beside its state — what each node is doing, and what it produced.
- *
- * Session state, so it is not saved; but it must go when the document does, because its cache
- * names local assets of a project that is being left, and the run itself would otherwise keep
- * submitting into a tab nobody can see.
- */
-const withGraphRun = (io: DocumentIo): DocumentIo => ({
-  ...io,
-  forget: documentId => {
-    useGraphRuns.getState().forget(documentId)
-    io.forget(documentId)
-  },
-})
-
-/**
  * Every kind the studio can write, and the only place a kind is declared savable. A kind absent
  * here has a Save that does nothing rather than one that writes an empty body.
  */
@@ -318,7 +299,6 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // The one whose absence is NOT a refusal: a channel is a reference, not pixels, and what does
   // produce pixels — `derive-channel` — already writes them as an asset when it derives them.
   texture: textDocumentIo(textureStore, asIs, parseTexture, newTexture),
-  graph: withGraphRun(textDocumentIo(graphStore, asIs, parseGraph, () => EMPTY_GRAPH)),
 }
 
 /** `undefined` for an id no tab is showing — never for a kind that cannot be saved. */

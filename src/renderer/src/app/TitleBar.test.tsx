@@ -55,7 +55,7 @@ describe('TitleBar', () => {
     drag('Image', 'Audio')
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', '3d', 'audio', 'image', 'textures', 'skyboxes', 'graph'] },
+      workspaces: { order: ['video', '3d', 'audio', 'image', 'textures', 'skyboxes'] },
     })
   })
 
@@ -133,7 +133,7 @@ describe('TitleBar', () => {
     fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes', 'graph'] },
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
     })
   })
 
@@ -166,7 +166,7 @@ describe('TitleBar', () => {
     fireEvent.keyDown(pill('Image'), { key: 'l', code: 'KeyL', altKey: true })
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes', 'graph'] },
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
     })
   })
 
@@ -218,7 +218,7 @@ describe('TitleBar', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: 'Déplacer à droite' }))
 
     expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes', 'graph'] },
+      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
     })
   })
 
@@ -254,7 +254,7 @@ describe('TitleBar', () => {
 
     fireEvent.keyDown(pill('Image'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
 
-    expect(screen.getByRole('status')).toHaveTextContent('Image en position 2 sur 7')
+    expect(screen.getByRole('status')).toHaveTextContent('Image en position 2 sur 6')
   })
 
   /**
@@ -268,7 +268,7 @@ describe('TitleBar', () => {
 
     fireEvent.keyDown(pill('Vidéo'), { key: 'ArrowRight', code: 'ArrowRight', altKey: true })
 
-    expect(screen.getByRole('status')).toHaveTextContent('Vidéo en position 3 sur 7')
+    expect(screen.getByRole('status')).toHaveTextContent('Vidéo en position 3 sur 6')
   })
 
   /**

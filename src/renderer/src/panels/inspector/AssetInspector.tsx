@@ -112,7 +112,7 @@ function GenerationGroup({
   useEffect(() => void useFavorites.getState().load(), [])
 
   const regenerate = (): void => {
-    openGeneratorOn(workspaceById(workspace).scope, generation.modelId, generation.params)
+    openGeneratorOn(workspaceById(workspace).family, generation.modelId, generation.params)
   }
 
   return (

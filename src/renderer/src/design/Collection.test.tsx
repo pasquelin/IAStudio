@@ -250,9 +250,8 @@ describe('Collection', () => {
   })
 
   /**
-   * Opening on a single click is still opening. The Apps panel wired it through `onSelect` for
-   * want of anything else, which announced a `listbox` whose rows are never selected — and a
-   * row there swaps the whole panel for the App it names.
+   * Opening on a single click is still opening. Wired through `onSelect` for want of anything
+   * else, it announced a `listbox` whose rows are never selected.
    */
   describe('a list whose rows open on a single click', () => {
     it('stays a list rather than becoming a listbox', () => {
