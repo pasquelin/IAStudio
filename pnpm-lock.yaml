@@ -15,8 +15,8 @@ importers:
         specifier: ^1.6.1
         version: 1.6.1
       '@scenario-labs/sdk':
-        specifier: ^2.7.0
-        version: 2.7.0
+        specifier: ^3.0.0
+        version: 3.0.0
       '@xyflow/react':
         specifier: ^12.11.3
         version: 12.11.3(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(immer@11.1.16)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -1328,8 +1328,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@scenario-labs/sdk@2.7.0':
-    resolution: {integrity: sha512-Qhrd9hWe9I1hNkdYRyM3+KN0voE2enhi3NhVUzbttws3qt6u1fUJaipQQZuayeQRdWckYPSEGQf5Ociz0gn7WA==}
+  '@scenario-labs/sdk@3.0.0':
+    resolution: {integrity: sha512-NcZhP2fP34CHfxAFIo8xtI7+19kLb2mL8v6S7fMq6HHEB09NcByf1+HJM1gIj4CARr5YPSOeuBu45nxX8hzBMQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@sindresorhus/is@4.6.0':
@@ -4696,7 +4696,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
 
-  '@scenario-labs/sdk@2.7.0':
+  '@scenario-labs/sdk@3.0.0':
     dependencies:
       '@marcbachmann/cel-js': 7.6.1
 
