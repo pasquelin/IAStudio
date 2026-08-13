@@ -94,6 +94,8 @@ Full walkthrough: [user guide](docs/en/user-guide.md) · every setting explained
 | `pnpm lint` · `pnpm lint:fix` | eslint over `src` |
 | `pnpm format` · `pnpm format:check` | prettier, write or check |
 | `pnpm validate` | typecheck + lint + format check + tests with coverage budgets + the slack those budgets have left |
+| `pnpm unused:main` | knip — exports, files and dependencies nothing reaches. **`src/main` only**: the same unreachable export is reported there and ignored under `renderer` and `shared`, and no configuration found so far widens it |
+| `pnpm duplication` | jscpd — blocks written twice, from sixty tokens up, over the whole of `src` |
 | `pnpm rebuild:native` | electron-rebuild — required after touching better-sqlite3 |
 | `pnpm docs:scenario` | regenerate the local copy of the Scenario API docs |
 

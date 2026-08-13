@@ -1,0 +1,8 @@
+{
+  "path": ["src"],
+  "minTokens": 60,
+  "reporters": ["consoleFull"],
+  "gitignore": true,
+  "ignore": ["**/public/**"],
+  "absolute": false
+}
