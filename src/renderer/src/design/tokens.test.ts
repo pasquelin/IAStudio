@@ -233,7 +233,6 @@ function dimmingPercent(fraction = '', unit = '', step = ''): number {
  */
 const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
-  '/Counts.tsx': 'a count of nothing, `disabled` on the button twelve lines up',
 }
 
 /**

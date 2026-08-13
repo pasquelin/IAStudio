@@ -200,9 +200,10 @@ describe('the home', () => {
 
     expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Assets')).not.toBeInTheDocument()
-    // Four dividers: one per column, and the cut between the two halves of each. The zones that
-    // would carry a fifth — the montage and the asset strip — are absent.
-    expect(handles()).toHaveLength(4)
+    // TWO dividers, one per column — where a workspace has four. A column split needs both halves
+    // populated, and since 13 August the home has no `secondary` anywhere: a handle drawn there
+    // would drag a cut with nothing on the far side of it.
+    expect(handles()).toHaveLength(2)
   })
 
   /**
@@ -210,33 +211,33 @@ describe('the home', () => {
    * reopens like the others. What an unchosen half draws is the first panel the registry puts
    * there, which is why no arrangement here names one.
    */
-  it('opens on the projects, what was made, and the journal', () => {
+  it('opens on the projects and on the library', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
     // The upper left, which the home alone gives to something other than generation.
     expect(screen.getByLabelText('Vos projets')).toBeInTheDocument()
-    expect(screen.getByLabelText('Ce que vous avez produit')).toBeInTheDocument()
-    expect(screen.getByLabelText('Activité récente')).toBeInTheDocument()
+    expect(screen.getByLabelText('Votre bibliothèque')).toBeInTheDocument()
+    // Gone with the eight readings of the studio that came down on 13 August.
+    expect(screen.queryByLabelText('Ce que vous avez produit')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Activité récente')).not.toBeInTheDocument()
     // The spaces' own two, which no placement gives this surface.
     expect(screen.queryByLabelText('Modèles')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Explorateur')).not.toBeInTheDocument()
   })
 
   /**
-   * The other three of the right column's upper half take turns with what is open there: a half
+   * The documents take their turn with the library in the one half the right column has: a half
    * shows ONE panel at a time. The rail is how one swaps them, and it has its own suite — this
    * file mocks it away so that a title queried here can only be a panel.
    */
-  it('shows one panel per half, never the whole upper right at once', () => {
+  it('shows one panel per half, never the whole right column at once', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     renderShell()
 
-    for (const name of ['Par type', 'Votre bibliothèque', 'Vos documents']) {
-      expect(screen.queryByLabelText(name)).not.toBeInTheDocument()
-    }
+    expect(screen.queryByLabelText('Vos documents')).not.toBeInTheDocument()
   })
 
   // The status line is the studio's global view — jobs, activity, updates — and the home is
@@ -250,13 +251,12 @@ describe('the home', () => {
    * measured container reads zero: what is under test is which store each handle writes to, not
    * the arithmetic, which `fitZoneSize` and `fitSplit` own and are tested on directly.
    */
-  it('resizes its own zones and its own split, and writes them to the home', () => {
+  it('resizes its own zones and writes them to the home', () => {
     useLayouts.setState({ home: true })
     useTools.setState({ arrangements: DEFAULT_ARRANGEMENTS })
     Element.prototype.setPointerCapture = vi.fn()
     renderShell()
 
-    // Each column carries both: its own handle, and the divider between its two halves.
     for (const handle of handles()) {
       fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, clientY: 300 })
       fireEvent.pointerMove(handle, { pointerId: 1, clientX: 340, clientY: 260 })
@@ -265,8 +265,9 @@ describe('the home', () => {
     const home = arrangementOf(useTools.getState(), HOME_SURFACE)
     expect(home.sizes.left).toBeDefined()
     expect(home.sizes.right).toBeDefined()
-    expect(home.splits.left).toBeDefined()
-    expect(home.splits.right).toBeDefined()
+    // No split to drag any more, and that is the assertion rather than an omission: the home has
+    // one half per column since 13 August, so nothing here writes `splits`.
+    expect(home.splits).toEqual({})
     // The spaces' own arrangement is untouched: the two families never share a drag.
     expect(arrangementOf(useTools.getState(), 'image').sizes).toEqual({})
   })

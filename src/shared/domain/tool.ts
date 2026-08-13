@@ -55,16 +55,8 @@ export type ToolId =
   | 'view'
   | 'apps'
   | 'projects'
-  | 'creations'
-  | 'counts'
   | 'library'
   | 'documents'
-  | 'activity'
-  | 'spark'
-  | 'favorites'
-  | 'similar'
-  | 'usage'
-  | 'jobs'
 
 /**
  * The panels the upper half of a WORKSPACE's left column is reserved for: choosing a model, then
@@ -181,51 +173,30 @@ export const TOOL_PLACEMENTS: readonly ToolPlacement[] = [
   // Video as in 3D, where an animation runs along the same line a montage does.
   { id: 'timeline', zone: 'bottom', slot: 'primary', surfaces: ['video', 'audio', '3d'] },
 
-  // The home's own, and they serve it ALONE. It is a surface like the others — two columns and a
-  // centre — rather than the one page in the studio that scrolls, and the centre is kept for the
-  // two things that earn the width: what is put forward, and the gallery that pages as it is read.
+  // The home's own, and they serve it ALONE — a column beside an editor is for what acts on what
+  // is in front of you, and each of these reads the studio rather than a document.
   //
-  // Each of them reads the studio rather than a document, which is exactly why none reaches a
-  // workspace: a column beside an editor is for what acts on what is in front of you.
+  // THREE, where there were eleven until 13 August. The eight that went were readings of the
+  // studio nobody came to this screen for: what an account had spent, how many assets it held by
+  // kind, the newest ones it made, favourites, ideas, look-alikes, and two journals the status bar
+  // already carries. The home is an entry point — where one comes to open something — and every
+  // panel that answered a question instead of offering a way in was a panel between the reader
+  // and the projects.
   //
-  // The columns follow the rule every space follows: the left is what one produces with and what
-  // one browses, the right is what speaks ABOUT what is open. The home never had it applied — its
-  // panels arrived one at a time, six on the right against one on the left.
+  // What that leaves is one half per column, and the halves are the same ones every space uses:
+  // the left is what one opens FROM, the right is what one opens. No `secondary` on this surface
+  // at all, which is why `tool.test.ts` scopes the "both halves are used" checks to the
+  // workspaces — a rail with one row and no separator is the honest drawing of one half.
   //
   // The upper left, which the home alone leaves for something other than generation: it makes no
   // document, so the half goes to what one produces IN — the projects, the first thing anyone
-  // comes to this screen for. It is ALONE there, and that is the point of the half: the three
-  // below take turns with each other, and none of them may take the projects' turn.
+  // comes to this screen for, and now the only thing this column offers.
   { id: 'projects', zone: 'left', slot: 'primary', surfaces: [HOME_SURFACE] },
 
-  // The lower half, where every space puts what one browses: the recipes kept across projects,
-  // the ideas to start from, and work in the vein of the last asset.
-  //
-  // `favorites` is declared first, so it is what the half shows to everyone who never chose one,
-  // and it is first because it is the only one of the three that asks for NOTHING. The other two
-  // condition on a key — `spark` cannot even ask without a chosen image model, and drew the empty
-  // state saying so to anyone opening the studio for the first time.
-  { id: 'favorites', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
-  { id: 'spark', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
-  { id: 'similar', zone: 'left', slot: 'secondary', surfaces: [HOME_SURFACE] },
-
-  // The right column, in rail order: from the newest thing this project made to the files it
-  // was made into, by way of what the account holds outside it — and what it spent doing so,
-  // beside the counts, since both of those measure a consumption rather than list a thing.
-  { id: 'creations', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
-  { id: 'counts', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
-  { id: 'usage', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
+  // The right column, in rail order: what the account holds outside this project, then the
+  // documents inside it. Two ways into something, which is what this screen is for.
   { id: 'library', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
   { id: 'documents', zone: 'right', slot: 'primary', surfaces: [HOME_SURFACE] },
-
-  // The lower half, as the inspector takes it in the spaces, and for the same reason: what just
-  // happened is read WHILE what it produced is looked at. A journal one has to switch away to is
-  // a journal nobody reads — which is what it was here, a band hidden by default. The jobs join
-  // it: both answer "what has been going on", the journal in events and the jobs in runs, and
-  // neither is worth a half of its own. As a band it showed the running ones and vanished when
-  // there were none; the panel is the status bar's own list, finished runs and their cost kept.
-  { id: 'activity', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
-  { id: 'jobs', zone: 'right', slot: 'secondary', surfaces: [HOME_SURFACE] },
 ]
 
 /**

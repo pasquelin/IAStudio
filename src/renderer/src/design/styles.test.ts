@@ -42,13 +42,15 @@ describe('the quiet ink of a row', () => {
   /**
    * Five sites had reached these three classes on their own, one of them twice — and a sixth was
    * about to. Read off the constant rather than spelled out again, so a change of rule moves
-   * every word with it.
+   * every word with it. Three wear it today: two of the six went with the home's panels on
+   * 13 August, and the floor below moved with them rather than being left to pass on a studio
+   * that had lost half its wearers.
    *
    * **What this holds is narrow, and the narrowness matters**: it refuses the literal re-copy of
    * this one class, nothing else. A site that writes `text-muted` ALONE under a row — the very
    * state `AssetRow` was in before this batch — passes it untouched, and so would a variant
    * (`group-hover/row:text-accent-content`) or a group under another name. What catches those is
-   * a test at the site, and each of the six sites has one.
+   * a test at the site, and each of the three sites has one.
    *
    * `WRITTEN_SOURCES` reads `renderer/src` only: a class string written in `shared/` would not be
    * seen. No JSX lives there today, which is why the gap is tolerated rather than closed.
@@ -68,7 +70,7 @@ describe('the quiet ink of a row', () => {
       ([path, source]) => path !== GUARDED && source.includes('ROW_QUIET'),
     )
 
-    expect(wearing.length).toBeGreaterThanOrEqual(4)
+    expect(wearing.length).toBeGreaterThanOrEqual(3)
   })
 })
 
@@ -119,7 +121,9 @@ describe('the row skin and the state it publishes', () => {
 /**
  * The fill a button of the docks takes when it is not the primary action. Two sites reached it on
  * their own — `Button`'s neutral variant and the idea card of `Spark` — and the second had written
- * beside itself that it was avoiding a copy while writing one.
+ * beside itself that it was avoiding a copy while writing one. `Spark` went with the home's panels
+ * on 13 August, so `Button` is the one wearer left; the constant is kept because the rule below is
+ * what stops the second site from being written again.
  */
 const REWRITTEN = /(bg-surface[^'"`]*hover:bg-elevated|hover:bg-elevated[^'"`]*bg-surface)/
 
@@ -160,11 +164,11 @@ describe('the neutral fill of a button', () => {
 
   // The partner of the rule above: it stays green on a studio where nobody wears the constant,
   // which is what a dead export looks like from here.
-  it('is worn by the two sites it was extracted from', () => {
+  it('is worn by the site it was extracted for', () => {
     const wearing = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('BUTTON_NEUTRAL'),
     )
 
-    expect(wearing.length).toBeGreaterThanOrEqual(2)
+    expect(wearing.length).toBeGreaterThanOrEqual(1)
   })
 })

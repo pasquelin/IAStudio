@@ -9,7 +9,7 @@ const picture = { id: 'asset-1', name: 'boulder.png' }
 function shelf(state: ShelfState, items: readonly (typeof picture)[] = [], onRetry = vi.fn()) {
   render(
     <ShelfPanel
-      tool="creations"
+      tool="library"
       items={items}
       state={state}
       onRetry={onRetry}
@@ -49,7 +49,7 @@ describe('the frame a shelf panel draws', () => {
   it('draws the cards under the name the rail gives the tool', () => {
     shelf('ready', [picture])
 
-    expect(screen.getByLabelText('Ce que vous avez produit')).toBeInTheDocument()
+    expect(screen.getByLabelText('Votre bibliothèque')).toBeInTheDocument()
     expect(screen.getByText('boulder.png')).toBeInTheDocument()
   })
 })

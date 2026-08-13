@@ -90,17 +90,17 @@ export const DEFAULT_SPLIT = 240
  * Which halves start open — and nothing about what they draw. Every one of them is `null`, so
  * each surface opens on the panel it declares first: the layers in Image, the shelf in Video,
  * the sky in Skyboxes, the models in the upper left of every space and the Explorer in the lower
- * left of each — and, on the home, the projects above and the recipes below (the one shelf of
- * the three that asks for no key).
+ * left of each — and, on the home, the projects and the library.
  *
- * Every half a surface has is named here, and the lower left is no exception: two halves of two
- * exist so the generator stays visible WHILE the Explorer is read, and a half that starts closed
- * would be that arrangement withheld until someone goes looking for it in the rail.
+ * Every half a surface has is named here, and a workspace's lower left is no exception: two halves
+ * of two exist so the generator stays visible WHILE the Explorer is read, and a half that starts
+ * closed would be that arrangement withheld until someone goes looking for it in the rail.
  *
- * The home names the two columns it has and no band, and every half those columns HAVE — all four
- * again since the projects took its upper left. A half a surface does NOT have must stay unnamed:
- * `isZoneOpen` reads the key rather than what it resolves to, so a name over an empty half keeps
- * the zone reserving 320 px against the other column long after the screen stopped drawing it.
+ * The home names ONE half per column since 13 August, which is every half it has left. A half a
+ * surface does NOT have must stay unnamed: `isZoneOpen` reads the key rather than what it resolves
+ * to, so a `secondary: null` here would keep each column reserving 320 px against the other long
+ * after the screen stopped drawing anything in it — and `tools.test.ts` derives the expected set
+ * from `TOOL_PLACEMENTS` rather than restating it, so dropping a placement fails here.
  */
 export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
   workspaces: {
@@ -109,8 +109,8 @@ export const DEFAULT_OPEN: Record<SurfaceFamily, OpenByZone> = {
     bottom: { primary: null },
   },
   home: {
-    left: { primary: null, secondary: null },
-    right: { primary: null, secondary: null },
+    left: { primary: null },
+    right: { primary: null },
   },
 }
 
