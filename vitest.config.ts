@@ -66,9 +66,11 @@ process.env.TZ = TEST_TZ
  * Hence `forks` on the `node` project alone. Its effect is what a review measured, and it is the
  * mechanism rather than the crash: counting the PIDs that log `ExperimentalWarning: SQLite`, the
  * twelve loads happen in TWELVE processes here, against ONE process on twelve threads when all
- * projects use threads. **What is NOT established is that this prevents the crash** — one segfault
- * seen, then none in 5 + 26 runs across both shapes, which separates nothing at a rate this low.
- * An insurance, not a fix.
+ * projects use threads. **It does NOT prevent the crash, and that is now measured rather than
+ * doubted**: 25 consecutive whole-suite runs under this very shape on 2026-08-13 ended one run in
+ * `EXIT=139` — SIGSEGV, twelve processes killed mid-flight, no summary printed, the `node:sqlite`
+ * warnings the only thing on screen. Cumulative rate under the parade: 1 in 56. An insurance, not
+ * a fix — and the earlier "none in 5 + 26 runs" was too small a sample to say otherwise.
  *
  * Stated per project, and that is not redundancy: a project inherits nothing from the root `test`
  * block unless it says `extends`, and none here does. A review asked each project which side it
