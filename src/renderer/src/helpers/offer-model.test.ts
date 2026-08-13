@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DEFAULT_COLLECTION_STATE, selectedValues } from '@/helpers/collection-state'
-import { FAMILY_FACET } from '@/panels/models/family-facet'
+import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
 import { arrangedFor } from '@/stores/tool-fixtures'
 import { arrangementOf, useTools } from '@/stores/tools'
 import { useLayouts } from '@/stores/layouts'
@@ -19,41 +18,33 @@ beforeEach(() => {
 })
 
 /**
- * What a generator node does where no model of its family has ever been chosen: it takes the
- * user to where one IS chosen. A failure message would say what went wrong and not what to do.
+ * What an image edit does where no model of its family has ever been chosen: it takes the user
+ * to where one IS chosen. A failure message would say what went wrong and not what to do.
  */
 describe('offering a model of one family', () => {
-  describe('where the space browses one family of its own', () => {
-    beforeEach(() => {
-      useTools.setState({ arrangements: arrangedFor('image', { open: {} }), focusedZone: null })
-      useLayouts.setState({ activeWorkspace: 'image', home: false })
-    })
+  it('opens the browser for the family that space already lists', () => {
+    offerModelsOfFamily('image')
 
-    it('opens the browser for the family that space already lists', () => {
-      offerModelsOfFamily('image')
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('models')
+  })
 
-      expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBe('models')
-    })
+  /**
+   * The browser lists that space's family and no other, so an upscaler would never appear in it
+   * however long one looked. The settings are where those three families are set.
+   */
+  it('opens the settings for a family that space cannot list', () => {
+    offerModelsOfFamily('upscale')
 
-    /**
-     * The browser lists that space's family and no other, so an upscaler would never appear in
-     * it however long one looked. The settings are where those three families are set.
-     */
-    it('opens the settings for a family that space cannot list', () => {
-      offerModelsOfFamily('upscale')
+    expect(opened).toEqual(['generation.upscale'])
+    expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBeUndefined()
+  })
 
-      expect(opened).toEqual(['generation.upscale'])
-      expect(arrangementOf(useTools.getState(), 'image').open.left?.primary).toBeUndefined()
-    })
+  /** The home browses no catalogue at all, so it lands in the preferences like any other miss. */
+  it('opens the settings from the home, which lists nothing', () => {
+    useLayouts.setState({ home: true })
 
-    /**
-     * The facet is not offered where the space has a family, so writing one would leave a filter
-     * the user can neither see nor release — and it would follow them into every other space.
-     */
-    it('narrows nothing it could not show', () => {
-      offerModelsOfFamily('upscale')
+    offerModelsOfFamily('image')
 
-      expect(selectedValues(useModels.getState().collection, FAMILY_FACET)).toEqual([])
-    })
+    expect(opened).toEqual(['generation.image'])
   })
 })

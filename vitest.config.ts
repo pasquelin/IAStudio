@@ -122,7 +122,7 @@ const DOM_BOUND = [
   'src/renderer/src/engines/timeline/TimelineEngine.mount.test.ts',
   'src/renderer/src/engines/timeline/painter.test.ts',
   'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
-  'src/renderer/src/helpers/model-for-scope.test.ts',
+  'src/renderer/src/helpers/model-for-family.test.ts',
   'src/renderer/src/helpers/scroll-parent.test.ts',
   'src/renderer/src/helpers/tool-registry.test.ts',
   'src/renderer/src/helpers/typing.test.ts',

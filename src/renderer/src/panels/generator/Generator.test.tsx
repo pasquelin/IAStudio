@@ -119,7 +119,7 @@ describe('Generator', () => {
   it('drops the preparation once a model is picked in the panel', async () => {
     await prepareEdit(DOCUMENT, 'enlarge', host, bridge.scenario)
 
-    useModels.getState().select('image', 'model_flux', 'image')
+    useModels.getState().select('image', 'model_flux')
     renderPanel()
 
     expect(await screen.findByText('Flux')).toBeInTheDocument()

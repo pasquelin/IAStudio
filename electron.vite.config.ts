@@ -68,15 +68,14 @@ export default defineConfig(({ command }) => ({
     build: {
       externalizeDeps: true,
       rollupOptions: {
-        // The catalogue's thread, the waveform's process, the recogniser's and the CEL
-        // evaluator's are entry points of their own: each is resolved beside the bundled main,
-        // so each has to land there as a file of its own.
+        // The catalogue's thread, the waveform's process and the recogniser's are entry points
+        // of their own: each is resolved beside the bundled main, so each has to land there as
+        // a file of its own.
         input: {
           index: resolve('src/main/index.ts'),
           'catalog-worker': resolve('src/main/project/catalog-worker.ts'),
           'peaks-worker': resolve('src/main/media/peaks-worker.ts'),
           'stt-worker': resolve('src/main/dictation/stt-worker.ts'),
-          'transform-worker': resolve('src/main/scenario/transform-worker.ts'),
         },
         output: { entryFileNames: '[name].js' },
       },
