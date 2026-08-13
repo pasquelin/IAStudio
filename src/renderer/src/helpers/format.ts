@@ -107,10 +107,12 @@ export function formatMoment(time: string, language: string, zone: Zone): string
     MOMENTS,
     `${zone}:${language}`,
     () =>
+      // `undefined` reads exactly as the absent key — measured, same output and same resolved
+      // zone — so `local` still means whatever clock the reader's machine keeps.
       new Intl.DateTimeFormat(language, {
         dateStyle: 'short',
         timeStyle: 'short',
-        ...(zone === 'utc' ? { timeZone: 'UTC' } : {}),
+        timeZone: zone === 'utc' ? 'UTC' : undefined,
       }),
   ).format(parsed)
 }

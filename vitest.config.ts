@@ -21,11 +21,9 @@ const TEST_TIMEOUT = 15_000
 /**
  * The zone every suite reads its clocks in, so a date test answers the same everywhere.
  *
- * Left to the machine, a test about time passes for whoever wrote it and fails for the next
- * reader — the CI runner sits in UTC and this desk in `Europe/Paris`. Measured before fixing it:
- * the whole suite is green under `UTC` and under `Asia/Tokyo` alike, and exactly ONE case tells
- * them apart, the one asserting that `formatMoment` reads a stamp against the clock it is handed
- * rather than the machine's. So this costs nothing and closes a class of flake.
+ * Left to the machine, a test about time passes for whoever wrote it and fails for the next reader.
+ * Measured before fixing it: the whole suite is green under `UTC` and under `Asia/Tokyo` alike, and
+ * exactly ONE case tells them apart — `format.test.ts`, which carries the proof.
  *
  * Tokyo rather than UTC, and rather than Paris. **Not UTC**: a zone at zero offset makes every
  * assertion about zones agree by accident, which is the defect the case above exists to catch.

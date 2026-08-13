@@ -1,13 +1,14 @@
-import type {
-  AccountSpend,
-  DailySpend,
-  ModelSpend,
-  SilentAccount,
-  UnitPrice,
-  UsageEvent,
-  UsagePeriod,
-  UsageReport,
-  UsageTally,
+import {
+  dayOf,
+  type AccountSpend,
+  type DailySpend,
+  type ModelSpend,
+  type SilentAccount,
+  type UnitPrice,
+  type UsageEvent,
+  type UsagePeriod,
+  type UsageReport,
+  type UsageTally,
 } from '@shared/domain/usage'
 import { byCodeUnit } from '@shared/text'
 
@@ -60,11 +61,6 @@ export type AccountUsage = {
 const SYNTHESIS_USAGES: readonly string[] = ['creative-unit-cost', 'creative-unit-discount']
 
 const isSpend = (usageName: string): boolean => !SYNTHESIS_USAGES.includes(usageName)
-
-/** ISO day of an ISO timestamp — the granularity every chart in the window uses. */
-export function dayOf(time: string): string {
-  return time.slice(0, 10)
-}
 
 /** A count the API sends as a string; anything unparseable counts as nothing. */
 function countOf(value: string): number {

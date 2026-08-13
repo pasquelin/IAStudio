@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { dayOf } from '@shared/domain/usage'
 import { formatMoment } from '@/helpers/format'
 import { formatDay, formatMoney, formatUnits, shareOf } from './format'
 
@@ -42,14 +43,16 @@ describe('formatDay', () => {
    * in `Europe/Paris`, an event at 23:30 UTC sat on the bar of the 13th and printed `14/08 01:30`
    * two panes away, with nothing on screen accounting for the gap.
    *
-   * `dayOf` is not imported: it lives in `main/`, and the renderer cannot reach across that
-   * boundary. Its rule is restated here as `slice(0, 10)`, which is all it is — and the assertion
-   * is that the two functions the WINDOW owns agree on the day.
+   * `dayOf` is IMPORTED rather than restated, and that is the point of the case. It sat in
+   * `main/scenario/` at first, out of the renderer's reach, so this test recopied its `slice(0, 10)`
+   * — a copy that would keep passing the day the real rule started reading a local day. It moved to
+   * `shared/domain/usage.ts`, which both sides already import, so the pair is now held against the
+   * function the chart actually counts with.
    */
   it('names the same day as the journal row beside it', () => {
     const lateEvening = '2026-08-13T23:30:00Z'
 
-    expect(formatDay(lateEvening.slice(0, 10), 'en-US')).toBe('Aug 13')
+    expect(formatDay(dayOf(lateEvening), 'en-US')).toBe('Aug 13')
     expect(formatMoment(lateEvening, 'en-US', 'utc')).toMatch(/^8\/13\/26/)
   })
 })

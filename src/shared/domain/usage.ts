@@ -297,6 +297,23 @@ export type UsageEventPage = {
   more: boolean
 }
 
+/**
+ * The day an ISO stamp falls on, **in UTC** — the granularity every chart in the window uses.
+ *
+ * The slice IS the decision: the API dates its points in UTC, so the first ten characters are
+ * already the day it counted them under. Reading the stamp into a `Date` and asking for its local
+ * day would move an event across midnight for every reader east or west of Greenwich, and the
+ * totals would stop matching what the account was billed.
+ *
+ * It lives here rather than beside the aggregation because the WINDOW has to agree with it: a
+ * journal row printed in another zone than the bar it sits under is a screen contradicting itself,
+ * and `renderer/src/usage/format.test.ts` holds that pair. A rule restated on the far side of the
+ * boundary would be a copy, and a copy is what stops agreeing.
+ */
+export function dayOf(time: string): string {
+  return time.slice(0, 10)
+}
+
 export const USAGE_ROUTE = 'usage'
 
 export function isUsageRoute(hash: string): boolean {
