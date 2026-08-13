@@ -8,9 +8,10 @@
  * in the middle of a dev run.
  *
  * That is not cosmetic: it sent the window looking for `out/renderer/index.html`, which a dev
- * run never builds, so the app failed to start at all. Six other behaviours switched to their
+ * run never builds, so the app failed to start at all. Seven other behaviours switched to their
  * production side with it — DevTools, the log mirror, the Dock icon, the developer menu, the
- * reload shortcut guard and the `secrets/.env` fallback.
+ * reload shortcut guard, the `secrets/.env` fallback, and the single-instance lock, which a dev
+ * run does not take: hot reload starts the next process before this one has finished dying.
  *
  * `__DEV__` is injected by `define` at build time, so it says what the build *is* rather than
  * what the executable happens to be called.
