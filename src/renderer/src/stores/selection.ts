@@ -18,7 +18,6 @@ export type Selection =
   | { kind: 'clip'; ownerId: string; ids: readonly string[] }
   | { kind: 'track'; ownerId: string; ids: readonly string[] }
   | { kind: 'layer'; ownerId: string; ids: readonly string[] }
-  | { kind: 'node'; ownerId: string; ids: readonly string[] }
 
 type SelectionState = {
   selection: Selection
@@ -26,7 +25,6 @@ type SelectionState = {
   selectClip: (documentId: string, clipId: string) => void
   selectTrack: (documentId: string, trackId: string) => void
   selectLayer: (documentId: string, layerId: string) => void
-  selectNodes: (documentId: string, ids: readonly string[]) => void
   clear: () => void
 }
 
@@ -79,8 +77,6 @@ export const useSelection = create<SelectionState>()(set => {
       point({ kind: 'track', ownerId: documentId, ids: [trackId] }),
     selectLayer: (documentId, layerId) =>
       point({ kind: 'layer', ownerId: documentId, ids: [layerId] }),
-    selectNodes: (documentId, ids) =>
-      point(ids.length > 0 ? { kind: 'node', ownerId: documentId, ids } : NONE),
     clear: () => point(NONE),
   }
 })

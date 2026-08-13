@@ -13,7 +13,7 @@ import type { WorkspaceId } from './workspace'
  * only ones a conflict check treats as competing with every scope.
  */
 export type CommandScope =
-  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'graph' | 'audio' | 'texture'
+  'global' | 'spaces' | 'scene' | 'sequence' | 'canvas' | 'skybox' | 'audio' | 'texture'
 
 export type CommandId =
   | 'project.new'
@@ -109,9 +109,6 @@ export type CommandId =
   | 'skybox.probes'
   | 'skybox.undo'
   | 'skybox.redo'
-  | 'graph.run'
-  | 'graph.undo'
-  | 'graph.redo'
   | 'audio.undo'
   | 'audio.redo'
   | 'texture.undo'
@@ -880,40 +877,6 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     helpKey: 'commands.redo.help',
     defaultBinding: 'Shift+Meta+KeyZ',
   }),
-  /**
-   * The gesture the space exists for, and the only one that had no key at all.
-   *
-   * A chord rather than a bare letter, and unlike the five image commands that spend credit and
-   * ship with nothing: this one is also the Stop, which has to be fast, and `Meta+Enter` is not
-   * a key one lands on by accident. It fires nothing on a graph with no node — see `start`.
-   *
-   * It runs from inside a field because that is where the gesture starts: the prompt is typed
-   * into a node, and asking the user to click away before running it is the whole friction this
-   * key exists to remove.
-   */
-  command({
-    id: 'graph.run',
-    scope: 'graph',
-    titleKey: 'commands.graphRun.title',
-    helpKey: 'commands.graphRun.help',
-    defaultBinding: 'Meta+Enter',
-    runsWhileTyping: true,
-  }),
-  command({
-    id: 'graph.undo',
-    scope: 'graph',
-    titleKey: 'commands.undo.title',
-    helpKey: 'commands.undo.help',
-    defaultBinding: 'Meta+KeyZ',
-  }),
-  command({
-    id: 'graph.redo',
-    scope: 'graph',
-    titleKey: 'commands.redo.title',
-    helpKey: 'commands.redo.help',
-    defaultBinding: 'Shift+Meta+KeyZ',
-  }),
-
   // The take editor was one of two surfaces whose history had no key and no menu row: its two
   // buttons were the whole of it, so the bar could not be relieved of them without this pair.
   command({
@@ -956,7 +919,6 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
   'sequence',
   'canvas',
   'skybox',
-  'graph',
   'audio',
   'texture',
 ]
@@ -969,7 +931,7 @@ export const COMMAND_SCOPES: readonly CommandScope[] = [
  *
  * **Total, not partial, and that is the guard.** A workspace whose store holds a history and is
  * missing here reaches nothing: the native role keeps the accelerator, ⌘Z never reaches the
- * window, and the failure is silent. It cost Skyboxes once, the graph once, Audio until its bar
+ * window, and the failure is silent. It cost Skyboxes once, Audio until its bar
  * was asked to stop drawing the only undo it had, and Textures for as long as the manual
  * promised a key nothing answered. Written as a full `Record`, the next workspace added does
  * not COMPILE until someone answers the question for it — `Partial` let all four slip through.
@@ -983,7 +945,6 @@ const SCOPE_BY_WORKSPACE: Record<WorkspaceId, CommandScope | null> = {
   '3d': 'scene',
   video: 'sequence',
   skyboxes: 'skybox',
-  graph: 'graph',
   audio: 'audio',
   textures: 'texture',
 }

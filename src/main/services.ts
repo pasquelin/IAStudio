@@ -107,8 +107,6 @@ import { createCredentialsWatch } from './scenario/credentials-watch'
 import { createFileSystemFallback, environmentAccount } from './scenario/credentials'
 import { createModelRegistry, type ModelRegistry } from './scenario/model-registry'
 import { createPlanReader, teamsOf, type PlanReader } from './scenario/plan'
-import { createWorkflowRegistry, type WorkflowRegistry } from './scenario/workflow-registry'
-import { workflowCatalogOf } from './scenario/workflow-catalog'
 import { createAssistQueue } from './scenario/assist-queue'
 import { createPromptAssist, type PromptAssist } from './scenario/prompt-assist'
 import { promptAssistApiOf } from './scenario/prompt-assist-api'
@@ -131,20 +129,17 @@ export type Services = {
   client: ClientProvider
   models: ModelRegistry
   /**
-   * Bounded background work the studio asks for on its own — captions, and the model schemas a
-   * graph must resolve before it compiles. Never the JobManager's business: none of it produces
-   * an asset or has a status to poll.
+   * Bounded background work the studio asks for on its own — captions above all. Never the
+   * JobManager's business: none of it produces an asset or has a status to poll.
    */
   queue: <T>(task: () => Promise<T>) => Promise<T>
-  /** Scenario's workflows, and the public ones — the Apps — the studio can run as they are. */
-  workflows: WorkflowRegistry
   jobs: JobManager
   prompts: PromptAssist
   /** What every stored key spent. Consumption only — the API exposes no balance to read. */
   usage: UsageReader
   /** Which models the account's plan may run, so the picker refuses one before the API does. */
   plan: PlanReader
-  /** What a run would cost, asked before it is run — of a model or of a workflow. See `cost.ts`. */
+  /** What a run would cost, asked before it is run. See `cost.ts`. */
   estimateCost: CostEstimator
   /**
    * Runs the resolved ffmpeg with those arguments. Exposed because a render encodes too, and a
@@ -187,10 +182,6 @@ export type Services = {
   language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
-  /** Asks where an exported workflow goes and writes it there. `null` where the picker closed. */
-  saveWorkflow: (name: string, contents: string) => Promise<string | null>
-  /** Asks which `.workflow.json` to open and answers what it holds. `null` where nothing was. */
-  openWorkflow: () => Promise<unknown>
   pickSavePath: (name: string, extension: string) => Promise<string | null>
   /** Where a folder the studio is about to fill goes — an exported texture is several files. */
   pickFolder: () => Promise<string | null>
@@ -275,45 +266,6 @@ async function savePicture(name: string, bytes: Uint8Array): Promise<string | nu
 
   await writeFile(path, bytes)
   return path
-}
-
-/**
- * The `.workflow.json` of a graph, written where the user says. Beside `savePicture` and for the
- * same reason: the renderer has no filesystem, so the contents come across and only the path the
- * user chose stays on this side.
- */
-async function saveWorkflow(name: string, contents: string): Promise<string | null> {
-  const path = await pickSavePath(`${name}.workflow`, '.json')
-  if (!path) return null
-
-  await writeFile(path, contents, 'utf8')
-  return path
-}
-
-/**
- * The symmetric of `saveWorkflow`: asks which `.workflow.json` to open and answers what is IN it.
- *
- * The contents and not the path, for the reason the export sends contents rather than a path: the
- * renderer has no filesystem. Unparsed beyond `JSON.parse` — a file a user may have edited is
- * untrusted, and `parseGraph` is already written to drop what does not hold rather than to fail
- * the whole read.
- *
- * `null` for a picker that was closed AND for a file that is not JSON at all, and the two are the
- * same answer on purpose: neither is a failure the user needs a stack trace for, and the reader
- * downstream answers an empty graph either way.
- */
-async function openWorkflow(): Promise<unknown> {
-  const [path] = await openDialog({
-    properties: ['openFile'],
-    filters: [{ name: 'JSON', extensions: ['json'] }],
-  })
-  if (!path) return null
-
-  try {
-    return JSON.parse(await readFile(path, 'utf8'))
-  } catch {
-    return null
-  }
 }
 
 /**
@@ -443,11 +395,6 @@ export function createServices(settings: SettingsStore): Services {
     watch: credentials.watch,
   })
 
-  const workflows = createWorkflowRegistry({
-    catalog: () => workflowCatalogOf(client.require()),
-    watch: credentials.watch,
-  })
-
   // Bounded and separate from the `JobManager`: none of this produces an asset or has a status
   // to poll, and a library fetch of three hundred must not become three hundred calls.
   const assistQueue = createAssistQueue({
@@ -538,7 +485,7 @@ export function createServices(settings: SettingsStore): Services {
 
       // The same two beats `mutate` runs in the settings handlers, and conditioned the same way:
       // the store derives whether the KEY moved, and purging every cache when it did not would
-      // cost a refetch of the model catalogue, the plan and the workflows for nothing.
+      // cost a refetch of the model catalogue and the plan for nothing.
       if (change.credentialsChanged) credentials.changed()
       broadcast(EVENTS.accountsChanged, change.accounts)
 
@@ -781,12 +728,8 @@ export function createServices(settings: SettingsStore): Services {
   // `maxRetries: 0`, because a held request is answered with a synthetic 429 the SDK honours:
   // retried twice, one courtesy estimate would take three slots of the window precisely when
   // there are none left, and hold the transport for half a minute for a figure nobody waits on.
-  // Both endpoints price a dry run the same way, which is why the estimator takes a function:
-  // what runs decides which one is asked, exactly as it does for running it.
   const estimateCost = costEstimatorOf((target, body) =>
-    target.kind === 'workflow'
-      ? client.require().workflows.run(target.id, { body, dryRun: true }, { maxRetries: 0 })
-      : client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
+    client.require().generate.runModel(target.id, { body, dryRun: true }, { maxRetries: 0 }),
   )
 
   const ownerScope = createOwnerScope(credentials.watch)
@@ -982,7 +925,6 @@ export function createServices(settings: SettingsStore): Services {
     client,
     models,
     queue: assistQueue.run,
-    workflows,
     jobs,
     prompts,
     usage,
@@ -1019,8 +961,6 @@ export function createServices(settings: SettingsStore): Services {
     language,
     pickPath,
     savePicture,
-    saveWorkflow,
-    openWorkflow,
     pickSavePath,
     encodeVideo: async args => {
       const binary = ffmpeg.path()

@@ -10,14 +10,6 @@ import {
 } from './activity'
 import { ASSET_BADGES, ASSET_TYPES, type AssetBadge, type AssetType } from './asset'
 import {
-  GRAPH_COMPILE_PROBLEMS,
-  GRAPH_RUN_FAILURES,
-  GRAPH_RUN_STATUSES,
-  type GraphCompileProblem,
-  type GraphRunFailure,
-  type GraphRunStatus,
-} from './graph'
-import {
   MODEL_FAMILIES,
   MODEL_PERIODS,
   MODEL_SORTS,
@@ -183,12 +175,6 @@ describe('the lists that stand for a union', () => {
       'project.forget': true,
       'project.rename': true,
       'font.face': true,
-      'graph.node': true,
-      'graph.run': true,
-      'graph.compile': true,
-      'graph.export': true,
-      'graph.publish': true,
-      'graph.import': true,
       'shell.render': true,
       'shell.layout': true,
     }
@@ -223,58 +209,5 @@ describe('the lists that stand for a union', () => {
     }
 
     expect(sorted(TEXTURE_SLOTS)).toEqual(sorted(Object.keys(all)))
-  })
-  /**
-   * The one the bundles hang off: `bundles.test.ts` demands a sentence for every code the LIST
-   * holds, so a code added to the union alone would reach the screen under its own key with every
-   * suite green.
-   */
-  it('names every reason a graph would not compile', () => {
-    const all: Record<GraphCompileProblem, true> = {
-      'no-output': true,
-      empty: true,
-      invalid: true,
-      'loop-end-outside': true,
-      'loop-two-ends': true,
-    }
-
-    expect(sorted(GRAPH_COMPILE_PROBLEMS)).toEqual(sorted(Object.keys(all)))
-  })
-
-  /**
-   * Same hazard one surface further in, and this one drops the state instead of misnaming it:
-   * `asRun` in `GraphNodes.tsx` reads a failure back through this list, so a code dropped from it
-   * paints a node that failed with no mention at all — while `bundles.test.ts`, which walks the
-   * list to demand its sentences, stops demanding the one it can no longer see.
-   */
-  it('names every reason a node produced nothing', () => {
-    const all: Record<GraphRunFailure, true> = {
-      cycle: true,
-      unsupported: true,
-      unwired: true,
-      'no-model': true,
-      blocked: true,
-      rejected: true,
-      declined: true,
-      'invalid-expression': true,
-    }
-
-    expect(sorted(GRAPH_RUN_FAILURES)).toEqual(sorted(Object.keys(all)))
-  })
-
-  /** `asRun` reads this one four lines above the other, and it had no guard of its own. */
-  it('names every state a running node reports', () => {
-    const all: Record<GraphRunStatus, true> = {
-      idle: true,
-      queued: true,
-      running: true,
-      awaiting: true,
-      cached: true,
-      done: true,
-      skipped: true,
-      failed: true,
-    }
-
-    expect(sorted(GRAPH_RUN_STATUSES)).toEqual(sorted(Object.keys(all)))
   })
 })

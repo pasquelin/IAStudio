@@ -15,7 +15,7 @@ describe('the kinds of thing a job runs', () => {
   // Missing from the list, a kind is skipped by every walk that reads it — and the gap reads
   // as coverage. `Record<Union, true>` is what stops compiling when one is added.
   it('names every one of them', () => {
-    const all: Record<JobKind, true> = { model: true, workflow: true }
+    const all: Record<JobKind, true> = { model: true }
 
     expect([...JOB_KINDS].sort()).toEqual(Object.keys(all).sort())
   })

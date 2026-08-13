@@ -6,14 +6,6 @@ import { DISPLAY_MODES, VIEW_DIRECTIONS } from '../domain/scene'
 import { TOOL_PLACEMENTS } from '../domain/tool'
 import { ASSET_BADGES, ASSET_TYPES } from '../domain/asset'
 import { STT_ERROR_CODES } from '../domain/dictation'
-import {
-  CONDITION_LOGICS,
-  GRAPH_COMPILE_PROBLEMS,
-  GRAPH_CONDITION_OPERATORS,
-  GRAPH_RUN_FAILURES,
-  GRAPH_RUN_STATUSES,
-  SILENT_RUN_STATUSES,
-} from '../domain/graph'
 import { breakableSpots } from './typography'
 import { isRecord } from '../guards'
 import { NAMED_KEYS } from '../domain/shortcut'
@@ -556,22 +548,6 @@ const DYNAMIC_KEYS: readonly string[] = [
   // turns the progress row into a raw code at the exact moment something is happening.
   ...JOB_STATUSES.map(status => `jobs.status.${status}`),
   ...INGEST_STAGES.map(stage => `ingest.${stage}`),
-  // A third pipeline, painted node by node on the graph canvas. Two of the eight states have no
-  // line and never will: `idle` is a node saying nothing, and `failed` is never shown on its own
-  // — a failure always names its reason, which is the second union below.
-  ...GRAPH_RUN_STATUSES.filter(status => !SILENT_RUN_STATUSES.includes(status)).map(
-    status => `graphRun.${status}`,
-  ),
-  ...GRAPH_RUN_FAILURES.map(failure => `graphRun.failure.${failure}`),
-  // Composed the same way, one surface further down: what the editor says of a graph that would
-  // not compile. A refusal added without its line reads as its own key, beside the canvas.
-  ...GRAPH_COMPILE_PROBLEMS.map(problem => `graphCompile.problem.${problem}`),
-  // What a branch asks, read out on the node itself and offered in the inspector. The union is
-  // SCENARIO'S — its converter answers `'false'` for an operator it does not know — so a twelfth
-  // one arrives from outside, and unlisted here it would caption a condition with its own key in
-  // both languages.
-  ...GRAPH_CONDITION_OPERATORS.map(operator => `graph.condition.${operator}`),
-  ...CONDITION_LOGICS.map(logic => `graph.logic.${logic}`),
   // Composed from the shared PBR union to caption a tile of the Channels panel. `panels.channels`
   // needs no line here because `t.panels[id]` is typed; this family has no such guard, so a ninth
   // channel — and the domain warns the API adds types without notice — would caption a tile with

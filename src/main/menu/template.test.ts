@@ -202,38 +202,6 @@ describe('the 3D View rows', () => {
   })
 })
 
-describe('the Graph menu', () => {
-  it('offers the run, and fires it', () => {
-    const runCommand = vi.fn()
-    const entries = submenuOf(
-      menuTemplate(options({ workspace: 'graph', actions: actions({ runCommand }) })),
-      'Graphe',
-    )
-
-    activate(entries.find(entry => entry.label === 'Exécuter / Arrêter le graphe'))
-
-    expect(runCommand).toHaveBeenCalledWith('graph.run')
-  })
-
-  /**
-   * Shown but not reserved. Not for undo's reason — no text field competes for this chord — but
-   * for the mechanism undo taught: a reserved accelerator is served to the menu by the system and
-   * never reaches the window, and this command belongs to whichever document is in front.
-   */
-  it('shows the key without taking it from the window', () => {
-    const entries = submenuOf(menuTemplate(options({ workspace: 'graph' })), 'Graphe')
-    const row = entries.find(entry => entry.label === 'Exécuter / Arrêter le graphe')
-
-    expect(row?.accelerator).toBe('CmdOrCtrl+Return')
-    expect(row?.registerAccelerator).toBe(false)
-  })
-
-  it('leaves it out of every other workspace, where there is no graph to run', () => {
-    expect(labels(menuTemplate(options({ workspace: 'image' })))).not.toContain('Graphe')
-    expect(labels(menuTemplate(options({ workspace: null })))).not.toContain('Graphe')
-  })
-})
-
 describe('every command the studio declares', () => {
   /**
    * A command with no default key and no menu row cannot be run at all. Four of them were in
@@ -250,7 +218,7 @@ describe('every command the studio declares', () => {
     }
 
     // Every workspace posts its own rows, so the union is what the studio actually offers.
-    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'textures', 'skyboxes', 'graph']
+    const spaces: WorkspaceId[] = ['image', '3d', 'video', 'audio', 'textures', 'skyboxes']
     for (const workspace of spaces) collect(menuTemplate(options({ workspace })))
 
     const titles = TRANSLATIONS.fr.commands

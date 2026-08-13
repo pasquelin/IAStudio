@@ -14,33 +14,33 @@ describe('workspaceOrder', () => {
   })
 
   it('keeps what the user arranged', () => {
-    const stored: WorkspaceId[] = ['image', 'video', '3d', 'audio', 'textures', 'skyboxes', 'graph']
+    const stored: WorkspaceId[] = ['image', 'video', '3d', 'audio', 'textures', 'skyboxes']
     stored.reverse()
 
     expect(workspaceOrder(stored)).toEqual(stored)
   })
 
   /**
-   * A stored order is a photograph of the workspaces that existed the day it was written. The
-   * graph was the seventh and it will not be the last: a build that added one must show it,
-   * rather than hide it from everyone who had already arranged the bar.
+   * A stored order is a photograph of the workspaces that existed the day it was written, and the
+   * registry will grow again: a build that adds one must show it, rather than hide it from
+   * everyone who had already arranged the bar.
    */
   it('adds a workspace the stored order predates, next to the neighbours it was declared with', () => {
-    const withoutGraph = WORKSPACE_IDS.filter(id => id !== 'graph')
+    const withoutLast = WORKSPACE_IDS.filter(id => id !== 'skyboxes')
 
-    expect(workspaceOrder(withoutGraph)).toEqual([...WORKSPACE_IDS])
+    expect(workspaceOrder(withoutLast)).toEqual([...WORKSPACE_IDS])
   })
 
   it('places a newcomer after the space it follows in the registry, wherever that space was moved', () => {
-    // `graph` is declared last, so it lands after `skyboxes` — even when `skyboxes` opens the bar.
-    expect(workspaceOrder(['skyboxes', 'image'])).toEqual([
+    // `skyboxes` is declared after `textures`, so it lands there — even when `textures` opens the
+    // bar.
+    expect(workspaceOrder(['textures', 'image'])).toEqual([
+      'textures',
       'skyboxes',
-      'graph',
       'image',
       'video',
       '3d',
       'audio',
-      'textures',
     ])
   })
 
@@ -59,7 +59,7 @@ describe('workspaceOrder', () => {
   })
 
   it('answers with every workspace exactly once, whatever it was given', () => {
-    const order = workspaceOrder(['graph', 'graph', 'image'])
+    const order = workspaceOrder(['skyboxes', 'skyboxes', 'image'])
 
     expect(order).toHaveLength(WORKSPACE_IDS.length)
     expect(new Set(order).size).toBe(WORKSPACE_IDS.length)
@@ -89,8 +89,8 @@ describe('movedWorkspace', () => {
   })
 
   it('changes nothing when either end of the move is unknown', () => {
-    expect(movedWorkspace(bar, 'image', 'graph')).toEqual(bar)
-    expect(movedWorkspace(bar, 'graph', 'image')).toEqual(bar)
+    expect(movedWorkspace(bar, 'image', 'skyboxes')).toEqual(bar)
+    expect(movedWorkspace(bar, 'skyboxes', 'image')).toEqual(bar)
   })
 
   it('leaves the order it was given untouched', () => {
@@ -115,13 +115,13 @@ describe('movedWorkspaceBy', () => {
   // Unchanged at either end, so the menu row is disabled rather than a write that does nothing.
   it('stays put at the ends, and says so beforehand', () => {
     expect(canMoveWorkspace(bar(), 'image', 'left')).toBe(false)
-    expect(canMoveWorkspace(bar(), 'graph', 'right')).toBe(false)
+    expect(canMoveWorkspace(bar(), 'skyboxes', 'right')).toBe(false)
     expect(movedWorkspaceBy(bar(), 'image', 'left')).toEqual(bar())
   })
 
   it('offers the move everywhere else', () => {
     expect(canMoveWorkspace(bar(), 'image', 'right')).toBe(true)
-    expect(canMoveWorkspace(bar(), 'graph', 'left')).toBe(true)
+    expect(canMoveWorkspace(bar(), 'skyboxes', 'left')).toBe(true)
   })
 
   it('reconciles what it was given, like everything else that reads a stored order', () => {

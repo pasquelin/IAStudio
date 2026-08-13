@@ -7,21 +7,16 @@ const REMOTE = { jobId: 'job_remote', status: 'queued', progress: 0, assetIds: [
 const triggerAction = vi.fn(() => Promise.resolve({}))
 
 /**
- * The three resources the runner touches. Narrow on purpose: standing up a whole `Scenario` to
+ * The two resources the runner touches. Narrow on purpose: standing up a whole `Scenario` to
  * prove which field is kept would prove nothing about the field.
  */
-function client(
-  runModel: () => Promise<unknown>,
-  runWorkflow?: () => Promise<unknown>,
-  retrieve?: () => Promise<unknown>,
-): Scenario {
+function client(runModel: () => Promise<unknown>, retrieve?: () => Promise<unknown>): Scenario {
   const stub = {
     generate: { runModel: vi.fn(runModel) },
-    workflows: { run: vi.fn(runWorkflow ?? (() => Promise.resolve({ job: REMOTE }))) },
     jobs: { retrieve: retrieve ?? (() => Promise.resolve({ job: REMOTE })), triggerAction },
   }
 
-  // Three of the SDK's dozens of resources; the rest would be dead weight in a stub and
+  // Two of the SDK's dozens of resources; the rest would be dead weight in a stub and
   // unreachable from these tests.
   return stub as unknown as Scenario
 }
@@ -35,47 +30,11 @@ describe('the assets a finished job leaves behind', () => {
     expect(outputsOf({ ...REMOTE, metadata: { assetIds: ['asset_1'] } })).toEqual(['asset_1'])
   })
 
-  /**
-   * A workflow job says nothing in `assetIds` — it reports node by node, and the API includes
-   * only the last nodes unless one asks otherwise. Unread, the outputs of every App would land
-   * nowhere: the job would succeed with an empty project behind it.
-   */
-  it('flattens what the nodes of a workflow produced', () => {
-    const payload = {
-      ...REMOTE,
-      metadata: {
-        flow: [{ assets: [{ assetId: 'asset_mask' }] }, { assets: [{ assetId: 'asset_final' }] }],
-      },
-    }
-
-    expect(outputsOf(payload)).toEqual(['asset_mask', 'asset_final'])
-  })
-
-  // A logic node, a transform, an approval: plenty of nodes produce no asset at all.
-  it('skips the nodes that produced nothing', () => {
-    const payload = { ...REMOTE, metadata: { flow: [{}, { assets: [{ assetId: 'asset_1' }] }] } }
-
-    expect(outputsOf(payload)).toEqual(['asset_1'])
-  })
-
   // The same asset would otherwise be fetched, filed and charged for twice.
   it('never names the same asset twice', () => {
-    const twice = [{ assets: [{ assetId: 'asset_1' }] }, { assets: [{ assetId: 'asset_1' }] }]
-
-    expect(outputsOf({ ...REMOTE, metadata: { flow: twice } })).toEqual(['asset_1'])
-  })
-
-  /** Both would import every intermediate picture of a pipeline as if it were a result. */
-  it('prefers what the job names over what its nodes produced', () => {
-    const payload = {
-      ...REMOTE,
-      metadata: {
-        assetIds: ['asset_final'],
-        flow: [{ assets: [{ assetId: 'asset_intermediate' }] }],
-      },
-    }
-
-    expect(outputsOf(payload)).toEqual(['asset_final'])
+    expect(outputsOf({ ...REMOTE, metadata: { assetIds: ['asset_1', 'asset_1'] } })).toEqual([
+      'asset_1',
+    ])
   })
 
   it('answers nothing for a job the API said nothing about', () => {
@@ -108,89 +67,39 @@ describe('the runner that binds the job manager to the SDK', () => {
     ).resolves.not.toHaveProperty('cost')
   })
 
-  /** Two endpoints, and only the kind says which one runs — a workflow id is not a model id. */
-  it('runs a workflow through the workflow endpoint', async () => {
-    const runModel = vi.fn(() => Promise.resolve({ job: REMOTE }))
-    const runWorkflow = vi.fn(() => Promise.resolve({ job: REMOTE, workflow: { id: 'w' } }))
-    const runner = runnerOf(client(runModel, runWorkflow))
-
-    await expect(
-      runner.submit({ kind: 'workflow', id: 'workflow_1' }, { image: 'asset_1' }),
-    ).resolves.toMatchObject({ jobId: 'job_remote' })
-
-    expect(runWorkflow).toHaveBeenCalledWith('workflow_1', { body: { image: 'asset_1' } })
-    expect(runModel).not.toHaveBeenCalled()
-  })
-
-  // Both endpoints report progress the same way, and the bar sums what it is given.
+  // The bar sums what it is given, and a job that reports nothing must not read as zero.
   it('carries a progress reading through, and says nothing when there is none', async () => {
-    const generation = client(() => Promise.resolve({ job: { ...REMOTE, progress: 0.4 } }))
-    const workflow = client(
-      () => Promise.resolve({ job: REMOTE }),
-      () => Promise.resolve({ job: { jobId: 'job_remote', status: 'queued' } }),
-    )
+    const reported = client(() => Promise.resolve({ job: { ...REMOTE, progress: 0.4 } }))
+    const silent = client(() => Promise.resolve({ job: { jobId: 'job_remote', status: 'queued' } }))
 
     await expect(
-      runnerOf(generation).submit({ kind: 'model', id: 'model_flux' }, {}),
+      runnerOf(reported).submit({ kind: 'model', id: 'model_flux' }, {}),
     ).resolves.toMatchObject({ progress: 0.4 })
     await expect(
-      runnerOf(workflow).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
+      runnerOf(silent).submit({ kind: 'model', id: 'model_flux' }, {}),
     ).resolves.not.toHaveProperty('progress')
   })
 
   /**
-   * A doubt left open: both references declare `billing.cuCost` on the job
-   * itself, and nothing had ever been read from it. A workflow prices nothing beside its job,
-   * so this is the only figure an App could show — when the API fills it in, which for a
-   * workflow it was observed not to. See the two tests below.
+   * `billing.cuCost` sits on the job itself, which is where a job resumed from a previous session
+   * can still find what it cost — the submission's own figure is gone by then.
    */
   it('reads what the job says it cost when the submission said nothing', async () => {
+    const priced = client(() => Promise.resolve({ job: { ...REMOTE, billing: { cuCost: 7 } } }))
+
+    await expect(
+      runnerOf(priced).submit({ kind: 'model', id: 'model_flux' }, {}),
+    ).resolves.toMatchObject({ cost: 7 })
+  })
+
+  // And on the poll as well, which is the path a resumed job only ever takes.
+  it('reads it on a poll too', async () => {
     const priced = client(
       () => Promise.resolve({ job: REMOTE }),
       () => Promise.resolve({ job: { ...REMOTE, billing: { cuCost: 7 } } }),
     )
 
-    await expect(
-      runnerOf(priced).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
-    ).resolves.toMatchObject({ cost: 7 })
-  })
-
-  /**
-   * Observed on 9 August 2026: the parent of a two-node App answered `cuCost: 0` while the node
-   * it ran answered 12. Zero on a pipeline is where the charge is not, never what it cost.
-   */
-  it('shows no cost for a workflow job that bills nothing itself', async () => {
-    const parent = client(
-      () => Promise.resolve({ job: REMOTE }),
-      () => Promise.resolve({ job: { ...REMOTE, jobType: 'workflow', billing: { cuCost: 0 } } }),
-    )
-
-    await expect(
-      runnerOf(parent).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
-    ).resolves.not.toHaveProperty('cost')
-  })
-
-  // And on the poll as well, which is the path a resumed App only ever takes.
-  it('shows no cost for a workflow job polled after the session that ran it', async () => {
-    const parent = client(
-      () => Promise.resolve({ job: REMOTE }),
-      undefined,
-      () => Promise.resolve({ job: { ...REMOTE, jobType: 'workflow', billing: { cuCost: 0 } } }),
-    )
-
-    await expect(runnerOf(parent).poll('job_remote')).resolves.not.toHaveProperty('cost')
-  })
-
-  // The day the API does charge the parent, the figure is shown: only the zero is read as absence.
-  it('shows a workflow cost the API does fill in', async () => {
-    const parent = client(
-      () => Promise.resolve({ job: REMOTE }),
-      () => Promise.resolve({ job: { ...REMOTE, jobType: 'workflow', billing: { cuCost: 30 } } }),
-    )
-
-    await expect(
-      runnerOf(parent).submit({ kind: 'workflow', id: 'workflow_1' }, {}),
-    ).resolves.toMatchObject({ cost: 30 })
+    await expect(runnerOf(priced).poll('job_remote')).resolves.toMatchObject({ cost: 7 })
   })
 
   /**

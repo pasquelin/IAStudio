@@ -1,17 +1,5 @@
 import { z } from 'zod'
 import { ASSET_NAME_MAX_LENGTH } from '@shared/domain/asset'
-import {
-  GRAPH_EDGES_MAX,
-  GRAPH_EXPRESSION_MAX,
-  GRAPH_ID_MAX,
-  GRAPH_NODES_MAX,
-  GRAPH_NODE_TYPES,
-  GRAPH_VARIABLE_MAX,
-  GRAPH_VARIABLE_NAME_MAX,
-  GRAPH_VARIABLES_MAX,
-  type GraphState,
-  type GraphTransformVariables,
-} from '@shared/domain/graph'
 import { JOB_KINDS, type JobTarget } from '@shared/domain/job'
 import type { PersistedJob } from './job-store'
 import {
@@ -29,7 +17,6 @@ import {
   type SuggestPromptsRequest,
 } from '@shared/domain/prompt-assist'
 import { USAGE_PERIODS, type UsageCursors, type UsagePeriod } from '@shared/domain/usage'
-import { WORKFLOW_PRIVACIES, type WorkflowQuery } from '@shared/domain/workflow'
 
 const usagePeriod = z.literal(USAGE_PERIODS)
 
@@ -109,101 +96,6 @@ const jobTarget = z.object({ kind: z.enum(JOB_KINDS), id: z.string().trim().min(
 
 export function parseJobTarget(value: unknown): JobTarget {
   return jobTarget.parse(value)
-}
-
-const workflowId = z.string().trim().min(1)
-
-export function parseWorkflowId(value: unknown): string {
-  return workflowId.parse(value)
-}
-
-/**
- * A graph, on its way in to be compiled.
- *
- * Bounded like every other body that crosses: the renderer is sandboxed and trusted for nothing,
- * and a graph is the largest thing the studio sends this way. `data` is kept as it stands and
- * NOT validated — the same contract `parseGraph` holds on the other side, and the one the
- * converter is written against.
- */
-// `width`/`height` are declared because zod STRIPS what it does not name, and this schema is on
-// the export's only path: left out, a note the user resized came back to its default size.
-const graphNode = z.object({
-  id: z.string().min(1).max(GRAPH_ID_MAX),
-  type: z.literal(GRAPH_NODE_TYPES),
-  position: z.object({ x: z.number(), y: z.number() }),
-  data: z.record(z.string(), z.unknown()),
-  width: z.number().optional(),
-  height: z.number().optional(),
-})
-
-const graphEdge = z.object({
-  id: z.string().min(1).max(GRAPH_ID_MAX),
-  source: z.string().min(1).max(GRAPH_ID_MAX),
-  target: z.string().min(1).max(GRAPH_ID_MAX),
-  sourceHandle: z.string().max(GRAPH_ID_MAX).optional(),
-  targetHandle: z.string().max(GRAPH_ID_MAX).optional(),
-})
-
-const graphState = z.object({
-  nodes: z.array(graphNode).max(GRAPH_NODES_MAX),
-  edges: z.array(graphEdge).max(GRAPH_EDGES_MAX),
-  inputKeys: z.array(z.string().max(GRAPH_ID_MAX)).max(GRAPH_NODES_MAX),
-  // Same reason as `width` above, and it was worse: dropped here, the boxes a user drew vanished
-  // from every export while each node kept a `data.group` naming an id nothing resolved.
-  nodeGroups: z
-    .record(
-      z.string().max(GRAPH_ID_MAX),
-      z.object({
-        title: z.string().max(GRAPH_ID_MAX).optional(),
-        color: z.string().max(32).optional(),
-      }),
-    )
-    .optional(),
-})
-
-export function parseGraphState(value: unknown): GraphState {
-  return graphState.parse(value)
-}
-
-/**
- * One CEL expression, and what it reads. Bounded like the graph above, and for its reason: the
- * renderer is sandboxed and trusted for nothing, and this one goes to an evaluator.
- *
- * Blank is refused rather than defaulted: a node holding no expression is one the executor never
- * submits, so an empty string arriving here is a caller doing something else.
- */
-const transformExpression = z.string().min(1).max(GRAPH_EXPRESSION_MAX)
-
-export function parseTransformExpression(value: unknown): string {
-  return transformExpression.parse(value)
-}
-
-// What a WIRE carries, never what someone typed: a text node holding a long prompt must travel,
-// or its own expression is refused for a length that is not the expression's.
-const transformValue = z.string().max(GRAPH_VARIABLE_MAX)
-
-const transformVariables = z
-  .record(
-    z.string().min(1).max(GRAPH_VARIABLE_NAME_MAX),
-    z.union([transformValue, z.array(transformValue).max(GRAPH_VARIABLES_MAX)]),
-  )
-  // Zod has no cap on a record's key count, and one variable per wire into a node is the shape
-  // this channel is for — a thousand of them is not a graph anyone drew.
-  .refine(held => Object.keys(held).length <= GRAPH_VARIABLES_MAX, 'too many variables')
-
-export function parseTransformVariables(value: unknown): GraphTransformVariables {
-  return transformVariables.parse(value)
-}
-
-/** Bounded like the model query: `limit` is the page the API is asked for, never a walk. */
-const workflowQuery = z.object({
-  privacy: z.enum(WORKFLOW_PRIVACIES).optional(),
-  cursor: z.string().max(500).optional(),
-  limit: z.number().int().min(1).max(100).optional(),
-})
-
-export function parseWorkflowQuery(value: unknown): WorkflowQuery {
-  return value === undefined ? {} : workflowQuery.parse(value)
 }
 
 const modelIds = z.array(modelId).max(MODEL_IDS_BATCH_LIMIT)

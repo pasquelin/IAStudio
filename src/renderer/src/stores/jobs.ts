@@ -87,10 +87,7 @@ export const useJobs = create<JobsState>()((set, get) => ({
     const bridge = getBridge()
     if (!bridge) return null
 
-    const job =
-      target.kind === 'workflow'
-        ? await bridge.workflows.run(target.id, body)
-        : await bridge.scenario.generate(target.id, body)
+    const job = await bridge.scenario.generate(target.id, body)
 
     set(state => ({ jobs: [job, ...state.jobs], bodies: { ...state.bodies, [job.id]: body } }))
     return job

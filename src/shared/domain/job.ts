@@ -3,14 +3,13 @@ import type { JobFailure } from './failure'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
 /**
- * What a job runs. Two endpoints, two vocabularies of id, and one thing that must not be
- * confused: only a model id means anything to the generator, so "regenerate with these
- * parameters" on an asset an App produced would otherwise open the form of a model that does
- * not exist.
+ * What a job runs. One value today, kept as a union because a job read back off disk may name a
+ * kind this build no longer runs — `storedJob` folds those onto `model` rather than dropping a
+ * generation that is running and already paid for.
  */
-export type JobKind = 'model' | 'workflow'
+export type JobKind = 'model'
 
-export const JOB_KINDS: readonly JobKind[] = ['model', 'workflow']
+export const JOB_KINDS: readonly JobKind[] = ['model']
 
 /**
  * What to run, and under which vocabulary of id. One shape for the two questions asked of it —
@@ -23,7 +22,7 @@ export type JobTarget = { kind: JobKind; id: string }
 export type Job = {
   id: string
   kind: JobKind
-  /** The id of whatever `kind` names — a model of the catalogue, or a workflow. */
+  /** The id of whatever `kind` names — a model of the catalogue. */
   targetId: string
   label: string
   status: JobStatus
@@ -38,8 +37,7 @@ export type Job = {
    * What it cost, in creative units.
    *
    * Read from `creativeUnitsCost` beside a submission, and from `billing.cuCost` on the job
-   * itself — which is where a job resumed from a previous session can still find it. A workflow
-   * job is the exception: it bills nothing on itself, its nodes do (see `runner.ts`).
+   * itself — which is where a job resumed from a previous session can still find it.
    */
   cost?: number
 }

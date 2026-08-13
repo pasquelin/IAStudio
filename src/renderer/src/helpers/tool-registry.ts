@@ -1,5 +1,4 @@
 import {
-  mdiApplicationBracesOutline,
   mdiCloudOutline,
   mdiCreationOutline,
   mdiCubeScan,
@@ -56,7 +55,6 @@ const ICONS: Record<ToolId, string> = {
   assets: mdiImageMultipleOutline,
   channels: mdiGridLarge,
   styles: mdiPaletteSwatchOutline,
-  apps: mdiApplicationBracesOutline,
   // The home's own. `mdiFolderOutline` is the Explorer's and `mdiCreationOutline` the
   // generator's: a rail where two glyphs mean two things is a rail one reads twice.
   projects: mdiFolderMultipleOutline,
@@ -113,9 +111,9 @@ export function toolIcon(id: ToolId): string {
  * What a surface browses models by. The home generates nothing: it opens documents, it makes
  * none — and that is the ONE surface with no scope at all.
  *
- * A workspace without a family is a different thing entirely: the graph chains them, so it has
- * every model to choose from rather than none. Reading its `null` family as "no models" is what
- * would drop the generator from its rail for good, since `canOffer` removes the panel outright.
+ * A workspace without a family is a different thing entirely: it has every model to choose from
+ * rather than none. Reading its `null` family as "no models" is what would drop the generator
+ * from its rail for good, since `canOffer` removes the panel outright.
  */
 function scopeFor(surface: ToolSurface): ModelScope | null {
   return surface === HOME_SURFACE ? null : workspaceById(surface).scope

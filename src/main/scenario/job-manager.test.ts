@@ -134,7 +134,7 @@ describe('status mapping', () => {
   })
 
   // Unrecognised, either would fold onto `running` and poll for ever holding a concurrency slot.
-  it('folds the two outcomes the guide spells differently for a workflow job', () => {
+  it('folds the two outcomes the guide spells differently', () => {
     expect(jobStatusOf('succeeded')).toBe('succeeded')
     expect(jobStatusOf('failed')).toBe('failed')
   })
@@ -185,15 +185,15 @@ describe('job manager', () => {
     })
   })
 
-  /** The runner is what picks the endpoint, so the kind has to survive the queue to reach it. */
+  /** What the target names has to survive the queue to reach the runner that submits it. */
   it('carries what a job runs through to the runner', async () => {
     const submit = vi.fn(() => Promise.resolve(remote('success')))
     const { manager } = harness({ runner: { submit } })
 
-    manager.submit({ kind: 'workflow', id: 'workflow_1' }, 'Background remover', { image: 'a' })
+    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', { image: 'a' })
     await settled()
 
-    expect(submit).toHaveBeenCalledWith({ kind: 'workflow', id: 'workflow_1' }, { image: 'a' })
+    expect(submit).toHaveBeenCalledWith({ kind: 'model', id: 'model_flux' }, { image: 'a' })
   })
 
   /**
@@ -284,7 +284,7 @@ describe('job manager', () => {
     expect(progress.at(-1)?.error).toBeUndefined()
   })
 
-  it('remembers what a running workflow job runs, so a resumed one is not taken for a model', async () => {
+  it('remembers what a running job runs, so a resumed one still names its target', async () => {
     // Every note written along the way: the last one is empty, since the job finishes here.
     const written: PersistedJob[][] = []
     const { manager } = harness({
@@ -292,10 +292,10 @@ describe('job manager', () => {
       persist: jobs => void written.push([...jobs]),
     })
 
-    manager.submit({ kind: 'workflow', id: 'workflow_1' }, 'Background remover', {})
+    manager.submit({ kind: 'model', id: 'model_flux' }, 'Flux', {})
     await settled()
 
-    expect(written[0]?.[0]).toMatchObject({ kind: 'workflow', targetId: 'workflow_1' })
+    expect(written[0]?.[0]).toMatchObject({ kind: 'model', targetId: 'model_flux' })
   })
 
   it('never runs more jobs at once than it is allowed to', async () => {
