@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron-vite dev --watch",
     "start:debug": "electron-vite dev --watch --remoteDebuggingPort 9222",
-    "build": "pnpm typecheck && electron-vite build",
+    "build": "pnpm typecheck && electron-vite build && node scripts/check-artefact.mjs",
     "dist": "pnpm build && bash scripts/dist.sh",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
