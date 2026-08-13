@@ -5,8 +5,17 @@ import { useShelfRefresh } from '@/hooks/useShelfRefresh'
 
 const NO_TEXTURE: readonly Asset[] = []
 
+/**
+ * The stamp as much as the id: an id does not move when ⌘S rewrites the picture behind it, and
+ * the tile draws its URL off `localChangedAt` (`posterUrl`) precisely so an edit repaints. Keying
+ * on the id alone left the inspector showing the picture from before it was painted.
+ */
 const sameRows = (held: readonly Asset[], found: readonly Asset[]): boolean =>
-  held.length === found.length && held.every((asset, index) => asset.id === found[index]?.id)
+  held.length === found.length &&
+  held.every(
+    (asset, index) =>
+      asset.id === found[index]?.id && asset.localChangedAt === found[index]?.localChangedAt,
+  )
 
 /**
  * The pictures taken OUT of one asset — a model's own maps, above all.

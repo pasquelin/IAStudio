@@ -90,6 +90,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
     },
     assets: {
       search: () => Promise.resolve([]),
+      onChanged: noSubscription,
       counts: () => Promise.resolve(emptyAssetCounts()),
       peaks: () => Promise.resolve(null),
       reveal: () => Promise.resolve(false),

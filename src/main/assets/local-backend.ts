@@ -226,8 +226,15 @@ export function createLocalBackend({
 
     const added = await catalog().add(asset)
     // After the catalogue, never before: a listener that goes looking for what just arrived —
-    // extracting a model's pictures does exactly that — would find nothing at all.
-    onImported?.(added)
+    // extracting a model's pictures does exactly that — would find nothing at all. Caught, as
+    // the deps promise: the row is committed by now, so a listener throwing here would fail an
+    // import that has already happened.
+    try {
+      onImported?.(added)
+    } catch {
+      // Nothing to say from here: what a listener does is its own errand, and the one this
+      // exists for reports its own failures to the journal.
+    }
     return added
   }
 

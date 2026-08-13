@@ -7,6 +7,7 @@ import { useNativeMenu } from '@/hooks/useNativeMenu'
 import { useHeldCommand } from '@/hooks/useShortcuts'
 import { useWindowFit } from '@/hooks/useWindowFit'
 import { useAccounts } from '@/stores/accounts'
+import { useAssets } from '@/stores/assets'
 import { useJobs } from '@/stores/jobs'
 import { useDictation as useDictationStore } from '@/stores/dictation'
 import { useMedia } from '@/stores/media'
@@ -33,6 +34,7 @@ export function Application() {
   const connectDictation = useDictationStore(state => state.connect)
   const connectUpdates = useUpdates(state => state.connect)
   const connectActivity = useActivity(state => state.connect)
+  const connectAssets = useAssets(state => state.connect)
 
   useEffect(() => {
     const subscriptions = [
@@ -44,6 +46,7 @@ export function Application() {
       connectDictation(),
       connectUpdates(),
       connectActivity(),
+      connectAssets(),
     ]
     return () => {
       for (const subscription of subscriptions) void subscription.then(stop => stop())
@@ -57,6 +60,7 @@ export function Application() {
     connectDictation,
     connectUpdates,
     connectActivity,
+    connectAssets,
   ])
 
   // Store to store rather than through the main process, so each subscribes on its own: what a

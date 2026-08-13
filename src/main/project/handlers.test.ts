@@ -772,6 +772,31 @@ describe('project handlers', () => {
       await rm(root, { recursive: true, force: true })
     })
 
+    /**
+     * The catalogue can only answer for what is COMMITTED, and reading a real model then writing
+     * its pictures takes seconds: the automatic run and the menu row clicked while it was going
+     * both saw a mesh with no derived picture — which it was, for a few seconds more.
+     */
+    it('shares a run already going rather than extracting the same model twice', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
+      const assets = backend()
+      const merged = deps(catalog, {
+        assets,
+        project: projectAt(root, catalog),
+        newAssetId: () => 'asset-new',
+      })
+      registerProjectHandlers(merged)
+
+      const [first, second] = await Promise.all([
+        invoke(CHANNELS.assetsExtractTextures, 'asset-1'),
+        invoke(CHANNELS.assetsExtractTextures, 'asset-1'),
+      ])
+
+      expect(assets.importFromBytes).toHaveBeenCalledTimes(1)
+      expect(second).toEqual(first)
+      await rm(root, { recursive: true, force: true })
+    })
+
     // Named as a derived channel is, and in the language the window is in — the two are the same
     // thing on the shelf and must not read as two different notions.
     it('names it after the model and the role it played', async () => {

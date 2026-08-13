@@ -211,15 +211,17 @@ describe('local backend', () => {
    * goes looking for what just arrived — that extraction does exactly that — would find nothing.
    */
   it('says what landed, once the catalogue can answer for it', async () => {
-    const seen: string[] = []
+    // The look-up is STARTED from the listener and awaited from the body: an `async` listener's
+    // promise is dropped — `onImported` answers `void` — so an expectation inside one would
+    // reject into the void and the case would pass on the very regression it guards.
+    const asked: Promise<unknown>[] = []
     const watched = createLocalBackend({
       download: () => Promise.resolve(BYTES),
       projectPath: () => root,
       catalog: () => catalog,
       now: () => '2026-08-06T10:00:00.000Z',
-      onImported: async imported => {
-        seen.push(imported.id)
-        expect(await catalog.find(imported.id)).not.toBeNull()
+      onImported: imported => {
+        asked.push(catalog.find(imported.id))
       },
     })
 
@@ -230,7 +232,33 @@ describe('local backend', () => {
       type: 'mesh',
     })
 
-    expect(seen).toEqual(['asset_1'])
+    expect(await Promise.all(asked)).toEqual([expect.objectContaining({ id: 'asset_1' })])
+  })
+
+  /**
+   * The deps say a listener that throws must not cost the asset, and the row is committed by the
+   * time one is called: an import reported as failed for an asset the project holds is worse
+   * than the errand that failed.
+   */
+  it('keeps the import when a listener throws', async () => {
+    const watched = createLocalBackend({
+      download: () => Promise.resolve(BYTES),
+      projectPath: () => root,
+      catalog: () => catalog,
+      now: () => '2026-08-06T10:00:00.000Z',
+      onImported: () => {
+        throw new Error('a listener that has its own troubles')
+      },
+    })
+
+    await watched.importFromUrl({
+      id: 'asset_2',
+      url: 'https://cdn.example/tree.glb',
+      name: 'Tree',
+      type: 'mesh',
+    })
+
+    await expect(catalog.find('asset_2')).resolves.not.toBeNull()
   })
 
   it('indexes nothing when the download fails', async () => {

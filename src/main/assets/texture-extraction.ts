@@ -58,55 +58,74 @@ export type TextureExtraction = (source: Asset) => Promise<Asset[]>
  * catches up the models a project already held: a mesh that already has pictures derived from it
  * is left alone, and answers with them. Without that, the two paths would double every texture of
  * every model imported since.
+ *
+ * Twice over, because the catalogue can only answer for what is COMMITTED: a run in flight is
+ * shared rather than started again. A real model takes seconds to read and write, and the menu
+ * row clicked during the automatic run saw a mesh with no derived picture — which it was, for a
+ * few seconds more.
  */
 export function createTextureExtraction(deps: TextureExtractionDeps): TextureExtraction {
-  return async source => {
-    if (source.type !== 'mesh') throw new Error(`asset ${source.id} is not a mesh`)
+  // What is being extracted right now, per mesh. The catalogue can only answer for what is
+  // COMMITTED, and a real model takes seconds to read and write: the import path and the menu row
+  // both saw zero derived rows and both extracted, leaving every picture twice.
+  const running = new Map<string, Promise<Asset[]>>()
 
-    const already = await deps.search({ derivedFrom: source.id, type: 'texture' })
-    if (already.length > 0) return [...already]
+  return source => {
+    const already = running.get(source.id)
+    if (already) return already
 
-    const file = deps.fileOf(source)
-    if (!file) throw new Error(`asset ${source.id} has no file to read`)
-
-    // `Buffer` IS a `Uint8Array`, and the reader takes it as one: wrapping it would copy the
-    // whole model — several hundred megabytes for a scan, on the process every window waits on.
-    const found = await readFile(file).then(embeddedTextures, (error: unknown) => {
-      // Recorded and rethrown: the window says it too, but a project reopened tomorrow keeps
-      // the line — and a file the disk refuses is exactly what one goes back to the journal for.
-      deps.record({
-        level: 'error',
-        topic: 'import',
-        messageKey: 'activity.extractFailed',
-        params: { name: source.name },
-      })
-      throw error
-    })
-
-    const created: Asset[] = []
-    for (const texture of found) {
-      // Sequential on purpose: a model can carry half a dozen 2048² pictures, and writing them
-      // all at once is a burst of tens of megabytes at whatever the disk will take.
-      created.push(await deps.write(requestFor(source, texture, deps.newAssetId()), texture.bytes))
-    }
-
-    // Said either way. A model with no picture inside it is a normal answer, and one the shelf
-    // cannot show on its own: nothing appears, and a gesture that changes nothing without a word
-    // reads as a broken menu row.
-    deps.record({
-      level: 'info',
-      // `import`, like every other line about bytes landing in the project.
-      topic: 'import',
-      ...(created.length > 0
-        ? {
-            messageKey: 'activity.extractedTextures',
-            params: { count: created.length, name: source.name },
-          }
-        : { messageKey: 'activity.extractedNothing', params: { name: source.name } }),
-    })
-
-    return created
+    const run = extract(deps, source).finally(() => running.delete(source.id))
+    running.set(source.id, run)
+    return run
   }
+}
+
+async function extract(deps: TextureExtractionDeps, source: Asset): Promise<Asset[]> {
+  if (source.type !== 'mesh') throw new Error(`asset ${source.id} is not a mesh`)
+
+  const already = await deps.search({ derivedFrom: source.id, type: 'texture' })
+  if (already.length > 0) return [...already]
+
+  const file = deps.fileOf(source)
+  if (!file) throw new Error(`asset ${source.id} has no file to read`)
+
+  // `Buffer` IS a `Uint8Array`, and the reader takes it as one: wrapping it would copy the
+  // whole model — several hundred megabytes for a scan, on the process every window waits on.
+  const found = await readFile(file).then(embeddedTextures, (error: unknown) => {
+    // Recorded and rethrown: the window says it too, but a project reopened tomorrow keeps
+    // the line — and a file the disk refuses is exactly what one goes back to the journal for.
+    deps.record({
+      level: 'error',
+      topic: 'import',
+      messageKey: 'activity.extractFailed',
+      params: { name: source.name },
+    })
+    throw error
+  })
+
+  const created: Asset[] = []
+  for (const texture of found) {
+    // Sequential on purpose: a model can carry half a dozen 2048² pictures, and writing them
+    // all at once is a burst of tens of megabytes at whatever the disk will take.
+    created.push(await deps.write(requestFor(source, texture, deps.newAssetId()), texture.bytes))
+  }
+
+  // Said either way. A model with no picture inside it is a normal answer, and one the shelf
+  // cannot show on its own: nothing appears, and a gesture that changes nothing without a word
+  // reads as a broken menu row.
+  deps.record({
+    level: 'info',
+    // `import`, like every other line about bytes landing in the project.
+    topic: 'import',
+    ...(created.length > 0
+      ? {
+          messageKey: 'activity.extractedTextures',
+          params: { count: created.length, name: source.name },
+        }
+      : { messageKey: 'activity.extractedNothing', params: { name: source.name } }),
+  })
+
+  return created
 }
 
 function requestFor(source: Asset, texture: EmbeddedTexture, id: string): WriteRequest {

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
@@ -62,6 +62,30 @@ describe('ModelTexturesSection', () => {
     await userEvent.dblClick(await screen.findByRole('button', { name: /Couleur de base/ }))
 
     expect(openAsset).toHaveBeenCalledWith(derived[0])
+  })
+
+  /**
+   * The id of a picture does not move when ⌘S rewrites the file behind it, so the tile draws its
+   * URL off the stamp. A grid that only compared ids kept showing the picture from before the
+   * edit — the very half of « edit it, and the model follows » this panel exists for.
+   */
+  it('repaints a tile whose picture was rewritten under the same id', async () => {
+    derived = [texture({ localChangedAt: '2026-08-13T10:00:00.000Z' })]
+
+    show()
+
+    const before = await screen.findByRole('presentation')
+    expect(before).toHaveAttribute('src', expect.stringContaining('v=2026-08-13T10'))
+
+    derived = [texture({ localChangedAt: '2026-08-13T11:00:00.000Z' })]
+    useAssets.setState({ items: [texture()] })
+
+    await waitFor(() =>
+      expect(screen.getByRole('presentation')).toHaveAttribute(
+        'src',
+        expect.stringContaining('v=2026-08-13T11'),
+      ),
+    )
   })
 
   /**

@@ -631,11 +631,18 @@ export function createServices(settings: SettingsStore): Services {
     // download that produced it, and a failure here must not cost the model itself.
     onImported: asset => {
       if (asset.type !== 'mesh') return
-      void extractTextures(asset).catch((error: unknown) =>
-        // The journal already carries the line `extractTextures` writes; this is the rejection
-        // itself, which nothing else would ever hear.
-        log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
-      )
+      void extractTextures(asset)
+        .then(textures => {
+          // The one write no window ordered, so the one nothing else would say out loud: the
+          // import that started this is long answered, and its shelf refreshed, by the time a
+          // GLB has been read and its pictures written.
+          if (textures.length > 0) broadcast(EVENTS.assetsChanged)
+        })
+        .catch((error: unknown) =>
+          // The journal already carries the line `extractTextures` writes; this is the rejection
+          // itself, which nothing else would ever hear.
+          log.warn('assets', `could not extract the textures of ${asset.name}: ${String(error)}`),
+        )
     },
   })
 

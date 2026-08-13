@@ -25,6 +25,11 @@ type AssetsState = {
   setScope: (scope: readonly AssetType[] | null) => void
   refresh: () => Promise<void>
   /**
+   * Hears the writes the MAIN process makes on its own — the pictures a model sheds on import.
+   * Every other write is answered where it was ordered, and invalidates the shelf there.
+   */
+  connect: () => Promise<() => void>
+  /**
    * Says the catalogue changed and lets this store decide when to read it. `assets.search` is
    * a synchronous SQLite query in the main process: forty rushes finishing their ingest would
    * otherwise freeze every window forty times over.
@@ -154,6 +159,14 @@ export const useAssets = create<AssetsState>()(
           })
 
           return reading
+        },
+
+        connect: () => {
+          const bridge = getBridge()
+          // Through `invalidate` like every other site that says the catalogue moved, so the
+          // coalescing holds: an extraction writing six pictures is one read, not six.
+          const stop = bridge?.assets.onChanged(() => get().invalidate())
+          return Promise.resolve(stop ?? (() => {}))
         },
 
         invalidate: () => {

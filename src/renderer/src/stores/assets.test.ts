@@ -99,6 +99,59 @@ describe('the kinds the catalogue is asked for', () => {
 })
 
 /**
+ * The write nothing else says out loud: a model sheds its pictures on the main process, seconds
+ * after the import that produced it was answered and its shelf refreshed. Without this the
+ * inspector said « no picture was taken out of this model » until the model was picked again.
+ */
+describe('what the main process writes on its own', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    useAssets.setState({ items: [], scope: null })
+  })
+  afterEach(() => vi.useRealTimers())
+
+  it('re-reads the catalogue when the main process says it wrote', async () => {
+    let announce = (): void => {}
+    const asked: unknown[] = []
+    installFakeBridge({
+      assets: {
+        search: query => {
+          asked.push(query)
+          return Promise.resolve([])
+        },
+        onChanged: callback => {
+          announce = callback
+          return () => {}
+        },
+      },
+    })
+
+    const stop = await useAssets.getState().connect()
+    announce()
+    vi.runAllTimers()
+
+    expect(asked).toHaveLength(1)
+    stop()
+  })
+
+  it('stops listening when the window lets go', async () => {
+    let listening = true
+    installFakeBridge({
+      assets: {
+        onChanged: () => () => {
+          listening = false
+        },
+      },
+    })
+
+    const stop = await useAssets.getState().connect()
+    stop()
+
+    expect(listening).toBe(false)
+  })
+})
+
+/**
  * The timer `invalidate` arms lives at MODULE scope, so it outlives the case that armed it. Left
  * alone it fires inside a LATER case and re-reads the catalogue through whatever bridge that one
  * installed — which is how a shelf changes under an element a test is already holding.
