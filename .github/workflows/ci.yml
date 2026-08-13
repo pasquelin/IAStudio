@@ -45,3 +45,8 @@ jobs:
       # `electron-vite build` rather than `pnpm build`, which would run the typecheck a second
       # time. The step above already did it, and did it first so a type error answers early.
       - run: pnpm exec electron-vite build
+
+      # What `pnpm build` adds beyond the bundler, spelled out because this job cannot call it:
+      # nothing else in the pipeline looks at the artefact, and a duplicate is made by the
+      # bundler out of files no import graph reaches.
+      - run: node scripts/check-artefact.mjs
