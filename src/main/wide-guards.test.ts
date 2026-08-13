@@ -74,6 +74,9 @@ describe('finding the tests no import graph reaches', () => {
   it('sees the suite that borrows the shared sweep rather than writing one', () => {
     expect(readsTheTree("import { sourceFiles } from './source-files'")).toBe(true)
     expect(readsTheTree("import { PROJECT_TREES } from '@main/source-files'")).toBe(true)
+    // A guard one folder down, which the first version of the rule would have dropped.
+    expect(readsTheTree("import { sourceFiles } from '../source-files'")).toBe(true)
+    expect(readsTheTree("import { sourceFiles } from '../../source-files'")).toBe(true)
     expect(GUARDED).toContain('src/main/no-bare-locale-compare.test.ts')
     expect(GUARDED).toContain('src/main/no-hardcoded-text.test.ts')
   })

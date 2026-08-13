@@ -5,16 +5,18 @@ import { describe, expect, it } from 'vitest'
 import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
 
 /**
- * Whether a call names the language it answers in.
+ * Whether the argument in the language's place says anything at all.
  *
- * `localeCompare(other, undefined)` is spelled longer and means exactly `localeCompare(other)`, so
- * counting arguments is not enough — the second one has to say something.
+ * `(other, undefined)` is spelled longer and means exactly `(other)`, so counting arguments is not
+ * enough — the one in that position has to say something. Used for BOTH shapes the defect takes:
+ * argument two of `localeCompare`, argument one of a collator. The first version of this file
+ * counted the collator's, which is the very mistake this paragraph warns about, one function down;
+ * the batch's code review caught it.
  */
-function namesNoLanguage(call: ts.CallExpression): boolean {
-  const language = call.arguments[1]
-  if (!language) return true
+function saysNoLanguage(argument: ts.Expression | undefined): boolean {
+  if (!argument) return true
 
-  return ts.isIdentifier(language) && language.text === 'undefined'
+  return ts.isIdentifier(argument) && argument.text === 'undefined'
 }
 
 /**
@@ -26,7 +28,14 @@ function namesNoLanguage(call: ts.CallExpression): boolean {
 function calledName(call: ts.CallExpression): string | null {
   const target = call.expression
   if (ts.isPropertyAccessExpression(target)) return target.name.text
-  if (ts.isElementAccessExpression(target) && ts.isStringLiteral(target.argumentExpression))
+
+  // A backtick is a third node kind for the same string, so half-closing the evasion is not
+  // closing it. The review found this one too.
+  if (
+    ts.isElementAccessExpression(target) &&
+    (ts.isStringLiteral(target.argumentExpression) ||
+      ts.isNoSubstitutionTemplateLiteral(target.argumentExpression))
+  )
     return target.argumentExpression.text
 
   return null
@@ -35,22 +44,30 @@ function calledName(call: ts.CallExpression): string | null {
 /**
  * A collator built with no locale, which is the same defect wearing the other constructor.
  *
- * `new Intl.Collator().compare` answers in the OS locale exactly as a bare `localeCompare` does.
- * `no-uncached-formatter.test.ts` bans a loose `new Intl` in the renderer, but it says nothing
- * about the argument and nothing about the other three trees.
+ * `Intl.Collator().compare` answers in the OS locale exactly as a bare `localeCompare` does —
+ * measured, `en-US`. `no-uncached-formatter.test.ts` bans a loose `new Intl` in the renderer, but
+ * it says nothing about the argument and nothing about the other three trees.
+ *
+ * **With and without `new`**: `Intl.Collator(…)` called plainly is legal and returns a collator, so
+ * a rule that only reads the `new` misses a working spelling. Both were pointed out by the review.
  */
+function isIntlCollator(node: ts.Node): node is ts.NewExpression | ts.CallExpression {
+  if (!ts.isNewExpression(node) && !ts.isCallExpression(node)) return false
+
+  const target = node.expression
+  return (
+    ts.isPropertyAccessExpression(target) &&
+    ts.isIdentifier(target.expression) &&
+    target.expression.text === 'Intl' &&
+    target.name.text === 'Collator'
+  )
+}
+
 function localelessCollatorsIn(file: ts.SourceFile, path: string): string[] {
   const found: string[] = []
 
   const walk = (node: ts.Node): void => {
-    if (
-      ts.isNewExpression(node) &&
-      ts.isPropertyAccessExpression(node.expression) &&
-      ts.isIdentifier(node.expression.expression) &&
-      node.expression.expression.text === 'Intl' &&
-      node.expression.name.text === 'Collator' &&
-      (node.arguments?.length ?? 0) === 0
-    ) {
+    if (isIntlCollator(node) && saysNoLanguage(node.arguments?.[0])) {
       const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
       found.push(`${path}:${line + 1}`)
     }
@@ -71,7 +88,7 @@ function bareCallsIn(path: string, source: string): string[] {
     if (
       ts.isCallExpression(node) &&
       calledName(node) === 'localeCompare' &&
-      namesNoLanguage(node)
+      saysNoLanguage(node.arguments[1])
     ) {
       const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
       found.push(`${path}:${line + 1}`)
@@ -165,8 +182,9 @@ describe('no sort hands its language to the machine', () => {
 
   // Nobody writes it this way, which is the reason a guard has to: a rule a rename tool can slip
   // past is a rule that stops holding without saying so. Found by the batch's own review.
-  it('reads the call spelled through an element access', () => {
+  it('reads the call spelled through an element access, in both quotings', () => {
     expect(bareCallsIn('probe.ts', "const n = a['localeCompare'](b)")).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', 'const n = a[`localeCompare`](b)')).toEqual(['probe.ts:1'])
     expect(bareCallsIn('probe.ts', "const n = a['localeCompare'](b, 'fr')")).toEqual([])
   })
 
@@ -179,6 +197,24 @@ describe('no sort hands its language to the machine', () => {
     expect(bareCallsIn('probe.ts', 'const c = new Intl.Collator()')).toEqual(['probe.ts:1'])
     expect(bareCallsIn('probe.ts', "const c = new Intl.Collator('fr')")).toEqual([])
     expect(bareCallsIn('probe.ts', 'const c = new Intl.NumberFormat()')).toEqual([])
+  })
+
+  /**
+   * The two holes the review measured in the rule above, and they are the same mistake this file
+   * warns about in prose: an argument spelled `undefined` says nothing, and `Intl.Collator(…)`
+   * without `new` is a working spelling. Both resolve to the host locale — measured, `en-US`.
+   */
+  it('reads the collator whose locale is spelled undefined, and the one built without new', () => {
+    expect(bareCallsIn('probe.ts', 'const c = new Intl.Collator(undefined)')).toEqual([
+      'probe.ts:1',
+    ])
+    expect(
+      bareCallsIn('probe.ts', "const c = new Intl.Collator(undefined, { sensitivity: 'base' })"),
+    ).toEqual(['probe.ts:1'])
+    expect(
+      bareCallsIn('probe.ts', 'const c = Intl.Collator(undefined, { numeric: true })'),
+    ).toEqual(['probe.ts:1'])
+    expect(bareCallsIn('probe.ts', "const c = Intl.Collator('fr', { numeric: true })")).toEqual([])
   })
 
   // A guard that reads its own prose is a guard that fails on a sentence about it.

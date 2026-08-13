@@ -897,7 +897,7 @@ export function createServices(settings: SettingsStore): Services {
     reveal: file => shell.showItemInFolder(file),
     exists: existsSync,
     folder: {
-      ...createFolderReader(() => project.path()),
+      ...createFolderReader(() => project.path(), language),
       ...createFolderEditor(
         () => project.path(),
         file => shell.trashItem(file),

@@ -61,7 +61,10 @@ function readsAnchoredFile(code: string): boolean {
  * below exist to prevent. Extracting shared reading is a good move that MUST come with this line.
  */
 function borrowsTheSweep(code: string): boolean {
-  return /from '\.\/source-files'|from '@main\/source-files'/.test(code)
+  // Any depth of `../`, not just the sibling: a guard one folder down imports `'../source-files'`
+  // and would have dropped out of the net exactly like the one this function was added for. The
+  // review caught the two literal spellings before anyone wrote that guard.
+  return /from '\.[./]*\/source-files'|from '@main\/source-files'/.test(code)
 }
 
 /**
