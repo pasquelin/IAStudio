@@ -895,7 +895,7 @@
     "matcap": "Matcap",
     "matcapHint": "Un éclairage capté sur une sphère : c’est le relief qui se lit, pas la couleur",
     "density": "Densité",
-    "densityHint": "Du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser"
+    "densityHint": "Du vert au rouge selon les triangles par unité de surface : le rouge est à optimiser"
   },
   "project": {
     "none": "Aucun projet ouvert",
@@ -991,7 +991,7 @@
     "newProject": "Nouveau projet…",
     "openProject": "Ouvrir un projet…",
     "saveDocument": "Enregistrer",
-    "saveDocumentAs": "Enregistrer sous",
+    "saveDocumentAs": "Enregistrer sous…",
     "settings": "Réglages…",
     "tools": "Modules",
     "add": "Ajouter",
@@ -1355,7 +1355,7 @@
     },
     "sceneQuad": {
       "title": "Quatre vues",
-      "help": "Partage le viewport en quatre — dessus, face et profil autour de la vue en cours. Chaque quart s’oriente à la souris ; celui du dessus garde les manipulateurs."
+      "help": "Partage le viewport en quatre — dessus, face et profil autour de la vue en cours. Chaque quart s’oriente à la souris ; la vue en cours garde les manipulateurs."
     },
     "sceneQuadEdges": {
       "title": "Arêtes en quads",
@@ -1463,68 +1463,68 @@
     },
     "canvasDeselect": {
       "title": "Désélectionner",
-      "help": "Abandonner la région sélectionnée : le pinceau retrouve tout le calque"
+      "help": "Abandonne la région sélectionnée : le pinceau retrouve tout le calque."
     },
     "canvasCropApply": {
       "title": "Appliquer le recadrage",
-      "help": "Rogner le document au cadre posé. ⌘Z rend le cadre, pas les pixels retirés"
+      "help": "Rogne le document au cadre posé. ⌘Z rend le cadre, pas les pixels retirés."
     },
     "canvasCropCancel": {
       "title": "Abandonner le recadrage",
-      "help": "Retirer le cadre de recadrage sans rien rogner du tout"
+      "help": "Retire le cadre de recadrage sans rien rogner du tout."
     },
     "canvasMaskFromSelection": {
       "title": "Faire un masque de la sélection",
-      "help": "Masquer le calque actif hors de la région sélectionnée"
+      "help": "Masque le calque actif hors de la région sélectionnée."
     },
     "canvasRegenerate": {
       "title": "Régénérer la zone",
-      "help": "Demander au modèle de repeindre la région masquée du calque actif"
+      "help": "Demande au modèle de repeindre la région masquée du calque actif."
     },
     "canvasCutout": {
       "title": "Détourer",
-      "help": "Retirer l’arrière-plan de l’image aplatie avec le modèle par défaut"
+      "help": "Retire l’arrière-plan de l’image aplatie avec le modèle par défaut."
     },
     "canvasEnlarge": {
       "title": "Agrandir",
-      "help": "Augmenter la définition de l’image aplatie avec le modèle par défaut"
+      "help": "Augmente la définition de l’image aplatie avec le modèle par défaut."
     },
     "canvasVectorize": {
       "title": "Vectoriser",
-      "help": "Convertir l’image aplatie en tracés avec le modèle par défaut"
+      "help": "Convertit l’image aplatie en tracés avec le modèle par défaut."
     },
     "canvasExtend": {
       "title": "Étendre",
-      "help": "Demander au modèle de peindre au-delà des bords de l’image aplatie"
+      "help": "Demande au modèle de peindre au-delà des bords de l’image aplatie."
     },
     "canvasMergeDown": {
       "title": "Fusionner vers le bas",
-      "help": "Réunir le calque actif et celui juste en dessous en un seul, qui garde le nom du dessous"
+      "help": "Réunit le calque actif et celui juste en dessous en un seul, qui garde le nom du dessous."
     },
     "canvasFlatten": {
       "title": "Aplatir l’image",
-      "help": "Réduire toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés",
+      "help": "Réduit toute la pile à un seul calque : les calques masqués sont perdus, pas fusionnés.",
       "layerName": "Arrière-plan"
     },
     "canvasFlipHorizontal": {
       "title": "Miroir horizontal",
-      "help": "Retourner tout le document de gauche à droite, calques compris"
+      "help": "Retourne tout le document de gauche à droite, calques compris."
     },
     "canvasFlipVertical": {
       "title": "Miroir vertical",
-      "help": "Retourner tout le document de haut en bas, calques compris"
+      "help": "Retourne tout le document de haut en bas, calques compris."
     },
     "canvasRotateCw": {
       "title": "Rotation horaire",
-      "help": "Pivoter le document d’un quart de tour vers la droite : le cadre pivote avec lui"
+      "help": "Pivote le document d’un quart de tour vers la droite : le cadre pivote avec lui."
     },
     "canvasRotateCcw": {
       "title": "Rotation antihoraire",
-      "help": "Pivoter le document d’un quart de tour vers la gauche : le cadre pivote avec lui"
+      "help": "Pivote le document d’un quart de tour vers la gauche : le cadre pivote avec lui."
     },
     "canvasExport": {
       "title": "Exporter l’image",
-      "help": "Écrire le document aplati sur le disque, au format PNG"
+      "help": "Écrit le document aplati sur le disque, au format PNG."
     },
     "skyboxView": {
       "title": "Changer de vue",
@@ -1603,8 +1603,8 @@
       "help": "Arme la gomme ponctuelle : elle efface là où la main passe, bornée par la sélection s’il y en a une."
     },
     "canvasToolEraserSelection": {
-      "title": "Gomme de la sélection",
-      "help": "Arme la gomme de sélection : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
+      "title": "Gomme sélective",
+      "help": "Arme la gomme sélective : un clic efface d’un coup tout ce que la sélection enferme, au lieu de le frotter."
     },
     "canvasToolFill": {
       "title": "Outil Pot de peinture",
@@ -1624,11 +1624,11 @@
     },
     "sceneSkeletons": {
       "title": "Afficher les squelettes",
-      "help": "Dessine les os de chaque modèle rigué par-dessus la scène"
+      "help": "Dessine les os de chaque modèle rigué par-dessus la scène."
     },
     "scenePoseMode": {
       "title": "Mode pose",
-      "help": "Bascule entre la sélection des objets et celle des os d’un rig"
+      "help": "Bascule entre la sélection des objets et celle des os d’un rig."
     }
   },
   "styles": {
@@ -2045,7 +2045,7 @@
       "runningBody": "Elles continuent pendant que vous travaillez, et atterrissent dans le document qui les a demandées.",
       "connect": "Connecter une clé API",
       "connectBody": "Les modèles, la génération et la bibliothèque partagée demandent une clé et un secret Scenario. Collez-les dans Réglages ▸ Compte — ils sont chiffrés par le trousseau du système et ne quittent jamais cette machine. Tout ce qui est sur votre disque fonctionne sans.",
-      "connectAction": "Saisir ma clé API",
+      "connectAction": "Saisir la clé API",
       "ready": "Tout est prêt",
       "readyBody": "{{project}} est ouvert et ne contient encore rien. Choisissez un espace et créez-y la première pièce.",
       "readyAction": "Créer une image"
