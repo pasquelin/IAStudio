@@ -1,9 +1,10 @@
 import { mdiFolderOpenOutline } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { projectsByCreation, type RecentProject } from '@shared/domain/project'
 import { Collection } from '@/design/Collection'
 import { EmptyState } from '@/design/EmptyState'
+import { reportFailure } from '@/services/diagnostics'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { ProjectRow } from './ProjectRow'
@@ -27,11 +28,20 @@ type Card = RecentProject & { id: string }
  * A single click opens, which is what `onOpen` announces: a project is not a thing to select. What
  * `selectedIds` paints here is therefore not a selection but WHERE ONE IS — the folder the studio
  * has open — which is why the tone is `strong` and why the row keeps its `listitem` role.
+ *
+ * **Which path a rename is open on is held here, not in the row**, and the double-click is why: it
+ * is caught on the row's own wrapper, and only one row may hold a field at a time — two rows each
+ * holding their own boolean cannot agree on that.
+ *
+ * The double-click is deliberately NOT `Collection`'s `onActivate`. That slot is also what Enter
+ * fires, and taking it would make Enter rename a row while Space opened it — backwards from every
+ * other list in the studio, where Enter opens what is under the keyboard.
  */
 export function Projects() {
   const { t } = useTranslation()
   const recent = useSettings(state => state.settings.storage.recentProjects)
   const open = useProject(state => state.project?.path)
+  const [renaming, setRenaming] = useState<string | null>(null)
 
   // Held, or every render of the home hands each row a project of a new identity and `ProjectRow`
   // is memoised against nothing.
@@ -39,6 +49,19 @@ export function Projects() {
     () => projectsByCreation(recent).map(entry => ({ ...entry, id: entry.path })),
     [recent],
   )
+
+  // The field is closed first, whatever comes back: `InlineRename` commits the ORIGINAL name when
+  // the edit was abandoned, and a write fired for that would stamp the manifest for a gesture that
+  // said no. The failure goes to the journal — the field is gone by the time an answer arrives.
+  const commitRename = (project: Card, name: string): void => {
+    setRenaming(null)
+    if (name === project.name) return
+
+    void useProject
+      .getState()
+      .rename(project.path, name)
+      .catch(error => reportFailure('project.rename', project.path, error))
+  }
 
   return (
     <Collection
@@ -52,7 +75,14 @@ export function Projects() {
       // A folder gone from the disk drops out on its own: the store forgets it wherever an
       // opening fails, not only where it was clicked.
       onOpen={project => void useProject.getState().open(project.path)}
-      renderRow={project => <ProjectRow project={project} />}
+      renderRow={project => (
+        <ProjectRow
+          project={project}
+          renaming={renaming === project.path}
+          onRenameStart={() => setRenaming(project.path)}
+          onRenameCommit={name => commitRename(project, name)}
+        />
+      )}
       // The one screen a first launch actually shows. It says what to do rather than that there
       // is nothing: a studio with no project yet is a studio about to have one.
       empty={

@@ -65,8 +65,8 @@ export function ProjectMenuRows({ path, onClose, onRename }: ProjectMenuProps) {
         disabled={onRename === undefined}
         tip={HINT_RIGHT(t('home.projects.renameHint'))}
         onSelect={() => {
-          onRename?.()
           onClose()
+          onRename?.()
         }}
       />
       <MenuRow

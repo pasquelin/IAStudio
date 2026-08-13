@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { useProject } from '@/stores/project'
 import { ProjectRow } from './ProjectRow'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -86,83 +85,43 @@ describe('one row of the projects shelf', () => {
 })
 
 /**
- * Renaming, from the row's own menu. The field is `InlineRename`, the same one the layer stack, the
- * track headers and the explorer edit their names with — what is this row's own is that the list it
- * sits in OPENS on a single click, so the field has to stop one.
+ * Renaming is the panel's, not the row's — the double-click that starts it lands on the collection
+ * cell, and only one row may hold a field at a time. What the row still owns is the two ways of
+ * ASKING for it, and both are wired here rather than to anything the row can do alone.
  */
-describe('renaming a project from its row', () => {
-  const startRenaming = async (): Promise<void> => {
+describe('the two ways a row asks to be renamed', () => {
+  it('asks on a double-click', async () => {
+    const onRenameStart = vi.fn()
+    render(<ProjectRow project={SUMMER} onRenameStart={onRenameStart} />)
+
+    await userEvent.dblClick(screen.getByText('Summer'))
+
+    expect(onRenameStart).toHaveBeenCalled()
+  })
+
+  it('asks from its menu', async () => {
+    const onRenameStart = vi.fn()
+    render(<ProjectRow project={SUMMER} onRenameStart={onRenameStart} />)
+
     await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
-  }
 
-  it('swaps the row for a field holding the current name', async () => {
+    expect(onRenameStart).toHaveBeenCalled()
+  })
+
+  // Refused rather than dead where the panel offers no field: a row that explains nothing and does
+  // nothing is the worst of the outcomes this menu can produce.
+  it('refuses the menu row where the panel offers no field', async () => {
     render(<ProjectRow project={SUMMER} />)
 
-    await startRenaming()
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
+
+    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
+  })
+
+  it('draws the field holding the current name once the panel says so', () => {
+    render(<ProjectRow project={SUMMER} renaming onRenameCommit={vi.fn()} />)
 
     expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveValue('Summer')
-  })
-
-  it('writes the new name on Enter, and gives the row back', async () => {
-    const rename = vi.fn(() => Promise.resolve(true))
-    useProject.setState({ rename })
-    render(<ProjectRow project={SUMMER} />)
-    await startRenaming()
-
-    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
-    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Winter{Enter}')
-
-    expect(rename).toHaveBeenCalledWith('/projects/summer', 'Winter')
-  })
-
-  // Abandoning must cost nothing: `InlineRename` commits the ORIGINAL name on Escape, and a write
-  // fired for it would stamp `updatedAt` and rewrite the settings for a gesture that said no.
-  it('writes nothing when the edit is abandoned', async () => {
-    const rename = vi.fn(() => Promise.resolve(true))
-    useProject.setState({ rename })
-    render(<ProjectRow project={SUMMER} />)
-    await startRenaming()
-
-    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), '{Escape}')
-
-    expect(rename).not.toHaveBeenCalled()
-  })
-
-  /**
-   * The trap this row has and the lists `InlineRename` was written for do not: they SELECT on a
-   * single click, this one OPENS. A click landing in the field would tear down every panel and
-   * reload a catalogue while a name was being typed.
-   */
-  it('does not open the project when the field is clicked', async () => {
-    const open = vi.fn(() => Promise.resolve(true))
-    useProject.setState({ open })
-    render(
-      <div onClick={() => void useProject.getState().open(SUMMER.path)}>
-        <ProjectRow project={SUMMER} />
-      </div>,
-    )
-    await startRenaming()
-
-    await userEvent.click(screen.getByRole('textbox', { name: 'Renommer' }))
-
-    expect(open).not.toHaveBeenCalled()
-  })
-
-  // A failure reaches the journal rather than the promise it was thrown into: the field is gone by
-  // the time the answer comes, and a rename that silently did nothing reads as a dead menu.
-  it('says so when the rename was refused', async () => {
-    const report = vi.fn(() => Promise.resolve())
-    installFakeBridge({ diagnostics: { report } })
-    useProject.setState({ rename: () => Promise.reject(new Error('read-only disk')) })
-    render(<ProjectRow project={SUMMER} />)
-    await startRenaming()
-
-    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
-    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Winter{Enter}')
-
-    expect(report).toHaveBeenCalledWith(
-      expect.objectContaining({ level: 'error', scope: 'project.rename' }),
-    )
   })
 })

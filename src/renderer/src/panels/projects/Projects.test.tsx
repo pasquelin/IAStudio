@@ -1,7 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Manifest, RecentProject } from '@shared/domain/project'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useProject } from '@/stores/project'
 import { useSettings } from '@/stores/settings'
 import { Projects } from './Projects'
@@ -195,5 +197,103 @@ describe('the room a project row is given', () => {
     // the 36 it shipped at — two steps of text left ~4px of room, which on a FILLED row reads as
     // words pressed against the edge of their own highlight.
     expect(screen.getByRole('list')).toHaveStyle({ height: '96px' })
+  })
+})
+
+/**
+ * Renaming, held by the panel because the double-click that starts it lands on the collection cell
+ * and only one row may hold a field at a time.
+ *
+ * Rendered under StrictMode throughout, and that is the whole reason these read as they do: the
+ * window runs under it (`main.tsx`) and `render` does not, so a suite without it watched the field
+ * open while no rename in the running app did — the cleanup StrictMode replays took the focus off a
+ * field still on screen, `onBlur` read that as a commit, and the panel closed it a frame later.
+ */
+describe('renaming from the panel', () => {
+  const renderPanel = () => render(<Projects />, { wrapper: StrictMode })
+
+  const startFromMenu = async (): Promise<void> => {
+    await userEvent.click(screen.getByRole('button', { name: 'Actions du projet' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+  }
+
+  it('opens the field on a double-click, and leaves it focused', async () => {
+    renderPanel()
+
+    await userEvent.dblClick(screen.getByText('Summer'))
+
+    expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveFocus()
+  })
+
+  /**
+   * The menu closes as it hands the gesture back, and the field mounts in that same commit. It once
+   * took a `requestAnimationFrame` to keep the two apart — removed, and measured: a frame never
+   * comes for an occluded window, so the row silently did nothing there.
+   */
+  it('opens the field from the row menu, without waiting for a frame', async () => {
+    renderPanel()
+
+    await startFromMenu()
+
+    expect(screen.getByRole('textbox', { name: 'Renommer' })).toHaveFocus()
+  })
+
+  it('writes the new name on Enter, and gives the row back', async () => {
+    const rename = vi.fn(() => Promise.resolve(true))
+    useProject.setState({ rename })
+    renderPanel()
+    await startFromMenu()
+
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Winter{Enter}')
+
+    expect(rename).toHaveBeenCalledExactlyOnceWith('/projects/summer', 'Winter')
+    expect(screen.getByText('Summer')).toBeInTheDocument()
+  })
+
+  // Abandoning must cost nothing: `InlineRename` commits the ORIGINAL name on Escape, and a write
+  // fired for it would stamp `updatedAt` and rewrite the settings for a gesture that said no.
+  it('writes nothing when the edit is abandoned', async () => {
+    const rename = vi.fn(() => Promise.resolve(true))
+    useProject.setState({ rename })
+    renderPanel()
+    await startFromMenu()
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), '{Escape}')
+
+    expect(rename).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The trap this list has and the lists `InlineRename` was written for do not: they SELECT on a
+   * single click, this one OPENS. A click landing in the field would tear down every panel and
+   * reload a catalogue while a name was being typed.
+   */
+  it('does not open the project when the field is clicked', async () => {
+    const open = vi.fn(() => Promise.resolve(true))
+    useProject.setState({ open })
+    renderPanel()
+    await startFromMenu()
+
+    await userEvent.click(screen.getByRole('textbox', { name: 'Renommer' }))
+
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  // A failure reaches the journal rather than the promise it was thrown into: the field is gone by
+  // the time the answer comes, and a rename that silently did nothing reads as a dead menu.
+  it('says so when the rename was refused', async () => {
+    const report = vi.fn(() => Promise.resolve())
+    installFakeBridge({ diagnostics: { report } })
+    useProject.setState({ rename: () => Promise.reject(new Error('read-only disk')) })
+    renderPanel()
+    await startFromMenu()
+
+    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'Winter{Enter}')
+
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({ level: 'error', scope: 'project.rename' }),
+    )
   })
 })

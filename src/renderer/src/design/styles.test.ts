@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BUTTON_NEUTRAL, ROW_INK, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
+import { BUTTON_NEUTRAL, FOCUS_RING, ROW_INK, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -165,6 +165,16 @@ describe('the loud fill of a row that says where one is', () => {
     // At rest they are still what they always were — the variant only fires under the attribute.
     expect(ROW_INK).toContain('text-text')
     expect(ROW_QUIET).toContain('text-muted')
+  })
+
+  /**
+   * A control INSIDE such a row — the rename field, its menu button — draws the studio's one focus
+   * ring, and that ring is the accent: on an accent fill it is 1:1, so a keyboard sees nothing at
+   * all (WCAG 2.4.7). Fixed on the indicator rather than at each caller, since "must not draw in
+   * accent over an accent fill" is a property of the ring.
+   */
+  it('takes the ring of a control standing inside such a row off the accent too', () => {
+    expect(FOCUS_RING).toContain('group-data-accented/row:focus-visible:ring-accent-content')
   })
 
   /**

@@ -6,8 +6,21 @@ import { cn } from '@/helpers/cn'
  * apart, and every name here has to be unique across the folder.
  */
 
-/** The focus ring on its own, for controls that carry their own shape. */
-export const FOCUS_RING = 'outline-none focus-visible:ring-accent focus-visible:ring-1'
+/**
+ * The focus ring on its own, for controls that carry their own shape.
+ *
+ * The second line is for a control sitting INSIDE a row filled with the accent — the rename field
+ * of the open project, its menu button. The ring draws in `accent`, so on that fill it is 1:1 and
+ * therefore no indicator at all (WCAG 2.4.7). Read off `rowSkin`'s group, as the two row inks are,
+ * so no list passes state down; outside such a row the attribute never appears.
+ *
+ * It does NOT cover the row cell itself, and cannot: `group/row` and `data-accented` sit on the
+ * same element there, and a `group-*` variant only looks at ancestors. `rowSkin` overrides its own.
+ */
+export const FOCUS_RING = cn(
+  'outline-none focus-visible:ring-accent focus-visible:ring-1',
+  'group-data-accented/row:focus-visible:ring-accent-content',
+)
 
 /**
  * The chrome every button of the docks shares, whether it carries a glyph or a label. Its own
