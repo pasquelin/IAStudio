@@ -10,6 +10,7 @@ import {
 } from 'three'
 import { PBR_CHANNELS, type PbrChannel } from '@shared/domain/texture'
 import { reportFailure } from '@/services/diagnostics'
+import { createTextureBinding, type TextureBinding } from '../scene/texture-binding'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createSkyBinding, type SkyBinding } from '../viewport/sky-binding'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
@@ -35,6 +36,12 @@ import {
 export type TextureRendererOptions = {
   /** Injected: jsdom decodes no image, and the engine is built the same way in both. */
   loadTexture: TextureSource
+  /**
+   * When each asset was last written, read off the catalogue by whoever mounts the engine — the
+   * same port the two other 3D engines take. Without it a channel edited in Images and saved
+   * stayed on screen as it was: its id does not move when ⌘S rewrites the file. See `refreshMaps`.
+   */
+  assetVersion?: (assetId: string) => string | undefined
 }
 
 /** Radians per second of auto spin — slow enough to read a normal map, fast enough to see. */
@@ -60,12 +67,16 @@ export class TextureRenderer {
   private environment: ViewportEnvironment | null = null
 
   /**
-   * Per channel, the asset this material holds a reference on. Keyed by channel rather than by
-   * slot because the cavity mask has no slot at all, and the colour space is a function of the
-   * channel — held as a second field it was free to disagree with `spaceOf` and leave a texture
-   * alive for the rest of the session.
+   * Per channel, the asset the document last pointed it at — what a refresh asks for again. The
+   * REFERENCE is the binding's, not this map's.
+   *
+   * Keyed by channel rather than by slot because the cavity mask has no slot at all, and the
+   * colour space is a function of the channel — held as a second field it was free to disagree
+   * with `spaceOf` and leave a texture alive for the rest of the session.
    */
-  private readonly holding = new Map<PbrChannel, string>()
+  private readonly wanted = new Map<PbrChannel, string | null>()
+  /** One reference per channel, and what settles their races — see `texture-binding`. */
+  private readonly bindings = new Map<PbrChannel, TextureBinding>()
   private readonly uniforms = createUniforms()
   /** What the maps are currently placed on, so a map arriving late is placed on the same thing. */
   private transform: MapTransform = DEFAULT_TRANSFORM
@@ -77,10 +88,20 @@ export class TextureRenderer {
   private readonly sky: SkyBinding
 
   constructor(options: TextureRendererOptions) {
-    this.cache = createTextureCache(options.loadTexture, (assetId, error) =>
-      reportFailure('texture.map', assetId, error),
+    this.cache = createTextureCache(
+      options.loadTexture,
+      (assetId, error) => reportFailure('texture.map', assetId, error),
+      options.assetVersion,
     )
     this.sky = createSkyBinding(this.cache, () => this.paintBackground())
+    // One per channel, built with the cache and never after: the reference, the race and the
+    // version they carry are the binding's business, not this engine's.
+    for (const channel of PBR_CHANNELS) {
+      this.bindings.set(
+        channel,
+        createTextureBinding(this.cache, spaceOf(channel), map => this.install(channel, map)),
+      )
+    }
     this.viewport.camera.position.set(0, 0.6, 3.2)
     this.viewport.scene.add(this.mesh)
 
@@ -124,8 +145,10 @@ export class TextureRenderer {
   }
 
   dispose(): void {
-    for (const channel of this.holding.keys()) this.release(channel)
-    this.holding.clear()
+    // Emptied rather than only given back: a material left pointing at a freed texture is one the
+    // next frame would still try to draw with.
+    for (const bind of this.bindings.values()) bind(null)
+    this.wanted.clear()
     this.sky.release()
     this.cache.dispose()
 
@@ -210,7 +233,7 @@ export class TextureRenderer {
 
   /** Every texture this material shows, the cavity mask included — it is not in a slot. */
   private *maps(): Generator<Texture> {
-    for (const channel of this.holding.keys()) {
+    for (const channel of PBR_CHANNELS) {
       const slot = slotFor(channel)
       const map = slot ? this.material[slot] : this.uniforms.edgeMap.value
       if (map) yield map
@@ -218,20 +241,23 @@ export class TextureRenderer {
   }
 
   private applyChannels(texture: TextureState): void {
-    for (const channel of PBR_CHANNELS) {
-      const wanted = texture.channels[channel]?.assetId ?? null
-      if ((this.holding.get(channel) ?? null) === wanted) continue
-
-      this.release(channel)
-      if (!wanted) continue
-
-      this.holding.set(channel, wanted)
-      void this.cache.acquire(wanted, spaceOf(channel)).then(loaded => {
-        // Stale: the channel has moved on, and the reference it took went back with the move.
-        if (this.holding.get(channel) !== wanted || !loaded) return
-        this.install(channel, loaded)
-      })
+    for (const [channel, bind] of this.bindings) {
+      const asked = texture.channels[channel]?.assetId ?? null
+      this.wanted.set(channel, asked)
+      bind(asked)
     }
+  }
+
+  /**
+   * Every channel asks again for the picture it holds, and reloads the ones the catalogue says
+   * were rewritten since — a channel edited in Images and saved, which is the whole reason the
+   * "Edit the picture" row exists.
+   *
+   * Costs nothing when nothing moved: a binding compares what it holds before letting go.
+   */
+  refreshMaps(): void {
+    for (const [channel, asked] of this.wanted) this.bindings.get(channel)?.(asked)
+    void this.sky.refresh()
   }
 
   /**
@@ -239,7 +265,9 @@ export class TextureRenderer {
    * started the load is stale by the time it resolves — reapplying it snapped every other map back
    * to the tiling the user had already left.
    */
-  private install(channel: PbrChannel, map: Texture): void {
+  private install(channel: PbrChannel, map: Texture | null): void {
+    if (!map) return this.clear(channel)
+
     // Upload-time state, set before the first render rather than on every frame: changing either
     // of these later would cost a full re-upload of the pixels.
     map.wrapS = RepeatWrapping
@@ -267,11 +295,8 @@ export class TextureRenderer {
     map.rotation = rotation
   }
 
-  private release(channel: PbrChannel): void {
-    const held = this.holding.get(channel)
-    if (held) this.cache.release(held, spaceOf(channel))
-    this.holding.delete(channel)
-
+  /** A channel emptied: its slot cleared, or the cavity mask unbound where it has no slot. */
+  private clear(channel: PbrChannel): void {
     const slot = slotFor(channel)
     if (!slot) {
       this.setEdgeMap(null)

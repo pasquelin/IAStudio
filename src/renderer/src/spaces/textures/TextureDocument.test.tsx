@@ -21,6 +21,7 @@ vi.mock('@/engines/texture/TextureRenderer', () => ({
     mount = vi.fn()
     apply = vi.fn()
     dispose = vi.fn()
+    refreshMaps = vi.fn()
   },
 }))
 

@@ -77,6 +77,18 @@ export function assetsById(state: Pick<AssetsState, 'items'>): ReadonlyMap<strin
   return indexed.byId
 }
 
+/**
+ * When the file behind an asset was last written, or nothing when the catalogue does not hold it
+ * — the shelf is scoped, so a slot can name a row this store is not carrying.
+ *
+ * Read at the moment a slot asks rather than subscribed to: this is the port the three 3D engines
+ * take (`assetVersion`), and an engine knows no store. What it is FOR is the id not moving when
+ * ⌘S rewrites a picture — see `versionedUrl`.
+ */
+export function assetVersionOf(assetId: string): string | undefined {
+  return assetsById(useAssets.getState()).get(assetId)?.localChangedAt
+}
+
 /** The shape the store persisted before it held a whole `CollectionState`. */
 function readView(persisted: unknown): CollectionState['view'] | null {
   if (!isRecord(persisted) || !('view' in persisted)) return null

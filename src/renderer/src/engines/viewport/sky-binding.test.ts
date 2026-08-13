@@ -44,6 +44,35 @@ describe('createSkyBinding', () => {
   })
 
   /**
+   * A sky edited in Images and saved keeps its id, so « already shown » was true forever: the
+   * backdrop stayed on the picture the edit replaced until the document was reopened.
+   */
+  it('reads the file again once the catalogue says it was rewritten', async () => {
+    let version = 'before'
+    const sky = createSkyBinding(
+      createTextureCache(source.load, silent, () => version),
+      paint,
+    )
+    const environment = fakeEnvironment()
+
+    await sky.apply(environment, SKY)
+    await sky.refresh()
+    expect(source.load).toHaveBeenCalledTimes(1)
+
+    version = 'after'
+    await sky.refresh()
+
+    expect(source.load).toHaveBeenCalledTimes(2)
+    expect(source.load).toHaveBeenLastCalledWith('scenario://asset/sky-1?v=after')
+  })
+
+  it('refreshes nothing before a sky has been asked for', async () => {
+    await binding().refresh()
+
+    expect(source.load).not.toHaveBeenCalled()
+  })
+
+  /**
    * `setStudio` lights the scene but hangs nothing behind it. Without repainting, the backdrop
    * stayed on the texture that was just cleared — which reads as a viewport gone black.
    */

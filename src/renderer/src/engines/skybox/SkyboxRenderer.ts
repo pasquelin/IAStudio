@@ -9,6 +9,7 @@ import { DEFAULT_FIELD_OF_VIEW, type SkyboxContent, type SkyboxView } from '@sha
 import { createGpuPipeline, type GpuPipeline } from '../gpu/GpuPipeline'
 import { createAdjustPass } from '../gpu/passes/adjust'
 import { reportFailure } from '@/services/diagnostics'
+import { createTextureBinding, type TextureBinding } from '../scene/texture-binding'
 import { createTextureCache, type TextureCache, type TextureSource } from '../scene/texture-cache'
 import { createEnvironment, type ViewportEnvironment } from '../viewport/environment'
 import { createTestObjects, type TestObjects } from '../viewport/test-objects'
@@ -21,6 +22,12 @@ export type SkyboxRendererOptions = {
   /** A sun dragged in the viewport. The document holds the angles; this only reports them. */
   onSunChange: (angles: SphericalAngles) => void
   loadTexture: TextureSource
+  /**
+   * When each asset was last written, read off the catalogue by whoever mounts the engine — the
+   * same port `SceneRenderer` takes, and for the same reason: a picture edited and saved keeps
+   * its id, so nothing here would ever ask for it again. See `refreshSource`.
+   */
+  assetVersion?: (assetId: string) => string | undefined
 }
 
 /**
@@ -82,6 +89,8 @@ export class SkyboxRenderer {
   private backgroundWanted = true
   private sourceAssetId: string | null = null
   private sourceTexture: Texture | null = null
+  /** The one reference this engine holds on a picture, and what settles its races. */
+  private readonly source: TextureBinding
   private quiet: ReturnType<typeof setTimeout> | null = null
 
   /**
@@ -95,9 +104,18 @@ export class SkyboxRenderer {
   private applied: SkyboxContent | null = null
 
   constructor(private readonly options: SkyboxRendererOptions) {
-    this.cache = createTextureCache(options.loadTexture, (assetId, error) =>
-      reportFailure('skybox.source', assetId, error),
+    this.cache = createTextureCache(
+      options.loadTexture,
+      (assetId, error) => reportFailure('skybox.source', assetId, error),
+      options.assetVersion,
     )
+    // The reference, the race and the version are all the binding's: written here too, the sky
+    // would be the third copy of a rule the studio already keeps in one place.
+    this.source = createTextureBinding(this.cache, SRGBColorSpace, texture => {
+      this.sourceTexture = texture
+      this.adjust.setSource(texture)
+      this.regrade()
+    })
     this.viewport.camera.position.set(0, EYE_HEIGHT, 0)
     this.viewport.scene.add(this.probes.group, this.sunLight, this.sunLight.target)
     // Hidden until a sky arrives, and before the first frame rather than after it: `apply` is
@@ -284,28 +302,27 @@ export class SkyboxRenderer {
   private loadSource(assetId: string | null): boolean {
     if (assetId === this.sourceAssetId) return false
 
-    this.releaseSource()
     this.sourceAssetId = assetId
-
-    if (!assetId) {
-      this.adjust.setSource(null)
-      this.environment?.setTexture(null)
-      return true
-    }
-
-    void this.cache.acquire(assetId, SRGBColorSpace).then(texture => {
-      // Checked on arrival: the document may have moved on to another sky while this loaded.
-      if (this.sourceAssetId !== assetId) return
-      this.sourceTexture = texture
-      this.adjust.setSource(texture)
-      this.regrade()
-    })
+    // Before the binding, not after: it installs `null` on the spot, and the environment has to
+    // let go of a texture that is about to be freed.
+    if (!assetId) this.environment?.setTexture(null)
+    this.source(assetId)
 
     return true
   }
 
+  /**
+   * The picture behind the sky, asked for again when the catalogue says it was rewritten.
+   *
+   * Costs nothing when nothing moved — the binding compares what it holds before letting go — so
+   * this may be called on every read of the shelf, which is what the document does with it.
+   */
+  refreshSource(): void {
+    this.source(this.sourceAssetId)
+  }
+
   private releaseSource(): void {
-    if (this.sourceAssetId) this.cache.release(this.sourceAssetId, SRGBColorSpace)
+    this.source(null)
     this.sourceAssetId = null
     this.sourceTexture = null
   }

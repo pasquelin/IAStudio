@@ -32,6 +32,7 @@ vi.mock('@/engines/skybox/SkyboxRenderer', () => ({
     setFieldOfView = vi.fn()
     setProbesVisible = vi.fn()
     setView = vi.fn()
+    refreshSource = vi.fn()
   },
 }))
 
