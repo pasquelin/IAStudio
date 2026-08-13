@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import licences from '@shared/licences.json'
 import { isCopyleft, type Licence, NO_VERSION } from '@shared/domain/licence'
 import manifest from '../../package.json'
+import { SHIPPED } from './shipped-packages'
 
 // Under `src/main` because `src/shared` compiles for the renderer, where `node:fs` has no types.
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -36,6 +37,31 @@ describe('the notice the repository carries', () => {
     for (const entry of copyleft) {
       expect(notices, `${entry.name} lost its source offer`).toContain(entry.sources ?? '')
     }
+  })
+})
+
+/**
+ * `SHIPPED` is spelled out by hand, and nothing confronts it with the manifest: a package dropped
+ * from `package.json` stays listed, and the notice goes on naming a component the binary no longer
+ * carries. `licence.test.ts` holds the other half of the same accounting — declared, hence shipped
+ * or a build tool — and neither half sees a name that left the manifest.
+ *
+ * What is still uncovered: a name removed from `SHIPPED` without regenerating leaves its entry in
+ * the notice, and every case here passes on a superset.
+ */
+describe('the list the collector ships from', () => {
+  it('names only packages the manifest still declares', () => {
+    const declared = new Set([
+      ...Object.keys(manifest.dependencies),
+      ...Object.keys(manifest.devDependencies),
+    ])
+    expect(SHIPPED.filter(name => !declared.has(name))).toEqual([])
+  })
+
+  // Adding a name without regenerating leaves the window announcing less than the binary ships.
+  it('has an entry in the notice for each of its names', () => {
+    const named = new Set(entries.map(entry => entry.name))
+    expect(SHIPPED.filter(name => !named.has(name))).toEqual([])
   })
 })
 
