@@ -109,6 +109,7 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       saveAudio: () => Promise.reject(new Error('no project')),
       savePicture: () => Promise.reject(new Error('no project')),
       saveTexture: () => Promise.reject(new Error('no project')),
+      extractTextures: () => Promise.reject(new Error('no project')),
       update: () => Promise.reject(new Error('no project')),
       remove: () => Promise.resolve(),
       describe: () => Promise.resolve(0),

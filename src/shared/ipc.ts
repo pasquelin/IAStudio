@@ -124,6 +124,7 @@ export type Channels = {
   assetsSaveAudio: 'assets:save-audio'
   assetsSavePicture: 'assets:save-picture'
   assetsSaveTexture: 'assets:save-texture'
+  assetsExtractTextures: 'assets:extract-textures'
   assetsUpdate: 'assets:update'
   assetsRemove: 'assets:remove'
   assetsDescribe: 'assets:describe'
@@ -253,6 +254,7 @@ export const CHANNELS: Channels = {
   assetsSaveAudio: 'assets:save-audio',
   assetsSavePicture: 'assets:save-picture',
   assetsSaveTexture: 'assets:save-texture',
+  assetsExtractTextures: 'assets:extract-textures',
   assetsUpdate: 'assets:update',
   assetsRemove: 'assets:remove',
   assetsDescribe: 'assets:describe',
@@ -440,6 +442,7 @@ export type LogScope =
   // ⌘S reaches the asset behind a document as well as the document itself, and the two halves
   // fail apart: the file can be written while the picture behind it is not.
   | 'assets.save'
+  | 'assets.extract'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // all three of its gestures need somewhere to say they did nothing.
   | 'project.reveal'
@@ -479,6 +482,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.reveal',
   'assets.open',
   'assets.save',
+  'assets.extract',
   'project.reveal',
   'project.forget',
   'project.rename',
@@ -878,6 +882,20 @@ export type StudioBridge = {
      * user pointed at would destroy pixels the studio did not author.
      */
     saveTexture: (request: SaveTextureRequest) => Promise<Asset>
+    /**
+     * Takes the pictures a `.glb` carries inside itself out into the project, one texture asset
+     * each — which is what makes a downloaded model's own maps something the studio can open,
+     * paint on, and hand back to a material.
+     *
+     * The bytes are copied, never decoded and re-encoded: what comes out is exactly what the
+     * model was painted with. Each one is filed under the channel its glTF slot means, when the
+     * slot means exactly one — `metallicRoughnessTexture` packs two and claims neither.
+     *
+     * Answers with what it created, newest last, and with an empty list for a model that carries
+     * no picture at all. A picture already taken out is taken out again: the copy in the project
+     * may have been painted since, and this is not the gesture that decides that.
+     */
+    extractTextures: (assetId: string) => Promise<Asset[]>
     /** Renames an asset or rewrites its tags. Whichever field is absent is left as it was. */
     update: (assetId: string, changes: AssetChanges) => Promise<Asset>
     /**

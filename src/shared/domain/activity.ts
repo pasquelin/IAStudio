@@ -48,6 +48,9 @@ export type ActivityMessage =
   | 'apiRefused'
   | 'captionFailed'
   | 'captioned'
+  | 'extractFailed'
+  | 'extractedNothing'
+  | 'extractedTextures'
   | 'fileNotMoved'
   | 'fileNotOpened'
   | 'fileNotRenamed'
@@ -79,6 +82,9 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'apiRefused',
   'captionFailed',
   'captioned',
+  'extractFailed',
+  'extractedNothing',
+  'extractedTextures',
   'fileNotMoved',
   'fileNotOpened',
   'fileNotRenamed',

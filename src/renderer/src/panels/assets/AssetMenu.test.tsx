@@ -117,6 +117,39 @@ describe('what the shelf offers to do with an asset', () => {
     expect(row).not.toHaveAttribute('aria-label')
   })
 
+  /**
+   * A `.glb` keeps its pictures inside itself, where nothing in the studio can open them. This
+   * row is what turns them into assets — and the first half of editing a downloaded model's own
+   * texture, which is the whole point of it existing.
+   */
+  it('offers to take the pictures out of a model, and of nothing else', () => {
+    render(<AssetMenu asset={asset({ type: 'mesh' })} at={AT} onClose={() => {}} />)
+    expect(screen.getByRole('menuitem', { name: /textures/i })).toBeEnabled()
+
+    render(<AssetMenu asset={asset({ type: 'image' })} at={AT} onClose={() => {}} />)
+    expect(screen.queryAllByRole('menuitem', { name: /Extraire/ })).toHaveLength(1)
+  })
+
+  // The pictures are read off the file, so there has to be one.
+  it('cannot take them out of a model that is only in the library', () => {
+    render(
+      <AssetMenu asset={asset({ type: 'mesh', location: 'cloud' })} at={AT} onClose={() => {}} />,
+    )
+
+    expect(screen.getByRole('menuitem', { name: /Extraire/ })).toBeDisabled()
+  })
+
+  it('asks the main process for them, and re-reads the shelf once they are there', async () => {
+    const bridge = installFakeBridge()
+    const extractTextures = vi.fn(() => Promise.resolve([]))
+    bridge.assets.extractTextures = extractTextures
+
+    render(<AssetMenu asset={asset({ type: 'mesh' })} at={AT} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('menuitem', { name: /Extraire/ }))
+
+    expect(extractTextures).toHaveBeenCalledWith('asset_1')
+  })
+
   it('closes on Escape without doing anything', async () => {
     const onClose = vi.fn()
     render(<AssetMenu asset={asset()} at={AT} onClose={onClose} />)

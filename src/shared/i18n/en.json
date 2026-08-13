@@ -257,6 +257,11 @@
     "pulled_one": "{{count, number}} asset fetched",
     "pulled_many": "{{count, number}} assets fetched",
     "pulled_other": "{{count, number}} assets fetched",
+    "extractedTextures_one": "{{count, number}} texture taken out of “{{name}}”",
+    "extractedTextures_many": "{{count, number}} textures taken out of “{{name}}”",
+    "extractedTextures_other": "{{count, number}} textures taken out of “{{name}}”",
+    "extractedNothing": "“{{name}}” carries no picture of its own",
+    "extractFailed": "Could not read the pictures inside “{{name}}”",
     "pushFailed": "Could not send “{{name}}”",
     "pushed_one": "{{count, number}} asset sent",
     "pushed_many": "{{count, number}} assets sent",
@@ -285,6 +290,7 @@
       "assets.reveal": "The file could not be shown",
       "assets.open": "This asset has nowhere to go",
       "assets.save": "The asset could not be rewritten",
+      "assets.extract": "The pictures inside this model could not be taken out",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",
       "project.rename": "The project could not be renamed",
@@ -348,7 +354,9 @@
     "generatingHint": "Generating — the asset will appear here once it finishes",
     "fetchHint": "Double-click to fetch it into the project and open it",
     "fetchAction": "Fetch into the project",
-    "fetchActionHint": "Downloads this asset from your Scenario library into the open project"
+    "fetchActionHint": "Downloads this asset from your Scenario library into the open project",
+    "extractTextures": "Extract its textures",
+    "extractTexturesHint": "Takes the pictures inside this model out into the project, where they can be opened and painted on"
   },
   "dialog": {
     "allMedia": "All media",
