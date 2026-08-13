@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
+import { isTyping } from '@/helpers/typing'
 import { rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 import { useRemeasure, useRowHeight, type RowHeight } from './virtual'
@@ -311,7 +312,10 @@ export function Tree<T extends TreeNode>({
                 onPointerDown={event => pick(row.node, event)}
                 onDoubleClick={() => onActivate?.(row.node)}
                 onContextMenu={event => {
-                  if (!onContextMenu) return
+                  // A right-click in a row's rename field belongs to the native clipboard and
+                  // spelling menu (`main/window/context-menu.ts`), which `preventDefault` would
+                  // keep from ever being asked.
+                  if (!onContextMenu || isTyping(event.target)) return
                   event.preventDefault()
                   onContextMenu(row.node, { x: event.clientX, y: event.clientY })
                 }}

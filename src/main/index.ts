@@ -12,6 +12,7 @@ import { log, mirrorLogsTo } from '@main/log'
 import { createServices, createSettings } from '@main/services'
 import { createShutdown } from '@main/shutdown'
 import type { SettingsStore } from '@main/settings/store'
+import { registerFieldMenu } from '@main/window/context-menu'
 import { lockNavigation } from '@main/window/navigation'
 import { lockPermissions, rendererOrigin } from '@main/window/permissions'
 import { type Splash } from '@main/window/splash'
@@ -103,6 +104,10 @@ function bootstrap(): void {
   // Before any window: this hooks `web-contents-created`, so a window opened earlier would be
   // created outside the lock and keep none of it.
   lockNavigation()
+
+  // Beside it, and for the same reason: a window created before this runs would hold no menu in
+  // its fields, and nothing would say so.
+  registerFieldMenu()
 
   void app.whenReady().then(() => {
     // The session only exists once ready, and no window may exist before it is locked: with no

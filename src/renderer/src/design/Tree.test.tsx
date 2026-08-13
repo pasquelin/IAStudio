@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
@@ -487,6 +488,48 @@ describe('Tree', () => {
  * A file browser opens what a row names; an outliner has nothing to open. Both walk the same
  * tree, so the tree asks rather than assumes.
  */
+describe('Tree, the menu a right-click opens', () => {
+  const withMenu = (renderRow: (row: { node: { id: string } }) => ReactNode) => {
+    const onContextMenu = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onContextMenu={onContextMenu}
+        renderRow={renderRow}
+      />,
+    )
+    return onContextMenu
+  }
+
+  it('names the node the pointer was over', () => {
+    const onContextMenu = withMenu(row => <span>{row.node.id}</span>)
+
+    fireEvent.contextMenu(screen.getByText('a'))
+
+    expect(onContextMenu).toHaveBeenCalledWith(NODES[1], expect.anything())
+  })
+
+  /**
+   * A row can BE a text field — the explorer renames in place — and the press then belongs to the
+   * native clipboard menu, which Chromium never asks the main process for once this row has
+   * called `preventDefault` (`main/window/context-menu.ts`).
+   */
+  it('leaves a right-click inside a row that is a field to the native menu', () => {
+    const onContextMenu = withMenu(row =>
+      row.node.id === 'a' ? <input /> : <span>{row.node.id}</span>,
+    )
+
+    const raised = fireEvent.contextMenu(screen.getByRole('textbox'))
+
+    expect(raised).toBe(true)
+    expect(onContextMenu).not.toHaveBeenCalled()
+  })
+})
+
 describe('Tree, opening a row', () => {
   const withActivate = (onActivate: (node: { id: string }) => void, onSelect = vi.fn()) =>
     render(

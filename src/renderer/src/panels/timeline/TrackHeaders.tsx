@@ -15,6 +15,7 @@ import {
 } from '@/engines/timeline/timeline-state'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
+import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
@@ -107,6 +108,9 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
       data-testid={`track-header-${track.id}`}
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
       onContextMenu={event => {
+        // A right-click in the rename field belongs to the native clipboard and spelling menu
+        // (`main/window/context-menu.ts`), which `preventDefault` would keep from ever being asked.
+        if (isTyping(event.target)) return
         event.preventDefault()
         setMenuAt({ x: event.clientX, y: event.clientY })
       }}
