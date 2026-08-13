@@ -160,6 +160,31 @@ describe('a side column', () => {
     expect(handles()).toHaveLength(2)
   })
 
+  /**
+   * The close button of a docked panel, which is the only way out of a half that the rail cannot
+   * offer — and it has to shut the half it belongs to rather than the one above it. Both halves
+   * are asserted from one arrangement: `Edge` builds a closing handler per half, and a single
+   * one of them proves nothing about the other.
+   */
+  it('closes the half whose button was pressed, and leaves the other standing', () => {
+    useTools.setState({
+      arrangements: arrangedFor('image', {
+        open: { right: { primary: 'layers', secondary: 'inspector' } },
+      }),
+    })
+    renderShell()
+
+    const [upper, lower] = screen.getAllByRole('button', { name: 'Retirer le module' })
+    fireEvent.click(lower as HTMLElement)
+
+    expect(screen.getByLabelText('Calques')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Inspecteur')).not.toBeInTheDocument()
+
+    fireEvent.click(upper as HTMLElement)
+
+    expect(screen.queryByLabelText('Calques')).not.toBeInTheDocument()
+  })
+
   // A lone half fills its zone: the divider belongs to the cut, and there is none to make here.
   it('draws no divider where only one half of a column is open', () => {
     useTools.setState({
