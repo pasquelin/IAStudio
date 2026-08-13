@@ -248,20 +248,10 @@ function polyfillLayout(): void {
   }
 }
 
-/**
- * The language setting defaults to `system`, which reads `navigator.language` — jsdom answers
- * `en-US`, so every window would render in English while the assertions expect the French
- * bundle (CLAUDE.md: expected values come from `fr.json`). Pinned rather than worked around in
- * each test.
- */
-function pinLocale(): void {
-  Object.defineProperty(navigator, 'language', { configurable: true, value: 'fr-FR' })
-}
-
 // Components translate on first render: without init, `t()` would return raw keys and every
-// assertion on a label would test the key rather than the text.
+// assertion on a label would test the key rather than the text. French, because expected values
+// come from `fr.json` (CLAUDE.md).
 beforeAll(async () => {
-  pinLocale()
   polyfillDialog()
   polyfillLayout()
   await initI18n('fr')

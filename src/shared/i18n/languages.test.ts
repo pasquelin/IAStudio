@@ -4,10 +4,11 @@ import {
   effectiveLanguage,
   LANGUAGE_PREFERENCES,
   LANGUAGES,
+  preferredLanguage,
   resolveLanguage,
 } from './languages'
 
-describe('resolving a machine tag', () => {
+describe('resolving one tag', () => {
   it('keeps only the primary subtag, which is all that names a language', () => {
     expect(resolveLanguage('fr-CA')).toBe('fr')
     expect(resolveLanguage('en-GB')).toBe('en')
@@ -19,11 +20,13 @@ describe('resolving a machine tag', () => {
    * studio is the only thing standing between them and a window they cannot use — they would
    * have to find the settings, in French, to discover that English exists.
    */
-  it('serves English to a machine set to neither language', () => {
+  it('serves English to a tag naming neither language', () => {
     expect(resolveLanguage('de-DE')).toBe('en')
     expect(resolveLanguage('es-ES')).toBe('en')
     expect(resolveLanguage('ja-JP')).toBe('en')
+    // `i18next.language` is `undefined` until `initI18n` resolves, and `pseudo` under the flag.
     expect(resolveLanguage(undefined)).toBe('en')
+    expect(resolveLanguage('pseudo')).toBe('en')
   })
 
   // The bundle a missing key falls back to stays French: it is the reference, and the fullest.
@@ -32,16 +35,48 @@ describe('resolving a machine tag', () => {
   })
 })
 
-describe('the language in force', () => {
-  // Both processes go through this. A machine tag read on one side only is how a native menu
-  // ends up in a different language from the window under it.
-  it('takes the machine tag only when the setting defers to it', () => {
-    expect(effectiveLanguage('system', 'en-GB')).toBe('en')
-    expect(effectiveLanguage('fr', 'en-GB')).toBe('fr')
+describe('choosing among the machine languages', () => {
+  /**
+   * The shape the main process builds — the application's own locale, then the system's
+   * preferences. Both cases were measured on macOS, on a machine whose system says `fr-FR`:
+   * `--lang=en-GB` gives `['en-GB', 'fr-FR']`, and `--lang=de` gives `['de', 'fr-FR']`.
+   *
+   * The first is why the application locale leads: macOS lets a reader set a language for one
+   * application, and answering French there would overrule what they chose. The second is what
+   * the list was added for — the studio spoke English to that reader before it.
+   */
+  it('prefers the language set for the application over the system preferences', () => {
+    expect(preferredLanguage(['en-GB', 'fr-FR'])).toBe('en')
   })
 
-  it('ignores a machine tag it cannot honour, and serves English instead', () => {
-    expect(effectiveLanguage('system', 'de-DE')).toBe('en')
+  it('falls through to the system preferences when it cannot speak the application locale', () => {
+    expect(preferredLanguage(['de', 'fr-FR'])).toBe('fr')
+    expect(preferredLanguage(['br-FR', 'de-DE', 'en-US'])).toBe('en')
+  })
+
+  /**
+   * The half this order does NOT win, kept as a test so it stays a decision. Chromium answers
+   * `en-US` both for a reader who chose English and for one whose choice it ships no bundle for,
+   * and nothing separates the two — so English wins here before `fr-FR` is ever read. Measured:
+   * `--lang=fr-CA` on a French machine builds exactly this list.
+   */
+  it('cannot tell a chosen English from a fallen-back one, and serves English to both', () => {
+    expect(preferredLanguage(['en-US', 'fr-FR'])).toBe('en')
+  })
+
+  // `getPreferredSystemLanguages()` answers a list, and a list can come back empty.
+  it('serves English when the machine names nothing at all', () => {
+    expect(preferredLanguage([])).toBe('en')
+  })
+})
+
+describe('the language in force', () => {
+  // The main process is the only caller: it resolves once and tells the renderer, because a
+  // machine tag read on both sides is how a native menu ends up in a different language from
+  // the window under it.
+  it('takes the machine languages only when the setting defers to them', () => {
+    expect(effectiveLanguage('system', ['en-GB'])).toBe('en')
+    expect(effectiveLanguage('fr', ['en-GB'])).toBe('fr')
   })
 })
 
