@@ -75,7 +75,7 @@ export function sampleRanges(size: number, slice: number): ByteRange[] {
 }
 
 /** One mebibyte per slice: enough to separate two rushes, small enough to read instantly. */
-export const HASH_SLICE = 1024 * 1024
+const HASH_SLICE = 1024 * 1024
 
 export type HashDeps = {
   size: (path: string) => Promise<number>

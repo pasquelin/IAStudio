@@ -1,26 +1,9 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { WINDOW_SOURCES } from './window-sources'
 
-/**
- * Every module of the window, as text. Read through Vite rather than through `fs`, like
- * `no-hardcoded-text.test.ts` reads the components: the renderer has no filesystem, and a test
- * living here does not get one.
- */
-const SOURCES: Record<string, string> = import.meta.glob(
-  [
-    './**/*.ts',
-    './**/*.tsx',
-    '!./**/*.test.ts',
-    '!./**/*.test.tsx',
-    '!./**/*-fixtures.ts',
-    '!./**/*-fixtures.tsx',
-  ],
-  {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  },
-)
+/** Every module of the window, as text — the sweep `window-sources.ts` holds for its guards. */
+const SOURCES = WINDOW_SOURCES
 
 /**
  * The names a percentage is allowed to wear when it is a CSS length rather than a sentence.

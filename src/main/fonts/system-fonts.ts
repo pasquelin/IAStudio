@@ -35,7 +35,7 @@ export type FontDisk = {
 }
 
 /** Where a face lives, and which of a collection's fonts it is. */
-export type SystemFace = { family: string; path: string; sfntOffset: number }
+type SystemFace = { family: string; path: string; sfntOffset: number }
 
 export type SystemFonts = {
   /**

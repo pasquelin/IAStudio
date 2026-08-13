@@ -121,24 +121,35 @@ export function removeAnimationTrack(trackId: string): Command<SceneState> {
  * Whoever calls this has already worked out the difference between where the object is and where
  * it rests; the command is not the place to guess it.
  */
-export function setAnimationKey(
+/**
+ * A command that rewrites the keys of ONE track and takes them back whole.
+ *
+ * Written once because setting, removing and moving a key had it spelt identically: the undo of
+ * any of them is the list as it stood, and there is no cleverer inverse to find.
+ *
+ * Two ways for `next` to decline, and they are the same answer to the caller — the track is
+ * missing or locked, or `next` itself returns null because what it was asked to move is no longer
+ * there. In both cases the state is handed back untouched and `previous` stays null, which is
+ * what makes the revert of a refused command a no-op rather than a restore of someone else's keys.
+ */
+function keysCommand(
+  id: string,
   trackId: string,
-  time: number,
-  value: Vector3,
+  next: (keys: readonly Keyframe[]) => readonly Keyframe[] | null,
 ): Command<SceneState> {
   let previous: readonly Keyframe[] | null = null
 
   return {
-    id: `key:set:${trackId}`,
+    id,
     apply: state => {
       const track = trackById(state, trackId)
       if (!track || track.locked) return state
 
+      const keys = next(track.keys)
+      if (keys === null) return state
+
       previous = track.keys
-      return editTrack(state, trackId, current => ({
-        ...current,
-        keys: withKey(current.keys, { time, value }),
-      }))
+      return editTrack(state, trackId, current => ({ ...current, keys }))
     },
     revert: state => {
       const origin = previous
@@ -149,28 +160,16 @@ export function setAnimationKey(
   }
 }
 
+export function setAnimationKey(
+  trackId: string,
+  time: number,
+  value: Vector3,
+): Command<SceneState> {
+  return keysCommand(`key:set:${trackId}`, trackId, keys => withKey(keys, { time, value }))
+}
+
 export function removeAnimationKey(trackId: string, time: number): Command<SceneState> {
-  let previous: readonly Keyframe[] | null = null
-
-  return {
-    id: `key:remove:${trackId}`,
-    apply: state => {
-      const track = trackById(state, trackId)
-      if (!track || track.locked) return state
-
-      previous = track.keys
-      return editTrack(state, trackId, current => ({
-        ...current,
-        keys: withoutKey(current.keys, time),
-      }))
-    },
-    revert: state => {
-      const origin = previous
-      return origin === null
-        ? state
-        : editTrack(state, trackId, track => ({ ...track, keys: origin }))
-    },
-  }
+  return keysCommand(`key:remove:${trackId}`, trackId, keys => withoutKey(keys, time))
 }
 
 /**
@@ -293,30 +292,11 @@ export function unkeySubject(
  * everywhere else — two keys on one frame is a state no evaluation can read twice.
  */
 export function moveAnimationKey(trackId: string, from: Us, to: Us): Command<SceneState> {
-  let previous: readonly Keyframe[] | null = null
-
-  return {
-    id: `key:move:${trackId}`,
-    apply: state => {
-      const track = trackById(state, trackId)
-      if (!track || track.locked) return state
-
-      const moving = track.keys.find(key => key.time === from)
-      if (!moving) return state
-
-      previous = track.keys
-      return editTrack(state, trackId, current => ({
-        ...current,
-        keys: withKey(withoutKey(current.keys, from), { time: to, value: moving.value }),
-      }))
-    },
-    revert: state => {
-      const origin = previous
-      return origin === null
-        ? state
-        : editTrack(state, trackId, track => ({ ...track, keys: origin }))
-    },
-  }
+  return keysCommand(`key:move:${trackId}`, trackId, keys => {
+    const moving = keys.find(key => key.time === from)
+    // The key named is gone — dropped by another window between the grab and the release.
+    return moving ? withKey(withoutKey(keys, from), { time: to, value: moving.value }) : null
+  })
 }
 
 /** How long the whole thing runs, and how finely it is cut. */

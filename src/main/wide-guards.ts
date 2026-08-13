@@ -19,8 +19,9 @@ import { join } from 'node:path'
  * A detector that recognises nothing prints the same green as one that works, and every hardcoded
  * word would sail through it — the failure this whole module exists to prevent.
  *
- * Measured at 29 on 2026-08-13. Set well under it: guards come and go, and a floor tracking the
- * count exactly would fail for a suite legitimately deleted.
+ * Measured at 29 on 2026-08-13, then at 42 the same day — the figure moves with every guard
+ * added, which is exactly why the floor does not follow it. Set well under: guards come and go,
+ * and a floor tracking the count exactly would fail for a suite legitimately deleted.
  */
 export const LEAST_GUARDS = 20
 
@@ -51,19 +52,26 @@ function readsAnchoredFile(code: string): boolean {
 }
 
 /**
- * A suite that borrows the sweep instead of writing one.
+ * A suite that borrows a sweep instead of writing one.
  *
- * `source-files.ts` holds the walk, the four trees and their timeout, so a guard importing it has
- * no `readdirSync` and no `import.meta.url` of its own left to recognise. Measured the day the
- * module was extracted: the detector found 36 guards and `no-bare-locale-compare.test.ts` was not
- * among them — a guard silently outside the short loop, which is the exact failure the four ways
- * below exist to prevent. Extracting shared reading is a good move that MUST come with this line.
+ * TWO modules hold one, one per side of the wall. `source-files.ts` walks the disk for the guards
+ * of the main process; `renderer/src/window-sources.ts` holds the `import.meta.glob` for those of
+ * the window, which have no filesystem to walk. Either way the borrower is left with no
+ * `readdirSync`, no `import.meta.url` and no glob of its own to recognise.
+ *
+ * Measured the day the first module was extracted: the detector found 36 guards and
+ * `no-bare-locale-compare.test.ts` was not among them — a guard silently outside the short loop,
+ * which is the exact failure the ways below exist to prevent. **Extracting shared reading is a
+ * good move that MUST come with a line here**, and the count is the only proof: the three window
+ * guards that gave up their own glob were counted before and after, 41 both times.
  */
 function borrowsTheSweep(code: string): boolean {
   // Any depth of `../`, not just the sibling: a guard one folder down imports `'../source-files'`
   // and would have dropped out of the net exactly like the one this function was added for. The
   // review caught the two literal spellings before anyone wrote that guard.
-  return /from '\.[./]*\/source-files'|from '@main\/source-files'/.test(code)
+  return /from '\.[./]*\/(source-files|window-sources)'|from '@main\/source-files'|from '@\/window-sources'/.test(
+    code,
+  )
 }
 
 /**

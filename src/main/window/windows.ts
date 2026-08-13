@@ -59,6 +59,63 @@ export function load(window: BrowserWindow, options: { entry?: string; hash?: st
   void window.loadFile(file, hash ? { hash } : {})
 }
 
+/** What separates one auxiliary window from the next. Everything else about them is identical. */
+type AuxiliarySize = { width: number; height: number; minWidth: number; minHeight: number }
+
+/**
+ * The shape shared by every window that is not a document: a size typed here rather than taken
+ * from the screen, and no full screen — macOS would give it a space of its own, hiding the studio
+ * behind it.
+ *
+ * Written once because it was written three times: settings, licences and usage differed only by
+ * their four numbers, and a floor added to one of them silently left the other two behind.
+ */
+function auxiliaryWindow(size: AuxiliarySize): BrowserWindow {
+  const window = new BrowserWindow({
+    ...size,
+    show: false,
+    backgroundColor: chromeColor(),
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 12, y: 12 },
+    fullscreenable: false,
+    icon: WINDOW_ICON,
+    webPreferences: WEB_PREFERENCES,
+  })
+
+  trackWindowState(window)
+  window.once('ready-to-show', () => window.show())
+  return window
+}
+
+/**
+ * The windows there is only ever one of, held by the route that identifies them — a route is what
+ * the window IS here, and no two auxiliary windows share one.
+ */
+const auxiliaryWindows = new Map<string, BrowserWindow>()
+
+/**
+ * Reveals the window a route already has, or builds it. Settings does not come through here: it
+ * carries a section to announce and a close it may refuse, neither of which the other two have.
+ */
+function openAuxiliaryWindow(hash: string, size: AuxiliarySize): BrowserWindow {
+  const held = auxiliaryWindows.get(hash)
+  if (held && !held.isDestroyed()) {
+    revealWindow(held)
+    return held
+  }
+
+  const window = auxiliaryWindow(size)
+  // Identity-checked, as `createMainWindow` is: an older window closing must not clear a slot a
+  // newer one now holds.
+  window.on('closed', () => {
+    if (auxiliaryWindows.get(hash) === window) auxiliaryWindows.delete(hash)
+  })
+
+  load(window, { hash })
+  auxiliaryWindows.set(hash, window)
+  return window
+}
+
 let mainWindow: BrowserWindow | null = null
 
 /**
@@ -162,24 +219,7 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
     return settingsWindow
   }
 
-  const window = new BrowserWindow({
-    width: 760,
-    height: 540,
-    minWidth: 560,
-    minHeight: 420,
-    show: false,
-    backgroundColor: chromeColor(),
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
-    // Not a document window: nothing here is worth a full screen, and macOS would otherwise
-    // give it its own space, hiding the studio behind it.
-    fullscreenable: false,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
-  })
-
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
+  const window = auxiliaryWindow({ width: 760, height: 540, minWidth: 560, minHeight: 420 })
 
   /**
    * Nothing is written until Apply, so closing on a pending buffer throws the work away in
@@ -216,43 +256,19 @@ export function openSettingsWindow(section?: SettingsSectionId): BrowserWindow {
   return window
 }
 
-let licencesWindow: BrowserWindow | null = null
-
 /**
  * The notice the licences of everything shipped ask for, as its own window rather than a
  * settings section: it is read once, printed or copied from, and belongs beside About in Help
  * — not among things one changes.
  */
 export function openLicencesWindow(): BrowserWindow {
-  if (licencesWindow && !licencesWindow.isDestroyed()) {
-    revealWindow(licencesWindow)
-    return licencesWindow
-  }
-
-  const window = new BrowserWindow({
+  return openAuxiliaryWindow(LICENCES_ROUTE, {
     width: 720,
     height: 600,
     minWidth: 480,
     minHeight: 360,
-    show: false,
-    backgroundColor: chromeColor(),
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
-    fullscreenable: false,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
   })
-
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
-  window.on('closed', () => (licencesWindow = null))
-
-  load(window, { hash: LICENCES_ROUTE })
-  licencesWindow = window
-  return window
 }
-
-let usageWindow: BrowserWindow | null = null
 
 /**
  * What every stored key has spent, as its own window rather than a panel: it is read on its
@@ -261,30 +277,10 @@ let usageWindow: BrowserWindow | null = null
  * Wider than the licences window — four sections, tables and charts side by side.
  */
 export function openUsageWindow(): BrowserWindow {
-  if (usageWindow && !usageWindow.isDestroyed()) {
-    revealWindow(usageWindow)
-    return usageWindow
-  }
-
-  const window = new BrowserWindow({
+  return openAuxiliaryWindow(USAGE_ROUTE, {
     width: 900,
     height: 620,
     minWidth: 680,
     minHeight: 440,
-    show: false,
-    backgroundColor: chromeColor(),
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 12, y: 12 },
-    fullscreenable: false,
-    icon: WINDOW_ICON,
-    webPreferences: WEB_PREFERENCES,
   })
-
-  trackWindowState(window)
-  window.once('ready-to-show', () => window.show())
-  window.on('closed', () => (usageWindow = null))
-
-  load(window, { hash: USAGE_ROUTE })
-  usageWindow = window
-  return window
 }

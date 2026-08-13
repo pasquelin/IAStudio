@@ -1,10 +1,10 @@
 /**
- * How a guard reads the project's sources rather than importing them.
+ * How a guard of the MAIN process reads the project's sources rather than importing them.
  *
- * The two AST guards that sweep the whole repository — `no-hardcoded-text.test.ts` and
- * `no-bare-locale-compare.test.ts` — need the same three things: the walk, the four trees, and a
- * timeout wide enough for them. Held here so a guard added later inherits the same reading, and
- * so the exclusion below is decided once.
+ * The AST guards that sweep the whole repository from this side need the same three things: the
+ * walk, the four trees, and a timeout wide enough for them. Held here so a guard added later
+ * inherits the same reading, and so the exclusion below is decided once. The window's guards have
+ * no filesystem and borrow `renderer/src/window-sources.ts` instead — same idea, other mechanism.
  *
  * `wide-guards.ts` is the other half of this and NOT the same job: it detects which suites read
  * the tree, so the short loop replays them. It never hands one the files. A guard importing this
@@ -21,8 +21,8 @@ export const WHOLE_PROJECT = 60_000
 /**
  * Test material is out, `-fixtures.ts` included: a fixture builds the data a suite asserts on and
  * never reaches a screen, so a job it names `Flux` is the label the API returns, not a word this
- * studio writes. Coverage draws the same line (`vitest.config.ts`), and the exclusion is a
- * DECISION, taken 11/08 — a fixture forced through a bundle key says nothing truer and reads worse.
+ * studio writes. The exclusion is a DECISION, taken 11/08 — a fixture forced through a bundle key
+ * says nothing truer and reads worse.
  *
  * `.tsx` as well as `.ts`: the sweep was widened to components, and a fixture is a fixture on
  * either side.

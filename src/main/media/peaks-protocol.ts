@@ -16,7 +16,7 @@ export type PeaksJob = {
   samplesPerBucket: number
 }
 
-export type PeaksRequest = PeaksJob & { id: number }
+type PeaksRequest = PeaksJob & { id: number }
 
 /** Cancels a request by id. A twenty-minute rush must stop on demand, mid-decode. */
 export type PeaksCancel = { id: number; cancel: true }

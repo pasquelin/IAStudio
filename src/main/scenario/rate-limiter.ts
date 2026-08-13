@@ -39,7 +39,7 @@ export const MAX_WAIT_MS = 10_000
  * the same expiry, whatever order they wait in. What a cancellation needs is a slot that the
  * hundred thumbnails ahead of it could not have taken in the first place.
  */
-export const URGENT_RESERVE = 5
+const URGENT_RESERVE = 5
 
 /**
  * What ordinary traffic may spend in a window: the published limit, less the drift margin, less
@@ -55,10 +55,10 @@ export const ORDINARY_REQUESTS_PER_WINDOW = REQUESTS_PER_WINDOW - RATE_MARGIN - 
  * queueing it behind two minutes of polls bills the user for the wait. Everything else is
  * ordinary, and nothing else should become urgent without the same argument.
  */
-export type Priority = 'ordinary' | 'urgent'
+type Priority = 'ordinary' | 'urgent'
 
 /** Resolves after `ms`, or rejects if the signal aborts first. */
-export type Delay = (ms: number, signal?: AbortSignal) => Promise<void>
+type Delay = (ms: number, signal?: AbortSignal) => Promise<void>
 
 export type RateLimiterOptions = {
   /** Monotonic. A wall clock stepping backwards would strand the window in the future. */

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { sitesIn } from './ast-sites'
 import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
 
 /**
@@ -63,42 +64,29 @@ function isIntlCollator(node: ts.Node): node is ts.NewExpression | ts.CallExpres
   )
 }
 
-function localelessCollatorsIn(file: ts.SourceFile, path: string): string[] {
-  const found: string[] = []
+const localelessCollatorsIn = (file: ts.SourceFile, path: string): string[] =>
+  sitesIn(file, path, node => isIntlCollator(node) && saysNoLanguage(node.arguments?.[0]))
 
-  const walk = (node: ts.Node): void => {
-    if (isIntlCollator(node) && saysNoLanguage(node.arguments?.[0])) {
-      const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
-      found.push(`${path}:${line + 1}`)
-    }
-
-    ts.forEachChild(node, walk)
-  }
-
-  walk(file)
-  return found
-}
-
-/** Every comparison of two strings that leaves the language to the machine. */
+/**
+ * Every comparison of two strings that leaves the language to the machine.
+ *
+ * Two rules over one file rather than one: a held `Intl.Collator` and a bare `localeCompare` are
+ * the same defect written two ways, and a guard catching one of them reads as covering both.
+ */
 function bareCallsIn(path: string, source: string): string[] {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
-  const found: string[] = localelessCollatorsIn(file, path)
 
-  const walk = (node: ts.Node): void => {
-    if (
-      ts.isCallExpression(node) &&
-      calledName(node) === 'localeCompare' &&
-      saysNoLanguage(node.arguments[1])
-    ) {
-      const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
-      found.push(`${path}:${line + 1}`)
-    }
-
-    ts.forEachChild(node, walk)
-  }
-
-  walk(file)
-  return found
+  return [
+    ...localelessCollatorsIn(file, path),
+    ...sitesIn(
+      file,
+      path,
+      node =>
+        ts.isCallExpression(node) &&
+        calledName(node) === 'localeCompare' &&
+        saysNoLanguage(node.arguments[1]),
+    ),
+  ]
 }
 
 /**
@@ -158,15 +146,8 @@ describe('no sort hands its language to the machine', () => {
     WHOLE_PROJECT,
   )
 
-  // An empty result proves nothing unless the files were opened: pointed at a folder that does
-  // not exist, the assertion above stays green. The four trees are counted, not assumed.
-  it('holds all four trees, modules and components alike', () => {
-    const counts = PROJECT_TREES.map(tree => sourceFiles(tree).length)
-
-    expect(counts).toHaveLength(4)
-    expect(counts.every(count => count > 0)).toBe(true)
-    expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(700)
-  })
+  // That the four trees were actually opened is held by `source-files.test.ts`, on the walk both
+  // guards borrow — an empty result here proves nothing unless the files were read.
 
   it('sees the bare call, and the one that spells the absence out', () => {
     expect(bareCallsIn('probe.ts', 'const n = a.localeCompare(b)')).toEqual(['probe.ts:1'])

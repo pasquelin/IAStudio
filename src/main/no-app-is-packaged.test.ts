@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { sitesIn } from './ast-sites'
 import { PROJECT_TREES, SOURCE_ROOT, sourceFiles, WHOLE_PROJECT } from './source-files'
 
 const isElectronApp = (node: ts.Expression): boolean => ts.isIdentifier(node) && node.text === 'app'
@@ -28,19 +29,7 @@ function readsIsPackaged(node: ts.Node): boolean {
 
 function packagedReadsIn(path: string, source: string): string[] {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
-  const found: string[] = []
-
-  const walk = (node: ts.Node): void => {
-    if (readsIsPackaged(node)) {
-      const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
-      found.push(`${path}:${line + 1}`)
-    }
-
-    ts.forEachChild(node, walk)
-  }
-
-  walk(file)
-  return found
+  return sitesIn(file, path, readsIsPackaged)
 }
 
 /**

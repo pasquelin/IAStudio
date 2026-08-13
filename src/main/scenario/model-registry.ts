@@ -41,7 +41,7 @@ export type RemoteModel = {
   inputs?: readonly ScenarioInput[]
 }
 
-export type RemoteAsset = {
+type RemoteAsset = {
   id: string
   url?: string
   /** `video/mp4`, `model/gltf-binary`, `audio/mpeg`… — `url` is only showable when it is an image. */

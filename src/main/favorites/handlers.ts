@@ -8,7 +8,7 @@ import { parseAssetId } from '@main/project/validation'
 import { parseFavoriteId } from './validation'
 
 /** Reads a still down to what a tile draws. Injected: it needs a live app to reach `nativeImage`. */
-export type ThumbnailReader = (file: string) => Promise<Uint8Array | null>
+type ThumbnailReader = (file: string) => Promise<Uint8Array | null>
 
 export type FavoriteHandlerDeps = {
   favorites: FavoritesStore

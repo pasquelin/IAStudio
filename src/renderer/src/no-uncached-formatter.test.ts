@@ -1,14 +1,14 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { WINDOW_SOURCES } from './window-sources'
 
 /**
- * The whole window, as text — read through Vite like `no-hardcoded-text.test.ts` reads it: the
- * renderer has no filesystem, and a test living here does not get one.
+ * The whole window, as text — the sweep `window-sources.ts` holds for its guards.
+ *
+ * This one used to spell its own, and it had drifted: it excluded `-fixtures.tsx` and swept
+ * `-fixtures.ts`, alone among the three. Nothing was wrong in the tree, so nothing said a word.
  */
-const SOURCES: Record<string, string> = import.meta.glob(
-  ['./**/*.ts', './**/*.tsx', '!./**/*.test.ts', '!./**/*.test.tsx', '!./**/*-fixtures.tsx'],
-  { query: '?raw', import: 'default', eager: true },
-)
+const SOURCES = WINDOW_SOURCES
 
 /**
  * The three that build a formatter without looking like it.

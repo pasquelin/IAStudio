@@ -38,7 +38,7 @@ export type WorkflowListRequest = {
   token?: string
 }
 
-export type WorkflowCatalogPage = {
+type WorkflowCatalogPage = {
   workflows: readonly RemoteWorkflow[]
   /** Continuation for the same listing, or `null` when it is exhausted. */
   token: string | null

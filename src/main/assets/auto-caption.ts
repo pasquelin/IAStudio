@@ -37,7 +37,7 @@ const OS_SCREENSHOT = /^(screen ?shot|capture d['’]ecran)[-_ ]*(\(\d+\)|\d.*)$
  */
 export type Describable = Asset & { remoteAssetId: string }
 
-export function describable(asset: Asset): asset is Describable {
+function describable(asset: Asset): asset is Describable {
   return asset.type === 'image' && asset.remoteAssetId !== undefined
 }
 

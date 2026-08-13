@@ -16,8 +16,11 @@ import { hitAnimation, type AnimationHit } from '@/engines/scene/animation-hit'
 import { paintAnimation, keyId, keyParts } from '@/engines/scene/animation-painter'
 import { rowsHeight, maxOffsetFor, maxScrollTopFor } from '@/engines/timeline/band'
 import { RULER_HEIGHT, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
-import { clampScale, scrollBy, zoomAt, ZOOM_STEP } from '@/engines/timeline/viewport'
+import { clampScale } from '@/engines/timeline/viewport'
+import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
+import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import type { Size } from '@/engines/core/geometry'
+import { fitToDisplay } from '@/engines/core/canvas-2d'
 import { trackIdsOf, type AnimationRow } from '@/engines/scene/animation-rows'
 import { clamp } from '@shared/numeric'
 import { animationViewOf, keySetOf, useAnimationViews } from '@/stores/animation-view'
@@ -71,19 +74,8 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     const context = canvas?.getContext('2d')
     if (!canvas || !context) return
 
-    const ratio = window.devicePixelRatio
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
+    const { width, height } = fitToDisplay(canvas, context)
     size.current = { width, height }
-
-    // Backing store in device pixels, drawing in CSS pixels, and only when it actually changed:
-    // assigning `width` at all throws away the GPU texture, even for the same value.
-    const backing = { width: Math.round(width * ratio), height: Math.round(height * ratio) }
-    if (canvas.width !== backing.width || canvas.height !== backing.height) {
-      canvas.width = backing.width
-      canvas.height = backing.height
-    }
-    context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
     const current = latest.current
     paintAnimation(
@@ -105,14 +97,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     paint()
   }, [rows, view.viewport, timeline, playhead, selected, paint])
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const observer = new ResizeObserver(paint)
-    observer.observe(canvas)
-    return () => observer.disconnect()
-  }, [paint])
+  useRepaintOnResize(canvasRef, paint)
 
   const setViewport = useCallback(
     (next: Viewport): void => {
@@ -133,31 +118,7 @@ export function AnimationCanvas({ documentId, rows }: AnimationCanvasProps) {
     [documentId],
   )
 
-  // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
-  // and the whole panel scrolls behind the band instead.
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const onWheel = (event: WheelEvent): void => {
-      event.preventDefault()
-      const current = latest.current.viewport
-
-      if (event.ctrlKey || event.metaKey) {
-        const bounds = canvas.getBoundingClientRect()
-        const factor = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
-        setViewport(zoomAt(current, factor, event.clientX - bounds.left))
-        return
-      }
-
-      const horizontal = event.shiftKey ? event.deltaY : event.deltaX
-      const vertical = event.shiftKey ? 0 : event.deltaY
-      setViewport(scrollBy(current, horizontal, vertical))
-    }
-
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', onWheel)
-  }, [setViewport])
+  useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
 
   /**
    * Removes what is picked. Bound on the canvas rather than on a global scope: the band is one

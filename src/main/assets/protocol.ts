@@ -78,7 +78,7 @@ export function registerAssetScheme(): void {
 }
 
 /** Asynchronous since the catalogue moved to its own thread — see `catalog-thread.ts`. */
-export type AssetResolver = (assetId: string) => Promise<string | null>
+type AssetResolver = (assetId: string) => Promise<string | null>
 
 /**
  * One resolver per host of the scheme. `asset` is a row of the open project's catalogue;

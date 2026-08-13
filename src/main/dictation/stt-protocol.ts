@@ -31,10 +31,10 @@ export type SttLoad = {
 export type SttAudio = { audio: Int16Array }
 
 /** Close the speech in flight, so the last words are transcribed rather than dropped. */
-export type SttFlush = { flush: true }
+type SttFlush = { flush: true }
 
 /** Drop the speech in flight. What was said is not transcribed and never reaches a field. */
-export type SttCancel = { cancel: true }
+type SttCancel = { cancel: true }
 
 export type SttMessage = SttLoad | SttAudio | SttFlush | SttCancel
 
@@ -53,7 +53,7 @@ export function isAudio(message: SttMessage): message is SttAudio {
  */
 export type SttReady = { ready: true } | { ready: false; error: string }
 
-export type SttResult =
+type SttResult =
   | { partial: string }
   | { final: string; latencyMs: number }
   /** The ring buffer overflowed and older audio was dropped. Logged, never shown. */

@@ -4,7 +4,7 @@ import type { Asset, AssetType } from '@shared/domain/asset'
 /** The kinds a file on disk can be linked as. Generated assets cover the rest. */
 export type ImportableType = Extract<AssetType, 'video' | 'audio' | 'image' | 'mesh'>
 
-export const IMPORTABLE_TYPES: readonly ImportableType[] = ['video', 'audio', 'image', 'mesh']
+const IMPORTABLE_TYPES: readonly ImportableType[] = ['video', 'audio', 'image', 'mesh']
 
 const EXTENSIONS: Record<ImportableType, readonly string[]> = {
   video: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'mxf', 'm4v'],

@@ -7,7 +7,7 @@ import { STT_CHUNK_SAMPLES } from '@shared/domain/dictation'
  * without leaving room for a renderer that decided to send a minute at once. The bound is the
  * point: this is the one channel a compromised window could flood.
  */
-export const MAX_CHUNK_SAMPLES = STT_CHUNK_SAMPLES * 2
+const MAX_CHUNK_SAMPLES = STT_CHUNK_SAMPLES * 2
 
 /**
  * The 16-bit samples of one chunk, checked rather than trusted.

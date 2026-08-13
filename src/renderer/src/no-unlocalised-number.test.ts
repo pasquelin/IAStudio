@@ -1,25 +1,16 @@
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { WINDOW_SOURCES } from './window-sources'
 
 /**
- * Every module of the window, as text. Read through Vite rather than through `fs`, like
- * `no-composed-percent.test.ts` beside it: the renderer has no filesystem.
+ * Every module of the window, as text — the sweep `window-sources.ts` holds for its guards.
  *
  * Components ONLY was the first shape of this rule, and it was wrong by exactly one file: a
  * ruler graduation is painted from a `.ts`, and it drew `0.5` at a French reader for months
- * under a green check. A number becomes a word wherever it is written, not only in JSX.
+ * under a green check. A number becomes a word wherever it is written, not only in JSX — which
+ * is why the shared sweep takes both extensions.
  */
-const SOURCES: Record<string, string> = import.meta.glob(
-  [
-    './**/*.ts',
-    './**/*.tsx',
-    '!./**/*.test.ts',
-    '!./**/*.test.tsx',
-    '!./**/*-fixtures.ts',
-    '!./**/*-fixtures.tsx',
-  ],
-  { query: '?raw', import: 'default', eager: true },
-)
+const SOURCES = WINDOW_SOURCES
 
 /**
  * Where a rounder writes something no one reads as a number.

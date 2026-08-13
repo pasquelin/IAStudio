@@ -41,13 +41,13 @@ export type AssetBackend = {
   ) => Promise<{ url: string }>
 }
 
-export type RemoteAssetPage = {
+type RemoteAssetPage = {
   assets: CloudAsset[]
   /** Opaque, and `null` at the end. `/assets` reports neither an offset nor a total. */
   token: string | null
 }
 
-export type AssetListRequest = {
+type AssetListRequest = {
   pageSize: number
   token?: string
   /** `metadata.type` values — the only axis `GET /assets` filters on. */
@@ -55,7 +55,7 @@ export type AssetListRequest = {
   collectionId?: string
 }
 
-export type AssetSearchRequest = {
+type AssetSearchRequest = {
   query?: string
   /** The Meilisearch-style expression built by `filter-expression`. */
   filter?: string

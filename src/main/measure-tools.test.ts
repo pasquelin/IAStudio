@@ -19,7 +19,8 @@ import manifest from '../../package.json'
  */
 const ROOT = join(import.meta.dirname, '..', '..')
 
-const readJson = (name: string): unknown => JSON.parse(readFileSync(join(ROOT, name), 'utf8'))
+const read = (name: string): string => readFileSync(join(ROOT, name), 'utf8')
+const readJson = (name: string): unknown => JSON.parse(read(name))
 
 /**
  * The floor jscpd was measured at. Sixty tokens over 1281 files found 121 clones — 1217 lines,
@@ -80,17 +81,35 @@ describe('the duplication detector still looking at the tree', () => {
  */
 describe('the dead-code detector still looking at the tree', () => {
   /**
-   * Two macOS binaries `dev-app-identity.mjs` shells out to. They are the ONLY exemptions, and
-   * every entry written by hand was reported redundant by knip itself. An `ignore` or an `entry`
-   * list added here would be a second description of the build, drifting from the first — and the
-   * probe above shows it would not widen the reach anyway.
+   * Two macOS binaries `dev-app-identity.mjs` shells out to, and ONE entry point.
+   *
+   * The entry is not a widening of the reach — the probe above shows nothing widens it. It names
+   * the one file knip cannot see is used: `electron-builder.yml` calls `before-pack.mjs` through
+   * its `beforePack` hook, which is configuration rather than an import, so knip reported it as
+   * a dead file. Deleting it on that word would stop ffmpeg being fetched at packaging time, and
+   * the build would ship without an encoder rather than fail.
+   *
+   * It is here because a detector that always reports one false positive is a detector whose red
+   * gets read as normal. The three entry points for `src/main`, `src/preload` and the renderer
+   * are NOT here: knip finds them itself and reports each as redundant, which is what separates
+   * a genuine blind spot from a second description of the build drifting from the first.
    */
-  it('exempts the two shelled-out binaries and nothing else', () => {
+  it('exempts the two shelled-out binaries and the one entry knip cannot see', () => {
     const config = readJson('knip.json')
     expect(config).toEqual({
       $schema: 'https://unpkg.com/knip@6/schema.json',
       ignoreBinaries: ['sips', 'iconutil'],
+      entry: ['scripts/before-pack.mjs'],
     })
+  })
+
+  /**
+   * The reason the entry above exists, held rather than described: a rename of the script or of
+   * the hook would leave the two pointing at different files, and the packaging failure would
+   * surface as a build shipping without an encoder.
+   */
+  it('names the script electron-builder actually calls before packing', () => {
+    expect(read('electron-builder.yml')).toContain('beforePack: scripts/before-pack.mjs')
   })
 
   /**

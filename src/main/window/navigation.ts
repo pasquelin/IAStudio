@@ -41,7 +41,7 @@ export function lockNavigation(): void {
  * application outside the Chromium sandbox, and `smb://` leaks an NTLM hash. The renderer
  * fully controls this string, so the scheme has to be checked here.
  */
-export function openExternally(url: string): void {
+function openExternally(url: string): void {
   try {
     if (new URL(url).protocol === 'https:') void shell.openExternal(url)
   } catch {

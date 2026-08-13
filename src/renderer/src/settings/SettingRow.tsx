@@ -40,20 +40,26 @@ function decimalsOf(step: number | undefined): number {
   return step && step < 1 ? (String(step).split('.')[1]?.length ?? 0) : 0
 }
 
-/** Text settings commit on blur; a controlled input fed by a write hands back a stale word. */
-function TextControl({
-  descriptor,
-  id,
-  describedBy,
-  stored,
-  onCommit,
-}: {
+/**
+ * What ties any control below to the label above it and the help text under it. Every control
+ * takes these two and they are never optional: a field whose label points nowhere is a field a
+ * screen reader announces bare.
+ */
+type Labelled = { id: string; describedBy: string }
+
+/**
+ * A control that hands its word over when the field is LEFT rather than on every keystroke —
+ * hence `stored` and `onCommit` where the others take `value` and `onChange`. Written once
+ * because the text field and the path field had it spelt identically.
+ */
+type CommittedProps = Labelled & {
   descriptor: SettingDescriptor
-  id: string
-  describedBy: string
   stored: SettingValue | undefined
   onCommit: (value: string) => void
-}) {
+}
+
+/** Text settings commit on blur; a controlled input fed by a write hands back a stale word. */
+function TextControl({ descriptor, id, describedBy, stored, onCommit }: CommittedProps) {
   const { t } = useTranslation()
   // Null until touched, so a setting still on its way from the main process shows up when it
   // lands — seeding once would display an empty field over a stored value.
@@ -102,19 +108,7 @@ function TextControl({
  * A path, with the native picker beside it. The field stays writable: a path can be pasted, and
  * one typed before the binary is plugged in has to be storable — see `media.ffmpegPath`.
  */
-function PathControl({
-  descriptor,
-  id,
-  describedBy,
-  stored,
-  onCommit,
-}: {
-  descriptor: SettingDescriptor
-  id: string
-  describedBy: string
-  stored: SettingValue | undefined
-  onCommit: (value: string) => void
-}) {
+function PathControl({ descriptor, id, describedBy, stored, onCommit }: CommittedProps) {
   const { t } = useTranslation()
 
   const browse = async (): Promise<void> => {
@@ -154,12 +148,7 @@ function ColorControl({
   describedBy,
   value,
   onChange,
-}: {
-  id: string
-  describedBy: string
-  value: SettingValue | undefined
-  onChange: (value: SettingValue) => void
-}) {
+}: Labelled & { value: SettingValue | undefined; onChange: (value: SettingValue) => void }) {
   const themeAccent = useToken('--color-accent')
 
   return (
@@ -180,10 +169,8 @@ function Control({
   describedBy,
   value,
   onChange,
-}: {
+}: Labelled & {
   descriptor: SettingDescriptor
-  id: string
-  describedBy: string
   value: SettingValue | undefined
   onChange: (value: SettingValue | undefined) => void
 }) {

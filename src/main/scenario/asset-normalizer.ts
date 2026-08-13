@@ -78,7 +78,7 @@ function nameOf(metadata: Record<string, unknown>, id: string): string {
  * what reading straight off the record already yields. Two functions and a shape parameter said
  * the same thing at the cost of a wrapper that rebuilt the object it had just destructured.
  */
-export function cloudAssetOf(value: unknown): CloudAsset | null {
+function cloudAssetOf(value: unknown): CloudAsset | null {
   if (!isRecord(value)) return null
 
   const id = text(value, 'id')

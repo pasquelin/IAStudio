@@ -13,7 +13,7 @@ import { adoptableParameters } from './call-parameters'
  * `parameters` is `unknown` in the SDK too — it is the target model's own schema, which is
  * discovered at runtime.
  */
-export type RemoteCall = {
+type RemoteCall = {
   modelId: string
   parameters: unknown
   rationale?: string
@@ -57,7 +57,7 @@ export type RemoteTranslation = {
   detectedLanguage: string
 }
 
-export type SuggestRequest = {
+type SuggestRequest = {
   modelId: string
   /** The draft the user has written. Absent lets the API invent from the model alone. */
   prompt?: string

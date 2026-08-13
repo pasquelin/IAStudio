@@ -32,7 +32,7 @@ export type TransformClient = {
  * What it catches is the pattern nobody meant to write: `matches('^(\\w+ ?)+$')` over ninety
  * characters was measured still running after four minutes.
  */
-export const TRANSFORM_TIMEOUT_MS = 2000
+const TRANSFORM_TIMEOUT_MS = 2000
 
 /**
  * Evaluates CEL off this process, and gives up on a thread that will not answer.

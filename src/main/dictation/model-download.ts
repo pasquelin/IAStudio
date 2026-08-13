@@ -37,7 +37,7 @@ export type DownloadHost = {
 }
 
 /** An open `.part`, for the length of one file. */
-export type DownloadSink = {
+type DownloadSink = {
   write: (chunk: Uint8Array) => Promise<void>
   close: () => Promise<void>
 }

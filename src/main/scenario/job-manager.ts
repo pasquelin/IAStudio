@@ -75,9 +75,9 @@ export type JobAccount = {
 }
 
 /** The account in force, named so a job outliving the session can find its way back to it. */
-export type ActiveAccount = { id: string; account: JobAccount }
+type ActiveAccount = { id: string; account: JobAccount }
 
-export type JobAccounts = {
+type JobAccounts = {
   /** `null` when no credentials are available. Read once per job, at submission. */
   active: () => ActiveAccount | null
   /** The account a resumed job was submitted on, or `null` if the studio no longer holds it. */

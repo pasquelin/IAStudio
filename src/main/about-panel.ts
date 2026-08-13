@@ -5,7 +5,7 @@ import { APP_ICON_PATH } from '@main/resources'
 import { followWindowLanguage, windowLanguage } from '@main/window/language'
 
 /** The versions are never wanted without the rest, so the pair is composed once, here. */
-export function currentAboutInfo(language: Language): AboutInfo {
+function currentAboutInfo(language: Language): AboutInfo {
   return aboutInfo(language, {
     app: app.getVersion(),
     commit: __COMMIT_HASH__,

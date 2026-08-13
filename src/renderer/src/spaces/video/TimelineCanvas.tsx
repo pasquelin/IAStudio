@@ -13,6 +13,7 @@ import { clipForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import type { Point, Size } from '@/engines/core/geometry'
+import { fitToDisplay } from '@/engines/core/canvas-2d'
 import {
   clipUnderPlayhead,
   sequenceDuration,
@@ -24,14 +25,15 @@ import {
   clampViewport,
   fitToWidth,
   revealTime,
-  scrollBy,
   zoomAt,
   ZOOM_STEP,
 } from '@/engines/timeline/viewport'
 import { assetIdFromDrag, carriesAsset, droppedAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { cachedImage } from '@/helpers/image-cache'
+import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
+import { useTimelineWheel } from '@/hooks/useTimelineWheel'
 import { assetsById, useAssets } from '@/stores/assets'
 import { usePeaks } from '@/stores/peaks'
 import { useSelection } from '@/stores/selection'
@@ -64,20 +66,8 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const context = canvas?.getContext('2d')
     if (!canvas || !context) return
 
-    const ratio = window.devicePixelRatio
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
+    const { width, height } = fitToDisplay(canvas, context)
     size.current = { width, height }
-
-    // Backing store in device pixels, drawing in CSS pixels: without this the ruler is soft on
-    // every retina display. Only when it actually changed — assigning `width` at all throws
-    // away the GPU texture and reallocates several megabytes, even for the same value.
-    const backing = { width: Math.round(width * ratio), height: Math.round(height * ratio) }
-    if (canvas.width !== backing.width || canvas.height !== backing.height) {
-      canvas.width = backing.width
-      canvas.height = backing.height
-    }
-    context.setTransform(ratio, 0, 0, ratio, 0, 0)
 
     const current = latest.current
     paintTimeline(context, current.sequence, current.viewport, { width, height }, current.options)
@@ -144,14 +134,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     }
   }, [repaint])
 
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const observer = new ResizeObserver(paint)
-    observer.observe(canvas)
-    return () => observer.disconnect()
-  }, [paint])
+  useRepaintOnResize(canvasRef, paint)
 
   useEffect(() => {
     latest.current = { sequence, viewport, options: { labelOf: nameOf, peaksOf, posterOf } }
@@ -168,35 +151,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
 
   // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
   // and the whole window scrolls behind the timeline instead.
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const onWheel = (event: WheelEvent): void => {
-      event.preventDefault()
-      const current = latest.current.viewport
-
-      if (event.ctrlKey || event.metaKey) {
-        const bounds = canvas.getBoundingClientRect()
-        setViewport(
-          zoomAt(
-            current,
-            event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP,
-            event.clientX - bounds.left,
-          ),
-        )
-        return
-      }
-
-      // Shift turns a vertical wheel horizontal, as every editor does for a single-axis mouse.
-      const horizontal = event.shiftKey ? event.deltaY : event.deltaX
-      const vertical = event.shiftKey ? 0 : event.deltaY
-      setViewport(scrollBy(current, horizontal, vertical))
-    }
-
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-    return () => canvas.removeEventListener('wheel', onWheel)
-  }, [setViewport])
+  useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
 
   const seek = useCallback(
     (time: number): void => {

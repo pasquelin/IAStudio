@@ -134,7 +134,7 @@ export function hashSource(path: string): Promise<string> {
 }
 
 /** How long a binary gets to print its own version before it counts as broken. */
-export const VERSION_TIMEOUT_MS = 5_000
+const VERSION_TIMEOUT_MS = 5_000
 
 /**
  * Answers already given, by binary path. A probe that fails asks this to tell a missing tool
@@ -171,7 +171,7 @@ export function forgetBinaries(): void {
  * Reading headers, never transcoding. Generous enough for a rush on a network volume, short
  * enough that a wedged probe frees its slot in the ingest pool the same minute.
  */
-export const PROBE_TIMEOUT_MS = 30_000
+const PROBE_TIMEOUT_MS = 30_000
 
 /**
  * Probes with ffprobe. Says which of the two failures happened: without the binary the file is

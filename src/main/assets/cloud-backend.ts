@@ -11,7 +11,7 @@ import { twinOf, type LocalBackend } from './local-backend'
  * Sending a file the API cannot take in one request. Everything but a small picture goes this
  * way — a rush is gigabytes, and the base64 body tops out at six megabytes.
  */
-export type MultipartUpload = (params: {
+type MultipartUpload = (params: {
   file: string
   fileName: string
   contentType: string
@@ -19,7 +19,7 @@ export type MultipartUpload = (params: {
 }) => Promise<{ assetId: string; updatedAt?: string; ownerId?: string }>
 
 /** A picture small enough to travel as base64 — the path `uploader.ts` already opened. */
-export type SmallUpload = (name: string, base64: string) => Promise<string>
+type SmallUpload = (name: string, base64: string) => Promise<string>
 
 export type CloudBackendDeps = {
   remote: () => RemoteAssetCatalog

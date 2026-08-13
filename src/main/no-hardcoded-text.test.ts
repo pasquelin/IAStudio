@@ -464,15 +464,8 @@ describe('the words nobody puts in a tag', () => {
     WHOLE_PROJECT,
   )
 
-  // An empty result proves nothing unless the files were opened: pointed at a folder that does
-  // not exist, every assertion above stays green. The four trees are counted, not assumed.
-  it('holds all four trees, modules and components alike', () => {
-    const counts = PROJECT_TREES.map(tree => sourceFiles(tree).length)
-
-    expect(counts).toHaveLength(4)
-    expect(counts.every(count => count > 0)).toBe(true)
-    expect(counts.reduce((total, count) => total + count, 0)).toBeGreaterThan(700)
-  })
+  // That the four trees were actually opened is held by `source-files.test.ts`, on the walk both
+  // guards borrow — an empty result here proves nothing unless the files were read.
 
   it('would see a sentence parked in a constant', () => {
     expect(boundSentencesIn('probe.tsx', "const label = 'Delete this project'")).toHaveLength(1)

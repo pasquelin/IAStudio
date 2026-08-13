@@ -55,7 +55,7 @@ export type ImportRequest = {
 }
 
 /** An import whose bytes the caller already holds — an edited take, rather than a download. */
-export type WriteRequest = Omit<ImportRequest, 'url'> & {
+type WriteRequest = Omit<ImportRequest, 'url'> & {
   extension: string
   /** What the bytes say about themselves, when the caller could read it. */
   probe?: MediaProbe

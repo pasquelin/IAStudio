@@ -19,7 +19,7 @@ export type Credentials = {
  * that happens to answer the same way today. Read as one flag, a provisioned key that the
  * keychain owns and the user may not rename would be dropped on the next write.
  */
-export type AccountOrigin = 'keychain' | 'environment'
+type AccountOrigin = 'keychain' | 'environment'
 
 /** An account as the main process holds it — the only place the credentials exist in clear. */
 export type StoredAccount = {
