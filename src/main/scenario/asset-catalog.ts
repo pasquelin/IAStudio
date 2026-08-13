@@ -117,6 +117,11 @@ export function assetCatalogOf(backend: AssetBackend): RemoteAssetCatalog {
     list: async ({ pageSize, token, types, collectionId }) => {
       const params = {
         pageSize: Math.min(pageSize, PAGE_SIZE_MAX),
+        // Asked for rather than left to the server. The endpoint documents both parameters and
+        // no default order, so a listing without them is whatever the API feels like returning —
+        // and every caller here wants the same thing: what was made most recently, first.
+        sortBy: 'createdAt',
+        sortDirection: 'desc',
         ...(token ? { paginationToken: token } : {}),
         ...(types?.length ? { types: [...types] } : {}),
         ...(collectionId ? { collectionId } : {}),

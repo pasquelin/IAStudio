@@ -330,7 +330,11 @@
       "to-pull": "Changed in the library — to fetch",
       "conflict": "Changed on both sides",
       "error": "The last upload failed",
-      "other-account": "Belongs to another project"
+      "other-account": "Belongs to another project",
+      "remote-only": "In your library — not on this disk",
+      "generating": "Being generated",
+      "fetching": "Fetching…",
+      "missing": "File not found on disk"
     },
     "describe_one": "Describe {{count, number}} asset",
     "describe_many": "Describe {{count, number}} assets",
@@ -340,7 +344,11 @@
     "push_one": "Send {{count, number}} asset",
     "push_many": "Send {{count, number}} assets",
     "push_other": "Send {{count, number}} assets",
-    "pushHint": "Uploads the selection to the Scenario library"
+    "pushHint": "Uploads the selection to the Scenario library",
+    "generatingHint": "Generating — the asset will appear here once it finishes",
+    "fetchHint": "Double-click to fetch it into the project and open it",
+    "fetchAction": "Fetch into the project",
+    "fetchActionHint": "Downloads this asset from your Scenario library into the open project"
   },
   "dialog": {
     "allMedia": "All media",

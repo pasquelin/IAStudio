@@ -65,6 +65,10 @@ describe('the lists that stand for a union', () => {
       conflict: true,
       error: true,
       'other-account': true,
+      'remote-only': true,
+      generating: true,
+      fetching: true,
+      missing: true,
     }
 
     expect(sorted(ASSET_BADGES)).toEqual(sorted(Object.keys(all)))

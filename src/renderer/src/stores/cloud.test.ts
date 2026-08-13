@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from './assets'
 import { failedCount, useCloud } from './cloud'
@@ -115,5 +116,93 @@ describe('moving assets between the project and the library', () => {
   it('has no plan to give for an empty selection', async () => {
     installFakeBridge()
     expect(await useCloud.getState().plan([], 'push')).toBeNull()
+  })
+})
+
+describe('what the shelf is told while a transfer is in flight', () => {
+  beforeEach(() => {
+    useCloud.getState().clear()
+    vi.useRealTimers()
+  })
+
+  // `busy` says the studio is transferring; it cannot say WHICH tile to mark, and a shelf that
+  // dimmed every cell during one download would be lying about nine of them.
+  it('names the ids it is moving, not just that it is busy', async () => {
+    const seen: string[][] = []
+    installFakeBridge({
+      cloud: {
+        pull: () => {
+          seen.push([...useCloud.getState().moving])
+          return Promise.resolve([{ assetId: 'asset_remote', ok: true }])
+        },
+      },
+    })
+
+    await useCloud.getState().pull(['asset_remote'])
+
+    expect(seen).toEqual([['asset_remote']])
+  })
+
+  /**
+   * The floor exists because a 45 Ko picture is fetched in about 200 ms — measured — which is
+   * under the time it takes to read a mark appearing. It is a floor on the SIGN alone: `busy`
+   * has to drop at once, or the next transfer would wait on a delay that exists to be seen.
+   */
+  it('frees the studio at once while the mark stays up', async () => {
+    vi.useFakeTimers()
+    installFakeBridge({
+      cloud: { pull: () => Promise.resolve([{ assetId: 'asset_remote', ok: true }]) },
+    })
+
+    await useCloud.getState().pull(['asset_remote'])
+
+    expect(useCloud.getState().busy).toBe(false)
+    expect(useCloud.getState().moving).toEqual(['asset_remote'])
+
+    await vi.advanceTimersByTimeAsync(600)
+    expect(useCloud.getState().moving).toEqual([])
+
+    vi.useRealTimers()
+  })
+})
+
+describe('bringing one library asset in', () => {
+  beforeEach(() => {
+    useCloud.getState().clear()
+    useAssets.setState({ items: [] })
+  })
+
+  /**
+   * The join this exists for: `pull` answers in the library's ids, and every caller downstream —
+   * opening a tab, dropping onto a canvas — needs the catalogue row the import wrote. The two
+   * vocabularies meet on `remoteAssetId` and nowhere else.
+   */
+  it('hands back the catalogue row, not the library id it was given', async () => {
+    const row: Asset = {
+      id: 'asset_local',
+      name: 'skeleton',
+      type: 'mesh',
+      location: 'local',
+      remoteAssetId: 'asset_remote',
+      tags: [],
+      createdAt: '2026-08-12T11:00:00.000Z',
+    }
+    installFakeBridge({
+      cloud: { pull: () => Promise.resolve([{ assetId: 'asset_remote', ok: true }]) },
+      assets: { search: () => Promise.resolve([row]) },
+    })
+
+    expect(await useCloud.getState().fetchOne('asset_remote')).toMatchObject({ id: 'asset_local' })
+  })
+
+  // A refusal opens nothing rather than guessing: the journal already says why, and a caller
+  // that received a row that was never written would open an empty document.
+  it('answers nothing when the transfer brought nothing back', async () => {
+    installFakeBridge({
+      cloud: { pull: () => Promise.resolve([{ assetId: 'asset_remote', ok: false }]) },
+      assets: { search: () => Promise.resolve([]) },
+    })
+
+    expect(await useCloud.getState().fetchOne('asset_remote')).toBeNull()
   })
 })

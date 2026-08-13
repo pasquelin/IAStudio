@@ -28,7 +28,7 @@ import {
   zoomAt,
   ZOOM_STEP,
 } from '@/engines/timeline/viewport'
-import { assetIdFromDrag, carriesAsset } from '@/helpers/asset-drag'
+import { assetIdFromDrag, carriesAsset, droppedAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 import { cachedImage } from '@/helpers/image-cache'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -357,15 +357,32 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     const assetId = assetIdFromDrag(event)
     if (!assetId) return
 
+    // Where it landed is read HERE and carried into the promise: both the pointer position and
+    // `dataTransfer` are gone once this handler returns, so a library asset fetched first would
+    // otherwise land wherever the cursor happened to be a download later.
     const point = pointAt(event)
     const target = hitTest(sequence, viewport, point)
+    // Left to bubble on purpose when it landed on nothing: the ruler takes no clip, and a drop
+    // this surface does not use is one the shell should still answer by opening the asset.
     if (!target || target.kind === 'ruler') return
 
-    const asset = byId.get(assetId) ?? null
-    const start = xToTime(point.x, viewport)
-    const clip = clipForAsset(assetId, asset, start, sequence.settings)
+    // Taken from here on — see `AssetDropTarget`, which consumes for the same reason.
+    event.stopPropagation()
 
-    useSequences.getState().runCommand(documentId, addClip(target.trackId, clip))
+    const start = xToTime(point.x, viewport)
+    const { trackId } = target
+
+    void droppedAsset(event).then(asset => {
+      // Nothing to lay down: a library asset whose fetch was refused has no row, and a clip
+      // pointing at one that was never written reads as missing media for good.
+      if (!asset) return
+
+      // `asset.id`, never the id the drag carried: a library drag carries the CLOUD id, and what
+      // the import wrote is a catalogue row under an id of its own. A clip built on the first
+      // names a row the project does not hold.
+      const clip = clipForAsset(asset.id, asset, start, sequence.settings)
+      useSequences.getState().runCommand(documentId, addClip(trackId, clip))
+    })
   }
 
   return (

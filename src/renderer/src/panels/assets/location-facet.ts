@@ -6,13 +6,28 @@ import type { FacetDescriptor } from '@/helpers/collection-state'
 export const LOCATION_FACET = 'location'
 
 /**
- * The states worth narrowing to, out of the seven a badge can show.
+ * The states worth narrowing to, out of every mark a badge can show.
  *
- * `to-pull`, `conflict` and `other-account` are left out on purpose: none of them can be
- * reached while pushing and pulling stay explicit, so offering them would be four filters that
- * always answer nothing. They come back with the policy that produces them.
+ * `to-pull` and `conflict` joined the list when the browser started reading a page of the
+ * library beside the catalogue: they are what comparing the two stamps produces, and until
+ * something did that comparison they were filters that always answered nothing.
+ *
+ * Three stay out, each for its own reason. `other-account` cannot be reached while the panel
+ * only ever lists one key's own library. `fetching` lasts under a second — a filter on it would
+ * answer nothing by the time the pointer arrived. And `missing` is not a place an asset is: a
+ * row that lost its file is either handed back to the library or forgotten, so narrowing to it
+ * would offer a shelf of things about to disappear.
  */
-const FILTERABLE: readonly AssetBadge[] = ['local-only', 'synced', 'to-push', 'error']
+const FILTERABLE: readonly AssetBadge[] = [
+  'local-only',
+  'synced',
+  'to-push',
+  'to-pull',
+  'conflict',
+  'error',
+  'remote-only',
+  'generating',
+]
 
 /**
  * Narrowing by what the badge says, rather than by a field of its own.

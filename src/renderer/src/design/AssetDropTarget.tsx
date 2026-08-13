@@ -1,14 +1,28 @@
 import { useState, type ReactNode } from 'react'
 import type { Asset, AssetType } from '@shared/domain/asset'
-import { carriesAsset, draggedAsset, draggedAssetType } from '@/helpers/asset-drag'
+import { carriesAsset, draggedAssetType, droppedAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
 
 export type AssetDropTargetProps = {
   /** The kinds this target takes. A drag announcing none is taken anyway — see below. */
   accepts: readonly AssetType[]
   onDrop: (asset: Asset) => void
-  /** For a target sitting inside another: the surface behind must not receive the drop too. */
+  /**
+   * For a target sitting inside another: the surface behind must not LIGHT UP too.
+   *
+   * Only the outline — the drop itself is consumed by whichever target takes it, always, so a
+   * surface never receives one another surface has already handled.
+   */
   exclusive?: boolean
+  /**
+   * Whether the surface draws a frame while an asset hovers it.
+   *
+   * On a surface with an edge — a channel slot, a field — the frame IS the answer: it says which
+   * of several places the drop would land in. On one that fills the middle of the window there is
+   * nothing to choose between, so a frame only outlines what the user is already looking at, and
+   * the pointer's own "+" says it better.
+   */
+  outlined?: boolean
   className?: string
   children: ReactNode
 }
@@ -30,6 +44,7 @@ export function AssetDropTarget({
   accepts,
   onDrop,
   exclusive,
+  outlined = true,
   className,
   children,
 }: AssetDropTargetProps) {
@@ -39,11 +54,11 @@ export function AssetDropTarget({
     <div
       className={cn(
         className,
-        state !== 'idle' && 'outline-2 -outline-offset-2',
-        state === 'over' && 'outline-accent',
+        outlined && state !== 'idle' && 'outline-2 -outline-offset-2',
+        outlined && state === 'over' && 'outline-accent',
         // Refusal is drawn too: a target that stays blank while nothing can happen reads as a
         // broken drop rather than as an answer.
-        state === 'refused' && 'outline-danger',
+        outlined && state === 'refused' && 'outline-danger',
       )}
       onDragOver={event => {
         if (!carriesAsset(event)) return
@@ -51,7 +66,13 @@ export function AssetDropTarget({
 
         const kind = draggedAssetType(event)
         const welcome = kind === null || accepts.includes(kind)
-        if (welcome) event.preventDefault()
+        if (welcome) {
+          event.preventDefault()
+          // The pointer's own answer, and the only one an unframed surface gives: "+" means the
+          // drop adds something here. Without it the platform shows the arrow of a MOVE, which
+          // reads as "this will be taken from where it is".
+          if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+        }
         setState(welcome ? 'over' : 'refused')
       }}
       onDragLeave={event => {
@@ -62,12 +83,28 @@ export function AssetDropTarget({
         setState('idle')
       }}
       onDrop={event => {
-        event.preventDefault()
-        if (exclusive) event.stopPropagation()
         setState('idle')
 
-        const asset = draggedAsset(event)
-        if (asset) onDrop(asset)
+        /**
+         * Asked AGAIN here, and that is the whole point: `dragover` decides the outline, this
+         * decides whether the drop is taken — and since the shell mounts a fallback that welcomes
+         * every kind, a drop now lands on the deepest target whatever it holds. Reading only the
+         * dragover verdict, a surface that had just drawn "refused" would still swallow the drop
+         * and rob the fallback of it.
+         */
+        const kind = draggedAssetType(event)
+        if (!carriesAsset(event) || (kind !== null && !accepts.includes(kind))) return
+
+        event.preventDefault()
+        // Consumed, which is what lets the shell hold ONE fallback rather than each surface
+        // guessing whether it is the last one: what reaches the surface behind is what nobody took.
+        event.stopPropagation()
+
+        // Read synchronously, awaited after: a library asset is fetched first, and the event
+        // is recycled the moment this handler returns.
+        void droppedAsset(event).then(asset => {
+          if (asset) onDrop(asset)
+        })
       }}
     >
       {children}

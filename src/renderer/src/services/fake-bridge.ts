@@ -103,6 +103,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       counts: () => Promise.resolve(emptyAssetCounts()),
       peaks: () => Promise.resolve(null),
       reveal: () => Promise.resolve(false),
+      // Nothing is absent by default: a suite that has said nothing about the disk is not one
+      // where every file has gone, and answering otherwise would mark every fixture as lost.
+      absent: () => Promise.resolve([]),
       saveAudio: () => Promise.reject(new Error('no project')),
       savePicture: () => Promise.reject(new Error('no project')),
       saveTexture: () => Promise.reject(new Error('no project')),

@@ -51,18 +51,22 @@ describe('TimelineCanvas', () => {
     useAssets.setState({ items: [asset()] })
   })
 
-  it('turns a dropped asset into a clip on the track it landed on', () => {
+  it('turns a dropped asset into a clip on the track it landed on', async () => {
     fireEvent.drop(paint(), {
       clientX: 200,
       clientY: RULER_HEIGHT + 10,
       dataTransfer: dataTransfer('asset-1'),
     })
 
+    // Settled first: a drop resolves through `droppedAsset`, which fetches a library asset
+    // before handing it over — so the clip is added a microtask after the gesture.
+    await Promise.resolve()
+
     expect(clipsOf()).toHaveLength(1)
     expect(clipsOf()[0]).toMatchObject({ assetId: 'asset-1', start: 2_000_000 })
   })
 
-  it('gives a clip the probed duration of its asset', () => {
+  it('gives a clip the probed duration of its asset', async () => {
     useAssets.setState({ items: [asset({ probe: { duration: 8_000_000, codec: 'avc1' } })] })
 
     fireEvent.drop(paint(), {
@@ -71,15 +75,23 @@ describe('TimelineCanvas', () => {
       dataTransfer: dataTransfer('asset-1'),
     })
 
+    // Settled first: a drop resolves through `droppedAsset`, which fetches a library asset
+    // before handing it over — so the clip is added a microtask after the gesture.
+    await Promise.resolve()
+
     expect(clipsOf()[0]?.duration).toBe(8_000_000)
   })
 
-  it('falls back to a default length for an asset that has not been probed yet', () => {
+  it('falls back to a default length for an asset that has not been probed yet', async () => {
     fireEvent.drop(paint(), {
       clientX: 0,
       clientY: RULER_HEIGHT + 10,
       dataTransfer: dataTransfer('asset-1'),
     })
+
+    // Settled first: a drop resolves through `droppedAsset`, which fetches a library asset
+    // before handing it over — so the clip is added a microtask after the gesture.
+    await Promise.resolve()
 
     expect(clipsOf()[0]?.duration).toBe(TIMELESS_DURATION)
   })

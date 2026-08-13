@@ -1,11 +1,24 @@
 import { DockviewReact, type DockviewReadyEvent } from 'dockview-react'
 import { useCallback } from 'react'
+import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
+import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { setDockviewApi } from './dockview-api'
+
+/**
+ * Imported at the drop rather than at the top, and the guard in `eager-graph.test.ts` is what
+ * says why: `openAsset` reaches `ASSET_INTENTS`, which names every editor's destination — so a
+ * static import pulled four files out of `spaces/` into the chunk the first screen loads, for a
+ * gesture that may never happen. A drop is a human action; the module arrives well before the
+ * hand has let go.
+ */
+const openDropped = (asset: Asset): void => {
+  void import('@/helpers/open-asset').then(module => module.openAsset(asset))
+}
 
 /**
  * Dockview, remounted per workspace by its `key`: coming back to "3D" must restore that
@@ -56,14 +69,40 @@ export function DocumentArea() {
     [workspace],
   )
 
+  /**
+   * The one place a dropped asset is OPENED, and the last surface to see the drop.
+   *
+   * Every other target in the studio answers a different question — which channel of a material,
+   * which track and at what time, where on the graph — and each needs the pointer in its own
+   * frame. That is why the platform attaches a drop to an element rather than to the document,
+   * and it is what cannot be centralised.
+   *
+   * What can, and is here, is the FALLBACK: a target that handles a drop consumes it, so
+   * anything still reaching this one is a drop nobody wanted — the empty middle, the ruler of a
+   * timeline, a document that refuses the kind. It opens the asset in its own space, which is
+   * what an editor does with a file dropped on it.
+   *
+   * Mounted whether or not a tab is open, and that is the point: "only when nothing is open"
+   * was a second rule for the same gesture, and it answered a drop beside an open document with
+   * nothing at all.
+   */
   return (
-    <DockviewReact
-      key={`${projectPath ?? ''}:${workspace}`}
-      components={DOCUMENT_COMPONENTS}
-      // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
-      // whichever space opened it.
-      defaultTabComponent={DocumentTab}
-      onReady={onReady}
-    />
+    <AssetDropTarget
+      accepts={ASSET_TYPES}
+      onDrop={openDropped}
+      // No frame: this surface is the whole middle of the window, so outlining it says nothing
+      // the user cannot already see. The pointer carries the answer instead — see `outlined`.
+      outlined={false}
+      className="size-full"
+    >
+      <DockviewReact
+        key={`${projectPath ?? ''}:${workspace}`}
+        components={DOCUMENT_COMPONENTS}
+        // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
+        // whichever space opened it.
+        defaultTabComponent={DocumentTab}
+        onReady={onReady}
+      />
+    </AssetDropTarget>
   )
 }

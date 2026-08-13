@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
+import type { CloudAsset } from '@shared/domain/cloud-asset'
 import type { Project } from '@shared/domain/project'
 import { ToolZoneProvider } from '@/app/tool-zone'
 import { DEFAULT_COLLECTION_STATE } from '@/helpers/collection-state'
@@ -11,6 +12,10 @@ import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { useSelection } from '@/stores/selection'
 import { useSettings } from '@/stores/settings'
+import { useCloud } from '@/stores/cloud'
+import { useJobs } from '@/stores/jobs'
+import { installFakeBridge } from '@/services/fake-bridge'
+import { job } from '@/stores/job-fixtures'
 import { AssetBrowser } from './AssetBrowser'
 
 const openAsset = vi.fn()
@@ -345,5 +350,410 @@ describe('the shelf hands its rows to the collection', () => {
 
     await userEvent.keyboard('{Enter}')
     expect(openAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'two' }))
+  })
+})
+
+describe('the three provenances, as the panel draws them', () => {
+  const cloudAsset: CloudAsset = {
+    id: 'asset_remote',
+    name: 'A library picture',
+    type: 'image',
+    remoteType: 'txt2img',
+    ownerId: 'proj_1',
+    createdAt: '2026-08-12T11:00:00.000Z',
+    updatedAt: '2026-08-12T11:00:00.000Z',
+    privacy: 'private',
+    tags: [],
+    collectionIds: [],
+  }
+
+  beforeEach(() => {
+    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
+    useProject.setState({ project: PROJECT })
+    useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    useJobs.setState({ jobs: [] })
+    useCloud.getState().clear()
+    useSelection.getState().clear()
+    vi.clearAllMocks()
+  })
+
+  it('draws what the library holds beside what the project does', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
+    })
+    useAssets.setState({ items: [asset('asset_1')] })
+
+    render(<AssetBrowser />)
+
+    expect(await screen.findByText('A library picture')).toBeInTheDocument()
+    expect(screen.getByText('Asset asset_1')).toBeInTheDocument()
+  })
+
+  // The whole point of the merged list: the thing being made is on it before it exists.
+  it('draws a generation that is still running', () => {
+    installFakeBridge({})
+    useJobs.setState({ jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })] })
+
+    render(<AssetBrowser />)
+
+    expect(screen.getByText('A skeleton')).toBeInTheDocument()
+  })
+
+  /**
+   * Asked of the cells drawn rather than of the catalogue: a project holds hundreds of rows, and
+   * checking every one at each refresh would be hundreds of syscalls on the process every window
+   * shares. This is what checks the shelf asks at all, and only about what it lists.
+   */
+  it('asks the disk about the rows it is drawing, and marks what is gone', async () => {
+    let asked: readonly string[] = []
+    installFakeBridge({
+      assets: {
+        absent: ids => {
+          asked = ids
+          return Promise.resolve(['asset_gone'])
+        },
+      },
+    })
+    useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
+
+    render(<AssetBrowser />)
+
+    await screen.findByTitle(/introuvable/i)
+    expect(asked).toEqual(['asset_gone'])
+  })
+
+  /**
+   * The recovery path, end to end through the panel: what is gone is the FILE, so the line goes
+   * back to being the library one it can be fetched from — badge, gestures and all.
+   */
+  it('hands a lost row back to the library when a twin still answers for it', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
+      assets: { absent: () => Promise.resolve(['asset_gone']) },
+    })
+    useAssets.setState({
+      items: [asset('asset_gone', { path: 'assets/img/gone.png', remoteAssetId: 'asset_remote' })],
+    })
+
+    render(<AssetBrowser />)
+
+    // Its own name is gone with it: what stands there now is the library's line.
+    expect(await screen.findByText('A library picture')).toBeInTheDocument()
+    expect(screen.queryByText('Asset asset_gone')).toBeNull()
+  })
+
+  // A row that lost its file and has nothing to fetch it back from is tidied away: it points at
+  // nothing, and no gesture on it could ever succeed.
+  it('forgets a row of the project that lost its file for good', async () => {
+    let removed: readonly string[] = []
+    installFakeBridge({
+      assets: {
+        absent: () => Promise.resolve(['asset_gone']),
+        remove: ids => {
+          removed = ids
+          return Promise.resolve()
+        },
+      },
+    })
+    useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
+
+    render(<AssetBrowser />)
+
+    await vi.waitFor(() => expect(removed).toEqual(['asset_gone']))
+  })
+
+  /**
+   * A LINKED medium has no `path` on this side of the boundary (`withoutSourcePath`), and its
+   * absence usually means an unplugged volume rather than a deletion. Forgetting it would throw
+   * away its tags and its provenance over a disk somebody will plug back in.
+   */
+  it('never forgets a linked medium whose volume may simply be unplugged', async () => {
+    let removed = 0
+    installFakeBridge({
+      assets: {
+        absent: () => Promise.resolve(['asset_rush']),
+        remove: () => {
+          removed += 1
+          return Promise.resolve()
+        },
+      },
+    })
+    useAssets.setState({ items: [asset('asset_rush', { type: 'video' })] })
+    useLayouts.setState({ activeWorkspace: 'video' })
+
+    render(<AssetBrowser />)
+
+    await screen.findByTitle(/introuvable/i)
+    expect(removed).toBe(0)
+  })
+})
+
+describe('what each gesture on a line does', () => {
+  const cloudAsset: CloudAsset = {
+    id: 'asset_remote',
+    name: 'A library picture',
+    type: 'image',
+    remoteType: 'txt2img',
+    ownerId: 'proj_1',
+    createdAt: '2026-08-12T11:00:00.000Z',
+    updatedAt: '2026-08-12T11:00:00.000Z',
+    privacy: 'private',
+    tags: [],
+    collectionIds: [],
+  }
+
+  const pulled = asset('asset_pulled', { remoteAssetId: 'asset_remote' })
+
+  beforeEach(() => {
+    useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
+    useProject.setState({ project: PROJECT })
+    useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    useJobs.setState({ jobs: [] })
+    useCloud.getState().clear()
+    useSelection.getState().clear()
+    vi.clearAllMocks()
+  })
+
+  it('opens a catalogue row on a double-click', async () => {
+    installFakeBridge({})
+    useAssets.setState({ items: [asset('asset_1')] })
+    render(<AssetBrowser />)
+
+    await userEvent.dblClick(screen.getByText('Asset asset_1'))
+
+    expect(openAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'asset_1' }))
+  })
+
+  /**
+   * One gesture, one meaning, whatever the line stands for. Stopping at the download left the
+   * user having to guess that a second gesture was now needed, and which one.
+   */
+  it('fetches a library line first, then opens what arrived', async () => {
+    installFakeBridge({
+      cloud: {
+        browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }),
+        pull: () => {
+          useAssets.setState({ items: [pulled] })
+          return Promise.resolve([{ assetId: 'asset_remote', ok: true }])
+        },
+      },
+      assets: { search: () => Promise.resolve([pulled]) },
+    })
+    render(<AssetBrowser />)
+
+    await userEvent.dblClick(await screen.findByText('A library picture'))
+
+    await vi.waitFor(() =>
+      expect(openAsset).toHaveBeenCalledWith(expect.objectContaining({ id: 'asset_pulled' })),
+    )
+  })
+
+  // One transfer at a time is the store's rule; the panel does not start a second one that
+  // would be refused in silence.
+  it('starts nothing on a library line while another transfer runs', async () => {
+    let pulls = 0
+    installFakeBridge({
+      cloud: {
+        browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }),
+        pull: () => {
+          pulls += 1
+          return Promise.resolve([])
+        },
+      },
+    })
+    render(<AssetBrowser />)
+    const tile = await screen.findByText('A library picture')
+
+    useCloud.setState({ busy: true })
+    await userEvent.dblClick(tile)
+
+    expect(pulls).toBe(0)
+  })
+
+  /**
+   * The selection store speaks catalogue ids, and a library line has none. Letting one in would
+   * hand every action over it — push, describe, remove — a row that does not exist.
+   */
+  it('never selects a line the catalogue cannot answer for', async () => {
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
+    })
+    render(<AssetBrowser />)
+
+    await userEvent.click(await screen.findByText('A library picture'))
+
+    expect(useSelection.getState().selection).toMatchObject({ kind: 'none' })
+  })
+
+  /**
+   * The loop a recovery opens: fetching a lost asset writes its file back under the row that
+   * already existed, so without asking again the id would stay "absent" for ever and the
+   * download would appear to have changed nothing.
+   */
+  it('asks again about what it believed lost once the catalogue moves', async () => {
+    let asks = 0
+    installFakeBridge({
+      assets: {
+        absent: () => {
+          asks += 1
+          return Promise.resolve(asks === 1 ? ['asset_gone'] : [])
+        },
+      },
+    })
+    useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
+    render(<AssetBrowser />)
+
+    await screen.findByTitle(/introuvable/i)
+    // A refresh of the catalogue is what re-opens the question.
+    useAssets.setState({ items: [asset('asset_gone', { path: 'assets/img/gone.png' })] })
+
+    await vi.waitFor(() => expect(asks).toBeGreaterThan(1))
+  })
+
+  // Filtering to nothing and holding nothing are different situations, and only one of them is
+  // something the user can undo.
+  it('tells an empty shelf from one narrowed to nothing', async () => {
+    installFakeBridge({})
+    useAssets.setState({
+      items: [asset('asset_1')],
+      collection: { ...DEFAULT_COLLECTION_STATE, search: 'nothing matches this' },
+    })
+
+    render(<AssetBrowser />)
+
+    expect(await screen.findByText(/Aucun résultat|ne correspond/i)).toBeInTheDocument()
+  })
+
+  // Naming a kind switches the scope off, so the library is asked for everything and sorted
+  // out here — two filters intersecting reads as broken rather than as a scope.
+  it('asks the library for everything once a kind is chosen by hand', async () => {
+    let asked: unknown
+    installFakeBridge({
+      cloud: {
+        browse: query => {
+          asked = query
+          return Promise.resolve({ assets: [], cursor: null })
+        },
+      },
+    })
+    useAssets.setState({
+      collection: { ...DEFAULT_COLLECTION_STATE, selections: { type: ['image'] } },
+    })
+
+    render(<AssetBrowser />)
+
+    await vi.waitFor(() => expect(asked).toEqual({ pageSize: 60 }))
+  })
+
+  // A refusal opens nothing rather than guessing: an editor opened on a row that was never
+  // written says less than nothing, and the journal already carries the why.
+  it('opens nothing when the fetch behind a double-click failed', async () => {
+    installFakeBridge({
+      cloud: {
+        browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }),
+        pull: () => Promise.resolve([{ assetId: 'asset_remote', ok: false }]),
+      },
+      assets: { search: () => Promise.resolve([]) },
+    })
+    render(<AssetBrowser />)
+
+    await userEvent.dblClick(await screen.findByText('A library picture'))
+
+    await vi.waitFor(() => expect(useCloud.getState().busy).toBe(false))
+    expect(openAsset).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A row whose twin can still bring it back is not an orphan: it is handed to the library as a
+   * line one can fetch again, and forgetting it would throw away a recovery that is one click
+   * away.
+   */
+  it('forgets no row that a twin could still bring back', async () => {
+    let removed = 0
+    installFakeBridge({
+      cloud: { browse: () => Promise.resolve({ assets: [cloudAsset], cursor: null }) },
+      assets: {
+        absent: () => Promise.resolve(['asset_gone']),
+        remove: () => {
+          removed += 1
+          return Promise.resolve()
+        },
+      },
+    })
+    useAssets.setState({
+      items: [asset('asset_gone', { path: 'assets/img/gone.png', remoteAssetId: 'asset_remote' })],
+    })
+
+    render(<AssetBrowser />)
+
+    await screen.findByText('A library picture')
+    expect(removed).toBe(0)
+  })
+
+  // The other half of the loop: once the file is back, the row stops being marked and becomes
+  // an ordinary line again — and it can be asked about afresh if it goes a second time.
+  it('unmarks a row whose file has come back', async () => {
+    let asks = 0
+    installFakeBridge({
+      assets: {
+        absent: () => {
+          asks += 1
+          return Promise.resolve(asks === 1 ? ['asset_back'] : [])
+        },
+      },
+    })
+    const row = asset('asset_back', { path: 'assets/img/back.png' })
+    useAssets.setState({ items: [row] })
+    render(<AssetBrowser />)
+
+    await screen.findByTitle(/introuvable/i)
+    useAssets.setState({ items: [{ ...row }] })
+
+    await vi.waitFor(() => expect(screen.queryByTitle(/introuvable/i)).toBeNull())
+  })
+
+  /**
+   * The channel throws when no project is open — closing one while the shelf is scrolled is
+   * enough. The ids must go back into the pool: `asked` is what stops a scroll from re-asking,
+   * and leaving a failed batch in it would keep those rows unexaminable for the whole session.
+   */
+  it('asks again about a batch the main process refused', async () => {
+    let attempts = 0
+    installFakeBridge({
+      assets: {
+        absent: ids => {
+          attempts += 1
+          return attempts === 1
+            ? Promise.reject(new Error('no project'))
+            : Promise.resolve([...ids])
+        },
+      },
+    })
+    const row = asset('asset_1', { path: 'assets/img/one.png' })
+    useAssets.setState({ items: [row] })
+    render(<AssetBrowser />)
+
+    await vi.waitFor(() => expect(attempts).toBe(1))
+    // A refresh puts the same rows back on screen, and they are asked about afresh.
+    useAssets.setState({ items: [{ ...row }] })
+
+    await screen.findByTitle(/introuvable/i)
+  })
+
+  /**
+   * A generation has no kind to answer with until it does, so a chosen kind hides it and its
+   * type column stays blank — the honest answer rather than a guess at the shelf it will land in.
+   */
+  it('hides a running generation once a kind is chosen, and never names its type', async () => {
+    installFakeBridge({})
+    useJobs.setState({ jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })] })
+    useAssets.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
+    render(<AssetBrowser />)
+
+    expect(screen.getByText('A skeleton')).toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'video')
+
+    expect(screen.queryByText('A skeleton')).toBeNull()
   })
 })

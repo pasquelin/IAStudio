@@ -330,7 +330,11 @@
       "to-pull": "Modifié dans la bibliothèque — à rapatrier",
       "conflict": "Modifié des deux côtés",
       "error": "Le dernier envoi a échoué",
-      "other-account": "Appartient à un autre projet"
+      "other-account": "Appartient à un autre projet",
+      "remote-only": "Dans votre bibliothèque — pas sur ce disque",
+      "generating": "En cours de génération",
+      "fetching": "Rapatriement en cours…",
+      "missing": "Fichier introuvable sur le disque"
     },
     "describe_one": "Décrire {{count, number}} asset",
     "describe_many": "Décrire {{count, number}} assets",
@@ -340,7 +344,11 @@
     "push_one": "Envoyer {{count, number}} asset",
     "push_many": "Envoyer {{count, number}} assets",
     "push_other": "Envoyer {{count, number}} assets",
-    "pushHint": "Téléverse la sélection dans la bibliothèque Scenario"
+    "pushHint": "Téléverse la sélection dans la bibliothèque Scenario",
+    "generatingHint": "Génération en cours — l’asset apparaîtra ici une fois terminée",
+    "fetchHint": "Double-cliquez pour la récupérer dans le projet et l’ouvrir",
+    "fetchAction": "Récupérer dans le projet",
+    "fetchActionHint": "Télécharge cet asset de votre bibliothèque Scenario dans le projet ouvert"
   },
   "dialog": {
     "allMedia": "Tous les médias",

@@ -70,15 +70,25 @@ describe('SkyboxDocument', () => {
     installDocument('doc-1', 'skyboxes')
   })
 
-  it('hangs a picture dropped from the shelf', () => {
+  it('hangs a picture dropped from the shelf', async () => {
     fireEvent.drop(viewport(), { dataTransfer: dragging('asset-dusk') })
+
+    // Settled first: a drop resolves through `droppedAsset`, which may fetch a library asset
+    // before handing it over, so the answer lands a microtask later even when nothing was fetched.
+    await Promise.resolve()
+
     expect(sourceOf('doc-1')).toEqual({ assetId: 'asset-dusk' })
   })
 
   // The drag carries an id, never the asset: one the catalogue no longer holds has no file
   // behind it, and the engine would load a 404 into a sky it cannot tell from a black one.
-  it('ignores an id the catalogue does not hold', () => {
+  it('ignores an id the catalogue does not hold', async () => {
     fireEvent.drop(viewport(), { dataTransfer: dragging('asset-gone') })
+
+    // Settled first: a drop resolves through `droppedAsset`, which may fetch a library asset
+    // before handing it over, so the answer lands a microtask later even when nothing was fetched.
+    await Promise.resolve()
+
     expect(sourceOf('doc-1')).toBeNull()
   })
 
