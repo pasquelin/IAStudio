@@ -103,7 +103,7 @@ import { promptAssistApiOf } from './scenario/prompt-assist-api'
 import { createElectronAdapter } from './settings/adapter'
 import { createSettingsStore, type AccountChange, type SettingsStore } from './settings/store'
 import { buildMenu } from './menu'
-import { setWindowLanguage } from './window/language'
+import { setWindowLanguage, windowLanguage } from './window/language'
 import { applyTheme } from './window/theme'
 
 /**
@@ -171,7 +171,7 @@ export type Services = {
   /** Links a file into the open project — id, timestamp and catalogue row in one move. */
   link: (source: string, type: AssetType) => Promise<Asset>
   capabilities: () => Promise<MediaCapabilities>
-  /** The language in force, machine locale included. Both the menu and the dialogs read it. */
+  /** The language in force. Injected where it is needed, so no module reads the source itself. */
   language: () => Language
   pickPath: (kind: PathKind) => Promise<string | null>
   savePicture: (name: string, bytes: Uint8Array) => Promise<string | null>
@@ -367,11 +367,9 @@ export function createSettings(): SettingsStore {
       // and Chromium only answers with the new value once `themeSource` has moved.
       applyTheme(current.appearance.theme)
       setLogVerbosity(current.advanced.logLevel)
-      // The native menu is built once and never re-reads anything: without this the window
-      // changes language and the menu bar above it does not.
-      const spoken = effectiveLanguage(current.general.language, app.getLocale())
-      setWindowLanguage(spoken)
-      buildMenu(spoken, current.shortcuts.overrides)
+      // Every native surface follows this one call, the menu bar included.
+      setWindowLanguage(effectiveLanguage(current.general.language, app.getLocale()))
+      buildMenu(current.shortcuts.overrides)
       broadcast(EVENTS.settingsChanged, current)
     },
   })
@@ -396,8 +394,9 @@ export function createSettings(): SettingsStore {
  * reaches for a singleton and every collaborator stays injectable in tests.
  */
 export function createServices(settings: SettingsStore): Services {
-  const language = (): Language =>
-    effectiveLanguage(settings.read().general.language, app.getLocale())
+  // Read off the one copy rather than derived a second time: the file picker below is a native
+  // surface too, and a second derivation is what let the menu and the dialogs drift apart.
+  const language = (): Language => windowLanguage()
 
   // Every cache the API fills belongs to one account. They subscribe where they are built, so
   // that a cache added later cannot be left out of a purge list nobody thinks to reread.
