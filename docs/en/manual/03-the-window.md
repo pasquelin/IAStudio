@@ -606,7 +606,7 @@ empties it everywhere: that is the one thing the click actually said.
 Two practical consequences:
 
 - **nothing is overwritten**: go back to the original workspace and you find what you had there;
-- **a Generate panel with no model gives way to Models** — the panel that lets you choose one.
+- **a Generation panel with no model gives way to Models** — the panel that lets you choose one.
 
 ### A half you have not chosen for opens on the workspace's first panel
 

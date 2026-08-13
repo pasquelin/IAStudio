@@ -273,7 +273,7 @@ files and its textures along beside it — as well as `.obj`, `.fbx` and HDRIs (
 1. click the picture in the **Assets** panel;
 2. look at the **Inspector**, on the right: if it knows the generation, it shows the **model**,
    the **prompt** and the **seed**;
-3. the **Regenerate** button: the model and its parameters come back into the Generate panel,
+3. the **Regenerate** button: the model and its parameters come back into the Generation panel,
    ready to go again.
 
 **The principle to remember.** Same model + same prompt + **same seed** = same picture. Change

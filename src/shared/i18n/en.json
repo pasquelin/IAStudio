@@ -25,7 +25,7 @@
     "timeline": "Timeline",
     "explorer": "Explorer",
     "models": "Models",
-    "generator": "Generate",
+    "generator": "Generation",
     "inspector": "Inspector",
     "assets": "Assets",
     "skybox": "Skybox",
@@ -215,7 +215,7 @@
     "failures_one": "{{count, number}} failure",
     "failures_many": "{{count, number}} failures",
     "failures_other": "{{count, number}} failures",
-    "clearFilters": "Show everything",
+    "clearFilters": "Show all",
     "dismiss": "Dismiss",
     "all": "All",
     "filters": {
@@ -1453,7 +1453,7 @@
       "help": "Brings the camera close enough that the chosen object fills the view. Handy when you are lost, or when an object is tiny."
     },
     "sceneSnap": {
-      "title": "Snapping",
+      "title": "Snap",
       "help": "Moves the handles in regular steps instead of leaving them free. Handy for laying objects out in line. How fine the steps are is set in the 3D space settings."
     },
     "sceneSpace": {
@@ -1760,7 +1760,7 @@
   },
   "texture": {
     "shapeSphere": "Sphere",
-    "shapeBox": "Cube",
+    "shapeBox": "Box",
     "shapeCylinder": "Cylinder",
     "shapePlane": "Plane",
     "shapeKnot": "Knot",
@@ -2128,7 +2128,7 @@
       "graph": "Chain models into a graph, and run it.",
       "newProject": "New project",
       "newProjectHelp": "A folder that holds your documents and everything you bring in.",
-      "openProject": "Open a project",
+      "openProject": "Open project",
       "openProjectHelp": "Pick a project folder already on this machine.",
       "settings": "Settings",
       "settingsHelp": "Keys, appearance, generation limits and shortcuts."

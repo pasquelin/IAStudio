@@ -373,7 +373,7 @@ key pressed by mistake has no business spending any.
 | **Vectorize** | turns the flattened image into paths |
 
 **None of them leaves on its own.** Each flattens the document, sends it, then **fills in the
-Generate panel's form** and shows it to you. You are the one who presses Generate, having seen
+Generation panel's form** and shows it to you. You are the one who presses Generate, having seen
 what is going and with which settings.
 
 **They live in the Image menu**, and nowhere else: with no default shortcut, that is the only
@@ -583,7 +583,7 @@ are bound to the band, not to a context.
 | `G` |  |  | Move |  |  |  |  |  |  |
 | `R` |  |  | Rotate |  |  |  |  |  |  |
 | `S` |  |  | Scale *(and back up)* | Split clip |  |  |  |  |  |
-| `M` |  |  | Snapping |  |  |  |  |  |  |
+| `M` |  |  | Snap |  |  |  |  |  |  |
 | `L` |  |  | Local frame |  |  |  |  |  |  |
 | `F` |  |  | Frame selection |  |  |  |  |  |  |
 | `Delete` |  |  | Delete object | Delete clip |  |  |  |  |  |

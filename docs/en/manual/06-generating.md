@@ -417,7 +417,7 @@ the `+` button on the left rail. See [Assets](07-assets.md).
 > drag the picture onto the canvas — it becomes a layer there. That document, however, does not
 > save; `⇧⌘E` gets a PNG out of it. See [Image workspace](08-image-workspace.md).
 
-<!-- SCREENSHOT: the Generate panel with a model's form, and the status line below with a running
+<!-- SCREENSHOT: the Generation panel with a model's form, and the status line below with a running
      generation. Save to ../../images/generate.png -->
 
 ---

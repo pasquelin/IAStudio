@@ -46,7 +46,7 @@ Five shapes, and each one shows something different:
 | Shape | What it reveals |
 |---|---|
 | **Sphere** | how the material takes light — the best for judging shine |
-| **Cube** | how it behaves on flat faces and sharp edges |
+| **Box** | how it behaves on flat faces and sharp edges |
 | **Cylinder** | repetition on a curved surface |
 | **Plane** | **repetition** — this is where you see the seams that show |
 | **Knot** | what happens where the surface folds back on itself |
