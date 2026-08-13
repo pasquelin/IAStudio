@@ -2,7 +2,7 @@ import { Mesh, type Material, type Texture, type WebGLRenderer } from 'three'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
-import { isRecord } from '@shared/guards'
+import { materialDefOf, textureSlotsOf } from '@shared/domain/gltf'
 import { reportFailure } from '@/services/diagnostics'
 import type { ModelSource } from './model-cache'
 import { texturesOf } from './scene-stats'
@@ -110,32 +110,16 @@ function unresolvedTextures(gltf: GLTF): { missing: number; declared: number } {
 
     for (const material of materials) {
       const index = parser.associations.get(material)?.materials
-      if (index !== undefined) collectWantedTextures(materialDef(parser.json, index), wanted)
+      if (index !== undefined) {
+        // The same reading of a glTF material the extraction uses, from the one module that
+        // knows the rule: spelt twice, the two would answer differently the day one is edited.
+        for (const { index: texture } of textureSlotsOf(materialDefOf(parser.json, index))) {
+          wanted.add(texture)
+        }
+      }
       for (const texture of texturesOf(material)) attached.add(texture)
     }
   })
 
   return { missing: Math.max(0, wanted.size - attached.size), declared: wanted.size }
-}
-
-/** `parser.json` is typed `any` by three, so it is read as data and never trusted for a shape. */
-function materialDef(json: unknown, index: number): unknown {
-  const materials = isRecord(json) ? json.materials : undefined
-  return Array.isArray(materials) ? materials[index] : undefined
-}
-
-/**
- * Every texture slot a material definition fills, extensions included: glTF spells them all
- * `…Texture: { index }`, whichever specification added them — so walking for that shape covers
- * what a hand-written list of five names would have missed.
- */
-function collectWantedTextures(def: unknown, into: Set<number>): void {
-  if (!isRecord(def)) return
-
-  for (const [key, value] of Object.entries(def)) {
-    if (!isRecord(value)) continue
-
-    if (key.endsWith('Texture') && typeof value.index === 'number') into.add(value.index)
-    else collectWantedTextures(value, into)
-  }
 }

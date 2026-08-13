@@ -257,6 +257,11 @@
     "pulled_one": "{{count, number}} asset rapatrié",
     "pulled_many": "{{count, number}} assets rapatriés",
     "pulled_other": "{{count, number}} assets rapatriés",
+    "extractedTextures_one": "{{count, number}} texture extraite de « {{name}} »",
+    "extractedTextures_many": "{{count, number}} textures extraites de « {{name}} »",
+    "extractedTextures_other": "{{count, number}} textures extraites de « {{name}} »",
+    "extractedNothing": "« {{name}} » ne contient aucune image",
+    "extractFailed": "Impossible de lire les images contenues dans « {{name}} »",
     "pushFailed": "Impossible d’envoyer « {{name}} »",
     "pushed_one": "{{count, number}} asset envoyé",
     "pushed_many": "{{count, number}} assets envoyés",
@@ -285,6 +290,7 @@
       "assets.reveal": "Le fichier n’a pas pu être montré",
       "assets.open": "Cet asset n’a nulle part où aller",
       "assets.save": "L’asset n’a pas pu être réécrit",
+      "assets.extract": "Les images de ce modèle n’ont pas pu être extraites",
       "project.reveal": "Le dossier du projet n’a pas pu être montré",
       "project.forget": "Le projet n’a pas pu être retiré de la liste",
       "project.rename": "Le projet n’a pas pu être renommé",
@@ -348,7 +354,9 @@
     "generatingHint": "Génération en cours — l’asset apparaîtra ici une fois terminée",
     "fetchHint": "Double-cliquez pour la récupérer dans le projet et l’ouvrir",
     "fetchAction": "Récupérer dans le projet",
-    "fetchActionHint": "Télécharge cet asset de votre bibliothèque Scenario dans le projet ouvert"
+    "fetchActionHint": "Télécharge cet asset de votre bibliothèque Scenario dans le projet ouvert",
+    "extractTextures": "Extraire ses textures",
+    "extractTexturesHint": "Sort les images contenues dans ce modèle vers le projet, où elles peuvent être ouvertes et peintes"
   },
   "dialog": {
     "allMedia": "Tous les médias",

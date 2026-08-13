@@ -1,7 +1,10 @@
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS, EVENTS } from '@shared/ipc'
+import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
 import { invoke, openWindow, resetHandlers } from '@main/ipc/test-harness'
 import { pngBytes } from '@main/media/png-fixtures'
 import { memoryCatalog } from './catalog-fixtures'
@@ -26,6 +29,20 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   createdAt: '2026-08-07T10:00:00.000Z',
   ...overrides,
 })
+
+/** A project store answering for a real folder — what a handler reading a file off disk needs. */
+function projectAt(root: string, catalog?: AsyncCatalog): ProjectHandlerDeps['project'] {
+  return {
+    create: vi.fn(),
+    open: vi.fn(),
+    current: () => ({ path: root, manifest: MANIFEST }),
+    path: () => root,
+    catalog: () => catalog,
+    touch: vi.fn(),
+    settled: vi.fn(async () => undefined),
+    close: vi.fn(),
+  } as unknown as ProjectHandlerDeps['project']
+}
 
 function deps(catalog: AsyncCatalog, overrides: Partial<ProjectHandlerDeps> = {}) {
   return {
@@ -652,6 +669,156 @@ describe('project handlers', () => {
    * into, and a `Uint8Array` beside it would fail the deep equality on the call.
    */
   const png = (width: number, height: number): Buffer => Buffer.from(pngBytes({ width, height }))
+
+  /**
+   * A downloaded model keeps its pictures inside its own file, where nothing in the studio can
+   * open them. Taking them out is what makes them assets — and what lets the maps of a model
+   * fetched from the library be painted on at all.
+   */
+  describe('the pictures inside a model', () => {
+    const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4])
+
+    const backend = () => ({
+      importFromUrl: vi.fn(),
+      importFromBytes: vi.fn(async () => asset({ id: 'asset-new', type: 'texture' })),
+      replaceBytes: vi.fn(),
+    })
+
+    /**
+     * What one call wrote, with the bytes as plain numbers: the reader hands back views ONTO the
+     * file it read — a `Buffer`, since that is what `readFile` answers — and a deep equality
+     * against a `Uint8Array` compares the two wrappers rather than the pixels.
+     */
+    const wrote = (assets: ReturnType<typeof backend>, at = 0) => {
+      const call: unknown[] = assets.importFromBytes.mock.calls[at] ?? []
+      const bytes = call[1]
+
+      return {
+        request: call[0],
+        bytes: bytes instanceof Uint8Array ? [...bytes] : [],
+      }
+    }
+
+    /** The model on disk, under a project folder this test owns. */
+    async function modelInProject(file: Uint8Array, name = 'Skeleton'): Promise<string> {
+      const root = await mkdtemp(join(tmpdir(), 'scenario-extract-'))
+      await mkdir(join(root, 'assets/3d'), { recursive: true })
+      await writeFile(join(root, 'assets/3d/asset-1.glb'), file)
+
+      await catalog.add(asset({ id: 'asset-1', name, type: 'mesh', path: 'assets/3d/asset-1.glb' }))
+      return root
+    }
+
+    it('writes each one into the project as a texture of its own', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
+      const assets = backend()
+      registerProjectHandlers(
+        deps(catalog, { assets, project: projectAt(root, catalog), newAssetId: () => 'asset-new' }),
+      )
+
+      await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(wrote(assets).request).toMatchObject({
+        id: 'asset-new',
+        type: 'texture',
+        // The channel the glTF slot means, so the shelf can badge it and the catalogue answer
+        // "which base colours does this project hold".
+        map: 'baseColor',
+        // `.jpg`, from what the file declares: the bytes are copied, so the name must not lie.
+        extension: '.jpg',
+        derivedFrom: 'asset-1',
+      })
+      expect(wrote(assets).bytes).toEqual([...JPEG])
+      await rm(root, { recursive: true, force: true })
+    })
+
+    // Named as a derived channel is, and in the language the window is in — the two are the same
+    // thing on the shelf and must not read as two different notions.
+    it('names it after the model and the role it played', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG), 'Squelette')
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
+
+      await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(wrote(assets).request).toMatchObject({ name: 'Squelette — Couleur de base' })
+      await rm(root, { recursive: true, force: true })
+    })
+
+    // Nothing appears on the shelf, so a gesture that says nothing reads as a broken menu row.
+    it('says so when the model carries no picture at all', async () => {
+      const root = await modelInProject(glbFile({ materials: [{ name: 'bare' }] }))
+      const record = vi.fn()
+      registerProjectHandlers(
+        deps(catalog, { assets: backend(), project: projectAt(root, catalog), record }),
+      )
+
+      await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-1')).resolves.toEqual([])
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({ messageKey: 'activity.extractedNothing' }),
+      )
+      await rm(root, { recursive: true, force: true })
+    })
+
+    it('counts what it took out in the journal', async () => {
+      const root = await modelInProject(glbWearing('baseColorTexture', JPEG))
+      const record = vi.fn()
+      registerProjectHandlers(
+        deps(catalog, { assets: backend(), project: projectAt(root, catalog), record }),
+      )
+
+      await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          messageKey: 'activity.extractedTextures',
+          params: { count: 1, name: 'Skeleton' },
+        }),
+      )
+      await rm(root, { recursive: true, force: true })
+    })
+
+    /**
+     * The picture glTF packs two channels into: roughness in green, metalness in blue. The
+     * studio stores those apart, so it comes out unlabelled — still openable, still paintable,
+     * just not claiming to be a channel it is not. A PNG also answers for its own dimensions.
+     */
+    it('files a packed picture without a channel, and reads a PNG for its size', async () => {
+      const png = pngBytes({ width: 8, height: 4 })
+      const root = await modelInProject(glbWearing('metallicRoughnessTexture', png, 'image/png'))
+      const assets = backend()
+      registerProjectHandlers(deps(catalog, { assets, project: projectAt(root, catalog) }))
+
+      await invoke(CHANNELS.assetsExtractTextures, 'asset-1')
+
+      expect(wrote(assets).request).toMatchObject({
+        type: 'texture',
+        extension: '.png',
+        probe: expect.objectContaining({ width: 8, height: 4 }),
+      })
+      // Neither roughness nor metalness: the picture holds both, and claiming one would label
+      // the pixels wrongly.
+      expect(wrote(assets).request).not.toHaveProperty('map')
+      await rm(root, { recursive: true, force: true })
+    })
+
+    // A row whose file the disk no longer has: there is nothing to read the pictures out of.
+    it('refuses a model with no file behind it', async () => {
+      await catalog.add(asset({ id: 'asset-3', name: 'Ghost', type: 'mesh' }))
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-3')).rejects.toThrow()
+    })
+
+    // Only a mesh holds pictures inside itself, and the id comes from the renderer.
+    it('refuses an asset that is not a model', async () => {
+      await catalog.add(asset({ id: 'asset-2', type: 'image', path: 'assets/img/asset-2.png' }))
+      registerProjectHandlers(deps(catalog, { assets: backend() }))
+
+      await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-2')).rejects.toThrow()
+      await expect(invoke(CHANNELS.assetsExtractTextures, 'asset-gone')).rejects.toThrow()
+    })
+  })
 
   describe('a channel the renderer computed', () => {
     const backend = () => ({

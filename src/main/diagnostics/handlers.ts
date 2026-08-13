@@ -38,6 +38,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'assets.open': 'library',
   // Read with the shelf whose tile is now behind, not with the document — that one was saved.
   'assets.save': 'library',
+  // `import`, with the lines the extraction itself writes: what it produces is bytes landing in
+  // the project, and a failure filed away from its own outcome reads as a different event.
+  'assets.extract': 'import',
   // The shelf of recent projects: none of its three rows is about the project that is open in
   // particular, and all three are about a folder — read with the project topic the main process
   // already writes there.

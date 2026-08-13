@@ -118,6 +118,7 @@ const bridge: StudioBridge = {
     saveAudio: request => ipcRenderer.invoke(CHANNELS.assetsSaveAudio, request),
     savePicture: request => ipcRenderer.invoke(CHANNELS.assetsSavePicture, request),
     saveTexture: request => ipcRenderer.invoke(CHANNELS.assetsSaveTexture, request),
+    extractTextures: assetId => ipcRenderer.invoke(CHANNELS.assetsExtractTextures, assetId),
     update: (assetId, changes) => ipcRenderer.invoke(CHANNELS.assetsUpdate, assetId, changes),
     remove: (assetIds, alsoRemote) =>
       ipcRenderer.invoke(CHANNELS.assetsRemove, assetIds, alsoRemote),

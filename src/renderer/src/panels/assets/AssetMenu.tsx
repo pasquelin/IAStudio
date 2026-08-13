@@ -1,4 +1,4 @@
-import { mdiFolderOpenOutline } from '@mdi/js'
+import { mdiFolderOpenOutline, mdiImageMultipleOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { ContextMenu } from '@/design/ContextMenu'
@@ -8,6 +8,7 @@ import { HINT_RIGHT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
+import { useAssets } from '@/stores/assets'
 
 export type AssetMenuProps = {
   asset: Asset
@@ -51,6 +52,21 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
       .catch(error => reportFailure('assets.reveal', asset.name, error))
   }
 
+  /**
+   * The model's own pictures, taken out into the project. The shelf is told to re-read rather
+   * than handed the new rows: the same invalidation every other write goes through, so what is
+   * on screen comes from the catalogue and never from what a gesture believed it created.
+   */
+  const extract = (): void => {
+    void getBridge()
+      ?.assets.extractTextures(asset.id)
+      .catch(error => reportFailure('assets.extract', asset.name, error))
+      // In `finally`, because the write is not all-or-nothing: the handler files one picture at
+      // a time, so a failure on the fourth leaves three in the catalogue — invisible until some
+      // unrelated refresh, if only the happy path re-read the shelf.
+      .finally(() => useAssets.getState().invalidate())
+  }
+
   return (
     <ContextMenu at={at} onClose={onClose}>
       {intentsFor(asset.type).map(intent => (
@@ -64,6 +80,18 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
           onSelect={choose(() => void intent.run(asset))}
         />
       ))}
+      {/* Only for a mesh, because only a mesh keeps its pictures inside itself. Shown for one
+          wherever it sits and disabled when the file is not here — a row that appears and
+          disappears with the selection is a row nobody can learn. */}
+      {asset.type === 'mesh' && (
+        <MenuRow
+          label={t('assets.extractTextures')}
+          icon={mdiImageMultipleOutline}
+          disabled={asset.location !== 'local'}
+          tip={HINT_RIGHT(t('assets.extractTexturesHint'))}
+          onSelect={choose(extract)}
+        />
+      )}
       <MenuRow
         label={t('inspector.reveal')}
         icon={mdiFolderOpenOutline}
