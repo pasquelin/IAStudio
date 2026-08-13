@@ -96,6 +96,23 @@ describe('opening an asset', () => {
     expect(useLayouts.getState().activeWorkspace).toBe('image')
   })
 
+  /**
+   * The pixels of a texture, which its own space assembles without ever writing an image back.
+   * The two documents coexist on one asset: the channel and the picture are not the same edit.
+   */
+  it('opens the pixels of a texture in Images, beside the tab its own space opened', async () => {
+    const texture = picture({ id: 'asset-tex', type: 'texture', name: 'body.png' })
+    await openAsset(texture)
+    const channel = opened().id
+
+    const { pixelEditorIntent } = await import('./asset-intents')
+    await openAsset(texture, pixelEditorIntent(texture) ?? undefined)
+
+    expect(opened().id).not.toBe(channel)
+    expect(canvasOf(useCanvases.getState(), opened().id).layers.at(-1)?.name).toBe('body.png')
+    expect(useLayouts.getState().activeWorkspace).toBe('image')
+  })
+
   it('opens a mesh in a scene', async () => {
     await openAsset(asset({ id: 'mesh-1', type: 'mesh', name: 'chair.glb' }))
 

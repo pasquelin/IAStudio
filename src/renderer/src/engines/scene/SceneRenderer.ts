@@ -60,6 +60,7 @@ import {
   type MaterialTextures,
   type SpriteTexture,
 } from './material-textures'
+import { createModelTextures, type ModelTextures } from './model-textures'
 import { reportFailure } from '@/services/diagnostics'
 import { studioFonts } from '@/services/fonts'
 import type { FontLibrary } from '../core/fonts'
@@ -142,6 +143,13 @@ export type SceneRendererOptions = {
   loadModel?: ModelSource
   /** Same, for the sky an environment hangs: jsdom decodes no image either. */
   loadTexture?: TextureSource
+  /**
+   * When each asset was last written, read off the catalogue by whoever mounts the engine.
+   *
+   * A port rather than a store read, like everything else here: `engines/` knows no store. It is
+   * what makes an edited picture reach the scene — see `refreshTextures`.
+   */
+  assetVersion?: (assetId: string) => string | undefined
   /** Same again, for the picking trees: jsdom spawns the worker that builds them no more. */
   bvh?: BvhBuilder
   /** The typefaces a text is cut from. Shared with the image workspace — see `services/fonts`. */
@@ -253,6 +261,8 @@ export class SceneRenderer {
   private readonly textures = new Map<string, MaterialTextures>()
   /** The same, for the one map a sprite wears. Apart, so each map stays exactly typed. */
   private readonly spriteMaps = new Map<string, SpriteTexture>()
+  /** The project's maps put over the ones a model's file carries, per node. See `model-textures`. */
+  private readonly modelMaps = new Map<string, ModelTextures>()
   /** Last node applied per id, compared by reference to skip what has not changed. */
   private readonly applied = new Map<string, SceneNode>()
   private readonly textureCache: TextureCache
@@ -322,8 +332,10 @@ export class SceneRenderer {
     // Injected rather than built here, so a test can drive the whole model path without a
     // decoder: jsdom parses no GLB, exactly as it decodes no image.
     // One cache for the whole scene: ten meshes sharing a map upload it once.
-    this.textureCache = createTextureCache(options.loadTexture ?? loadTexture, (assetId, error) =>
-      reportFailure('scene.texture', assetId, error),
+    this.textureCache = createTextureCache(
+      options.loadTexture ?? loadTexture,
+      (assetId, error) => reportFailure('scene.texture', assetId, error),
+      options.assetVersion,
     )
     this.gltf = options.loadModel
       ? { load: options.loadModel, dispose: () => {} }
@@ -981,6 +993,30 @@ export class SceneRenderer {
   }
 
   /**
+   * The catalogue moved: every slot asks again for what it holds, and reloads the ones whose
+   * picture was overwritten since.
+   *
+   * Nothing at all when no version changed — a binding compares what it holds before it lets go —
+   * so this may be called on every write to the shelf, which is exactly what it is for. Without
+   * it a texture edited and saved stayed on screen as it was until the engine was rebuilt, since
+   * the id a slot points at does not move when ⌘S rewrites the file behind it.
+   */
+  refreshTextures(): void {
+    for (const [id, maps] of this.textures) {
+      const node = this.applied.get(id)
+      if (node?.type === 'mesh') maps.apply(node.material)
+    }
+    for (const [id, maps] of this.spriteMaps) {
+      const node = this.applied.get(id)
+      if (node?.type === 'sprite') maps.apply(node.sprite)
+    }
+    for (const [id, maps] of this.modelMaps) {
+      const node = this.applied.get(id)
+      if (node?.type === 'model') maps.apply(node.model.textures)
+    }
+  }
+
+  /**
    * The viewport settings changed. The grid is rebuilt rather than resized — `GridHelper` bakes
    * its geometry at construction — and the camera's projection matrix has to be recomputed by
    * hand, since three.js never reads `fov` back on its own.
@@ -1181,6 +1217,16 @@ export class SceneRenderer {
       return
     }
 
+    if (node.type === 'model') {
+      const before = previous?.type === 'model' ? previous : null
+      // Nothing at all until the file has landed: `buildModel` applies what the node holds the
+      // moment it builds the maps, and there is no material to write into before that.
+      if (before?.model.textures !== node.model.textures) {
+        this.modelMaps.get(node.id)?.apply(node.model.textures)
+      }
+      return
+    }
+
     if (node.type === 'text' && object instanceof Mesh) {
       const before = previous?.type === 'text' ? previous : null
       // Cut again only when the words or their shape moved: a colour change must not re-extrude
@@ -1280,6 +1326,18 @@ export class SceneRenderer {
       // Here rather than in `syncNode`: what arrives lands after the sync that built the holder,
       // and the next one skips an unchanged node — the model would throw nothing until edited.
       const applied = this.applied.get(node.id) ?? node
+
+      // The instance, never the cached source: its materials are shared with every other node
+      // built from the same file, and `createModelTextures` is what clones them before writing.
+      const maps = createModelTextures(this.textureCache, holder, this.viewport.requestRender, () =>
+        reportFailure(
+          'scene.texture',
+          assetId,
+          new Error('this model carries no material a map can be written into'),
+        ),
+      )
+      this.modelMaps.set(node.id, maps)
+      if (applied.type === 'model') maps.apply(applied.model.textures)
 
       // The clips come from the cached SOURCE rather than the clone: `Object3D.copy` does not
       // carry them, and a clip addresses its targets by name — so the source's drive any
@@ -1445,7 +1503,7 @@ export class SceneRenderer {
 
     // Before the material goes: the slots have to give their references back, or the cache
     // keeps a 4K map alive for a node that no longer exists.
-    for (const maps of [this.textures, this.spriteMaps]) {
+    for (const maps of [this.textures, this.spriteMaps, this.modelMaps]) {
       maps.get(id)?.dispose()
       maps.delete(id)
     }

@@ -275,6 +275,7 @@ describe('createSkyBinding', () => {
         released.push(assetId)
         cache.release(assetId, colorSpace)
       },
+      versionOf: cache.versionOf,
       dispose: cache.dispose,
     }
     const sky = createSkyBinding(watched, paint)

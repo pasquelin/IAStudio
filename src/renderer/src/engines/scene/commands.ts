@@ -364,17 +364,49 @@ export function setSprite(id: string, sprite: SpriteDescriptor): Command<SceneSt
  * and a play that kept the old time would start over from wherever the last pause happened to be.
  */
 export function setModelAnimation(id: string, animation: AnimationRef | null): Command<SceneState> {
+  return editModel(id, 'animation', model => {
+    const rest = { ...model }
+    delete rest.animation
+    return animation ? { ...rest, animation } : rest
+  })
+}
+
+/**
+ * The project's own maps over the ones the model's file carries. An empty record puts every slot
+ * back to what the file brought.
+ *
+ * The whole set is written rather than one slot patched, for the reason `setMaterialOn` states
+ * about a descriptor: what the inspector holds IS the set, and a partial write would leave the
+ * revert unable to say which slots it was answering for.
+ */
+export function setModelTextures(id: string, textures: ModelRef['textures']): Command<SceneState> {
+  return editModel(id, 'textures', model => {
+    const rest = { ...model }
+    delete rest.textures
+    // An empty set is « the file's own maps », which is what a document says by holding no field.
+    return textures && Object.keys(textures).length > 0 ? { ...rest, textures } : rest
+  })
+}
+
+/**
+ * One field of a model's reference, with the rest of it carried over. Written once because the
+ * carrying is the whole point: an edit that rebuilt the reference from `assetId` alone dropped
+ * every other field a model holds — which is how a texture override vanished on the next play.
+ */
+function editModel(
+  id: string,
+  edited: string,
+  next: (model: ModelRef) => ModelRef,
+): Command<SceneState> {
   let previous: ModelRef | null = null
 
   return {
-    id: `animation:${id}`,
+    id: `${edited}:${id}`,
     apply: state => {
       const node = nodeById(state, id)
       if (node?.type !== 'model') return state
       previous = node.model
-      return patchPart(state, id, 'model', {
-        model: { assetId: node.model.assetId, ...(animation && { animation }) },
-      })
+      return patchPart(state, id, 'model', { model: next(node.model) })
     },
     revert: state => (previous ? patchPart(state, id, 'model', { model: previous }) : state),
   }

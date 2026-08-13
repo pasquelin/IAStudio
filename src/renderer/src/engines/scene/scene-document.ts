@@ -153,7 +153,8 @@ function isSceneNode(value: unknown): value is SceneNode {
     return (
       isRecord(value.model) &&
       typeof value.model.assetId === 'string' &&
-      isOptionalAnimation(value.model.animation)
+      isOptionalAnimation(value.model.animation) &&
+      isOptionalTextureOverrides(value.model.textures)
     )
   // A sprite is its colour, its opacity and at most one map — the same shapes as a material's,
   // checked against the same table.
@@ -188,6 +189,26 @@ function isOptionalAnimation(value: unknown): boolean {
     typeof value.loop === 'boolean' &&
     Number.isFinite(value.time) &&
     Number.isFinite(value.speed)
+  )
+}
+
+/**
+ * The maps put over the ones a model's file carries. Absent is legal and means "the file's own",
+ * which is what every document written before overriding existed says.
+ *
+ * A slot spelled with something that is not a reference costs the node, exactly as a malformed
+ * animation does: the alternative is a model coming back with one map silently missing.
+ */
+function isOptionalTextureOverrides(value: unknown): boolean {
+  if (value == null) return true
+  if (!isRecord(value)) return false
+
+  // `null` is refused where a material's own slots take it: there, `null` means « no map », and
+  // here « the file's own » is what an ABSENT slot already says. Accepting it would load a state
+  // its own type forbids, and one `setModelTextures` never empties — the dead field would be
+  // written back on every save.
+  return TEXTURE_SLOTS.every(
+    slot => value[slot] === undefined || (value[slot] !== null && isTextureRef(value[slot])),
   )
 }
 

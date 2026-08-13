@@ -5,6 +5,7 @@ import {
   setGeometryOn,
   setLightOn,
   setMaterialOn,
+  setModelTextures,
   setSpriteOn,
   setTextOn,
 } from '@/engines/scene/commands'
@@ -17,6 +18,7 @@ import { DescriptorSection } from './DescriptorSection'
 import { AnimationSection } from './AnimationSection'
 import { EnvironmentSection } from './EnvironmentSection'
 import { MaterialSection } from './MaterialSection'
+import { ModelTexturesSection } from './ModelTexturesSection'
 import { ShadowSection } from './ShadowSection'
 import { SpriteSection } from './SpriteSection'
 import { TextSection } from './TextSection'
@@ -117,7 +119,18 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
         </>
       )}
 
-      {model && <AnimationSection documentId={documentId} node={model} edit={edit} />}
+      {model && (
+        <>
+          <AnimationSection documentId={documentId} node={model} edit={edit} />
+          {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
+              own file carries, so spreading one over a selection would dress meshes that never
+              had that slot. */}
+          <ModelTexturesSection
+            textures={model.model.textures}
+            onChange={textures => edit.run(setModelTextures(model.id, textures))}
+          />
+        </>
+      )}
 
       {sprite && (
         <SpriteSection

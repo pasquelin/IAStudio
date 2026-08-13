@@ -150,6 +150,23 @@ describe('what the shelf offers to do with an asset', () => {
     expect(extractTextures).toHaveBeenCalledWith('asset_1')
   })
 
+  /**
+   * A texture is assembled in its own space, which writes no image back — so without this row an
+   * extracted map could be looked at and never retouched, and `replaces` had nothing to bite on.
+   */
+  it('offers to edit the pixels of a picture whose own space does not paint', () => {
+    render(<AssetMenu asset={asset({ type: 'texture' })} at={AT} onClose={() => {}} />)
+
+    expect(screen.getByRole('menuitem', { name: /Modifier l’image/ })).toBeInTheDocument()
+  })
+
+  // Images already opens one on a double-click: a second row for the same gesture is noise.
+  it('offers nothing of the sort for a picture Images already opens', () => {
+    render(<AssetMenu asset={asset()} at={AT} onClose={() => {}} />)
+
+    expect(screen.queryByRole('menuitem', { name: /Modifier l’image/ })).not.toBeInTheDocument()
+  })
+
   it('closes on Escape without doing anything', async () => {
     const onClose = vi.fn()
     render(<AssetMenu asset={asset()} at={AT} onClose={onClose} />)

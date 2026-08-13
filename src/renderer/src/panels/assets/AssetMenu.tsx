@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { ContextMenu } from '@/design/ContextMenu'
 import { MenuRow } from '@/design/MenuRow'
-import { intentsFor } from '@/helpers/asset-intents'
+import { intentsFor, pixelEditorIntent } from '@/helpers/asset-intents'
+import { openAsset } from '@/helpers/open-asset'
 import { HINT_RIGHT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
@@ -32,6 +33,7 @@ export type AssetMenuProps = {
  */
 export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
   const { t } = useTranslation()
+  const pixels = pixelEditorIntent(asset)
 
   const choose =
     (run: () => void): (() => void) =>
@@ -80,6 +82,16 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
           onSelect={choose(() => void intent.run(asset))}
         />
       ))}
+      {/* The other half of extracting a model's textures: a channel is assembled in the Textures
+          space, which writes no image back, so this is where its pixels are opened for editing. */}
+      {pixels && (
+        <MenuRow
+          label={t('assets.editPixels')}
+          icon={workspaceById(pixels.workspace).icon}
+          tip={HINT_RIGHT(t('assets.editPixelsHint'))}
+          onSelect={choose(() => void openAsset(asset, pixels))}
+        />
+      )}
       {/* Only for a mesh, because only a mesh keeps its pictures inside itself. Shown for one
           wherever it sits and disabled when the file is not here — a row that appears and
           disappears with the selection is a row nobody can learn. */}
