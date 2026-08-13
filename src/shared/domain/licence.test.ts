@@ -82,6 +82,9 @@ describe('the collected notice', () => {
    * leaves the machine that built it. A new one is neither until someone says which, and this
    * is what asks: reading `dependencies` alone would miss the twenty packages Vite bundles out
    * of `devDependencies`, which is most of what the notice owes.
+   *
+   * The reciprocal — nothing shipped that the manifest no longer declares — is `licences.test.ts`
+   * under `src/main`, which needs `node:fs` and so cannot live here.
    */
   it('accounts for every declared dependency, as shipped or as a build tool', () => {
     const declared = [

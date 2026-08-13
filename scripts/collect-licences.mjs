@@ -3,10 +3,9 @@
  * which the Help ▸ Licences window reads, and into `THIRD-PARTY-NOTICES.md` for readers of the
  * repository and the release page.
  *
- * The list is spelled out rather than derived from `dependencies`: this project bundles React,
- * zustand, dockview and the rest with Vite, so they sit in `devDependencies` while shipping in
- * the binary all the same. Deriving from the manifest would quietly omit most of the notice.
- * `licence.test.ts` fails if a runtime dependency is added without landing here.
+ * What is shipped is `SHIPPED`, and why it is a list rather than a query is written there.
+ * `licence.test.ts` fails if a runtime dependency is added without landing in it, and
+ * `main/licences.test.ts` fails if one of its names is no longer declared in the manifest.
  *
  * The texts themselves are read from `node_modules`, never copied by hand — a version bump
  * brings its own wording.
@@ -17,8 +16,10 @@ import { fileURLToPath } from 'node:url'
 import { sourceArchives as FFMPEG_SOURCES, TARGETS as FFMPEG_TARGETS } from './fetch-ffmpeg.mjs'
 import { VAD as STT_VAD } from './fetch-stt.mjs'
 // A `.ts` from a `.mjs`: Node 24 strips the types on the way in. Worth the novelty here — the
-// rule that decides who owes a source offer must be the one the tests check, not a twin of it.
+// rule that decides who owes a source offer must be the one the tests check, not a twin of it,
+// and the same goes for the list of what is shipped.
 import { isCopyleft, NO_VERSION } from '../src/shared/domain/licence.ts'
+import { SHIPPED } from '../src/main/shipped-packages.ts'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'src', 'shared', 'licences.json')
@@ -30,51 +31,6 @@ const PATCHED = new Set(
     JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).pnpm?.patchedDependencies ?? {},
   ).map(spec => spec.split('@').slice(0, -1).join('@')),
 )
-
-/**
- * Everything that reaches a user's disk: bundled by Vite, loaded at runtime, or shipped beside.
- * Not here on purpose: eslint, prettier, vitest, typescript, electron-builder and the `@types`
- * — a build tool never leaves the machine that ran it.
- */
-const SHIPPED = [
-  // Runtime dependencies, loaded from `node_modules` by the main process.
-  '@mdi/js',
-  '@mdi/react',
-  '@scenario-labs/sdk',
-  '@xyflow/react',
-  'better-sqlite3',
-  'electron-store',
-  'electron-updater',
-  'mediabunny',
-  'opentype.js',
-  'pixi.js',
-  'sherpa-onnx-node',
-  'three',
-  'three-mesh-bvh',
-  // The runtime itself.
-  'electron',
-  // Bundled into the renderer by Vite, hence in `devDependencies` while shipping all the same.
-  '@hookform/resolvers',
-  '@tanstack/react-query',
-  '@tanstack/react-virtual',
-  'daisyui',
-  'dockview-react',
-  'i18next',
-  'immer',
-  'react',
-  'react-dom',
-  'react-hook-form',
-  'react-i18next',
-  'react-is',
-  'react-tooltip',
-  'recharts',
-  'tailwind-merge',
-  'tailwindcss',
-  'wavesurfer.js',
-  'zod',
-  'zundo',
-  'zustand',
-]
 
 const LICENCE_FILES = ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'COPYING', 'COPYING.md']
 
