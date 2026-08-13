@@ -76,8 +76,8 @@ function findByLabel(label: string): MenuRow | null {
  * imports the harness itself, so a reset hands the module under test a SECOND registry and the
  * channel this file invokes is registered in the one nobody reads.
  *
- * So the module stays loaded and the state is normalised instead — the language and the
- * overrides by a build that names both, the per-window maps by ids that never repeat.
+ * So the module stays loaded and the state is normalised instead — the language at its source,
+ * the overrides by a build that names them, the per-window maps by ids that never repeat.
  */
 beforeEach(() => {
   resetHandlers()
@@ -338,9 +338,9 @@ describe('a window that goes away', () => {
 })
 
 /**
- * Both are remembered between builds, and both are set from somewhere else: a rebuild driven by
- * a focus change passes neither, so forgetting them would drop the user's language and remaps
- * the first time they clicked another window.
+ * The overrides are remembered between builds and set from somewhere else: a rebuild driven by a
+ * focus change passes none, so forgetting them would drop the user's remaps the first time they
+ * clicked another window. The language is not remembered — it is read where the menu is drawn.
  */
 describe('what a rebuild must not drop', () => {
   /**
@@ -356,17 +356,6 @@ describe('what a rebuild must not drop', () => {
     setWindowLanguage('en')
 
     expect(menuBuilds()).toBe(before + 1)
-    expect(findByLabel(TRANSLATIONS.en.menu.file)).not.toBeNull()
-  })
-
-  it('keeps speaking the language the windows speak', () => {
-    const window = openWindow()
-    focusWindow(window)
-    announce(window, '3d')
-    setWindowLanguage('en')
-
-    announce(window, 'image')
-
     expect(findByLabel(TRANSLATIONS.en.menu.file)).not.toBeNull()
     expect(findByLabel(TRANSLATIONS.fr.menu.file)).toBeNull()
   })

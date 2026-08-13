@@ -130,10 +130,7 @@ function rebuildIfStale(): void {
   }
 }
 
-/**
- * Named rather than inline, and it is not `buildMenu` itself: the follower set dedupes by
- * identity, and a follower taking the language would read it as the overrides.
- */
+/** Named rather than inline: the follower set dedupes by identity, so registering twice adds one. */
 function rebuildInNewLanguage(): void {
   buildMenu()
 }
@@ -143,8 +140,6 @@ function rebuildInNewLanguage(): void {
  * is in. It announces the restored one on startup and again on every click of the space rail.
  */
 export function registerMenuHandlers(): void {
-  // The menu is built once and never re-reads anything: without this the window changes
-  // language and the menu bar above it does not.
   followWindowLanguage(rebuildInNewLanguage)
 
   handle(CHANNELS.windowWorkspace, (event, next, tools, checked) => {
