@@ -168,6 +168,24 @@ describe('the loud fill of a row that says where one is', () => {
   })
 
   /**
+   * The subtitle needs a SECOND spelling, and this is the whole of why: it also carries a
+   * `data-selected` lift to `text`, the two variants compile to the same specificity, and Tailwind
+   * emits the accented one FIRST — so `text` won and the path under the open project's name
+   * rendered at 3.44:1. Being written last in the class string decides nothing; the cascade never
+   * reads attribute order. Stacking the variants takes the accented rule to (0,3,0).
+   *
+   * What this can and cannot see: jsdom applies no stylesheet, so no suite here resolves a
+   * cascade. Asserted is the SHAPE that outranks the lift — the ratio itself was measured in
+   * Electron, and `ROW_INK` needs none of this since its base `text-text` is (0,1,0).
+   */
+  it('outranks its own selected lift rather than trusting the order it is written in', () => {
+    expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
+    expect(ROW_QUIET).toContain(
+      'group-data-accented/row:group-data-selected/row:text-accent-content',
+    )
+  })
+
+  /**
    * A control INSIDE such a row — the rename field, its menu button — draws the studio's one focus
    * ring, and that ring is the accent: on an accent fill it is 1:1, so a keyboard sees nothing at
    * all (WCAG 2.4.7). Fixed on the indicator rather than at each caller, since "must not draw in
@@ -182,13 +200,21 @@ describe('the loud fill of a row that says where one is', () => {
    * while the words stay at 3.44:1, with nothing on screen saying so. `data-selected` alone cannot
    * drive it — every picked row in the studio carries that one.
    */
-  it('is never worn without the attribute the two inks read', () => {
-    const offenders = WRITTEN_SOURCES.filter(
+  /**
+   * Whoever PAINTS the tone, not whoever asks for it: a panel writes `selectionTone="strong"` and
+   * leaves the attribute to the surface that draws the cell, which is the only place that can
+   * emit it. Filtering on the word alone caught the panel and let the painter through — and it
+   * caught nothing at all before that, since it looked for `'strong'` in single quotes while the
+   * one site that asks writes it as a JSX attribute.
+   */
+  it('is never painted without the attribute the two inks read', () => {
+    const painters = WRITTEN_SOURCES.filter(
       ([path, source]) =>
-        path !== GUARDED && source.includes("'strong'") && !source.includes('data-accented'),
-    ).map(([path]) => path)
+        path !== GUARDED && /\browSkin\(/.test(source) && /["']strong["']/.test(source),
+    )
 
-    expect(offenders).toEqual([])
+    expect(painters.map(([path]) => path)).not.toEqual([])
+    expect(painters.filter(([, source]) => !source.includes('data-accented'))).toEqual([])
   })
 })
 

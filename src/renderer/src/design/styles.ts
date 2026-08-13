@@ -155,9 +155,22 @@ export function rowSkin(selected: boolean, disabled = false, tone: RowTone = 'so
 export const ROW_QUIET = cn(
   'text-muted transition-colors',
   'group-hover/row:text-text group-data-selected/row:text-text',
-  // On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
-  // pinned so that only pure white clears 4.5. Last in the string, so it beats both lifts.
+  /**
+   * On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
+   * pinned so that only pure white clears 4.5.
+   *
+   * Written TWICE, and the second spelling is the one that works. Being last in the class string
+   * decides nothing — the cascade never reads attribute order — and Tailwind emits the accented
+   * rule BEFORE the selected one at equal specificity, so `text` won and this subtitle rendered at
+   * 3.44:1 on the open project. Measured in Electron on 13 August, and reproduced by compiling
+   * both candidates with the repo's own Tailwind. Stacking the two variants raises the accented
+   * rule to (0,3,0) against the lift's (0,2,0), which no emission order can undo.
+   *
+   * The bare spelling stays for a row accented without being selected, which no surface draws
+   * today: `CollectionCell` derives one from the other.
+   */
   'group-data-accented/row:text-accent-content',
+  'group-data-accented/row:group-data-selected/row:text-accent-content',
 )
 
 /**

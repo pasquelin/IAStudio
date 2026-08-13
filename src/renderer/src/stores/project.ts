@@ -142,8 +142,17 @@ export const useProject = create<ProjectState>()((set, get) => ({
     // arrangement: nothing of the previous one may be left showing.
     const stop = bridge.project.onChange(project => {
       announced = true
+      const before = get().project?.path
       set({ project, known: true })
-      void followProject(project)
+
+      /**
+       * Only when ANOTHER project is in front. The same folder announcing itself again is a
+       * manifest that changed under it — a rename is the one that does — and following that would
+       * empty the scene clipboard, dismiss every toast and refetch three lists in every window,
+       * to update a word. The main process already declines to fire its own `onChange` for a
+       * rename (`main/project/store.ts`); this is the same decision on the side that pays for it.
+       */
+      if (project?.path !== before) void followProject(project)
     })
 
     // A refusal is an answer too. Left to throw, `connect` never hands back the unsubscribe —
@@ -213,7 +222,14 @@ export const useProject = create<ProjectState>()((set, get) => ({
     const { settings, write } = useSettings.getState()
     await write({
       storage: {
-        recentProjects: renamedRecentProject(settings.storage.recentProjects, path, name),
+        // The name the MANIFEST took, not the one that was asked for: the main process trims it
+        // (`parseProjectTitle`), and the shelf storing what was typed would list a project under
+        // a name its own manifest does not carry.
+        recentProjects: renamedRecentProject(
+          settings.storage.recentProjects,
+          path,
+          renamed.manifest.name,
+        ),
       },
     })
 

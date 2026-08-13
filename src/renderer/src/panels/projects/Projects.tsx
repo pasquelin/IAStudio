@@ -69,7 +69,12 @@ export function Projects() {
     void useProject
       .getState()
       .rename(project.path, name)
-      .catch(error => reportFailure('project.rename', project.path, error))
+      // A REFUSAL, not a rejection: the store swallows the bridge error and answers `false`, so a
+      // `.catch` here could only ever have caught a settings write going wrong — and the rename
+      // that did nothing would have passed in silence.
+      .then(done => {
+        if (!done) reportFailure('project.rename', project.path, new Error('rename refused'))
+      })
   }, [])
 
   return (

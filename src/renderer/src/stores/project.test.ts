@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RecentProject } from '@shared/domain/project'
+import type { Project, RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
+import type { ActivityEntry } from '@shared/domain/activity'
+import { useActivity } from './activity'
 import { useProject } from './project'
 import { useSettings } from './settings'
 
@@ -8,6 +10,16 @@ const closeOrphanTabs = vi.hoisted(() => vi.fn())
 vi.mock('@/app/orphan-tabs', () => ({ closeOrphanTabs }))
 
 const MANIFEST = { version: 1, name: 'demo', createdAt: '', updatedAt: '' }
+
+/** A toast standing on screen — what following another project is right to sweep away, and a
+ *  rename is not. */
+const TOAST: ActivityEntry = {
+  id: 1,
+  at: '2026-08-13T10:00:00.000Z',
+  level: 'error',
+  topic: 'project',
+  messageKey: 'activity.projectNotRenamed',
+}
 
 beforeEach(() => {
   useProject.setState({ project: null, known: false })
@@ -67,6 +79,42 @@ describe('settling the tabs of a project being followed', () => {
     await useProject.getState().connect()
 
     expect(closeOrphanTabs).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Announcing the SAME folder is a manifest that changed under it — a rename is the one gesture
+   * that does — and following it would empty the scene clipboard, dismiss every toast and refetch
+   * three lists in every window, to update a word.
+   *
+   * The unread toasts are the witness because they are dismissed SYNCHRONOUSLY, before the three
+   * requests: `closeOrphanTabs`, the last thing following a project does, sits behind three
+   * awaits, so an assertion made on it right after the announcement passes whether the work was
+   * skipped or merely not finished — which is what this test did until it was checked by removing
+   * the guard and watching it stay green.
+   */
+  it('follows another project, and lets the same one merely change its name', async () => {
+    const listeners: ((project: Project | null) => void)[] = []
+    const announce = (project: Project): void => listeners.forEach(listener => listener(project))
+    installFakeBridge({
+      project: {
+        onChange: listener => {
+          listeners.push(listener)
+          return () => {}
+        },
+      },
+    })
+    await useProject.getState().connect()
+
+    useActivity.setState({ unread: [TOAST] })
+    announce({ path: '/projects/summer', manifest: MANIFEST })
+
+    expect(useActivity.getState().unread).toEqual([])
+
+    useActivity.setState({ unread: [TOAST] })
+    announce({ path: '/projects/summer', manifest: { ...MANIFEST, name: 'Winter' } })
+
+    expect(useActivity.getState().unread).toEqual([TOAST])
+    expect(useProject.getState().project?.manifest.name).toBe('Winter')
   })
 })
 

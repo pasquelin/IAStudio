@@ -282,10 +282,15 @@ describe('renaming from the panel', () => {
 
   // A failure reaches the journal rather than the promise it was thrown into: the field is gone by
   // the time the answer comes, and a rename that silently did nothing reads as a dead menu.
+  /**
+   * The store ANSWERS a refusal rather than throwing it — the disk error is swallowed on the way
+   * (`stores/project.ts`) — so a stub that rejects would exercise a path the real one never takes,
+   * and the panel's own `.catch` would have looked right while catching nothing.
+   */
   it('says so when the rename was refused', async () => {
     const report = vi.fn(() => Promise.resolve())
     installFakeBridge({ diagnostics: { report } })
-    useProject.setState({ rename: () => Promise.reject(new Error('read-only disk')) })
+    useProject.setState({ rename: () => Promise.resolve(false) })
     renderPanel()
     await startFromMenu()
 
