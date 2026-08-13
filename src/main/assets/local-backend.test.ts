@@ -205,6 +205,34 @@ describe('local backend', () => {
     await expect(catalog.find('asset_1')).resolves.toEqual(asset)
   })
 
+  /**
+   * The one door every asset comes through, which is why extracting a model's pictures hangs off
+   * it rather than off each import site. Told AFTER the catalogue holds the row: a listener that
+   * goes looking for what just arrived — that extraction does exactly that — would find nothing.
+   */
+  it('says what landed, once the catalogue can answer for it', async () => {
+    const seen: string[] = []
+    const watched = createLocalBackend({
+      download: () => Promise.resolve(BYTES),
+      projectPath: () => root,
+      catalog: () => catalog,
+      now: () => '2026-08-06T10:00:00.000Z',
+      onImported: async imported => {
+        seen.push(imported.id)
+        expect(await catalog.find(imported.id)).not.toBeNull()
+      },
+    })
+
+    await watched.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/tree.glb',
+      name: 'Tree',
+      type: 'mesh',
+    })
+
+    expect(seen).toEqual(['asset_1'])
+  })
+
   it('indexes nothing when the download fails', async () => {
     const failing = createLocalBackend({
       download: vi.fn(() => Promise.reject(new Error('offline'))),

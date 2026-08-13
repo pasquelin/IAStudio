@@ -82,6 +82,8 @@ const assetQuery = z.object({
   location: z.enum(['local', 'cloud']).optional(),
   syncStatus: z.custom<SyncStatus>(isSyncStatus).optional(),
   groupId: z.string().trim().min(1).optional(),
+  // Spelled out rather than reusing the `assetId` schema, which is declared further down.
+  derivedFrom: z.string().trim().min(1).optional(),
   generated: z.literal(true).optional(),
   // Bounded here rather than in SQL: the renderer chooses the page size, and an unbounded
   // one would pull an entire well-stocked project across the IPC boundary in one message.

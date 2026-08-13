@@ -636,6 +636,11 @@ export function createCatalog(driver: SqliteDriver): Catalog {
         params.push(query.groupId)
       }
 
+      if (query.derivedFrom) {
+        conditions.push('derived_from = ?')
+        params.push(query.derivedFrom)
+      }
+
       // The column `parseGeneration` keys off: without a model there is no generation, so this
       // is exactly the set of rows the studio made rather than the ones it was handed.
       if (query.generated) conditions.push('model_id IS NOT NULL')
