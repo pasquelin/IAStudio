@@ -14,12 +14,17 @@ type RemoteJobPayload = {
 }
 
 /**
- * The assets a job leaves behind, as a list the manager can hold either way.
+ * The assets a job leaves behind.
+ *
+ * Deduplicated as an assurance rather than as a correction: no observed payload repeats an id,
+ * and nothing says the API never will. What a repeat costs is measured — the collector fetches
+ * and files the same remote asset twice, and the activity count overstates — so the `Set` is
+ * cheaper than the doubt.
  *
  * Read here rather than in the job manager: this file is the one that speaks SDK.
  */
 export function outputsOf(payload: RemoteJobPayload): string[] {
-  return [...(payload.metadata?.assetIds ?? [])]
+  return [...new Set(payload.metadata?.assetIds ?? [])]
 }
 
 /**

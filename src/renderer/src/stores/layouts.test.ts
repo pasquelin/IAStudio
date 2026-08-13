@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { WORKSPACE_IDS } from '@shared/domain/workspace'
 import { layoutShowing } from './layout-fixtures'
 import { useLayouts, type SerializedLayout } from './layouts'
 
@@ -99,6 +100,23 @@ describe('layouts store', () => {
       await useLayouts.persist.rehydrate()
 
       expect(useLayouts.getState().layouts).toEqual({})
+    })
+
+    /**
+     * `activeWorkspace` is persisted too, and it outlives the space it names. A session last
+     * left in a workspace this build no longer declares restored it verbatim, and the first
+     * reader to ask `workspaceById` for it threw `Unknown workspace` — during render, in the
+     * shell, the generator and the models panel alike. The version stamp is what drops it.
+     */
+    it('drops a workspace this build no longer declares, rather than restoring it', async () => {
+      localStorage.setItem(
+        'scenario-studio:layouts',
+        JSON.stringify({ state: { activeWorkspace: 'graph', layouts: {} }, version: 1 }),
+      )
+
+      await useLayouts.persist.rehydrate()
+
+      expect(WORKSPACE_IDS).toContain(useLayouts.getState().activeWorkspace)
     })
   })
 

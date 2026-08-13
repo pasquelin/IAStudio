@@ -103,7 +103,11 @@ export const useLayouts = create<LayoutsState>()(
       // Bumped whenever a stored layout stops being one this build can restore: a major
       // Dockview release, or a `DocumentKind` renamed or dropped — Dockview throws on a layout
       // naming a component it cannot find. Dropped rather than migrated, per the type above.
-      version: 1,
+      //
+      // 2: the graph space went, and `activeWorkspace` is persisted. Restored verbatim, a
+      // session last left in it hands `'graph'` to `workspaceById`, which throws on an id no
+      // build declares — during render, in the shell, the generator and the models panel alike.
+      version: 2,
       migrate: () => undefined,
     },
   ),
