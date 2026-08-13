@@ -14,3 +14,6 @@ minimumReleaseAgeExclude:
   - jscpd@5.0.15
   - mediabunny@1.53.1
   - zustand@5.0.15
+  - dockview-core@8.1.0
+  - dockview-react@8.1.0
+  - dockview@8.1.0

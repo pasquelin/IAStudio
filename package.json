@@ -73,7 +73,7 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "daisyui": "^5.7.16",
-    "dockview-react": "^7.0.4",
+    "dockview-react": "^8.1.0",
     "electron": "^43.4.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
