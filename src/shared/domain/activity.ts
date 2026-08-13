@@ -59,6 +59,9 @@ export type ActivityMessage =
   | 'imported'
   | 'jobCancelled'
   | 'jobFailed'
+  | 'projectAccountMissing'
+  | 'projectAccountRestored'
+  | 'projectAccountSwitched'
   | 'projectNotAProject'
   | 'projectNotCreated'
   | 'projectNotRenamed'
@@ -87,6 +90,9 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'imported',
   'jobCancelled',
   'jobFailed',
+  'projectAccountMissing',
+  'projectAccountRestored',
+  'projectAccountSwitched',
   'projectNotAProject',
   'projectNotCreated',
   'projectNotRenamed',
@@ -99,6 +105,23 @@ export const ACTIVITY_MESSAGES: readonly ActivityMessage[] = [
   'pushed',
   'tagsNotSynced',
   'unknownMessage',
+]
+
+/**
+ * Lines that claim the corner of the screen without being failures.
+ *
+ * A list rather than the LEVEL, and the difference is not academic: promoting every `warn` to a
+ * toast would have caught the two that already existed, both of which argued for staying quiet
+ * where they are written — a rename that landed but could not sync its tags, and a caption batch
+ * refused inside a loop over every batch. Toasts do not expire, so a large import would have left
+ * the user closing them one by one.
+ *
+ * What belongs here is a line the user cannot afford to read later: switching accounts changes
+ * which remote library the open project reads, and nobody has the journal open at that moment.
+ */
+export const ATTENTION_MESSAGES: readonly ActivityMessage[] = [
+  'projectAccountMissing',
+  'projectAccountSwitched',
 ]
 
 /**
@@ -180,6 +203,43 @@ export const ACTIVITY_RETENTION = 2000
  * a count that seems to lose failures on its own.
  */
 export const ACTIVITY_WINDOW = 200
+
+/**
+ * Whether a line is worth a toast: every failure, plus the few that ask for attention by name.
+ *
+ * Beside the messages it reads rather than in the store that draws them, so adding a line to
+ * `ATTENTION_MESSAGES` is the whole of the decision.
+ */
+export function isToastWorthy(entry: ActivityDraft): boolean {
+  return entry.level === 'error' || asksAttention(entry)
+}
+
+function asksAttention(entry: ActivityDraft): boolean {
+  return ATTENTION_MESSAGES.some(message => entry.messageKey === `activity.${message}`)
+}
+
+/**
+ * The toasts that survive a bound, newest first — failures dropped before attention lines.
+ *
+ * Which is not a nicety: switching accounts purges every cache, so refetching under a key the API
+ * refuses answers a RUN of failures, and three of them would push out the very sentence saying
+ * the key had changed. `ATTENTION_MESSAGES` calls those "a line the user cannot afford to read
+ * later", and a list that silently evicts them does not keep that promise.
+ *
+ * Order is preserved among what is kept: a toast that jumped the queue on arrival would read as
+ * a newer event than it is.
+ */
+export function boundedToasts(lines: readonly ActivityEntry[], limit: number): ActivityEntry[] {
+  if (lines.length <= limit) return [...lines]
+
+  const attention = lines.filter(asksAttention)
+  if (attention.length >= limit) return attention.slice(0, limit)
+
+  const spared = new Set(
+    lines.filter(line => !asksAttention(line)).slice(0, limit - attention.length),
+  )
+  return lines.filter(line => asksAttention(line) || spared.has(line))
+}
 
 /** Whether a line passes a filter. An absent list and an empty one both let everything through. */
 export function matchesActivity(entry: ActivityDraft, filter: ActivityFilter): boolean {

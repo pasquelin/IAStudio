@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import {
   ACTIVITY_WINDOW,
+  boundedToasts,
+  isToastWorthy,
   matchesActivity,
   type ActivityEntry,
   type ActivityFilter,
@@ -21,7 +23,7 @@ type ActivityState = {
   entries: ActivityEntry[]
   levels: ActivityLevel[]
   topics: ActivityTopic[]
-  /** Failures the user has not acknowledged yet — what the toasts show. */
+  /** What the toasts show, and the user has not dismissed yet — see `isToastWorthy`. */
   unread: ActivityEntry[]
 
   /** Reads the journal back and follows what is written to it. Returns the unsubscribe. */
@@ -67,10 +69,7 @@ export const useActivity = create<ActivityState>()((set, get) => ({
   append: entries =>
     set(state => ({
       entries: [...[...entries].reverse(), ...state.entries].slice(0, ACTIVITY_WINDOW),
-      unread: [...entries.filter(entry => entry.level === 'error'), ...state.unread].slice(
-        0,
-        TOAST_LIMIT,
-      ),
+      unread: boundedToasts([...entries.filter(isToastWorthy), ...state.unread], TOAST_LIMIT),
     })),
 
   // One write for both axes: clearing the filters used to be two, and two renders for one click.

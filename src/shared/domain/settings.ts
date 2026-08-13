@@ -100,6 +100,19 @@ export type Settings = {
     lastProject?: string
     /** Session state like `lastProject`, and replicated with it — see `domain/project.ts`. */
     recentProjects: RecentProject[]
+    /**
+     * Which account each project works under, by folder — see `planProjectAccount`.
+     *
+     * Its own branch rather than a field on `recentProjects`: that list is session state, bounded
+     * to twelve and evicted by opening date, and `forget` empties an entry whenever an opening
+     * FAILS. A project on a drive that was not plugged in would have come back on someone else's
+     * key, in silence, which is the one thing this exists to prevent.
+     *
+     * Nothing prunes it, and `forget` deliberately leaves it alone for that same reason — pruning
+     * on the path an opening failed on is exactly the defect above. It grows by one short line per
+     * project ever opened, which is the cost of not losing a choice the user made.
+     */
+    projectAccounts: Record<string, string>
   }
   /**
    * The 3D workspace. A branch of its own rather than nested under a `spaces` one: every branch
@@ -198,7 +211,7 @@ export const DEFAULT_SETTINGS: Settings = {
     shadowQuality: 'soft',
     shadowMapSize: 2048,
   },
-  storage: { backend: 'local', recentProjects: [] },
+  storage: { backend: 'local', recentProjects: [], projectAccounts: {} },
   shortcuts: { overrides: {} },
   advanced: { logLevel: 'info' },
   media: {},

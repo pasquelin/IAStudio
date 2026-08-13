@@ -116,12 +116,39 @@ describe('what gets shown as a toast', () => {
     expect(state().unread.map(one => one.id)).toEqual([1])
   })
 
+  /**
+   * The axis is the MESSAGE, not the level, and this is what the difference buys: switching
+   * accounts changes which remote library the open project reads and nobody has the journal open
+   * at that moment, while a caption batch refused inside a loop over every batch would leave the
+   * user closing toasts one by one — toasts do not expire.
+   */
+  it('raises a line that asks for attention, and leaves an ordinary warning alone', () => {
+    state().append([
+      entry({ id: 1, level: 'warn', messageKey: 'activity.projectAccountSwitched' }),
+      entry({ id: 2, level: 'warn', messageKey: 'activity.captionFailed' }),
+    ])
+
+    expect(state().unread.map(one => one.id)).toEqual([1])
+  })
+
   // A key that expired mid-push is forty lines and one problem; past a few, the toasts would
   // cover the work they report on.
   it('stops stacking a burst of the same trouble', () => {
     state().append(Array.from({ length: 40 }, (_, id) => entry({ id, level: 'error' })))
 
     expect(state().unread.length).toBeLessThanOrEqual(3)
+  })
+
+  /**
+   * The burst a switch itself provokes: every cache is purged, so refetching under a key the API
+   * refuses answers a run of failures. Evicting by arrival alone would push out the one sentence
+   * saying the key had changed — the line the user cannot go and read later.
+   */
+  it('drops failures before the line that asked for attention', () => {
+    state().append([entry({ id: 1, level: 'warn', messageKey: 'activity.projectAccountSwitched' })])
+    state().append(Array.from({ length: 6 }, (_, index) => entry({ id: index + 2 })))
+
+    expect(state().unread.map(one => one.id)).toContain(1)
   })
 
   it('raises a failure the current filter would have hidden', () => {
