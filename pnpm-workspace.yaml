@@ -5,3 +5,12 @@ allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
   - immer@11.1.16
+  - jscpd-darwin-arm64@5.0.15
+  - jscpd-darwin-x64@5.0.15
+  - jscpd-linux-arm64-gnu@5.0.15
+  - jscpd-linux-x64-gnu@5.0.15
+  - jscpd-linux-x64-musl@5.0.15
+  - jscpd-windows-x64-msvc@5.0.15
+  - jscpd@5.0.15
+  - mediabunny@1.53.1
+  - zustand@5.0.15
