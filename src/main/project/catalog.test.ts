@@ -53,6 +53,22 @@ describe('catalog', () => {
     expect(found?.peaksPath).toBe('.index/peaks/abc123.bin')
   })
 
+  // The still of a mesh, which its own file cannot stand in for — see `posterUrl`.
+  it('keeps the still recorded beside an asset through a round trip', () => {
+    catalog.add(
+      asset({ id: 'asset_mesh', type: 'mesh', posterPath: '.index/posters/asset_mesh.jpg' }),
+    )
+
+    expect(catalog.find('asset_mesh')?.posterPath).toBe('.index/posters/asset_mesh.jpg')
+    expect(catalog.find('asset_mesh')?.type).toBe('mesh')
+  })
+
+  it('leaves it absent on an asset nothing wrote one for', () => {
+    catalog.add(asset())
+
+    expect(catalog.find('asset_1')?.posterPath).toBeUndefined()
+  })
+
   it('leaves the ingest columns absent on an asset that has never been probed', () => {
     catalog.add(asset())
     const found = catalog.find('asset_1')
@@ -87,10 +103,20 @@ describe('catalog', () => {
 
     migrate(older)
     const upgraded = createCatalog(older)
-    upgraded.add(asset({ id: 'asset_old', hash: 'def456', map: 'normal' }))
+    upgraded.add(
+      asset({
+        id: 'asset_old',
+        hash: 'def456',
+        map: 'normal',
+        posterPath: '.index/posters/asset_old.jpg',
+      }),
+    )
 
     expect(upgraded.find('asset_old')?.hash).toBe('def456')
     expect(upgraded.find('asset_old')?.map).toBe('normal')
+    // The newest column too: a project opened for the first time on this build is the ordinary
+    // case, not the exception, and a migration list read in the wrong order lands exactly here.
+    expect(upgraded.find('asset_old')?.posterPath).toBe('.index/posters/asset_old.jpg')
   })
 
   it('keeps a channel and its reading direction through a round trip', () => {

@@ -1,8 +1,11 @@
-import type { WebGLRenderer } from 'three'
+import { Mesh, type Material, type Texture, type WebGLRenderer } from 'three'
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js'
+import { isRecord } from '@shared/guards'
+import { reportFailure } from '@/services/diagnostics'
 import type { ModelSource } from './model-cache'
+import { texturesOf } from './scene-stats'
 
 /**
  * Where the decoders are served from. A folder, not a file: each loader appends the names it
@@ -63,6 +66,12 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
       // itself keeps them, and the cache hands one object back. Dropping them here is what left
       // every model Scenario animates standing still, with nothing said.
       gltf.scene.animations = gltf.animations
+
+      const { missing, declared } = unresolvedTextures(gltf)
+      // A count, not a sentence: the scope carries the translated line the user reads, and this
+      // detail rides beside it exactly as an SDK message would.
+      if (missing > 0) reportFailure('scene.texture', url, new Error(`${missing}/${declared}`))
+
       return gltf.scene
     },
     // `KTX2Loader` counts live instances: an undisposed one makes the next engine warn about itself.
@@ -70,5 +79,63 @@ export function createGltfSource(rendererOf: () => WebGLRenderer | null): GltfSo
       draco.dispose()
       ktx2.dispose()
     },
+  }
+}
+
+/**
+ * The textures the file asks the scene's materials to wear, against the ones they got.
+ *
+ * `GLTFLoader` resolves a texture it could not read to `null` and carries on. The model then
+ * lands whole, white, and SILENT — which is exactly how a window policy refusing the loader its
+ * own blob went unnoticed until the pixels were measured. Counted so the studio can say it.
+ *
+ * READ, never asked for: `parser.getDependency('texture', i)` LOADS an index the parse never
+ * wanted — a texture no material references would be decoded here, on the UI thread, for a
+ * picture nothing will show and nothing will dispose. Both sides are compared as they stand.
+ *
+ * Only the materials that reached the scene are judged, and only the slots this build can read:
+ * an unknown extension is a texture left uncounted, never a failure invented.
+ */
+function unresolvedTextures(gltf: GLTF): { missing: number; declared: number } {
+  const { parser } = gltf
+  const wanted = new Set<number>()
+  const attached = new Set<Texture>()
+
+  gltf.scene.traverse(object => {
+    if (!(object instanceof Mesh)) return
+
+    const materials: Material[] = Array.isArray(object.material)
+      ? object.material
+      : [object.material]
+
+    for (const material of materials) {
+      const index = parser.associations.get(material)?.materials
+      if (index !== undefined) collectWantedTextures(materialDef(parser.json, index), wanted)
+      for (const texture of texturesOf(material)) attached.add(texture)
+    }
+  })
+
+  return { missing: Math.max(0, wanted.size - attached.size), declared: wanted.size }
+}
+
+/** `parser.json` is typed `any` by three, so it is read as data and never trusted for a shape. */
+function materialDef(json: unknown, index: number): unknown {
+  const materials = isRecord(json) ? json.materials : undefined
+  return Array.isArray(materials) ? materials[index] : undefined
+}
+
+/**
+ * Every texture slot a material definition fills, extensions included: glTF spells them all
+ * `…Texture: { index }`, whichever specification added them — so walking for that shape covers
+ * what a hand-written list of five names would have missed.
+ */
+function collectWantedTextures(def: unknown, into: Set<number>): void {
+  if (!isRecord(def)) return
+
+  for (const [key, value] of Object.entries(def)) {
+    if (!isRecord(value)) continue
+
+    if (key.endsWith('Texture') && typeof value.index === 'number') into.add(value.index)
+    else collectWantedTextures(value, into)
   }
 }

@@ -6,7 +6,13 @@ import { availableParallelism } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { setTimeout as sleepFor } from 'node:timers/promises'
 import type { AccountSummary } from '@shared/domain/account'
-import { ASSET_HOST, ASSET_ID_PREFIX, type Asset, type AssetType } from '@shared/domain/asset'
+import {
+  ASSET_HOST,
+  ASSET_ID_PREFIX,
+  POSTER_HOST,
+  type Asset,
+  type AssetType,
+} from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
 import {
@@ -25,7 +31,13 @@ import { isDevelopment } from '@main/environment'
 import { createUpdates, type Updates } from '@main/updater'
 import { createAssetCollector } from './assets/collector'
 import { createCaptioner, type AutoCaption, type DescribeAssets } from './assets/auto-caption'
-import { assetFilePath, ownFileOf, serveAssets, servedFileOf } from './assets/protocol'
+import {
+  assetFilePath,
+  ownFileOf,
+  posterFileOf,
+  serveAssets,
+  servedFileOf,
+} from './assets/protocol'
 import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
@@ -746,6 +758,7 @@ export function createServices(settings: SettingsStore): Services {
           parentId: asset.metadata.parentId,
           ownerId: asset.ownerId,
           updatedAt: asset.updatedAt,
+          ...(asset.thumbnail?.url ? { thumbnailUrl: asset.thumbnail.url } : {}),
           ...(asset.metadata.outputIndex === undefined
             ? {}
             : { outputIndex: asset.metadata.outputIndex }),
@@ -853,12 +866,17 @@ export function createServices(settings: SettingsStore): Services {
    */
   const removeAssetFile = async (asset: Asset): Promise<void> => {
     const current = project.current()
-    if (!current || !asset.path) return
+    if (!current) return
 
     // Through the same containment the scheme uses: a stored path is user-editable territory,
     // and `rm` on one that escaped the project would delete a file nobody asked about.
-    const file = assetFilePath(current.path, asset.path)
-    if (file) await rm(file, { force: true })
+    //
+    // The still goes with it, and it is removed even for a LINKED rush whose own file stays put:
+    // it is ours, written into the project, and nothing would ever come back for it.
+    for (const stored of [asset.path, asset.posterPath]) {
+      const file = stored ? assetFilePath(current.path, stored) : null
+      if (file) await rm(file, { force: true })
+    }
   }
 
   const accountOn = (scenario: Scenario): JobAccount => ({
@@ -930,6 +948,13 @@ export function createServices(settings: SettingsStore): Services {
 
       const asset = await project.catalog().find(assetId)
       return asset ? servedFileOf(current.path, asset) : null
+    },
+    [POSTER_HOST]: async assetId => {
+      const current = project.current()
+      if (!current) return null
+
+      const asset = await project.catalog().find(assetId)
+      return asset ? posterFileOf(current.path, asset) : null
     },
     [FAVORITE_HOST]: favoriteId => Promise.resolve(favorites.thumbnailPath(favoriteId)),
   })

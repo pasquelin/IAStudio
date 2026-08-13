@@ -197,6 +197,8 @@ export function withoutRecentProject(
 export const PROXIES_FOLDER = '.index/proxies'
 export const PEAKS_FOLDER = '.index/peaks'
 export const FILMSTRIPS_FOLDER = '.index/filmstrips'
+/** Stills for the assets that are not pictures — a mesh's, brought down with its bytes. */
+export const POSTERS_FOLDER = '.index/posters'
 
 export const PROJECT_FOLDERS: readonly string[] = [
   'assets',
@@ -206,4 +208,5 @@ export const PROJECT_FOLDERS: readonly string[] = [
   PROXIES_FOLDER,
   PEAKS_FOLDER,
   FILMSTRIPS_FOLDER,
+  POSTERS_FOLDER,
 ]

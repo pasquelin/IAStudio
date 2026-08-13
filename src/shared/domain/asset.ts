@@ -200,6 +200,15 @@ export type Asset = {
   proxyPath?: string
   /** Precomputed waveform, relative to the project folder. */
   peaksPath?: string
+  /**
+   * A still standing for an asset that is not itself a picture — a mesh above all, whose file no
+   * browser can decode. Relative to the project folder, and rebuildable: it is the library's own
+   * thumbnail, brought down beside the bytes rather than kept only in a listing that expires.
+   *
+   * Without it a downloaded model is an icon in a grid it was a picture in one gesture earlier,
+   * which is exactly how "the thumbnail disappears when I download" was reported.
+   */
+  posterPath?: string
   /** Absent for an imported file, and for a generated one the catalogue predates. */
   generation?: AssetGeneration
 }
@@ -430,6 +439,13 @@ export const ASSET_SCHEME = 'scenario'
 export const ASSET_HOST = 'asset'
 
 /**
+ * The host that serves an asset's still rather than the asset itself. A host of its own, and not
+ * a parameter on `asset`: one id names one file per host, and a mesh's `.glb` and its `.jpg` are
+ * two files — the resolver would otherwise have to guess which of them a caller meant.
+ */
+export const POSTER_HOST = 'poster'
+
+/**
  * `scenario://<host>/<id>`. One scheme, one host per kind of thing it serves — the favourites
  * keep their stills outside any project, so they answer on a host of their own.
  */
@@ -469,9 +485,10 @@ export function assetUrl(assetId: string): string {
 }
 
 /**
- * The still that stands for an asset — in a browser cell, on a timeline clip. Only pictures
- * have one today: a video's poster frame is produced at ingest, which is still to come, and
- * decoding one here would open a hardware decoder per visible clip.
+ * The still that stands for an asset — in a browser cell, on a timeline clip. A picture answers
+ * for itself; anything else answers with the still recorded beside it, which today means a mesh
+ * brought down from the library. A video has neither: its poster frame is produced at ingest,
+ * which is still to come, and decoding one here would open a hardware decoder per visible clip.
  *
  * Stamped with `localChangedAt`, and that is what makes a REWRITTEN asset repaint: an id alone
  * is a stable URL, so a browser that already decoded it keeps the bitmap it holds and a ⌘S that
@@ -483,8 +500,17 @@ export function assetUrl(assetId: string): string {
  * three, and `.map(assetUrl)` would then quietly pass the index as the version.
  */
 export function posterUrl(asset: Asset): string | null {
-  if (!isLocalPicture(asset)) return null
-  const url = assetUrl(asset.id)
+  if (isLocalPicture(asset)) return stamped(assetUrl(asset.id), asset)
+  // `local` said out loud rather than left to the fact that nothing writes a poster path on a
+  // cloud row: the still is a file inside the open project, so a row from anywhere else would
+  // send the window after a picture no resolver can answer for — a 404 where an icon belongs.
+  if (asset.posterPath && asset.location === 'local') {
+    return stamped(hostedUrl(POSTER_HOST, asset.id), asset)
+  }
+  return null
+}
+
+function stamped(url: string, asset: Asset): string {
   return asset.localChangedAt ? `${url}?v=${encodeURIComponent(asset.localChangedAt)}` : url
 }
 

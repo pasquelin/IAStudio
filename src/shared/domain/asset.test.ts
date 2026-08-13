@@ -3,12 +3,15 @@ import {
   assetBadgeOf,
   assetIdFromUrl,
   assetUrl,
+  hostedParts,
+  hostedUrl,
   isAssetType,
   isSyncStatus,
   isTimeless,
   mediaDuration,
   posterUrl,
   withoutSourcePath,
+  POSTER_HOST,
   type Asset,
 } from './asset'
 
@@ -74,6 +77,52 @@ describe('which assets have a picture to show', () => {
 
   it('offers none for an asset that only exists in the cloud', () => {
     expect(posterUrl(asset({ type: 'image', location: 'cloud' }))).toBeNull()
+  })
+
+  /**
+   * A mesh's own file is a `.glb`, which no browser decodes — and answering with it is what put
+   * an icon where the library had just shown a picture. The still recorded beside it answers on
+   * a host of its own, so one id can name two files.
+   */
+  it('offers the still recorded beside a mesh, on the poster host', () => {
+    const mesh = asset({ type: 'mesh', posterPath: '.index/posters/asset-1.jpg' })
+
+    expect(posterUrl(mesh)).toBe(hostedUrl(POSTER_HOST, 'asset-1'))
+  })
+
+  it('stamps that one too, so a still written again repaints', () => {
+    const mesh = asset({
+      type: 'mesh',
+      posterPath: '.index/posters/asset-1.jpg',
+      localChangedAt: '2026-08-12T09:00:00.000Z',
+    })
+
+    expect(posterUrl(mesh)).toContain('?v=')
+    expect(hostedParts(posterUrl(mesh) ?? '')).toMatchObject({ host: POSTER_HOST, id: 'asset-1' })
+  })
+
+  it('offers none for a mesh nothing wrote a still for', () => {
+    expect(posterUrl(asset({ type: 'mesh' }))).toBeNull()
+  })
+
+  // The still is a file inside the OPEN project. A row from anywhere else would send the window
+  // after a picture no resolver can answer for — a 404 where an icon belongs.
+  it('offers none for a row whose still is not in this project', () => {
+    const elsewhere = asset({
+      type: 'mesh',
+      location: 'cloud',
+      posterPath: '.index/posters/asset-1.jpg',
+    })
+
+    expect(posterUrl(elsewhere)).toBeNull()
+  })
+
+  // The asset host serves the file the asset owns. A poster URL answered from there would hand a
+  // `<img>` a `.glb`, which is the very defect this exists to fix.
+  it('never answers for a mesh on the asset host', () => {
+    const mesh = asset({ type: 'mesh', posterPath: '.index/posters/asset-1.jpg' })
+
+    expect(posterUrl(mesh)).not.toBe(assetUrl('asset-1'))
   })
 })
 

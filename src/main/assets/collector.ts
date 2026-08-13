@@ -18,6 +18,8 @@ export type RemoteAsset = {
   ownerId?: string
   updatedAt?: string
   outputIndex?: number
+  /** The still the API renders for what cannot be shown directly — a mesh, a video, a sound. */
+  thumbnailUrl?: string
   /** Read off the API asset: the job carries neither the model nor the prompt at its top level. */
   generation?: AssetGeneration
 }
@@ -79,6 +81,9 @@ export function createAssetCollector({
         // One job, one group. The API has no notion of a set, but the seven channels of a PBR
         // pack are exactly the outputs of one conversion — and a lone output is not a group.
         ...(remoteAssetIds.length > 1 ? { groupId: job.id, outputIndex: index } : {}),
+        // The same still the library shows, kept for what cannot stand in for itself — a mesh
+        // generated here is a tile in the browser a second later, and its own file is not a picture.
+        ...(remote.thumbnailUrl ? { thumbnailUrl: remote.thumbnailUrl } : {}),
         ...(remote.ownerId ? { remoteOwnerId: remote.ownerId } : {}),
         ...(remote.updatedAt ? { remoteUpdatedAt: remote.updatedAt } : {}),
         ...(remote.generation ? { generation: remote.generation } : {}),

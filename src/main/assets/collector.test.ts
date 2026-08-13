@@ -97,6 +97,38 @@ describe('asset collector', () => {
     expect(imported[0]).toMatchObject({ remoteAssetId: 'remote_1', type: 'mesh' })
   })
 
+  /**
+   * A mesh generated here is a tile in the browser a second later, and its `.glb` is not a
+   * picture. The API renders a still for exactly that, and dropping it leaves the shelf showing
+   * an icon for every model the studio makes.
+   */
+  it('carries the still the API rendered for what cannot show itself', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () =>
+        Promise.resolve({ ...remote('3d'), thumbnailUrl: 'https://cdn.example/thumbnails/x' }),
+      backend,
+      newId: () => 'asset_1',
+      heldFor: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]?.thumbnailUrl).toBe('https://cdn.example/thumbnails/x')
+  })
+
+  it('carries none when the API rendered none', async () => {
+    const { backend, imported } = backendSpy()
+    const collect = createAssetCollector({
+      retrieve: () => Promise.resolve(remote('3d')),
+      backend,
+      newId: () => 'asset_1',
+      heldFor: async () => null,
+    })
+
+    await collect(JOB, ['remote_1'])
+    expect(imported[0]?.thumbnailUrl).toBeUndefined()
+  })
+
   // One converter job answers with several pictures. Filed as plain images, the material
   // would be lost: the channel a picture carries is what makes it part of one.
   it('files a PBR channel as a texture, whatever its kind says', async () => {
