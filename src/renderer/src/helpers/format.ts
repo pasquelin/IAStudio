@@ -75,6 +75,19 @@ export function formatPercent(ratio: number, language: string, fractionDigits: n
 const MOMENTS = new Map<string, Intl.DateTimeFormat>()
 
 /**
+ * Which clock a stamp is read against — and it is asked for rather than defaulted.
+ *
+ * `local` is what a person did: an asset made at eight in the evening reads as eight in the
+ * evening. `utc` is what an account was billed: the API dates its points there, so a screen that
+ * totals them by day has to say its hours in the same frame or its own two halves disagree.
+ *
+ * There is no default on purpose. Left out, `Intl` takes the zone the machine happens to run in —
+ * right for the developer who wrote the line and quietly wrong for everyone else, which is how the
+ * usage window came to count a day in one frame and print its hours in another.
+ */
+export type Zone = 'local' | 'utc'
+
+/**
  * A point in time, read the way the reader reads one — date and clock, no seconds.
  *
  * It moved here from the usage window, which was the only surface to have decided what a
@@ -84,14 +97,23 @@ const MOMENTS = new Map<string, Intl.DateTimeFormat>()
  * A date the API sent unparseable is handed back untouched: a row missing its stamp still names
  * what happened, which `Invalid Date` in the reader's language does not.
  */
-export function formatMoment(time: string, language: string): string {
+export function formatMoment(time: string, language: string, zone: Zone): string {
   const parsed = new Date(time)
   if (Number.isNaN(parsed.getTime())) return time
 
+  // The zone belongs in the key as much as the language: two zones are two formatters for one
+  // language, and sharing an entry would print whichever was asked for first.
   return kept(
     MOMENTS,
-    language,
-    () => new Intl.DateTimeFormat(language, { dateStyle: 'short', timeStyle: 'short' }),
+    `${zone}:${language}`,
+    () =>
+      // `undefined` reads exactly as the absent key — measured, same output and same resolved
+      // zone — so `local` still means whatever clock the reader's machine keeps.
+      new Intl.DateTimeFormat(language, {
+        dateStyle: 'short',
+        timeStyle: 'short',
+        timeZone: zone === 'utc' ? 'UTC' : undefined,
+      }),
   ).format(parsed)
 }
 

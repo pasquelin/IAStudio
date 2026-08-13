@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { aggregate, dayOf, eventsOf, periodBounds, type AccountUsage } from './usage-aggregate'
+import { dayOf } from '@shared/domain/usage'
+import { aggregate, eventsOf, periodBounds, type AccountUsage } from './usage-aggregate'
 
 const BOUNDS = { from: '2026-07-09', to: '2026-08-08' }
 

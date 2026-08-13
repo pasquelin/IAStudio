@@ -60,7 +60,8 @@ export function AssetInspector({ asset }: { asset: Asset }) {
         )}
         <PropertyRow label={t('inspector.created')}>
           {/* The studio's language, not the machine's — the two differ. */}
-          {formatMoment(asset.createdAt, i18n.language)}
+          {/* Local: this says when a person made the thing, not what an account was billed. */}
+          {formatMoment(asset.createdAt, i18n.language, 'local')}
         </PropertyRow>
       </PropertyGroup>
 

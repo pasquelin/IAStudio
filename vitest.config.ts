@@ -19,6 +19,31 @@ const alias = {
 const TEST_TIMEOUT = 15_000
 
 /**
+ * The zone every suite reads its clocks in, so a date test answers the same everywhere.
+ *
+ * Left to the machine, a test about time passes for whoever wrote it and fails for the next reader.
+ * Measured before fixing it: the whole suite is green under `UTC` and under `Asia/Tokyo` alike.
+ *
+ * **What depends on this pin is any case asserting a LOCAL reading**, not a number of them: this
+ * paragraph said "exactly one case" and a review counted three, across two files. A count drifts
+ * the moment another case leans on the pin, and it sends the next reader to the wrong file.
+ *
+ * Tokyo rather than UTC, and rather than Paris. **Not UTC**: a zone at zero offset makes every
+ * assertion about zones agree by accident, which is the defect the case above exists to catch.
+ * **Not Paris**: it observes daylight saving, so a stamp near midnight changes day twice a year
+ * and a suite green in August goes red in November. `Asia/Tokyo` is UTC+9 all year.
+ *
+ * **Set on this process, NOT through a project's `env` block** — measured, and the difference is
+ * the whole reason this paragraph exists. `env: { TZ }` reaches the worker after Node has already
+ * resolved its zone, so the case above still read the machine's and still failed under `TZ=UTC`.
+ * Assigning it here runs while the config is evaluated, before any worker is spawned, so every
+ * pool inherits it.
+ */
+const TEST_TZ = 'Asia/Tokyo'
+
+process.env.TZ = TEST_TZ
+
+/**
  * Worker threads, where Vitest defaults to child processes since its version 2. What it buys is the
  * start of each worker: a process costs more than a thread, and this suite pays that once per
  * worker either way.

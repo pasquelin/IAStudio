@@ -29,7 +29,10 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
       <UsageTable
         head={
           <>
-            <HeadCell label={t('usage.columns.time')} />
+            {/* The frame these hours are read in, ON the column: the footnote saying so renders
+                after the table, and this list pages — so a reader scrolling rows whose hours
+                disagree with their own clock had the explanation off screen. */}
+            <HeadCell label={t('usage.columns.time')} hint={t('usage.countedInUtc')} />
             <HeadCell label={t('usage.columns.action')} />
             <HeadCell label={t('usage.columns.model')} />
             <HeadCell label={t('usage.columns.account')} />
@@ -39,7 +42,9 @@ export function UsageJournal({ period }: { period: UsagePeriod }) {
       >
         {page.events.map((event, index) => (
           <Row key={`${event.time}-${event.jobId ?? index}`}>
-            <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale)}</td>
+            {/* UTC, like the day the chart next door counts it under: a stamp read in the local
+                zone puts an event two hours past midnight on the bar of the day before. */}
+            <td className="py-1.5 whitespace-nowrap">{formatMoment(event.time, locale, 'utc')}</td>
             {/* Scenario adds actions without notice: one nobody named shows as the API sent it. */}
             <td className="py-1.5">
               {t(`usage.actionNames.${event.action}`, { defaultValue: event.action })}
