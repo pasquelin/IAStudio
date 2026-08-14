@@ -8,7 +8,8 @@ import { AssetDropTarget } from './AssetDropTarget'
 import { Thumbnail } from './Thumbnail'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
-import { FIELD_LABEL, FIELD_ROW, FIELD_THUMBNAIL, FOCUS_RING } from './styles'
+import { Row } from './Row'
+import { FIELD_THUMBNAIL, FOCUS_RING } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -77,82 +78,91 @@ export function TextureField({
 
   return (
     <DroppableSlot accepts={accepts} onDrop={onChange}>
-      <span title={label} className={FIELD_LABEL}>
-        {label}
-      </span>
-
-      {/* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives the
-          picture it points at, and an id whose asset has left the project draws the empty label
-          beside a button offering to open something that is no longer there. A focus stop that
-          leads nowhere is also one more Tab to cross. */}
-      {open && chosen ? (
-        <button
-          type="button"
-          {...activation(open.run)}
-          {...TIP_LEFT(open.label, false, open.hint)}
-          className={cn(
-            'shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
-            FOCUS_RING,
-          )}
-        >
-          {picture}
-        </button>
-      ) : (
-        picture
-      )}
-
-      <span className="text-muted min-w-0 flex-1 truncate">{chosen?.name ?? emptyLabel}</span>
-
-      <MenuButton
-        icon={mdiTextureBox}
-        label={chooseLabel}
-        tooltip={TIP_LEFT}
-        variant="header"
-        opensOnClick
-        disabled={options.length === 0}
-        // "None" is one of the choices, not a separate button: choosing no texture is choosing.
-        rowCount={options.length + 1}
-        rows={close => [
-          <MenuRow
-            key="none"
-            label={emptyLabel}
-            icon={mdiCheckboxBlankOutline}
-            checked={value === null}
-            tick="one-of"
-            tip={HINT_RIGHT(emptyHint)}
-            onSelect={() => {
-              onChange(null)
-              close()
-            }}
-          />,
-          ...options.map(option => (
-            <MenuRow
-              key={option.id}
-              label={option.name}
+      <Row
+        // The picture first, then what the slot holds over the slot's own name — the shape every
+        // list of the studio draws, and the reason this stopped drawing its own: a label in the
+        // fixed column pushed the thumbnails of one panel out of line with the thumbnails of the
+        // next, and a reader looking for pictures found them in two different places.
+        media={
+          /* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives
+             the picture it points at, and an id whose asset has left the project drew the empty
+             label beside a button offering to open something no longer there. A focus stop that
+             leads nowhere is also one more Tab to cross. */
+          open && chosen ? (
+            <button
+              type="button"
+              {...activation(open.run)}
+              {...TIP_LEFT(open.label, false, open.hint)}
+              className={cn(
+                'shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
+                FOCUS_RING,
+              )}
+            >
+              {picture}
+            </button>
+          ) : (
+            picture
+          )
+        }
+        title={chosen?.name ?? emptyLabel}
+        subtitle={label}
+        tip={TIP_LEFT}
+        actions={
+          <>
+            <MenuButton
               icon={mdiTextureBox}
-              checked={option.id === value}
-              tick="one-of"
-              tip={HINT_RIGHT(optionHint)}
-              onSelect={() => {
-                onChange(option.id)
-                close()
-              }}
+              label={chooseLabel}
+              tooltip={TIP_LEFT}
+              variant="header"
+              opensOnClick
+              disabled={options.length === 0}
+              // "None" is one of the choices, not a separate button: choosing no texture is
+              // choosing.
+              rowCount={options.length + 1}
+              rows={close => [
+                <MenuRow
+                  key="none"
+                  label={emptyLabel}
+                  icon={mdiCheckboxBlankOutline}
+                  checked={value === null}
+                  tick="one-of"
+                  tip={HINT_RIGHT(emptyHint)}
+                  onSelect={() => {
+                    onChange(null)
+                    close()
+                  }}
+                />,
+                ...options.map(option => (
+                  <MenuRow
+                    key={option.id}
+                    label={option.name}
+                    icon={mdiTextureBox}
+                    checked={option.id === value}
+                    tick="one-of"
+                    tip={HINT_RIGHT(optionHint)}
+                    onSelect={() => {
+                      onChange(option.id)
+                      close()
+                    }}
+                  />
+                )),
+              ]}
             />
-          )),
-        ]}
-      />
 
-      {/* Only when there is something to clear: a dead cross on each of the five empty slots of
-          a fresh material is five buttons that do nothing. */}
-      {value !== null && (
-        <ToolButton
-          icon={mdiClose}
-          label={clearLabel}
-          tooltip={TIP_LEFT}
-          variant="header"
-          onClick={() => onChange(null)}
-        />
-      )}
+            {/* Only when there is something to clear: a dead cross on each of the five empty
+                slots of a fresh material is five buttons that do nothing. */}
+            {value !== null && (
+              <ToolButton
+                icon={mdiClose}
+                label={clearLabel}
+                tooltip={TIP_LEFT}
+                variant="header"
+                onClick={() => onChange(null)}
+              />
+            )}
+          </>
+        }
+      />
     </DroppableSlot>
   )
 }
@@ -177,14 +187,18 @@ function DroppableSlot({
   onDrop: (assetId: string) => void
   children: ReactNode
 }) {
-  if (!accepts) return <div className={FIELD_ROW}>{children}</div>
+  // The height only: `Row` draws the flex line itself, and a second one around it would centre a
+  // full-height child inside a box it is already the size of.
+  const shape = 'min-h-(--sc-control) min-w-0'
+
+  if (!accepts) return <div className={shape}>{children}</div>
 
   return (
     <AssetDropTarget
       accepts={accepts}
       exclusive
       onDrop={asset => onDrop(asset.id)}
-      className={FIELD_ROW}
+      className={shape}
     >
       {children}
     </AssetDropTarget>

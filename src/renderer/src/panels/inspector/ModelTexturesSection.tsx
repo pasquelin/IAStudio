@@ -46,10 +46,10 @@ function ModelTextureList({ assetId }: { assetId: string }) {
   if (textures.length === 0) return <QuietNote>{t('inspector.noModelTexture')}</QuietNote>
 
   return (
-    // No gap, as `Tree` draws the outliner right beside this panel: the studio spaces a row's
-    // CONTENTS by two and stacks the rows themselves flush, which is what `spacing.test.ts`
-    // holds. `Collection` reserves four pixels, but through its virtualizer rather than a class.
-    <div className="flex flex-col">
+    // Two, like every other stack of this panel — `PROPERTY_BODY` spaces the sections' children
+    // by two and these rows are one of them. Flush, they read as one block rather than as a list;
+    // by one, `spacing.test.ts` refuses them, and it is right to: the studio has one gap.
+    <div className="flex flex-col gap-2">
       {textures.map(texture => (
         <ModelTextureRow key={texture.id} texture={texture} />
       ))}
@@ -70,9 +70,9 @@ function ModelTextureList({ assetId }: { assetId: string }) {
  */
 const ModelTextureRow = memo(function ModelTextureRow({ texture }: { texture: Asset }) {
   const { t } = useTranslation()
-  // The channel over the file name: seven pictures called « Robot — … » differ by that word alone.
-  // A slot the studio has no channel for keeps the name the extraction gave it.
-  const channel = texture.map ? t(`texture.channel.${texture.map}`) : texture.name
+  // Nothing under a picture the studio has no channel for: the extraction named it, and repeating
+  // that name as its own kind would say something the file never said.
+  const channel = texture.map ? t(`texture.channel.${texture.map}`) : undefined
 
   return (
     <div className={cn('relative', rowSkin(false))}>
@@ -82,10 +82,11 @@ const ModelTextureRow = memo(function ModelTextureRow({ texture }: { texture: As
         media={
           <Thumbnail url={posterUrl(texture) ?? assetUrl(texture.id)} className={FIELD_THUMBNAIL} />
         }
-        // The channel alone, with no file name under it: the seven pictures of one model are all
-        // called « Robot — … » and the word already on the line is the only one that tells them
-        // apart. A subtitle here would be the same string seven times.
-        title={channel}
+        // The name over the channel, which is the shape every row of the studio draws: what the
+        // thing IS on the first line, what KIND of thing on the second. One list reading the
+        // other way round was one list to learn twice.
+        title={texture.name}
+        subtitle={channel}
       />
 
       {/* Laid OVER the row rather than around it, exactly as `ChannelTile` does and for the same
@@ -95,7 +96,7 @@ const ModelTextureRow = memo(function ModelTextureRow({ texture }: { texture: As
       <button
         type="button"
         {...activation(() => void openAsset(texture))}
-        {...TIP_LEFT(t('home.open', { name: channel }), false, t('inspector.openTextureHint'))}
+        {...TIP_LEFT(t('home.open', { name: texture.name }), false, t('inspector.openTextureHint'))}
         className={cn(
           'absolute inset-0 cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
           FOCUS_RING,
