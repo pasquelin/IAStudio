@@ -141,7 +141,7 @@ extract of the last few lines.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  TITLE BAR — the seven workspaces                            │
+│  TITLE BAR — home and the six workspaces                     │
 ├──┬────────────────────────────────────────────────────────┬──┤
 │  │                    top zone                            │  │
 │ R├────────────────────────────────────────────────────────┤ R│
@@ -384,8 +384,8 @@ go.
 A tab whose work is not on disk carries **a dot** (`•`). It goes at save time (`⌘S` / `Ctrl+S`)
 and comes back on the next change. Undo back to the exact point where you saved, and it goes too.
 
-> **All seven document kinds save** — images, 3D scenes, materials, sequences, edited sounds,
-> skies and graphs. What does not survive one save to the next is the undo history. See
+> **All six document kinds save** — layered images, 3D scenes, materials, sequences, edited sounds
+> and skies. What does not survive one save to the next is the undo history. See
 > [What does not exist yet](18-limits.md).
 
 ### Closing a tab

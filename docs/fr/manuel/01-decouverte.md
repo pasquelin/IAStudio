@@ -20,7 +20,7 @@ phrase et où l’on télécharge une image, c’est **tout ce qui vient après*
   restent attachés à chaque fichier, et un bouton les rejoue ;
 - **rien ne repart** : vos fichiers restent chez vous.
 
-> **Une chose à savoir tout de suite :** les sept types de documents s’enregistrent dans le
+> **Une chose à savoir tout de suite :** les six types de documents s’enregistrent dans le
 > dossier du projet et se rouvrent tels quels, et fermer un onglet qui a du travail non
 > enregistré pose la question avant de le perdre. Ce qui ne revient jamais, c’est l’historique
 > d’annulation. La liste complète et honnête de ce qui manque encore est le chapitre

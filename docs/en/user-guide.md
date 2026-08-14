@@ -102,7 +102,7 @@ When the job reaches "Done", the image arrives in the **Assets** panel — the p
 and on your disk, in the `assets/img/` folder. Click it: the **Inspector**, on the right, shows
 its model, its prompt and its seed, and can open the folder holding it.
 
-That is all. The rest of the manual details each of these seven steps, and the six other
+That is all. The rest of the manual details each of these seven steps, and the five other
 workspaces.
 
 ---

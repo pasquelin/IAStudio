@@ -105,7 +105,7 @@ Quand la tâche passe à « Terminée », l’image arrive dans le panneau **Ass
 projet — et sur votre disque, dans le dossier `assets/img/`. Cliquez dessus : l’**Inspecteur**,
 à droite, montre son modèle, son prompt et sa graine, et sait ouvrir le dossier qui la contient.
 
-C’est tout. Le reste du manuel détaille chacune de ces sept étapes, et les six autres espaces.
+C’est tout. Le reste du manuel détaille chacune de ces sept étapes, et les cinq autres espaces.
 
 ---
 

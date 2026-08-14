@@ -146,7 +146,7 @@ extrait des dernières lignes.
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  BARRE DE TITRE — les sept espaces de travail                │
+│  BARRE DE TITRE — l'accueil et les six espaces de travail    │
 ├──┬────────────────────────────────────────────────────────┬──┤
 │  │                    zone haute                          │  │
 │ R├────────────────────────────────────────────────────────┤ R│
@@ -396,8 +396,8 @@ Un onglet dont le travail n’est pas écrit sur le disque porte **un point** (`
 l’enregistrement (`⌘S` / `Ctrl+S`) et revient à la modification suivante. Si vous annulez jusqu’au
 point exact où vous aviez enregistré, il disparaît aussi.
 
-> **Les sept types de documents savent s’enregistrer** — images, scènes 3D, textures, séquences,
-> sons édités, ciels et graphes. Ce qui ne revient pas d’un enregistrement à l’autre, c’est
+> **Les six types de documents savent s’enregistrer** — images en calques, scènes 3D, matières,
+> séquences, sons édités et ciels. Ce qui ne revient pas d’un enregistrement à l’autre, c’est
 > l’historique d’annulation. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ### Fermer un onglet

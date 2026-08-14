@@ -469,9 +469,9 @@ l’espace, quand `shared/` n’a aucune dépendance runtime. D’où une couche
 - le générateur n’est offert que là où un modèle est choisi ou préféré ;
 - une moitié que personne n’a choisie affiche le **premier panneau que l’espace y déclare**. Elle
   vaut `null` dans le store — clé absente, la moitié est fermée ; un identifiant, c’est un choix de
-  l’utilisateur. La disposition est retenue une fois pour les sept espaces alors que ce premier
+  l’utilisateur. La disposition est retenue une fois pour les six espaces alors que ce premier
   panneau diffère dans chacun : y inscrire un identifiant imposerait la réponse d’un espace aux
-  six autres. `shownTool` distingue les trois cas, et la migration vers la version 8 repose au
+  cinq autres. `shownTool` distingue les trois cas, et la migration vers la version 8 repose au
   défaut toute disposition antérieure, moitié par moitié.
 
 ---
