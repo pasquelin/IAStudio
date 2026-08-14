@@ -844,15 +844,11 @@ Three consequences, one of them to be accepted:
   `normalizeModelText` absorbs what costs nothing to absorb — case, whitespace, typographic
   apostrophes and dashes, trailing punctuation — and the fallback is **the English sentence
   itself, never a key**. The worst case is the screen as it was, not a broken one;
-- **seven words stay in English, and the rule guarding them has been remade twice** — `sampler`,
-  `scheduler`, `LoRA`, `checkpoint`, `prompt`, `clip skip`, `denoising strength`. The original
-  argument was "it is the trade's term, it reads that way in every other tool": **general, and
-  impossible to check**, and it let `seed` through — which `inspector.seed` and `skybox.seed` had
-  called "Graine" for a long time — then `guidance scale` and `negative prompt`, which the manual's
-  glossary named. Each time, the form was the **only surface** refusing the word the rest of the
-  studio uses. So the rule became checkable: **a word stays in English only where no surface and
-  no glossary entry gives it a French name.** A test holds the list, so translating one is a
-  decision taken against a red test;
+- **seven words stay in English** — `sampler`, `scheduler`, `LoRA`, `checkpoint`, `prompt`,
+  `clip skip`, `denoising strength` — under a **checkable** rule: a word stays in English only
+  where no surface and no glossary entry gives it a French name. "It is the trade's term" is not
+  checkable, and let `seed` through while two panels already said "Graine". A test holds the list,
+  so translating one is a decision taken against a red test;
 - **translation applies at render, not when descriptors are built.** Switching language restates
   the open form instead of waiting for the model to be reloaded. Invariant 5 is intact: nothing is
   written by hand for a given model.

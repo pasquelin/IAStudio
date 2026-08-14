@@ -880,16 +880,11 @@ Trois conséquences, dont une à accepter :
   absorbe ce qui ne coûte rien à absorber — casse, espaces, apostrophe et tiret typographiques,
   ponctuation finale — et le repli est **la phrase anglaise elle-même, jamais une clé**. Le pire
   cas est donc l’écran d’avant, pas un écran cassé ;
-- **sept mots restent en anglais, et la règle qui les garde a été refaite deux fois** —
-  `sampler`, `scheduler`, `LoRA`, `checkpoint`, `prompt`, `clip skip`, `denoising strength`.
-  L’argument d’origine était « c’est le terme du métier, on le lit ainsi dans tous les autres
-  outils » : il est **général et invérifiable**, et il a laissé passer `seed`, que
-  `inspector.seed` et `skybox.seed` nommaient « Graine » depuis longtemps, puis `guidance scale`
-  et `negative prompt`, que le glossaire du manuel nommait. Le formulaire était à chaque fois la
-  **seule surface** à refuser le mot que le reste du studio emploie. La règle est donc devenue
-  vérifiable : **on ne garde en anglais que ce qu’aucune surface ni le glossaire ne nomme en
-  français.** Un test tient la liste, pour qu’en traduire un soit une décision prise contre un
-  test rouge ;
+- **sept mots restent en anglais** — `sampler`, `scheduler`, `LoRA`, `checkpoint`, `prompt`,
+  `clip skip`, `denoising strength` — sous une règle **vérifiable** : on ne garde en anglais que
+  ce qu’aucune surface ni le glossaire ne nomme en français. « C’est le terme du métier » ne l’est
+  pas, et laissait passer `seed` quand deux panneaux disaient déjà « Graine ». Un test tient la
+  liste, pour qu’en traduire un soit une décision prise contre un test rouge ;
 - **la traduction s’applique au rendu, pas à la construction des descripteurs.** Changer de
   langue redit le formulaire ouvert au lieu d’attendre que le modèle soit rechargé. L’invariant 5
   est intact : rien n’est écrit à la main pour un modèle donné.

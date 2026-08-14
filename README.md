@@ -17,7 +17,7 @@ Generate and edit images, videos, 3D models, audio, textures and skyboxes — in
 </div>
 
 <div align="center">
-  <img src="docs/images/studio-3d.png" alt="Scenario Studio in the 3D workspace: models and apps on the left, scene viewport in the centre, meshes and inspector on the right, asset shelf at the bottom" width="900">
+  <img src="docs/images/studio-3d.png" alt="Scenario Studio in the 3D workspace: the model catalogue and the project explorer on the left, the scene viewport in the centre, the asset shelf and the inspector on the right, the animation timeline across the bottom" width="900">
 </div>
 
 ---
