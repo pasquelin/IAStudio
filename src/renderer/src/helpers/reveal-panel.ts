@@ -49,8 +49,8 @@ export function revealAssets(): void {
  *
  * Beside `revealAssets` rather than in the home that asks for it: naming a facet and writing it
  * into the browser's state is the panel's own language, and the home has no business speaking
- * it. The shelf drops its workspace scope when it finds a kind chosen — which is what makes a
- * click on "Skyboxes" show every sky rather than the ones this space happens to accept.
+ * it. The kind IS the scope the shelf asks the catalogue and the library for, so a click on
+ * "Skyboxes" shows every sky rather than the four kinds that space happens to accept.
  */
 export function revealAssetsOfKind(type: AssetType): void {
   // `showWorkspace` rather than the store's setter, so the tab strip and the rail agree: the
