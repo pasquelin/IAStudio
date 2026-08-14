@@ -42,6 +42,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
   return (
     <Tree
       nodes={items}
+      label={t('panels.scene')}
       selectedIds={selectedIds}
       expandedIds={expandedIds}
       // The root is a row but not a node: clicking it selects nothing, and a range that spans

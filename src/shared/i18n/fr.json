@@ -486,8 +486,6 @@
     "lockPixels": "Verrouiller les pixels",
     "lockPosition": "Verrouiller la position",
     "lockAlpha": "Verrouiller la transparence",
-    "collapse": "Replier le groupe",
-    "expand": "Déplier le groupe",
     "operations": "Opérations",
     "operationsHint": "Grouper, dégrouper ou dupliquer le calque actif",
     "group": "Grouper",

@@ -1,15 +1,24 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
 import { addLayer } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
-import { groupLayer } from '@/engines/canvas/canvas-state'
+import { groupLayer, isGroup } from '@/engines/canvas/canvas-state'
+import { dragTransfer } from '@/helpers/drag-fixtures'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { installDocument } from '@/stores/document-fixtures'
 import { canvasOf, useCanvases } from '@/stores/canvases'
 import { useDocuments } from '@/stores/documents'
 import { LayersPanel } from './LayersPanel'
+
+/**
+ * The chevron belongs to `Tree`, which owns the geometry of every stack in the studio: it is
+ * `aria-hidden` on purpose — the row already carries `aria-expanded`, and the arrow keys already
+ * fold it — so it is reached the way the tree's own suite reaches it, by its place in the row.
+ */
+const chevronOf = (name: string): HTMLElement =>
+  screen.getByText(name).closest('[role="treeitem"]')?.firstChild as HTMLElement
 
 describe('LayersPanel', () => {
   // The panel sits on the edge, outside Dockview: it reads the image in front rather than being
@@ -37,7 +46,7 @@ describe('LayersPanel', () => {
     useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
     render(<LayersPanel />)
 
-    const rows = screen.getAllByRole('option')
+    const rows = screen.getAllByRole('treeitem')
     expect(within(rows[0] as HTMLElement).getByText('Paint')).toBeInTheDocument()
   })
 
@@ -55,7 +64,7 @@ describe('LayersPanel', () => {
     useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
     render(<LayersPanel />)
 
-    const rows = screen.getAllByRole('option')
+    const rows = screen.getAllByRole('treeitem')
     ;(rows[1] as HTMLElement).focus()
     await userEvent.keyboard('{Enter}')
 
@@ -66,7 +75,7 @@ describe('LayersPanel', () => {
     useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
     render(<LayersPanel />)
 
-    const rows = screen.getAllByRole('option')
+    const rows = screen.getAllByRole('treeitem')
     const eye = within(rows[1] as HTMLElement).getByRole('button', { name: 'Afficher ou masquer' })
     await userEvent.click(eye)
 
@@ -96,7 +105,7 @@ describe('LayersPanel', () => {
       await userEvent.type(screen.getByRole('textbox'), 'Sky{Enter}')
 
       await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
-      expect(screen.getByText('Sky').closest('[role="option"]')).toHaveFocus()
+      expect(screen.getByText('Sky').closest('[role="treeitem"]')).toHaveFocus()
     })
 
     // Clicking away from a half-typed name is how most renames end.
@@ -158,7 +167,7 @@ describe('LayersPanel', () => {
       render(<LayersPanel />)
       expect(screen.getByText('Inside')).toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('button', { name: /^Replier/ }))
+      await userEvent.click(chevronOf('Group'))
 
       expect(screen.queryByText('Inside')).not.toBeInTheDocument()
     })
@@ -167,7 +176,7 @@ describe('LayersPanel', () => {
     it('does not put a fold in the history', async () => {
       useCanvases.getState().runCommand('doc-1', addLayer(groupLayer('g', 'Group', [])))
       render(<LayersPanel />)
-      await userEvent.click(screen.getByRole('button', { name: /^Replier/ }))
+      await userEvent.click(chevronOf('Group'))
 
       useCanvases.getState().undo('doc-1')
 
@@ -176,31 +185,109 @@ describe('LayersPanel', () => {
   })
 
   /**
-   * Both lists are virtualized and re-key their rows on every change, so a layer added while a
-   * name is being typed tears the field out of the tree — and React fires no blur for an input
-   * it unmounts. The name was lost with it.
+   * The list runs top first and the stack bottom first, so a drag that read the index straight
+   * across would send the layer to the far end of its level. These two are what say the
+   * reversal is applied, and applied once.
    */
-  it('keeps a name typed in a row that is torn out from under it', async () => {
-    render(<LayersPanel />)
-    await userEvent.dblClick(screen.getByText('Background'))
-    await userEvent.clear(screen.getByRole('textbox'))
-    await userEvent.type(screen.getByRole('textbox'), 'Sky')
+  describe('reordering by dragging a row', () => {
+    // jsdom measures every element at zero, and where the pointer sits in the row is the whole
+    // difference between an insertion and a drop into a group.
+    const dropAt = (row: HTMLElement, ratio: number, data: DataTransfer): void => {
+      // `as DOMRect`: the handler reads `top` and `height`, and the ten other fields of a
+      // rectangle would say nothing about the drop.
+      row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      fireEvent.drop(row, { dataTransfer: data, clientY: 30 * ratio })
+    }
 
-    // What a finished generation does while the field is open.
-    useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
+    const stackOf = (): (string | undefined)[] =>
+      canvasOf(useCanvases.getState(), 'doc-1').layers.map(layer => layer.name)
 
-    await waitFor(() =>
-      expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky'),
-    )
+    it('puts the row dropped at the top of the list on top of the stack', () => {
+      useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
+      render(<LayersPanel />)
+
+      // Listed top first: Paint, then Background.
+      const [paint, background] = screen.getAllByRole('treeitem')
+      const data = dragTransfer()
+      fireEvent.dragStart(background!, { dataTransfer: data })
+      dropAt(paint!, 0.1, data)
+
+      // Drawn bottom first, so the top of the stack is the end of the array.
+      expect(stackOf()).toEqual(['Paint', 'Background'])
+    })
+
+    /**
+     * A folded group hides what it holds, so a layer dropped into one left the panel entirely:
+     * no row anywhere, while the inspector went on describing it.
+     */
+    it('unfolds the group it drops a layer into', () => {
+      useCanvases.getState().runCommand(
+        'doc-1',
+        addLayer({
+          ...groupLayer('g', 'Group', [layerFixture({ id: 'inside', name: 'Inside' })]),
+          collapsed: true,
+        }),
+      )
+      render(<LayersPanel />)
+      expect(screen.queryByText('Inside')).not.toBeInTheDocument()
+
+      const [group, background] = screen.getAllByRole('treeitem')
+      const data = dragTransfer()
+      fireEvent.dragStart(background!, { dataTransfer: data })
+      dropAt(group!, 0.5, data)
+
+      expect(screen.getByText('Background')).toBeInTheDocument()
+      expect(screen.getByText('Inside')).toBeInTheDocument()
+    })
+
+    // A stack rebuilt into the same stack still takes a place in the history, and the ⌘Z that
+    // follows appears to do nothing.
+    it('writes nothing to the history when the layer is dropped where it already sits', () => {
+      useCanvases
+        .getState()
+        .runCommand('doc-1', addLayer(groupLayer('g', 'Group', [layerFixture({ id: 'inside' })])))
+      render(<LayersPanel />)
+
+      // 'Paint' is already the topmost — the only — child of the group.
+      const [group, paint] = screen.getAllByRole('treeitem')
+      const data = dragTransfer()
+      fireEvent.dragStart(paint!, { dataTransfer: data })
+      dropAt(group!, 0.5, data)
+
+      // The one ⌘Z undoes the group that was added, because the drop wrote nothing of its own.
+      useCanvases.getState().undo('doc-1')
+      expect(stackOf()).toEqual(['Background'])
+    })
+
+    it('takes a layer into the group it is dropped onto', () => {
+      useCanvases
+        .getState()
+        .runCommand('doc-1', addLayer(groupLayer('g', 'Group', [layerFixture({ id: 'inside' })])))
+      render(<LayersPanel />)
+
+      const [group, , background] = screen.getAllByRole('treeitem')
+      const data = dragTransfer()
+      fireEvent.dragStart(background!, { dataTransfer: data })
+      dropAt(group!, 0.5, data)
+
+      expect(stackOf()).toEqual(['Group'])
+      const held = canvasOf(useCanvases.getState(), 'doc-1').layers[0]
+      expect(held && isGroup(held) ? held.children.map(child => child.name) : []).toEqual([
+        'Paint',
+        'Background',
+      ])
+    })
   })
 
   /**
-   * The same tear-out, judged on the focus rather than on the name. The row the edit started on
-   * is gone — remounted at another index under another key — so there is nothing to give the
-   * focus back to. Landing on `document.body` would throw the keyboard out of the panel, which
-   * is the whole defect; the stack's own tab stop keeps it inside.
+   * A layer arriving while a name is being typed — what a finished generation does — used to
+   * tear the field out and lose what was in it: the list keyed its rows on the virtualizer's
+   * INDEX, so every row below the new one was reused for another layer.
+   *
+   * `Tree` keys on the layer's id, so the row being edited stays the row being edited wherever
+   * it slides to. The name is not rescued after the fact any more; it is never interrupted.
    */
-  it('keeps the keyboard in the stack when the row is torn out from under it', async () => {
+  it('keeps the rename open when a layer arrives above the row being edited', async () => {
     render(<LayersPanel />)
     await userEvent.dblClick(screen.getByText('Background'))
     await userEvent.clear(screen.getByRole('textbox'))
@@ -208,11 +295,10 @@ describe('LayersPanel', () => {
 
     useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
 
-    await waitFor(() => expect(screen.queryByRole('textbox')).not.toBeInTheDocument())
-    expect(document.activeElement).not.toBe(document.body)
-    expect(screen.getByRole('listbox', { name: 'Calques' })).toContainElement(
-      // `as`: `activeElement` is typed as `Element`, and `toContainElement` wants an `HTMLElement`.
-      document.activeElement as HTMLElement,
-    )
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('Sky'))
+    expect(screen.getByRole('textbox')).toHaveFocus()
+
+    await userEvent.keyboard('{Enter}')
+    expect(canvasOf(useCanvases.getState(), 'doc-1').layers[0]?.name).toBe('Sky')
   })
 })

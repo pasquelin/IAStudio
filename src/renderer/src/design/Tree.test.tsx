@@ -60,6 +60,7 @@ function renderTree(
   return render(
     <Tree
       nodes={NODES}
+      label="Outline"
       selectedIds={selectedIds}
       expandedIds={new Set(['scene'])}
       onSelect={onSelect}
@@ -190,6 +191,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={['scene']}
         expandedIds={new Set(['scene'])}
         onSelect={onSelect}
@@ -211,6 +213,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={['b']}
         expandedIds={new Set(['scene'])}
         onSelect={onSelect}
@@ -260,6 +263,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -283,6 +287,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -304,6 +309,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -324,6 +330,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -348,6 +355,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -368,11 +376,197 @@ describe('Tree', () => {
     expect(screen.getAllByRole('treeitem')[0]!.className).toContain('outline-accent')
   })
 
+  describe('dropping between rows', () => {
+    /**
+     * Where in the row the pointer sits is the whole of what tells an insertion from a reparent,
+     * and jsdom measures every element at zero — so the row is given a height here.
+     *
+     * `as DOMRect`: the handler reads `top` and `height`, and writing the ten other fields of a
+     * rectangle would say nothing about the drop.
+     */
+    function dropAt(row: HTMLElement, ratio: number, data: DataTransfer): void {
+      row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      fireEvent.drop(row, { dataTransfer: data, clientY: 30 * ratio })
+    }
+
+    function renderInsertable(
+      onInsert: (id: string, parentId: string | null, index: number) => void,
+      onDrop = () => {},
+    ) {
+      render(
+        <Tree
+          nodes={NODES}
+          label="Outline"
+          selectedIds={[]}
+          expandedIds={new Set(['scene', 'a'])}
+          onSelect={() => {}}
+          onToggle={() => {}}
+          onDrop={onDrop}
+          onInsert={onInsert}
+          renderRow={row => <span>{row.node.id}</span>}
+        />,
+      )
+      // scene, a, a1, b
+      return screen.getAllByRole('treeitem')
+    }
+
+    it('reports the level receiving the row and its place in it', () => {
+      const onInsert = vi.fn()
+      const [, a, , b] = renderInsertable(onInsert)
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      dropAt(a!, 0.1, data)
+
+      expect(onInsert).toHaveBeenCalledWith('b', 'scene', 0)
+    })
+
+    /**
+     * The one case every caller would get wrong on its own: a row moving DOWN its own level
+     * leaves a hole behind it, so the place it lands in has shifted by one.
+     */
+    it('counts the target level as it will be once the row has left it', () => {
+      const onInsert = vi.fn()
+      const [, a, , b] = renderInsertable(onInsert)
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a!, { dataTransfer: data })
+      dropAt(b!, 0.9, data)
+
+      expect(onInsert).toHaveBeenCalledWith('a', 'scene', 1)
+    })
+
+    it('takes a row out of the group holding it', () => {
+      const onInsert = vi.fn()
+      const [, , a1, b] = renderInsertable(onInsert)
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a1!, { dataTransfer: data })
+      dropAt(b!, 0.9, data)
+
+      expect(onInsert).toHaveBeenCalledWith('a1', 'scene', 2)
+    })
+
+    it('says nothing when the row would land exactly where it already sits', () => {
+      const onInsert = vi.fn()
+      const [, a, , b] = renderInsertable(onInsert)
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      dropAt(a!, 0.9, data)
+
+      expect(onInsert).not.toHaveBeenCalled()
+    })
+
+    // The moved subtree would carry its new parent along with it, and every row under it would
+    // leave the tree with no way back.
+    it('refuses a row dropped inside its own subtree', () => {
+      const onInsert = vi.fn()
+      const [, a, a1] = renderInsertable(onInsert)
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a!, { dataTransfer: data })
+      dropAt(a1!, 0.1, data)
+
+      expect(onInsert).not.toHaveBeenCalled()
+    })
+
+    it('keeps the middle of a row for the drop that reparents', () => {
+      const onInsert = vi.fn()
+      const onDrop = vi.fn()
+      const [, a, , b] = renderInsertable(onInsert, onDrop)
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      dropAt(a!, 0.5, data)
+
+      expect(onDrop).toHaveBeenCalledWith('b', 'a')
+      expect(onInsert).not.toHaveBeenCalled()
+    })
+
+    /** jsdom measures at zero, so the row is given a height for the hover as for the drop. */
+    function hoverAt(row: HTMLElement, ratio: number, data: DataTransfer): void {
+      row.getBoundingClientRect = () => ({ top: 0, height: 30 }) as DOMRect
+      fireEvent.dragOver(row, { dataTransfer: data, clientY: 30 * ratio })
+    }
+
+    it('opens a gap where the row would land, showing the row that would land there', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+
+      // Four rows and a ghost: the list grew by one while the drop is being aimed.
+      const drawn = screen.getAllByText('b')
+      expect(drawn).toHaveLength(2)
+      expect(a!.className).not.toContain('outline-accent')
+    })
+
+    it('dims the row the hand is holding rather than taking it out of the list', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+
+      expect(screen.getAllByRole('treeitem')).toHaveLength(4)
+      expect(b!.className).toContain('opacity-40')
+    })
+
+    it('takes the gap back when the pointer leaves without dropping', () => {
+      const [, a, , b] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(b!, { dataTransfer: data })
+      hoverAt(a!, 0.1, data)
+      fireEvent.dragEnd(b!)
+
+      expect(screen.getAllByText('b')).toHaveLength(1)
+    })
+
+    /**
+     * A row beside a group belongs below everything the group holds. Placing the ghost right
+     * after the group's own row would show it landing between the group and its first child —
+     * a place the drop never puts it.
+     */
+    it('places the ghost below the whole subtree when it lands after a group', () => {
+      // `a1` comes out of `a` and lands beside it, at the root.
+      const [, a, a1] = renderInsertable(() => {})
+      const data = dragTransfer()
+
+      fireEvent.dragStart(a1!, { dataTransfer: data })
+      hoverAt(a!, 0.9, data)
+
+      // The ghost sits below `a1`, not between `a` and it: that is where the drop puts it.
+      const drawn = screen.getAllByText(/^(a|a1|b)$/).map(node => node.textContent)
+      expect(drawn).toEqual(['a', 'a1', 'a1', 'b'])
+    })
+
+    it('picks up a row for a tree that only inserts', () => {
+      render(
+        <Tree
+          nodes={NODES}
+          label="Outline"
+          selectedIds={[]}
+          expandedIds={new Set(['scene'])}
+          onSelect={() => {}}
+          onToggle={() => {}}
+          onInsert={() => {}}
+          renderRow={row => <span>{row.node.id}</span>}
+        />,
+      )
+
+      expect(screen.getAllByRole('treeitem')[1]).toHaveAttribute('draggable', 'true')
+    })
+  })
+
   it('tells the caller what is being dragged, so a target can judge the pair', () => {
     const droppable = vi.fn(() => true)
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -401,6 +595,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -413,6 +608,37 @@ describe('Tree', () => {
     const elsewhere = dragTransfer()
     elsewhere.setData('application/x-scenario-tree-row', 'from-another-tree')
     fireEvent.drop(screen.getAllByRole('treeitem')[2]!, { dataTransfer: elsewhere })
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A drag cancelled after its source row scrolled out of the window fires no `dragEnd`, so the
+   * tree goes on holding the node it picked up. The channel is shared by every tree of the
+   * studio, so the next drag started anywhere at all would be reported here as that stale node —
+   * moving something the hand never touched.
+   */
+  it('ignores a drop carrying something other than what it picked up', () => {
+    const onDrop = vi.fn()
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        onDrop={onDrop}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const rows = screen.getAllByRole('treeitem')
+    fireEvent.dragStart(rows[1]!, { dataTransfer: dragTransfer() })
+
+    const elsewhere = dragTransfer()
+    elsewhere.setData('application/x-scenario-tree-row', 'from-another-tree')
+    fireEvent.drop(rows[2]!, { dataTransfer: elsewhere })
 
     expect(onDrop).not.toHaveBeenCalled()
   })
@@ -470,6 +696,7 @@ describe('Tree', () => {
     render(
       <Tree
         nodes={many}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set()}
         onSelect={() => {}}
@@ -494,6 +721,7 @@ describe('Tree, the menu a right-click opens', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={() => {}}
@@ -535,6 +763,7 @@ describe('Tree, opening a row', () => {
     render(
       <Tree
         nodes={NODES}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set(['scene'])}
         onSelect={onSelect}
@@ -597,6 +826,7 @@ describe('Tree, a node that can hold children it has not got yet', () => {
     render(
       <Tree
         nodes={[{ id: 'assets', parentId: null }]}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set()}
         onSelect={() => {}}
@@ -613,6 +843,7 @@ describe('Tree, a node that can hold children it has not got yet', () => {
     render(
       <Tree
         nodes={[{ id: 'notes.txt', parentId: null }]}
+        label="Outline"
         selectedIds={[]}
         expandedIds={new Set()}
         onSelect={() => {}}

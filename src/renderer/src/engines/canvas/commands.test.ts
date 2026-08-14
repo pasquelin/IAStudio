@@ -13,11 +13,11 @@ import {
   groupLayers,
   mergeDown,
   moveGuide,
+  moveLayer,
   removeGuide,
   removeLayer,
   rotateImage,
   renameLayer,
-  reorderLayer,
   resizeCanvas,
   resizeImage,
   selectLayer,
@@ -87,14 +87,14 @@ describe('removeLayer', () => {
   })
 })
 
-describe('reorderLayer', () => {
+describe('moveLayer', () => {
   it('moves a layer down the stack', () => {
-    const state = reorderLayer('layer-2', 0).apply(withTwo)
+    const state = moveLayer('layer-2', null, 0).apply(withTwo)
     expect(state.layers.map(layer => layer.id)).toEqual(['layer-2', 'layer-1'])
   })
 
   it('puts the order back on revert', () => {
-    const command = reorderLayer('layer-2', 0)
+    const command = moveLayer('layer-2', null, 0)
     const back = command.revert(command.apply(withTwo))
     expect(back.layers.map(layer => layer.id)).toEqual(['layer-1', 'layer-2'])
   })
@@ -104,12 +104,12 @@ describe('reorderLayer', () => {
     const withThree = addLayer(layerFixture({ id: 'layer-3' })).apply(withTwo)
 
     expect(
-      reorderLayer('layer-1', -1)
+      moveLayer('layer-1', null, -1)
         .apply(withThree)
         .layers.map(layer => layer.id),
     ).toEqual(['layer-1', 'layer-2', 'layer-3'])
     expect(
-      reorderLayer('layer-1', 99)
+      moveLayer('layer-1', null, 99)
         .apply(withThree)
         .layers.map(layer => layer.id),
     ).toEqual(['layer-2', 'layer-3', 'layer-1'])
@@ -161,6 +161,11 @@ const stack = (...names: string[]): CanvasState => ({
 })
 
 const namesOf = (state: CanvasState): string[] => state.layers.map(layer => layer.id)
+
+const childrenOf = (state: CanvasState, id: string): string[] => {
+  const group = layerById(state, id)
+  return group && isGroup(group) ? group.children.map(child => child.id) : []
+}
 
 /** Counted rather than random, so a duplicated subtree reads the same on every run. */
 function ids(): () => string {
@@ -376,11 +381,41 @@ describe('operating inside a group', () => {
     expect(after.activeLayerId).toBe('a')
   })
 
-  it('reorders within the group, never out of it', () => {
-    const [after] = roundTrip(nested(), reorderLayer('a', 1))
-    const group = layerById(after, 'g')
+  it('reorders within the group', () => {
+    const [after] = roundTrip(nested(), moveLayer('a', 'g', 1))
 
-    expect(group && isGroup(group) ? group.children.map(child => child.id) : []).toEqual(['b', 'a'])
+    expect(childrenOf(after, 'g')).toEqual(['b', 'a'])
+  })
+
+  it('takes a layer into a group', () => {
+    const [after, back] = roundTrip(nested(), moveLayer('c', 'g', 0))
+
+    expect(namesOf(after)).toEqual(['g'])
+    expect(childrenOf(after, 'g')).toEqual(['c', 'a', 'b'])
+    expect(namesOf(back)).toEqual(['g', 'c'])
+  })
+
+  it('takes a layer out of a group, above it', () => {
+    const [after] = roundTrip(nested(), moveLayer('a', null, 1))
+
+    expect(namesOf(after)).toEqual(['g', 'a', 'c'])
+    expect(childrenOf(after, 'g')).toEqual(['b'])
+  })
+
+  /**
+   * The drop would carry the receiving group along with the moved one, and every layer under it
+   * would leave the document with no way back.
+   */
+  it('refuses a group dropped into its own subtree', () => {
+    const outer = groupLayers(['g', 'c'], 'outer', 'Outer').apply(nested())
+
+    expect(moveLayer('outer', 'g', 0).apply(outer)).toBe(outer)
+  })
+
+  it('refuses a layer dropped into something that is not a group', () => {
+    const before = nested()
+
+    expect(moveLayer('c', 'a', 0).apply(before)).toBe(before)
   })
 
   it('dissolves a group nested in another one', () => {
@@ -743,8 +778,8 @@ describe('commands aimed at a layer that is gone', () => {
     expect(removeLayer('gone').apply(withTwo)).toBe(withTwo)
   })
 
-  it('reorders nothing', () => {
-    expect(reorderLayer('gone', 0).apply(withTwo)).toBe(withTwo)
+  it('moves nothing', () => {
+    expect(moveLayer('gone', null, 0).apply(withTwo)).toBe(withTwo)
   })
 
   it('duplicates nothing', () => {

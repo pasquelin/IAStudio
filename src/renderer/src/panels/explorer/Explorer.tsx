@@ -117,6 +117,7 @@ export function Explorer() {
   const tree = (
     <Tree
       nodes={nodes}
+      label={t('panels.explorer')}
       selectedIds={selectedIds}
       expandedIds={expandedIds}
       onSelect={setSelectedIds}
