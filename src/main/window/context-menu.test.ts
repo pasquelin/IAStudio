@@ -1,8 +1,9 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TRANSLATIONS } from '@shared/i18n'
+import { CHANNELS } from '@shared/ipc'
 import { setWindowLanguage } from './language'
-import { registerFieldMenu } from './context-menu'
+import { registerContextMenu, registerFieldMenu } from './context-menu'
 
 /**
  * Electron in a bottle for this file alone, rather than the shared `ipc/test-harness`: what is
@@ -15,26 +16,63 @@ import { registerFieldMenu } from './context-menu'
  */
 const electron = vi.hoisted(() => {
   const created: ((event: unknown, window: unknown) => void)[] = []
-  const popped: { items: MenuItemConstructorOptions[]; window: unknown }[] = []
+  const popped: {
+    items: MenuItemConstructorOptions[]
+    window: unknown
+    /** Called by the system when the menu goes away, whether or not a row was chosen. */
+    close: () => void
+  }[] = []
+  const handlers = new Map<string, (...args: unknown[]) => unknown>()
+  /** The one window every web contents belongs to here: which window is not what these cases ask. */
+  const owner = { name: 'the window that was clicked in' }
 
   return {
     created,
     popped,
+    handlers,
+    owner,
     app: {
       on: (event: string, listener: (event: unknown, window: unknown) => void) => {
         if (event === 'browser-window-created') created.push(listener)
       },
     },
+    ipcMain: {
+      handle: (channel: string, handler: (...args: unknown[]) => unknown) =>
+        void handlers.set(channel, handler),
+    },
+    BrowserWindow: { fromWebContents: (contents: unknown) => (contents ? owner : null) },
+    nativeImage: {
+      createEmpty: () => ({
+        representations: [] as unknown[],
+        template: false,
+        addRepresentation(representation: unknown) {
+          this.representations.push(representation)
+        },
+        setTemplateImage(value: boolean) {
+          this.template = value
+        },
+      }),
+    },
     Menu: {
       buildFromTemplate: (items: MenuItemConstructorOptions[]) => ({
-        popup: (options: { window: unknown }) =>
-          void popped.push({ items, window: options.window }),
+        popup: (options: { window: unknown; callback?: () => void }) =>
+          void popped.push({
+            items,
+            window: options.window,
+            close: () => options.callback?.(),
+          }),
       }),
     },
   }
 })
 
-vi.mock('electron', () => ({ app: electron.app, Menu: electron.Menu }))
+vi.mock('electron', () => ({
+  app: electron.app,
+  ipcMain: electron.ipcMain,
+  BrowserWindow: electron.BrowserWindow,
+  nativeImage: electron.nativeImage,
+  Menu: electron.Menu,
+}))
 
 /** A caret in a text field, with a misspelled word under the pointer. */
 const inField = {
@@ -96,8 +134,10 @@ function choose(label: string | undefined): void {
 beforeEach(() => {
   electron.created.length = 0
   electron.popped.length = 0
+  electron.handlers.clear()
   setWindowLanguage('fr')
   registerFieldMenu()
+  registerContextMenu()
 })
 
 describe('the menu a right-click raises', () => {
@@ -174,5 +214,84 @@ describe('the menu a right-click raises', () => {
 
     expect(electron.popped).toHaveLength(1)
     expect(electron.popped[0]?.window).toBe(second.window)
+  })
+})
+
+/** A PNG as short as one can be — these cases read where it goes, never what it draws. */
+const PIXEL = 'data:image/png;base64,iVBORw0KGgo='
+
+function popup(items: unknown): Promise<string | null> {
+  const handler = electron.handlers.get(CHANNELS.menuPopup)
+  if (!handler) throw new Error('nothing answers the context menu channel')
+  return handler({ sender: { id: 1 } }, items) as Promise<string | null>
+}
+
+/** A window asking for a menu of its own, and the two ways the system can answer it. */
+function raise(items: unknown) {
+  const answer = popup(items)
+  const menu = electron.popped.at(-1)
+  if (!menu) throw new Error('no menu was popped up')
+
+  return {
+    answer,
+    rows: menu.items,
+    /**
+     * In the order macOS uses, which is the one that catches the mistake: the menu closes FIRST,
+     * and only then does the row it was left on send its action.
+     */
+    choose: (label: string) => {
+      menu.close()
+      const click: unknown = menu.items.find(item => item.label === label)?.click
+      if (typeof click !== 'function') throw new Error(`the menu has no ${label} row`)
+      click()
+    },
+    dismiss: () => menu.close(),
+  }
+}
+
+describe('the menu a window raises over its own surfaces', () => {
+  const rows = [
+    { id: 'reveal', label: 'Révéler dans le dossier', icon: PIXEL },
+    { id: 'rename', label: 'Renommer', enabled: false },
+  ]
+
+  it('answers the row that was chosen, though the menu closed before sending it', async () => {
+    const menu = raise(rows)
+
+    menu.choose('Révéler dans le dossier')
+
+    await expect(menu.answer).resolves.toBe('reveal')
+  })
+
+  it('answers that nothing was chosen when the menu is dismissed', async () => {
+    const menu = raise(rows)
+
+    menu.dismiss()
+
+    await expect(menu.answer).resolves.toBeNull()
+  })
+
+  it('greys the row the window declared unavailable', () => {
+    expect(raise(rows).rows.map(row => row.enabled)).toEqual([true, false])
+  })
+
+  /**
+   * A bitmap filed at 1× draws at twice the height of a menu row, which is the whole reason
+   * `addRepresentation` is used over `createFromDataURL`.
+   */
+  it('files the glyph at the density the window drew it for', () => {
+    const icon = raise(rows).rows[0]?.icon
+
+    expect(icon).toMatchObject({
+      template: true,
+      representations: [{ scaleFactor: 2, dataURL: PIXEL }],
+    })
+  })
+
+  // The one channel where a window composes something handed straight to the platform, and
+  // `addRepresentation` takes any URL string it is given — `file:` included.
+  it('refuses a picture the window did not draw', () => {
+    expect(() => popup([{ id: 'reveal', label: 'Révéler', icon: 'file:///etc/passwd' }])).toThrow()
+    expect(electron.popped).toEqual([])
   })
 })

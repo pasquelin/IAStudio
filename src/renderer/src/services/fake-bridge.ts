@@ -194,6 +194,9 @@ export function installFakeBridge(overrides: BridgeOverrides = {}): StudioBridge
       ...overrides.diagnostics,
     },
     menu: {
+      // Dismissed, which is what a test that never doubles this one wants: no row runs by
+      // accident because a menu it did not think about was raised.
+      popup: () => Promise.resolve(null),
       onOpenTool: noSubscription,
       onCommand: noSubscription,
       onSceneAdd: noSubscription,

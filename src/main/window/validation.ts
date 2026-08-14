@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { ContextMenuItem } from '@shared/domain/context-menu'
 import { PATH_KINDS, type PathKind } from '@shared/domain/settings-registry'
 import { parseBase64 } from '@main/scenario/validation'
 
@@ -34,4 +35,43 @@ export function parseFileName(value: unknown): string {
 /** The same rule the upload path applies: only the payload, never a data URL. */
 export function parseBase64Payload(value: unknown): string {
   return parseBase64(value)
+}
+
+/**
+ * A menu icon on its way to `nativeImage.addRepresentation`, which takes any URL string it is
+ * handed. A PNG data URL and nothing else: `file:` would read whatever path a window named, and
+ * an `http:` one would have the main process fetch it.
+ *
+ * The cap is generous rather than tight — a 32 px glyph encodes to about a kilobyte, and the
+ * point of the bound is that a window cannot hand over a bitmap it never drew.
+ */
+const menuIcon = z
+  .string()
+  .max(64_000)
+  .refine(value => /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value))
+
+/**
+ * The rows a window asks the system to draw. Every field crosses the boundary as it is written
+ * on screen, so every field is checked here: this is the one channel where a renderer composes
+ * something the main process hands straight to the platform.
+ *
+ * `label` is not trimmed to a path segment or anything like it — it is a sentence in the user's
+ * language, and the only thing that can go wrong with it is length.
+ */
+const contextMenuItems = z
+  .array(
+    z.object({
+      id: z.string().min(1).max(120),
+      label: z.string().min(1).max(200),
+      enabled: z.boolean().optional(),
+      icon: menuIcon.optional(),
+    }),
+  )
+  .min(1)
+  // Well above the longest menu of the studio — an asset with every intent it can have — and low
+  // enough that a runaway list cannot ask the system to draw ten thousand rows.
+  .max(40)
+
+export function parseContextMenuItems(value: unknown): ContextMenuItem[] {
+  return contextMenuItems.parse(value)
 }
