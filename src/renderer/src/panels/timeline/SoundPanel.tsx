@@ -1,5 +1,3 @@
-import { useEffect } from 'react'
-import { EMPTY_SOUND_SEQUENCE } from '@/engines/timeline/timeline-state'
 import { sequenceStore, useSequences } from '@/stores/sequences'
 import { MontagePanel } from './MontagePanel'
 
@@ -8,23 +6,21 @@ export type SoundPanelProps = { documentId: string }
 /**
  * The sound montage of a take: the same montage the Video workspace shows, with sound only.
  *
- * It installs its own starting state rather than leaning on `document-io`: the panel and the
- * document mount together, and the montage store answers with the SEQUENCE default until one of
- * them has written — which would show a picture track, for one frame, in a workspace that has no
- * picture. Idempotent, so the document's own load still wins.
+ * It installs nothing itself, and waits instead. `document-io` is what fills a document — from
+ * the file when there is one, from `EMPTY_SOUND_SEQUENCE` when there is not — and a panel posting
+ * its own default beside it would be a second owner of the same state: the montage would be
+ * usable while the file was still in flight, and the read landing after would replace whatever
+ * had just been dropped on it, marking the document clean over an edit nobody could undo.
  */
 export function SoundPanel({ documentId }: SoundPanelProps) {
   const ready = useSequences(state => sequenceStore.hasState(state, documentId))
 
-  useEffect(() => {
-    useSequences.getState().ensure(documentId, () => EMPTY_SOUND_SEQUENCE)
-  }, [documentId])
-
-  // Nothing rather than the wrong thing, for the one frame the effect above has not run in.
+  // Nothing rather than the wrong thing: the montage store answers with the SEQUENCE default —
+  // a picture track — until the document is installed, in a workspace that has no picture.
   if (!ready) return null
 
-  // Shortcuts off, and it is the whole reason the host passes them down: the take under this
-  // montage already listens on the `audio` scope, and one ⌘Z reaching both scopes would undo a
-  // step of the chain AND a step of the montage. `AudioDocument` routes ⌘Z to the right half.
-  return <MontagePanel documentId={documentId} shortcuts={false} />
+  // History off, and it is the whole reason the host passes it down: the take under this montage
+  // already answers ⌘Z on the `audio` scope, and two listeners undoing at once would take a step
+  // off both halves. `AudioDocument` routes the key. Every other key of the strip stays live.
+  return <MontagePanel documentId={documentId} history={false} />
 }

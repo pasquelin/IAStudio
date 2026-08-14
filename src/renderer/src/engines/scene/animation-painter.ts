@@ -37,7 +37,6 @@ type Palette = {
   key: string
   keySelected: string
   block: string
-  end: string
   playhead: string
   muted: string
   rulerFont: string
@@ -51,7 +50,6 @@ const readPalette = memoPalette((): Palette => ({
   key: rootColour('--color-muted'),
   keySelected: rootColour('--color-accent'),
   block: rootColour('--color-elevated'),
-  end: rootColour('--color-muted'),
   playhead: rootColour('--color-accent'),
   muted: rootColour('--color-muted'),
   rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
@@ -151,7 +149,7 @@ export function paintAnimation(
     viewport: paint.viewport,
     width: size.width,
     height: size.height,
-    colour: palette.end,
+    colour: palette.muted,
   })
   paintHead(context, paint, size, palette)
 }

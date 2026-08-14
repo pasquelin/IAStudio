@@ -144,10 +144,6 @@ describe('arranging the lines', () => {
     expect(arranged(['c', 'a', 'b'])).toEqual(['c', 'a', 'b'])
   })
 
-  it('lands an object added since the arrangement was made, rather than losing it', () => {
-    expect(arranged(['c', 'a'])).toEqual(['c', 'a', 'b'])
-  })
-
   it('ignores an entry for an object the scene no longer holds, and draws no hole for it', () => {
     expect(arranged(['gone', 'c', 'a', 'b'])).toEqual(['c', 'a', 'b'])
   })

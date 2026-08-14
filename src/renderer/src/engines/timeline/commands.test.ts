@@ -550,6 +550,27 @@ describe('track commands', () => {
     expect(first.revert(dragged)).toEqual(state)
   })
 
+  // The other half of the same entry: ⌘⇧Z has to put the track back where the drag left it, and
+  // the last step alone knows only its own `by`.
+  it('replays the whole drag on redo, not its last step', () => {
+    const state = sequenceWith(
+      reindexTracks([
+        trackFixture('V1', 'video'),
+        trackFixture('V2', 'video'),
+        trackFixture('A1', 'audio'),
+      ]),
+    )
+    const first = moveTrack('V1', 1)
+    const second = moveTrack('V1', 1)
+    const dragged = second.apply(first.apply(state))
+
+    expect(second.apply(first.revert(dragged)).tracks.map(track => track.id)).toEqual([
+      'V2',
+      'A1',
+      'V1',
+    ])
+  })
+
   it('re-reads depth after a move, so what is drawn follows what is shown', () => {
     const next = moveTrack('V1', 1).apply(twoTracks())
     expect(next.tracks.map(track => [track.id, track.index])).toEqual([

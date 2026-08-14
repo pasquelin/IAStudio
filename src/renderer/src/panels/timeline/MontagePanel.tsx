@@ -4,8 +4,8 @@ import { TrackHeaders } from './TrackHeaders'
 
 export type MontagePanelProps = {
   documentId: string
-  /** Passed straight through to the strip — see `TimelineCanvasProps.shortcuts`. */
-  shortcuts?: boolean
+  /** Passed straight through to the strip — see `TimelineCanvasProps.history`. */
+  history?: boolean
 }
 
 /**
@@ -15,14 +15,14 @@ export type MontagePanelProps = {
  * SAME one on purpose. What differs between them is what the montage holds, never how it is
  * worked: a clip is dragged, trimmed and faded identically whether it carries a picture or not.
  */
-export function MontagePanel({ documentId, shortcuts }: MontagePanelProps) {
+export function MontagePanel({ documentId, history }: MontagePanelProps) {
   const tool = useVideoTool(state => state.tool)
 
   return (
     <div className="flex h-full min-h-0">
       <TrackHeaders documentId={documentId} />
       <div className="min-w-0 flex-1">
-        <TimelineCanvas documentId={documentId} tool={tool} shortcuts={shortcuts} />
+        <TimelineCanvas documentId={documentId} tool={tool} history={history} />
       </div>
     </div>
   )

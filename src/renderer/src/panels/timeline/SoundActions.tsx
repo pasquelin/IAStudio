@@ -1,8 +1,11 @@
 import { mdiPause, mdiPlay, mdiSkipPrevious } from '@mdi/js'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { CommandId } from '@shared/domain/command'
 import { Separator } from '@/design/Separator'
 import { Timecode } from '@/design/Timecode'
 import { ToolButton } from '@/design/ToolButton'
+import { useShortcuts } from '@/hooks/useShortcuts'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useSoundTransport } from '@/spaces/audio/useSoundTransport'
 import { sequenceOf, useSequences } from '@/stores/sequences'
@@ -21,6 +24,16 @@ export function SoundActions({ documentId }: SoundActionsProps) {
   const { t } = useTranslation()
   const sequence = useSequences(state => sequenceOf(state, documentId))
   const transport = useSoundTransport(documentId, sequence)
+
+  // The space bar, which nothing else in this workspace would answer: the strip leaves
+  // `sequence.playPause` to the programme monitor, and Audio has no monitor to leave it to.
+  const onCommand = useCallback(
+    (command: CommandId) => {
+      if (command === 'sequence.playPause') transport.toggle()
+    },
+    [transport],
+  )
+  useShortcuts({ scope: 'sequence', enabled: true, onCommand })
 
   return (
     <SequenceActions

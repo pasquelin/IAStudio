@@ -166,12 +166,7 @@ function textDocumentIo<S>(
 const asIs = <S>(state: S): unknown => state
 
 /**
- * The take, which is the one kind holding TWO states: the chain of edits over a sample, and the
- * sound montage the timeline shows under it. Both are the same document — one tab, one ⌘S, one
- * file — so neither of the two generic paths fits, and the composition is written out here.
- *
- * The montage half is why the Audio workspace is a workspace at all rather than a sample editor:
- * music is built by laying takes side by side, and a montage lost on close is a session lost.
+ * What a take's file holds: the chain of edits over its sample, and the sound montage under it.
  */
 type AudioPayload = { edits: unknown; montage: unknown }
 
@@ -198,6 +193,14 @@ function audioHasUnsavedWork(
   )
 }
 
+/**
+ * The take, which is the one kind holding TWO states: the chain of edits over a sample, and the
+ * sound montage the timeline shows under it. Both are the same document — one tab, one ⌘S, one
+ * file — so neither generic path fits, and the composition is written out here.
+ *
+ * The montage half is why the Audio workspace is a workspace at all rather than a sample editor:
+ * music is built by laying takes side by side, and a montage lost on close is a session lost.
+ */
 const AUDIO_IO: DocumentIo = {
   capture: documentId => {
     const edits = audioEditStore.use.getState()

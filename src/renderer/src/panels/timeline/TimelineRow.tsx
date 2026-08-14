@@ -19,7 +19,7 @@ import { TIP_RIGHT } from '@/helpers/tooltip'
  * neighbour: waiting for a full height means the row one is dragging has already covered the one
  * it is about to pass, and the stack looks stuck for half the gesture.
  */
-export function reorderSteps(travelled: number, height: number): number {
+function reorderSteps(travelled: number, height: number): number {
   if (height <= 0) return 0
   return Math.round(travelled / height)
 }
@@ -53,7 +53,15 @@ export function TimelineHeaderColumn({
 export type RowReorder = {
   /** Accessible name of the grip — it says which row is being moved. */
   label: string
-  move: (by: number) => void
+  /**
+   * Moves the row, and answers how many places it ACTUALLY travelled — zero at the ends of the
+   * stack, where there is nowhere to go.
+   *
+   * The answer is what keeps a drag honest. Counting the pointer instead, a row held against the
+   * bottom edge banks steps it never took, and bringing the pointer back where it started spends
+   * them the other way: the row climbs a place it was never dragged over.
+   */
+  move: (by: number) => number
   /**
    * Both ends of the drag, for a stack whose order is an EDIT: a row dragged across three places
    * has to cost one ⌘Z, not three. Absent where the order is a way of looking rather than a
@@ -115,7 +123,6 @@ export function TimelineRow({
   )
 }
 
-/** What a press took hold of: where it started, and how far it has already moved the row. */
 type Grab = { pointerId: number; y: number; applied: number }
 
 /**
@@ -151,8 +158,9 @@ function RowGrip({ height, reorder }: { height: number; reorder: RowReorder }) {
     const steps = reorderSteps(event.clientY - grab.y, height)
     if (steps === grab.applied) return
 
-    reorder.move(steps - grab.applied)
-    grabbed.current = { ...grab, applied: steps }
+    // What the stack GAVE, not what the pointer asked for — see `move`.
+    const moved = reorder.move(steps - grab.applied)
+    grabbed.current = { ...grab, applied: grab.applied + moved }
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {

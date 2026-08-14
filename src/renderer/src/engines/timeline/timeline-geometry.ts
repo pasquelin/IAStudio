@@ -42,6 +42,10 @@ export const RULER_HEIGHT = 24
  * heights are derived from what a header must hold, and the band is painted from those same
  * heights. Two independent numbers would drift the DOM column and the painted rows apart by a
  * line — cumulatively, with nothing red anywhere. `TimelineRow` reads it; so does `animation-rows`.
+ *
+ * A number and not a gauge, so it does NOT follow the density setting — deliberately, and for the
+ * same reason the row heights beside it do not: a canvas cannot read a CSS variable, and a header
+ * that breathed with the density would stop lining up with the rows it names.
  */
 export const ROW_PADDING = 8
 /** Pixels around a clip edge that grab the edge rather than the body. */

@@ -57,16 +57,18 @@ export type TimelineCanvasProps = {
   documentId: string
   tool: VideoToolId
   /**
-   * Whether the strip answers the `sequence` scope — undo, redo, zoom, the transport keys.
+   * Whether ⌘Z and ⌘⇧Z belong to this strip.
    *
-   * The host decides, never the strip: a sound montage sits under a take that already listens
-   * on its own scope, and two listeners on one window is one ⌘Z undoing both halves of the
-   * document — the studio's oldest trap, "two diverging undo stacks".
+   * The host decides, and only for those two: a sound montage sits under a take that already
+   * answers ⌘Z on its own scope, and two listeners undoing at once is one press taking a step
+   * off BOTH halves of the document — the studio's oldest trap. Everything else the strip binds
+   * — the blade, Delete, the zoom, the ends — stays live, or the one timeline this lot exists to
+   * make consistent would be the only one with a dead keyboard.
    */
-  shortcuts?: boolean
+  history?: boolean
 }
 
-export function TimelineCanvas({ documentId, tool, shortcuts = true }: TimelineCanvasProps) {
+export function TimelineCanvas({ documentId, tool, history = true }: TimelineCanvasProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
@@ -242,20 +244,21 @@ export function TimelineCanvas({ documentId, tool, shortcuts = true }: TimelineC
           return seek(0)
         case 'sequence.end':
           return seek(sequenceDuration(state))
+        // Left alone where the host owns the history — see `history`. Not the same as being
+        // absent: the key is still swallowed by this scope, and it is the host that answers it.
         case 'sequence.undo':
-          return store.undo(documentId)
+          return history ? store.undo(documentId) : undefined
         case 'sequence.redo':
-          return store.redo(documentId)
+          return history ? store.redo(documentId) : undefined
         default:
           return
       }
     },
-    [documentId, seek, setViewport],
+    [documentId, history, seek, setViewport],
   )
 
-  // The strip is only mounted for the document in front, so it listens while it is there — unless
-  // its host says another scope already answers for this document.
-  useShortcuts({ scope: 'sequence', enabled: shortcuts, onCommand: run })
+  // The strip is only mounted for the document in front, so it always listens while it is there.
+  useShortcuts({ scope: 'sequence', enabled: true, onCommand: run })
 
   const pointAt = (
     event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,

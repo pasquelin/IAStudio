@@ -11,6 +11,7 @@ import {
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
+import { clamp } from '@shared/numeric'
 import { cn } from '@/helpers/cn'
 import { TIP_RIGHT } from '@/helpers/tooltip'
 import { isTyping } from '@/helpers/typing'
@@ -22,6 +23,26 @@ import { TRACK_FLAGS } from './track-flags'
 import { TrackMenu, TrackMenuRows, TRACK_MENU_ROWS } from './TrackMenu'
 
 export type TrackHeadersProps = { documentId: string }
+
+/**
+ * Moves a track through the stack and answers how far it went — nothing at either end.
+ *
+ * The refusal is decided HERE rather than left to the command, for the reason `sequence.unlink`
+ * gives a few files away: every command that runs lands on the undo stack, so a step that moves
+ * nothing would still mark the document modified and leave a ⌘Z that visibly does nothing.
+ */
+function moveTrackBy(documentId: string, trackId: string, by: number): number {
+  const store = useSequences.getState()
+  const tracks = sequenceOf(store, documentId).tracks
+  const from = tracks.findIndex(track => track.id === trackId)
+  if (from === -1) return 0
+
+  const to = clamp(from + by, 0, tracks.length - 1)
+  if (to === from) return 0
+
+  store.runCommand(documentId, moveTrack(trackId, to - from))
+  return to - from
+}
 
 /**
  * The column standing beside the canvas: one row per track, aligned with the rows it names.
@@ -74,7 +95,7 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
       height={track.height}
       reorder={{
         label: t('timeline.reorderTrack', { name: track.name }),
-        move: by => useSequences.getState().runCommand(documentId, moveTrack(track.id, by)),
+        move: by => moveTrackBy(documentId, track.id, by),
         // A drag across three places is one thing the user did: without the gesture, `runCommand`
         // pushes an entry per step, and ⌘Z gives the stack back a row at a time.
         begin: () => useSequences.getState().beginGesture(documentId),
