@@ -298,7 +298,7 @@ service can turn away the ones arriving on top (see
 > **This setting is the only valve.** Every generation goes through the same queue, whatever
 > workspace it starts from, and nothing bypasses it.
 
-### Describe fetched assets
+### Name fetched assets
 
 **Checkbox.**
 
@@ -311,13 +311,13 @@ sees in it.
 
 **What counts as "without a useful name"**, and nothing else:
 
-| What the studio describes | Examples |
+| What the studio renames | Examples |
 |---|---|
 | an empty name, or a device prefix followed by a number | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
 | the names operating systems give, in both languages | `Untitled`, `Download`, `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image` |
 | a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)` |
 
-**A name you chose is never described**, even when it starts with the same words: `Screenshot of
+**A name you chose is never replaced**, even when it starts with the same words: `Screenshot of
 the main menu` stays as it is.
 
 Accents make no difference to this recognition: `Capture d'écran` and `Capture d’écran` are
@@ -678,7 +678,7 @@ What you have on a fresh install, at a glance.
 | Appearance | Text size | 1 | 0.85 to 1.40 |
 | Appearance | Limit animations | unchecked | — |
 | Generation | Concurrent generations | 3 | 1 to 16 |
-| Generation | Describe fetched assets | ticked | — |
+| Generation | Name fetched assets | ticked | — |
 | Generation | Max retries | 4 | 0 to 10 |
 | Generation | Default model ×7 | Ask every time | — |
 | 3D | Show the grid | checked | — |

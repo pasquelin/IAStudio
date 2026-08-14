@@ -218,9 +218,9 @@
       "fetching": "Fetching…",
       "missing": "File not found on disk"
     },
-    "describe_one": "Describe {{count, number}} asset",
-    "describe_many": "Describe {{count, number}} assets",
-    "describe_other": "Describe {{count, number}} assets",
+    "describe_one": "Name {{count, number}} asset",
+    "describe_many": "Name {{count, number}} assets",
+    "describe_other": "Name {{count, number}} assets",
     "describeHint": "Name the chosen images from what the API sees in them",
     "location": "Location",
     "push_one": "Send {{count, number}} asset",
@@ -1077,7 +1077,7 @@
       "help": "How many creations work at the same time. The higher it is, the more you can start at once — but each may take longer to come back, and the service can turn away the ones beyond its limit. Three is a good balance."
     },
     "captionArrivals": {
-      "title": "Describe fetched assets",
+      "title": "Name fetched assets",
       "help": "Automatically name an image that arrives without a useful name. Spends creative units."
     },
     "maxRetries": {
