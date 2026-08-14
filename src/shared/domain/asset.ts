@@ -379,6 +379,32 @@ export function isTimeless(asset: Asset | null): boolean {
   return asset !== null && PICTURES.includes(asset.type)
 }
 
+/**
+ * The kinds whose own file no surface can paint, and which therefore get a still of their own.
+ *
+ * A picture answers for itself. A sound must NOT be given one: a timeline clip reads `posterUrl`
+ * like every other surface, and the still would be painted under its waveform. What is left is
+ * a mesh — nothing decodes a `.glb` — and a rush, whose first frame is the only thing that tells
+ * one take from another in a shelf of grey rectangles.
+ *
+ * Here rather than beside either producer: a still comes down with a generated asset and is
+ * grabbed by ffmpeg for an imported one, and the two must not answer this differently.
+ */
+export const POSTER_KINDS: readonly AssetType[] = ['mesh', 'video']
+
+export function wantsPoster(type: AssetType): boolean {
+  return POSTER_KINDS.includes(type)
+}
+
+/**
+ * Whether the media carries a sound of its own. `channels` is only ever written when ffprobe
+ * found an audio stream, so its absence is the answer — for a silent rush AND for one nobody
+ * has probed, which a montage must treat alike: there is no sound it could lay down either way.
+ */
+export function hasSound(asset: Asset | null): boolean {
+  return (asset?.probe?.channels ?? 0) > 0
+}
+
 export type AssetQuery = {
   type?: AssetType
   /**

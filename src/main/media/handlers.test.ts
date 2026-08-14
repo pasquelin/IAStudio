@@ -10,7 +10,11 @@ vi.mock('electron', async () => (await import('@main/ipc/test-harness')).mockEle
 function deps(overrides: Partial<MediaHandlerDeps> = {}): MediaHandlerDeps {
   let linked = 0
   return {
-    media: { ingest: vi.fn(async () => undefined), cancel: vi.fn() },
+    media: {
+      ingest: vi.fn(async () => undefined),
+      derive: vi.fn(async () => undefined),
+      cancel: vi.fn(),
+    },
     link: vi.fn(async (source: string, type: Asset['type']) =>
       linkedAsset(source, {
         id: `asset-${(linked += 1)}`,

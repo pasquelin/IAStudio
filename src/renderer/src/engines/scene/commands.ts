@@ -1,4 +1,4 @@
-import type { Command } from '../core/history'
+import { composed, type Command } from '../core/history'
 import type {
   AnimationRef,
   EnvironmentRef,
@@ -232,14 +232,9 @@ function patchPart<T extends SceneNodeType>(
   }
 }
 
-/** One entry in the history for what the user did in one gesture. */
+/** One entry in the history for what the user did in one gesture — see `composed`. */
 export function multi(id: string, commands: Command<SceneState>[]): Command<SceneState> {
-  return {
-    id,
-    apply: state => commands.reduce((current, command) => command.apply(current), state),
-    revert: state =>
-      [...commands].reverse().reduce((current, command) => command.revert(current), state),
-  }
+  return composed(id, commands)
 }
 
 /**

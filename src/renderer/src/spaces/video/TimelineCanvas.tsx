@@ -2,19 +2,26 @@ import type { CommandId } from '@shared/domain/command'
 import { clamp } from '@shared/numeric'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
-import { addClip, removeClip, splitClip, type MediaExtent } from '@/engines/timeline/commands'
+import {
+  addClips,
+  removeClip,
+  splitClip,
+  unlinkClip,
+  type MediaExtent,
+} from '@/engines/timeline/commands'
 import {
   beginGesture,
   commandForGesture,
   viewportForGesture,
   type Gesture,
 } from '@/engines/timeline/interactions'
-import { clipForAsset } from '@/engines/timeline/insert'
+import { placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import type { Point, Size } from '@/engines/core/geometry'
 import { fitToDisplay } from '@/engines/core/canvas-2d'
 import {
+  clipById,
   clipUnderPlayhead,
   sequenceDuration,
   snapToFrame,
@@ -149,6 +156,24 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     [documentId],
   )
 
+  // The strip follows the playhead out of the frame — zoomed in, playing ran off the right edge
+  // within seconds and the montage stayed on a moment nobody was watching any more.
+  //
+  // On the PLAYHEAD alone, and the viewport read out of the ref rather than depended on: woken
+  // by the view as well, this pulled the strip back onto the playhead the instant the hand tool
+  // dragged it away, and chased its own clamped write when there was nowhere left to scroll.
+  useEffect(() => {
+    // A strip that has not been laid out yet says nothing about what is on screen, and every
+    // instant reads as off-frame against a width of zero.
+    if (size.current.width === 0) return
+
+    const current = latest.current.viewport
+    // Identity, which `revealTime` guarantees while the playhead is inside the frame: a montage
+    // that fits on screen must not scroll at all.
+    const revealed = revealTime(current, sequence.playhead, size.current.width)
+    if (revealed !== current) setViewport(revealed)
+  }, [sequence.playhead, setViewport])
+
   // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
   // and the whole window scrolls behind the timeline instead.
   useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
@@ -158,10 +183,10 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       const store = useSequences.getState()
       const state = sequenceOf(store, documentId)
       const playhead = clamp(time, 0, sequenceDuration(state))
+      // The strip follows on its own, from wherever the playhead lands — see the effect above.
       store.replace(documentId, { ...state, playhead })
-      setViewport(revealTime(latest.current.viewport, playhead, size.current.width))
     },
-    [documentId, setViewport],
+    [documentId],
   )
 
   const run = useCallback(
@@ -182,6 +207,14 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
         case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
           return
+        case 'sequence.unlink': {
+          // Asked here rather than left to the command: every command run lands on the undo
+          // stack, so a ⌘L on a clip that is tied to nothing would mark the document modified
+          // and leave a ⌘Z that visibly does nothing.
+          const linked = state.selectedId ? clipById(state, state.selectedId) : null
+          if (linked?.linkId) store.runCommand(documentId, unlinkClip(linked.id))
+          return
+        }
         case 'sequence.zoomIn':
           return setViewport(zoomAt(current, ZOOM_STEP, middle))
         case 'sequence.zoomOut':
@@ -335,8 +368,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       // `asset.id`, never the id the drag carried: a library drag carries the CLOUD id, and what
       // the import wrote is a catalogue row under an id of its own. A clip built on the first
       // names a row the project does not hold.
-      const clip = clipForAsset(asset.id, asset, start, sequence.settings)
-      useSequences.getState().runCommand(documentId, addClip(trackId, clip))
+      //
+      // Read out of the store rather than from the render's own `sequence`: a library asset is
+      // fetched first, and the montage may have been edited while it came down.
+      const store = useSequences.getState()
+      const current = sequenceOf(store, documentId)
+      const placements = placementsForAsset(current, asset, asset.id, start, trackId)
+      if (placements.length > 0) store.runCommand(documentId, addClips(placements))
     })
   }
 

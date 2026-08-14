@@ -172,6 +172,15 @@ export class TimelineEngine {
   private readonly clock: Clock
   private readonly sound: SoundScheduler
   private frameHandle: number | null = null
+  /**
+   * Whether the transport is running — which is NOT « a frame is pending ».
+   *
+   * The loop spends most of its time inside a decode with no frame requested, and reading the
+   * handle as the transport's state made `pause` a no-op exactly there.
+   */
+  private running = false
+  /** Which run of the transport a frame belongs to — see `step`. */
+  private transport = 0
 
   constructor(private readonly deps: TimelineEngineDeps) {
     // First child, so every layer added later composites over it.
@@ -189,38 +198,33 @@ export class TimelineEngine {
   }
 
   play(): void {
-    if (this.frameHandle !== null) return
+    if (this.running) return
 
     // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
     playbackToken.acquire(this.deps.owner, () => this.pause())
+
+    // The playhead stops ON the end, where the loop's first test sends it straight back to
+    // pause: pressing play there did nothing at all, which reads as a broken transport rather
+    // than as a sequence that is over.
+    const from = this.state.playhead >= sequenceDuration(this.state) ? 0 : this.state.playhead
+    if (from !== this.state.playhead) this.deps.onTime?.(from)
+
     // Sound first: it wakes the output, and the clock asks that same output whether to follow it
     // — asked before, the answer is always no and the sequence runs on the wall clock instead.
-    this.sound.start(this.state.playhead)
-    this.clock.start(this.state.playhead)
+    this.sound.start(from)
+    this.clock.start(from)
 
-    const step = (): void => {
-      const time = this.clock.now()
-      if (time >= sequenceDuration(this.state)) {
-        this.pause()
-        return
-      }
-
-      this.deps.onTime?.(time)
-      // Planned from the frame loop rather than from `seek`: a seek also happens while paused,
-      // where scrubbing must stay silent, and it happens per video track rather than per frame.
-      this.sound.pump(time)
-      void this.seek(time)
-      this.frameHandle = requestAnimationFrame(step)
-    }
-
-    this.frameHandle = requestAnimationFrame(step)
+    this.running = true
+    this.transport += 1
+    this.nextFrame(this.transport)
     this.deps.onPlayingChange?.(true)
   }
 
   pause(): void {
-    if (this.frameHandle === null) return
+    if (!this.running) return
 
-    cancelAnimationFrame(this.frameHandle)
+    this.running = false
+    if (this.frameHandle !== null) cancelAnimationFrame(this.frameHandle)
     this.frameHandle = null
     this.clock.stop()
     this.sound.stop()
@@ -230,7 +234,51 @@ export class TimelineEngine {
   }
 
   playing(): boolean {
-    return this.frameHandle !== null
+    return this.running
+  }
+
+  /**
+   * One decode in flight at a time, and the next frame asked for only once it has been painted.
+   *
+   * Asked every animation frame instead, the loop outran its own decoder: `seek` bumps the
+   * generation on entry, so each ask invalidated the one still awaiting a frame, and a decode
+   * that took longer than sixteen milliseconds — which is every hardware decode — was closed
+   * unpainted on return. The picture froze at the first miss and only a pause revived it.
+   *
+   * The playhead comes from the clock rather than from a frame count, so a decoder slower than
+   * real time drops pictures instead of falling behind the sound.
+   */
+  private nextFrame(transport: number): void {
+    this.frameHandle = requestAnimationFrame(() => {
+      this.frameHandle = null
+      void this.step(transport)
+    })
+  }
+
+  /**
+   * `transport` says which run this frame belongs to, and `running` alone cannot.
+   *
+   * Most of a frame is spent inside a decode, with no animation frame left for `pause` to
+   * cancel: pausing there and pressing play again started a second chain while the first was
+   * still in flight, and the two then invalidated each other's decodes on every frame — the
+   * very freeze this loop was rewritten to fix.
+   */
+  private async step(transport: number): Promise<void> {
+    if (!this.running || transport !== this.transport) return
+
+    const time = this.clock.now()
+    if (time >= sequenceDuration(this.state)) {
+      this.pause()
+      return
+    }
+
+    this.deps.onTime?.(time)
+    // Planned from the frame loop rather than from `seek`: a seek also happens while paused,
+    // where scrubbing must stay silent, and it happens per video track rather than per frame.
+    this.sound.pump(time)
+    await this.seek(time)
+    // Re-read: a pause, a revoked token or a dispose may all have landed during that decode.
+    if (this.running && transport === this.transport) this.nextFrame(transport)
   }
 
   async mount(element: HTMLElement): Promise<void> {
@@ -281,25 +329,32 @@ export class TimelineEngine {
     const painting = videoTracksByDepth(this.state)
     for (const sprite of spritesOffFrame(this.sprites, painting)) sprite.visible = false
 
-    for (const track of painting) {
-      const sprite = this.spriteFor(track.id)
+    // Every track asked BEFORE any is awaited: each holds a sink of its own, so their decodes
+    // are independent, and awaiting them one after another made a frame of a two-track montage
+    // cost the sum of two decodes rather than the longer of them.
+    const asked = painting.map(track => {
       // Asked here rather than by filtering the list: a track dropped from it would keep the
       // sprite it last painted on screen, which is the opposite of muting it.
       const clip = playsThrough(this.state, track) ? clipAt(track, time) : null
-      if (!clip) {
-        sprite.visible = false
-        continue
+      return {
+        sprite: this.spriteFor(track.id),
+        clip,
+        frame: clip ? this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time)) : null,
       }
+    })
 
-      const frame = await this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time))
-      if (generation !== this.generation) {
-        frame?.close()
-        return
-      }
+    const decoded = await Promise.all(asked.map(({ frame }) => frame))
+    if (generation !== this.generation) {
+      for (const frame of decoded) frame?.close()
+      return
+    }
+
+    asked.forEach(({ sprite, clip }, index) => {
+      const frame = decoded[index]
       if (!frame) {
         sprite.visible = false
-        if (this.pool.undecodable(clip.assetId)) unreadable = true
-        continue
+        if (clip && this.pool.undecodable(clip.assetId)) unreadable = true
+        return
       }
 
       sprite.visible = true
@@ -309,7 +364,7 @@ export class TimelineEngine {
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
       }).push(frame)
       this.fit(sprite)
-    }
+    })
 
     // Only when the monitor is showing nothing at all: the message covers the whole picture, and
     // laying it over a track that did decode would trade one silence for a worse lie. A layer

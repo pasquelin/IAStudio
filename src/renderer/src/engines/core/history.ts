@@ -60,6 +60,21 @@ export function run<S>(state: S, history: History<S>, command: Command<S>): [S, 
 }
 
 /**
+ * Several commands as ONE entry in the history: applied in order, reverted in reverse.
+ *
+ * What the user did in one gesture is one ⌘Z — three nodes nudged together, a take laid down as
+ * a picture and a sound. Here rather than in an engine because two of them compose already and
+ * a third writes the same four lines the day it needs to.
+ */
+export function composed<S>(id: string, parts: readonly Command<S>[]): Command<S> {
+  return {
+    id,
+    apply: state => parts.reduce((current, part) => part.apply(current), state),
+    revert: state => parts.reduceRight((current, part) => part.revert(current), state),
+  }
+}
+
+/**
  * Runs a command as the continuation of the one before it, when both are the same edit of the
  * same node — which is what `id` says. Dragging a field emits dozens of values a second, and a
  * stack where ⌘Z gives back one pixel of a drag is a stack nobody can use.

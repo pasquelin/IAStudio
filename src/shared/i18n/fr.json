@@ -1413,6 +1413,10 @@
       "title": "Supprimer le clip",
       "help": "Retire du montage le clip choisi. Le fichier d’origine, lui, reste dans vos assets."
     },
+    "sequenceUnlink": {
+      "title": "Délier l’image et le son",
+      "help": "Sépare les deux clips d’une même prise. Tant qu’ils sont liés, déplacer, couper ou supprimer l’un fait la même chose à l’autre."
+    },
     "sequenceZoomIn": {
       "title": "Zoomer",
       "help": "Étale le montage pour voir le détail : les clips deviennent plus larges et on vise plus précisément."

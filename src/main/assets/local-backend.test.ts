@@ -55,6 +55,7 @@ describe('local backend', () => {
     await mkdir(join(root, 'assets/aud'), { recursive: true })
     await mkdir(join(root, 'assets/tex'), { recursive: true })
     await mkdir(join(root, 'assets/3d'), { recursive: true })
+    await mkdir(join(root, 'assets/vid'), { recursive: true })
     await mkdir(join(root, '.index/posters'), { recursive: true })
 
     catalog = memoryCatalog()
@@ -69,6 +70,62 @@ describe('local backend', () => {
   afterEach(async () => {
     await catalog.close()
     await rm(root, { recursive: true, force: true })
+  })
+
+  /**
+   * The API states no duration beside the bytes it hands over: a generated take reached the
+   * timeline as an untimed clip — five arbitrary seconds — and nothing said whether it carried
+   * a sound, which is what decides that a drop lays down one clip or two.
+   */
+  it('reads a downloaded take back for its length and its tracks', async () => {
+    const probeFile = vi.fn(async () => ({
+      duration: 5_400_000,
+      codec: 'h264',
+      width: 848,
+      height: 480,
+      sampleRate: 48_000,
+      channels: 2,
+    }))
+    const probing = createLocalBackend({
+      download: () => Promise.resolve(BYTES),
+      projectPath: () => root,
+      catalog: () => catalog,
+      now: () => '2026-08-06T10:00:00.000Z',
+      probeFile,
+    })
+
+    const asset = await probing.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/take.mp4',
+      name: 'Terrier',
+      type: 'video',
+    })
+
+    expect(asset.probe?.duration).toBe(5_400_000)
+    expect(asset.probe?.channels).toBe(2)
+    // The file that was just written, never the URL it came from.
+    expect(probeFile).toHaveBeenCalledWith(join(root, 'assets/vid/asset_1.mp4'))
+  })
+
+  // A tool the user has not installed must cost nothing but the length nobody could read.
+  it('imports the take all the same when nothing can read it back', async () => {
+    const probing = createLocalBackend({
+      download: () => Promise.resolve(BYTES),
+      projectPath: () => root,
+      catalog: () => catalog,
+      now: () => '2026-08-06T10:00:00.000Z',
+      probeFile: () => Promise.reject(new Error('no ffprobe')),
+    })
+
+    const asset = await probing.importFromUrl({
+      id: 'asset_1',
+      url: 'https://cdn.example/take.mp4',
+      name: 'Terrier',
+      type: 'video',
+    })
+
+    expect(asset.path).toBe('assets/vid/asset_1.mp4')
+    expect(asset.probe).toBeUndefined()
   })
 
   // Pulling a twin twice lands on the same id on purpose. Rebuilding the row from the request
@@ -468,12 +525,29 @@ describe('the still brought down beside the bytes', () => {
   })
 
   /**
-   * A picture answers for itself, and a rush and a take get their still at ingest — one recorded
-   * here would be painted UNDER the waveform of every audio clip, since a timeline clip reads
-   * `posterUrl` like every other surface. Only a `.glb` has nothing that decodes.
+   * A grid of video tiles is a grid of identical grey rectangles otherwise, and so is a clip on
+   * the strip — both read `posterUrl`. The still the library already holds is the cheapest true
+   * picture of the take there is; nothing needs decoding to show it.
+   */
+  it('writes one for a rush, whose own file no grid can paint', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_2',
+      url: 'https://cdn.example/take.mp4',
+      name: 'Terrier',
+      type: 'video',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+    })
+
+    expect(asset.posterPath).toBe('.index/posters/asset_2.jpg')
+    expect(await readFile(join(root, '.index/posters/asset_2.jpg'))).toEqual(Buffer.from(POSTER))
+  })
+
+  /**
+   * A picture answers for itself. A sound must NOT be given one: a timeline clip reads
+   * `posterUrl` like every other surface, and the still would be painted under its waveform.
    */
   it('writes none for a kind that has a picture of its own', async () => {
-    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'video', 'audio']
+    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'audio']
     for (const type of alreadyShowable) {
       const asset = await backend.importFromUrl({
         id: `asset_${type}`,
@@ -487,7 +561,7 @@ describe('the still brought down beside the bytes', () => {
     }
 
     // One download per asset, and not one thumbnail among them.
-    expect(download).toHaveBeenCalledTimes(5)
+    expect(download).toHaveBeenCalledTimes(4)
   })
 
   // The model is the asset; the still is a convenience. A CDN answering 404 must not cost the

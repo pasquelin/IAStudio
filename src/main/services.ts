@@ -625,11 +625,41 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
+    // The API states no duration and no track list beside the bytes it hands over, so a
+    // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
+    // way to tell whether it carries a sound. ffprobe reads the file that just landed.
+    probeFile: async path => {
+      const outcome = await probeSource(companionPath(ffmpeg.path()), path)
+      return outcome.kind === 'probed' ? outcome.probe : null
+    },
     // Every mesh that lands in the project sheds its pictures on the spot, so the inspector has
     // something to show beside a model without anyone having gone looking for a menu row. Not
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
     // download that produced it, and a failure here must not cost the model itself.
     onImported: asset => {
+      // A take that came down from the API never met the picker, so nothing ever derived what
+      // a montage reads: no waveform under its sound clip, and no proxy for a codec the window
+      // cannot decode. Both are what `ingest` writes for a file picked off a disk.
+      //
+      // Only with a probe: `deriveFiles` needs the length, and a `null` one means ffprobe is
+      // missing — in which case there is no ffmpeg to derive anything with either.
+      if ((asset.type === 'video' || asset.type === 'audio') && asset.probe && asset.path) {
+        void media
+          .derive({
+            assetId: asset.id,
+            path: join(project.path() ?? '', asset.path),
+            kind: asset.type,
+            probe: asset.probe,
+            // The library's own still is a picture of the take; ours would be a frame of it.
+            poster: !asset.posterPath,
+          })
+          .then(() => broadcast(EVENTS.assetsChanged))
+          .catch((error: unknown) =>
+            log.warn('media', `could not derive the files of ${asset.name}: ${String(error)}`),
+          )
+        return
+      }
+
       if (asset.type !== 'mesh') return
       void extractTextures(asset)
         .then(textures => {

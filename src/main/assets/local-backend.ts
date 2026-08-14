@@ -2,6 +2,7 @@ import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
   ASSET_FOLDERS,
+  wantsPoster,
   type Asset,
   type AssetGeneration,
   type AssetType,
@@ -27,6 +28,15 @@ export type LocalBackendDeps = {
   projectPath: () => string
   catalog: () => AsyncCatalog
   now: () => string
+  /**
+   * Reads a written file back for its length and its tracks — `null` when the tool is missing
+   * or the file says nothing.
+   *
+   * A generation carries no length with its bytes: the API states none, and a clip laid down
+   * without one is given an arbitrary five seconds and no way to know whether it even has a
+   * sound. Read here rather than at the drop, which has no ffprobe and no file path either.
+   */
+  probeFile?: (path: string) => Promise<MediaProbe | null>
   /**
    * What has just landed in the project, once the catalogue holds it.
    *
@@ -146,21 +156,38 @@ export function createLocalBackend({
   projectPath,
   catalog,
   now,
+  probeFile,
   onImported,
 }: LocalBackendDeps): LocalBackend {
   /**
-   * The library's still, brought down beside the bytes — for a mesh, and for a mesh alone.
+   * What the bytes say about themselves, read off the file that was just written.
    *
-   * A picture IS its own poster. A rush and a take have one waiting for them at ingest, and a
-   * still recorded here would be painted UNDER the waveform of every audio clip on the timeline
-   * (`posterUrl` is what a clip reads) — a picture of the take before any edit, at that. Only
-   * `.glb` has nothing any surface can decode, which is the whole reason this exists.
+   * Only for the two kinds that run in time, and only when the caller could not say: an editor
+   * applying an edit already knows, and a picture has nothing to time. Best effort, like the
+   * poster beside it — a missing ffprobe leaves the asset exactly as it was before.
+   */
+  const probeWritten = async (
+    request: WriteRequest,
+    relativePath: string,
+  ): Promise<MediaProbe | undefined> => {
+    if (request.probe) return request.probe
+    if (!probeFile || (request.type !== 'video' && request.type !== 'audio')) return undefined
+
+    try {
+      return (await probeFile(join(projectPath(), relativePath))) ?? undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * The library's still, brought down beside the bytes — for the kinds `wantsPoster` names.
    *
    * Best effort, and that is the whole design: the thumbnail is a convenience, the model is the
    * asset. A CDN that answers 404 must leave the import that carries it untouched.
    */
   const savePoster = async (request: WriteRequest): Promise<string | undefined> => {
-    if (!request.thumbnailUrl || request.type !== 'mesh') return undefined
+    if (!request.thumbnailUrl || !wantsPoster(request.type)) return undefined
 
     try {
       const poster = await download(request.thumbnailUrl)
@@ -175,19 +202,24 @@ export function createLocalBackend({
   const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
     const relativePath = relativePathFor(request.id, request.extension, request.type)
 
-    // Together: the still is a second download over the network, and waiting for it after the
-    // bytes are already on disk would add its latency to every import that carries one.
-    const [, posterPath] = await Promise.all([
-      writeFile(join(projectPath(), relativePath), bytes),
-      savePoster(request),
-    ])
-
-    const at = now()
+    // All at once. Three of these are the only thing the fourth waits on: the still is a second
+    // download over the network, the probe spawns ffprobe, and the row is a catalogue read —
+    // run in a file, each one's latency lands on every import that carries the others.
+    //
     // What the row already held survives being written again. Pulling a twin a second time
     // lands on the same id on purpose, and rebuilding the asset from the request alone dropped
     // the tags the user had put on it and moved its creation date to now — which also sent it
     // back to the top of a shelf sorted newest first, for a file that had not changed.
-    const existing = await catalog().find(request.id)
+    const written = writeFile(join(projectPath(), relativePath), bytes)
+    const [, posterPath, probe, existing] = await Promise.all([
+      written,
+      savePoster(request),
+      // After the write, and only after it: this one reads the file that was just laid down.
+      written.then(() => probeWritten(request, relativePath)),
+      catalog().find(request.id),
+    ])
+
+    const at = now()
 
     // The still's name follows the extension the CDN's URL carried, and a second pull of the
     // same twin can carry another one. The file the row stops pointing at is ours and nothing
@@ -207,7 +239,7 @@ export function createLocalBackend({
       tags: existing?.tags ?? [],
       createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
-      ...(request.probe ? { probe: request.probe } : {}),
+      ...(probe ? { probe } : {}),
       // Absent rather than cleared: a still that failed to come down this time leaves the one
       // an earlier pull already put on disk, which is still a true picture of the same asset.
       ...(posterPath ? { posterPath } : {}),

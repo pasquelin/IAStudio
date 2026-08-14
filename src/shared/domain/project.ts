@@ -197,7 +197,10 @@ export function withoutRecentProject(
 export const PROXIES_FOLDER = '.index/proxies'
 export const PEAKS_FOLDER = '.index/peaks'
 export const FILMSTRIPS_FOLDER = '.index/filmstrips'
-/** Stills for the assets that are not pictures — a mesh's, brought down with its bytes. */
+/**
+ * Stills for the assets that are not pictures: a mesh's, brought down with its bytes, and a
+ * rush's — the library's when it came from there, one grabbed by ffmpeg when it came off a disk.
+ */
 export const POSTERS_FOLDER = '.index/posters'
 
 export const PROJECT_FOLDERS: readonly string[] = [

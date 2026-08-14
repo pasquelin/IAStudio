@@ -1,8 +1,14 @@
 import { basename } from 'node:path'
-import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
+import {
+  PEAKS_PER_SECOND,
+  wantsPoster,
+  type Asset,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
-import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
-import { peaksArgs, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
+import { PEAKS_FOLDER, POSTERS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
+import { peaksArgs, posterArgs, posterOffset, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
 import type { PeaksRun } from './peaks-client'
 import type { ProbeOutcome } from './probe'
 import type { ActivityReport } from '@main/project/activity-log'
@@ -38,9 +44,32 @@ export type MediaServiceDeps = {
   concurrency: () => number
 }
 
+/**
+ * A file that is already inside the project and needs what `ingest` derives — a generation
+ * brought down from the API, which no picker ever handed over.
+ */
+export type DeriveRequest = {
+  assetId: string
+  /** Absolute path of the file. It sits inside the project, so nothing here records it. */
+  path: string
+  kind: AssetType
+  /** Read when the bytes were written — see `LocalBackendDeps.probeFile`. */
+  probe: MediaProbe
+  /** False when the library sent a still down beside the bytes: ours would overwrite a better one. */
+  poster: boolean
+}
+
 export type MediaService = {
   /** `kind` decides what the pipeline runs: a still needs neither a proxy nor a waveform. */
   ingest: (assetId: string, sourcePath: string, kind: AssetType) => Promise<void>
+  /**
+   * The same derived files for an asset that arrived already probed and already in the project.
+   *
+   * Without the two halves that only a picked file needs: no `sourcePath` — there is no
+   * original anywhere else — and no duplicate check, since the row was minted by the collector
+   * for an output the account genuinely produced twice if it produced it twice.
+   */
+  derive: (request: DeriveRequest) => Promise<void>
   cancel: (assetId: string) => void
 }
 
@@ -119,6 +148,82 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
     }
   }
 
+  /**
+   * What a timed media gets beside it once its length is known: a still, a proxy when nothing
+   * can decode it as it is, and a waveform. Shared by both ways in — a file picked off a disk
+   * and a generation brought down from the API derive exactly the same things.
+   *
+   * `key` names the files that CAN be shared between rows holding the same bytes: the hash for
+   * both callers, so a rush imported twice writes one proxy.
+   */
+  const deriveFiles = async (
+    request: {
+      assetId: string
+      source: string
+      kind: AssetType
+      probe: MediaProbe
+      key: string
+      poster: boolean
+    },
+    fields: Partial<Asset>,
+    signal: AbortSignal,
+    advance: (stage: IngestStage) => void,
+  ): Promise<void> => {
+    const { assetId, source, kind, probe, key, poster } = request
+    const binary = deps.ffmpeg()
+    const project = deps.projectPath()
+    const timed = kind === 'video' || kind === 'audio'
+    if (!timed || !binary || !project) return
+
+    // Under the proxy's own stage rather than one of its own: a keyframe grab is a tenth of a
+    // second, and a stage of its own would cost an ingest state, its label in two bundles and
+    // the guards that hold them, for a bar nobody would see move.
+    //
+    // Swallowed on failure, like the still a download brings beside a mesh: a rush whose first
+    // keyframe ffmpeg refuses is still a perfectly good import.
+    if (poster && wantsPoster(kind)) {
+      const relative = `${POSTERS_FOLDER}/${assetId}.jpg`
+      const args = posterArgs(source, `${project}/${relative}`, posterOffset(probe.duration))
+      try {
+        await deps.run(binary, args, signal)
+        fields.posterPath = relative
+      } catch {
+        // A grid falls back to the kind's own glyph, which is what it showed before.
+      }
+      if (signal.aborted) return
+    }
+
+    if (needsProxy(probe)) {
+      advance('proxy')
+      const relative = `${PROXIES_FOLDER}/${key}.mp4`
+      await deps.run(binary, proxyArgs(source, `${project}/${relative}`), signal)
+      if (signal.aborted) return
+      fields.proxyPath = relative
+    }
+
+    // Without a duration there is no bucket count worth computing, and a waveform reduced to
+    // one pair is a flat line that looks exactly like silence.
+    if (probe.sampleRate && probe.duration > 0) {
+      advance('peaks')
+
+      const seconds = probe.duration / 1_000_000
+      // ffmpeg and the reduction both run off this process: an hour of audio is 57 MB of PCM,
+      // and folding it here froze every window for the length of the fold.
+      const peaks = await deps.computePeaks({
+        binary,
+        args: peaksArgs(source),
+        buckets: Math.max(1, Math.round(seconds * PEAKS_PER_SECOND)),
+        samplesPerBucket: PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND,
+        signal,
+      })
+      if (signal.aborted) return
+
+      const relative = `${PEAKS_FOLDER}/${key}.bin`
+      await deps.writeFile(`${project}/${relative}`, new Uint8Array(peaks.buffer))
+      fields.peaksPath = relative
+    }
+  }
+
   return {
     ingest: async (assetId, sourcePath, kind) => {
       const controller = new AbortController()
@@ -186,41 +291,12 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         }
         if (cancelled()) return
 
-        const binary = deps.ffmpeg()
-        const project = deps.projectPath()
-        const timed = kind === 'video' || kind === 'audio'
-
-        if (timed && binary && project && probe) {
-          if (needsProxy(probe)) {
-            advance('proxy')
-            const relative = `${PROXIES_FOLDER}/${hash}.mp4`
-            const destination = `${project}/${relative}`
-            await deps.run(binary, proxyArgs(sourcePath, destination), controller.signal)
-            if (cancelled()) return
-            fields.proxyPath = relative
-          }
-
-          // Without a duration there is no bucket count worth computing, and a waveform
-          // reduced to one pair is a flat line that looks exactly like silence.
-          if (probe.sampleRate && probe.duration > 0) {
-            advance('peaks')
-
-            const seconds = probe.duration / 1_000_000
-            // ffmpeg and the reduction both run off this process: an hour of audio is 57 MB of
-            // PCM, and folding it here froze every window for the length of the fold.
-            const peaks = await deps.computePeaks({
-              binary,
-              args: peaksArgs(sourcePath),
-              buckets: Math.max(1, Math.round(seconds * PEAKS_PER_SECOND)),
-              samplesPerBucket: PEAKS_SAMPLE_RATE / PEAKS_PER_SECOND,
-              signal: controller.signal,
-            })
-            if (cancelled()) return
-
-            const relative = `${PEAKS_FOLDER}/${hash}.bin`
-            await deps.writeFile(`${project}/${relative}`, new Uint8Array(peaks.buffer))
-            fields.peaksPath = relative
-          }
+        if (probe) {
+          // A picked file has no still waiting for it anywhere: whatever ffmpeg grabs is the
+          // only picture there will ever be of it.
+          const work = { assetId, source: sourcePath, kind, probe, key: hash, poster: true }
+          await deriveFiles(work, fields, controller.signal, advance)
+          if (cancelled()) return
         }
 
         stage = 'done'
@@ -249,6 +325,53 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         const outcome = cancelled() ? 'cancelled' : stage
         advance(outcome)
         journal(sourcePath, outcome)
+      }
+    },
+
+    derive: async ({ assetId, path, kind, probe, poster }) => {
+      const controller = new AbortController()
+      running.set(assetId, controller)
+      const cancelled = (): boolean => controller.signal.aborted
+      const fields: Partial<Asset> = {}
+      let stage: IngestStage = 'queued'
+
+      const advance = (next: IngestStage): void => {
+        stage = next
+        deps.onProgress({ assetId, stage, ratio: STAGE_RATIO[stage] })
+      }
+
+      advance('queued')
+      // The same bounded pool as a picked file, per CLAUDE.md § 6: four videos generated at once
+      // are four ffmpeg processes otherwise, on top of whatever is being imported beside them.
+      await acquire()
+
+      try {
+        if (cancelled()) return
+
+        // Hashed like a picked file, and for the same two reasons: it names the derived files —
+        // so the same bytes pulled twice write one proxy — and it is what a relink searches on.
+        advance('hash')
+        fields.hash = await deps.hash(path)
+        if (cancelled()) return
+
+        await deriveFiles(
+          { assetId, source: path, kind, probe, key: fields.hash, poster },
+          fields,
+          controller.signal,
+          advance,
+        )
+        stage = 'done'
+      } catch {
+        stage = 'failed'
+      } finally {
+        release()
+        running.delete(assetId)
+
+        // Never discarded, whatever happened: the row stands for an asset the account holds,
+        // and a proxy that failed is a take that plays without one — not a take that is gone.
+        if (stage !== 'queued') deps.save(assetId, fields)
+
+        advance(cancelled() ? 'cancelled' : stage)
       }
     },
 

@@ -1,6 +1,6 @@
 import type { Asset } from '@shared/domain/asset'
-import { addClip } from '@/engines/timeline/commands'
-import { clipForAsset, trackForAsset } from '@/engines/timeline/insert'
+import { addClips } from '@/engines/timeline/commands'
+import { placementsForAsset, trackForAsset } from '@/engines/timeline/insert'
 import {
   EMPTY_SEQUENCE,
   updateTrack,
@@ -36,11 +36,9 @@ export function sequenceTakes(documentId: string, asset: Asset): boolean {
 export function addAssetToSequence(documentId: string, asset: Asset): void {
   const current = store.use.getState()
   const sequence = store.stateOf(current, documentId)
-  const track = trackForAsset(sequence, asset)
-  if (!track) return
 
-  const clip = clipForAsset(asset.id, asset, sequence.playhead, sequence.settings)
-  current.runCommand(documentId, addClip(track.id, clip))
+  const placements = placementsForAsset(sequence, asset, asset.id, sequence.playhead)
+  if (placements.length > 0) current.runCommand(documentId, addClips(placements))
 }
 
 /**
