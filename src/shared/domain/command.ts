@@ -986,18 +986,35 @@ export function bindingOf(id: CommandId, overrides: BindingOverrides): Signature
  * `global` is deliberately excluded: those are the native menu's accelerators, and Electron
  * fires them itself — matching them here too would run the command twice.
  */
+/**
+ * The one key that answers to two names.
+ *
+ * A Mac's main keyboard carries a single key marked « delete », and it reports `Backspace`. The
+ * key that reports `Delete` is a full keyboard's forward-delete, or `fn` held down with the
+ * other. A command bound to `Delete` was therefore out of reach on the keyboard most of this
+ * studio is used on: pressing the key labelled delete did nothing whatsoever, in every space
+ * that binds it — the montage, the scene, the canvas.
+ *
+ * One way round only: whatever genuinely binds `Backspace` keeps it to itself.
+ */
+const KEY_ALIASES: Partial<Record<Signature, Signature>> = { Backspace: 'Delete' }
+
 export function commandFor(
   signature: Signature,
   scope: CommandScope,
   overrides: BindingOverrides,
 ): CommandId | null {
-  const found = COMMAND_REGISTRY.find(
-    descriptor =>
-      descriptor.scope === scope &&
-      !descriptor.held &&
-      bindingOf(descriptor.id, overrides) === signature,
-  )
-  return found?.id ?? null
+  const bound = (wanted: Signature): CommandId | null =>
+    COMMAND_REGISTRY.find(
+      descriptor =>
+        descriptor.scope === scope &&
+        !descriptor.held &&
+        bindingOf(descriptor.id, overrides) === wanted,
+    )?.id ?? null
+
+  // The alias is tried second, so a scope that binds the pressed key outright still wins.
+  const alias = KEY_ALIASES[signature]
+  return bound(signature) ?? (alias ? bound(alias) : null)
 }
 
 /**
