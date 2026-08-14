@@ -1046,6 +1046,18 @@ commodité de développement, pas une seconde source de vérité.
 `ELECTRON_RENDERER_URL` est posée par electron-vite en mode watch : c’est elle qui fait charger
 la fenêtre depuis le serveur de développement plutôt que depuis le disque.
 
+### Ce que l’environnement fournit sans qu’on le règle
+
+Trois variables ne se renseignent nulle part : elles viennent du système, de la CI ou du lanceur
+de tests. Chacune a un **repli qui marche** — aucune n’est requise, et c’est la raison de les
+lire plutôt que de les exiger.
+
+| Variable | Posée par | Ce qu’elle change | Si elle manque |
+|---|---|---|---|
+| `LOCALAPPDATA` | Windows | ajoute les polices installées pour l’utilisateur seul aux dossiers balayés | seules les polices de la machine sont vues |
+| `NODE_ENV` | le lanceur de tests, à `test` | fait taire le journal du processus principal | le journal écrit, et une suite bavarde noie sa propre sortie |
+| `GITHUB_SHA` | GitHub Actions | grave l’empreinte du commit dans le build, sans appeler git | l’empreinte est demandée à git ; hors dépôt, elle vaut `dev` |
+
 ### Ce dont le build a besoin
 
 `scripts/dist.sh` charge `secrets/.env` et appelle electron-builder. Laissées vides, les trois

@@ -993,6 +993,18 @@ development, not a second source of truth.
 `ELECTRON_RENDERER_URL` is set by electron-vite in watch mode and is what makes the window load
 from the dev server rather than from disk.
 
+### What the environment provides without being configured
+
+Three variables are set nowhere: they come from the operating system, from CI, or from the test
+runner. Each has a **working fallback** — none is required, and that is precisely why they are
+read rather than demanded.
+
+| Variable | Set by | What it changes | When absent |
+|---|---|---|---|
+| `LOCALAPPDATA` | Windows | adds per-user installed fonts to the folders scanned | only machine-wide fonts are seen |
+| `NODE_ENV` | the test runner, as `test` | silences the main process log | the log writes, and a noisy suite drowns its own output |
+| `GITHUB_SHA` | GitHub Actions | stamps the commit hash into the build without calling git | the hash is asked of git; outside a repository it is `dev` |
+
 ### What the build needs
 
 `scripts/dist.sh` loads `secrets/.env` and calls electron-builder. Left empty, the three Apple
