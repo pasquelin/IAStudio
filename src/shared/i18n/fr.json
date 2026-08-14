@@ -171,6 +171,7 @@
       "assets.reveal": "Le fichier n’a pas pu être montré",
       "assets.open": "Cet asset n’a pas pu être ouvert",
       "assets.save": "L’asset n’a pas pu être réécrit",
+      "assets.copy": "La copie n’a pas pu être terminée",
       "assets.extract": "Les images de ce modèle n’ont pas pu être extraites",
       "project.reveal": "Le dossier du projet n’a pas pu être montré",
       "project.forget": "Le projet n’a pas pu être retiré de la liste",

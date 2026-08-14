@@ -41,9 +41,12 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // document that refused it — there is none, and that is exactly what the line says.
   'assets.open': 'library',
   // Read with the shelf whose tile is now behind, not with the document — that one was saved.
-  // The drift warning that used to justify this line moved to `canvas.size`; what is left is
-  // ⌘S failing to write the asset, and ⇧⌘S failing to make a copy — see the note at its sites.
+  // The drift warning that used to justify this line moved to `canvas.size`, and ⇧⌘S to
+  // `assets.copy`: what is left is ⌘S failing to write the asset, which is what this line said.
   'assets.save': 'library',
+  // The copy lands in the shelf, and that is where a user goes looking for it — including in the
+  // one case where it arrived and no document names it.
+  'assets.copy': 'library',
   // `import`, with the lines the extraction itself writes: what it produces is bytes landing in
   // the project, and a failure filed away from its own outcome reads as a different event.
   'assets.extract': 'import',

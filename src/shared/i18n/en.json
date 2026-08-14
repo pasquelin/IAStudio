@@ -171,6 +171,7 @@
       "assets.reveal": "The file could not be shown",
       "assets.open": "This asset could not be opened",
       "assets.save": "The asset could not be rewritten",
+      "assets.copy": "The copy could not be completed",
       "assets.extract": "The images inside this model could not be taken out",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",

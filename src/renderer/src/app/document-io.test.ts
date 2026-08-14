@@ -672,7 +672,9 @@ describe('saveDocument', () => {
       await expect(saveDocumentAs(await openScene())).resolves.toBe(false)
 
       expect(entries()).toHaveLength(1)
-      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+      // `assets.copy`, never `assets.save`: ⇧⌘S makes a copy and rewrites nothing, so every
+      // refusal here is a copy that was not made — not a save that failed.
+      expect(entries()[0]).toMatchObject({ scope: 'assets.copy' })
     })
 
     // Nothing baked means nothing to copy: no second document is opened onto an asset that was
@@ -691,7 +693,7 @@ describe('saveDocument', () => {
       release()
 
       expect(Object.keys(useDocuments.getState().documents)).toHaveLength(1)
-      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+      expect(entries()[0]).toMatchObject({ scope: 'assets.copy' })
     })
 
     // No engine at all, as opposed to one whose context is still coming up: both mean there are
@@ -706,7 +708,7 @@ describe('saveDocument', () => {
 
       await expect(saveDocumentAs(created.id)).resolves.toBe(false)
 
-      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+      expect(entries()[0]).toMatchObject({ scope: 'assets.copy' })
     })
 
     it('says so when the copy itself is refused', async () => {
@@ -719,7 +721,7 @@ describe('saveDocument', () => {
       await expect(saveDocumentAs(documentId)).resolves.toBe(false)
       release()
 
-      expect(entries()[0]).toMatchObject({ scope: 'assets.save' })
+      expect(entries()[0]).toMatchObject({ scope: 'assets.copy' })
     })
 
     /**
