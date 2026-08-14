@@ -259,6 +259,15 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
   }
 
   const onPointerDown = (event: PointerEvent<HTMLCanvasElement>): void => {
+    // A right press raises the menu and must not start anything else. It arrives here first —
+    // `pointerdown` precedes `contextmenu` — so the clip was picked up: it followed the pointer
+    // while the menu was open, and the drag's own pointer-up then rewound the montage to where
+    // the press began, over whatever the menu had just done. Delete looked like it moved the
+    // clip and deleted nothing.
+    //
+    // `ctrlKey` with it: on macOS a control-click IS the context menu, and it reports button 0.
+    if (event.button !== 0 || event.ctrlKey) return
+
     const point = pointAt(event)
 
     if (tool === 'blade') {
