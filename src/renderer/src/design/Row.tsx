@@ -72,8 +72,18 @@ export function Row({
         </p>
         {/* Muted at rest, full ink once the row is picked or pointed at: `muted` on
             `accent-soft` reads 3.25:1 and on `elevated` 3.51, both under the 4.5 of WCAG 1.4.3.
-            Driven from the row through `rowSkin`'s group, so no list has to pass its state down. */}
-        {subtitle && <p className={cn(ROW_QUIET, 'text-mini truncate')}>{subtitle}</p>}
+            Driven from the row through `rowSkin`'s group, so no list has to pass its state down.
+
+            Titled for the same reason the name above it is tipped, and it took an inspector slot
+            to notice: this line truncates too, and « Occlusion ambian… » is exactly the case
+            where hovering is the only way to read the rest. The native attribute rather than the
+            studio tooltip — one row raising two of them answers two things depending on which
+            half of it the pointer is over. */}
+        {subtitle && (
+          <p title={subtitle} className={cn(ROW_QUIET, 'text-mini truncate')}>
+            {subtitle}
+          </p>
+        )}
       </div>
       {actions}
     </div>

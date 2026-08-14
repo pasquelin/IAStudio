@@ -4,7 +4,7 @@ import type { UseFormRegisterReturn } from 'react-hook-form'
 import { ASSET_TYPES, assetUrl, posterUrl, type Asset } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
 import { AssetDropTarget } from './AssetDropTarget'
-import { FIELD } from './styles'
+import { FIELD, FIELD_THUMBNAIL } from './styles'
 import { Thumbnail } from './Thumbnail'
 import { UiIcon } from './UiIcon'
 
@@ -14,9 +14,6 @@ export type AssetDropFieldProps = {
   initial?: string
   placeholder: string
 }
-
-/** The thumbnail matches the control gauge, so the field is exactly one row tall. */
-const THUMBNAIL = 'size-(--sc-control)'
 
 /**
  * A picture, chosen by dropping one on it. The field a model asks for when it edits an image —
@@ -62,9 +59,9 @@ export function AssetDropField({ registration, initial, placeholder }: AssetDrop
       className="flex min-w-0 items-center gap-2 rounded"
     >
       {assetId ? (
-        <Thumbnail url={poster ?? assetUrl(assetId)} className={THUMBNAIL} />
+        <Thumbnail url={poster ?? assetUrl(assetId)} className={FIELD_THUMBNAIL} />
       ) : (
-        <span className={cn(THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
+        <span className={cn(FIELD_THUMBNAIL, 'text-muted grid shrink-0 place-items-center')}>
           <UiIcon path={mdiImagePlusOutline} size={14} />
         </span>
       )}

@@ -18,6 +18,15 @@ const SOURCES: Record<string, string> = import.meta.glob('./PropertyRow.tsx', {
 
 const propertyRow = Object.values(SOURCES)[0] ?? ''
 
+/** The third family, read the same way — see the last case of this file for why it is here. */
+const ROW: Record<string, string> = import.meta.glob('./Row.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
+
+const rowSource = Object.values(ROW)[0] ?? ''
+
 /**
  * Every field of the family, read the same way. The rule below was once fixed on ONE of them —
  * `ToggleField`, where a label had been seen truncated mid-word — and the eight others went on
@@ -108,5 +117,18 @@ describe('a label the column is too narrow for', () => {
 
   it('is reachable on the row family too, which is where the rule started', () => {
     expect(named(propertyRow)).toBe(true)
+  })
+
+  /**
+   * And on `Row`, which is the third family: a field that hands its whole line over to it — a
+   * texture slot does — leaves this glob, since it no longer names `FIELD_LABEL` anywhere. The
+   * rule has to be held where the truncation now happens, or it is held nowhere at all.
+   *
+   * Both lines: the name is tipped by `Row` itself, the kind under it was not, and « Occlusion
+   * ambian… » is exactly the case the rule was written for.
+   */
+  it('is reachable on both lines of `Row`, which fields now delegate to', () => {
+    expect(rowSource).toContain('title={subtitle}')
+    expect(rowSource).toContain('tip(title')
   })
 })

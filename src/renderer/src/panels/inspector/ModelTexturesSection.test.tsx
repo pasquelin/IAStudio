@@ -43,17 +43,29 @@ describe('ModelTexturesSection', () => {
   })
 
   /**
-   * The channel, not the file name: a model's pictures are all called « Robot — … » and differ by
-   * that word alone. A slot the studio has no channel for keeps the name the extraction gave it.
+   * The name over the channel, which is the shape every row of the studio draws: what the thing
+   * IS on the first line, what KIND of thing on the second. This list read the other way round
+   * for a while, and was the one list of the panel to be learnt twice.
    */
-  it('shows a model’s own pictures, each under the channel it plays', async () => {
-    derived = [texture(), texture({ id: 'asset-ao', map: undefined, name: 'Robot — occlusion' })]
+  it('shows a model’s own pictures, each named over the channel it plays', async () => {
+    show()
+
+    expect(await screen.findByText('Robot — Couleur de base')).toBeInTheDocument()
+    // Which of the two is the SUBTITLE, and not merely that both are on screen: read the other
+    // way round — the channel over the file name, as this list drew it for a while — both
+    // strings are still there and an assertion on their presence alone stays green.
+    expect(screen.getByText('Couleur de base')).toHaveClass('text-mini')
+  })
+
+  // Nothing invented under a picture the file gave no channel to: repeating its name as its own
+  // kind would say something the extraction never said.
+  it('says no kind for a picture the studio has no channel for', async () => {
+    derived = [texture({ id: 'asset-ao', map: undefined, name: 'Robot — occlusion' })]
 
     show()
 
-    expect(await screen.findByText('Couleur de base')).toBeInTheDocument()
-    expect(screen.getByText('Robot — occlusion')).toBeInTheDocument()
-    expect(screen.queryByText('Robot — Couleur de base')).not.toBeInTheDocument()
+    expect(await screen.findByText('Robot — occlusion')).toBeInTheDocument()
+    expect(screen.getAllByText(/Robot/)).toHaveLength(1)
   })
 
   it('opens a picture where it is edited, on the double-click every asset answers to', async () => {
