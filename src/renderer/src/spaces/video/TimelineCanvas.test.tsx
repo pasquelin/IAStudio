@@ -318,6 +318,36 @@ describe('TimelineCanvas', () => {
     expect(clipsOf()).toHaveLength(0)
   })
 
+  /**
+   * A Mac's main keyboard has one key marked « delete », and it reports `Backspace` — the
+   * binding says `Delete`, which is that keyboard's `fn`-delete. Pressing the key that says
+   * delete did nothing at all.
+   */
+  it('deletes the selected clip from the key that says delete', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.keyDown(canvas, { code: 'Backspace' })
+
+    expect(clipsOf()).toHaveLength(0)
+  })
+
+  /**
+   * Every edit here is undoable and always was, but nothing said so and nothing held it: the
+   * key travels through the native Edit menu, which declares it WITHOUT reserving it, and a
+   * regression there would leave the montage looking like an editor with no way back.
+   */
+  it('takes back the last edit on the undo key, and puts it back on redo', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    const canvas = paint()
+
+    fireEvent.keyDown(canvas, { code: 'KeyZ', metaKey: true })
+    expect(clipsOf()).toHaveLength(0)
+
+    fireEvent.keyDown(canvas, { code: 'KeyZ', metaKey: true, shiftKey: true })
+    expect(clipsOf()).toHaveLength(1)
+  })
+
   it('raises nothing over a gap, where there is no clip to act on', async () => {
     fireEvent.contextMenu(paint(), { clientX: 50, clientY: RULER_HEIGHT + 10 })
 
