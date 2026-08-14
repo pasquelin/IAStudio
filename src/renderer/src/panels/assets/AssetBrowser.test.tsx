@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
@@ -43,18 +43,38 @@ describe('AssetBrowser', () => {
     useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
     useProject.setState({ project: null })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    // Said out loud, because the shelf narrows to the space's own kind: these fixtures are
+    // pictures, and a block left in whichever space ran last would filter them all away.
+    useLayouts.setState({ activeWorkspace: 'image' })
     useSelection.getState().clear()
     vi.clearAllMocks()
   })
 
-  // Two situations, and the user can only act on one of them.
-  it('tells a project with no asset from no project at all', () => {
+  /**
+   * Three situations behind one empty shelf, and each is acted on differently. "No project" is
+   * asked first: with no folder open there is nothing for a filter to hide, and while the Type
+   * facet had to be set by hand this branch was simply unreachable — it now carries the space's
+   * own kind from the moment the panel opens.
+   */
+  it('tells a project with no asset of this kind from no project at all', () => {
     const { rerender } = render(<AssetBrowser />)
     expect(screen.getByText(/Ouvrez un projet/)).toBeInTheDocument()
 
     useProject.setState({ project: PROJECT })
     rerender(<AssetBrowser />)
-    expect(screen.getByText(/Aucun asset/)).toBeInTheDocument()
+    expect(screen.getByText(/Aucun asset de ce type/)).toBeInTheDocument()
+  })
+
+  // And a narrowing the user asked for is blamed, where the space's own default is not: only
+  // one of the two is cleared by touching the bar.
+  it('blames the filter only when the user set one', async () => {
+    useProject.setState({ project: PROJECT })
+    useAssets.setState({ items: [asset('a')] })
+    render(<AssetBrowser />)
+
+    await userEvent.type(screen.getByLabelText(/Rechercher/i), 'nothing matches this')
+
+    expect(await screen.findByText(/Aucun résultat|ne correspond/i)).toBeInTheDocument()
   })
 
   it('renders a window over the assets rather than all of them', () => {
@@ -261,18 +281,49 @@ describe('the kinds a space has any use for', () => {
     expect(setScope).toHaveBeenCalledWith(['image', 'texture', 'skybox'])
   })
 
-  // A default, not a wall: the intersection of two filters reads as a broken filter.
-  it('drops the scope once a kind is asked for by name', () => {
+  /**
+   * The facet is the scope now, rather than something that cancelled it. Asking for takes while
+   * painting used to switch the space's scope OFF and hand the catalogue `null` — the two read
+   * as one broken filter. It asks for takes.
+   */
+  it('asks for exactly the kind the facet names', async () => {
     const setScope = vi.fn()
-    useAssets.setState({
-      setScope,
-      collection: { ...DEFAULT_COLLECTION_STATE, selections: { type: ['audio'] } },
-    })
+    useAssets.setState({ setScope })
     useLayouts.setState({ activeWorkspace: 'image' })
+    render(<AssetBrowser />)
+    setScope.mockClear()
+
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'audio')
+
+    expect(setScope).toHaveBeenCalledWith(['audio'])
+  })
+
+  /**
+   * What the user reported: nothing on screen said the shelf was narrowed, so a project that
+   * plainly held meshes looked empty from Image and full of pictures from 3D. The bar carries
+   * the answer now, and one click widens it.
+   */
+  it('writes the space’s own kind into the Type facet', () => {
+    useLayouts.setState({ activeWorkspace: '3d' })
 
     render(<AssetBrowser />)
 
-    expect(setScope).toHaveBeenCalledWith(null)
+    expect(useAssets.getState().collection.selections.type).toEqual(['mesh'])
+  })
+
+  // Only when the space changes, never on the user's own choice: a filter that rewrote itself
+  // under the hand that set it is one nobody can use.
+  it('rewrites it when the space changes, and not under the user’s own choice', async () => {
+    useLayouts.setState({ activeWorkspace: '3d' })
+    render(<AssetBrowser />)
+
+    await userEvent.selectOptions(screen.getByLabelText('Type'), 'image')
+    expect(useAssets.getState().collection.selections.type).toEqual(['image'])
+
+    act(() => {
+      useLayouts.setState({ activeWorkspace: 'audio' })
+    })
+    expect(useAssets.getState().collection.selections.type).toEqual(['audio'])
   })
 })
 
@@ -285,6 +336,9 @@ describe('the shelf hands its rows to the collection', () => {
     useAssets.setState({ items: [], collection: DEFAULT_COLLECTION_STATE })
     useProject.setState({ project: PROJECT })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
+    // Said out loud, because the shelf narrows to the space's own kind: these fixtures are
+    // pictures, and a block left in whichever space ran last would filter them all away.
+    useLayouts.setState({ activeWorkspace: 'image' })
     useSelection.getState().clear()
     vi.clearAllMocks()
   })
@@ -372,6 +426,9 @@ describe('the three provenances, as the panel draws them', () => {
     useProject.setState({ project: PROJECT })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
     useJobs.setState({ jobs: [] })
+    // Said out loud, because the shelf narrows to the space's own kind: these fixtures are
+    // pictures, and a block left in whichever space ran last would filter them all away.
+    useLayouts.setState({ activeWorkspace: 'image' })
     useCloud.getState().clear()
     useSelection.getState().clear()
     vi.clearAllMocks()
@@ -509,6 +566,9 @@ describe('what each gesture on a line does', () => {
     useProject.setState({ project: PROJECT })
     useMedia.setState({ progress: {}, capabilities: { ffmpeg: true } })
     useJobs.setState({ jobs: [] })
+    // Said out loud, because the shelf narrows to the space's own kind: these fixtures are
+    // pictures, and a block left in whichever space ran last would filter them all away.
+    useLayouts.setState({ activeWorkspace: 'image' })
     useCloud.getState().clear()
     useSelection.getState().clear()
     vi.clearAllMocks()
@@ -624,9 +684,12 @@ describe('what each gesture on a line does', () => {
     expect(await screen.findByText(/Aucun résultat|ne correspond/i)).toBeInTheDocument()
   })
 
-  // Naming a kind switches the scope off, so the library is asked for everything and sorted
-  // out here — two filters intersecting reads as broken rather than as a scope.
-  it('asks the library for everything once a kind is chosen by hand', async () => {
+  /**
+   * The facet reaches the API, not just the rows already here. It used to switch the scope off
+   * and pull a page of everything to sort out locally — sixty rows of which a handful could be
+   * the kind asked for, on a shelf that pages no further.
+   */
+  it('asks the library for the kind the facet names', async () => {
     let asked: unknown
     installFakeBridge({
       cloud: {
@@ -642,7 +705,7 @@ describe('what each gesture on a line does', () => {
 
     render(<AssetBrowser />)
 
-    await vi.waitFor(() => expect(asked).toEqual({ pageSize: 60 }))
+    await vi.waitFor(() => expect(asked).toEqual({ pageSize: 60, types: ['image'] }))
   })
 
   // A refusal opens nothing rather than guessing: an editor opened on a row that was never
@@ -741,10 +804,14 @@ describe('what each gesture on a line does', () => {
   })
 
   /**
-   * A generation has no kind to answer with until it does, so a chosen kind hides it and its
-   * type column stays blank — the honest answer rather than a guess at the shelf it will land in.
+   * A generation has no kind to answer with until it does, so its type column stays blank — the
+   * honest answer rather than a guess at the shelf it will land in.
+   *
+   * And it is never hidden by one. Naming a kind used to hide it, which was defensible while
+   * naming one was a deliberate act; the space in front now names one on arrival, so that rule
+   * would have taken every generation in flight off the shelf built to show it.
    */
-  it('hides a running generation once a kind is chosen, and never names its type', async () => {
+  it('keeps a running generation whatever kind is chosen, and never names its type', async () => {
     installFakeBridge({})
     useJobs.setState({ jobs: [job({ label: 'A skeleton', status: 'running', progress: 0.4 })] })
     useAssets.setState({ collection: { ...DEFAULT_COLLECTION_STATE, view: 'list' } })
@@ -754,6 +821,6 @@ describe('what each gesture on a line does', () => {
 
     await userEvent.selectOptions(screen.getByLabelText('Type'), 'video')
 
-    expect(screen.queryByText('A skeleton')).toBeNull()
+    expect(screen.getByText('A skeleton')).toBeInTheDocument()
   })
 })

@@ -87,7 +87,7 @@ beforeEach(() => {
   // `known` settled: the panel says nothing at all until the main process has answered, and
   // every case below is about what it says once it has.
   useProject.setState({ project: null, known: true })
-  useLayouts.setState({ layouts: {} })
+  useLayouts.setState({ layout: null })
   installFakeBridge({})
 })
 

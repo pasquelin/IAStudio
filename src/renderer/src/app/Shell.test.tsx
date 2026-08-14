@@ -34,7 +34,7 @@ beforeEach(() => {
   installFakeBridge()
   // Every test below is about the docks, which the home covers entirely — see the last block,
   // which is the one that exercises it.
-  useLayouts.setState({ activeWorkspace: 'image', layouts: {}, home: false })
+  useLayouts.setState({ activeWorkspace: 'image', layout: null, home: false })
   useTools.setState({ arrangements: arrangedFor('image', { open: {}, sizes: {}, splits: {} }) })
   // The store is shared across files: one test turns the home off, and every later one would
   // inherit a studio whose entry point does not exist.

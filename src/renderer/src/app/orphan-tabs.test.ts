@@ -22,29 +22,33 @@ const FRESH: DocumentDescriptor = {
 }
 
 function panelsLeft(): string[] {
-  return Object.keys(useLayouts.getState().layouts.image?.panels ?? {})
+  return Object.keys(useLayouts.getState().layout?.panels ?? {})
 }
 
 describe('closeOrphanTabs', () => {
   beforeEach(() => {
     closePanel.mockClear()
-    useLayouts.setState({ layouts: {} })
+    useLayouts.setState({ layout: null })
     useDocuments.setState({ documents: {}, stored: [], activeId: null })
   })
 
   // The reported defect: two documents created and never saved, then a reload. The folder holds
   // neither, the layout holds both, and each tab comes back saying it is not open.
+  //
+  // The stored layout and not the mounted Dockview, and that is the half a `close` cannot reach:
+  // the home COVERS the centre, so a launch that starts on it has every tab in this record and
+  // nowhere else.
   it('closes a restored tab whose document is in no folder and no store', () => {
-    showPanels('image', 'ghost')
+    showPanels('ghost')
 
     closeOrphanTabs()
 
     expect(closePanel).toHaveBeenCalledWith('ghost')
-    expect(useLayouts.getState().layouts.image).toBeUndefined()
+    expect(useLayouts.getState().layout).toBeNull()
   })
 
   it('leaves the tab of a document the folder holds', () => {
-    showPanels('image', SAVED.id)
+    showPanels(SAVED.id)
     useDocuments.setState({ documents: { [SAVED.id]: SAVED }, stored: [SAVED] })
 
     closeOrphanTabs()
@@ -56,7 +60,7 @@ describe('closeOrphanTabs', () => {
   // A document created during the session is absent from the folder too — `create` writes
   // nothing on purpose — and sweeping on that alone would close a tab under the hands.
   it('leaves the tab of a document created during the session', () => {
-    showPanels('image', FRESH.id)
+    showPanels(FRESH.id)
     useDocuments.setState({ documents: { [FRESH.id]: FRESH }, stored: [] })
 
     closeOrphanTabs()
@@ -68,7 +72,7 @@ describe('closeOrphanTabs', () => {
   // An Explorer row opened while the listing travelled is adopted into the store and nowhere
   // else: the store is read when the answer is settled, not passed in from before it.
   it('leaves the tab of a document adopted from a listing', () => {
-    showPanels('image', SAVED.id)
+    showPanels(SAVED.id)
     useDocuments.setState({ documents: {}, stored: [SAVED] })
 
     closeOrphanTabs()
@@ -77,7 +81,7 @@ describe('closeOrphanTabs', () => {
   })
 
   it('keeps the tabs of the same layout that have a document', () => {
-    showPanels('image', SAVED.id, 'ghost')
+    showPanels(SAVED.id, 'ghost')
     useDocuments.setState({ documents: { [SAVED.id]: SAVED }, stored: [SAVED] })
 
     closeOrphanTabs()
@@ -85,24 +89,13 @@ describe('closeOrphanTabs', () => {
     expect(panelsLeft()).toEqual([SAVED.id])
   })
 
-  // Dockview is mounted for one workspace at a time, so the tabs of the others are in the
-  // stored layout and nowhere a `close` could reach them.
-  it('takes a ghost out of a workspace Dockview has not mounted', () => {
-    useLayouts.setState({ layouts: {} })
-    showPanels('3d', 'ghost')
-
-    closeOrphanTabs()
-
-    expect(useLayouts.getState().layouts['3d']).toBeUndefined()
-  })
-
   it('touches nothing when every tab has its document', () => {
-    showPanels('image', SAVED.id)
+    showPanels(SAVED.id)
     useDocuments.setState({ documents: { [SAVED.id]: SAVED }, stored: [SAVED] })
-    const before = useLayouts.getState().layouts
+    const before = useLayouts.getState().layout
 
     closeOrphanTabs()
 
-    expect(useLayouts.getState().layouts).toBe(before)
+    expect(useLayouts.getState().layout).toBe(before)
   })
 })

@@ -303,6 +303,16 @@ export const MEDIA_FRAME =
   'border-border bg-surface overflow-hidden rounded-(--radius-sc-sm) border'
 
 /**
+ * The plate a mark sits on in the corner of a tile — never WHICH corner, which is each mark's
+ * own business.
+ *
+ * Two of them share a tile: what an asset IS on one side, where it LIVES on the other. Written
+ * once because a picture can be pale, dark or busy under either of them, and one plate drifting
+ * from the other would make two answers to the same tile read as two different kinds of thing.
+ */
+export const TILE_MARK = 'bg-chassis/75 rounded-(--radius-sc-sm) p-px'
+
+/**
  * A control laid over a shelf's artwork — the carousel's arrows, the button a tile puts in its
  * corner. Hidden until the shelf is hovered: a control permanently over the picture hides part
  * of what the shelf exists to show. Gauge, tone and corner stay with the caller.

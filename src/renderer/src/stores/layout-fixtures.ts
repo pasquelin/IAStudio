@@ -1,7 +1,6 @@
 import { Orientation } from 'dockview-react'
 import type { SerializedLayout } from './layouts'
 import { useLayouts } from './layouts'
-import type { WorkspaceId } from '@shared/domain/workspace'
 
 /**
  * A persisted layout holding one panel per id, in the shape Dockview writes.
@@ -26,7 +25,7 @@ export function layoutShowing(...ids: readonly string[]): SerializedLayout {
   }
 }
 
-/** Installs that layout under one workspace, which is what says those documents are open. */
-export function showPanels(workspace: WorkspaceId, ...ids: readonly string[]): void {
-  useLayouts.setState({ layouts: { [workspace]: layoutShowing(...ids) } })
+/** Installs that layout, which is what says those documents are open. */
+export function showPanels(...ids: readonly string[]): void {
+  useLayouts.setState({ layout: layoutShowing(...ids) })
 }

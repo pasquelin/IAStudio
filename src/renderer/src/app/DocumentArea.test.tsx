@@ -44,30 +44,22 @@ describe('DocumentArea', () => {
     vi.clearAllMocks()
     panels = {}
     forgetReportedFailures()
-    useDocuments.setState({ documents: {}, activeId: null })
-    useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+    useDocuments.setState({ documents: {}, activeId: null, recent: {} })
+    useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null, projectPath: null })
   })
 
-  it('restores the layout stored for the active workspace', async () => {
+  it('restores the stored arrangement', async () => {
     const stored = layoutShowing()
-    useLayouts.setState({ layouts: { '3d': stored } })
+    useLayouts.setState({ layout: stored })
 
     render(<DocumentArea />)
 
     expect(fromJSON).toHaveBeenCalledWith(stored)
   })
 
-  it('does not restore another workspace layout', async () => {
-    useLayouts.setState({ layouts: { image: layoutShowing() } })
-
-    render(<DocumentArea />)
-
-    expect(fromJSON).not.toHaveBeenCalled()
-  })
-
   describe('given a stored layout Dockview refuses', () => {
     beforeEach(() => {
-      useLayouts.setState({ layouts: { '3d': layoutShowing() } })
+      useLayouts.setState({ layout: layoutShowing(), projectPath: '/projects/first' })
       fromJSON.mockImplementation(() => {
         throw new Error('dockview: root must be of type branch')
       })
@@ -89,17 +81,17 @@ describe('DocumentArea', () => {
       expect(log.report).toHaveBeenCalledWith({
         level: 'error',
         scope: 'shell.layout',
-        message: '3d: dockview: root must be of type branch',
+        message: '/projects/first: dockview: root must be of type branch',
       })
     })
 
     it('forgets the layout, so the next launch is not the same launch', () => {
       render(<DocumentArea />)
 
-      expect(useLayouts.getState().layouts['3d']).toBeUndefined()
+      expect(useLayouts.getState().layout).toBeNull()
     })
 
-    it('still subscribes, so the workspace remembers what the user arranges next', () => {
+    it('still subscribes, so the centre remembers what the user arranges next', () => {
       render(<DocumentArea />)
 
       expect(onDidLayoutChange).toHaveBeenCalled()
@@ -116,6 +108,49 @@ describe('DocumentArea', () => {
 
     announceActivePanel?.({})
     expect(useDocuments.getState().activeId).toBeNull()
+  })
+
+  /**
+   * The half that makes one tab strip work for six sections: the centre holds them all, so the
+   * tab going to the front is what says which docks belong around it.
+   */
+  it('puts the section of the tab in front up', () => {
+    useDocuments.setState({
+      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+    })
+    render(<DocumentArea />)
+
+    announceActivePanel?.({ panel: { id: 'doc-7' } })
+
+    expect(useLayouts.getState().activeWorkspace).toBe('image')
+  })
+
+  // There is no section a blank middle belongs to, and swapping the whole periphery for having
+  // closed the last tab is a screen nobody asked for.
+  it('leaves the section alone when no tab is left in front', () => {
+    render(<DocumentArea />)
+
+    announceActivePanel?.({})
+
+    expect(useLayouts.getState().activeWorkspace).toBe('3d')
+  })
+
+  /**
+   * Raising the home is what tears this centre down, and putting a section up LEAVES the home. A
+   * tab announced on the way out would therefore have reopened the studio over the home the user
+   * had just asked for — the button would have looked broken.
+   */
+  it('says nothing about the section once the home has taken the centre', () => {
+    useDocuments.setState({
+      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+    })
+    render(<DocumentArea />)
+    useLayouts.setState({ home: true })
+
+    announceActivePanel?.({ panel: { id: 'doc-7' } })
+
+    expect(useLayouts.getState().home).toBe(true)
+    expect(useLayouts.getState().activeWorkspace).toBe('3d')
   })
 
   it('opens a panel for a document created after mount', async () => {
@@ -158,7 +193,7 @@ describe('the last surface a dropped asset reaches', () => {
 
   beforeEach(() => {
     useAssets.setState({ items: [picture] })
-    useDocuments.setState({ documents: {}, activeId: null })
+    useDocuments.setState({ documents: {}, activeId: null, recent: {} })
   })
 
   /**

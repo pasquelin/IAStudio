@@ -10,77 +10,72 @@ const layout = (marker: string): SerializedLayout => layoutShowing(marker)
 describe('layouts store', () => {
   beforeEach(() => {
     localStorage.clear()
-    useLayouts.setState({ activeWorkspace: 'image', layouts: {} })
+    useLayouts.setState({ activeWorkspace: 'image', home: false, layout: null })
   })
 
-  it('remembers one layout per workspace', () => {
-    const { remember } = useLayouts.getState()
-    remember('image', layout('generator'))
-    remember('3d', layout('viewport'))
+  it('remembers the arrangement of the centre', () => {
+    useLayouts.getState().remember(layout('generator'))
 
-    const { layouts } = useLayouts.getState()
-    expect(layouts.image?.panels).toHaveProperty('generator')
-    expect(layouts['3d']?.panels).toHaveProperty('viewport')
+    expect(useLayouts.getState().layout?.panels).toHaveProperty('generator')
   })
 
-  it('keeps the remembered layout across a workspace switch', () => {
+  // The centre holds every section's tabs at once, so choosing a section must not disturb it:
+  // it changes the docks around the centre and nothing inside it.
+  it('keeps the arrangement across a section switch', () => {
     const { remember, setActiveWorkspace } = useLayouts.getState()
-    remember('image', layout('generator'))
+    remember(layout('generator'))
     setActiveWorkspace('3d')
     setActiveWorkspace('image')
 
     const state = useLayouts.getState()
     expect(state.activeWorkspace).toBe('image')
-    expect(state.layouts.image?.panels).toHaveProperty('generator')
+    expect(state.layout?.panels).toHaveProperty('generator')
   })
 
-  it('forgets a single workspace layout', () => {
-    const { remember, forget } = useLayouts.getState()
-    remember('image', layout('generator'))
-    remember('audio', layout('tracks'))
-    forget('image')
+  it('forgets the arrangement', () => {
+    useLayouts.getState().remember(layout('generator'))
+    useLayouts.getState().forget()
 
-    const { layouts } = useLayouts.getState()
-    expect(layouts.image).toBeUndefined()
-    expect(layouts.audio?.panels).toHaveProperty('tracks')
+    expect(useLayouts.getState().layout).toBeNull()
+  })
+
+  // The centre announces the tab in front on every click, so choosing the section already up is
+  // the common case and is guarded — but the guard must not swallow the other half of what
+  // choosing a section does.
+  it('still leaves the home when the section chosen is the one already up', () => {
+    useLayouts.setState({ home: true })
+
+    useLayouts.getState().setActiveWorkspace('image')
+
+    expect(useLayouts.getState().home).toBe(false)
   })
 
   describe('prune', () => {
-    it('takes the panel out of the workspace holding it', () => {
-      useLayouts.getState().remember('image', layoutShowing('kept', 'ghost'))
+    it('takes the panel out of the arrangement', () => {
+      useLayouts.getState().remember(layoutShowing('kept', 'ghost'))
 
       useLayouts.getState().prune(new Set(['ghost']))
 
-      expect(Object.keys(useLayouts.getState().layouts.image?.panels ?? {})).toEqual(['kept'])
+      expect(Object.keys(useLayouts.getState().layout?.panels ?? {})).toEqual(['kept'])
     })
 
-    it('reaches every workspace, not the one in front', () => {
-      useLayouts.getState().remember('image', layoutShowing('kept'))
-      useLayouts.getState().remember('3d', layoutShowing('ghost'))
+    it('forgets an arrangement left with no panel rather than storing an empty one', () => {
+      useLayouts.getState().remember(layoutShowing('ghost'))
 
       useLayouts.getState().prune(new Set(['ghost']))
 
-      expect(useLayouts.getState().layouts['3d']).toBeUndefined()
-      expect(useLayouts.getState().layouts.image?.panels).toHaveProperty('kept')
-    })
-
-    it('forgets a layout left with no panel rather than storing an empty one', () => {
-      useLayouts.getState().remember('image', layoutShowing('ghost'))
-
-      useLayouts.getState().prune(new Set(['ghost']))
-
-      expect(useLayouts.getState().layouts.image).toBeUndefined()
+      expect(useLayouts.getState().layout).toBeNull()
     })
 
     // Every launch calls this, and a layout replaced by an equal one is a write to
     // `localStorage` for nothing — and a new identity for whoever subscribes to it.
-    it('leaves the layouts alone when none of them shows one', () => {
-      useLayouts.getState().remember('image', layoutShowing('kept'))
-      const before = useLayouts.getState().layouts
+    it('leaves the arrangement alone when it shows none of them', () => {
+      useLayouts.getState().remember(layoutShowing('kept'))
+      const before = useLayouts.getState().layout
 
       useLayouts.getState().prune(new Set(['elsewhere']))
 
-      expect(useLayouts.getState().layouts).toBe(before)
+      expect(useLayouts.getState().layout).toBe(before)
     })
   })
 
@@ -99,7 +94,26 @@ describe('layouts store', () => {
 
       await useLayouts.persist.rehydrate()
 
-      expect(useLayouts.getState().layouts).toEqual({})
+      expect(useLayouts.getState().layout).toBeNull()
+    })
+
+    /**
+     * The six layouts became one, and the map an older build wrote is not a layout: handed to
+     * `fromJSON` it throws, and the throw happens inside Dockview's own mount effect — which
+     * took the window down rather than losing an arrangement.
+     */
+    it('drops the per-section layouts a build before the unified centre stored', async () => {
+      localStorage.setItem(
+        'scenario-studio:layouts',
+        JSON.stringify({
+          state: { activeWorkspace: 'image', layouts: { image: layout('generator') } },
+          version: 2,
+        }),
+      )
+
+      await useLayouts.persist.rehydrate()
+
+      expect(useLayouts.getState().layout).toBeNull()
     })
 
     /**
@@ -111,7 +125,7 @@ describe('layouts store', () => {
     it('drops a workspace this build no longer declares, rather than restoring it', async () => {
       localStorage.setItem(
         'scenario-studio:layouts',
-        JSON.stringify({ state: { activeWorkspace: 'graph', layouts: {} }, version: 1 }),
+        JSON.stringify({ state: { activeWorkspace: 'graph', layout: null }, version: 1 }),
       )
 
       await useLayouts.persist.rehydrate()
@@ -125,11 +139,11 @@ describe('layouts store', () => {
     // change of project, the tabs of the previous one come back over a folder that has none.
     it('drops the arrangement of the project being left', () => {
       useLayouts.getState().adopt('/projects/first')
-      useLayouts.getState().remember('image', layout('generator'))
+      useLayouts.getState().remember(layout('generator'))
 
       useLayouts.getState().adopt('/projects/second')
 
-      expect(useLayouts.getState().layouts.image).toBeUndefined()
+      expect(useLayouts.getState().layout).toBeNull()
       expect(useLayouts.getState().projectPath).toBe('/projects/second')
     })
 
@@ -137,20 +151,20 @@ describe('layouts store', () => {
     // would greet the user with an empty centre every single time.
     it('keeps the arrangement when the same project comes back', () => {
       useLayouts.getState().adopt('/projects/first')
-      useLayouts.getState().remember('image', layout('generator'))
+      useLayouts.getState().remember(layout('generator'))
 
       useLayouts.getState().adopt('/projects/first')
 
-      expect(useLayouts.getState().layouts.image?.panels).toHaveProperty('generator')
+      expect(useLayouts.getState().layout?.panels).toHaveProperty('generator')
     })
 
     it('drops the arrangement when no project is open any more', () => {
       useLayouts.getState().adopt('/projects/first')
-      useLayouts.getState().remember('image', layout('generator'))
+      useLayouts.getState().remember(layout('generator'))
 
       useLayouts.getState().adopt(null)
 
-      expect(useLayouts.getState().layouts.image).toBeUndefined()
+      expect(useLayouts.getState().layout).toBeNull()
     })
   })
 })

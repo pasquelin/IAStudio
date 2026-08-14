@@ -1,7 +1,6 @@
 import type { DockviewApi } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DocumentDescriptor } from '@shared/domain/document'
-import type { WorkspaceId } from '@shared/domain/workspace'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
 import {
@@ -10,6 +9,7 @@ import {
   openPanelIds,
   setDockviewApi,
   setDocumentTitle,
+  showWorkspace,
 } from './dockview-api'
 
 const scene: DocumentDescriptor = { id: 'doc-1', kind: 'scene', title: 'Niveau', workspace: '3d' }
@@ -26,18 +26,23 @@ type Panel = {
   api: { setActive: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }
 }
 
+const fakePanel = (id: string): Panel => ({
+  id,
+  setTitle: vi.fn(),
+  api: { setActive: vi.fn(), close: vi.fn() },
+})
+
 /**
  * A Dockview api that only holds panels. The real one needs a layout engine and a DOM box; what
  * this module does with it is add, find, retitle and close — nothing that needs a layout.
+ *
+ * `restored` is what a real remount comes back with: `fromJSON` rebuilds the stored panels
+ * before the api is handed over.
  */
-function fakeApi() {
-  const panels: Panel[] = []
+function fakeApi(...restored: readonly string[]) {
+  const panels: Panel[] = restored.map(fakePanel)
   const addPanel = vi.fn((options: { id: string }): void => {
-    panels.push({
-      id: options.id,
-      setTitle: vi.fn(),
-      api: { setActive: vi.fn(), close: vi.fn() },
-    })
+    panels.push(fakePanel(options.id))
   })
 
   const api = {
@@ -49,21 +54,26 @@ function fakeApi() {
   return { api: api as unknown as DockviewApi, addPanel, panels }
 }
 
-const mount = (workspace: WorkspaceId) => {
-  const fake = fakeApi()
-  setDockviewApi(workspace, fake.api)
+const mount = (...restored: readonly string[]) => {
+  const fake = fakeApi(...restored)
+  setDockviewApi(fake.api)
   return fake
+}
+
+/** The home COVERS the centre, which is the one state where Dockview is not on screen. */
+const coverWithHome = (): void => {
+  useLayouts.setState({ home: true })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  useDocuments.setState({ documents: {}, stored: [], activeId: null })
-  useLayouts.setState({ activeWorkspace: '3d', layouts: {} })
+  useDocuments.setState({ documents: {}, stored: [], activeId: null, recent: {} })
+  useLayouts.setState({ activeWorkspace: '3d', home: false, layout: null })
 })
 
 describe('opening a document', () => {
-  it('adds a panel for a document of the workspace on screen', () => {
-    const { addPanel } = mount('3d')
+  it('adds a panel for it', () => {
+    const { addPanel } = mount()
 
     openDocument(scene)
 
@@ -77,7 +87,7 @@ describe('opening a document', () => {
 
   // A panel whose document the window has never heard of renders "no longer open".
   it('takes the descriptor in before the panel exists', () => {
-    mount('3d')
+    mount()
 
     openDocument(scene)
     expect(useDocuments.getState().documents['doc-1']).toBe(scene)
@@ -85,7 +95,7 @@ describe('opening a document', () => {
 
   // Dockview refuses a second panel under an id it already holds.
   it('brings an already-open document forward rather than opening it twice', () => {
-    const { addPanel, panels } = mount('3d')
+    const { addPanel, panels } = mount()
     openDocument(scene)
 
     openDocument(scene)
@@ -93,82 +103,152 @@ describe('opening a document', () => {
     expect(addPanel).toHaveBeenCalledTimes(1)
     expect(panels[0]?.api.setActive).toHaveBeenCalled()
   })
+
+  /**
+   * The centre is ONE Dockview holding every section at once, so a sequence opened while a scene
+   * is in front becomes a tab beside it — no switch, no waiting, and the two can be split side by
+   * side.
+   */
+  it('adds a document of another section to the same centre', () => {
+    const { addPanel } = mount()
+    openDocument(scene)
+
+    openDocument(sequence)
+
+    expect(addPanel).toHaveBeenCalledTimes(2)
+    expect(openPanelIds()).toEqual(['doc-1', 'doc-2'])
+  })
+
+  // The centre no longer changes with the section, but the DOCKS do: opening a sequence has to
+  // bring the montage's tools up, or the tab lands under the tools of the space it left.
+  it('puts the section of the document up around it', () => {
+    mount()
+
+    openDocument(sequence)
+
+    expect(useLayouts.getState().activeWorkspace).toBe('video')
+  })
 })
 
 /**
- * Dockview is keyed on the workspace, so switching one throws its api away and builds another a
- * React commit later. A panel added to the outgoing api lands in a layout about to be discarded
- * — a document that silently never opens.
+ * The home renders INSTEAD of the centre, so a document opened from one of its panels arrives
+ * while Dockview is unmounted — and any api handed over earlier belongs to a torn-down instance.
  */
-describe('opening a document of another workspace', () => {
-  it('switches to the workspace that owns it', () => {
-    mount('3d')
+describe('opening a document while the home covers the centre', () => {
+  it('adds nothing to the api of the centre the home replaced', () => {
+    const covered = mount()
+    coverWithHome()
 
-    openDocument(sequence)
-    expect(useLayouts.getState().activeWorkspace).toBe('video')
+    openDocument(scene)
+    expect(covered.addPanel).not.toHaveBeenCalled()
   })
 
-  it('adds nothing to the api being left behind', () => {
-    const leaving = mount('3d')
+  it('leaves the home, which is what mounts the centre', () => {
+    coverWithHome()
 
-    openDocument(sequence)
-    expect(leaving.addPanel).not.toHaveBeenCalled()
+    openDocument(scene)
+    expect(useLayouts.getState().home).toBe(false)
   })
 
-  it('opens it once the workspace that owns it has mounted', () => {
-    mount('3d')
-    openDocument(sequence)
+  it('opens it once the centre reports itself', () => {
+    coverWithHome()
+    openDocument(scene)
 
-    const arriving = mount('video')
+    const arriving = mount()
 
-    expect(arriving.addPanel).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-2' }))
+    expect(arriving.addPanel).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-1' }))
   })
 
-  it('opens it once and not again on the next remount', () => {
-    mount('3d')
-    openDocument(sequence)
-    mount('video')
+  it('opens it once and not again on the next mount', () => {
+    coverWithHome()
+    openDocument(scene)
+    mount()
 
-    const remounted = mount('video')
+    const remounted = mount()
 
     expect(remounted.addPanel).not.toHaveBeenCalled()
   })
+})
 
-  // Waiting for Video must not open in Image on the way past.
-  it('leaves a document waiting for a workspace nobody has gone to yet', () => {
-    mount('3d')
-    openDocument(sequence)
+/**
+ * Choosing a section drives the DOCKS, and the centre holds every section's tabs at once — so
+ * the gesture also has to say which of that section's tabs comes forward, or the rail and the
+ * tab strip end up describing two different documents.
+ */
+describe('choosing a section', () => {
+  it('makes it the active section', () => {
+    mount()
 
-    const passing = mount('image')
-    expect(passing.addPanel).not.toHaveBeenCalled()
+    showWorkspace('video')
 
-    const arriving = mount('video')
-    expect(arriving.addPanel).toHaveBeenCalledWith(expect.objectContaining({ id: 'doc-2' }))
+    expect(useLayouts.getState().activeWorkspace).toBe('video')
+  })
+
+  it('brings the tab that section was last left in forward', () => {
+    const { panels } = mount()
+    openDocument(scene)
+    openDocument({ ...scene, id: 'doc-3', title: 'Autre' })
+    useDocuments.getState().activate('doc-3')
+    useDocuments.getState().activate('doc-2')
+
+    showWorkspace('3d')
+
+    expect(panels[1]?.api.setActive).toHaveBeenCalled()
+    expect(panels[0]?.api.setActive).not.toHaveBeenCalled()
+  })
+
+  // `recent` is never swept when a tab closes: a trail through tabs that are gone is answered
+  // by falling back rather than by a second piece of bookkeeping to get wrong.
+  it('falls back to another of its tabs when the remembered one is closed', () => {
+    const { panels } = mount()
+    openDocument(scene)
+    openDocument({ ...scene, id: 'doc-4', title: 'Autre' })
+    useDocuments.getState().activate('doc-1')
+    useDocuments.getState().close('doc-1')
+
+    showWorkspace('3d')
+
+    expect(panels[1]?.api.setActive).toHaveBeenCalled()
+  })
+
+  // The docks still change; emptying the centre of the document being read would be a worse
+  // answer than leaving it where it is.
+  it('leaves the centre alone when the section has no tab open', () => {
+    const { panels } = mount()
+    openDocument(scene)
+
+    showWorkspace('audio')
+
+    expect(panels[0]?.api.setActive).not.toHaveBeenCalled()
+    expect(useLayouts.getState().activeWorkspace).toBe('audio')
+  })
+
+  it('brings the tab forward once the home has given the centre back', () => {
+    mount()
+    openDocument(scene)
+    useDocuments.getState().activate('doc-1')
+    coverWithHome()
+
+    showWorkspace('3d')
+    const arriving = mount('doc-1')
+
+    expect(arriving.panels[0]?.api.setActive).toHaveBeenCalled()
   })
 })
 
-describe('the panels of the workspace on screen', () => {
+describe('the panels of the centre', () => {
   it('names them in the order they are shown', () => {
-    mount('3d')
+    mount()
     openDocument(scene)
     openDocument({ ...scene, id: 'doc-3', title: 'Autre' })
 
     expect(openPanelIds()).toEqual(['doc-1', 'doc-3'])
   })
-
-  // Remounting is how a workspace switch happens: the panels of the one being left are gone.
-  it('answers nothing for a workspace that holds no panel', () => {
-    mount('3d')
-    openDocument(scene)
-
-    mount('image')
-    expect(openPanelIds()).toEqual([])
-  })
 })
 
 describe('the tab of a document', () => {
   it('carries a bullet while the work is not on disk', () => {
-    const { panels } = mount('3d')
+    const { panels } = mount()
     openDocument(scene)
 
     setDocumentTitle('doc-1', 'Niveau', true)
@@ -179,13 +259,13 @@ describe('the tab of a document', () => {
   })
 
   it('says nothing about a document no panel holds', () => {
-    mount('3d')
+    mount()
     expect(() => setDocumentTitle('gone', 'Niveau', true)).not.toThrow()
     expect(() => closePanel('gone')).not.toThrow()
   })
 
   it('closes the panel it names', () => {
-    const { panels } = mount('3d')
+    const { panels } = mount()
     openDocument(scene)
 
     closePanel('doc-1')

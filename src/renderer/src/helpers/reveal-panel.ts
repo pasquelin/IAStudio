@@ -1,11 +1,12 @@
 import type { AssetType } from '@shared/domain/asset'
 import { placementIn, type ToolId } from '@shared/domain/tool'
+import { showWorkspace } from '@/app/dockview-api'
 import { setFacetValue } from '@/helpers/collection-state'
 import { hasModelFor, shownTool } from '@/helpers/tool-registry'
 import { workspaceOfType } from '@/helpers/workspaces'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { useAssets } from '@/stores/assets'
-import { toolSurface, useLayouts } from '@/stores/layouts'
+import { toolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 
 /**
@@ -48,11 +49,13 @@ export function revealAssets(): void {
  *
  * Beside `revealAssets` rather than in the home that asks for it: naming a facet and writing it
  * into the browser's state is the panel's own language, and the home has no business speaking
- * it. The shelf drops its workspace scope when it finds a kind chosen — which is what makes a
- * click on "Skyboxes" show every sky rather than the ones this space happens to accept.
+ * it. The kind IS the scope the shelf asks the catalogue and the library for, so a click on
+ * "Skyboxes" shows every sky rather than the four kinds that space happens to accept.
  */
 export function revealAssetsOfKind(type: AssetType): void {
-  useLayouts.getState().setActiveWorkspace(workspaceOfType(type))
+  // `showWorkspace` rather than the store's setter, so the tab strip and the rail agree: the
+  // centre holds every section at once, and a section chosen by hand brings its own tab forward.
+  showWorkspace(workspaceOfType(type))
 
   const { collection, setCollection } = useAssets.getState()
   setCollection(setFacetValue(collection, TYPE_FACET, type))

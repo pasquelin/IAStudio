@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Asset, AssetBadge } from '@shared/domain/asset'
+import type { Asset, AssetBadge, AssetType } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useCloud } from '@/stores/cloud'
@@ -40,11 +40,24 @@ const remote: CloudAsset = {
   collectionIds: [],
 }
 
+const TYPE_LABELS = new Map<AssetType, string>([
+  ['image', 'Image'],
+  ['mesh', 'Modèle 3D'],
+])
+
 /** Built by the panel in production — see `AssetCardProps.hints`. */
 const HINTS = { fetch: {}, generating: {} }
 
 function draw(row: AssetRowModel, badge: AssetBadge) {
-  return render(<AssetCard row={row} badge={badge} badgeLabels={LABELS} hints={HINTS} />)
+  return render(
+    <AssetCard
+      row={row}
+      badge={badge}
+      badgeLabels={LABELS}
+      typeLabels={TYPE_LABELS}
+      hints={HINTS}
+    />,
+  )
 }
 
 describe('one cell of the shelf, whatever it stands for', () => {
@@ -58,6 +71,25 @@ describe('one cell of the shelf, whatever it stands for', () => {
     draw({ id: 'asset_1', from: 'local', asset: picture }, 'local-only')
 
     expect(screen.getByText('moss.png')).toBeInTheDocument()
+  })
+
+  /**
+   * The defect this mark exists for: the shelf's type glyph was the tile's FALLBACK, so it only
+   * ever showed where there was no thumbnail — never on the tiles worth telling apart. A `.glb`
+   * whose preview has been rendered and a `.png` looked exactly alike.
+   */
+  it('says what a tile is, thumbnail or no thumbnail', () => {
+    // A local picture: `posterUrl` answers for it, so the tile draws the file itself and the
+    // fallback glyph the shelf used to rely on never renders.
+    draw({ id: 'asset_1', from: 'local', asset: picture }, 'local-only')
+
+    expect(screen.getByRole('img', { name: 'Image' })).toBeInTheDocument()
+  })
+
+  it('tells a mesh from a picture, which their two previews do not', () => {
+    draw({ id: 'remote:asset_remote', from: 'remote', asset: remote }, 'remote-only')
+
+    expect(screen.getByRole('img', { name: 'Modèle 3D' })).toBeInTheDocument()
   })
 
   it('draws a library line under the name the API gave it', () => {

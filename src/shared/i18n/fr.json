@@ -195,6 +195,7 @@
   },
   "assets": {
     "none": "Aucun asset. Générez quelque chose pour commencer.",
+    "noneOfKind": "Aucun asset de ce type. Changez le filtre Type pour voir le reste du projet.",
     "search": "Rechercher…",
     "type": "Type",
     "count_one": "{{count, number}} asset",

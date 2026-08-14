@@ -4,7 +4,7 @@ import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { setDockviewApi } from './dockview-api'
@@ -21,52 +21,72 @@ const openDropped = (asset: Asset): void => {
 }
 
 /**
- * Dockview, remounted per workspace by its `key`: coming back to "3D" must restore that
- * workspace's tabs, not the ones from "Image".
+ * What the tab in front makes true everywhere else: the tool windows read the document, and the
+ * rail reads its section.
  *
- * Remounting destroys the WebGL context of any open viewport. That is the point — engines are
- * rebuilt from their state, never moved, which is what detaching a panel into another window
- * will demand.
+ * The section is set only when a document is actually in front. An emptied centre keeps the
+ * docks it had — there is no section a blank middle belongs to, and swapping the whole periphery
+ * for having closed the last tab is a screen the user did not ask for.
+ */
+function followFront(id: string | null): void {
+  const documents = useDocuments.getState()
+  documents.activate(id)
+
+  // Nothing said while the home is up, and it is not belt and braces: `setActiveWorkspace` also
+  // LEAVES the home, so a tab announced while Dockview is being torn down — which is exactly
+  // what raising the home does to it — would reopen the studio over the home the user just asked
+  // for. The centre is only ever on screen when the home is not.
+  if (homeIsVisible()) return
+
+  const workspace = id === null ? undefined : documents.documents[id]?.workspace
+  if (workspace) useLayouts.getState().setActiveWorkspace(workspace)
+}
+
+/**
+ * ONE Dockview for the whole studio, keyed by the project alone.
+ *
+ * Every document is a tab here whatever section it belongs to, so a scene and an image can sit
+ * side by side — and the SECTION follows the tab in front rather than deciding what the centre
+ * holds. What the section still decides is the docks around it.
+ *
+ * Keyed by the project because Dockview holds its panels itself: dropping the stored layout of
+ * the project being left would otherwise leave its tabs on screen — then persist them again,
+ * under the project that never had them, on the first layout change.
  */
 export function DocumentArea() {
-  const workspace = useLayouts(state => state.activeWorkspace)
-  // Keyed by the project too: Dockview holds its panels itself, and dropping the stored layout
-  // of the project being left would otherwise leave its tabs on screen — then persist them
-  // again, under the project that never had them, on the first layout change.
   const projectPath = useLayouts(state => state.projectPath)
 
   const onReady = useCallback(
     (event: DockviewReadyEvent) => {
-      const stored = useLayouts.getState().layouts[workspace]
+      const stored = useLayouts.getState().layout
       if (stored) {
         try {
           event.api.fromJSON(stored)
         } catch (error) {
           // Dockview rethrows a layout it refuses from inside its own mount effect, where an
           // uncaught throw would take the window down on every launch. Forgotten, not kept:
-          // nothing reloads it afterwards, so a kept one would fail again at every switch.
-          reportFailure('shell.layout', workspace, error)
-          useLayouts.getState().forget(workspace)
+          // nothing reloads it afterwards, so a kept one would fail again at every launch.
+          reportFailure('shell.layout', projectPath ?? '', error)
+          useLayouts.getState().forget()
         }
       }
 
       // AFTER the stored layout is restored, never before: handing the api over drains the
-      // documents waiting for this workspace, and `fromJSON` clears the panels it did not name —
-      // a document opened from another workspace would be added and then thrown away.
-      setDockviewApi(workspace, event.api)
+      // documents that were waiting for a centre, and `fromJSON` clears the panels it did not
+      // name — a document opened from the home would be added and then thrown away.
+      setDockviewApi(event.api)
 
       event.api.onDidLayoutChange(() => {
-        useLayouts.getState().remember(workspace, event.api.toJSON())
+        useLayouts.getState().remember(event.api.toJSON())
       })
 
       // Tool windows live outside Dockview: without this, a layer stack on the edge has no way
-      // of knowing which tab it is looking at.
-      useDocuments.getState().activate(event.api.activePanel?.id ?? null)
-      event.api.onDidActivePanelChange(change => {
-        useDocuments.getState().activate(change.panel?.id ?? null)
-      })
+      // of knowing which tab it is looking at. And the section follows the same event — that is
+      // what makes clicking a 3D tab put the 3D docks up.
+      followFront(event.api.activePanel?.id ?? null)
+      event.api.onDidActivePanelChange(change => followFront(change.panel?.id ?? null))
     },
-    [workspace],
+    [projectPath],
   )
 
   /**
@@ -96,7 +116,7 @@ export function DocumentArea() {
       className="size-full"
     >
       <DockviewReact
-        key={`${projectPath ?? ''}:${workspace}`}
+        key={projectPath ?? ''}
         components={DOCUMENT_COMPONENTS}
         // Every tab, not a per-panel choice: closing a document has to ask about unsaved work
         // whichever space opened it.

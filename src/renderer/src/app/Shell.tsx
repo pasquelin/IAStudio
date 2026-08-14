@@ -6,6 +6,7 @@ import { useSettings } from '@/stores/settings'
 import { arrangementOf, DEFAULT_SIZES, DEFAULT_SPLIT, useTools } from '@/stores/tools'
 import { HomeView } from '@/home/HomeView'
 import { DocumentArea } from './DocumentArea'
+import { showWorkspace } from './dockview-api'
 import { guardUnsavedWork } from './unsaved-guard'
 import { DictationStatus } from '@/dictation/DictationStatus'
 import { Breadcrumb } from './Breadcrumb'
@@ -41,7 +42,6 @@ import './dockview-theme.css'
  */
 export function Shell() {
   const activeWorkspace = useLayouts(state => state.activeWorkspace)
-  const setActiveWorkspace = useLayouts(state => state.setActiveWorkspace)
   const setHome = useLayouts(state => state.setHome)
   const focus = useTools(state => state.focus)
 
@@ -57,7 +57,9 @@ export function Shell() {
     <div className="bg-chassis flex h-full flex-col">
       <TitleBar
         activeWorkspace={activeWorkspace}
-        onWorkspace={setActiveWorkspace}
+        // `showWorkspace` and not the store's setter: choosing a section also brings its last
+        // tab forward, now that the centre holds every section's tabs at once.
+        onWorkspace={showWorkspace}
         home={home}
         onHome={homeEnabled ? () => setHome(true) : undefined}
         // Local then remote: the folder everything is written into, then the key it is

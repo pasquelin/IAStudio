@@ -1,4 +1,4 @@
-import type { AssetType } from './asset'
+import { ASSET_TYPES, type AssetType } from './asset'
 import { channelFromScenarioType } from './texture'
 import type { WorkspaceId } from './workspace'
 
@@ -143,4 +143,18 @@ const WORKSPACE_OF_TYPE: Record<AssetType, WorkspaceId> = {
 
 export function workspaceOfType(type: AssetType): WorkspaceId {
   return WORKSPACE_OF_TYPE[type]
+}
+
+/**
+ * The kind a space MAKES — what the asset shelf narrows to by default when that space comes up.
+ *
+ * Searched rather than tabulated, the way `workspaceForKind` reads the document table: a second
+ * table is free to disagree with the first, and a space filed under a kind it does not produce
+ * is a shelf that answers nothing.
+ *
+ * `null` for a space no kind is made in. There is none today, and the type is what keeps a
+ * caller from assuming there never will be.
+ */
+export function typeOfWorkspace(workspace: WorkspaceId): AssetType | null {
+  return ASSET_TYPES.find(type => WORKSPACE_OF_TYPE[type] === workspace) ?? null
 }

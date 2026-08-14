@@ -1,6 +1,7 @@
 import { memo } from 'react'
-import { posterUrl, type AssetBadge as BadgeName } from '@shared/domain/asset'
+import { posterUrl, type AssetBadge as BadgeName, type AssetType } from '@shared/domain/asset'
 import { AssetBadge } from '@/design/AssetBadge'
+import { AssetTypeMark } from '@/design/AssetTypeMark'
 import { MediaTile } from '@/design/MediaTile'
 import { MEDIA_FRAME } from '@/design/styles'
 import { ProgressBar } from '@/design/ProgressBar'
@@ -10,7 +11,7 @@ import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
 import { DraggableAsset } from './DraggableAsset'
 import { LibraryAsset } from './LibraryAsset'
-import { nameOfRow, type AssetRowModel } from './rows'
+import { nameOfRow, typeOfRow, type AssetRowModel } from './rows'
 
 /** What the CDN is asked to resize a library thumbnail to. A tile is never wider than this. */
 const PREVIEW_WIDTH = 220
@@ -23,6 +24,8 @@ export type AssetCardProps = {
   badge: BadgeName
   /** Resolved by the panel too — translating per tile runs i18next per frame. */
   badgeLabels: Map<BadgeName, string>
+  /** Resolved by the panel too, for the same reason as `badgeLabels`. */
+  typeLabels: Map<AssetType, string>
   /**
    * The tooltip attributes for the two provenances that need a gesture explained, already
    * built. Same reason as the labels, and the same mistake avoided: a `useTranslation` here
@@ -35,9 +38,23 @@ export const AssetCard = memo(function AssetCard({
   row,
   badge,
   badgeLabels,
+  typeLabels,
   hints,
 }: AssetCardProps) {
-  const mark = <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? badge} overlay />
+  const type = typeOfRow(row)
+
+  /**
+   * Both corners at once: what the asset IS on the left, where it lives on the right.
+   *
+   * Handed to `MediaTile` as one node because its slot takes one — each mark places itself, as
+   * that slot's contract says.
+   */
+  const mark = (
+    <>
+      {type && <AssetTypeMark type={type} label={typeLabels.get(type) ?? type} />}
+      <AssetBadge badge={badge} label={badgeLabels.get(badge) ?? badge} overlay />
+    </>
+  )
 
   // Only a local row has a file to drag: a library asset has no path, and a job has no output
   // yet. Dragging either would drop an identifier no document can resolve.

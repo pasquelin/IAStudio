@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { IDockviewPanelHeaderProps } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { workspaceById } from '@/helpers/workspaces'
+import { useDocuments } from '@/stores/documents'
 import theme from './dockview-theme.css?raw'
 import { DocumentTab } from './DocumentTab'
 
@@ -42,9 +44,35 @@ const props = (id: string): IDockviewPanelHeaderProps =>
 beforeEach(() => {
   vi.clearAllMocks()
   defaultTabProps = {}
+  useDocuments.setState({ documents: {}, activeId: null, recent: {} })
 })
 
 describe('a document tab', () => {
+  /**
+   * One tab strip now holds six sections, where the title alone says nothing about which editor
+   * a tab opens. Held against the rail's own table rather than against a glyph named here: a
+   * `.scene` wearing two different pictures in two lists is two vocabularies.
+   */
+  it('wears the glyph of its section, and names it', () => {
+    useDocuments.setState({
+      documents: { 'doc-1': { id: 'doc-1', kind: 'scene', title: 'Niveau', workspace: '3d' } },
+    })
+
+    const { container } = render(<DocumentTab {...props('doc-1')} />)
+
+    const glyph = container.querySelector('[data-tooltip-content="3D"] path')
+    expect(glyph?.getAttribute('d')).toBe(workspaceById('3d').icon)
+  })
+
+  // A panel Dockview restored before the folder listing came back: its descriptor is not in yet,
+  // and a glyph guessed from nothing would be a section the tab does not belong to.
+  it('draws no glyph for a document the window has not heard of', () => {
+    const { container } = render(<DocumentTab {...props('doc-1')} />)
+
+    // The cross, and nothing in front of the title.
+    expect(container.querySelectorAll('path')).toHaveLength(1)
+  })
+
   it('hides Dockview’s own close button, which cannot ask about unsaved work', () => {
     render(<DocumentTab {...props('doc-1')} />)
     expect(defaultTabProps.hideClose).toBe(true)

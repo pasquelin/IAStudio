@@ -39,7 +39,7 @@ describe('a preparation', () => {
     const stop = connectPreparation()
     useModels.getState().prepare('upscale', 'model_big', {})
 
-    useLayouts.setState({ layouts: {} })
+    useLayouts.setState({ layout: null })
 
     expect(useModels.getState().prepared).toBe('upscale')
     stop()

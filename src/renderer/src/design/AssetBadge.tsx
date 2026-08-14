@@ -13,6 +13,7 @@ import {
 } from '@mdi/js'
 import type { AssetBadge as Badge } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
+import { TILE_MARK } from './styles'
 import { UiIcon } from './UiIcon'
 
 /**
@@ -76,7 +77,7 @@ export function AssetBadge({ badge, label, showQuiet = false, overlay = false }:
     <span
       className={cn(
         'pointer-events-none inline-flex items-center',
-        overlay && 'bg-chassis/75 absolute top-1 right-1 rounded-(--radius-sc-sm) p-px',
+        overlay && cn('absolute top-1 right-1', TILE_MARK),
         mark.busy && 'animate-pulse',
         mark.tone,
       )}

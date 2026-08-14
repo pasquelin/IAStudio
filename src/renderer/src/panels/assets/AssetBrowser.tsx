@@ -1,13 +1,14 @@
 import { mdiImageMultipleOutline } from '@mdi/js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AssetType } from '@shared/domain/asset'
+import { ASSET_TYPES, isAssetType, type AssetType } from '@shared/domain/asset'
+import { typeOfWorkspace } from '@shared/domain/asset-kind'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { useToolLying } from '@/app/tool-zone'
 import { Collection } from '@/design/Collection'
 import { CollectionBar } from '@/design/CollectionBar'
 import { EmptyState } from '@/design/EmptyState'
-import { filterLocally, isFiltered } from '@/helpers/collection-state'
+import { filterLocally, isFiltered, setFacetValue } from '@/helpers/collection-state'
 import { applySelection } from '@/helpers/selection'
 import { openAsset } from '@/helpers/open-asset'
 import { HINT_LEFT } from '@/helpers/tooltip'
@@ -68,31 +69,45 @@ export function AssetBrowser() {
   const moving = useCloud(state => state.moving)
 
   /**
-   * What the space in front can actually take — a default, and one the user can step out of.
+   * The kind the space in front MAKES, written into the Type facet whenever the space changes.
    *
-   * Asked OF the catalogue rather than filtered out of its answer: the count in the header and
-   * the "this project has no asset" message both read the same list, and a shelf that dropped
-   * rows behind their backs would leave them describing a project nobody is looking at.
+   * A default that says its own name. The scope used to be invisible — the shelf narrowed to
+   * everything a space can take, which is four kinds in 3D and all six in Video, and nothing on
+   * screen said so: a mesh and a picture sat side by side under a bar claiming no filter at all.
+   * Here the bar carries the answer, and one click widens it.
    *
-   * Naming a kind switches the scope off entirely. Otherwise choosing "video" while painting
-   * would answer nothing at all — two filters intersecting reads as broken, not as a scope.
+   * On the space and never on the collection: this must not fight the user's own choice, only
+   * replace it when they move to another space.
    */
-  const chosenType = Boolean(collection.selections[TYPE_FACET]?.length)
-  const scope = useMemo(
-    () => (chosenType ? null : assetTypesOf(workspace)),
-    [chosenType, workspace],
-  )
+  const ownType = typeOfWorkspace(workspace)
+  useEffect(() => {
+    if (ownType) setCollection(setFacetValue(useAssets.getState().collection, TYPE_FACET, ownType))
+  }, [ownType, setCollection])
+
+  /**
+   * What the catalogue and the library are ASKED for — the facet's own answer, falling back to
+   * everything this space can take when the facet is cleared.
+   *
+   * Asked OF them rather than filtered out of their answers: the count in the header and the
+   * "this project has no asset" message both read the same list, and a shelf that dropped rows
+   * behind their backs would leave them describing a project nobody is looking at.
+   */
+  const chosenTypes = collection.selections[TYPE_FACET]
+  const scope = useMemo<readonly AssetType[]>(() => {
+    const chosen = (chosenTypes ?? []).filter(isAssetType)
+    return chosen.length > 0 ? chosen : assetTypesOf(workspace)
+  }, [chosenTypes, workspace])
   useEffect(() => {
     setScope(scope)
   }, [setScope, scope])
 
-  // Read again when the key changes — another key is another library — and when the space does,
+  // Read again when the key changes — another key is another library — and when the scope does,
   // since the kinds asked for change with it. Keyed rather than cached: the URL that draws a
   // library tile is signed and expires, so a page held for a fortnight draws broken pictures.
   const { value: remote } = useShelf(
     NO_REMOTE,
     () => browseLibrary(scope),
-    `${ownerId ?? ''}/${scope?.join(',') ?? ''}`,
+    `${ownerId ?? ''}/${scope.join(',')}`,
   )
 
   /**
@@ -218,11 +233,19 @@ export function AssetBrowser() {
       filterLocally(marked, collection, {
         text: nameOfRow,
         facets: {
-          // A running job has no kind to answer with, so a chosen kind hides it — which is the
-          // honest answer: nothing yet says whether it will produce one.
+          /**
+           * A running generation holds no kind yet, so it holds them ALL: nothing about it says
+           * it will not be the thing being looked for.
+           *
+           * It used to answer with none, which HID it as soon as a kind was named — defensible
+           * while naming one was a deliberate act, and untenable now that the space in front
+           * names one on arrival: every generation in flight would have gone missing from the
+           * shelf that exists to show it. `mergeRows` had already made this call for the space's
+           * own scope, in as many words.
+           */
           [TYPE_FACET]: row => {
             const type = typeOfRow(row)
-            return type ? [type] : []
+            return type ? [type] : ASSET_TYPES
           },
           // Narrowed by what the badge says, so the filter and the mark beside it agree.
           [LOCATION_FACET]: row => [row.badge],
@@ -231,13 +254,30 @@ export function AssetBrowser() {
     [marked, collection],
   )
 
-  // An empty project and no project at all are different situations, and the user can only
-  // act on one of them.
-  const emptyMessage = isFiltered(collection)
-    ? t('collection.noMatch')
-    : project
-      ? t('assets.none')
-      : t('assets.openProject')
+  /**
+   * Four situations, and the user can act on three of them.
+   *
+   * No project is asked FIRST, which it was not: with no folder open there is nothing for a
+   * filter to hide, so blaming one is an answer about a shelf that does not exist. It never
+   * showed while a filter had to be set by hand — the Type facet now carries the space's own
+   * kind from the moment the panel opens.
+   *
+   * And that default has to be told from a narrowing the USER asked for, which is what
+   * `isFiltered` alone cannot do: "nothing matches your filter" over a project full of pictures
+   * sends someone hunting for a filter to clear, and clearing this one only widens to the four
+   * kinds the space can take.
+   */
+  const atSpaceDefault = chosenTypes?.length === 1 && chosenTypes[0] === ownType
+  const narrowedByHand = isFiltered(
+    atSpaceDefault ? setFacetValue(collection, TYPE_FACET, null) : collection,
+  )
+  const emptyMessage = !project
+    ? t('assets.openProject')
+    : narrowedByHand
+      ? t('collection.noMatch')
+      : atSpaceDefault
+        ? t('assets.noneOfKind')
+        : t('assets.none')
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -268,7 +308,13 @@ export function AssetBrowser() {
           if (row.from === 'remote' && project && !busy) void openFetched(row.asset.id)
         }}
         renderCard={row => (
-          <AssetCard row={row} badge={row.badge} badgeLabels={badgeLabels} hints={hints} />
+          <AssetCard
+            row={row}
+            badge={row.badge}
+            badgeLabels={badgeLabels}
+            typeLabels={typeLabels}
+            hints={hints}
+          />
         )}
         renderRow={row => (
           <AssetRow

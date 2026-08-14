@@ -12,13 +12,13 @@ const POSTER: DocumentDescriptor = {
   workspace: 'image',
 }
 
-const showing = (...ids: readonly string[]): void => showPanels('image', ...ids)
+const showing = (...ids: readonly string[]): void => showPanels(...ids)
 
 describe('documents store', () => {
   beforeEach(() => {
     localStorage.clear()
-    useDocuments.setState({ documents: {}, activeId: null })
-    useLayouts.setState({ layouts: {}, projectPath: null })
+    useDocuments.setState({ documents: {}, activeId: null, recent: {} })
+    useLayouts.setState({ layout: null, projectPath: null })
     installFakeBridge()
   })
 
@@ -296,14 +296,14 @@ describe('documentForAsset', () => {
 })
 
 describe('panelIds', () => {
-  it('gathers what every workspace shows, across layouts', () => {
-    expect(panelIds({ '3d': { panels: { a: {} } }, image: { panels: { b: {} } } })).toEqual(
-      new Set(['a', 'b']),
-    )
+  it('names what the arrangement shows', () => {
+    expect(panelIds({ panels: { a: {}, b: {} } })).toEqual(new Set(['a', 'b']))
   })
 
-  it('survives a layout that has no panels recorded at all', () => {
-    expect(panelIds({ image: undefined })).toEqual(new Set())
+  // A project whose centre has never reported an arrangement, which is every launch before the
+  // first one lands: an empty set is the honest answer, and a throw here would be at mount.
+  it('survives having no arrangement at all', () => {
+    expect(panelIds(null)).toEqual(new Set())
   })
 })
 
@@ -315,8 +315,8 @@ describe('panelIds', () => {
 describe('relist', () => {
   beforeEach(() => {
     localStorage.clear()
-    useDocuments.setState({ documents: {}, stored: [], activeId: null })
-    useLayouts.setState({ layouts: {}, projectPath: null })
+    useDocuments.setState({ documents: {}, stored: [], activeId: null, recent: {} })
+    useLayouts.setState({ layout: null, projectPath: null })
   })
 
   it('reads what the folder holds, open or not', async () => {
