@@ -34,7 +34,8 @@ export type MediaServiceDeps = {
   duplicateExists: (assetId: string, hash: string) => Promise<boolean>
   /** Drops the row this pick minted. What the catalogue must not keep, it must not show. */
   discard: (assetId: string) => Promise<void>
-  save: (assetId: string, fields: Partial<Asset>) => void
+  /** Awaited by `derive`, whose caller reads the row back — see its `finally`. */
+  save: (assetId: string, fields: Partial<Asset>) => void | Promise<void>
   writeFile: (path: string, data: Uint8Array) => Promise<void>
   onProgress: (progress: IngestProgress) => void
   /** Where an import says what became of it, once the bar that showed it is gone. */
@@ -57,6 +58,14 @@ export type DeriveRequest = {
   probe: MediaProbe
   /** False when the library sent a still down beside the bytes: ours would overwrite a better one. */
   poster: boolean
+  /**
+   * Whether this shows up in the import panel.
+   *
+   * True for a generation, whose take the user is waiting on. False for the maintenance a
+   * project does on opening: those rows read as "importing" files nobody picked, and a failed
+   * one leaves a notice to dismiss for a file the user never chose.
+   */
+  announce: boolean
 }
 
 export type MediaService = {
@@ -328,7 +337,12 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
       }
     },
 
-    derive: async ({ assetId, path, kind, probe, poster }) => {
+    derive: async ({ assetId, path, kind, probe, poster, announce }) => {
+      // Nothing to derive AND nothing to remember: a row stamped here would be read as one the
+      // pipeline has been through, and the catch-up that runs once the tool IS resolved would
+      // skip it for good. A studio whose ffmpeg is configured later must still catch up.
+      if (!deps.ffmpeg() || !deps.projectPath()) return
+
       const controller = new AbortController()
       running.set(assetId, controller)
       const cancelled = (): boolean => controller.signal.aborted
@@ -337,7 +351,7 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
 
       const advance = (next: IngestStage): void => {
         stage = next
-        deps.onProgress({ assetId, stage, ratio: STAGE_RATIO[stage] })
+        if (announce) deps.onProgress({ assetId, stage, ratio: STAGE_RATIO[stage] })
       }
 
       advance('queued')
@@ -369,7 +383,11 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
 
         // Never discarded, whatever happened: the row stands for an asset the account holds,
         // and a proxy that failed is a take that plays without one — not a take that is gone.
-        if (stage !== 'queued') deps.save(assetId, fields)
+        //
+        // Awaited, unlike the same call in `ingest`: whoever asked for this reads the row back
+        // to announce it, and a broadcast that outran the write repainted the shelf with what
+        // was there before.
+        if (stage !== 'queued') await deps.save(assetId, fields)
 
         advance(cancelled() ? 'cancelled' : stage)
       }

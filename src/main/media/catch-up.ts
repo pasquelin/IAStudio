@@ -16,15 +16,34 @@ export function needsDeriving(asset: Asset): boolean {
   return timed && asset.location === 'local' && !asset.hash && Boolean(asset.path)
 }
 
+/** How many rows a page of the catalogue holds — its own default, stated rather than inherited. */
+export const CATCH_UP_PAGE = 200
+
 export type CatchUpDeps = {
-  /** Every timed asset the open project holds. Filtered here, not in SQL — see `needsDeriving`. */
-  list: () => Promise<Asset[]>
+  /**
+   * One page of the timed assets the project holds, oldest-first order left to the catalogue.
+   *
+   * Paged rather than asked whole: a search with no limit answers its own default of 200, so a
+   * project holding more takes than that would catch up the newest 200 and never reach the
+   * rest — they gain no hash, the same window comes back on every open, and nothing else would
+   * ever go looking for them.
+   */
+  list: (offset: number, limit: number) => Promise<Asset[]>
   /** Absolute path of an asset's own file, or null when the catalogue points at nothing. */
   fileOf: (asset: Asset) => string | null
   /** `null` when ffprobe is missing or refuses the file. */
   probeFile: (path: string) => Promise<MediaProbe | null>
-  save: (assetId: string, fields: Partial<Asset>) => void
+  /** Awaited: `derive` reads the row back, and a stale read drops what was just written. */
+  save: (assetId: string, fields: Partial<Asset>) => Promise<void>
   derive: (request: DeriveRequest) => Promise<void>
+  /**
+   * Whether the project this run started on is still the one in front.
+   *
+   * Checked between takes because `derive` resolves the project folder when it RUNS: a run left
+   * going after another project opened wrote one project's stills, proxies and waveforms into
+   * the other, under ids its catalogue has never heard of.
+   */
+  stillOpen: () => boolean
 }
 
 /**
@@ -41,30 +60,43 @@ export type CatchUpDeps = {
  * second — `derive` bounds its own ffmpeg, `probeFile` bounds nothing.
  */
 export async function catchUpMedia(deps: CatchUpDeps): Promise<number> {
-  const pending = (await deps.list()).filter(needsDeriving)
   let done = 0
 
-  for (const asset of pending) {
-    const path = deps.fileOf(asset)
-    if (!path) continue
+  for (let offset = 0; ; offset += CATCH_UP_PAGE) {
+    const page = await deps.list(offset, CATCH_UP_PAGE)
 
-    const probe = asset.probe ?? (await deps.probeFile(path))
-    // Nothing to derive from, and nothing to write down: without a length there is no bucket
-    // count for a waveform and no offset for a still. Left as it is, and tried again next time.
-    if (!probe) continue
-    if (!asset.probe) deps.save(asset.id, { probe })
+    for (const asset of page.filter(needsDeriving)) {
+      if (!deps.stillOpen()) return done
 
-    await deps.derive({
-      assetId: asset.id,
-      path,
-      kind: asset.type,
-      probe,
-      // A generation came down with the library's own still, which is a picture of the take
-      // rather than a frame of it. Only a row that has none gets one grabbed.
-      poster: !asset.posterPath,
-    })
-    done += 1
+      const path = deps.fileOf(asset)
+      if (!path) continue
+
+      const probe = asset.probe ?? (await deps.probeFile(path))
+      // Nothing to derive from, and nothing to write down: without a length there is no bucket
+      // count for a waveform and no offset for a still. Left as it is, tried again next time.
+      if (!probe) continue
+      // Awaited, and before the derive that follows it: both read the row and write it back,
+      // and a probe still in flight would commit a copy taken before the derive landed —
+      // dropping the very hash that keeps this take from being caught up again for ever.
+      if (!asset.probe) await deps.save(asset.id, { probe })
+
+      await deps.derive({
+        assetId: asset.id,
+        path,
+        kind: asset.type,
+        probe,
+        // A generation came down with the library's own still, which is a picture of the take
+        // rather than a frame of it. Only a row that has none gets one grabbed.
+        poster: !asset.posterPath,
+        // Maintenance, not an import: these rows would read as files the user never picked.
+        announce: false,
+      })
+      done += 1
+    }
+
+    // A short page is the last one. Filtering happens after, so a page of rows that all hold a
+    // hash is still a page — the walk stops on what the catalogue returned, never on the count
+    // of what was worth doing.
+    if (page.length < CATCH_UP_PAGE) return done
   }
-
-  return done
 }
