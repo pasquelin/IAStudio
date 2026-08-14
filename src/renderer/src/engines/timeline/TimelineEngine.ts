@@ -172,6 +172,13 @@ export class TimelineEngine {
   private readonly clock: Clock
   private readonly sound: SoundScheduler
   private frameHandle: number | null = null
+  /**
+   * Whether the transport is running — which is NOT « a frame is pending ».
+   *
+   * The loop spends most of its time inside a decode with no frame requested, and reading the
+   * handle as the transport's state made `pause` a no-op exactly there.
+   */
+  private running = false
 
   constructor(private readonly deps: TimelineEngineDeps) {
     // First child, so every layer added later composites over it.
@@ -189,7 +196,7 @@ export class TimelineEngine {
   }
 
   play(): void {
-    if (this.frameHandle !== null) return
+    if (this.running) return
 
     // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
     playbackToken.acquire(this.deps.owner, () => this.pause())
@@ -198,29 +205,16 @@ export class TimelineEngine {
     this.sound.start(this.state.playhead)
     this.clock.start(this.state.playhead)
 
-    const step = (): void => {
-      const time = this.clock.now()
-      if (time >= sequenceDuration(this.state)) {
-        this.pause()
-        return
-      }
-
-      this.deps.onTime?.(time)
-      // Planned from the frame loop rather than from `seek`: a seek also happens while paused,
-      // where scrubbing must stay silent, and it happens per video track rather than per frame.
-      this.sound.pump(time)
-      void this.seek(time)
-      this.frameHandle = requestAnimationFrame(step)
-    }
-
-    this.frameHandle = requestAnimationFrame(step)
+    this.running = true
+    this.nextFrame()
     this.deps.onPlayingChange?.(true)
   }
 
   pause(): void {
-    if (this.frameHandle === null) return
+    if (!this.running) return
 
-    cancelAnimationFrame(this.frameHandle)
+    this.running = false
+    if (this.frameHandle !== null) cancelAnimationFrame(this.frameHandle)
     this.frameHandle = null
     this.clock.stop()
     this.sound.stop()
@@ -230,7 +224,41 @@ export class TimelineEngine {
   }
 
   playing(): boolean {
-    return this.frameHandle !== null
+    return this.running
+  }
+
+  /**
+   * One decode in flight at a time, and the next frame asked for only once it has been painted.
+   *
+   * Asked every animation frame instead, the loop outran its own decoder: `seek` bumps the
+   * generation on entry, so each ask invalidated the one still awaiting a frame, and a decode
+   * that took longer than sixteen milliseconds — which is every hardware decode — was closed
+   * unpainted on return. The picture froze at the first miss and only a pause revived it.
+   *
+   * The playhead comes from the clock rather than from a frame count, so a decoder slower than
+   * real time drops pictures instead of falling behind the sound.
+   */
+  private nextFrame(): void {
+    this.frameHandle = requestAnimationFrame(() => {
+      this.frameHandle = null
+      void this.step()
+    })
+  }
+
+  private async step(): Promise<void> {
+    const time = this.clock.now()
+    if (time >= sequenceDuration(this.state)) {
+      this.pause()
+      return
+    }
+
+    this.deps.onTime?.(time)
+    // Planned from the frame loop rather than from `seek`: a seek also happens while paused,
+    // where scrubbing must stay silent, and it happens per video track rather than per frame.
+    this.sound.pump(time)
+    await this.seek(time)
+    // Re-read: a pause, a revoked token or a dispose may all have landed during that decode.
+    if (this.running) this.nextFrame()
   }
 
   async mount(element: HTMLElement): Promise<void> {

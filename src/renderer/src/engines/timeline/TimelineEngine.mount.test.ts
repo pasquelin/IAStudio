@@ -17,7 +17,7 @@ let started: Record<string, unknown> | null = null
 const EMPTY_TEXTURE = {}
 const PAINTED_TEXTURE = { source: {}, width: 8, height: 6, destroy: vi.fn() }
 /** Every sprite the engine builds, in order: the map that holds them is its own business. */
-const sprites: { visible: boolean }[] = []
+const sprites: { visible: boolean; texture: unknown }[] = []
 
 vi.mock('pixi.js/advanced-blend-modes', () => ({}))
 
@@ -278,5 +278,78 @@ describe('mounting a monitor', () => {
     await engine.seek(0)
 
     expect(render).not.toHaveBeenCalled()
+  })
+
+  /**
+   * A transport whose decodes are driven by hand, one frame at a time, already showing the
+   * still under its playhead — which is the state a monitor is in when play is pressed.
+   */
+  const playerOver = async (
+    host: HTMLElement,
+  ): Promise<{
+    engine: InstanceType<typeof TimelineEngine>
+    /** Runs the frame the loop has asked for, and answers the decode it starts. */
+    tick: () => Promise<void>
+  }> => {
+    const pending: ((sample: { toVideoFrame: () => VideoFrame; close: () => void }) => void)[] = []
+    const frames: (() => void)[] = []
+    vi.stubGlobal('requestAnimationFrame', (step: () => void) => frames.push(step))
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+
+    const engine = new TimelineEngine({
+      openSink: () =>
+        Promise.resolve({
+          getSample: () => new Promise(resolve => pending.push(resolve)),
+          close: vi.fn(),
+          holdsDecoder: true,
+        }),
+      sound: silence(),
+      maxDecoders: 1,
+      maxPictures: 1,
+      owner: host.id,
+    })
+
+    // A macrotask between the two: a decode is several awaits deep, and counting microtasks
+    // here would tie the test to how many the pool happens to take.
+    const settle = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
+
+    const tick = async (): Promise<void> => {
+      frames.shift()?.()
+      await settle()
+      pending.shift()?.({ toVideoFrame: fakeFrame, close: vi.fn() })
+      await settle()
+    }
+
+    await mounted(engine)
+    engine.apply(sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 10_000_000)])]))
+    // `apply` seeks on a paused monitor: that decode is answered here, so the frames below are
+    // the transport's own and nothing is left in flight from before it started.
+    await tick()
+
+    return { engine, tick }
+  }
+
+  /**
+   * A decode outlasting a frame is the ordinary case, not the edge one: a hardware decoder
+   * answers a seek in tens of milliseconds where a frame lasts sixteen. Asked again every frame,
+   * each seek bumped the generation the one before it was awaiting on, and every decoded frame
+   * was closed unpainted on return — the picture froze where the first miss happened, and a
+   * pause was what finally showed the right one.
+   *
+   * Both bounds matter: none painted is that freeze, more than one per frame is a queue of asks
+   * on a decoder that cannot keep up, each holding a frame the pool has to keep alive.
+   */
+  it('paints one frame per transport frame, when a decode outlasts the frame it belongs to', async () => {
+    const { engine, tick } = await playerOver(host)
+    render.mockClear()
+
+    engine.play()
+    await tick()
+    await tick()
+    engine.pause()
+    vi.unstubAllGlobals()
+
+    // Two frames asked for, two painted: a third draw would mean a seek nobody waited for.
+    expect(render).toHaveBeenCalledTimes(2)
   })
 })
