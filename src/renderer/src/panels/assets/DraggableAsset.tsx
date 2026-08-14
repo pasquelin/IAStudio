@@ -1,8 +1,9 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Asset } from '@shared/domain/asset'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { useSelection } from '@/stores/selection'
-import { AssetMenu } from './AssetMenu'
+import { openAssetMenu } from './AssetMenu'
 
 export type DraggableAssetProps = {
   asset: Asset
@@ -22,10 +23,7 @@ export type DraggableAssetProps = {
  * kind to whatever it flies over.
  */
 export function DraggableAsset({ asset, className, children }: DraggableAssetProps) {
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
-
-  // Stable, or the open menu re-subscribes its three global listeners on every catalogue refresh.
-  const closeMenu = useCallback(() => setMenuAt(null), [])
+  const { t } = useTranslation()
 
   /**
    * Takes the selection, unless this asset is already in it.
@@ -52,11 +50,10 @@ export function DraggableAsset({ asset, className, children }: DraggableAssetPro
       onContextMenu={event => {
         event.preventDefault()
         takeSelection()
-        setMenuAt({ x: event.clientX, y: event.clientY })
+        openAssetMenu({ asset, t })
       }}
     >
       {children}
-      {menuAt && <AssetMenu asset={asset} at={menuAt} onClose={closeMenu} />}
     </div>
   )
 }

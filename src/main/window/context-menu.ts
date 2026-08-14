@@ -122,6 +122,9 @@ export function registerContextMenu(): void {
       label: item.label,
       enabled: item.enabled ?? true,
       ...(item.icon ? { icon: glyph(item.icon) } : {}),
+      // macOS shows it on hover; Windows and Linux drop it without a word. Sent regardless —
+      // what a row does is written once, wherever the platform can say it.
+      ...(item.tooltip ? { toolTip: item.tooltip } : {}),
       click: () => {
         chosen = item.id
       },

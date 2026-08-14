@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { IDockviewPanelHeaderProps } from 'dockview-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { fakeMenu } from '@/helpers/menu-fixtures'
 import { workspaceById } from '@/helpers/workspaces'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import theme from './dockview-theme.css?raw'
 import { DocumentTab } from './DocumentTab'
@@ -41,10 +43,18 @@ vi.mock('dockview-react', () => ({
 const props = (id: string): IDockviewPanelHeaderProps =>
   ({ api: { id } }) as unknown as IDockviewPanelHeaderProps
 
+let menu = fakeMenu()
+
+const rightClick = async (): Promise<void> => {
+  await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   defaultTabProps = {}
   useDocuments.setState({ documents: {}, activeId: null, recent: {} })
+  menu = fakeMenu()
+  installFakeBridge({ menu: menu.bridge })
 })
 
 describe('a document tab', () => {
@@ -101,48 +111,58 @@ describe('a document tab', () => {
 
   it('opens its menu on a right-click', async () => {
     render(<DocumentTab {...props('doc-1')} />)
-    expect(screen.queryByRole('menu')).toBeNull()
 
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
-    expect(screen.getByRole('menu')).toBeInTheDocument()
+    await rightClick()
+
+    await vi.waitFor(() =>
+      expect(menu.labels()).toEqual([
+        'Fermer l’onglet',
+        'Fermer les autres onglets',
+        'Supprimer le document…',
+      ]),
+    )
   })
 
   it('offers to delete the document, which nothing else in the studio does', async () => {
+    menu.picks('Supprimer le document…')
     render(<DocumentTab {...props('doc-1')} />)
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
 
-    await userEvent.click(screen.getByRole('menuitem', { name: /Supprimer le document/ }))
-    expect(deleteDocument).toHaveBeenCalledWith('doc-1')
+    await rightClick()
+
+    await vi.waitFor(() => expect(deleteDocument).toHaveBeenCalledWith('doc-1'))
   })
 
   // A cancel means "no to closing", not "no to this one tab".
   it('stops closing the others as soon as one is cancelled', async () => {
     openPanelIds.mockReturnValue(['doc-1', 'doc-2', 'doc-3'])
     closeDocument.mockResolvedValue(false)
+    menu.picks('Fermer les autres onglets')
     render(<DocumentTab {...props('doc-1')} />)
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
 
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Fermer les autres onglets' }))
+    await rightClick()
+
+    await vi.waitFor(() => expect(closeDocument).toHaveBeenCalledWith('doc-2'))
     expect(closeDocument).toHaveBeenCalledTimes(1)
-    expect(closeDocument).toHaveBeenCalledWith('doc-2')
   })
 
   it('never closes the tab the menu was opened on', async () => {
     openPanelIds.mockReturnValue(['doc-1', 'doc-2', 'doc-3'])
     closeDocument.mockResolvedValue(true)
+    menu.picks('Fermer les autres onglets')
     render(<DocumentTab {...props('doc-1')} />)
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
 
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Fermer les autres onglets' }))
-    expect(closeDocument.mock.calls.flat()).toEqual(['doc-2', 'doc-3'])
+    await rightClick()
+
+    await vi.waitFor(() => expect(closeDocument.mock.calls.flat()).toEqual(['doc-2', 'doc-3']))
   })
 
   it('greys out closing the others when there are none', async () => {
     openPanelIds.mockReturnValue(['doc-1'])
     render(<DocumentTab {...props('doc-1')} />)
-    await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByTestId('default-tab') })
 
-    expect(screen.getByRole('menuitem', { name: 'Fermer les autres onglets' })).toBeDisabled()
+    await rightClick()
+
+    await vi.waitFor(() => expect(menu.offers('Fermer les autres onglets')).toBe(false))
   })
 
   /**

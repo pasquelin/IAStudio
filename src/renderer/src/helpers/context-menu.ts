@@ -9,6 +9,13 @@ export type ContextMenuRow = {
   icon?: string
   /** Greyed rather than dropped — a menu whose length follows the selection cannot be learnt. */
   disabled?: boolean
+  /**
+   * What the row does, already translated. **Required**, exactly as `MenuRow` and `ToolButton`
+   * require theirs: the system only shows it on macOS, but a row whose explanation was never
+   * written has none to show anywhere — and it is a menu the studio can no longer inspect on
+   * screen, so the compiler is the only thing left to ask for it.
+   */
+  tooltip: string
   onSelect: () => void
 }
 
@@ -34,6 +41,7 @@ export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<
       label: row.label,
       enabled: !row.disabled,
       ...(icon ? { icon } : {}),
+      tooltip: row.tooltip,
     }
   })
 

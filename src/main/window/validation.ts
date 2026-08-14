@@ -65,6 +65,7 @@ const contextMenuItems = z
       label: z.string().min(1).max(200),
       enabled: z.boolean().optional(),
       icon: menuIcon.optional(),
+      tooltip: z.string().min(1).max(300).optional(),
     }),
   )
   .min(1)

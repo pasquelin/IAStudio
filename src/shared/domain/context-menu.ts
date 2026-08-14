@@ -21,6 +21,13 @@ export type ContextMenuItem = {
    * the icons of this studio are `@mdi/js` path strings. Absent draws a row without a glyph.
    */
   icon?: string
+  /**
+   * What the row DOES, as `MenuRow` demands of every row drawn in a window — "tout bouton
+   * explique son action". Shown on hover by macOS alone: `MenuItem.toolTip` is documented as
+   * macOS-only and the other platforms drop it in silence, so it is sent for every row and lands
+   * where it can. Losing it on Windows and Linux is the price of a menu the system draws.
+   */
+  tooltip?: string
 }
 
 /** How wide the window draws a menu icon, in device pixels: a 16 pt row at `@2x`. */

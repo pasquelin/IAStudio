@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { ASSET_DRAG_TYPE } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
@@ -31,11 +32,14 @@ function tile() {
   return screen.getByText('Boulder').parentElement as Element
 }
 
+let menu = fakeMenu()
+
 describe('what a tile in the shelf answers to', () => {
   beforeEach(() => {
     useDocuments.setState({ documents: {}, activeId: null })
     useSelection.getState().clear()
-    installFakeBridge()
+    menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
   })
 
   it('announces both the asset and its kind, so a target can refuse before the drop', () => {
@@ -47,19 +51,18 @@ describe('what a tile in the shelf answers to', () => {
     expect(dataTransfer.types).toContain(`${ASSET_DRAG_TYPE}+image`)
   })
 
-  it('opens a menu where the pointer was', () => {
-    fireEvent.contextMenu(tile(), { clientX: 120, clientY: 80 })
+  // Where it appears is the system's business now; that one is raised at all is this one's.
+  it('raises a menu on a right-click', () => {
+    fireEvent.contextMenu(tile())
 
-    const menu = screen.getByRole('menu')
-    expect(menu.style.left).toBe('120px')
-    expect(menu.style.top).toBe('80px')
+    expect(menu.labels()).not.toEqual([])
   })
 
   // Selected first, or the shelf would highlight one asset while the menu names another.
   it('takes the selection before opening its menu', () => {
     useSelection.getState().selectAssets(['asset_9'])
 
-    fireEvent.contextMenu(tile(), { clientX: 10, clientY: 10 })
+    fireEvent.contextMenu(tile())
 
     expect(selected()).toEqual(['asset_1'])
   })
@@ -84,21 +87,6 @@ describe('what a tile in the shelf answers to', () => {
     fireEvent.pointerDown(tile())
 
     expect(selected()).toEqual(['asset_9'])
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-  })
-
-  it('carries no menu until one is asked for', () => {
-    tile()
-
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
-  })
-
-  it('takes its menu away once it closes', () => {
-    fireEvent.contextMenu(tile(), { clientX: 10, clientY: 10 })
-    expect(screen.getByRole('menu')).toBeInTheDocument()
-
-    fireEvent.keyDown(document, { key: 'Escape' })
-
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(menu.raised).toEqual([])
   })
 })

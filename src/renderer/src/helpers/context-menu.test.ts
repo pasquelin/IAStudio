@@ -24,17 +24,32 @@ function bridgeAnswering(chosen: string | null) {
 }
 
 describe('a menu the system draws for a window', () => {
-  it('sends the rows as the window wrote them', async () => {
+  it('sends the rows as the window wrote them, explanation included', async () => {
     const raised = bridgeAnswering(null)
 
     await showContextMenu([
-      { label: 'Renommer', onSelect: () => {} },
-      { label: 'Mettre à la corbeille', disabled: true, onSelect: () => {} },
+      { label: 'Renommer', tooltip: 'Change le nom du fichier sur le disque', onSelect: () => {} },
+      {
+        label: 'Mettre à la corbeille',
+        tooltip: 'Rien n’est effacé tout de suite',
+        disabled: true,
+        onSelect: () => {},
+      },
     ])
 
     expect(raised[0]).toEqual([
-      { id: '0', label: 'Renommer', enabled: true },
-      { id: '1', label: 'Mettre à la corbeille', enabled: false },
+      {
+        id: '0',
+        label: 'Renommer',
+        enabled: true,
+        tooltip: 'Change le nom du fichier sur le disque',
+      },
+      {
+        id: '1',
+        label: 'Mettre à la corbeille',
+        enabled: false,
+        tooltip: 'Rien n’est effacé tout de suite',
+      },
     ])
   })
 
@@ -47,8 +62,8 @@ describe('a menu the system draws for a window', () => {
     const renamed = vi.fn()
 
     await showContextMenu([
-      { label: 'Renommer', onSelect: renamed },
-      { label: 'Mettre à la corbeille', onSelect: () => {} },
+      { label: 'Renommer', tooltip: 'Change le nom', onSelect: renamed },
+      { label: 'Mettre à la corbeille', tooltip: 'Rien n’est effacé', onSelect: () => {} },
     ])
 
     expect(renamed).toHaveBeenCalledOnce()
@@ -58,7 +73,7 @@ describe('a menu the system draws for a window', () => {
     bridgeAnswering(null)
     const renamed = vi.fn()
 
-    await showContextMenu([{ label: 'Renommer', onSelect: renamed }])
+    await showContextMenu([{ label: 'Renommer', tooltip: 'Change le nom', onSelect: renamed }])
 
     expect(renamed).not.toHaveBeenCalled()
   })
@@ -68,8 +83,12 @@ describe('a menu the system draws for a window', () => {
   it('raises the menu where no glyph can be drawn', async () => {
     const raised = bridgeAnswering(null)
 
-    await showContextMenu([{ label: 'Renommer', icon: 'M0 0h24v24H0z', onSelect: () => {} }])
+    await showContextMenu([
+      { label: 'Renommer', icon: 'M0 0h24v24H0z', tooltip: 'Change le nom', onSelect: () => {} },
+    ])
 
-    expect(raised[0]).toEqual([{ id: '0', label: 'Renommer', enabled: true }])
+    expect(raised[0]).toEqual([
+      { id: '0', label: 'Renommer', enabled: true, tooltip: 'Change le nom' },
+    ])
   })
 })

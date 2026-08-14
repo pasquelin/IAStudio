@@ -11,7 +11,7 @@ import { getBridge } from '@/services/bridge'
 import { useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { NoProject } from '@/panels/shared/NoProject'
-import { EntryMenu } from './EntryMenu'
+import { openEntryMenu } from './EntryMenu'
 import { EntryRow } from './EntryRow'
 import { useFolderTree, type FolderNode } from './use-folder-tree'
 
@@ -45,7 +45,6 @@ export function Explorer() {
   const open = useDocuments(state => state.documents)
   const { nodes, expandedIds, toggle } = useFolderTree()
   const [selectedIds, setSelectedIds] = useState<readonly string[]>([])
-  const [menu, setMenu] = useState<{ node: FolderNode; at: { x: number; y: number } } | null>(null)
   const [renaming, setRenaming] = useState<string | null>(null)
 
   // Opening a project already lists its documents; this is for what has been written since.
@@ -134,7 +133,23 @@ export function Explorer() {
       // it again, so what appears in the new folder is what the disk actually holds.
       onDrop={(path, folder) => void getBridge()?.project.moveFile(path, folder)}
       onActivate={node => void activate(node)}
-      onContextMenu={(node, at) => setMenu({ node, at })}
+      onContextMenu={node =>
+        openEntryMenu({
+          node,
+          openInTab: isOpen(documentOf(node)),
+          labels: {
+            reveal: t('explorer.reveal'),
+            rename: t('explorer.rename'),
+            trash: t('explorer.trash'),
+          },
+          hints: {
+            reveal: t('explorer.revealHint'),
+            rename: t('explorer.renameHint'),
+            trash: t('explorer.trashHint'),
+          },
+          onRename: () => setRenaming(node.id),
+        })
+      }
       // Its rows carry a second line for a document that is open — see `EntryRow`. Uniformly,
       // as `Documents` does with the same conditionally stacked row: every row is then 8px taller
       // than a control, which is five or six fewer on screen. The alternative is a per-row
@@ -170,18 +185,5 @@ export function Explorer() {
     />
   )
 
-  return (
-    <>
-      {tree}
-      {menu && (
-        <EntryMenu
-          node={menu.node}
-          at={menu.at}
-          openInTab={isOpen(documentOf(menu.node))}
-          onRename={() => setRenaming(menu.node.id)}
-          onClose={() => setMenu(null)}
-        />
-      )}
-    </>
-  )
+  return tree
 }

@@ -137,6 +137,9 @@ const DOM_BOUND = [
   'src/renderer/src/engines/timeline/painter.test.ts',
   'src/renderer/src/engines/viewport/ViewportEngine.test.ts',
   'src/renderer/src/helpers/menu-icon.test.ts',
+  // Not for a DOM of its own: it reads the labels a menu is raised with, and `i18next` is only
+  // initialised by the renderer setup.
+  'src/renderer/src/panels/assets/AssetMenu.test.ts',
   'src/renderer/src/helpers/model-for-family.test.ts',
   'src/renderer/src/helpers/scroll-parent.test.ts',
   'src/renderer/src/helpers/tool-registry.test.ts',

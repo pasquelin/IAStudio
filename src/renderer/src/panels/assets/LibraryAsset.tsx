@@ -1,11 +1,9 @@
 import { mdiDownloadOutline } from '@mdi/js'
-import { useCallback, useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
-import { ContextMenu } from '@/design/ContextMenu'
-import { MenuRow } from '@/design/MenuRow'
 import { startLibraryDrag } from '@/helpers/asset-drag'
-import { HINT_RIGHT } from '@/helpers/tooltip'
+import { showContextMenu } from '@/helpers/context-menu'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
 
@@ -30,17 +28,6 @@ export type LibraryAssetProps = {
  */
 export function LibraryAsset({ asset, className, children }: LibraryAssetProps) {
   const { t } = useTranslation()
-  /**
-   * Where the menu was opened, and what could be done at that moment.
-   *
-   * The two conditions are READ on opening rather than subscribed to: they are only ever shown
-   * inside a menu that is closed almost always, and a subscription here would re-render every
-   * library tile of the window on each transfer — the busy flag flips twice per fetch.
-   */
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number; canFetch: boolean } | null>(null)
-
-  // Stable, or the open menu re-subscribes its three global listeners on every catalogue refresh.
-  const closeMenu = useCallback(() => setMenuAt(null), [])
 
   return (
     <div
@@ -52,29 +39,31 @@ export function LibraryAsset({ asset, className, children }: LibraryAssetProps) 
       onDragStart={event => startLibraryDrag(event, asset)}
       onContextMenu={event => {
         event.preventDefault()
-        // Without a project there is no folder to write the file into, and one transfer at a
-        // time is `useCloud`'s own rule — both true or false for as long as the menu stands.
+
+        /**
+         * Both conditions are READ here rather than subscribed to: they are only ever shown
+         * inside a menu that is closed almost always, and a subscription would re-render every
+         * library tile of the window on each transfer — the busy flag flips twice per fetch.
+         *
+         * Without a project there is no folder to write the file into, and one transfer at a
+         * time is `useCloud`'s own rule.
+         */
         const canFetch = useProject.getState().project !== null && !useCloud.getState().busy
-        setMenuAt({ x: event.clientX, y: event.clientY, canFetch })
+
+        void showContextMenu([
+          {
+            label: t('assets.fetchAction'),
+            icon: mdiDownloadOutline,
+            tooltip: t('assets.fetchActionHint'),
+            // Greyed rather than hidden, as every other menu here: an entry that comes and goes
+            // depending on what is open is one nobody can learn.
+            disabled: !canFetch,
+            onSelect: () => void useCloud.getState().pull([asset.id]),
+          },
+        ])
       }}
     >
       {children}
-      {menuAt && (
-        <ContextMenu at={menuAt} onClose={closeMenu}>
-          {/* Disabled rather than hidden, as every other menu here: an entry that comes and goes
-              depending on what is open is one nobody can learn. */}
-          <MenuRow
-            label={t('assets.fetchAction')}
-            icon={mdiDownloadOutline}
-            disabled={!menuAt.canFetch}
-            tip={HINT_RIGHT(t('assets.fetchActionHint'))}
-            onSelect={() => {
-              closeMenu()
-              void useCloud.getState().pull([asset.id])
-            }}
-          />
-        </ContextMenu>
-      )}
     </div>
   )
 }

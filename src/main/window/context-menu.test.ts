@@ -251,7 +251,12 @@ function raise(items: unknown) {
 
 describe('the menu a window raises over its own surfaces', () => {
   const rows = [
-    { id: 'reveal', label: 'Révéler dans le dossier', icon: PIXEL },
+    {
+      id: 'reveal',
+      label: 'Révéler dans le dossier',
+      icon: PIXEL,
+      tooltip: 'Ouvre le gestionnaire de fichiers sur le fichier sélectionné',
+    },
     { id: 'rename', label: 'Renommer', enabled: false },
   ]
 
@@ -273,6 +278,17 @@ describe('the menu a window raises over its own surfaces', () => {
 
   it('greys the row the window declared unavailable', () => {
     expect(raise(rows).rows.map(row => row.enabled)).toEqual([true, false])
+  })
+
+  /**
+   * "Tout bouton explique son action", and this is the only place left that can carry it: the
+   * menu is drawn by the platform, so nothing in the window can be inspected for it. macOS is
+   * the one platform that shows it — the others drop `toolTip` without a word.
+   */
+  it('carries what each row does, for the platform that can show it', () => {
+    expect(raise(rows).rows[0]?.toolTip).toBe(
+      'Ouvre le gestionnaire de fichiers sur le fichier sélectionné',
+    )
   })
 
   /**

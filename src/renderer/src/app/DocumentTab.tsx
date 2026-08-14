@@ -1,13 +1,13 @@
 import { mdiClose } from '@mdi/js'
 import { DockviewDefaultTab, type IDockviewPanelHeaderProps } from 'dockview-react'
-import { useCallback, useState, type MouseEvent } from 'react'
+import { type MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ToolButton } from '@/design/ToolButton'
 import { UiIcon } from '@/design/UiIcon'
 import { workspaceById, workspaceLabelKey } from '@/helpers/workspaces'
 import { useDocuments } from '@/stores/documents'
 import { closeTab } from './close-tab'
-import { DocumentTabMenu } from './DocumentTabMenu'
+import { openDocumentTabMenu } from './DocumentTabMenu'
 import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
 
 /**
@@ -25,7 +25,6 @@ import { HINT_BOTTOM, TIP_BOTTOM } from '@/helpers/tooltip'
  */
 export function DocumentTab(props: IDockviewPanelHeaderProps) {
   const { t } = useTranslation()
-  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
   const workspace = useDocuments(state => state.documents[props.api.id]?.workspace)
 
   const close = (event: MouseEvent): void => {
@@ -36,12 +35,20 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
 
   const openMenu = (event: MouseEvent): void => {
     event.preventDefault()
-    setMenuAt({ x: event.clientX, y: event.clientY })
+    openDocumentTabMenu({
+      documentId: props.api.id,
+      labels: {
+        close: t('documents.close'),
+        closeOthers: t('documents.closeOthers'),
+        delete: t('documents.delete'),
+      },
+      hints: {
+        close: t('documents.closeHint'),
+        closeOthers: t('documents.closeOthersHint'),
+        delete: t('documents.deleteHint'),
+      },
+    })
   }
-
-  // Stable, or the open menu re-subscribes its three global listeners every time the tab
-  // re-renders — which it does on every title change and every modified bullet.
-  const closeMenu = useCallback(() => setMenuAt(null), [])
 
   return (
     <>
@@ -69,8 +76,6 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
         className="mr-1 size-4 shrink-0 self-center"
         onClick={close}
       />
-
-      {menuAt && <DocumentTabMenu documentId={props.api.id} at={menuAt} onClose={closeMenu} />}
     </>
   )
 }
