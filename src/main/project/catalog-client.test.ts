@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { createCatalogClient, type CatalogPort } from './catalog-client'
 import { dispatchCatalogRequest } from './catalog-dispatch'
 import { createCatalog } from './catalog'
@@ -21,6 +21,9 @@ const asset: Asset = {
 /** A port wired to a real catalogue, answering on the next microtask like a thread would. */
 function loopbackPort(): CatalogPort & { requests: CatalogMessage[] } {
   const catalog = createCatalog(openMemoryDatabase())
+  // After the test, not on `terminate`: a test that never closes the client would leak the
+  // handle, and a `terminate` that also closed would close a second time and throw.
+  onTestFinished(catalog.close)
   const requests: CatalogMessage[] = []
   let listener: ((response: CatalogResponse) => void) | null = null
 

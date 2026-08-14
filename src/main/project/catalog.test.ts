@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { createCatalog, migrate, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
@@ -23,6 +23,7 @@ describe('catalog', () => {
   beforeEach(() => {
     driver = openMemoryDatabase()
     catalog = createCatalog(driver)
+    onTestFinished(driver.close)
   })
 
   it('keeps the ingest columns through a round trip', () => {
@@ -85,6 +86,7 @@ describe('catalog', () => {
   it('opens a catalogue created before the ingest columns existed', () => {
     // Append-only migrations: a project made yesterday has to open today.
     const older = openMemoryDatabase()
+    onTestFinished(older.close)
     older.exec(`
       CREATE TABLE assets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
@@ -381,6 +383,7 @@ describe('catalogue provenance and sync', () => {
   beforeEach(() => {
     driver = openMemoryDatabase()
     catalog = createCatalog(driver)
+    onTestFinished(driver.close)
   })
 
   it('keeps a generation through a round trip', () => {
@@ -537,6 +540,7 @@ describe('catalogue provenance and sync', () => {
 describe('migrating a catalogue that already holds assets', () => {
   it('carries the existing rows across without losing a field', () => {
     const older = openMemoryDatabase()
+    onTestFinished(older.close)
     older.exec(`
       CREATE TABLE assets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,
@@ -582,6 +586,7 @@ describe('migrating a catalogue that already holds assets', () => {
    */
   it('makes what was already there searchable at once', () => {
     const older = openMemoryDatabase()
+    onTestFinished(older.close)
     older.exec(`
       CREATE TABLE assets (
         id TEXT PRIMARY KEY, name TEXT NOT NULL, type TEXT NOT NULL, location TEXT NOT NULL,

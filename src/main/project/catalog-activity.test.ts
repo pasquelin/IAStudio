@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import { ACTIVITY_RETENTION, type ActivityDraft } from '@shared/domain/activity'
 import { createCatalog, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
@@ -16,6 +16,7 @@ describe('the journal the catalogue keeps', () => {
 
   beforeEach(() => {
     catalog = createCatalog(openMemoryDatabase())
+    onTestFinished(catalog.close)
   })
 
   it('answers nothing before anything has happened', () => {
@@ -141,6 +142,7 @@ describe('a journal written by a build that knew more than this one', () => {
   // read must not take the panel down with it.
   it('reads an unknown level, topic and message key as ordinary ones', () => {
     const driver = openMemoryDatabase()
+    onTestFinished(driver.close)
     const catalog = createCatalog(driver)
 
     driver
@@ -160,6 +162,7 @@ describe('a journal written by a build that knew more than this one', () => {
    */
   it('keeps a scope key, which is composed rather than listed', () => {
     const driver = openMemoryDatabase()
+    onTestFinished(driver.close)
     const catalog = createCatalog(driver)
 
     driver
@@ -171,6 +174,7 @@ describe('a journal written by a build that knew more than this one', () => {
 
   it('drops a parameter that is neither a string nor a number', () => {
     const driver = openMemoryDatabase()
+    onTestFinished(driver.close)
     const catalog = createCatalog(driver)
 
     driver
@@ -198,6 +202,7 @@ describe('pairing a batch with the ids it was given', () => {
 
   beforeEach(() => {
     catalog = createCatalog(openMemoryDatabase())
+    onTestFinished(catalog.close)
   })
 
   it('gives each line of a batch the id its own row got', () => {
