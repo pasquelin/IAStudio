@@ -38,6 +38,15 @@ export type LocalBackendDeps = {
   catalog: () => AsyncCatalog
   now: () => string
   /**
+   * Reads a written file back for its length and its tracks — `null` when the tool is missing
+   * or the file says nothing.
+   *
+   * A generation carries no length with its bytes: the API states none, and a clip laid down
+   * without one is given an arbitrary five seconds and no way to know whether it even has a
+   * sound. Read here rather than at the drop, which has no ffprobe and no file path either.
+   */
+  probeFile?: (path: string) => Promise<MediaProbe | null>
+  /**
    * What has just landed in the project, once the catalogue holds it.
    *
    * The one hook here, and it exists because this is the single door every asset comes through:
@@ -156,8 +165,30 @@ export function createLocalBackend({
   projectPath,
   catalog,
   now,
+  probeFile,
   onImported,
 }: LocalBackendDeps): LocalBackend {
+  /**
+   * What the bytes say about themselves, read off the file that was just written.
+   *
+   * Only for the two kinds that run in time, and only when the caller could not say: an editor
+   * applying an edit already knows, and a picture has nothing to time. Best effort, like the
+   * poster beside it — a missing ffprobe leaves the asset exactly as it was before.
+   */
+  const probeWritten = async (
+    request: WriteRequest,
+    relativePath: string,
+  ): Promise<MediaProbe | undefined> => {
+    if (request.probe) return request.probe
+    if (!probeFile || (request.type !== 'video' && request.type !== 'audio')) return undefined
+
+    try {
+      return (await probeFile(join(projectPath(), relativePath))) ?? undefined
+    } catch {
+      return undefined
+    }
+  }
+
   /**
    * The library's still, brought down beside the bytes — see `POSTER_KINDS`.
    *
@@ -186,6 +217,8 @@ export function createLocalBackend({
       writeFile(join(projectPath(), relativePath), bytes),
       savePoster(request),
     ])
+    // After the write, and only then: it reads the file that was just laid down.
+    const probe = await probeWritten(request, relativePath)
 
     const at = now()
     // What the row already held survives being written again. Pulling a twin a second time
@@ -212,7 +245,7 @@ export function createLocalBackend({
       tags: existing?.tags ?? [],
       createdAt: existing?.createdAt ?? at,
       localChangedAt: at,
-      ...(request.probe ? { probe: request.probe } : {}),
+      ...(probe ? { probe } : {}),
       // Absent rather than cleared: a still that failed to come down this time leaves the one
       // an earlier pull already put on disk, which is still a true picture of the same asset.
       ...(posterPath ? { posterPath } : {}),

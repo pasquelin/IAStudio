@@ -625,6 +625,13 @@ export function createServices(settings: SettingsStore): Services {
     projectPath: () => project.path(),
     catalog: () => project.catalog(),
     now: timestamp,
+    // The API states no duration and no track list beside the bytes it hands over, so a
+    // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
+    // way to tell whether it carries a sound. ffprobe reads the file that just landed.
+    probeFile: async path => {
+      const outcome = await probeSource(companionPath(ffmpeg.path()), path)
+      return outcome.kind === 'probed' ? outcome.probe : null
+    },
     // Every mesh that lands in the project sheds its pictures on the spot, so the inspector has
     // something to show beside a model without anyone having gone looking for a menu row. Not
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the

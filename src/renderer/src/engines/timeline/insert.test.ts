@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
-import { clipForAsset, trackForAsset, TIMELESS_DURATION } from './insert'
+import { clipForAsset, placementsForAsset, trackForAsset, TIMELESS_DURATION } from './insert'
 import { sequenceWith, trackFixture } from './timeline-fixtures'
 import { DEFAULT_SETTINGS } from './timeline-state'
 
@@ -76,13 +76,71 @@ describe('choosing a track for an asset', () => {
     expect(trackForAsset(muted, asset())?.id).toBe('A2')
   })
 
-  it('falls back to whatever track is usable when none matches the kind', () => {
+  /**
+   * It used to fall back to whatever track was free, which put sounds on picture tracks: the
+   * monitor paints those and `audioChunksIn` schedules none of them, so the take was invisible
+   * and silent at once. Refusing says so; landing somewhere useless does not.
+   */
+  it('answers nothing rather than putting a sound on a picture track', () => {
     const pictureOnly = sequenceWith([trackFixture('V1', 'video')])
-    expect(trackForAsset(pictureOnly, asset())?.id).toBe('V1')
+    expect(trackForAsset(pictureOnly, asset())).toBeNull()
   })
 
   it('answers nothing when every track refuses', () => {
     const shut = sequenceWith([trackFixture('V1', 'video', [], { locked: true })])
     expect(trackForAsset(shut, asset())).toBeNull()
+  })
+})
+
+describe('laying an asset down', () => {
+  const state = sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
+  const take = (channels?: number): Asset =>
+    asset({
+      type: 'video',
+      name: 'take.mp4',
+      probe: { duration: 5_000_000, codec: 'h264', ...(channels ? { channels } : {}) },
+    })
+
+  /**
+   * A take is a picture AND a sound. Laid down as one clip on a picture track, its sound was
+   * simply never scheduled — `audioChunksIn` only reads sound tracks — so a rush with dialogue
+   * played mute and nothing on screen said why.
+   */
+  it('lays a take that carries a sound as two clips, tied together', () => {
+    const [picture, sound, ...rest] = placementsForAsset(state, take(2), 'asset-1', 0, 'V1')
+
+    expect(picture?.trackId).toBe('V1')
+    expect(sound?.trackId).toBe('A1')
+    expect(rest).toEqual([])
+    expect(picture?.clip.linkId).toBe(sound?.clip.linkId)
+    expect(picture?.clip.linkId).toBeTruthy()
+    // Two clips, never one clip laid twice: every lookup is by id, starting with selection.
+    expect(picture?.clip.id).not.toBe(sound?.clip.id)
+  })
+
+  it('lays a silent take as the one clip there is something to show for', () => {
+    expect(placementsForAsset(state, take(), 'asset-1', 0, 'V1')).toHaveLength(1)
+  })
+
+  it('leaves a sound alone: there is no picture to tie it to', () => {
+    const [placed, ...rest] = placementsForAsset(state, asset(), 'asset-1', 0, 'A1')
+
+    expect(placed?.trackId).toBe('A1')
+    expect(placed?.clip.linkId).toBeUndefined()
+    expect(rest).toEqual([])
+  })
+
+  /**
+   * The pointer decides WHERE within a kind, never the kind itself: a rush dropped on a sound
+   * track was laid there whole, where the monitor cannot paint it and the output cannot read it.
+   */
+  it('sends a take to a picture track even when a sound track was aimed at', () => {
+    const [picture] = placementsForAsset(state, take(2), 'asset-1', 0, 'A1')
+    expect(picture?.trackId).toBe('V1')
+  })
+
+  it('lays nothing when the sequence holds no track of the kind', () => {
+    const soundOnly = sequenceWith([trackFixture('A1', 'audio')])
+    expect(placementsForAsset(soundOnly, take(2), 'asset-1', 0, 'A1')).toEqual([])
   })
 })

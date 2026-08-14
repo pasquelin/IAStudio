@@ -379,6 +379,15 @@ export function isTimeless(asset: Asset | null): boolean {
   return asset !== null && PICTURES.includes(asset.type)
 }
 
+/**
+ * Whether the media carries a sound of its own. `channels` is only ever written when ffprobe
+ * found an audio stream, so its absence is the answer — for a silent rush AND for one nobody
+ * has probed, which a montage must treat alike: there is no sound it could lay down either way.
+ */
+export function hasSound(asset: Asset | null): boolean {
+  return (asset?.probe?.channels ?? 0) > 0
+}
+
 export type AssetQuery = {
   type?: AssetType
   /**

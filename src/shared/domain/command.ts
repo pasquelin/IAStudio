@@ -50,6 +50,7 @@ export type CommandId =
   | 'sequence.playPause'
   | 'sequence.split'
   | 'sequence.delete'
+  | 'sequence.unlink'
   | 'sequence.zoomIn'
   | 'sequence.zoomOut'
   | 'sequence.fit'
@@ -430,6 +431,14 @@ export const COMMAND_REGISTRY: readonly CommandDescriptor[] = [
     titleKey: 'commands.sequenceDelete.title',
     helpKey: 'commands.sequenceDelete.help',
     defaultBinding: 'Delete',
+  }),
+  command({
+    id: 'sequence.unlink',
+    scope: 'sequence',
+    titleKey: 'commands.sequenceUnlink.title',
+    helpKey: 'commands.sequenceUnlink.help',
+    // What Premiere and DaVinci both bind it to, and the gesture is the same one.
+    defaultBinding: 'Meta+KeyL',
   }),
   command({
     id: 'sequence.zoomIn',

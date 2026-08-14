@@ -1413,6 +1413,10 @@
       "title": "Delete clip",
       "help": "Removes the chosen clip from the edit. The original file stays in your assets."
     },
+    "sequenceUnlink": {
+      "title": "Unlink picture and sound",
+      "help": "Separates the two clips of one take. While they are linked, moving, cutting or deleting one does the same to the other."
+    },
     "sequenceZoomIn": {
       "title": "Zoom in",
       "help": "Spreads the edit out to see detail: clips get wider and are easier to aim at."

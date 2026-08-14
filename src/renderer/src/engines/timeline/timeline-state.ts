@@ -47,6 +47,15 @@ export type Clip = {
   fadeOut: Us
   /** Decibels, audio only. Zero leaves the clip as it was recorded. */
   gain: number
+  /**
+   * What ties a take's picture to its sound: both clips carry the same value, and every edit
+   * that moves, trims, cuts or deletes one does the same to the other. A rush laid down as two
+   * clips that drift apart on the first drag is worse than one laid down as a mute picture.
+   *
+   * Absent for a clip that stands alone — a sound, a still, a rush with no audio stream, or a
+   * pair the user has unlinked to treat each half on its own.
+   */
+  linkId?: string
 }
 
 export type Track = {
@@ -262,6 +271,25 @@ export function trackOfClip(state: SequenceState, clipId: string): Track | null 
   return state.tracks.find(track => track.clips.some(clip => clip.id === clipId)) ?? null
 }
 
+/**
+ * Every clip a link ties to this one, itself first and always present — an unlinked clip is a
+ * group of one, which is what lets every edit run through the same path whether it is tied to
+ * anything or not.
+ */
+export function linkedClipIds(state: SequenceState, clipId: string): string[] {
+  const clip = clipById(state, clipId)
+  if (!clip?.linkId) return clip ? [clipId] : []
+
+  const { linkId } = clip
+  const twins: string[] = []
+  for (const track of state.tracks) {
+    for (const candidate of track.clips) {
+      if (candidate.id !== clipId && candidate.linkId === linkId) twins.push(candidate.id)
+    }
+  }
+  return [clipId, ...twins]
+}
+
 export function clipById(state: SequenceState, id: string): Clip | null {
   for (const track of state.tracks) {
     const found = track.clips.find(clip => clip.id === id)
@@ -369,11 +397,16 @@ function readClip(raw: unknown): Clip | null {
   // A clip with no identity, no source or no length cannot be drawn, selected or played.
   if (!id || !assetId || duration <= 0) return null
 
+  const linkId = readString(raw, 'linkId', '')
+
   return clampFades(
     makeClip({
       id,
       assetId,
       duration,
+      // Absent rather than empty: `linkedClipIds` reads its presence, and an empty string would
+      // tie together every clip a file was written without one.
+      ...(linkId ? { linkId } : {}),
       start: readPositive(raw, 'start', 0),
       inPoint: readPositive(raw, 'inPoint', 0),
       speed: readNumber(raw, 'speed', 1) || 1,

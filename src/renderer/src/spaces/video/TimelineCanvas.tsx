@@ -2,14 +2,20 @@ import type { CommandId } from '@shared/domain/command'
 import { clamp } from '@shared/numeric'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
 import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
-import { addClip, removeClip, splitClip, type MediaExtent } from '@/engines/timeline/commands'
+import {
+  addClips,
+  removeClip,
+  splitClip,
+  unlinkClip,
+  type MediaExtent,
+} from '@/engines/timeline/commands'
 import {
   beginGesture,
   commandForGesture,
   viewportForGesture,
   type Gesture,
 } from '@/engines/timeline/interactions'
-import { clipForAsset } from '@/engines/timeline/insert'
+import { placementsForAsset } from '@/engines/timeline/insert'
 import { paintTimeline, type PaintOptions } from '@/engines/timeline/painter'
 import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
 import type { Point, Size } from '@/engines/core/geometry'
@@ -182,6 +188,9 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
         case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
           return
+        case 'sequence.unlink':
+          if (state.selectedId) store.runCommand(documentId, unlinkClip(state.selectedId))
+          return
         case 'sequence.zoomIn':
           return setViewport(zoomAt(current, ZOOM_STEP, middle))
         case 'sequence.zoomOut':
@@ -335,8 +344,13 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       // `asset.id`, never the id the drag carried: a library drag carries the CLOUD id, and what
       // the import wrote is a catalogue row under an id of its own. A clip built on the first
       // names a row the project does not hold.
-      const clip = clipForAsset(asset.id, asset, start, sequence.settings)
-      useSequences.getState().runCommand(documentId, addClip(trackId, clip))
+      //
+      // Read out of the store rather than from the render's own `sequence`: a library asset is
+      // fetched first, and the montage may have been edited while it came down.
+      const store = useSequences.getState()
+      const current = sequenceOf(store, documentId)
+      const placements = placementsForAsset(current, asset, asset.id, start, trackId)
+      if (placements.length > 0) store.runCommand(documentId, addClips(placements))
     })
   }
 

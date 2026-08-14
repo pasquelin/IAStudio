@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addClip,
+  addClips,
   addTrack,
   moveClip,
   moveTrack,
@@ -8,6 +9,7 @@ import {
   removeTrack,
   splitClip,
   trimClip,
+  unlinkClip,
 } from './commands'
 import { clipFixture, sequenceWith, trackFixture } from './timeline-fixtures'
 import type { Clip, SequenceState } from './timeline-state'
@@ -296,6 +298,100 @@ describe('sequence commands', () => {
 
     expect(back.tracks[1]?.clips).toEqual(seeded.tracks[1]?.clips)
     expect(back.tracks[0]?.clips).toEqual(seeded.tracks[0]?.clips)
+  })
+})
+
+/**
+ * A take is two clips, and an editor expects them to behave as one thing: what an edit does to
+ * the picture it does to the sound, until the two are unlinked on purpose. Anything less drifts
+ * lip sync on the first drag, which is the one defect an edit cannot recover from by eye.
+ */
+describe('a take whose picture and sound are linked', () => {
+  const LINK = 'link-1'
+
+  const take = (): SequenceState =>
+    sequenceWith([
+      trackFixture('V1', 'video', [clipFixture('v', 1_000_000, 2_000_000, { linkId: LINK })]),
+      trackFixture('A1', 'audio', [clipFixture('a', 1_000_000, 2_000_000, { linkId: LINK })]),
+    ])
+
+  const clipOf = (state: SequenceState, id: string): Clip | undefined =>
+    state.tracks.flatMap(track => track.clips).find(clip => clip.id === id)
+
+  it('drags the sound along when the picture is dragged, and back on undo', () => {
+    const command = moveClip('v', 'V1', 3_000_000)
+    const state = take()
+
+    const moved = command.apply(state)
+
+    expect(clipOf(moved, 'v')?.start).toBe(3_000_000)
+    expect(clipOf(moved, 'a')?.start).toBe(3_000_000)
+    expect(command.revert(moved)).toEqual(state)
+  })
+
+  // The twin stays where it can be heard: one audio track is the ordinary sequence, and a sound
+  // moved onto a picture track is painted rather than played.
+  it('keeps the sound on its own track when the picture changes track', () => {
+    const moved = moveClip('v', 'V2', 1_000_000).apply({
+      ...take(),
+      tracks: [...take().tracks, trackFixture('V2', 'video', [], { index: 2 })],
+    })
+
+    expect(moved.tracks.find(track => track.id === 'V2')?.clips).toHaveLength(1)
+    expect(moved.tracks.find(track => track.id === 'A1')?.clips).toHaveLength(1)
+  })
+
+  it('trims both edges together', () => {
+    const trimmed = trimClip('v', 'out', 2_000_000, 'unknown').apply(take())
+
+    expect(clipOf(trimmed, 'v')?.duration).toBe(1_000_000)
+    expect(clipOf(trimmed, 'a')?.duration).toBe(1_000_000)
+  })
+
+  it('cuts both, and ties the two tails to each other rather than to the heads', () => {
+    const cut = splitClip('v', 2_000_000).apply(take())
+    const clips = cut.tracks.flatMap(track => track.clips)
+    const tails = clips.filter(clip => clip.start === 2_000_000)
+    const heads = clips.filter(clip => clip.start === 1_000_000)
+
+    expect(tails).toHaveLength(2)
+    expect(tails[0]?.linkId).toBe(tails[1]?.linkId)
+    expect(heads[0]?.linkId).toBe(LINK)
+    // Otherwise dragging one head would drag the far side of the cut with it.
+    expect(tails[0]?.linkId).not.toBe(LINK)
+  })
+
+  it('deletes both, since a picture whose sound stays behind is never what was meant', () => {
+    const cleared = removeClip('v').apply(take())
+    expect(cleared.tracks.flatMap(track => track.clips)).toEqual([])
+  })
+
+  it('unties the pair, so each half can then be edited alone', () => {
+    const command = unlinkClip('v')
+    const state = take()
+
+    const untied = command.apply(state)
+
+    expect(clipOf(untied, 'v')?.linkId).toBeUndefined()
+    expect(clipOf(untied, 'a')?.linkId).toBeUndefined()
+    // Undo puts the link back: unlinking is an edit like any other.
+    expect(command.revert(untied)).toEqual(state)
+    expect(clipOf(removeClip('v').apply(untied), 'a')).toBeDefined()
+  })
+
+  it('lays a take down as one history entry, so undo takes back both clips', () => {
+    const command = addClips([
+      { trackId: 'V1', clip: clipFixture('v', 0, 1_000_000, { linkId: LINK }) },
+      { trackId: 'A1', clip: clipFixture('a', 0, 1_000_000, { linkId: LINK }) },
+    ])
+    const state = sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
+
+    const dropped = command.apply(state)
+
+    expect(dropped.tracks.flatMap(track => track.clips)).toHaveLength(2)
+    // The picture, never the last part that ran: it is the half the user aimed at.
+    expect(dropped.selectedId).toBe('v')
+    expect(command.revert(dropped)).toEqual(state)
   })
 })
 

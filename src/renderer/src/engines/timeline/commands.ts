@@ -1,4 +1,5 @@
 import type { Command } from '../core/history'
+import type { ClipPlacement } from './insert'
 import {
   clampFades,
   clampGain,
@@ -8,6 +9,7 @@ import {
   clipFrom,
   editableTrack,
   insertClip,
+  linkedClipIds,
   makeTrack,
   newClipId,
   nextTrackId,
@@ -35,6 +37,41 @@ const withoutClip = (track: Track, clipId: string): Track => ({
   ...track,
   clips: track.clips.filter(clip => clip.id !== clipId),
 })
+
+/** Several commands as one history entry: applied in order, reverted in reverse. */
+function composed(id: string, parts: readonly Command<SequenceState>[]): Command<SequenceState> {
+  return {
+    id,
+    apply: state => parts.reduce((current, part) => part.apply(current), state),
+    revert: state => parts.reduceRight((current, part) => part.revert(current), state),
+  }
+}
+
+/**
+ * The same edit, on a clip and on whatever a link ties to it — a take's picture and its sound.
+ *
+ * The twins are only known once there is a state to read, so the parts are composed on the
+ * first apply and KEPT: a redo must replay the very same commands, each holding the id it
+ * minted for a tail it cut loose, and rebuilding them would rename what undo put back.
+ */
+function acrossLink(
+  id: string,
+  clipId: string,
+  make: (state: SequenceState, linkedId: string) => Command<SequenceState> | null,
+): Command<SequenceState> {
+  let parts: Command<SequenceState>[] | null = null
+
+  return {
+    id,
+    apply: state => {
+      parts ??= linkedClipIds(state, clipId)
+        .map(linkedId => make(state, linkedId))
+        .filter((part): part is Command<SequenceState> => part !== null)
+      return composed(id, parts).apply(state)
+    },
+    revert: state => (parts ? composed(id, parts).revert(state) : state),
+  }
+}
 
 /**
  * What is known of the media behind a clip, which is not the same question as how long it runs.
@@ -74,6 +111,24 @@ function boundToMedia(clip: Clip, edge: ClipEdge, at: Us, media: MediaExtent): U
 const restore = (state: SequenceState, trackId: string, clips: Clip[]): SequenceState =>
   updateTrack(state, trackId, current => ({ ...current, clips }))
 
+/**
+ * Lays down what one asset became — one clip, or the picture and the sound of a take, which
+ * must be ONE history entry: undoing a drop that put down two clips has to take back both.
+ *
+ * The picture is what ends up selected, whatever order the parts ran in: it is the half the
+ * user aimed at, and the inspector reads the selection.
+ */
+export function addClips(placements: readonly ClipPlacement[]): Command<SequenceState> {
+  const first = placements[0]
+  const parts = placements.map(({ trackId, clip }) => addClip(trackId, clip))
+  const all = composed(`add:${first?.clip.id ?? 'none'}`, parts)
+
+  return {
+    ...all,
+    apply: state => (first ? { ...all.apply(state), selectedId: first.clip.id } : state),
+  }
+}
+
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
   let before: { clips: Clip[]; selectedId: string | null } | null = null
   const tailId = newClipId()
@@ -98,7 +153,27 @@ export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
   }
 }
 
+/**
+ * Drags a clip, and with it whatever is tied to it.
+ *
+ * A twin follows in time and stays on its own track: the sound of a take dragged from V1 to V2
+ * has nowhere to go if the sequence holds one audio track, and a sound moved to a picture track
+ * would be painted rather than heard.
+ */
 export function moveClip(clipId: string, toTrackId: string, start: Us): Command<SequenceState> {
+  return acrossLink(`move:${clipId}`, clipId, (state, linkedId) => {
+    if (linkedId === clipId) return moveOneClip(clipId, toTrackId, start)
+
+    const twin = clipById(state, linkedId)
+    const dragged = clipById(state, clipId)
+    const track = trackOfClip(state, linkedId)
+    if (!twin || !dragged || !track) return null
+
+    return moveOneClip(linkedId, track.id, twin.start + (start - dragged.start))
+  })
+}
+
+function moveOneClip(clipId: string, toTrackId: string, start: Us): Command<SequenceState> {
   let from: {
     trackId: string
     sourceClips: Clip[]
@@ -157,6 +232,19 @@ export function trimClip(
   at: Us,
   media: MediaExtent,
 ): Command<SequenceState> {
+  // The same instant on both halves, and the same media behind them: a twin is the same asset,
+  // so what bounds one bounds the other.
+  return acrossLink(`trim:${clipId}:${edge}`, clipId, (_, linkedId) =>
+    trimOneClip(linkedId, edge, at, media),
+  )
+}
+
+function trimOneClip(
+  clipId: string,
+  edge: ClipEdge,
+  at: Us,
+  media: MediaExtent,
+): Command<SequenceState> {
   let before: { clips: Clip[]; trackId: string } | null = null
   // Minted once with the command: a trim landing mid-neighbour cuts a tail loose, and a redo
   // must not rename it.
@@ -191,6 +279,15 @@ export function trimClip(
 }
 
 export function splitClip(clipId: string, at: Us): Command<SequenceState> {
+  // One link for both tails, minted once: the two halves of a cut take stay tied to each other
+  // and to nothing else, or dragging one head would drag the far side of the cut with it.
+  const tailLink = newClipId()
+  return acrossLink(`split:${clipId}`, clipId, (_, linkedId) =>
+    splitOneClip(linkedId, at, tailLink),
+  )
+}
+
+function splitOneClip(clipId: string, at: Us, tailLink: string): Command<SequenceState> {
   let before: { clip: Clip; trackId: string } | null = null
   // Minted once with the command, not on each apply: a redo must not rename the tail.
   const tailId = newClipId()
@@ -210,7 +307,14 @@ export function splitClip(clipId: string, at: Us): Command<SequenceState> {
       // The cut point gets no ramp: a split is a butt joint, and fading into it would dip the
       // level in the middle of what the ear still hears as one take.
       const head: Clip = clampFades({ ...clip, duration: time - clip.start, fadeOut: 0 })
-      const tail: Clip = clampFades({ ...clipFrom(clip, time), id: tailId, fadeIn: 0 })
+      const tail: Clip = clampFades({
+        ...clipFrom(clip, time),
+        id: tailId,
+        fadeIn: 0,
+        // A link the head keeps, so the tail needs one of its own — shared with the tail of
+        // whatever was cut alongside it.
+        ...(clip.linkId ? { linkId: tailLink } : {}),
+      })
 
       return updateTrack(state, track.id, current => ({
         ...current,
@@ -274,6 +378,42 @@ export function setClipGain(clipId: string, gain: number): Command<SequenceState
 
 export function setClipSpeed(clipId: string, speed: number): Command<SequenceState> {
   return editClip(`speed:${clipId}`, clipId, clip => ({ ...clip, speed: clampSpeed(speed) }))
+}
+
+/**
+ * Unties a take's picture from its sound, so each half can be trimmed, moved or deleted alone.
+ *
+ * The whole group at once, not the clip it was asked on: a link with one member left is a clip
+ * that still refuses nothing but looks tied, which is the worst of both.
+ */
+export function unlinkClip(clipId: string): Command<SequenceState> {
+  let untied: { ids: string[]; linkId: string } | null = null
+
+  const relink = (state: SequenceState, ids: readonly string[], linkId?: string): SequenceState =>
+    ids.reduce(
+      (current, id) =>
+        updateClip(current, id, clip => {
+          // Deleted off a copy rather than left as `undefined`: a clip written to disk with the
+          // key still on it reads back as linked to nothing, and `linkedClipIds` would tie
+          // together every clip a file was saved without one.
+          const alone = { ...clip }
+          delete alone.linkId
+          return linkId ? { ...alone, linkId } : alone
+        }),
+      state,
+    )
+
+  return {
+    id: `unlink:${clipId}`,
+    apply: state => {
+      const linkId = clipById(state, clipId)?.linkId
+      if (!linkId) return state
+
+      untied = { ids: linkedClipIds(state, clipId), linkId }
+      return relink(state, untied.ids)
+    },
+    revert: state => (untied ? relink(state, untied.ids, untied.linkId) : state),
+  }
 }
 
 /**
@@ -389,7 +529,16 @@ export function renameTrack(trackId: string, name: string): Command<SequenceStat
   }
 }
 
+/**
+ * Takes a clip away, and with it whatever is tied to it: a take whose picture is deleted and
+ * whose sound stays behind is the state an editor never means to be in — unlink first, then
+ * delete the half that is in the way.
+ */
 export function removeClip(clipId: string): Command<SequenceState> {
+  return acrossLink(`remove:${clipId}`, clipId, (_, linkedId) => removeOneClip(linkedId))
+}
+
+function removeOneClip(clipId: string): Command<SequenceState> {
   let removed: { clip: Clip; trackId: string; index: number; selectedId: string | null } | null =
     null
 
