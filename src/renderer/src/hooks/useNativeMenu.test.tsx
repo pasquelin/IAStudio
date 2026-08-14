@@ -174,7 +174,7 @@ describe('useNativeMenu', () => {
   })
 
   /**
-   * `saveDocumentAs` journals its own failures under `assets.save` — the shelf the copy would
+   * `saveDocumentAs` journals its own failures under `assets.copy` — the shelf the copy would
    * have landed in — and answers false rather than rejecting. A second scope reported here would
    * say the same failure twice, under a name that does not fit it.
    */

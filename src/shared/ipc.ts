@@ -431,6 +431,10 @@ export type LogScope =
   // ⌘S reaches the asset behind a document as well as the document itself, and the two halves
   // fail apart: the file can be written while the picture behind it is not.
   | 'assets.save'
+  // ⇧⌘S makes a COPY and never rewrites anything, so its failures cannot be read as a save that
+  // did not happen. One of them fires once the copy is already on disk — under `assets.save` the
+  // journal denied a write that had just succeeded.
+  | 'assets.copy'
   | 'assets.extract'
   // The home's shelf: a folder moved since it was last opened is the ordinary case there, so
   // all three of its gestures need somewhere to say they did nothing.
@@ -469,6 +473,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'assets.reveal',
   'assets.open',
   'assets.save',
+  'assets.copy',
   'assets.extract',
   'project.reveal',
   'project.forget',

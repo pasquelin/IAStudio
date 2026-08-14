@@ -31,6 +31,8 @@ const GESTURE_SCOPES: ReadonlySet<LogScope> = new Set<LogScope>([
   'canvas.size',
   // ⌘S is a gesture, and the half that reaches the asset can fail while the document is written.
   'assets.save',
+  // ⇧⌘S is the same kind of gesture: asked again precisely because the first said nothing.
+  'assets.copy',
   // Both rows of the home's project menu: chosen again precisely because the first attempt
   // said nothing, and a shelf whose row does nothing twice in silence reads as a dead menu.
   'project.reveal',

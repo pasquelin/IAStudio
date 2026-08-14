@@ -442,16 +442,10 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   const { bridge, document, io } = savable
 
   const source = document.sourceAssetId
-  // KNOWN WRONG, and left for its own batch: the three `assets.save` lines below read « the
-  // asset could not be rewritten », while ⇧⌘S never rewrites anything — it makes a COPY. The
-  // third is the worst of them: the comment above it says the asset is already on disk, so the
-  // journal denies a write that happened. Same shape as the drift warning this batch moved out,
-  // one function away, and fixing it needs a scope or a sentence of its own.
-  //
   // No asset to derive from, or a kind that bakes to nothing one could hold: both are "there is
   // no copy to make", and both are said out loud rather than doing nothing quietly.
   if (!source || !io.writeAsset) {
-    reportFailure('assets.save', document.title, new Error('nothing to copy'))
+    reportFailure('assets.copy', document.title, new Error('nothing to copy'))
     return false
   }
 
@@ -460,7 +454,7 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   try {
     const copy = await io.writeAsset(documentId, { derivedFrom: source, name })
     if (!copy) {
-      reportFailure('assets.save', document.title, new Error('nothing to bake yet'))
+      reportFailure('assets.copy', document.title, new Error('nothing to bake yet'))
       return false
     }
 
@@ -475,7 +469,7 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
     // document naming it. Said out loud rather than swallowed: the copy is in the shelf, and a
     // user who cannot see why has no way to find that out.
     if (!created) {
-      reportFailure('assets.save', document.title, new Error('no document for the copy'))
+      reportFailure('assets.copy', document.title, new Error('no document for the copy'))
       return false
     }
 
@@ -499,7 +493,11 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
     void useDocuments.getState().relist('own-write')
     return true
   } catch (error) {
-    reportFailure('assets.save', document.title, error)
+    // Both sides of the write: the `try` OPENS on `writeAsset`, so a rejection there lands here
+    // with nothing on disk, while `capture`, `create` and `refresh` land here with the copy
+    // already written. That is why the sentence says the copy could not be FINISHED rather than
+    // not be made — one of the four sites reports a copy that exists.
+    reportFailure('assets.copy', document.title, error)
     return false
   }
 }
