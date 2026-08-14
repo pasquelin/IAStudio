@@ -1,5 +1,5 @@
 import type Scenario from '@scenario-labs/sdk'
-import { OFFICIAL_TAG, type ModelSort } from '@shared/domain/model'
+import type { ModelSort } from '@shared/domain/model'
 import { log } from '@main/log'
 import { offsetAfter, tokenAfter } from './cursor'
 import type { CatalogPage, ListRequest, ModelCatalog, SearchRequest } from './model-registry'
@@ -36,10 +36,9 @@ export function catalogOf(client: Scenario): ModelCatalog {
      * whole catalogue sat behind `privacy: 'public'` — measured: 0 private, 642 public. The
      * registry walks private first: a model the user trained outranks the six hundred others.
      */
-    list: async ({ privacy, pageSize, token, sort, official, tag, createdAfter }: ListRequest) => {
+    list: async ({ privacy, pageSize, token, sort, tag, createdAfter }: ListRequest) => {
       // `tags` and `score` ordering are public-only, and sorting private models by score would
       // additionally require a `status` filter the studio has no reason to impose.
-      const wanted = tag ?? (official ? OFFICIAL_TAG : undefined)
       const params = {
         pageSize,
         privacy,
@@ -49,7 +48,7 @@ export function catalogOf(client: Scenario): ModelCatalog {
               // A date bound is only honoured alongside the date order — the API says so, and
               // answers 400 otherwise. Asking for one silently overrides the chosen sort.
               ...(createdAfter ? { ...NEWEST_FIRST, createdAfter } : sortParams(sort)),
-              ...(wanted ? { tags: wanted } : {}),
+              ...(tag ? { tags: tag } : {}),
             }
           : {}),
       }
