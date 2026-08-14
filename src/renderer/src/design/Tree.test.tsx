@@ -251,13 +251,13 @@ describe('Tree', () => {
   })
 
   /**
-   * The whole reason `renderLeading` exists: a stack is read the way Photoshop draws one, its
-   * eyes in a column that does not move. A row three levels deep would otherwise put its controls
-   * further right than the group holding it, which is a file browser's reading, not a stack's.
+   * The whole reason `renderTrailing` exists: the eyes of an outliner read as one straight column
+   * whatever the depth or the length of a name. A control that walked right with the indent would
+   * put a nested row's eye past its parent's, and there would be no column left to read.
    *
-   * Asked of the OFFSET rather than of the markup: nothing between the row's edge and the pinned
-   * column may carry the indent, whatever elements the tree happens to stack in between. `a1` is
-   * two levels down, and its `aria-level` is what says so without reading the DOM.
+   * Asked of the OFFSET rather than of the markup: nothing between the pinned column and the row
+   * may carry the indent, whatever elements the tree happens to stack in between. `a1` is two
+   * levels down, and its `aria-level` is what says so without reading the DOM.
    */
   it('leaves a pinned column out of the indentation, however deep the row', () => {
     render(
@@ -270,7 +270,7 @@ describe('Tree', () => {
         onToggle={() => {}}
         // Marked rather than named: the row's own name is what `getByText` below asks for, and a
         // second element carrying it would make that query ambiguous.
-        renderLeading={() => <span data-pinned />}
+        renderTrailing={() => <span data-pinned />}
         renderRow={row => <span>{row.node.id}</span>}
       />,
     )
@@ -286,6 +286,36 @@ describe('Tree', () => {
       walked = walked.parentElement
     }
     expect(walked).toBe(deepest)
+  })
+
+  /**
+   * And it is the LAST thing in the row, which is the half of the decision that took three passes:
+   * pinned on the left it pushed the chevron, the indent and every name of the panel across by its
+   * own width. What is on the left of an outliner is the shape of the tree.
+   */
+  it('pins that column after everything the depth moves, not before it', () => {
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        renderTrailing={() => <span data-pinned />}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const row = screen.getByText('a').closest('[role="treeitem"]')
+    const pinned = row?.querySelector('[data-pinned]')
+    const name = screen.getByText('a')
+
+    // `DOCUMENT_POSITION_FOLLOWING` — the pinned column comes after the name in document order,
+    // which is what puts it at the far end of a `flex` row.
+    expect(name.compareDocumentPosition(pinned as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
   })
 
   /**
@@ -306,7 +336,7 @@ describe('Tree', () => {
         expandedIds={new Set(['scene', 'a'])}
         onSelect={() => {}}
         onToggle={() => {}}
-        renderLeading={() => <span data-pinned />}
+        renderTrailing={() => <span data-pinned />}
         renderRow={row => <span>{row.node.id}</span>}
       />,
     )

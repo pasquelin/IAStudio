@@ -60,7 +60,17 @@ export function Row({
     // something: a glyph, a word and a button, three things that have to breathe. The tree's
     // columns have a width of their own and needed no such thing — between them the same gutter
     // was 12px of nothing, on every line of every panel.
-    <div className={cn(ROW_LINE, 'gap-1.5')}>
+    //
+    // `min-w-0 flex-1` is what makes the `truncate` below fire at all, and it belongs here rather
+    // than at each host. A flex item defaults to `min-width: auto`, so without it this row is as
+    // wide as the longest name it holds, whatever the panel measures: the name never truncates,
+    // the row overflows, and since the tree lays its rows out `absolute inset-x-0` the fill stops
+    // at the panel edge while the text goes on. That is a file browser scrolling sideways with an
+    // unpainted selection — seen on 2026-08-14, on `asset_6be2d496-…-eda987c366e5.glb`.
+    //
+    // `LayerRow` and `SceneNodeRow` had reached for the same pair in a wrapper of their own, which
+    // is why only the explorer showed it: `EntryRow` renders this directly.
+    <div className={cn(ROW_LINE, 'min-w-0 flex-1 gap-1.5')}>
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">

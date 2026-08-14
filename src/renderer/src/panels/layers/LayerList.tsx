@@ -107,10 +107,11 @@ export function LayerList({ documentId }: { documentId: string }) {
           run: command => useCanvases.getState().runCommand(documentId, command),
         })
       }
-      // Pinned to the left edge, outside the indentation — a stack is read the way Photoshop
-      // draws one: the eye of a layer nested three groups deep sits under the eye of the one at
-      // the top, and only the name walks right.
-      renderLeading={row => (
+      // Pinned to the RIGHT edge, outside the indentation: the eyes read as one straight column
+      // whatever the depth or the length of a name, and the left of the panel is left to the
+      // shape of the stack — the chevron, the indent, the name. Pinned on the left it pushed all
+      // three across by its own width, which is what the panel had too much of.
+      renderTrailing={row => (
         <VisibilityToggle
           visible={row.node.layer.visible}
           label={labels.visible}

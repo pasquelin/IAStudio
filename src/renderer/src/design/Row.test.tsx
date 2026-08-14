@@ -99,4 +99,19 @@ describe('Row', () => {
 
     expect(screen.getByText('thumb')).toBeInTheDocument()
   })
+
+  /**
+   * What makes the `truncate` on the name fire at all. A flex item defaults to `min-width: auto`,
+   * so without this pair the row is as wide as the longest name it holds, whatever the panel
+   * measures — and the tree lays its rows out `absolute inset-x-0`, so the fill stops at the panel
+   * edge while the text scrolls on past it.
+   *
+   * jsdom lays nothing out, so the classes are what can be asked for; the defect they close was
+   * seen in Electron on 2026-08-14, in the explorer, on a `.glb` named after its asset id.
+   */
+  it('shrinks inside its host rather than growing to the width of its name', () => {
+    const { container } = render(<Row icon={mdiCube} title="A rather long name" />)
+
+    expect(container.firstElementChild).toHaveClass('min-w-0', 'flex-1')
+  })
 })
