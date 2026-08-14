@@ -31,6 +31,9 @@ const FIELDS: Record<string, string> = import.meta.glob('./*Field.tsx', {
 
 const named = (source: string): boolean => source.includes('title={label}')
 
+/** Either gauge: both truncate, so both owe the reader the whole label somewhere. */
+const labelled = (source: string): boolean => source.includes('FIELD_LABEL')
+
 describe('the label column of a property line', () => {
   it('finds the row at all, so the rules below cannot pass on an empty file', () => {
     expect(propertyRow).toContain('export function PropertyRow')
@@ -82,10 +85,25 @@ describe('a label the column is too narrow for', () => {
    */
   it('is reachable on hover from every field that draws one', () => {
     const silent = Object.entries(FIELDS)
-      .filter(([, source]) => source.includes('FIELD_LABEL') && !named(source))
+      .filter(([, source]) => labelled(source) && !named(source))
       .map(([path]) => path)
 
     expect(silent, `these draw a truncating label with no title: ${silent.join(', ')}`).toEqual([])
+  })
+
+  /**
+   * Both gauges are counted, and that is not a detail: the rule above once read `FIELD_LABEL`
+   * alone, so the day `ToggleField` moved to the wide one it left the guard through the back
+   * door — silently, and it is the very file the rule was first repaired on.
+   */
+  it('counts the fields that wear the wide label as well as the fixed column', () => {
+    const wide = Object.entries(FIELDS)
+      .filter(([, source]) => source.includes('FIELD_LABEL_WIDE'))
+      .map(([path]) => path)
+
+    // One, and named: a field with a control to place has a column to line up on, and taking the
+    // wide label there would put its name where the neighbours draw their sliders.
+    expect(wide).toEqual(['./ToggleField.tsx'])
   })
 
   it('is reachable on the row family too, which is where the rule started', () => {

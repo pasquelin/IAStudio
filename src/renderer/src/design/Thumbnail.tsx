@@ -15,7 +15,17 @@ export function Thumbnail({ url, className }: ThumbnailProps) {
   const frame = cn(MEDIA_FRAME, 'shrink-0', className)
 
   return src ? (
-    <img src={src} alt="" loading="lazy" onError={onError} className={cn(frame, 'object-cover')} />
+    // Never draggable: an `img` is by default, and these sit inside drop targets — dragging one
+    // slot onto another looked like the obvious gesture and did nothing at all, in silence,
+    // because what flew was the browser's own picture drag and no channel of ours.
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      draggable={false}
+      onError={onError}
+      className={cn(frame, 'object-cover')}
+    />
   ) : (
     <div className={cn(frame, 'flex items-center justify-center')}>
       <UiIcon path={mdiImageOffOutline} size={16} className="text-muted/30" />

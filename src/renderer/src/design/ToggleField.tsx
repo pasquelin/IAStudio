@@ -1,5 +1,5 @@
 import { cn } from '@/helpers/cn'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING } from './styles'
+import { FIELD_LABEL_WIDE, FIELD_ROW, FOCUS_RING } from './styles'
 
 export type ToggleFieldProps = {
   label: string
@@ -14,10 +14,10 @@ export type ToggleFieldProps = {
 export function ToggleField({ label, value, onChange }: ToggleFieldProps) {
   return (
     <label className={FIELD_ROW}>
-      {/* Titled because the column truncates at four rems, exactly as `PropertyRow` learned to
-          be: a label cut mid-word can read as a shorter label that means something else, which
-          says the wrong thing rather than half of the right one. */}
-      <span title={label} className={FIELD_LABEL}>
+      {/* The wide label, and the only field that wears it: a checkbox sits at the far end of the
+          row whatever its name does, so there is no control here to line up on the shared column
+          — see `FIELD_LABEL_WIDE`, which says what that cost. */}
+      <span title={label} className={FIELD_LABEL_WIDE}>
         {label}
       </span>
 

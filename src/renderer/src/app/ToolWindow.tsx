@@ -92,7 +92,11 @@ export const ToolWindow = memo(function ToolWindow({
             </ErrorBoundary>
           )}
         </PanelHeader>
-        <div className="min-h-0 flex-1 overflow-auto">
+        {/* A COLUMN, not a plain box: a panel that scrolls its own body sizes it `flex-1`
+            (`PANEL_SCROLL`), and `flex-1` against a non-flex parent does nothing at all — the
+            body took the height of its CONTENT instead of the height of the panel, so the
+            scroller stopped short and the empty space below it belonged to nobody. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto">
           {/* Inside the panel, not around it: a tool that throws keeps its header, so it can
               still be closed. Keyed by the tool — the rail swaps `tool` on this same element,
               and a boundary left standing would hand its failure to the tool that replaced it. */}

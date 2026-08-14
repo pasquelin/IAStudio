@@ -1,10 +1,14 @@
 import { mdiCheckboxBlankOutline, mdiClose, mdiTextureBox } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
+import type { AssetType } from '@shared/domain/asset'
+import { activation } from '@/helpers/activation'
+import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
+import { AssetDropTarget } from './AssetDropTarget'
 import { Thumbnail } from './Thumbnail'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
-import { FIELD_LABEL, FIELD_ROW } from './styles'
+import { FIELD_LABEL, FIELD_ROW, FIELD_THUMBNAIL, FOCUS_RING } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -31,10 +35,24 @@ export type TextureFieldProps = {
    */
   emptyHint: string
   optionHint: string
+  /**
+   * The kinds a drag may drop into this slot. Absent leaves the field undroppable, which is what
+   * a slot filled from something other than the catalogue wants — `FontField` offers the fonts
+   * of the system, and no asset of the project is one.
+   */
+  accepts?: readonly AssetType[]
+  /**
+   * OPENING what the slot holds — the double-click on its picture, and Enter with it. The caller
+   * owns it because it alone knows what `value` names; absent, the picture stays inert.
+   *
+   * One object rather than a label and a callback side by side, as `ChannelDerivation` and
+   * `EmptyStateAction` are: two props that must travel together are two props that can be split,
+   * and a caller passing the callback alone would lose the button with nothing to say so. The
+   * hint is required for the same reason `MenuRow` demands one — the label reads « Open the
+   * texture » while a single click does nothing at all, and only the hint says which gesture.
+   */
+  open?: { label: string; hint: string; run: () => void }
 }
-
-/** The thumbnail matches the control gauge, so a slot is exactly one row tall. */
-const THUMBNAIL = 'size-(--sc-control)'
 
 /**
  * One texture slot: what it holds, and a menu of what the project can put in it. What travels
@@ -50,16 +68,38 @@ export function TextureField({
   chooseLabel,
   emptyHint,
   optionHint,
+  accepts,
+  open,
 }: TextureFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
 
+  const picture = <Thumbnail url={chosen?.url} className={FIELD_THUMBNAIL} />
+
   return (
-    <div className={FIELD_ROW}>
+    <DroppableSlot accepts={accepts} onDrop={onChange}>
       <span title={label} className={FIELD_LABEL}>
         {label}
       </span>
 
-      <Thumbnail url={chosen?.url} className={THUMBNAIL} />
+      {/* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives the
+          picture it points at, and an id whose asset has left the project draws the empty label
+          beside a button offering to open something that is no longer there. A focus stop that
+          leads nowhere is also one more Tab to cross. */}
+      {open && chosen ? (
+        <button
+          type="button"
+          {...activation(open.run)}
+          {...TIP_LEFT(open.label, false, open.hint)}
+          className={cn(
+            'shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
+            FOCUS_RING,
+          )}
+        >
+          {picture}
+        </button>
+      ) : (
+        picture
+      )}
 
       <span className="text-muted min-w-0 flex-1 truncate">{chosen?.name ?? emptyLabel}</span>
 
@@ -113,6 +153,40 @@ export function TextureField({
           onClick={() => onChange(null)}
         />
       )}
-    </div>
+    </DroppableSlot>
+  )
+}
+
+/**
+ * The row itself, made a drop target only where a drop means something.
+ *
+ * Wrapped rather than made conditional inside the row: `AssetDropTarget` owns the outline that
+ * says WHICH slot a drop would land in, and a field that mounted one unconditionally would light
+ * up on a drag it has no use for. `exclusive`, because these slots sit inside the panel's own
+ * target — without it both would frame at once and the answer would name two places.
+ *
+ * NOT `AssetDropField`, whose name is one letter away: that one is a form control — it registers
+ * with react-hook-form, draws an input, and holds the chosen id itself. This holds nothing.
+ */
+function DroppableSlot({
+  accepts,
+  onDrop,
+  children,
+}: {
+  accepts?: readonly AssetType[]
+  onDrop: (assetId: string) => void
+  children: ReactNode
+}) {
+  if (!accepts) return <div className={FIELD_ROW}>{children}</div>
+
+  return (
+    <AssetDropTarget
+      accepts={accepts}
+      exclusive
+      onDrop={asset => onDrop(asset.id)}
+      className={FIELD_ROW}
+    >
+      {children}
+    </AssetDropTarget>
   )
 }
