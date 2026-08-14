@@ -301,6 +301,13 @@ describe('the translation bundles', () => {
    * so a search for the whole value walks straight past them. Four such quotes followed that
    * batch, the fourth found by review rather than by any guard. A label renamed here is not
    * done until `grep` has read the manual for its opening words, not its whole sentence.
+   *
+   * Two more holes, named by review so nobody has to rediscover them. **`except` exempts the
+   * whole KEY, not the one reading it was granted for**: `inspector.kind_video` is allowed
+   * `Picture` for the picture track, and would keep passing if it started saying `Drop a
+   * picture from the project`. And this reads VALUES only — `generation.dropPicture`,
+   * `texture.noPicture` and `texture.noPictureHint` still carry the old word in their NAMES,
+   * which is not screen text and not a fault, but is where the word would creep back in.
    */
   const SETTLED_WORDS: Record<
     Language,
