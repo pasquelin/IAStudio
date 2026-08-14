@@ -403,36 +403,37 @@ export function Tree<T extends TreeNode>({
         style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
         className="flex h-full min-w-0 flex-1 items-center"
       >
-        {/* Kept open on a leaf where the tree is a TREE, closed where it is a STACK, and the
-            pinned column is what tells the two apart.
+        {/* The fold column is kept open on a leaf, and it is NOT a cosmetic choice: it is what
+            makes the indent arithmetic uniform. A parent's content starts one column past its own
+            edge, so a child starts one INDENT past its parent's edge — the two only read as
+            nested while every row pays the same column.
 
-            A file browser reserves it: files and folders of one level line up under each other,
-            and a name that shifted by a glyph depending on whether it can be opened is a list
-            nobody can scan. A stack has no such need — the pinned column already anchors the
-            left edge, so a layer that holds nothing starts where a group's chevron does, which
-            is how every editor draws one and what it was asked to do.
+            Closing it on leaves was tried on 2026-08-14 and reverted the same day: `--sc-indent`
+            is 12px and this column is 12px, so a layer inside a group landed at exactly its
+            parent's x — and 4px to its LEFT in compact density, where the indent drops to 8. The
+            nesting a stack panel exists to show simply disappeared. Giving it back would mean an
+            indent of a column plus a gutter, which is 24px a level, and the file browser next
+            door would then walk in strides.
 
             Not a control: the row carries `aria-expanded` and the arrows already toggle it. Named
             because it has no other handle, being `aria-hidden` — three suites used to reach it as
             the row's `firstChild`, a claim about the markup around it rather than about it. */}
-        {(row.hasChildren || !renderLeading) && (
-          <span
-            aria-hidden="true"
-            data-chevron
-            className="flex w-3 shrink-0 justify-center"
-            onPointerDown={event => {
-              if (ghost || !row.hasChildren) return
-              // The row selects on pointer down, which fires before click: stopping the click
-              // alone would still have let the chevron steal the selection.
-              event.stopPropagation()
-              onToggle(row.node.id)
-            }}
-          >
-            {!ghost && row.hasChildren && (
-              <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
-            )}
-          </span>
-        )}
+        <span
+          aria-hidden="true"
+          data-chevron
+          className="flex w-3 shrink-0 justify-center"
+          onPointerDown={event => {
+            if (ghost || !row.hasChildren) return
+            // The row selects on pointer down, which fires before click: stopping the click
+            // alone would still have let the chevron steal the selection.
+            event.stopPropagation()
+            onToggle(row.node.id)
+          }}
+        >
+          {!ghost && row.hasChildren && (
+            <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
+          )}
+        </span>
         {renderRow(row)}
       </div>
     </>
