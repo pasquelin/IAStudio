@@ -135,14 +135,14 @@ export type TreeProps<T extends TreeNode> = {
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
   /**
-   * Draws a column pinned to the LEFT EDGE, outside the indentation — the visibility eye of a
+   * Draws a column pinned to the RIGHT EDGE, outside the indentation — the visibility eye of a
    * layer stack and of the scene outliner.
    *
-   * Outside, and that is the whole of what this prop is for: an eye that walked right with the
-   * depth put a top-level layer's controls further in than the group's own chevron, which is what
-   * a stack panel is read the other way round from. Photoshop has pinned that column for thirty
-   * years, and a stack is what the layers panel is — a file browser has no such column and does
-   * not pass this.
+   * Outside, so the eyes read as one straight column whatever the depth or the length of a name.
+   * On the RIGHT, and it took three passes to get there: pinned on the LEFT it pushed the chevron,
+   * the indent and every name of the panel across by its own width plus a gutter, which is the
+   * one thing those panels had too much of. What is on the left of an outliner is the shape of
+   * the tree; what is on the right is what one does to a row.
    *
    * The tree holds the column open at one width for every row, so a row with nothing to put in
    * it answers `null` rather than spacing itself: the scene's synthetic root does exactly that,
@@ -150,16 +150,16 @@ export type TreeProps<T extends TreeNode> = {
    *
    * Absent altogether, the row is exactly its indent, its chevron and `renderRow`.
    */
-  renderLeading?: (row: TreeRow<T>) => ReactNode
+  renderTrailing?: (row: TreeRow<T>) => ReactNode
 }
 
 /** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
 const INDENT = 'var(--sc-indent)'
 
 /**
- * The pinned column, at the gauge of the control it holds — the visibility eye, and nothing wider
- * so far. Held by the tree rather than measured from what the caller returns, because a row that
- * puts nothing in it still has to line the rows under it up.
+ * The pinned column at the right edge, at the gauge of the control it holds — the visibility eye,
+ * and nothing wider so far. Held by the tree rather than measured from what the caller returns,
+ * because a row that puts nothing in it still has to line the rows under it up.
  */
 const PINNED = 'flex w-(--sc-control-inline) shrink-0 justify-center'
 
@@ -183,7 +183,7 @@ export function Tree<T extends TreeNode>({
   onActivate,
   onContextMenu,
   renderRow,
-  renderLeading,
+  renderTrailing,
 }: TreeProps<T>) {
   // Which row the pointer is over during a drag, where in it, and what is being dragged. Session
   // state of the gesture itself, so none of it reaches the caller: what the caller hears about
@@ -396,9 +396,6 @@ export function Tree<T extends TreeNode>({
    */
   const body = (row: TreeRow<T>, ghost: boolean): ReactNode => (
     <>
-      {renderLeading && (
-        <span className={cn(PINNED, ghost && 'invisible')}>{renderLeading(row)}</span>
-      )}
       <div
         style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
         className="flex h-full min-w-0 flex-1 items-center"
@@ -436,6 +433,9 @@ export function Tree<T extends TreeNode>({
         </span>
         {renderRow(row)}
       </div>
+      {renderTrailing && (
+        <span className={cn(PINNED, ghost && 'invisible')}>{renderTrailing(row)}</span>
+      )}
     </>
   )
 

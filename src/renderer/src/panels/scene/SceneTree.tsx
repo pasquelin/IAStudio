@@ -99,11 +99,11 @@ export function SceneTree({ documentId }: { documentId: string }) {
           onRename: () => openRename(node.id),
         })
       }}
-      // Pinned to the left edge, outside the indentation, as the layer stack pins its own: a node
-      // three groups deep keeps its eye under the eye of the scene's first child, and only the
-      // name walks right. The synthetic root answers nothing — it stands for the scene, which
-      // cannot be hidden — and `Tree` holds the column open at one width for every row.
-      renderLeading={({ node: item }) =>
+      // Pinned to the RIGHT edge, outside the indentation, as the layer stack pins its own: the
+      // eyes read as one straight column, and the left of the panel is left to the shape of the
+      // tree. The synthetic root answers nothing — it stands for the scene, which cannot be
+      // hidden — and `Tree` holds the column open at one width for every row.
+      renderTrailing={({ node: item }) =>
         item.node && (
           <VisibilityToggle
             visible={item.node.visible}
