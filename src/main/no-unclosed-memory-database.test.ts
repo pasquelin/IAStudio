@@ -88,13 +88,18 @@ export function unclosedIn(path: string, source: string): string[] {
  * database; the next read the argument as text, so a comment explaining why the handle was left
  * open absolved it. The handle's own name has to come back, spelt as code.
  *
- * FOUR blind spots, written down rather than left to be found:
+ * FIVE blind spots, written down rather than left to be found:
  *
  * - **one entry point, and it is the SUITES that are read.** `memoryCatalog`
  *   (`project/catalog-fixtures.ts`) opens through this helper, but a fixture is not a `.test.ts`
- *   and is never swept; its thirteen callers name only `memoryCatalog`. Traced one by one on
- *   2026-08-14: `local-backend.test.ts` closes its two, and the three of `store.test.ts` come back
- *   through `store.ts:234`, so **eight** still leak. A lot of its own.
+ *   and is never swept; its thirteen callers name only `memoryCatalog`. On 2026-08-14
+ *   `local-backend.test.ts` closed its two and the three of `store.test.ts` came back through
+ *   `store.ts:234`, leaving **eight** that leak — in `assets/cloud-backend`, `assets/handlers`,
+ *   `favorites/handlers`, `project/activity-log` (four of them) and `project/handlers`. A lot of
+ *   its own, and the reason the title claims the openings this guard can read.
+ * - **named, not invoked.** `onTestFinished(() => { if (keep) d.close() })` gives the handle back
+ *   on one branch and reads as sound on both: the rule sees the name spelt as code, never the call
+ *   actually made. Following the branch would need the value resolved, which no reader does by eye.
  * - **a name, not a binding.** Two handles sharing a name share their tally. The case that gets
  *   through is a teardown posted in one `describe` for a handle opened elsewhere under the same
  *   name — `catalog` closed for a `memoryCatalog()` answers for a `createCatalog(open…())` next
