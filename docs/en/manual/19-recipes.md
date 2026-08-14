@@ -31,7 +31,7 @@ Before the recipes, one rule that runs through all of them.
 
 **Double-clicking an asset does not open a tab.** It sends the asset into the tab **already open
 in front of you** — failing that, into a document open **elsewhere**, switching workspace on the
-way. If there is nowhere at all, a message says so: "This asset has nowhere to go".
+way. If there is nowhere at all, a message says so: "This asset could not be opened".
 
 So in every recipe below, the order is **always** the same:
 

@@ -60,9 +60,9 @@ export async function becomeAsset(
   // quietly. The ceiling biting was said; the file that would not decode was NOT, and that
   // silence is how a 4112 × 2658 photo came to sit in a 1024² document and be overwritten by it.
   if (!measured) {
-    reportFailure('assets.open', asset.name, new Error('picture would not measure'))
+    reportFailure('canvas.size', asset.name, new Error('picture would not measure'))
   } else if (size.width !== measured.width || size.height !== measured.height) {
-    reportFailure('assets.open', asset.name, new Error('picture opened below its own size'))
+    reportFailure('canvas.size', asset.name, new Error('picture opened below its own size'))
   }
   const layer = { ...pixelLayer(newId(), asset.name), source: asset.id }
   const state: CanvasState = {
