@@ -296,6 +296,28 @@ describe('TimelineCanvas', () => {
     await vi.waitFor(() => expect(clipsOf()).toHaveLength(0))
   })
 
+  /**
+   * `pointerdown` fires before `contextmenu`, so the press that raises the menu was also
+   * picking the clip up: it followed the pointer while the menu was open, and the drag's own
+   * pointer-up rewound the montage to where the press began — over the deletion the menu had
+   * just run. On screen: the clip slid, and nothing was deleted.
+   */
+  it('deletes from the menu without the press underneath moving anything', async () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    menu.picks('Supprimer le clip')
+    const canvas = paint()
+
+    fireEvent.pointerDown(canvas, { clientX: 50, clientY: RULER_HEIGHT + 10, button: 2 })
+    fireEvent.contextMenu(canvas, { clientX: 50, clientY: RULER_HEIGHT + 10 })
+    await vi.waitFor(() => expect(clipsOf()).toHaveLength(0))
+
+    // The pointer travels on, as it does while a native menu is open and after it closes.
+    fireEvent.pointerMove(canvas, { clientX: 300, clientY: RULER_HEIGHT + 10 })
+    fireEvent.pointerUp(canvas, { clientX: 300, clientY: RULER_HEIGHT + 10 })
+
+    expect(clipsOf()).toHaveLength(0)
+  })
+
   it('raises nothing over a gap, where there is no clip to act on', async () => {
     fireEvent.contextMenu(paint(), { clientX: 50, clientY: RULER_HEIGHT + 10 })
 
