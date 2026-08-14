@@ -337,6 +337,24 @@ export function updateSiblings(
 }
 
 /**
+ * Whether the stack would still hold something to paint on once `layer` leaves it — its whole
+ * subtree, for a group.
+ *
+ * Counting the paintable layers of the document is not enough, and that is the trap this exists
+ * for: a folder holding every pixel layer answers "two paintable" while deleting it empties the
+ * document. `deserializeCanvas` reads an empty stack back as `DEFAULT_CANVAS`, silently resetting
+ * the size, the colour mode and the bit depth of the picture.
+ *
+ * Read from both sides on purpose: `removeLayer` refuses the command, and the panel greys the
+ * button and the menu row rather than offering a gesture that would do nothing.
+ */
+export function canRemoveLayer(layers: readonly Layer[], layer: Layer): boolean {
+  const leaving = new Set(allLayers([layer]).map(one => one.id))
+
+  return allLayers(layers).some(one => !isGroup(one) && !leaving.has(one.id))
+}
+
+/**
  * The layer directly under `id` at its own level — what `mergeDown` merges into. Within the level,
  * never through the wall of the group it sits in, exactly as the command reads it.
  *

@@ -3,6 +3,7 @@ import { clamp } from '@shared/numeric'
 import type { Command } from '../core/history'
 import {
   allLayers,
+  canRemoveLayer,
   clampOpacity,
   DEFAULT_CANVAS,
   groupLayer,
@@ -46,10 +47,10 @@ export function removeLayer(id: string): Command<CanvasState> {
     const target = layerById(state, id)
     if (!target) return state
 
-    // Counted across the tree, and only what can hold pixels: a root holding one group still
-    // holds every layer inside it, and a document with an empty stack cannot be painted on.
-    const paintable = allLayers(state.layers).filter(layer => !isGroup(layer))
-    if (!isGroup(target) && paintable.length <= 1) return state
+    // A document with an empty stack cannot be painted on — and a GROUP carries its subtree out
+    // with it, so what matters is what stays, not how many layers the document has. See
+    // `canRemoveLayer`, which the panel reads to grey the same gesture.
+    if (!canRemoveLayer(state.layers, target)) return state
 
     return withoutLayer(state, id)
   })

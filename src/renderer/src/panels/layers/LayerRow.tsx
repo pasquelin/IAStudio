@@ -1,11 +1,12 @@
-import { mdiLockOpenVariantOutline, mdiLockOutline } from '@mdi/js'
-import { memo, useState } from 'react'
+import { mdiLockOpenVariantOutline, mdiLockOutline, mdiTrashCanOutline } from '@mdi/js'
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
 import { Row } from '@/design/Row'
+import { ToolButton } from '@/design/ToolButton'
 import type { CanvasState, Layer } from '@/engines/canvas/canvas-state'
-import { renameLayer, setLayerLocks, setLayerVisible } from '@/engines/canvas/commands'
+import { removeLayer, renameLayer, setLayerLocks, setLayerVisible } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { InlineRename } from '@/panels/shared/InlineRename'
@@ -21,12 +22,24 @@ export type LayerRowLabels = {
   locks: string
   locksHint: string
   rename: string
+  remove: string
+  removeHint: string
 }
 
 export type LayerRowProps = {
   documentId: string
   layer: Layer
   labels: LayerRowLabels
+  /**
+   * False when the stack would keep nothing to paint on once this row leaves — its whole subtree,
+   * for a group. Handed down rather than read here: it is a fact about the stack, and a row that
+   * subscribed to it would re-render on every command, which is what the memo below avoids.
+   */
+  canRemove: boolean
+  /** The name is being typed over. Held by the list: the menu that opens a rename sits there. */
+  renaming: boolean
+  onRename: () => void
+  onRenamed: () => void
 }
 
 /**
@@ -36,9 +49,16 @@ export type LayerRowProps = {
  * The chevron and the indent belong to `Tree`, which owns the geometry of every stack in the
  * studio — this draws what is inside the row and nothing around it.
  */
-export const LayerRow = memo(function LayerRow({ documentId, layer, labels }: LayerRowProps) {
+export const LayerRow = memo(function LayerRow({
+  documentId,
+  layer,
+  labels,
+  canRemove,
+  renaming,
+  onRename,
+  onRenamed,
+}: LayerRowProps) {
   const { t } = useTranslation()
-  const [renaming, setRenaming] = useState(false)
   const run = (command: Command<CanvasState>): void =>
     useCanvases.getState().runCommand(documentId, command)
 
@@ -47,13 +67,13 @@ export const LayerRow = memo(function LayerRow({ documentId, layer, labels }: La
   return (
     <div className="flex h-full min-w-0 flex-1 items-center">
       {/* On the name alone: a double click meant for the chevron or the eye is not a rename. */}
-      <div className="min-w-0 flex-1" onDoubleClick={() => setRenaming(true)}>
+      <div className="min-w-0 flex-1" onDoubleClick={onRename}>
         {renaming ? (
           <InlineRename
             value={layer.name}
             label={labels.rename}
             onCommit={name => {
-              setRenaming(false)
+              onRenamed()
               if (name !== layer.name) run(renameLayer(layer.id, name))
             }}
           />
@@ -70,37 +90,59 @@ export const LayerRow = memo(function LayerRow({ documentId, layer, labels }: La
               />
             }
             actions={
-              <MenuButton
-                icon={locked ? mdiLockOutline : mdiLockOpenVariantOutline}
-                label={labels.locks}
-                description={labels.locksHint}
-                tooltip={TIP_RIGHT}
-                variant="header"
-                active={locked}
-                // One button rather than three on the line: the row is 24 px tall in compact.
-                rowCount={LAYER_LOCKS.length}
-                opensOnClick
-                rows={() =>
-                  LAYER_LOCKS.map(padlock => (
-                    <MenuRow
-                      key={padlock.key}
-                      label={t(padlock.labelKey)}
-                      icon={padlock.iconFor(layer.locked[padlock.key])}
-                      checked={layer.locked[padlock.key]}
-                      tick="on-off"
-                      tip={HINT_RIGHT(t(`${padlock.labelKey}Hint`))}
-                      onSelect={() =>
-                        run(
-                          setLayerLocks(layer.id, {
-                            ...layer.locked,
-                            [padlock.key]: !layer.locked[padlock.key],
-                          }),
-                        )
-                      }
-                    />
-                  ))
-                }
-              />
+              <>
+                <ToolButton
+                  icon={mdiTrashCanOutline}
+                  label={labels.remove}
+                  description={labels.removeHint}
+                  tooltip={TIP_RIGHT}
+                  variant="header"
+                  // The command does not refuse the last paintable layer — `deserializeCanvas`
+                  // rejects the empty stack that would follow — so the refusal is here, as it is
+                  // on the panel's own delete button.
+                  disabled={!canRemove}
+                  // Both, as `VisibilityToggle` does: `Tree` arms a row on POINTER DOWN, which
+                  // fires before the click — stopping the click alone would have let the delete
+                  // arm the row it is about to remove, moving the brush off whatever the user
+                  // was painting on.
+                  onPointerDown={event => event.stopPropagation()}
+                  onClick={event => {
+                    event.stopPropagation()
+                    run(removeLayer(layer.id))
+                  }}
+                />
+                <MenuButton
+                  icon={locked ? mdiLockOutline : mdiLockOpenVariantOutline}
+                  label={labels.locks}
+                  description={labels.locksHint}
+                  tooltip={TIP_RIGHT}
+                  variant="header"
+                  active={locked}
+                  // One button rather than three on the line: the row is 24 px tall in compact.
+                  rowCount={LAYER_LOCKS.length}
+                  opensOnClick
+                  rows={() =>
+                    LAYER_LOCKS.map(padlock => (
+                      <MenuRow
+                        key={padlock.key}
+                        label={t(padlock.labelKey)}
+                        icon={padlock.iconFor(layer.locked[padlock.key])}
+                        checked={layer.locked[padlock.key]}
+                        tick="on-off"
+                        tip={HINT_RIGHT(t(`${padlock.labelKey}Hint`))}
+                        onSelect={() =>
+                          run(
+                            setLayerLocks(layer.id, {
+                              ...layer.locked,
+                              [padlock.key]: !layer.locked[padlock.key],
+                            }),
+                          )
+                        }
+                      />
+                    ))
+                  }
+                />
+              </>
             }
           />
         )}

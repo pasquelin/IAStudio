@@ -69,6 +69,28 @@ describe('removeLayer', () => {
     expect(removeLayer('layer-1').apply(DEFAULT_CANVAS)).toEqual(DEFAULT_CANVAS)
   })
 
+  /**
+   * A group carries its subtree out with it, so counting the document's paintable layers is not
+   * the question — what stays is. A folder holding every pixel layer answers "two paintable" and
+   * empties the stack, which `deserializeCanvas` reads back as a blank default: the size, the
+   * colour mode and the bit depth of the picture go with it.
+   */
+  it('refuses a group that would take everything paintable with it', () => {
+    const folded = groupLayers(['layer-1', 'layer-2'], 'g', 'Group').apply(withTwo)
+
+    expect(removeLayer('g').apply(folded)).toBe(folded)
+  })
+
+  it('removes a group the stack can do without', () => {
+    const three = addLayer(layerFixture({ id: 'layer-3' })).apply(withTwo)
+    const folded = groupLayers(['layer-1'], 'g', 'Group').apply(three)
+
+    expect(allLayers(removeLayer('g').apply(folded).layers).map(layer => layer.id)).toEqual([
+      'layer-2',
+      'layer-3',
+    ])
+  })
+
   it('moves the selection to a neighbour rather than leaving it dangling', () => {
     const state = removeLayer('layer-2').apply(withTwo)
     expect(state.activeLayerId).toBe('layer-1')
