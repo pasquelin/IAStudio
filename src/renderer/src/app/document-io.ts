@@ -15,6 +15,7 @@ import {
   EMPTY_SEQUENCE,
   EMPTY_SOUND_SEQUENCE,
   parseSequence,
+  type SequenceState,
 } from '@/engines/timeline/timeline-state'
 import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
@@ -194,6 +195,24 @@ function audioHasUnsavedWork(
 }
 
 /**
+ * A montage read back for a take, kept to sound alone.
+ *
+ * Two guards rather than a plain `parseSequence`, and both close the same door. `parseSequence`
+ * answers `EMPTY_SEQUENCE` — which carries a PICTURE track — for anything it cannot read, and a
+ * montage whose last track was removed serialises as exactly that. Either way the Audio workspace
+ * would reopen holding a row it has no monitor to play.
+ */
+function soundMontageFrom(payload: unknown): SequenceState {
+  const parsed = payload ? parseSequence(payload) : EMPTY_SEQUENCE
+  // Identity, not emptiness: `parseSequence` hands back this very constant for a file it cannot
+  // read AND for a montage whose last track was removed — and it carries a picture track.
+  if (parsed === EMPTY_SEQUENCE) return EMPTY_SOUND_SEQUENCE
+
+  const tracks = parsed.tracks.filter(track => track.kind === 'audio')
+  return tracks.length === 0 ? EMPTY_SOUND_SEQUENCE : { ...parsed, tracks }
+}
+
+/**
  * The take, which is the one kind holding TWO states: the chain of edits over a sample, and the
  * sound montage the timeline shows under it. Both are the same document — one tab, one ⌘S, one
  * file — so neither generic path fits, and the composition is written out here.
@@ -229,9 +248,7 @@ const AUDIO_IO: DocumentIo = {
 
     // `replace`, not a command: loading a document is not something ⌘Z gives back.
     audioEditStore.use.getState().replace(documentId, parseAudioEdits(payload.edits))
-    sequenceStore.use
-      .getState()
-      .replace(documentId, payload.montage ? parseSequence(payload.montage) : EMPTY_SOUND_SEQUENCE)
+    sequenceStore.use.getState().replace(documentId, soundMontageFrom(payload.montage))
 
     const edits = audioEditStore.use.getState()
     edits.markSaved(documentId, audioEditStore.markOf(edits, documentId))

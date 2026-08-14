@@ -4,7 +4,7 @@ import { openAssetSink } from '@/engines/timeline/sink-port'
 import { createSoundPort } from '@/engines/timeline/sound-port'
 import { TimelineEngine } from '@/engines/timeline/TimelineEngine'
 import type { SequenceState, Us } from '@/engines/timeline/timeline-state'
-import { sequenceOf, useSequences } from '@/stores/sequences'
+import { sequenceOf, sequenceStore, useSequences } from '@/stores/sequences'
 
 /**
  * A sound montage needs one decoder for the take being scrubbed over — the schedule reads its
@@ -39,6 +39,11 @@ export function useSoundTransport(documentId: string, sequence: SequenceState): 
   const setTime = useCallback(
     (playhead: Us): void => {
       const store = useSequences.getState()
+      // Closing a tab drops the document BEFORE React unmounts this hook, and `dispose` pauses
+      // — which reports one last time. Writing then would build a montage back for a document
+      // that is gone, out of the store's default: a picture track, in the Audio workspace.
+      if (!sequenceStore.hasState(store, documentId)) return
+
       store.replace(documentId, { ...sequenceOf(store, documentId), playhead })
     },
     [documentId],

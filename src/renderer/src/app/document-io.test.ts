@@ -26,7 +26,7 @@ import { addLayer, resizeCanvas } from '@/engines/canvas/commands'
 import { holdCanvas, type CanvasHost } from '@/spaces/image/canvas-hosts'
 import { canvasStore, useCanvases } from '@/stores/canvases'
 import { pushEdit } from '@/engines/audio/edits'
-import { addClip } from '@/engines/timeline/commands'
+import { addClip, removeTrack } from '@/engines/timeline/commands'
 import { EMPTY_SOUND_SEQUENCE, makeClip } from '@/engines/timeline/timeline-state'
 import { setSunAngles } from '@/engines/skybox/commands'
 import { useAudioEdits } from '@/stores/audio-edits'
@@ -1232,6 +1232,24 @@ describe('the kinds a string holds', () => {
     await restoreDocument(documentId)
 
     expect(useSequences.getState().states[documentId]).toEqual(before)
+  })
+
+  // `parseSequence` answers `EMPTY_SEQUENCE` — a PICTURE track — for a montage with nothing left
+  // in it, and removing the last track is a gesture the menu offers.
+  it('reopens a take whose montage was emptied without handing it a picture track', async () => {
+    diskBackedBridge('audio')
+    const documentId = await open('audio')
+
+    for (const track of useSequences.getState().states[documentId]?.tracks ?? []) {
+      useSequences.getState().runCommand(documentId, removeTrack(track.id))
+    }
+    await saveDocument(documentId)
+
+    useSequences.getState().drop(documentId)
+    useAudioEdits.getState().drop(documentId)
+    await restoreDocument(documentId)
+
+    expect(useSequences.getState().states[documentId]).toEqual(EMPTY_SOUND_SEQUENCE)
   })
 
   // A file written before takes had a montage. It reopens with an empty one rather than refusing.
