@@ -486,8 +486,6 @@
     "lockPixels": "Lock pixels",
     "lockPosition": "Lock position",
     "lockAlpha": "Lock transparency",
-    "collapse": "Collapse group",
-    "expand": "Expand group",
     "operations": "Operations",
     "operationsHint": "Group, ungroup or duplicate the active layer",
     "group": "Group",
