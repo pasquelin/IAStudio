@@ -1,4 +1,5 @@
 import { mdiClose, mdiCloseBoxMultipleOutline, mdiTrashCanOutline } from '@mdi/js'
+import type { TFunction } from 'i18next'
 import { showContextMenu } from '@/helpers/context-menu'
 import { reportFailure } from '@/services/diagnostics'
 import { closeTab } from './close-tab'
@@ -7,10 +8,8 @@ import { openPanelIds } from './dockview-api'
 
 export type DocumentTabMenuProps = {
   documentId: string
-  /** Already translated, as the system's menu takes them. */
-  labels: { close: string; closeOthers: string; delete: string }
-  /** What each row does, for the tooltip macOS shows on hover. */
-  hints: { close: string; closeOthers: string; delete: string }
+  /** The window's translator, as every menu of this studio takes it — see `openAssetMenu`. */
+  t: TFunction
 }
 
 /**
@@ -22,18 +21,18 @@ export type DocumentTabMenuProps = {
  *
  * The menu is gone by the time any of these fails, so the journal is where a failure lands.
  */
-export function openDocumentTabMenu({ documentId, labels, hints }: DocumentTabMenuProps): void {
+export function openDocumentTabMenu({ documentId, t }: DocumentTabMenuProps): void {
   void showContextMenu([
     {
-      label: labels.close,
+      label: t('documents.close'),
       icon: mdiClose,
-      tooltip: hints.close,
+      tooltip: t('documents.closeHint'),
       onSelect: () => closeTab(documentId),
     },
     {
-      label: labels.closeOthers,
+      label: t('documents.closeOthers'),
       icon: mdiCloseBoxMultipleOutline,
-      tooltip: hints.closeOthers,
+      tooltip: t('documents.closeOthersHint'),
       disabled: openPanelIds().length < 2,
       onSelect: () =>
         void closeOthers(documentId).catch(error =>
@@ -41,9 +40,9 @@ export function openDocumentTabMenu({ documentId, labels, hints }: DocumentTabMe
         ),
     },
     {
-      label: labels.delete,
+      label: t('documents.delete'),
       icon: mdiTrashCanOutline,
-      tooltip: hints.delete,
+      tooltip: t('documents.deleteHint'),
       onSelect: () =>
         void deleteDocument(documentId).catch(error =>
           reportFailure('document.delete', documentId, error),

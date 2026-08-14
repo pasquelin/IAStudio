@@ -35,19 +35,7 @@ export function DocumentTab(props: IDockviewPanelHeaderProps) {
 
   const openMenu = (event: MouseEvent): void => {
     event.preventDefault()
-    openDocumentTabMenu({
-      documentId: props.api.id,
-      labels: {
-        close: t('documents.close'),
-        closeOthers: t('documents.closeOthers'),
-        delete: t('documents.delete'),
-      },
-      hints: {
-        close: t('documents.closeHint'),
-        closeOthers: t('documents.closeOthersHint'),
-        delete: t('documents.deleteHint'),
-      },
-    })
+    openDocumentTabMenu({ documentId: props.api.id, t })
   }
 
   return (

@@ -137,16 +137,7 @@ export function Explorer() {
         openEntryMenu({
           node,
           openInTab: isOpen(documentOf(node)),
-          labels: {
-            reveal: t('explorer.reveal'),
-            rename: t('explorer.rename'),
-            trash: t('explorer.trash'),
-          },
-          hints: {
-            reveal: t('explorer.revealHint'),
-            rename: t('explorer.renameHint'),
-            trash: t('explorer.trashHint'),
-          },
+          t,
           onRename: () => setRenaming(node.id),
         })
       }
