@@ -638,11 +638,21 @@ export function createServices(settings: SettingsStore): Services {
     return outcome.kind === 'probed' ? outcome.probe : null
   }
 
-  /** Writes onto a row the catalogue may have dropped while ffmpeg was running. */
-  const saveAssetFields = async (assetId: string, fields: Partial<Asset>): Promise<void> => {
-    const catalog = project.catalog()
-    const current = await catalog.find(assetId)
-    if (current) await catalog.add({ ...current, ...fields })
+  /**
+   * Writes onto a row the catalogue may have dropped while ffmpeg was running.
+   *
+   * Nobody awaits this — a proxy that lands after the import it belonged to is answered has no
+   * caller left — so the failure it can raise has to be caught here: closing a project while a
+   * twenty-minute encode finishes leaves `catalog()` with nothing to answer with.
+   */
+  const saveAssetFields = (assetId: string, fields: Partial<Asset>): void => {
+    void (async () => {
+      const catalog = project.catalog()
+      const current = await catalog.find(assetId)
+      if (current) await catalog.add({ ...current, ...fields })
+    })().catch((error: unknown) =>
+      log.warn('media', `could not record what was derived for ${assetId}: ${String(error)}`),
+    )
   }
 
   const assets = createLocalBackend({
@@ -742,7 +752,7 @@ export function createServices(settings: SettingsStore): Services {
       await project.catalog().remove(assetId)
     },
     // The row may have been deleted while a twenty-minute proxy was encoding — see the helper.
-    save: (assetId, fields) => void saveAssetFields(assetId, fields),
+    save: saveAssetFields,
     writeFile: async (path, data) => {
       await mkdir(dirname(path), { recursive: true })
       await writeFile(path, data)
@@ -770,7 +780,7 @@ export function createServices(settings: SettingsStore): Services {
         list: () => project.catalog().search({ types: ['video', 'audio'], location: 'local' }),
         fileOf: asset => ownFileOf(projectPath, asset),
         probeFile: probeLocalFile,
-        save: (assetId, fields) => void saveAssetFields(assetId, fields),
+        save: saveAssetFields,
         derive: request => media.derive(request),
       })
 
