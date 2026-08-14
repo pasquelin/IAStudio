@@ -200,10 +200,17 @@ export class TimelineEngine {
 
     // Taking the token revokes whoever held it: two streams at once is the bug this prevents.
     playbackToken.acquire(this.deps.owner, () => this.pause())
+
+    // The playhead stops ON the end, where the loop's first test sends it straight back to
+    // pause: pressing play there did nothing at all, which reads as a broken transport rather
+    // than as a sequence that is over.
+    const from = this.state.playhead >= sequenceDuration(this.state) ? 0 : this.state.playhead
+    if (from !== this.state.playhead) this.deps.onTime?.(from)
+
     // Sound first: it wakes the output, and the clock asks that same output whether to follow it
     // — asked before, the answer is always no and the sequence runs on the wall clock instead.
-    this.sound.start(this.state.playhead)
-    this.clock.start(this.state.playhead)
+    this.sound.start(from)
+    this.clock.start(from)
 
     this.running = true
     this.nextFrame()

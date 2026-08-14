@@ -1,5 +1,5 @@
-import { fireEvent, render } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, fireEvent, render } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { addClip } from '@/engines/timeline/commands'
 import { RULER_HEIGHT, timeToX, xToTime, type Viewport } from '@/engines/timeline/timeline-geometry'
@@ -43,6 +43,40 @@ function paint(tool: VideoToolId = 'select') {
 const clipsOf = (): Clip[] => sequenceOf(useSequences.getState(), 'doc-1').tracks[0]?.clips ?? []
 
 const viewOf = (): Viewport => viewportOf(useTimelineView.getState(), 'doc-1')
+
+/**
+ * A canvas that has been laid out AND can paint — the two conditions under which the strip
+ * learns its own width, which is the only thing anything here asks of the drawing.
+ *
+ * jsdom lays nothing out and implements no 2D context (`test-setup` hands back null, so `paint`
+ * returns before measuring anything). Every drawing call is a no-op; nothing is asserted on
+ * what was drawn, only on what the component did with the width it read back.
+ */
+function laidOut(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  Object.defineProperty(canvas, 'clientWidth', { value: 800, configurable: true })
+  Object.defineProperty(canvas, 'clientHeight', { value: 300, configurable: true })
+
+  const context = new Proxy({} as CanvasRenderingContext2D, {
+    get: () => () => undefined,
+    set: () => true,
+  })
+  // One `as`, and the reason is the signature rather than the value: `getContext` is overloaded,
+  // and a spy takes its LAST overload — the WebGPU one — so a 2D context reads as the wrong type.
+  vi.spyOn(canvas, 'getContext').mockReturnValue(context as unknown as GPUCanvasContext)
+  return canvas
+}
+
+/**
+ * Moves the playhead the way the transport does: a replace, outside the history. Inside `act`,
+ * since nothing about it comes from an event — the effects it wakes must have run when it
+ * hands back.
+ */
+function movePlayhead(playhead: number): void {
+  act(() => {
+    const store = useSequences.getState()
+    store.replace('doc-1', { ...sequenceOf(store, 'doc-1'), playhead })
+  })
+}
 
 describe('TimelineCanvas', () => {
   beforeEach(() => {
@@ -211,6 +245,32 @@ describe('TimelineCanvas', () => {
 
     fireEvent.keyDown(canvas, { code: 'Home' })
     expect(sequenceOf(useSequences.getState(), 'doc-1').playhead).toBe(0)
+  })
+
+  /**
+   * The playhead moves on its own while the transport runs, and nothing was following it: a
+   * montage longer than the strip ran off the right edge within seconds, and what stayed on
+   * screen was a still picture of a moment nobody was watching any more.
+   */
+  it('scrolls the strip after a playhead that has left the frame', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clipFixture('c', 0, 600_000_000)))
+    laidOut(paint())
+    expect(viewOf().offset).toBe(0)
+
+    movePlayhead(500_000_000)
+
+    expect(viewOf().offset).toBeGreaterThan(0)
+  })
+
+  // The other half of the same rule: a montage that fits on screen must never scroll at all,
+  // and an effect writing an equal-but-new viewport back would chase itself for ever.
+  it('leaves the view alone while the playhead is inside it', () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    laidOut(paint())
+
+    movePlayhead(500_000)
+
+    expect(viewOf().offset).toBe(0)
   })
 
   it('drags the view under the hand tool, which was declared and did nothing', () => {

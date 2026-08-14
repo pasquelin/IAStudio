@@ -155,6 +155,24 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     [documentId],
   )
 
+  // The strip follows the playhead out of the frame — zoomed in, playing ran off the right edge
+  // within seconds and the montage stayed on a moment nobody was watching any more.
+  //
+  // On the PLAYHEAD alone, and the viewport read out of the ref rather than depended on: woken
+  // by the view as well, this pulled the strip back onto the playhead the instant the hand tool
+  // dragged it away, and chased its own clamped write when there was nowhere left to scroll.
+  useEffect(() => {
+    // A strip that has not been laid out yet says nothing about what is on screen, and every
+    // instant reads as off-frame against a width of zero.
+    if (size.current.width === 0) return
+
+    const current = latest.current.viewport
+    // Identity, which `revealTime` guarantees while the playhead is inside the frame: a montage
+    // that fits on screen must not scroll at all.
+    const revealed = revealTime(current, sequence.playhead, size.current.width)
+    if (revealed !== current) setViewport(revealed)
+  }, [sequence.playhead, setViewport])
+
   // Native and non-passive: React delivers `wheel` passively, where `preventDefault` is a no-op
   // and the whole window scrolls behind the timeline instead.
   useTimelineWheel(canvasRef, () => latest.current.viewport, setViewport)
@@ -164,10 +182,10 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
       const store = useSequences.getState()
       const state = sequenceOf(store, documentId)
       const playhead = clamp(time, 0, sequenceDuration(state))
+      // The strip follows on its own, from wherever the playhead lands — see the effect above.
       store.replace(documentId, { ...state, playhead })
-      setViewport(revealTime(latest.current.viewport, playhead, size.current.width))
     },
-    [documentId, setViewport],
+    [documentId],
   )
 
   const run = useCallback(

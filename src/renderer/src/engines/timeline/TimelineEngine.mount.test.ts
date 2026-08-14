@@ -286,6 +286,7 @@ describe('mounting a monitor', () => {
    */
   const playerOver = async (
     host: HTMLElement,
+    onTime?: (time: number) => void,
   ): Promise<{
     engine: InstanceType<typeof TimelineEngine>
     /** Runs the frame the loop has asked for, and answers the decode it starts. */
@@ -307,6 +308,7 @@ describe('mounting a monitor', () => {
       maxDecoders: 1,
       maxPictures: 1,
       owner: host.id,
+      ...(onTime ? { onTime } : {}),
     })
 
     // A macrotask between the two: a decode is several awaits deep, and counting microtasks
@@ -351,5 +353,26 @@ describe('mounting a monitor', () => {
 
     // Two frames asked for, two painted: a third draw would mean a seek nobody waited for.
     expect(render).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * The playhead stops ON the end of the sequence, where the loop's first test sends it right
+   * back to pause: pressing play there did nothing whatsoever, which reads as a transport that
+   * is broken rather than as a sequence that is over.
+   */
+  it('plays again from the top when the playhead sits at the end', async () => {
+    const onTime = vi.fn()
+    const { engine } = await playerOver(host, onTime)
+    engine.apply({
+      ...sequenceWith([trackFixture('V1', 'video', [clipFixture('c', 0, 1_000_000)])]),
+      playhead: 1_000_000,
+    })
+    onTime.mockClear()
+
+    engine.play()
+    engine.pause()
+    vi.unstubAllGlobals()
+
+    expect(onTime).toHaveBeenCalledWith(0)
   })
 })
