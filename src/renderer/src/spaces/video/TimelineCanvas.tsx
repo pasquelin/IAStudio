@@ -1,7 +1,10 @@
 import type { CommandId } from '@shared/domain/command'
 import { clamp } from '@shared/numeric'
+import { mdiContentCut, mdiDeleteOutline, mdiLinkVariantOff } from '@mdi/js'
 import { useCallback, useEffect, useRef, type DragEvent, type PointerEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isTimeless, mediaDuration, posterUrl } from '@shared/domain/asset'
+import type { Command } from '@/engines/core/history'
 import {
   addClips,
   removeClip,
@@ -22,6 +25,7 @@ import type { Point, Size } from '@/engines/core/geometry'
 import { fitToDisplay } from '@/engines/core/canvas-2d'
 import {
   clipById,
+  clipEnd,
   clipUnderPlayhead,
   sequenceDuration,
   snapToFrame,
@@ -37,6 +41,7 @@ import {
 } from '@/engines/timeline/viewport'
 import { assetIdFromDrag, carriesAsset, droppedAsset } from '@/helpers/asset-drag'
 import { cn } from '@/helpers/cn'
+import { showContextMenu } from '@/helpers/context-menu'
 import { cachedImage } from '@/helpers/image-cache'
 import { useRepaintOnResize } from '@/hooks/useRepaintOnResize'
 import { useShortcuts } from '@/hooks/useShortcuts'
@@ -51,6 +56,7 @@ import type { VideoToolId } from './video-tools'
 export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
 
 export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
   const dragging = useRef<{ gesture: Gesture; base: SequenceState } | null>(null)
@@ -339,6 +345,57 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     store.runCommand(documentId, command)
   }
 
+  /**
+   * What can be done to the clip under the pointer, as the system's own menu.
+   *
+   * Everything here is also a shortcut, and that is the point: the keys were the ONLY way to
+   * reach them, so a montage offered nothing to a right-click and nothing at all to whoever had
+   * not learnt them. The labels are the commands' own, so a row and its key never drift apart.
+   */
+  const onContextMenu = (event: PointerEvent<HTMLCanvasElement>): void => {
+    event.preventDefault()
+
+    const store = useSequences.getState()
+    const state = sequenceOf(store, documentId)
+    const target = hitTest(state, viewport, pointAt(event))
+    if (!target || !('clipId' in target)) return
+
+    const clip = clipById(state, target.clipId)
+    if (!clip) return
+
+    // Selected first: the menu acts on this clip, and a menu whose rows edit something other
+    // than what is highlighted is a menu nobody trusts.
+    store.replace(documentId, { ...state, selectedId: clip.id })
+
+    const run = (command: Command<SequenceState>) => (): void =>
+      useSequences.getState().runCommand(documentId, command)
+
+    void showContextMenu([
+      {
+        label: t('commands.sequenceSplit.title'),
+        icon: mdiContentCut,
+        tooltip: t('commands.sequenceSplit.help'),
+        // At the playhead, exactly as the key does — the blade tool is what cuts at the pointer.
+        disabled: state.playhead <= clip.start || state.playhead >= clipEnd(clip),
+        onSelect: run(splitClip(clip.id, state.playhead)),
+      },
+      {
+        label: t('commands.sequenceUnlink.title'),
+        icon: mdiLinkVariantOff,
+        tooltip: t('commands.sequenceUnlink.help'),
+        // Greyed rather than dropped: a menu whose length follows the clip cannot be learnt.
+        disabled: !clip.linkId,
+        onSelect: run(unlinkClip(clip.id)),
+      },
+      {
+        label: t('commands.sequenceDelete.title'),
+        icon: mdiDeleteOutline,
+        tooltip: t('commands.sequenceDelete.help'),
+        onSelect: run(removeClip(clip.id)),
+      },
+    ])
+  }
+
   const onDrop = (event: DragEvent<HTMLCanvasElement>): void => {
     event.preventDefault()
 
@@ -386,6 +443,7 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
         'block h-full w-full outline-none',
         tool === 'hand' && 'cursor-grab active:cursor-grabbing',
       )}
+      onContextMenu={onContextMenu}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

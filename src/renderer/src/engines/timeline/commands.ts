@@ -53,11 +53,14 @@ function acrossLink(
   let parts: Command<SequenceState>[] | null = null
   /** Whether the last apply went through. A refused edit has nothing to put back. */
   let held = false
+  /** The ids this edit spans, kept for the selection — see the end of `apply`. */
+  let linked: string[] = []
 
   return {
     id,
     apply: state => {
-      parts ??= linkedClipIds(state, clipId).flatMap(linkedId => make(state, linkedId) ?? [])
+      linked = linkedClipIds(state, clipId)
+      parts ??= linked.flatMap(linkedId => make(state, linkedId) ?? [])
 
       // All halves or none. Every command refuses by handing its state back untouched — a
       // locked track, a cut falling outside the clip — and letting the others through anyway
@@ -74,7 +77,18 @@ function acrossLink(
       }
 
       held = true
-      return current
+
+      // The half the user touched keeps the selection, whatever order the parts ran in. Each of
+      // these commands selects what IT edited, and the twin is applied last: clicking a picture
+      // put the inspector on its sound, and clicking a sound on its picture — a montage that
+      // selected the wrong half of everything.
+      //
+      // Only when a part actually moved the selection onto a twin: a command that leaves it
+      // alone must leave it alone here too, or an edit that changed nothing would still write a
+      // state that differs — and undo would have nothing to put back for it.
+      const moved = current.selectedId
+      const ontoTwin = moved !== null && moved !== clipId && linked.includes(moved)
+      return ontoTwin ? { ...current, selectedId: clipId } : current
     },
     revert: state => (held && parts ? composed(id, parts).revert(state) : state),
   }

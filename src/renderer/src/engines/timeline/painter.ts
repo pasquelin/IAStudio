@@ -11,7 +11,14 @@ import {
   type Viewport,
 } from './timeline-geometry'
 import { paintRuler as paintBandRuler } from './ruler'
-import { clipEnd, type Clip, type SequenceState, type Track, type Us } from './timeline-state'
+import {
+  clipEnd,
+  type Clip,
+  type SequenceState,
+  type Track,
+  type TrackKind,
+  type Us,
+} from './timeline-state'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
 import type { Size } from '../core/geometry'
 import { waveformColumns, type WaveColumn } from './waveform'
@@ -219,6 +226,7 @@ function paintClip(
   selected: boolean,
   palette: Palette,
   options: PaintOptions,
+  kind: TrackKind,
 ): void {
   const boxTop = top + CLIP_INSET
   const boxHeight = height - CLIP_INSET * 2 - 1
@@ -231,10 +239,15 @@ function paintClip(
   context.rect(left, boxTop, right - left, boxHeight)
   context.clip()
 
-  const poster = options.posterOf?.(clip) ?? null
+  // What a track SHOWS follows what it plays: pictures on a picture track, the waveform on a
+  // sound track. Both on both drew a waveform over the stills of every rush — and the sound
+  // half of a take, which points at the same file, wore that rush's frames under its own
+  // waveform. Asking for neither is also what keeps a video clip from fetching peaks nobody
+  // draws, and a sound clip from decoding a still.
+  const poster = kind === 'video' ? (options.posterOf?.(clip) ?? null) : null
   if (poster) paintPoster(context, poster, left, right, boxTop, boxHeight)
 
-  const peaks = options.peaksOf?.(clip) ?? null
+  const peaks = kind === 'audio' ? (options.peaksOf?.(clip) ?? null) : null
   if (peaks) {
     paintWaveform(
       context,
@@ -302,6 +315,7 @@ export function paintTimeline(
         state.selectedId === clip.id,
         palette,
         options,
+        track.kind,
       )
     }
   }
