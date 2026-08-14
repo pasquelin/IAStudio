@@ -19,10 +19,18 @@ export function TooltipHost() {
       id={TOOLTIP_ID}
       clickable
       globalCloseEvents={{ escape: true }}
-      delayShow={450}
+      /* Long enough that crossing a dense panel raises nothing: `Row` tips every name it draws,
+         whether or not it was cut off, so the pointer sweeping a stack of them left a trail of
+         bubbles behind it. The wait treats the symptom — the cure is a condition in `Row`, which
+         nothing measures today — and it is paid by every control in the studio, icon-only
+         buttons included, whose tooltip is the only thing naming them on screen. */
+      delayShow={1000}
       offset={8}
       noArrow
-      className="bg-elevated! text-text! text-tiny! z-50! rounded-(--radius-sc-sm)! px-2! py-1! shadow-(--sc-shadow-floating)!"
+      /* Wrapped at `--sc-tooltip` rather than running as wide as its longest line — see
+         `index.css`. `break-words` with it: a path or an id has no space to wrap at, and would
+         push the bubble back past the measure this sets. */
+      className="bg-elevated! text-text! text-tiny! z-50! max-w-(--sc-tooltip)! rounded-(--radius-sc-sm)! px-2! py-1! break-words! shadow-(--sc-shadow-floating)!"
     />
   )
 }
