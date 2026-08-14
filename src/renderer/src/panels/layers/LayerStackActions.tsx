@@ -15,6 +15,7 @@ import {
   ADJUSTMENT_KINDS,
   adjustmentLayer,
   allLayers,
+  canRemoveLayer,
   isGroup,
   layerById,
   pixelLayer,
@@ -110,8 +111,10 @@ export function LayerStackActions({ documentId }: { documentId: string }) {
         description={t('layers.removeHint')}
         tooltip={TIP_BOTTOM}
         variant="header"
-        // The last paintable layer never goes: a canvas with an empty stack cannot be painted on.
-        disabled={paintable.length <= 1 || active === null}
+        // A canvas with an empty stack cannot be painted on. Asked of the armed layer rather than
+        // counted over the document: a GROUP takes its subtree with it, so a folder holding every
+        // pixel layer empties the stack however many the document has.
+        disabled={activeLayer === null || !canRemoveLayer(canvas.layers, activeLayer)}
         onClick={() => active && perform(removeLayer(active))}
       />
       <MenuButton

@@ -68,6 +68,23 @@ describe('the indentation gauge', () => {
   })
 })
 
+/**
+ * The bubble and its measure are joined by a string and nothing else: rename the gauge and
+ * `var(--sc-tooltip)` substitutes nothing, `max-width` falls back to `none`, and react-tooltip's
+ * own `width: max-content` puts the bubble back across the canvas — with the whole suite green.
+ *
+ * In `ch` for the reason written beside it: the bubble wears `--text-tiny`, which follows
+ * `appearance.fontScale`, so a length in pixels would narrow the prose for whoever enlarged it.
+ */
+describe('the tooltip measure', () => {
+  it('is a gauge the host actually reads', () => {
+    const host = WRITTEN_SOURCES.find(([path]) => path.endsWith('/TooltipHost.tsx'))
+
+    expect(stylesheet).toMatch(/--sc-tooltip:\s*\d+ch;/)
+    expect(host?.[1]).toContain('max-w-(--sc-tooltip)')
+  })
+})
+
 describe('color tokens', () => {
   it('are found at all, so the rule below cannot pass on an empty list', () => {
     expect(colorTokenNames()).toContain('panel')

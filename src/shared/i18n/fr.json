@@ -497,6 +497,7 @@
     "copyName": "{{name}} copie",
     "flatName": "Image aplatie",
     "rename": "Renommer le calque",
+    "renameHint": "Ouvre le nom du calque pour le réécrire, comme un double-clic dessus",
     "groupHint": "Range le calque actif dans un nouveau groupe",
     "ungroupHint": "Sort les calques du groupe et supprime le groupe",
     "duplicateHint": "Copie le calque actif juste au-dessus de lui"

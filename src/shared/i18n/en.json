@@ -497,6 +497,7 @@
     "copyName": "{{name}} copy",
     "flatName": "Flattened image",
     "rename": "Rename layer",
+    "renameHint": "Opens the layer’s name to be typed over, as a double-click on it does",
     "groupHint": "Puts the active layer into a new group",
     "ungroupHint": "Takes the layers out of the group and removes the group",
     "duplicateHint": "Copies the active layer just above itself"

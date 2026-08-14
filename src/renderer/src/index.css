@@ -445,6 +445,15 @@
      group, so their labels started in two different places. 80 is the wider of the two, and the
      one that was measured: `Aperçu de la répétition` does not fit in 64. */
   --sc-label: 80px;
+  /* How wide a tooltip may grow before it wraps. Unbounded, it took the width of its longest
+     line — a layer named with a whole sentence drew a band across the canvas beside its panel,
+     which is the surface the studio exists to let one judge.
+     In `ch` and not pixels, the one measure in this block that has to be: the bubble wears
+     `--text-tiny`, which follows `appearance.fontScale` from 0.85 to 1.4, and a fixed width
+     would turn two lines into four for exactly the readers who enlarged the text. `Spotlight`
+     measures its prose the same way. Held out of the density block on purpose: a tooltip is
+     read, not operated. */
+  --sc-tooltip: 42ch;
   --sc-shadow-furniture: 0 1px 2px rgb(0 0 0 / 0.25);
   --sc-shadow-floating: 0 8px 24px rgb(0 0 0 / 0.55);
 }

@@ -1,11 +1,12 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tree } from '@/design/Tree'
-import { allLayers, isGroup } from '@/engines/canvas/canvas-state'
+import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvas-state'
 import { moveLayer } from '@/engines/canvas/commands'
 import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { useSelection } from '@/stores/selection'
 import { LayerRow } from './LayerRow'
+import { openLayerMenu } from './LayerMenu'
 import { layerNodes, levelIndexOf, stackIndex } from './layer-nodes'
 
 /**
@@ -20,6 +21,9 @@ import { layerNodes, levelIndexOf, stackIndex } from './layer-nodes'
 export function LayerList({ documentId }: { documentId: string }) {
   const { t } = useTranslation()
   const canvas = useCanvases(state => canvasOf(state, documentId))
+  // Which row is being renamed, held here rather than per row: the menu that opens a rename
+  // lives on the tree, and there is only ever one name being typed at a time.
+  const [renaming, setRenaming] = useState<string | null>(null)
 
   // Top of the list first, groups nesting — see `layerNodes`.
   const nodes = useMemo(() => layerNodes(canvas.layers), [canvas.layers])
@@ -46,6 +50,8 @@ export function LayerList({ documentId }: { documentId: string }) {
       locks: t('layers.locks'),
       locksHint: t('layers.locksHint'),
       rename: t('layers.rename'),
+      remove: t('layers.remove'),
+      removeHint: t('layers.removeHint'),
     }),
     [t],
   )
@@ -88,7 +94,29 @@ export function LayerList({ documentId }: { documentId: string }) {
       droppable={node => isGroup(node.layer)}
       onDrop={(id, parentId) => move(id, parentId, 0)}
       onInsert={move}
-      renderRow={row => <LayerRow documentId={documentId} layer={row.node.layer} labels={labels} />}
+      // Through the tree rather than from the row: it is what holds the `preventDefault` a
+      // right-click needs — without it the system raises its clipboard menu over ours — and the
+      // guard that leaves a right-click inside the rename field to that menu alone.
+      onContextMenu={node =>
+        openLayerMenu({
+          layer: node.layer,
+          canRemove: canRemoveLayer(canvas.layers, node.layer),
+          t,
+          onRename: () => setRenaming(node.id),
+          run: command => useCanvases.getState().runCommand(documentId, command),
+        })
+      }
+      renderRow={row => (
+        <LayerRow
+          documentId={documentId}
+          layer={row.node.layer}
+          labels={labels}
+          canRemove={canRemoveLayer(canvas.layers, row.node.layer)}
+          renaming={renaming === row.node.id}
+          onRename={() => setRenaming(row.node.id)}
+          onRenamed={() => setRenaming(null)}
+        />
+      )}
     />
   )
 }

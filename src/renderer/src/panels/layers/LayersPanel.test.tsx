@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { NO_BREAK_SPACE } from '@shared/i18n/typography'
-import { addLayer } from '@/engines/canvas/commands'
+import { addLayer, groupLayers } from '@/engines/canvas/commands'
 import { layerFixture } from '@/engines/canvas/canvas-fixtures'
 import { groupLayer, isGroup } from '@/engines/canvas/canvas-state'
 import { dragTransfer } from '@/helpers/drag-fixtures'
@@ -181,6 +181,58 @@ describe('LayersPanel', () => {
       useCanvases.getState().undo('doc-1')
 
       expect(canvasOf(useCanvases.getState(), 'doc-1').layers).toHaveLength(1)
+    })
+  })
+
+  describe('deleting from the row itself', () => {
+    const trashOf = (name: string): HTMLElement =>
+      within(screen.getByText(name).closest('[role="treeitem"]') as HTMLElement).getByRole(
+        'button',
+        { name: /^Supprimer/ },
+      )
+
+    /**
+     * `Tree` arms a row on POINTER DOWN, which fires before the click. A delete that only stopped
+     * the click armed the row it was about to remove — and `withoutLayer` then handed the brush
+     * to that row's neighbour, so the next stroke landed on a layer nobody chose.
+     */
+    it('leaves the armed layer alone when another row is deleted', async () => {
+      // Three, and the armed one furthest from the deleted row: with two, the neighbour
+      // `withoutLayer` falls back to happens to BE the armed layer, and the case passes without
+      // the guard it exists for.
+      useCanvases.getState().runCommand('doc-1', addLayer(layerFixture({ id: 'layer-2' })))
+      useCanvases
+        .getState()
+        .runCommand('doc-1', addLayer(layerFixture({ id: 'layer-3', name: 'Top' })))
+      render(<LayersPanel />)
+      expect(canvasOf(useCanvases.getState(), 'doc-1').activeLayerId).toBe('layer-3')
+
+      await userEvent.click(trashOf('Background'))
+
+      const canvas = canvasOf(useCanvases.getState(), 'doc-1')
+      expect(canvas.layers.map(layer => layer.name)).toEqual(['Paint', 'Top'])
+      expect(canvas.activeLayerId).toBe('layer-3')
+    })
+
+    /**
+     * `removeLayer` waives its last-layer guard for a group, so the count of paintable layers is
+     * not what decides here: a folder holding every pixel layer of the document empties the stack
+     * on its own, and `deserializeCanvas` reads an empty stack back as a blank default — losing
+     * the size and the colour mode of the picture.
+     */
+    it('refuses to delete a group holding everything the document can paint on', () => {
+      useCanvases.getState().runCommand('doc-1', groupLayers(['layer-1'], 'g', 'Group'))
+      render(<LayersPanel />)
+
+      expect(trashOf('Group')).toBeDisabled()
+    })
+
+    it('offers to delete a group the stack can do without', () => {
+      useCanvases.getState().runCommand('doc-1', addLayer(layerFixture()))
+      useCanvases.getState().runCommand('doc-1', groupLayers(['layer-1'], 'g', 'Group'))
+      render(<LayersPanel />)
+
+      expect(trashOf('Group')).toBeEnabled()
     })
   })
 
