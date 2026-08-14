@@ -375,12 +375,17 @@ export function insertClip(track: Track, clip: Clip, tailId: string): Track {
 
     // Tail survives: it starts later in the source, so its in point moves with it.
     if (existingEnd > end) {
-      clips.push(
-        clampFades({
-          ...clipFrom(existing, end),
-          id: existing.start < clip.start ? tailId : existing.id,
-        }),
-      )
+      const cutInTwo = existing.start < clip.start
+      const tail = clampFades({
+        ...clipFrom(existing, end),
+        id: cutInTwo ? tailId : existing.id,
+      })
+      // A newcomer landing inside a linked take leaves two pieces of it. They must not both
+      // answer to the same link: dragging the head would then drag the far side of the cut,
+      // and deleting it would take that away too. The head keeps the sound it was laid with,
+      // and the tail stands alone — which is what an insertion into a take really produces.
+      if (cutInTwo) delete tail.linkId
+      clips.push(tail)
     }
   }
 

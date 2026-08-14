@@ -21,6 +21,7 @@ import { cursorAt, hitTest, xToTime, type Viewport } from '@/engines/timeline/ti
 import type { Point, Size } from '@/engines/core/geometry'
 import { fitToDisplay } from '@/engines/core/canvas-2d'
 import {
+  clipById,
   clipUnderPlayhead,
   sequenceDuration,
   snapToFrame,
@@ -206,9 +207,14 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
         case 'sequence.delete':
           if (state.selectedId) store.runCommand(documentId, removeClip(state.selectedId))
           return
-        case 'sequence.unlink':
-          if (state.selectedId) store.runCommand(documentId, unlinkClip(state.selectedId))
+        case 'sequence.unlink': {
+          // Asked here rather than left to the command: every command run lands on the undo
+          // stack, so a ⌘L on a clip that is tied to nothing would mark the document modified
+          // and leave a ⌘Z that visibly does nothing.
+          const linked = state.selectedId ? clipById(state, state.selectedId) : null
+          if (linked?.linkId) store.runCommand(documentId, unlinkClip(linked.id))
           return
+        }
         case 'sequence.zoomIn':
           return setViewport(zoomAt(current, ZOOM_STEP, middle))
         case 'sequence.zoomOut':

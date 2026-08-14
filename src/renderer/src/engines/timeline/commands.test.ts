@@ -392,6 +392,38 @@ describe('a take whose picture and sound are linked', () => {
     expect(clipOf(removeClip('v').apply(untied), 'a')).toBeDefined()
   })
 
+  /**
+   * Both halves or neither. A locked sound track is an ordinary editing move, and the edit went
+   * through on the picture alone: the take was then desynced for good, which is the one failure
+   * the link exists to prevent.
+   */
+  it('refuses the whole edit when one half sits on a locked track', () => {
+    const state = sequenceWith([
+      trackFixture('V1', 'video', [clipFixture('v', 1_000_000, 2_000_000, { linkId: LINK })]),
+      trackFixture('A1', 'audio', [clipFixture('a', 1_000_000, 2_000_000, { linkId: LINK })], {
+        locked: true,
+      }),
+    ])
+
+    expect(moveClip('v', 'V1', 3_000_000).apply(state)).toBe(state)
+    expect(trimClip('v', 'out', 2_000_000, 'unknown').apply(state)).toBe(state)
+    expect(removeClip('v').apply(state)).toBe(state)
+  })
+
+  /**
+   * A clip dropped inside a linked take leaves two pieces of it. Sharing one link, the head and
+   * the far side of the cut moved and were deleted together — and the sound followed whichever
+   * of them was dragged.
+   */
+  it('leaves the tail of an insertion unlinked, since only the head kept its sound', () => {
+    const cut = addClip('V1', clipFixture('b', 2_000_000, 500_000)).apply(take())
+    const clips = cut.tracks[0]?.clips ?? []
+
+    expect(clips.map(clip => clip.start)).toEqual([1_000_000, 2_000_000, 2_500_000])
+    expect(clips[0]?.linkId).toBe(LINK)
+    expect(clips[2]?.linkId).toBeUndefined()
+  })
+
   it('lays a take down as one history entry, so undo takes back both clips', () => {
     const command = addClips([
       { trackId: 'V1', clip: clipFixture('v', 0, 1_000_000, { linkId: LINK }) },

@@ -50,18 +50,33 @@ function acrossLink(
   clipId: string,
   make: (state: SequenceState, linkedId: string) => Command<SequenceState> | null,
 ): Command<SequenceState> {
-  let all: Command<SequenceState> | null = null
+  let parts: Command<SequenceState>[] | null = null
+  /** Whether the last apply went through. A refused edit has nothing to put back. */
+  let held = false
 
   return {
     id,
     apply: state => {
-      all ??= composed(
-        id,
-        linkedClipIds(state, clipId).flatMap(linkedId => make(state, linkedId) ?? []),
-      )
-      return all.apply(state)
+      parts ??= linkedClipIds(state, clipId).flatMap(linkedId => make(state, linkedId) ?? [])
+
+      // All halves or none. Every command refuses by handing its state back untouched — a
+      // locked track, a cut falling outside the clip — and letting the others through anyway
+      // moved a picture whose sound stayed put: the one failure a link exists to prevent.
+      // Lock A1, drag the take on V1, and the pair was desynced for good.
+      let current = state
+      for (const part of parts) {
+        const next = part.apply(current)
+        if (next === current) {
+          held = false
+          return state
+        }
+        current = next
+      }
+
+      held = true
+      return current
     },
-    revert: state => all?.revert(state) ?? state,
+    revert: state => (held && parts ? composed(id, parts).revert(state) : state),
   }
 }
 

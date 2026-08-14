@@ -179,6 +179,8 @@ export class TimelineEngine {
    * handle as the transport's state made `pause` a no-op exactly there.
    */
   private running = false
+  /** Which run of the transport a frame belongs to — see `step`. */
+  private transport = 0
 
   constructor(private readonly deps: TimelineEngineDeps) {
     // First child, so every layer added later composites over it.
@@ -213,7 +215,8 @@ export class TimelineEngine {
     this.clock.start(from)
 
     this.running = true
-    this.nextFrame()
+    this.transport += 1
+    this.nextFrame(this.transport)
     this.deps.onPlayingChange?.(true)
   }
 
@@ -245,14 +248,24 @@ export class TimelineEngine {
    * The playhead comes from the clock rather than from a frame count, so a decoder slower than
    * real time drops pictures instead of falling behind the sound.
    */
-  private nextFrame(): void {
+  private nextFrame(transport: number): void {
     this.frameHandle = requestAnimationFrame(() => {
       this.frameHandle = null
-      void this.step()
+      void this.step(transport)
     })
   }
 
-  private async step(): Promise<void> {
+  /**
+   * `transport` says which run this frame belongs to, and `running` alone cannot.
+   *
+   * Most of a frame is spent inside a decode, with no animation frame left for `pause` to
+   * cancel: pausing there and pressing play again started a second chain while the first was
+   * still in flight, and the two then invalidated each other's decodes on every frame — the
+   * very freeze this loop was rewritten to fix.
+   */
+  private async step(transport: number): Promise<void> {
+    if (!this.running || transport !== this.transport) return
+
     const time = this.clock.now()
     if (time >= sequenceDuration(this.state)) {
       this.pause()
@@ -265,7 +278,7 @@ export class TimelineEngine {
     this.sound.pump(time)
     await this.seek(time)
     // Re-read: a pause, a revoked token or a dispose may all have landed during that decode.
-    if (this.running) this.nextFrame()
+    if (this.running && transport === this.transport) this.nextFrame(transport)
   }
 
   async mount(element: HTMLElement): Promise<void> {

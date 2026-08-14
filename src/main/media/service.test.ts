@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { MediaProbe } from '@shared/domain/asset'
 import type { ProbeOutcome } from './probe'
-import { createMediaService, needsProxy, type MediaServiceDeps } from './service'
+import {
+  createMediaService,
+  needsProxy,
+  type DeriveRequest,
+  type MediaServiceDeps,
+} from './service'
 
 const probe: MediaProbe = {
   duration: 20_000_000,
@@ -128,6 +133,68 @@ describe('media service', () => {
     await createMediaService(injected).ingest('asset-1', '/take.wav', 'audio')
 
     expect(vi.mocked(injected.save).mock.calls[0]?.[1]).not.toHaveProperty('posterPath')
+  })
+})
+
+/**
+ * A generation never meets the picker, so nothing derived what a montage reads: its sound clip
+ * drew a flat rectangle where a waveform belongs — `stores/peaks` reads the file written here
+ * and never recomputes — and a codec the window cannot decode had no proxy to fall back on.
+ */
+describe('the files a generation gets beside it', () => {
+  const request: DeriveRequest = {
+    assetId: 'asset-1',
+    path: '/project/assets/vid/asset-1.mp4',
+    kind: 'video',
+    probe: { ...probe, codec: 'avc1', height: 1080 },
+    poster: false,
+  }
+
+  it('writes the waveform its sound clip is drawn from, and the hash a relink finds it by', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive(request)
+
+    expect(injected.save).toHaveBeenCalledWith('asset-1', {
+      hash: 'abc123',
+      peaksPath: '.index/peaks/abc123.bin',
+    })
+  })
+
+  it('encodes a proxy when the window cannot decode what the API produced', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive({ ...request, probe })
+
+    expect(vi.mocked(injected.save).mock.calls[0]?.[1]).toMatchObject({
+      proxyPath: '.index/proxies/abc123.mp4',
+    })
+  })
+
+  // The library sent one down with the bytes: a frame grabbed here would overwrite a picture
+  // chosen by whoever produced the model.
+  it('leaves the still alone when one came down with the bytes', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive(request)
+
+    const args = vi.mocked(injected.run).mock.calls.map(([, given]) => given)
+    expect(args.some(given => given.includes('-frames:v'))).toBe(false)
+  })
+
+  // The row stands for an asset the account holds. A proxy that failed is a take that plays
+  // without one, never a take that is gone — where a picked file that turns out not to be
+  // media has its row dropped.
+  it('keeps the row when ffmpeg fails, unlike a file that was picked', async () => {
+    const injected = deps({ run: vi.fn(async () => Promise.reject(new Error('broken'))) })
+    await createMediaService(injected).derive({ ...request, probe })
+
+    expect(injected.discard).not.toHaveBeenCalled()
+    expect(injected.save).toHaveBeenCalledWith('asset-1', { hash: 'abc123' })
+  })
+
+  it('reports its stages, so a take being prepared is not a window doing nothing', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive(request)
+
+    expect(stages(injected.onProgress)).toEqual(['queued', 'hash', 'peaks', 'done'])
   })
 
   it('skips the proxy for a file the browser can already decode', async () => {

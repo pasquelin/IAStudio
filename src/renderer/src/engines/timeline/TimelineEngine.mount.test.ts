@@ -291,6 +291,8 @@ describe('mounting a monitor', () => {
     engine: InstanceType<typeof TimelineEngine>
     /** Runs the frame the loop has asked for, and answers the decode it starts. */
     tick: () => Promise<void>
+    /** The animation frames asked for and not yet run. */
+    frames: (() => void)[]
   }> => {
     const pending: ((sample: { toVideoFrame: () => VideoFrame; close: () => void }) => void)[] = []
     const frames: (() => void)[] = []
@@ -326,7 +328,7 @@ describe('mounting a monitor', () => {
     // the transport's own and nothing is left in flight from before it started.
     await tick()
 
-    return { engine, tick }
+    return { engine, tick, frames }
   }
 
   /**
@@ -351,6 +353,29 @@ describe('mounting a monitor', () => {
 
     // Two frames asked for, two painted: a third draw would mean a seek nobody waited for.
     expect(render).toHaveBeenCalledTimes(2)
+  })
+
+  /**
+   * A frame is mostly spent inside a decode, where there is no animation frame left for `pause`
+   * to cancel. Pausing there and playing again started a second chain over the first, and from
+   * then on every frame issued two seeks that invalidated each other — the freeze again, this
+   * time unreachable by another pause.
+   */
+  it('starts one loop, not two, when play follows a pause taken mid-decode', async () => {
+    const { engine, tick, frames } = await playerOver(host)
+
+    engine.play()
+    // Paused with a decode in flight: the loop is between two animation frames.
+    frames.shift()?.()
+    await settled()
+    engine.pause()
+    engine.play()
+    await tick()
+    engine.pause()
+    vi.unstubAllGlobals()
+
+    // One chain asked for one frame. Two would have queued a second animation frame here.
+    expect(frames).toHaveLength(0)
   })
 
   /**
