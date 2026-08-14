@@ -1,4 +1,4 @@
-import { mdiCheckboxBlankOutline, mdiClose, mdiTextureBox } from '@mdi/js'
+import { mdiCheckboxBlankOutline, mdiClose, mdiImageOffOutline, mdiTextureBox } from '@mdi/js'
 import { useMemo, type ReactNode } from 'react'
 import type { AssetType } from '@shared/domain/asset'
 import { activation } from '@/helpers/activation'
@@ -38,6 +38,18 @@ export type TextureFieldProps = {
   emptyHint: string
   optionHint: string
   /**
+   * What the menu says when it has NOTHING to offer — and it opens to say it rather than refusing
+   * in silence, which is the whole reason this pair is required.
+   *
+   * The trigger used to be `disabled` there. On a small button at the end of the line that read
+   * as refused; once the whole LINE became the trigger, nothing looked disabled any more and a
+   * click simply did nothing — reported from the 3D space, where the slots of « swap a map » were
+   * inert with no word said. What is missing depends on the caller — a picture, a sky, a typeface
+   * — so the sentence is the caller's, like every other one on this field.
+   */
+  noOptionLabel: string
+  noOptionHint: string
+  /**
    * The kinds a drag may drop into this slot. Absent leaves the field undroppable, which is what
    * a slot filled from something other than the catalogue wants — `FontField` offers the fonts of
    * the system, and no asset of the project is one.
@@ -76,12 +88,19 @@ export function TextureField({
   chooseLabel,
   emptyHint,
   optionHint,
+  noOptionLabel,
+  noOptionHint,
   accepts,
   open,
 }: TextureFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
-  // "None" is one of the choices, not a separate button: choosing no texture is choosing.
-  const flyout = useHoverFlyout(options.length + 1)
+  /**
+   * "None" is one of the choices, not a separate button: choosing no texture is choosing. Never
+   * fewer than two, as `ChannelTile` counts them and for the same reason — `useHoverFlyout` shows
+   * nothing at all below two, and a project holding no picture left the whole line pressable and
+   * silent.
+   */
+  const flyout = useHoverFlyout(Math.max(options.length + 1, 2))
   // The same sentence for every option row: one object, not one per picture the project holds.
   const optionTip = HINT_RIGHT(optionHint)
 
@@ -106,7 +125,6 @@ export function TextureField({
       <button
         type="button"
         {...flyout.triggerProps}
-        disabled={options.length === 0}
         onClick={flyout.open}
         {...TIP_LEFT(chooseLabel)}
         className={MENU_TRIGGER}
@@ -181,20 +199,33 @@ export function TextureField({
               flyout.close()
             }}
           />
-          {options.map(option => (
+          {/* Says WHY there is no choice, rather than a line that refuses without a word. Offered
+              and refused, exactly as `ChannelTile` offers its own: a row that simply is not there
+              leaves nothing to read the reason from. */}
+          {options.length === 0 ? (
             <MenuRow
-              key={option.id}
-              label={option.name}
-              icon={mdiTextureBox}
-              checked={option.id === value}
-              tick="one-of"
-              tip={optionTip}
-              onSelect={() => {
-                onChange(option.id)
-                flyout.close()
-              }}
+              label={noOptionLabel}
+              icon={mdiImageOffOutline}
+              disabled
+              tip={HINT_RIGHT(noOptionHint)}
+              onSelect={() => undefined}
             />
-          ))}
+          ) : (
+            options.map(option => (
+              <MenuRow
+                key={option.id}
+                label={option.name}
+                icon={mdiTextureBox}
+                checked={option.id === value}
+                tick="one-of"
+                tip={optionTip}
+                onSelect={() => {
+                  onChange(option.id)
+                  flyout.close()
+                }}
+              />
+            ))
+          )}
         </Flyout>
       )}
     </DroppableSlot>
@@ -202,14 +233,13 @@ export function TextureField({
 }
 
 /**
- * Refused rather than merely inert: a project with no picture has nothing to offer this slot.
- *
- * And TRANSPARENT to the pointer while it is refused, which is not decoration. A disabled control
- * swallows pointer events without letting them bubble, and `DragEvent` is one of them — a cover
- * the size of the row would take the slot's own drop with it, on exactly the row a drag is meant
- * to fill. It gives the row's native titles back at the same time.
+ * Never refused, and that is a decision rather than an omission: with nothing to offer, the menu
+ * opens on a single row that says so. A disabled cover the size of the line looked like every
+ * other line and did nothing at all when pressed — and it would have swallowed the slot's own
+ * drop, since a disabled control eats pointer events without letting them bubble and `DragEvent`
+ * is one of them.
  */
-const MENU_TRIGGER = cn(OVERLAY_BUTTON, 'rounded-(--radius-sc-md) disabled:pointer-events-none')
+const MENU_TRIGGER = cn(OVERLAY_BUTTON, 'rounded-(--radius-sc-md)')
 
 /** The picture's own press, which is a second surface rather than a second meaning of one gesture. */
 const OPEN_PICTURE = cn(

@@ -66,6 +66,10 @@ export function FontField({ label, value, onChange }: FontFieldProps) {
       clearLabel={t('inspector.chooseFont')}
       emptyHint={t('inspector.noFontHint')}
       optionHint={t('inspector.pickFontHint')}
+      // The list always holds at least the face the document names, so this is the answer to a
+      // machine that announced nothing at all — offered rather than silent, like the others.
+      noOptionLabel={t('inspector.noFontOffered')}
+      noOptionHint={t('inspector.noFontOfferedHint')}
     />
   )
 }

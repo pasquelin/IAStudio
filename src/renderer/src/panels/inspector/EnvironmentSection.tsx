@@ -1,11 +1,10 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isLocalPicture, posterUrl, type AssetType } from '@shared/domain/asset'
+import type { AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
-import { TextureField, type TextureOption } from '@/design/TextureField'
+import { TextureField } from '@/design/TextureField'
 import { openAssetById } from '@/helpers/open-asset'
-import { useAssets } from '@/stores/assets'
+import { useProjectPictures } from './useProjectPictures'
 
 const SKIES: readonly AssetType[] = ['skybox']
 
@@ -27,17 +26,7 @@ export type EnvironmentSectionProps = {
  */
 export function EnvironmentSection({ environment, onChange }: EnvironmentSectionProps) {
   const { t } = useTranslation()
-  const assets = useAssets(state => state.items)
-
-  const options = useMemo<TextureOption[]>(
-    () =>
-      assets
-        // `isLocalPicture` and nothing else: a cloud row would be offered, chosen, and show
-        // nothing at all — the same question has to have one answer everywhere.
-        .filter(asset => asset.type === 'skybox' && isLocalPicture(asset))
-        .map(asset => ({ id: asset.id, name: asset.name, url: posterUrl(asset) ?? undefined })),
-    [assets],
-  )
+  const options = useProjectPictures(SKIES)
 
   return (
     <PropertySection title={t('inspector.environment')}>
@@ -51,6 +40,8 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
         clearLabel={t('inspector.clearSky')}
         emptyHint={t('inspector.studioHint')}
         optionHint={t('inspector.pickSkyHint')}
+        noOptionLabel={t('inspector.noSky')}
+        noOptionHint={t('inspector.noSkyHint')}
         // A sky and nothing else: the slot lights up for what it can actually hold, so a drag
         // across the panel says where it may land before the hand commits to it.
         accepts={SKIES}
