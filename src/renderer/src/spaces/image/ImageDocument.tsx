@@ -375,6 +375,9 @@ export function ImageDocument({ documentId }: ImageDocumentProps) {
       <AssetDropTarget
         accepts={PICTURES}
         onDrop={onDrop}
+        // No frame: this surface fills the centre, so outlining it says nothing the user cannot
+        // already see — the same call `DocumentArea` makes for the middle behind it.
+        outlined={false}
         className={cn('relative min-w-0 flex-1 overflow-hidden', CHECKER)}
       >
         {/* Pixi appends its own canvas here, and the overlay its own above it — see

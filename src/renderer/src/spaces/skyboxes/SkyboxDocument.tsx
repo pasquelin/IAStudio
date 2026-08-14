@@ -154,7 +154,13 @@ export function SkyboxDocument({ documentId }: { documentId: string }) {
   useShortcuts({ scope: 'skybox', enabled: active, onCommand: run })
 
   return (
-    <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
+    <AssetDropTarget
+      accepts={PICTURES}
+      onDrop={onDrop}
+      // No frame: see `ImageDocument`.
+      outlined={false}
+      className="relative size-full"
+    >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 

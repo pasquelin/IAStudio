@@ -403,26 +403,38 @@ describe('ImageDocument', () => {
       )
     })
 
-    it('answers a drag with the same edge every other droppable surface shows', () => {
+    /**
+     * The surface takes the drag — `preventDefault` is what makes a drop possible at all — and
+     * draws NO frame doing it.
+     *
+     * The frame was there and is gone: this surface fills the centre, so outlining it says
+     * nothing the user cannot already see, and the pointer's own "+" says it better. It stays on
+     * the surfaces where it IS the answer — a material's channel slots, a field — which is what
+     * `AssetDropTarget.outlined` documents and `AssetDropTarget.test.tsx` holds.
+     */
+    it('takes our drag without drawing a frame over the middle of the window', () => {
       const { container } = render(<ImageDocument documentId="doc-1" />)
       const surface = container.querySelector('.relative.min-w-0')
       expect(surface).not.toBeNull()
 
       const dataTransfer = dragTransfer()
       startAssetDrag({ dataTransfer }, { id: 'asset-1', type: 'image' })
-      if (surface) fireEvent.dragOver(surface, { dataTransfer })
+      const notPrevented = surface && fireEvent.dragOver(surface, { dataTransfer })
 
-      expect(container.querySelector('.outline-accent')).not.toBeNull()
+      expect(notPrevented).toBe(false)
+      expect(container.querySelector('.outline-accent')).toBeNull()
     })
 
     // It used to light up for anything at all, which also meant it swallowed files dragged in
-    // from the desktop — the drop then did nothing, silently.
-    it('stays quiet for a drag that is not one of ours', () => {
+    // from the desktop — the drop then did nothing, silently. The light is gone; the swallowing
+    // must stay gone with it, which is what the default NOT being prevented says.
+    it('leaves a drag that is not one of ours to the platform', () => {
       const { container } = render(<ImageDocument documentId="doc-1" />)
       const surface = container.querySelector('.relative.min-w-0')
-      if (surface) fireEvent.dragOver(surface, { dataTransfer: dragTransfer() })
 
-      expect(container.querySelector('.outline-accent')).toBeNull()
+      const notPrevented = surface && fireEvent.dragOver(surface, { dataTransfer: dragTransfer() })
+
+      expect(notPrevented).toBe(true)
     })
   })
 

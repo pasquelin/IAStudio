@@ -145,7 +145,14 @@ export function TextureDocument({ documentId }: { documentId: string }) {
   const editPixels = flatAsset && intent ? () => void openAsset(flatAsset, intent) : undefined
 
   return (
-    <AssetDropTarget accepts={PICTURES} onDrop={onDrop} className="relative size-full">
+    <AssetDropTarget
+      accepts={PICTURES}
+      onDrop={onDrop}
+      // No frame: see `ImageDocument`. The CHANNEL slots keep theirs — there the frame IS the
+      // answer, because it says which of seven places the drop would land in.
+      outlined={false}
+      className="relative size-full"
+    >
       {/* The renderer makes its own canvas in here — see `ViewportEngine.mount`. */}
       <div ref={host} className="absolute inset-0" />
 

@@ -191,7 +191,7 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
 
   if (!state.assetId) {
     return (
-      <AssetDropTarget accepts={TAKES} onDrop={takeDrop} className="h-full">
+      <AssetDropTarget accepts={TAKES} onDrop={takeDrop} outlined={false} className="h-full">
         <EmptyState icon={mdiMusicNoteOutline} message={t('audio.noAsset')} />
       </AssetDropTarget>
     )
@@ -202,6 +202,8 @@ export function AudioDocument({ documentId }: AudioDocumentProps) {
     <AssetDropTarget
       accepts={TAKES}
       onDrop={takeDrop}
+      // No frame: see `ImageDocument`.
+      outlined={false}
       className="flex h-full min-h-0 flex-col gap-2 p-2"
     >
       <div className="bg-chassis relative min-h-0 w-full flex-1">

@@ -368,6 +368,9 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     <AssetDropTarget
       accepts={MESHES}
       onDrop={asset => addModelTo(documentId, asset)}
+      // No frame: see `ImageDocument` — a surface that fills the centre outlines what the user is
+      // already looking at.
+      outlined={false}
       className="relative size-full"
     >
       {/* The renderer makes its own canvas in here — see `SceneRenderer.mount`. */}
