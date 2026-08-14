@@ -148,6 +148,7 @@ describe('the files a generation gets beside it', () => {
     kind: 'video',
     probe: { ...probe, codec: 'avc1', height: 1080 },
     poster: false,
+    announce: true,
   }
 
   it('writes the waveform its sound clip is drawn from, and the hash a relink finds it by', async () => {
@@ -195,6 +196,28 @@ describe('the files a generation gets beside it', () => {
     await createMediaService(injected).derive(request)
 
     expect(stages(injected.onProgress)).toEqual(['queued', 'hash', 'peaks', 'done'])
+  })
+
+  // The maintenance a project does on opening is not an import: those rows read as files the
+  // user never picked, and a failed one leaves a notice to dismiss for a file they never chose.
+  it('says nothing at all when it was not asked to announce', async () => {
+    const injected = deps()
+    await createMediaService(injected).derive({ ...request, announce: false })
+
+    expect(stages(injected.onProgress)).toEqual([])
+    expect(injected.save).toHaveBeenCalled()
+  })
+
+  /**
+   * Nothing to derive AND nothing to remember. A row stamped with a hash reads as one the
+   * pipeline has been through, so the catch-up that runs once ffmpeg IS resolved would skip it
+   * for good — the take would show a grey tile and a flat waveform for the rest of its life.
+   */
+  it('writes nothing at all when there is no ffmpeg to derive with', async () => {
+    const injected = deps({ ffmpeg: () => null })
+    await createMediaService(injected).derive(request)
+
+    expect(injected.save).not.toHaveBeenCalled()
   })
 
   it('skips the proxy for a file the browser can already decode', async () => {

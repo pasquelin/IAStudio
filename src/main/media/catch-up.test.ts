@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Asset, MediaProbe } from '@shared/domain/asset'
-import { catchUpMedia, needsDeriving, type CatchUpDeps } from './catch-up'
+import { catchUpMedia, CATCH_UP_PAGE, needsDeriving, type CatchUpDeps } from './catch-up'
 
 const probe: MediaProbe = { duration: 5_000_000, codec: 'avc1', height: 480, sampleRate: 48_000 }
 
@@ -15,13 +15,18 @@ const asset = (overrides: Partial<Asset> = {}): Asset => ({
   ...overrides,
 })
 
+/** A catalogue of exactly these assets, paged the way the real one answers. */
+const holding = (assets: Asset[]) =>
+  vi.fn(async (offset: number, limit: number) => assets.slice(offset, offset + limit))
+
 function deps(overrides: Partial<CatchUpDeps> = {}): CatchUpDeps {
   return {
-    list: vi.fn(async () => [asset()]),
+    list: holding([asset()]),
     fileOf: (given: Asset) => `/project/${given.path}`,
     probeFile: vi.fn(async () => probe),
-    save: vi.fn(),
+    save: vi.fn(async () => undefined),
     derive: vi.fn(async () => undefined),
+    stillOpen: () => true,
     ...overrides,
   }
 }
@@ -60,6 +65,9 @@ describe('catching up a project that was opened after the fix', () => {
       kind: 'video',
       probe,
       poster: true,
+      // Maintenance, not an import: these must not scroll through the import panel as files
+      // the user never picked, nor leave a failure notice to dismiss for one.
+      announce: false,
     })
   })
 
@@ -67,7 +75,7 @@ describe('catching up a project that was opened after the fix', () => {
   // here would overwrite it with an arbitrary one.
   it('leaves the still a download already brought down', async () => {
     const injected = deps({
-      list: async () => [asset({ posterPath: '.index/posters/asset-1.jpg' })],
+      list: holding([asset({ posterPath: '.index/posters/asset-1.jpg' })]),
     })
 
     await catchUpMedia(injected)
@@ -96,6 +104,38 @@ describe('catching up a project that was opened after the fix', () => {
   })
 
   /**
+   * A search states no limit and gets the catalogue's own — two hundred, newest first. The
+   * takes past that window would gain no hash, so the SAME window would come back on every
+   * open and the older ones would never be reached by anything, ever.
+   */
+  it('walks past the first page, which is where a catalogue stops on its own', async () => {
+    const many = Array.from({ length: CATCH_UP_PAGE + 3 }, (_, index) =>
+      asset({ id: `asset-${index}` }),
+    )
+    const injected = deps({ list: holding(many) })
+
+    expect(await catchUpMedia(injected)).toBe(many.length)
+  })
+
+  /**
+   * `derive` resolves the project folder when it RUNS, not when it is asked. A run left going
+   * after another project opened wrote one project's stills, proxies and waveforms into the
+   * other, under ids its catalogue has never heard of.
+   */
+  it('stops where it is when another project comes to the front', async () => {
+    let open = true
+    const injected = deps({
+      list: holding([asset(), asset({ id: 'asset-2' })]),
+      stillOpen: () => open,
+      derive: vi.fn(async () => {
+        open = false
+      }),
+    })
+
+    expect(await catchUpMedia(injected)).toBe(1)
+  })
+
+  /**
    * One at a time, behind a project that has just opened: `derive` bounds its own ffmpeg, and
    * `probeFile` bounds nothing at all — forty takes would be forty ffprobes competing with
    * whatever the user is doing in the second after the project appeared.
@@ -104,7 +144,7 @@ describe('catching up a project that was opened after the fix', () => {
     let running = 0
     let peak = 0
     const injected = deps({
-      list: async () => [asset(), asset({ id: 'asset-2' }), asset({ id: 'asset-3' })],
+      list: holding([asset(), asset({ id: 'asset-2' }), asset({ id: 'asset-3' })]),
       derive: vi.fn(async () => {
         running += 1
         peak = Math.max(peak, running)

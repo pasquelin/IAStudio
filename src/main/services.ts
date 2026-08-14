@@ -645,15 +645,14 @@ export function createServices(settings: SettingsStore): Services {
    * caller left — so the failure it can raise has to be caught here: closing a project while a
    * twenty-minute encode finishes leaves `catalog()` with nothing to answer with.
    */
-  const saveAssetFields = (assetId: string, fields: Partial<Asset>): void => {
-    void (async () => {
+  const saveAssetFields = (assetId: string, fields: Partial<Asset>): Promise<void> =>
+    (async () => {
       const catalog = project.catalog()
       const current = await catalog.find(assetId)
       if (current) await catalog.add({ ...current, ...fields })
     })().catch((error: unknown) =>
       log.warn('media', `could not record what was derived for ${assetId}: ${String(error)}`),
     )
-  }
 
   const assets = createLocalBackend({
     download,
@@ -684,6 +683,8 @@ export function createServices(settings: SettingsStore): Services {
             probe: asset.probe,
             // The library's own still is a picture of the take; ours would be a frame of it.
             poster: !asset.posterPath,
+            // The user is waiting on this take: what is being prepared belongs on screen.
+            announce: true,
           })
           .then(() => broadcast(EVENTS.assetsChanged))
           .catch((error: unknown) =>
@@ -764,6 +765,9 @@ export function createServices(settings: SettingsStore): Services {
     concurrency: () => Math.max(1, availableParallelism() - 2),
   })
 
+  /** Whether a catch-up is already walking the project — see `catchUpProject`. */
+  let catchingUp = false
+
   /**
    * The takes this project holds that arrived before the pipeline ran on downloads.
    *
@@ -772,22 +776,32 @@ export function createServices(settings: SettingsStore): Services {
    * an ffprobe that is not there must not stop a project from opening.
    */
   const catchUpProject = async (): Promise<void> => {
+    // Opening the project that is already open fires `onChange` again — the home shelf and the
+    // Recent list both do it. Two runs would list the same rows, neither having a hash yet, and
+    // two ffmpeg processes would write the same proxy over each other.
+    if (catchingUp) return
+    catchingUp = true
+
     try {
       // Inside the try: `path` throws when no project is open, and this runs on a change that
       // may already have been followed by a close.
       const projectPath = project.path()
       const done = await catchUpMedia({
-        list: () => project.catalog().search({ types: ['video', 'audio'], location: 'local' }),
+        list: (offset, limit) =>
+          project.catalog().search({ types: ['video', 'audio'], location: 'local', offset, limit }),
         fileOf: asset => ownFileOf(projectPath, asset),
         probeFile: probeLocalFile,
         save: saveAssetFields,
         derive: request => media.derive(request),
+        stillOpen: () => project.current()?.path === projectPath,
       })
 
       // The shelf and the strip both read what was just written, and neither asked for it.
       if (done > 0) broadcast(EVENTS.assetsChanged)
     } catch (error: unknown) {
       log.warn('media', `could not catch up the project's takes: ${String(error)}`)
+    } finally {
+      catchingUp = false
     }
   }
 
