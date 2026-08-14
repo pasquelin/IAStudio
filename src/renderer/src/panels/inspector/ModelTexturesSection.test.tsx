@@ -51,7 +51,10 @@ describe('ModelTexturesSection', () => {
     show()
 
     expect(await screen.findByText('Robot — Couleur de base')).toBeInTheDocument()
-    expect(screen.getByText('Couleur de base')).toBeInTheDocument()
+    // Which of the two is the SUBTITLE, and not merely that both are on screen: read the other
+    // way round — the channel over the file name, as this list drew it for a while — both
+    // strings are still there and an assertion on their presence alone stays green.
+    expect(screen.getByText('Couleur de base')).toHaveClass('text-mini')
   })
 
   // Nothing invented under a picture the file gave no channel to: repeating its name as its own

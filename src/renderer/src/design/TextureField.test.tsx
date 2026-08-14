@@ -50,8 +50,18 @@ function renderField(value: string | null = null, options = OPTIONS) {
   return { onChange }
 }
 
-/** The row itself, which the drop lands on — read through the one word an empty slot draws. */
-const emptyRow = (): Element => screen.getByText('Aucune').parentElement as Element
+/**
+ * The field, and the surface a drop lands on — its outermost element.
+ *
+ * Taken from the render rather than walked up from a word: the row now delegates its layout to
+ * `Row`, which puts the two lines of text in a column of their own, so the nearest ancestor of
+ * any of them is no longer the drop target. A `drop` fired on an inner node bubbles up and the
+ * case passes either way — which is exactly why the helper must name the right element.
+ */
+function renderSlot(props: Partial<TextureFieldProps> & Pick<TextureFieldProps, 'onChange'>) {
+  const { container } = render(<Slot value={null} {...props} />)
+  return container.firstElementChild as Element
+}
 
 const OPEN = { label: 'Ouvrir', hint: 'Double-cliquez pour ouvrir', run: () => {} }
 
@@ -66,6 +76,19 @@ describe('TextureField', () => {
     renderField('tex-2')
 
     expect(screen.getByText('Rust')).toBeInTheDocument()
+  })
+
+  /**
+   * What the slot HOLDS on the first line, what the slot IS on the second — the shape every list
+   * of the studio draws, and the reason this row stopped drawing its own. Read the other way
+   * round, both strings are still on screen: only the level tells them apart, so only the level
+   * is worth asserting.
+   */
+  it('reads what it holds over its own name', () => {
+    renderField('tex-2')
+
+    expect(screen.getByText('Rust')).not.toHaveClass('text-mini')
+    expect(screen.getByText('Texture')).toHaveClass('text-mini')
   })
 
   it('reports the identifier of what was picked, never the picture', async () => {
@@ -137,9 +160,9 @@ describe('TextureField', () => {
 
     it('takes an asset dragged onto the row', async () => {
       const onChange = vi.fn()
-      render(<Slot value={null} onChange={onChange} accepts={PICTURES} />)
+      const row = renderSlot({ onChange, accepts: PICTURES })
 
-      fireEvent.drop(emptyRow(), { dataTransfer: dragging('image') })
+      fireEvent.drop(row, { dataTransfer: dragging('image') })
 
       await waitFor(() => expect(onChange).toHaveBeenCalledWith('asset_1'))
     })
@@ -152,9 +175,9 @@ describe('TextureField', () => {
     // asset of the project is one.
     it('takes nothing at all where the caller named no kind', () => {
       const onChange = vi.fn()
-      render(<Slot value={null} onChange={onChange} />)
+      const row = renderSlot({ onChange })
 
-      fireEvent.drop(emptyRow(), { dataTransfer: dragging('image') })
+      fireEvent.drop(row, { dataTransfer: dragging('image') })
 
       expect(onChange).not.toHaveBeenCalled()
     })

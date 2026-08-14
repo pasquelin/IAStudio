@@ -187,9 +187,20 @@ function DroppableSlot({
   onDrop: (assetId: string) => void
   children: ReactNode
 }) {
-  // The height only: `Row` draws the flex line itself, and a second one around it would centre a
-  // full-height child inside a box it is already the size of.
-  const shape = 'min-h-(--sc-control) min-w-0'
+  /**
+   * The height only — `Row` draws the flex line itself, and a second one around it would centre a
+   * full-height child inside a box it is already the size of.
+   *
+   * STATED, and at the stacked gauge: `Row` sizes itself against its parent (`h-full`), which
+   * against a `min-height` alone computes to `auto` and gives no height at all. And the gauge is
+   * the taller one because this row now stacks two steps of text — `--sc-control` holds 27.5px of
+   * them edge to edge in comfort and overflows in compact, which `index.css` says at its own line.
+   *
+   * The negative inset cancels the one `Row` carries: every list of the studio wants those four
+   * pixels, and the inspector is the one place that does not — `FIELD_ROW` has none, deliberately,
+   * so that the two families of property line start at the same x.
+   */
+  const shape = 'h-(--sc-row-stacked) min-w-0 -mx-1'
 
   if (!accepts) return <div className={shape}>{children}</div>
 

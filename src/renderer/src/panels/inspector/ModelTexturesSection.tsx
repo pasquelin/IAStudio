@@ -75,7 +75,9 @@ const ModelTextureRow = memo(function ModelTextureRow({ texture }: { texture: As
   const channel = texture.map ? t(`texture.channel.${texture.map}`) : undefined
 
   return (
-    <div className={cn('relative', rowSkin(false))}>
+    // The stacked gauge, as every other row that puts a kind under a name takes: two steps of
+    // text do not fit a control's height — `index.css` says so where the gauge is declared.
+    <div className={cn('relative h-(--sc-row-stacked)', rowSkin(false))}>
       <Row
         // Straight off the row this list was answered with, rather than through `usePosterUrl`:
         // the asset is in hand, and it is fresher than the shelf, which is scoped by space.
