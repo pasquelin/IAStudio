@@ -11,8 +11,13 @@ import { VisibilityToggle } from './VisibilityToggle'
 export type SceneNodeRowProps = {
   documentId: string
   node: SceneNode
-  /** Accessible name of the eye, which differs per panel. */
-  visibleLabel: string
+  /**
+   * Accessible name of the eye, which differs per panel. **Absent leaves the row without one** —
+   * what the outliner asks for, having pinned its eyes to a column of their own outside the
+   * indentation, the way a stack panel is read. `NodeList` has no indentation to be outside of,
+   * so its eye stays here on the line.
+   */
+  visibleLabel?: string
   /** Accessible name of the field the rename opens. Absent leaves the row unrenamable. */
   renameLabel?: string
   /** The name is being typed over. Held by the list: the menu that opens a rename sits there. */
@@ -67,11 +72,13 @@ export const SceneNodeRow = memo(function SceneNodeRow({
         title={node.name}
         muted={!node.visible}
         leading={
-          <VisibilityToggle
-            visible={node.visible}
-            label={visibleLabel}
-            onToggle={() => run(setNodeVisible(node.id, !node.visible))}
-          />
+          visibleLabel && (
+            <VisibilityToggle
+              visible={node.visible}
+              label={visibleLabel}
+              onToggle={() => run(setNodeVisible(node.id, !node.visible))}
+            />
+          )
         }
       />
     </div>

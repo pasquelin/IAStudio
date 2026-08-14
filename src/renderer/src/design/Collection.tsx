@@ -399,12 +399,17 @@ function CollectionCell({
   children,
 }: CollectionCellProps) {
   /**
-   * Hover and selection are painted here rather than by the rendered item: a background set
-   * inside the cell would sit on top of this one and swallow it on hover. The three states come
-   * from `rowSkin`, which the tree draws its own rows with — the same line must not light up
-   * differently depending on which panel it is listed in.
+   * Selection and focus are painted here rather than by the rendered item: a background set
+   * inside the cell would sit on top of this one and swallow it. They come from `rowSkin`, which
+   * the tree draws its own rows with — the same line must not light up differently depending on
+   * which panel it is listed in.
+   *
+   * `surface: 'row'`, and the tree says the same: a list row does not answer the pointer in this
+   * studio. Spelled out rather than left to the default, which happens to agree — what the two
+   * surfaces MUST agree on is exactly this, and a reader of either file finds the answer where
+   * the skin is asked for.
    */
-  const skin = cn('min-w-0', rowSkin(selected, disabled, tone), className)
+  const skin = cn('min-w-0', rowSkin(selected, { surface: 'row', disabled, tone }), className)
   /**
    * Published beside `data-selected` rather than folded into it: `ROW_INK` and `ROW_QUIET` have to
    * tell an accent FILL from a soft one, since only the first takes their ink to white. A single

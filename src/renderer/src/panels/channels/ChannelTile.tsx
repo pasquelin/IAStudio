@@ -92,7 +92,7 @@ export function ChannelTile({
     // the studio's one answer to "this line is chosen", so a channel cannot light up differently
     // from an asset. `p-0.5` is what lets the tint show as a frame around the picture.
     <div
-      className={cn('relative p-0.5', rowSkin(inspected))}
+      className={cn('relative p-0.5', rowSkin(inspected, { surface: 'tile' }))}
       data-selected={inspected || undefined}
     >
       <MediaTile url={poster} caption={name} fallbackIcon={mdiTextureBox} />

@@ -77,7 +77,10 @@ const ModelTextureRow = memo(function ModelTextureRow({ texture }: { texture: As
   return (
     // The stacked gauge, as every other row that puts a kind under a name takes: two steps of
     // text do not fit a control's height — `index.css` says so where the gauge is declared.
-    <div className={cn('relative h-(--sc-row-stacked)', rowSkin(false))}>
+    //
+    // A `tile` and not a `row`: it is a slot one presses to pick a texture, and the fill under
+    // the pointer is the whole of what says so. A list row stopped taking one on 2026-08-14.
+    <div className={cn('relative h-(--sc-row-stacked)', rowSkin(false, { surface: 'tile' }))}>
       <Row
         // Straight off the row this list was answered with, rather than through `usePosterUrl`:
         // the asset is in hand, and it is fresher than the shelf, which is scoped by space.

@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tree } from '@/design/Tree'
 import { allLayers, canRemoveLayer, isGroup } from '@/engines/canvas/canvas-state'
-import { moveLayer } from '@/engines/canvas/commands'
+import { moveLayer, setLayerVisible } from '@/engines/canvas/commands'
 import { canvasOf, collapseLayerIn, selectLayerIn, useCanvases } from '@/stores/canvases'
 import { useSelection } from '@/stores/selection'
+import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LayerRow } from './LayerRow'
 import { openLayerMenu } from './LayerMenu'
 import { layerNodes, levelIndexOf, stackIndex } from './layer-nodes'
@@ -106,6 +107,21 @@ export function LayerList({ documentId }: { documentId: string }) {
           run: command => useCanvases.getState().runCommand(documentId, command),
         })
       }
+      // Pinned to the left edge, outside the indentation — a stack is read the way Photoshop
+      // draws one: the eye of a layer nested three groups deep sits under the eye of the one at
+      // the top, and only the name walks right.
+      renderLeading={row => (
+        <VisibilityToggle
+          visible={row.node.layer.visible}
+          label={labels.visible}
+          description={row.node.layer.visible ? labels.hide : labels.show}
+          onToggle={() =>
+            useCanvases
+              .getState()
+              .runCommand(documentId, setLayerVisible(row.node.layer.id, !row.node.layer.visible))
+          }
+        />
+      )}
       renderRow={row => (
         <LayerRow
           documentId={documentId}

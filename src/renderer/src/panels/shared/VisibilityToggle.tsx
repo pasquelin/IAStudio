@@ -23,7 +23,7 @@ export function VisibilityToggle({ visible, label, description, onToggle }: Visi
       label={label}
       description={description}
       tooltip={TIP_RIGHT}
-      variant="header"
+      variant="row"
       onPointerDown={event => event.stopPropagation()}
       onDoubleClick={event => event.stopPropagation()}
       onClick={event => {

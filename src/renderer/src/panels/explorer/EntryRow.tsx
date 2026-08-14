@@ -37,9 +37,13 @@ export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
     <Row
       icon={icon}
       title={name}
-      subtitle={open ? t('explorer.open') : undefined}
       // The mark of "open", its own rather than the selection tint: a row can be selected in
       // this tree without being open, and the two must not look alike.
+      //
+      // It used to be a dot AND the word under the name, and the word is what cost: one row in a
+      // folder of thirty carries it, and `Tree` is handed a NUMBER for its estimate, so every row
+      // in the panel stood at the height of the tallest — 36px against a control's 28, five or six
+      // fewer folders on screen for a word that repeats what the dot already says.
       leading={
         <span
           aria-hidden="true"

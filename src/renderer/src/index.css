@@ -407,6 +407,14 @@
   /* Overwritten inline by `useAppearance`; the value here is what an unstyled root falls to. */
   --sc-font-scale: 1;
   --sc-control: 28px;
+  /* A control that sits INSIDE a list row rather than on a bar: the visibility eye, a layer's
+     padlock. `--sc-control` is the gauge of a BAR, and two of them at the end of a 28px line took
+     68px of it — more than a fifth of a side panel, on the very rows whose name is what one reads.
+
+     Deliberately under the 24px WCAG 2.2 SC 2.5.8 asks for, under the criterion's spacing
+     exception: these are the only targets on their line, and the row itself answers everywhere
+     they do not. Chosen on 2026-08-14, not derived. */
+  --sc-control-inline: 20px;
   /* A list row that stacks a name over a subtitle. `--sc-control` cannot hold it: two steps of
      `leading-tight` text are 27.5px, which fills a 28px row edge to edge and overflows a compact
      one. Its own gauge rather than a padding on the row, because the virtualizer is given a
@@ -425,13 +433,13 @@
      leaves ~4px above and below the text, which reads as words pressed against their own
      highlight rather than as a line standing in it; 44 leaves ~8.
 
-     Not "the rows that have a fill", which would be all of them: `rowSkin` paints hover and
-     selection edge to edge in every list, the explorer's tree included. What is answered here is
-     a fill nobody has to hover to see, and only the home has one.
+     Not "the rows that have a fill", which would be every picked row: `rowSkin` paints a selection
+     edge to edge in every list. What is answered here is a fill nobody has to select to see, and
+     only the home has one.
 
      Its own gauge and not a taller `--sc-row-stacked`: raising the shared one for the home's sake
-     also loosened the explorer and the documents panel, which stack the same two steps. Flat, for
-     the reason above. */
+     also loosened the documents panel, which stacks the same two steps. Flat, for the reason
+     above. */
   --sc-row-filled: 44px;
   /* Rail width: the button (36) plus the margin keeping it off the window edge. */
   --sc-rail: 48px;
@@ -473,6 +481,7 @@
 
 :root[data-density='compact'] {
   --sc-control: 24px;
+  --sc-control-inline: 18px;
   --sc-row-stacked: 32px;
   --sc-row-filled: 38px;
   --sc-rail: 42px;
