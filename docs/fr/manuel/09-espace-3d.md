@@ -41,8 +41,8 @@ C’est le mode par défaut. On tourne **autour** de la scène, comme si on en f
 | `Q` | descendre |
 | `⇧ Maj` | accélérer |
 
-C’est la navigation des logiciels de jeu vidéo : on se déplace **à travers** la scène au lieu
-d’en faire le tour. Relâchez le bouton droit, la caméra reprend son mode normal.
+On se déplace **à travers** la scène au lieu d’en faire le tour, comme dans un jeu vidéo.
+Relâchez le bouton droit, la caméra reprend son mode normal.
 
 > **Les touches sont lues à leur position physique.** WASD sur un clavier QWERTY et ZQSD sur un
 > clavier AZERTY sont **les mêmes quatre touches**. Il n’y a rien à reconfigurer.
@@ -70,12 +70,9 @@ Trois réglages gouvernent le vol : **Réglages ▸ Espaces de travail ▸ 3D**
 | **Mode de rendu** | `Z` | fait défiler les sept façons de dessiner ; le survol les offre une à une |
 | **Cadrer la sélection** | `F` | recentre la caméra sur l’objet choisi |
 
-**Huit boutons, et c'est voulu.** La barre en a porté vingt-trois : tout ce qu'une scène sait
-faire y avait son icône, et les huit qu'on cherche pendant qu'on manipule s'y perdaient. Ce qui
-reste est ce que la main réclame **sans lâcher la souris** ; le reste est au menu natif, où on
-va le chercher une fois par séance.
+La barre ne porte que ce qui se réclame **sans lâcher la souris**. Le reste est au menu natif :
 
-| Ce qui a quitté la barre | Où le trouver |
+| Ce qui n’est pas dans la barre | Où le trouver |
 |---|---|
 | Projection, quatre vues, arêtes de quads, squelettes, mode pose | **Affichage**, en cases à cocher |
 | Les six côtés, les sept modes de rendu | **Affichage ▸ Point de vue** et **▸ Mode de rendu** |
@@ -90,10 +87,6 @@ l’échelle — se règle dans **Réglages ▸ Espaces de travail ▸ 3D**.
 **Le repère local se voit sur un objet tourné.** Poignées en repère monde, la flèche rouge pointe
 toujours vers l’est. En repère local, elle pointe vers la droite **de l’objet** : c’est ce qu’on
 veut pour avancer une voiture dans le sens où elle roule.
-
-Contrairement à l’espace Image, les trois outils de manipulation restent **trois boutons
-visibles** au lieu d’être groupés. C’est délibéré : on en change plusieurs fois par minute, et
-c’est ainsi que font Blender, Maya, Unity et l’éditeur three.js.
 
 ### Les poignées de couleur
 
@@ -210,21 +203,18 @@ Quatre choses à savoir :
 - **Sa taille est son échelle.** Un sprite n’a pas de largeur propre : on le redimensionne avec la
   poignée d’échelle, comme n’importe quel objet. Il rapetisse avec la distance, comme le reste de
   la scène.
-- **Il ne tourne pas.** Puisqu’il fait toujours face à la caméra, lui donner un angle ne se verrait
-  nulle part : sélectionné seul, il n’a ni poignée de l’outil **Pivoter**, ni ligne **Rotation**
-  dans l’Inspecteur — plutôt qu’un nombre qui ne change rien à l’écran mais coûte un `⌘Z`. Deux
-  cas le font tourner pour de vrai, et les deux se voient :
+- **Il ne tourne pas.** Sélectionné seul, il n’a ni poignée **Pivoter**, ni ligne **Rotation**
+  dans l’Inspecteur. Deux cas le font tourner pour de vrai :
   - **Des objets descendent de lui.** Il retrouve sa poignée et sa ligne : tourner l’ensemble fait
     pivoter les enfants autour de lui.
   - **Il est pris dans une sélection de plusieurs objets, et on tire la poignée.** Elle fait
-    tourner le groupe autour d’un pivot commun, ce qui déplace le sprite dans l’espace. Attention,
-    **la ligne Rotation de l’Inspecteur ne fait pas la même chose** : un angle tapé est absolu et
+    tourner le groupe autour d’un pivot commun, ce qui déplace le sprite dans l’espace. **La ligne
+    Rotation de l’Inspecteur ne fait pas la même chose** : un angle tapé est **absolu** et
     s’applique à chaque objet autour du sien propre, sans pivot commun — le sprite, lui, ne bouge
     pas. La ligne reste affichée tant qu’un objet de la sélection tourne, et l’angle tapé va sur
     ceux-là.
-- **Il ne joue pas avec les ombres.** Il n’en projette pas et n’en reçoit pas — three.js ne dessine
-  que des mailles dans une carte d’ombres. L’Inspecteur ne lui montre donc aucune section Ombres,
-  plutôt que deux interrupteurs sans effet.
+- **Il ne joue pas avec les ombres.** Il n’en projette pas et n’en reçoit pas ; l’Inspecteur ne
+  lui montre donc aucune section Ombres.
 - **Il n’est pas éclairé.** Sa couleur est celle qu’on lui donne, pas celle que les lumières de la
   scène en font.
 
@@ -259,10 +249,8 @@ que soit sa distance.
 C’est ce qui permet de juger un alignement. Deux cubes posés côte à côte semblent décalés en
 perspective ; en orthographique, ils le sont ou ils ne le sont pas.
 
-La bascule ne change pas ce que vous voyez, et c'est la seule promesse qu'elle tient : la caméra,
-elle, se replace pour cela. En orthographique le tronc de la projection est calculé pour que ce qui
-est au centre garde sa taille ; au retour en perspective, où l'on ne peut zoomer qu'en avançant, ce
-que la molette avait grossi devient de la distance.
+La bascule garde ce que vous voyez au centre à la même taille — la caméra se replace pour cela,
+et son éloignement change donc au passage.
 
 ### Se placer — **Affichage ▸ Point de vue**
 
@@ -286,7 +274,7 @@ aligne.
 | **Densité** | du vert au rouge selon les triangles au centimètre carré : le rouge est à optimiser |
 
 Le bouton porte le mode en cours et le fait défiler à chaque clic ; son menu permet d’en choisir un
-directement. `Z` fait la même chose au clavier, comme dans Blender — **et en quatre vues, sur le
+directement. `Z` fait la même chose au clavier — **et en quatre vues, sur le
 quart où se trouve le pointeur** : chaque quart garde son propre mode.
 
 **Rendu et filaire** est le plus coûteux : les arêtes sont un objet de plus par maille, construit
@@ -320,20 +308,17 @@ de cadrage à eux qu’ils retrouveraient. Seule la vue libre garde le sien.
 En filaire, le studio redessine les arêtes **sans les diagonales que la triangulation a
 ajoutées** — un cube perd ainsi celles qui barraient ses faces, une par face.
 
-**Ce n’est pas une lecture des quads du fichier, parce qu’il n’y en a pas.** Un GLB ne stocke que
-des triangles, quel que soit le logiciel qui l’a produit. Ce que vous voyez est une
-reconstruction : deux triangles dont l’arête commune sépare des faces presque coplanaires sont
-relus comme un quad. Sur une surface très courbée, la reconstruction se trompe — elle efface une
-arête que le modeleur avait voulue.
+**C’est une reconstruction, pas une lecture du fichier** : un GLB ne stocke que des triangles.
+Deux triangles dont l’arête commune sépare des faces presque coplanaires sont relus comme un
+quad. **Sur une surface très courbée, la reconstruction se trompe** et efface une arête que le
+modeleur avait voulue.
 
 ---
 
 ## Choisir plusieurs objets
 
-**Un clic remplace la sélection. Un clic avec `⇧`, `⌘` ou `Ctrl` l’ajoute ou la retire.**
-
-C’est la convention de tous les logiciels : le modificateur bascule l’objet cliqué sans toucher au
-reste. Recliquer un objet déjà choisi le sort de la sélection.
+**Un clic remplace la sélection. Un clic avec `⇧`, `⌘` ou `Ctrl` l’ajoute ou la retire** —
+recliquer un objet déjà choisi le sort de la sélection.
 
 | Geste | Effet |
 |---|---|
@@ -374,7 +359,7 @@ ranger disparaîtrait de l’écran, et on le croirait perdu.
 
 Les quatre raccourcis que vous connaissez déjà. **Dupliquer** a sa ligne dans **Édition** ; les
 lignes *Couper*, *Copier* et *Coller* que vous y verrez plus haut **ne sont pas celles de la
-scène**, et la raison mérite d'être dite.
+scène**.
 
 | Geste | Raccourci | Ce qu’il fait |
 |---|---|---|
@@ -383,11 +368,9 @@ scène**, et la raison mérite d'être dite.
 | **Couper** | `⌘X` | la retient et la retire de la scène |
 | **Coller** | `⌘V` | pose ce qui a été retenu dans la scène en cours |
 
-> **Pourquoi copier, couper et coller n'ont pas de ligne de menu.** Les trois lignes du menu
-> Édition sont celles du système, et elles agissent sur le **texte** : c'est ce qui permet de
-> copier le nom d'un calque qu'on est en train de renommer. Une ligne à nous à leur place
-> copierait la scène même le curseur dans un champ. Les touches, elles, savent faire la
-> différence : un texte sélectionné garde `⌘C`, tout le reste appartient à la scène.
+> **Les lignes du menu Édition agissent sur le TEXTE**, pas sur la scène : elles servent à copier
+> un nom qu’on est en train de renommer. Les touches, elles, font la différence — un texte
+> sélectionné garde `⌘C`, tout le reste appartient à la scène.
 
 Trois choses valent d’être sues :
 
@@ -406,8 +389,7 @@ Trois choses valent d’être sues :
 ## Le panneau Scène — l’arbre de la scène
 
 Le panneau **Scène**, dans la colonne de droite, montre tout ce que la scène contient, sous
-forme d’arborescence. Il s’appelait l’Explorateur ; celui-ci liste maintenant les documents du
-projet, ce qui est une autre question et vaut dans tous les espaces.
+forme d’arborescence.
 
 - **Cliquez** une ligne pour sélectionner l’objet — avec `⇧`, `⌘` ou `Ctrl` pour en choisir
   plusieurs, exactement comme dans la vue.
@@ -500,9 +482,9 @@ Deux interrupteurs, sur chaque objet qui peut en avoir :
 | **Projette une ombre** | l’objet bloque la lumière et pose son ombre sur le reste |
 | **Reçoit les ombres** | les ombres des autres se dessinent sur lui |
 
-**Les deux se décident objet par objet**, et c’est voulu : une ombre coûte du calcul à chaque
-lumière qui la projette. Un sol reçoit sans projeter ; une petite pièce de décor loin de la
-caméra peut ne faire ni l’un ni l’autre sans que cela se voie.
+**Les deux se décident objet par objet**, parce qu’une ombre coûte du calcul à chaque lumière qui
+la projette. Un sol reçoit sans projeter ; une petite pièce de décor loin de la caméra peut ne
+faire ni l’un ni l’autre sans que cela se voie.
 
 > **La section n’apparaît pas toujours.** Un *sprite* ne joue pas du tout avec les ombres, une
 > lumière ambiante ou hémisphérique n’en projette aucune : plutôt que d’afficher un interrupteur
@@ -569,10 +551,10 @@ repères de lumière ne font pas partie de la scène : ce sont des aides d’aff
 contient que ce que le panneau Scène liste. Les arêtes du mode « rendu et filaire » n’en sont pas non
 plus.
 
-**Un sprite ne sort pas non plus.** Ni en glTF, ni en USDZ : aucun des deux formats n’a d’objet qui
-se tourne toujours vers la caméra, et three.js le laisse simplement de côté — sans un mot. En glTF
-le fichier garde son nom et sa place, mais rien n’y est dessiné ; en USDZ il n’en reste rien du
-tout. Une image plate qui doit survivre à l’export se fait avec un plan et une texture.
+**Un sprite ne sort pas non plus**, et sans avertissement : aucun des deux formats n’a d’objet qui
+se tourne toujours vers la caméra. En glTF le fichier garde son nom et sa place, mais rien n’y est
+dessiné ; en USDZ il n’en reste rien du tout. Une image plate qui doit survivre à l’export se fait
+avec un plan et une texture.
 
 **Une sélection imbriquée garde sa place.** Exporter un objet rangé dans un groupe l’écrit là où il
 est dans la scène, pas là où il est dans son groupe.
@@ -621,8 +603,7 @@ laissée, pas au début.
 
 **La séquence choisie se voit aussi sur la bande du bas**, posée en bloc à sa longueur réelle, sur
 une ligne à elle qui porte **le nom du clip**. Les blocs sont groupés **sous** les lignes de clés,
-jamais mêlés à elles : un bloc et une clé ne sont pas de même nature, et les entrelacer ferait
-lire la bande comme si un clip avait des propriétés.
+jamais mêlés à elles.
 
 ### Voir le squelette
 
@@ -632,18 +613,13 @@ les dessine par-dessus la scène. La ligne est cochée tant qu'ils sont visibles
 **Pour en attraper un, passez en mode pose** — touche **P**, ou **Affichage ▸ Mode pose**. Le clic
 cesse alors de choisir des objets et choisit des os.
 
-> **Un os ne s’attrape pas comme le reste, et c’est pour cela qu’il faut un mode.** Un os n’a pas
-> de volume : ce qu’on voit est un trait entre deux points, et les os d’un rig traversent chaque
-> maille qu’ils pilotent. Viser à travers la scène tomberait sur le segment le plus proche de
-> l’œil, pas sur l’os voulu. Le studio les projette donc à l’écran et prend **le plus proche du
-> pointeur**, qu’il soit devant ou derrière une épaule. Visez donc l’articulation elle-même
-> plutôt que le membre qu’elle pilote.
+> **Le studio prend l’os le plus proche du pointeur à l’écran**, qu’il soit devant ou derrière une
+> épaule. Visez donc **l’articulation elle-même** plutôt que le membre qu’elle pilote.
 
 ### Poser vos propres mouvements
 
-**Vos objets sont déjà dans la bande.** Ouvrez l’espace 3D et chaque objet de la scène y a sa
-ligne — il n’y a rien à créer pour l’y faire entrer, et aucun bouton pour cela : un objet existe
-déjà, le demander une seconde fois n’aurait pas de sens.
+**Vos objets sont déjà dans la bande.** Chaque objet de la scène y a sa ligne : il n’y a rien à
+créer, et aucun bouton pour cela.
 
 Placez la tête de lecture, puis **posez une clé sur la ligne de l’objet**. Les trois propriétés
 animées — Position, Rotation, Échelle — naissent à ce moment-là, ensemble, et en **une seule
@@ -677,8 +653,7 @@ change que ce qui est montré.
 
 **La tête de lecture s’attrape et se déplace** sur la règle graduée, et **les clés se déplacent**
 sur leur ligne. **Au-delà de la durée, la bande est assombrie** : la tête ne va pas plus loin, et aucune clé ne
-s’y pose — un bloc de clip, lui, s’y dépose encore. Une règle graduée jusqu’à dix-sept secondes sur une scène qui en dure cinq
-dirait que la scène est plus longue qu’elle ne l’est.
+s’y pose — un bloc de clip, lui, s’y dépose encore.
 
 **Une clé se retire de deux façons.** Le losange de l’en-tête, pressé là où une clé se tient sous
 la tête de lecture, la retire de **toutes les propriétés qui en portent une à cet instant** — d’un
@@ -694,24 +669,18 @@ verrouillée garde la sienne** — le verrou protège du retrait comme il protè
 façon selon la propriété : les déplacements **s’ajoutent**, les échelles se **multiplient**.
 C’est l’inverse d’un montage vidéo, où le clip du dessus cache celui du dessous.
 
-> **Cela s’observe en empilant deux fois la même propriété sur un objet.** Un objet n’en porte
-> qu’une de chaque tant qu’on pose des clés normalement ; **verrouillez ses lignes**, et la clé
+> **Pour empiler deux fois la même propriété sur un objet, verrouillez ses lignes** : la clé
 > suivante en ouvre de nouvelles par-dessus. Deux positions de 2 et 3 donnent 5 ; deux échelles
-> qui doublent chacune donnent **quatre fois** la taille, ce qu’on veut en les empilant.
+> qui doublent chacune donnent **quatre fois** la taille.
 
-> **Un objet DÉJÀ animé enregistre de lui-même, quoi que dise l’interrupteur.** Ce que la vue
-> montre est la pose de repos **plus** ce que les clés ajoutent : déplacer un objet keyé sans
-> enregistrer écrirait sa pose de repos, et l’objet atterrirait décalé de la valeur exacte de la
-> clé posée à cet instant. Personne ne déplace un objet en voulant cela.
+> **Un objet DÉJÀ animé enregistre de lui-même, quoi que dise l’interrupteur.** Une fois qu’il
+> porte une clé, le bouger édite son animation. L’interrupteur ne décide donc que d’une chose :
+> si un objet **pas encore animé** se met à l’être — et la distinction porte sur les **clés**,
+> pas sur les lignes : des propriétés ouvertes et vides ne sont pas encore une animation, et
+> l’interrupteur y garde son mot.
 >
-> **L’interrupteur décide donc d’une seule chose** : si un objet **pas encore animé** se met à
-> l’être. Une fois qu’il porte une clé, le bouger édite son animation.
->
-> La distinction porte sur les **clés**, pas sur les lignes : des propriétés ouvertes et vides ne
-> sont pas encore une animation, et l’interrupteur y garde son mot.
->
-> **Un os sans clé est un cas à part** : il n’a pas de pose de repos où retomber, donc le geste
-> est simplement abandonné et l’os revient où il était.
+> **Un os sans clé est un cas à part** : n’ayant pas de pose de repos où retomber, le geste est
+> abandonné et l’os revient où il était.
 
 ### Poser les clés à la main
 
@@ -723,15 +692,12 @@ L’enregistrement automatique n’est pas obligatoire. Le geste, dans l’ordre
 3. **déplacez l’objet**, puis **posez une clé** à nouveau.
 
 > **Les chiffres de l’Inspecteur reviennent à la pose de référence, pas l’objet à l’écran.** La
-> clé retient le déplacement que vous venez de faire, et la position **enregistrée** de l’objet
-> repart de sa référence : sans cela le déplacement compterait **deux fois** — une fois dans
-> l’objet, une fois dans la clé posée par-dessus — et la lecture montrerait le double du mouvement
-> voulu. Dans la vue, en revanche, **rien ne bouge** : ce que vous voyez est toujours la référence
-> plus la clé, donc l’endroit où vous venez de le poser.
+> clé retient le déplacement, et la position enregistrée repart de la référence. Dans la vue,
+> **rien ne bouge** : ce que vous voyez est la référence plus la clé, donc l’endroit où vous venez
+> de poser l’objet.
 
-**Un os ne travaille pas ainsi.** Ses propriétés n’ont pas de pose de référence — celle d’un os
-vit dans le fichier du modèle, pas dans le document. Y poser une clé **fige ce qu’elles tiennent
-déjà** à cet instant, et rien ne revient en place. Pour animer un os, passez donc par
+**Un os ne travaille pas ainsi** : ses propriétés n’ont pas de pose de référence, donc y poser une
+clé **fige ce qu’elles tiennent déjà** et rien ne revient en place. Pour animer un os, passez par
 l’enregistrement automatique et le mode pose plutôt que par ces trois étapes.
 
 ### Sortir une vidéo
@@ -741,9 +707,8 @@ elle se déplace au gizmo, elle s’anime comme n’importe quel objet, et un ex
 avec lui.
 
 Le bouton **Rendre en vidéo** de la timeline écrit un fichier `.mp4` de ce que voit cette caméra,
-sur toute la durée de la timeline. Le studio demande **où enregistrer avant de calculer quoi que ce
-soit** : un rendu prend des minutes, et une boîte de dialogue à la fin serait le meilleur moyen de
-le jeter d’un appui sur Échap.
+sur toute la durée de la timeline. Le studio demande **où enregistrer avant de calculer quoi que
+ce soit** — un rendu prend des minutes.
 
 **Sans caméra dans la scène, le bouton est grisé** : il n’y a rien à travers quoi regarder.
 
