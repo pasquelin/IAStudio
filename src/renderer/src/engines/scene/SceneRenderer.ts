@@ -135,6 +135,14 @@ export type SceneRendererOptions = {
    */
   onSelectBone?: (picked: { nodeId: string; bone: string } | null) => void
   /**
+   * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
+   *
+   * Only for a right button that went down and came up in the same place with no motion key
+   * held: that button flies the camera, and every flight would otherwise end in a menu. A
+   * click in the void answers nothing, the fly camera being the gesture that owns the void.
+   */
+  onContextMenu?: (nodeId: string) => void
+  /**
    * What the scene costs, whenever that changes. Counted here because only the engine knows what
    * a model actually brought: the document holds an asset id, not the triangles behind it.
    */
@@ -299,6 +307,8 @@ export class SceneRenderer {
   private dragged = false
   /** Where the left button went down, so the release can tell a click from an orbit. */
   private pressed: { x: number; y: number } | null = null
+  /** The same, for the right button: it flies the camera, and a flight that never left is a click. */
+  private flownFrom: { x: number; y: number } | null = null
 
   private gizmo: TransformControls | null = null
   private viewHelper: ViewHelper | null = null
@@ -1670,6 +1680,7 @@ export class SceneRenderer {
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
       this.flying = true
+      this.flownFrom = { x: event.clientX, y: event.clientY }
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = false
       // Before the first frame of the flight, or its opening step spans the whole idle time.
@@ -1689,10 +1700,27 @@ export class SceneRenderer {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     if (event.button === 2) {
+      // A right button that never flew and never moved was a click, not a flight: that is the
+      // one gesture left for a menu in this viewport, the button itself being taken by the fly
+      // camera. Read before `held` is emptied, or every flight would end in a menu.
+      const aimed = this.flownFrom
+      const still =
+        aimed !== null &&
+        this.held.size === 0 &&
+        Math.hypot(event.clientX - aimed.x, event.clientY - aimed.y) <= CLICK_SLOP
+
+      this.flownFrom = null
       this.flying = false
       this.held.clear()
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = true
+
+      // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
+      // act on.
+      if (still && !this.poseMode) {
+        const id = this.nodeAt(event)
+        if (id) this.options.onContextMenu?.(id)
+      }
       return
     }
     if (event.button !== 0) return
@@ -1704,33 +1732,40 @@ export class SceneRenderer {
 
     this.aimGizmo()
 
+    // In pose mode a click names a BONE and never a node: the two are exclusive, which is what
+    // keeps a rig's bones from stealing every click meant for the mesh they drive.
+    if (this.poseMode) {
+      const ndc = this.viewport.pointerNdcOf(event)
+      if (!ndc) return
+
+      // The camera of the view under the pointer, never the main one — `nodeAt` says why.
+      const picked = nearestBone(this.projectedBones(this.cameraInHand()), { x: ndc.x, y: ndc.y })
+      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
+      return
+    }
+
+    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
+    const extending = event.shiftKey || event.metaKey || event.ctrlKey
+    const id = this.nodeAt(event)
+    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+  }
+
+  /** The node the pointer is over, or nothing for a ray that met only the void. */
+  private nodeAt(event: PointerEvent): string | null {
     const ndc = this.viewport.pointerNdcOf(event)
-    if (!ndc) return
+    if (!ndc) return null
 
     this.pointer.set(ndc.x, ndc.y)
     // The camera of the view under the pointer, never the main one: a ray cast from elsewhere
     // meets whatever stands in ITS way, so a click in a side view picked something the pointer
     // was nowhere near — which made every view but the first one inert.
-    const camera = this.cameraInHand()
-
-    // In pose mode a click names a BONE and never a node: the two are exclusive, which is what
-    // keeps a rig's bones from stealing every click meant for the mesh they drive.
-    if (this.poseMode) {
-      const picked = nearestBone(this.projectedBones(camera), { x: ndc.x, y: ndc.y })
-      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
-      return
-    }
-
-    this.raycaster.setFromCamera(this.pointer, camera)
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
     // that the ray actually meets. Both they and the light carry the node's id.
     const targets = [...this.objects.values(), ...this.helpers.values()]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    const id = hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
-    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
-    const extending = event.shiftKey || event.metaKey || event.ctrlKey
-    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
   }
 
   /**

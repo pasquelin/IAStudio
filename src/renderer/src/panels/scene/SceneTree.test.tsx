@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { fakeMenu } from '@/helpers/menu-fixtures'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneTree } from './SceneTree'
@@ -161,5 +163,30 @@ describe('SceneTree', () => {
     await userEvent.click(screen.getAllByRole('treeitem')[0]?.firstChild as HTMLElement)
 
     expect(screen.queryByText('AmbientLight')).not.toBeInTheDocument()
+  })
+
+  it('raises the node menu on a right-click, and nothing on the root', () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneTree documentId="doc-1" />)
+
+    fireEvent.contextMenu(screen.getByText('AmbientLight'))
+    expect(menu.labels()).toContain('Supprimer')
+
+    // The root is a row but not a node: it stands for the scene, which has no name and no delete.
+    fireEvent.contextMenu(screen.getByText('Scène'))
+    expect(menu.raised).toHaveLength(1)
+  })
+
+  it('renames a node from its own row, through the history', async () => {
+    render(<SceneTree documentId="doc-1" />)
+
+    await userEvent.dblClick(screen.getByText('AmbientLight'))
+    await userEvent.clear(screen.getByLabelText('Renommer l’objet'))
+    await userEvent.type(screen.getByLabelText('Renommer l’objet'), 'Soleil{Enter}')
+
+    expect(scene().nodes[0]?.name).toBe('Soleil')
+    useScenes.getState().undo('doc-1')
+    expect(scene().nodes[0]?.name).toBe('AmbientLight')
   })
 })

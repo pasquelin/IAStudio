@@ -6,6 +6,7 @@ import { modelNode } from '@/engines/scene/node-factory'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
 import type { SelectionMode } from '@/helpers/selection'
 import { createDocumentStore } from './document-store'
+import { useSelection } from './selection'
 
 /** One scene per document, in memory like the documents themselves. */
 const store = createDocumentStore<SceneState>(EMPTY_SCENE)
@@ -16,11 +17,6 @@ export const sceneOf = store.stateOf
 export const sceneHistoryOf = store.historyOf
 export const isSceneDirty = store.isDirty
 
-/**
- * Selection stays out of the history, so it writes the whole scene back — and the scene has to
- * be read at call time, not from the render that drew the row: a copy taken before whatever
- * command ran in between would undo it.
- */
 /**
  * A flag of an animation track, written without an entry in the history — how one works, not what
  * one made. The pendant of `sequences.writeTrack`, and for the same reason.
@@ -37,13 +33,30 @@ export function writeAnimationTrack(
   )
 }
 
+/**
+ * What is picked in a scene, wherever the gesture came from — the outliner, the two node panels
+ * or the viewport.
+ *
+ * Selection stays out of the history, so it writes the whole scene back — and the scene has to
+ * be read at call time, not from the render that drew the row: a copy taken before whatever
+ * command ran in between would undo it.
+ *
+ * It writes the studio's selection too, and that is the point of going through one function: the
+ * scene holds what the viewport highlights, `useSelection` holds what the INSPECTOR reads, and
+ * for as long as the 3D space wrote only the first one, picking a node left the inspector on
+ * whatever asset had been clicked in the browser — which is how a model got imported in the
+ * first place. What lands there is the resolved selection rather than the ids asked for: a
+ * toggle removes as often as it adds.
+ */
 export function selectIn(
   documentId: string,
   ids: readonly string[],
   mode: SelectionMode = 'replace',
 ): void {
   const state = useScenes.getState()
-  state.replace(documentId, setSelection(sceneOf(state, documentId), ids, mode))
+  const next = setSelection(sceneOf(state, documentId), ids, mode)
+  state.replace(documentId, next)
+  useSelection.getState().selectNodes(documentId, next.selectedIds)
 }
 
 /**

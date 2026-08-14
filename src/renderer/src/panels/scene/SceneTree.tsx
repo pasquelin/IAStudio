@@ -6,6 +6,7 @@ import { Tree, type TreeNode } from '@/design/Tree'
 import { canReparent, type SceneNode } from '@/engines/scene/scene-state'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
 import { reparentNode } from '@/engines/scene/commands'
+import { openSceneNodeMenu } from '@/spaces/three/SceneNodeMenu'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 
 /** The synthetic root. It is not a node: it has no transform, no visibility and no delete. */
@@ -19,6 +20,9 @@ export function SceneTree({ documentId }: { documentId: string }) {
   const selectedIds = useScenes(state => sceneOf(state, documentId).selectedIds)
   // Folding is session state: nobody wants Cmd-Z to give them back a collapsed branch.
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set([SCENE_ROOT]))
+  // Which row has its name open, held here rather than in the row: the menu that opens one sits
+  // at this level, and a memoized row cannot be told to open itself from outside.
+  const [renaming, setRenaming] = useState<string | null>(null)
   // A group opens the first time it is seen, and can be folded afterwards: made by ⌘G it would
   // otherwise swallow the very nodes just put into it, and the outliner would look like it had
   // lost them. Folding it again has to stick, so this happens once per group and not per render.
@@ -70,12 +74,25 @@ export function SceneTree({ documentId }: { documentId: string }) {
           return next
         })
       }
+      // Through the tree rather than from the row, as the layer stack does: it holds the
+      // `preventDefault` a right-click needs — without it the system raises its clipboard menu
+      // over ours — and the guard that leaves a right-click inside the rename field to that one.
+      // The root answers nothing: it stands for the scene, which has no name and no delete.
+      onContextMenu={item => {
+        if (!item.node) return
+        const nodeId = item.node.id
+        openSceneNodeMenu({ documentId, nodeId, t, onRename: () => setRenaming(nodeId) })
+      }}
       renderRow={({ node: item }) =>
         item.node ? (
           <SceneNodeRow
             documentId={documentId}
             node={item.node}
             visibleLabel={t('scene.visible')}
+            renameLabel={t('scene.rename')}
+            renaming={renaming === item.id}
+            onRename={() => setRenaming(item.id)}
+            onRenamed={() => setRenaming(null)}
           />
         ) : (
           <Row icon={mdiCubeOutline} title={t('scene.root')} />

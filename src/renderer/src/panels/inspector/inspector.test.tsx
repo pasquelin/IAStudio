@@ -25,7 +25,7 @@ import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 
@@ -777,5 +777,37 @@ describe('the inspector on an imported model', () => {
     await userEvent.click(screen.getByRole('button', { name: /Remplacer un canal/ }))
 
     expect(screen.getAllByText('Celle du fichier')).toHaveLength(TEXTURE_SLOTS.length)
+  })
+})
+
+/**
+ * The 3D space held its selection in the scene alone, where this panel never looked — so the
+ * asset clicked to import a model went on being described for as long as the tab stayed open,
+ * whatever was picked in the outliner or in the viewport afterwards.
+ */
+describe('the inspector and what is picked in a scene', () => {
+  beforeEach(() => {
+    useSelection.getState().clear()
+  })
+
+  it('describes the node picked in the scene, over the asset picked in the browser before it', () => {
+    install(meshNode('box-1'), false)
+    useSelection.getState().selectAssets(['asset-1'])
+    selectIn('doc-1', ['box-1'])
+    render(<Content />)
+
+    expect(screen.getByText('Géométrie')).toBeInTheDocument()
+  })
+
+  // The scene's own face is what a click in the void leaves: its environment is read there, and
+  // there is nowhere else to read it.
+  it('falls back to the scene itself when the pick lands in the void', () => {
+    install(meshNode('box-1'))
+    useSelection.getState().selectAssets(['asset-1'])
+    selectIn('doc-1', [])
+    render(<Content />)
+
+    expect(screen.getByText('Environnement')).toBeInTheDocument()
+    expect(screen.queryByText('Géométrie')).not.toBeInTheDocument()
   })
 })

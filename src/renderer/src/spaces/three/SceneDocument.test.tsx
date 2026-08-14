@@ -5,7 +5,8 @@ import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import type { SceneExportCommand } from '@shared/ipc'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { forgetReportedFailures } from '@/services/diagnostics'
-import { bridgeWatchingLogs } from '@/services/fake-bridge'
+import { fakeMenu } from '@/helpers/menu-fixtures'
+import { bridgeWatchingLogs, installFakeBridge } from '@/services/fake-bridge'
 import { addNode } from '@/engines/scene/commands'
 import { meshNode } from '@/engines/scene/scene-fixtures'
 import type { SceneNode } from '@/engines/scene/scene-state'
@@ -541,6 +542,25 @@ describe('SceneDocument and the timeline over the scene', () => {
     built.at(-1)?.onTransform([{ id: 'box-1', transform: moved(3) }])
 
     expect(nodesOf('doc-1').find(node => node.id === 'box-1')?.transform.position.x).toBe(3)
+  })
+})
+
+describe('SceneDocument and a node right-clicked in the viewport', () => {
+  /**
+   * What decides that a right-click WAS a click — brief, still, and no motion key held — lives in
+   * the engine, which needs a WebGL context and a ray to exercise: it is checked on screen rather
+   * than here. This covers the half a test can reach: the document raises the menu it reports.
+   */
+  it('raises the node menu the viewport reports, without a rename it could not open', async () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.('box-1')
+
+    await vi.waitFor(() => expect(menu.labels()).toContain('Supprimer'))
+    expect(menu.labels()).not.toContain('Renommer l’objet')
   })
 })
 

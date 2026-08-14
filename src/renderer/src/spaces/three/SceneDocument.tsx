@@ -3,6 +3,7 @@ import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat } from '@shared/domain/scene'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
 import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
@@ -31,6 +32,7 @@ import { nextDisplayMode } from '@/engines/scene/scene-view'
 import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
+import { openSceneNodeMenu } from './SceneNodeMenu'
 import { ScenePaneGrid } from './ScenePaneGrid'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -80,8 +82,10 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
 const MESHES: readonly AssetType[] = ['mesh']
 
 export function SceneDocument({ documentId }: { documentId: string }) {
+  const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
+  const translate = useRef(t)
   const [mode, setMode] = useState<TransformMode>('select')
   // Session state, like the mode: a document that remembered its snapping would impose it on
   // whoever opens it next.
@@ -110,6 +114,12 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     if (title) setDocumentTitle(documentId, title, modified)
   }, [documentId, title, modified])
 
+  // Read at click time rather than captured by the engine: the renderer is built once per
+  // document, and a language changed afterwards would leave its menu in the old one.
+  useEffect(() => {
+    translate.current = t
+  }, [t])
+
   useEffect(() => {
     const element = host.current
     if (!element) return
@@ -123,6 +133,8 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         useModelClips.getState().report(documentId, nodeId, clips, lengths),
       onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
+      // No rename row: a viewport draws no name to type over — see `openSceneNodeMenu`.
+      onContextMenu: nodeId => openSceneNodeMenu({ documentId, nodeId, t: translate.current }),
       onStats: (scene, selected) => setStats({ scene, selected }),
       assetVersion: assetVersionOf,
     })
