@@ -1,4 +1,7 @@
+import { mdiLinkVariant, mdiLinkVariantOff } from '@mdi/js'
 import {
+  badgeAt,
+  BADGE_SIZE,
   CLIP_INSET,
   EDGE_BAR_INSET,
   EDGE_BAR_WIDTH,
@@ -10,6 +13,7 @@ import {
   visibleRange,
   type Viewport,
 } from './timeline-geometry'
+import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
 import { paintRuler as paintBandRuler } from './ruler'
 import {
   clipEnd,
@@ -20,11 +24,39 @@ import {
   type Us,
 } from './timeline-state'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
-import type { Size } from '../core/geometry'
+import type { Point, Size } from '../core/geometry'
 import { waveformColumns, type WaveColumn } from './waveform'
 
 /** Poster width, as a multiple of the row height. Sixteen by nine, near enough to read a shot. */
 const POSTER_RATIO = 16 / 9
+
+/**
+ * The mark a clip wears in its corner: whether it still travels with its other half — the
+ * picture of a rush and its sound, which `linkId` ties together.
+ *
+ * Both states are drawn, and that is the point: nothing on the strip said which pairs were still
+ * tied, and a mark shown only when linked cannot be told from a mark nobody drew.
+ */
+const LINK_GLYPHS: Record<'tied' | 'alone', string> = {
+  tied: mdiLinkVariant,
+  alone: mdiLinkVariantOff,
+}
+
+/** Which fill a row's clips take. Keyed by kind, so a third one cannot be added without one. */
+const CLIP_FILLS: Record<TrackKind, 'clip' | 'clipAudio'> = {
+  video: 'clip',
+  audio: 'clipAudio',
+}
+
+/** An `@mdi/js` glyph, drawn at `BADGE_SIZE` with its top left corner where the badge sits. */
+function paintGlyph(context: CanvasRenderingContext2D, glyph: string, at: Point): void {
+  const scale = BADGE_SIZE / MDI_VIEWBOX
+  context.save()
+  context.translate(at.x, at.y)
+  context.scale(scale, scale)
+  context.fill(mdiPath(glyph))
+  context.restore()
+}
 
 const CLIP_FAMILY = 'ui-sans-serif, system-ui'
 const RULER_FAMILY = 'ui-monospace, monospace'
@@ -48,6 +80,7 @@ type Palette = {
   trackAlt: string
   border: string
   clip: string
+  clipAudio: string
   selected: string
   playhead: string
   text: string
@@ -62,6 +95,7 @@ const readPalette = memoPalette((): Palette => ({
   trackAlt: rootColour('--color-surface'),
   border: rootColour('--color-border'),
   clip: rootColour('--color-elevated'),
+  clipAudio: rootColour('--color-clip-audio'),
   selected: rootColour('--color-accent-soft'),
   playhead: rootColour('--color-accent'),
   text: rootColour('--color-text'),
@@ -231,7 +265,9 @@ function paintClip(
   const boxTop = top + CLIP_INSET
   const boxHeight = height - CLIP_INSET * 2 - 1
 
-  context.fillStyle = selected ? palette.selected : palette.clip
+  // Selection wins over the kind: a picked clip has to read as picked, and two greens would say
+  // less than one blue does.
+  context.fillStyle = selected ? palette.selected : palette[CLIP_FILLS[kind]]
   context.fillRect(left, boxTop, right - left, boxHeight)
 
   context.save()
@@ -262,6 +298,18 @@ function paintClip(
 
   context.fillStyle = palette.text
   context.fillText(label, left + 6, boxTop + 4)
+
+  // From the row's top, not the box's: the placement is measured against the bands `hitTest`
+  // reads, and those are the row's.
+  const badge = badgeAt(left, right, top)
+  if (badge) {
+    // Full ink for a pair that holds, the quiet one for a clip standing alone: the state is read
+    // from the glyph, and the ink only says which of the two is the ordinary case. A picked clip
+    // lifts to the label's ink as the waveform and the grips do — `muted` on `accent-soft` is
+    // the one pairing this palette does not carry.
+    context.fillStyle = selected || clip.linkId ? palette.text : palette.muted
+    paintGlyph(context, LINK_GLYPHS[clip.linkId ? 'tied' : 'alone'], badge)
+  }
   context.restore()
 
   context.fillStyle = palette.border

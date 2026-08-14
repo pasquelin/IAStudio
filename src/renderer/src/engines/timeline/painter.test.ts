@@ -42,6 +42,11 @@ function spyContext() {
   const lines: Point[] = []
   const images: Rect[] = []
 
+  // The glyphs drawn from an `@mdi/js` path, with where and in what ink. `Path2D` is a holder
+  // under jsdom (`test-setup`), so what comes back is the `d` string the painter chose.
+  const glyphs: { d: string; x: number; y: number; ink: string }[] = []
+  let origin: Point = { x: 0, y: 0 }
+
   const context = {
     fillStyle: '',
     font: '',
@@ -51,7 +56,12 @@ function spyContext() {
     restore: vi.fn(),
     beginPath: vi.fn(),
     closePath: vi.fn(),
-    fill: vi.fn(),
+    translate: vi.fn((x: number, y: number) => void (origin = { x, y })),
+    scale: vi.fn(),
+    fill: vi.fn((path?: { d?: string }) => {
+      // Called bare for the waveform and the fades, with a path only for a glyph.
+      if (path?.d) glyphs.push({ d: path.d, ...origin, ink })
+    }),
     moveTo: vi.fn((x: number, y: number) => lines.push({ x, y })),
     lineTo: vi.fn((x: number, y: number) => lines.push({ x, y })),
     rect: vi.fn(),
@@ -90,6 +100,7 @@ function spyContext() {
     lines,
     images,
     fonts,
+    glyphs,
   }
 }
 
@@ -378,5 +389,95 @@ describe('timeline painter', () => {
     paintTimeline(context, stateWith([clip('a', 0, 80_000)]), viewport, size)
 
     expect(rects.filter(rect => rect.width === EDGE_BAR_WIDTH)).toHaveLength(0)
+  })
+
+  /**
+   * Sentinel colours rather than the palette's own: what this holds is that the two kinds read
+   * their own token. The greens themselves are measured in `design/tokens.test.ts`, against the
+   * label and the waveform that have to stay legible on them.
+   */
+  it('fills a sound clip with its own colour, so a scrolled montage reads without labels', () => {
+    document.documentElement.style.setProperty('--color-elevated', 'rgb(1, 2, 3)')
+    document.documentElement.style.setProperty('--color-clip-audio', 'rgb(4, 5, 6)')
+    refreshPalette()
+
+    // Restored even on a failed assertion, as above: the palette is a module cache.
+    try {
+      const boxInk = (painted: { rects: Rect[]; inks: string[] }): string | undefined =>
+        painted.inks[painted.rects.findIndex(rect => rect.width === 100)]
+
+      const one = clip('a', 0, 1_000_000)
+      const picture = spyContext()
+      paintTimeline(picture.context, stateWith([one]), viewport, size)
+
+      const sound = spyContext()
+      paintTimeline(sound.context, soundWith([one]), viewport, size)
+
+      expect(boxInk(picture)).toBe('rgb(1, 2, 3)')
+      expect(boxInk(sound)).toBe('rgb(4, 5, 6)')
+    } finally {
+      document.documentElement.style.removeProperty('--color-elevated')
+      document.documentElement.style.removeProperty('--color-clip-audio')
+      refreshPalette()
+    }
+  })
+
+  it('keeps a picked sound clip picked, rather than saying its kind twice', () => {
+    document.documentElement.style.setProperty('--color-accent-soft', 'rgb(7, 8, 9)')
+    document.documentElement.style.setProperty('--color-clip-audio', 'rgb(4, 5, 6)')
+    refreshPalette()
+
+    try {
+      const one = clip('a', 0, 1_000_000)
+      const { context, rects, inks } = spyContext()
+      paintTimeline(context, { ...soundWith([one]), selectedId: 'a' }, viewport, size)
+
+      expect(inks[rects.findIndex(rect => rect.width === 100)]).toBe('rgb(7, 8, 9)')
+    } finally {
+      document.documentElement.style.removeProperty('--color-accent-soft')
+      document.documentElement.style.removeProperty('--color-clip-audio')
+      refreshPalette()
+    }
+  })
+})
+
+describe('the mark saying a clip travels with its other half', () => {
+  const paintOne = (one: Clip) => {
+    const painted = spyContext()
+    paintTimeline(painted.context, stateWith([one]), viewport, size)
+    return painted.glyphs
+  }
+
+  /**
+   * Both states are drawn, and that is what makes either readable: a mark shown only for a pair
+   * that holds cannot be told from a mark nobody drew.
+   */
+  it('wears a different glyph for a pair that holds and for a clip standing alone', () => {
+    const [tied] = paintOne(clip('a', 0, 1_000_000, { linkId: 'take-1' }))
+    const [single] = paintOne(clip('a', 0, 1_000_000))
+
+    expect(tied?.d).toBeTruthy()
+    expect(single?.d).toBeTruthy()
+    expect(tied?.d).not.toBe(single?.d)
+  })
+
+  it('inks a pair that holds like a label, and a clip standing alone like a hint', () => {
+    document.documentElement.style.setProperty('--color-text', 'rgb(1, 2, 3)')
+    document.documentElement.style.setProperty('--color-muted', 'rgb(4, 5, 6)')
+    refreshPalette()
+
+    try {
+      expect(paintOne(clip('a', 0, 1_000_000, { linkId: 'take-1' }))[0]?.ink).toBe('rgb(1, 2, 3)')
+      expect(paintOne(clip('a', 0, 1_000_000))[0]?.ink).toBe('rgb(4, 5, 6)')
+    } finally {
+      document.documentElement.style.removeProperty('--color-text')
+      document.documentElement.style.removeProperty('--color-muted')
+      refreshPalette()
+    }
+  })
+
+  it('is left off a clip it would take whole', () => {
+    // 200 ms is 20 px wide, under the three badge widths a corner mark asks of a clip.
+    expect(paintOne(clip('a', 0, 200_000))).toHaveLength(0)
   })
 })

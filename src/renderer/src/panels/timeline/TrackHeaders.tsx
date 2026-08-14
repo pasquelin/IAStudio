@@ -4,12 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'
-import { addTrack, renameTrack } from '@/engines/timeline/commands'
+import { renameTrack } from '@/engines/timeline/commands'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import {
   clampTrackHeight,
   playsThrough,
-  TRACK_KINDS,
   type SequenceState,
   type Track,
 } from '@/engines/timeline/timeline-state'
@@ -19,7 +18,7 @@ import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { TRACK_FLAGS, TRACK_KIND_ICONS } from './track-flags'
+import { TRACK_FLAGS } from './track-flags'
 import { TrackMenu, TrackMenuRows, TRACK_MENU_ROWS } from './TrackMenu'
 
 export type TrackHeadersProps = { documentId: string }
@@ -53,31 +52,6 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
           ))}
         </div>
       </div>
-      <AddTrackBar documentId={documentId} />
-    </div>
-  )
-}
-
-/**
- * The one place a track is born, at the foot of the column it will join. One button per kind
- * rather than one button that guesses: a video track and an audio track are not the same row,
- * and a sequence can legitimately want either.
- */
-function AddTrackBar({ documentId }: TrackHeadersProps) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="border-border flex shrink-0 items-center gap-0.5 border-t px-1.5 py-1">
-      {TRACK_KINDS.map(kind => (
-        <ToolButton
-          key={kind}
-          icon={TRACK_KIND_ICONS[kind]}
-          label={t(`timeline.addTrack.${kind}`)}
-          tooltip={TIP_RIGHT}
-          variant="header"
-          onClick={() => useSequences.getState().runCommand(documentId, addTrack(kind))}
-        />
-      ))}
     </div>
   )
 }

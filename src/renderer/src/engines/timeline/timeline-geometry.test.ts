@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  badgeAt,
+  BADGE_SIZE,
   cursorAt,
   edgeGrab,
   EDGE_GRAB,
@@ -19,6 +21,7 @@ import {
 } from './timeline-geometry'
 import { sequenceWith, trackFixture } from './timeline-fixtures'
 import {
+  clipEnd,
   DEFAULT_TRACK_HEIGHT,
   EMPTY_SEQUENCE,
   makeClip,
@@ -253,5 +256,47 @@ describe('hit testing', () => {
     const state = sequenceWith([trackFixture('V1', 'video'), trackFixture('A1', 'audio')])
 
     expect(rowAt(state, scrolled, RULER_HEIGHT + 10)?.track.id).toBe('A1')
+  })
+})
+
+describe('the corner a clip wears its mark in', () => {
+  /**
+   * The rule the placement exists for: every pixel of the mark answers as the clip itself, so
+   * pressing it neither trims nor opens a fade.
+   *
+   * The fade is what makes this worth a test rather than a comment. A first version measured the
+   * mark against the clip's END and passed — with a clip that had no fade. A handle sits at
+   * `clipEnd - fadeOut`, so it walks INTO the clip as the ramp grows, and at a tenth of a second
+   * it was under the mark: nine of its ten pixels started a fade drag.
+   */
+  const marked = (one: Clip): (string | undefined)[] => {
+    const state = stateWith([one])
+    const badge = badgeAt(
+      timeToX(one.start, viewport),
+      timeToX(clipEnd(one), viewport),
+      RULER_HEIGHT,
+    )
+    expect(badge).not.toBeNull()
+
+    const { x = 0, y = 0 } = badge ?? {}
+    return [x, x + BADGE_SIZE / 2, x + BADGE_SIZE].map(
+      at => hitTest(state, viewport, { x: at, y })?.kind,
+    )
+  }
+
+  it('answers as the clip across its whole width', () => {
+    expect(marked(clip('a', 0, 1_000_000))).toEqual(['clip', 'clip', 'clip'])
+  })
+
+  it('stays clear of a fade handle that has walked into the clip', () => {
+    expect(
+      marked(
+        makeClip({ id: 'a', assetId: 'asset-a', start: 0, duration: 1_000_000, fadeOut: 150_000 }),
+      ),
+    ).toEqual(['clip', 'clip', 'clip'])
+  })
+
+  it('is left off a clip it would take whole', () => {
+    expect(badgeAt(0, 20, RULER_HEIGHT)).toBeNull()
   })
 })

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
-import { assetsById, useAssets } from './assets'
+import { assetsById, forgetRememberedAssets, useAssets } from './assets'
 
 function asset(id: string, name: string): Asset {
   return { id, name, type: 'image', location: 'local', tags: [], createdAt: '2026-08-07' }
@@ -9,6 +9,8 @@ function asset(id: string, name: string): Asset {
 
 describe('assetsById', () => {
   beforeEach(() => {
+    // This project runs without `test-setup`, which is where the renderer's cases get it.
+    forgetRememberedAssets()
     useAssets.setState({ items: [] })
   })
 
@@ -38,6 +40,32 @@ describe('assetsById', () => {
 
     expect(after).not.toBe(before)
     expect(after.get('a')?.name).toBe('Renamed')
+  })
+
+  /**
+   * The defect this closes: filtering the browser to meshes narrows the catalogue the store
+   * holds, and a montage of video clips lost its names, its stills and the lengths a trim clamps
+   * against — all three read through this index.
+   */
+  it('still answers for an asset the browsing scope has dropped', () => {
+    useAssets.setState({ items: [asset('a', 'One')] })
+    assetsById(useAssets.getState())
+
+    useAssets.setState({ items: [asset('mesh', 'A mesh')] })
+    const narrowed = assetsById(useAssets.getState())
+
+    expect(narrowed.get('a')?.name).toBe('One')
+    expect(narrowed.get('mesh')?.name).toBe('A mesh')
+  })
+
+  it('forgets what it remembered when the harness asks', () => {
+    useAssets.setState({ items: [asset('a', 'One')] })
+    assetsById(useAssets.getState())
+
+    forgetRememberedAssets()
+    useAssets.setState({ items: [] })
+
+    expect(assetsById(useAssets.getState()).get('a')).toBeUndefined()
   })
 })
 

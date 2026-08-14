@@ -72,14 +72,36 @@ function sameScope(
  * The result is cached on the identity of `items`, so it is a stable value for zustand — a
  * fresh Map per call would re-render every subscriber on every notification. Five panels were
  * scanning the whole list for one asset, per render and per catalogue event.
+ *
+ * **It keeps every asset it has been shown, not only the ones `items` currently holds.** `items`
+ * is a SCOPE — the kinds the browser is asking for — and narrowing that facet to meshes used to
+ * take the names, the posters and the media lengths off the clips of an open montage: the strip
+ * fell back to raw ids, lost its stills, and a trim stopped clamping at the end of the source.
+ * A way of browsing is not a statement about what a document holds.
  */
 let indexed: { items: readonly Asset[]; byId: ReadonlyMap<string, Asset> } | null = null
 
 export function assetsById(state: Pick<AssetsState, 'items'>): ReadonlyMap<string, Asset> {
   if (!indexed || indexed.items !== state.items) {
-    indexed = { items: state.items, byId: new Map(state.items.map(asset => [asset.id, asset])) }
+    // Over what it already held, not from `items` alone: that is the remembering. A fresh Map
+    // each time is what hands zustand a changed identity, so the scope's own rows still win.
+    const byId = new Map(indexed?.byId)
+    for (const asset of state.items) byId.set(asset.id, asset)
+    indexed = { items: state.items, byId }
   }
   return indexed.byId
+}
+
+/**
+ * Drops what the index remembers — every asset of the project being left.
+ *
+ * Called by `followProject`, beside `forgetReportedFailures` and for the same reason: another
+ * project's catalogue is another story, and this map has no other way to shrink. The test
+ * harness calls it too, as it calls `cancelInvalidate`: the map lives at module scope, so an
+ * asset one case puts in the catalogue would still answer a lookup in the next one.
+ */
+export function forgetRememberedAssets(): void {
+  indexed = null
 }
 
 /**

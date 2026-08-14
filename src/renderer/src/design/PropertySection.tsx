@@ -1,7 +1,7 @@
 import { mdiChevronDown, mdiChevronRight } from '@mdi/js'
 import { useState, type ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { FOCUS_RING } from './styles'
+import { FOCUS_RING, PROPERTY_BODY } from './styles'
 import { UiIcon } from './UiIcon'
 import { HINT_LEFT } from '@/helpers/tooltip'
 import { useTranslation } from 'react-i18next'
@@ -37,7 +37,7 @@ export function PropertySection({ title, children, defaultOpen = true }: Propert
 
       {/* Unmounted rather than hidden: a folded section keeps no field mounted, and a scene with
           six sections folded costs nothing to render. */}
-      {open && <div className="flex flex-col gap-2 px-2 pt-1 pb-2">{children}</div>}
+      {open && <div className={PROPERTY_BODY}>{children}</div>}
     </section>
   )
 }

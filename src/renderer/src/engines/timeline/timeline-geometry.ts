@@ -55,6 +55,10 @@ export const CLIP_INSET = 2
 export const EDGE_BAR_WIDTH = 3
 /** How far the bar stops short of a clip's bottom, so it reads as a grip and not as a wall. */
 export const EDGE_BAR_INSET = 3
+/** Side of the mark a clip wears in its corner — the one saying whether it travels with a pair. */
+export const BADGE_SIZE = 10
+/** Narrower than this and the mark would BE the clip, which says nothing about a corner. */
+const BADGE_MIN_CLIP_WIDTH = BADGE_SIZE * 3
 
 export type SnapContext = {
   settings: SequenceSettings
@@ -119,6 +123,27 @@ export function fadeHandleTime(clip: Clip, edge: ClipEdge): Us {
  */
 export function edgeGrab(width: number): number {
   return Math.min(EDGE_GRAB, (width * (1 - BODY_SHARE)) / 2)
+}
+
+/**
+ * Where a clip carries its corner mark, measured from the top of its ROW — the same origin
+ * `hitTest` reads, so the two cannot disagree about what `top` means. Nothing for a clip too
+ * narrow to hold one.
+ *
+ * Decided here rather than by the painter for the reason this whole file exists: it is the only
+ * place that knows which pixels belong to which gesture, and both of the marks a corner could
+ * take are already spoken for. **Below the fade band**, exactly as the edge bar is: a fade handle
+ * sits at `clip.start + fadeIn` and at `clipEnd - fadeOut`, so it MOVES INTO the clip as the fade
+ * grows — a mark placed against the clip's end clears it at zero and is drawn straight onto it at
+ * a tenth of a second. And one pixel past the edge grab, whose comparison is inclusive, so the
+ * mark never covers the trim either.
+ *
+ * The row always has the room: `MIN_TRACK_HEIGHT` is 28 against the 22 the band and the mark take.
+ */
+export function badgeAt(left: number, right: number, top: number): Point | null {
+  if (right - left < BADGE_MIN_CLIP_WIDTH) return null
+
+  return { x: right - edgeGrab(right - left) - BADGE_SIZE - 1, y: top + FADE_BAND }
 }
 
 /**

@@ -36,9 +36,14 @@ describe('the label column of a property line', () => {
     expect(propertyRow).toContain('export function PropertyRow')
   })
 
+  /**
+   * Read from the constant now, not spelt out a second time: the row wears `FIELD_LABEL` itself,
+   * which is what "one gauge" was always after — the two spellings had converged to the byte,
+   * and two identical strings are still two things to keep in step.
+   */
   it('is one gauge, read by both families rather than written twice', () => {
     expect(FIELD_LABEL).toContain('w-(--sc-label)')
-    expect(propertyRow).toContain('w-(--sc-label)')
+    expect(propertyRow).toContain('FIELD_LABEL')
   })
 
   /** The lookbehind keeps `min-w-0` out of it: a minimum of zero is not a column width. */
@@ -61,7 +66,7 @@ describe('the label column of a property line', () => {
   /** Same height too, or two lines of the same list are not the same height. */
   it('gives both families the height of a control', () => {
     expect(FIELD_ROW).toContain('min-h-(--sc-control)')
-    expect(propertyRow).toContain('min-h-(--sc-control)')
+    expect(propertyRow).toContain('FIELD_ROW')
   })
 })
 

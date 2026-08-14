@@ -237,6 +237,16 @@ export const FILLED_ROW_HEIGHT = 44
 export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
 
 /**
+ * The body of a titled run of properties — `PropertyGroup`'s and `PropertySection`'s alike.
+ *
+ * One string because the inspector shows both, one under the other, and a reader takes them for
+ * one panel: a group whose rows touched while a section two boxes down breathed reads as a bug in
+ * the panel rather than as two components. They were kept in step by a comment saying "the same
+ * gap as", which is what this closes.
+ */
+export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
+
+/**
  * One property row of an inspector: a label of fixed width, then the control it names.
  *
  * The gap is two, never one: at one the label, the track and the number read as a single

@@ -8,7 +8,7 @@ import { getBridge } from '@/services/bridge'
 import { forgetReportedFailures } from '@/services/diagnostics'
 import { useSettings } from './settings'
 import { useActivity } from './activity'
-import { useAssets } from './assets'
+import { forgetRememberedAssets, useAssets } from './assets'
 import { useLayouts } from './layouts'
 import { useSceneClipboard } from './scene-clipboard'
 
@@ -83,6 +83,12 @@ async function followProject(project: Project | null): Promise<void> {
     refreshDocuments(),
     useActivity.getState().reload(),
   ])
+
+  // AFTER the catalogue has been read, never before it: the by-id index remembers every asset it
+  // has been shown — so that a browsing facet cannot take the names off an open montage — and
+  // until `refresh` answers, `items` still holds the rows of the project being left. Forgetting
+  // first leaves any render in that window putting them straight back, for the session's life.
+  forgetRememberedAssets()
 
   // Last, and only on a folder that answered: the reconciliation above is what says which tabs
   // have a document, and a listing that failed says nothing about any of them.

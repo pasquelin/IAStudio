@@ -817,6 +817,10 @@
       "video": "Ajouter une piste vidéo",
       "audio": "Ajouter une piste audio"
     },
+    "addTrackHint": {
+      "video": "Ajoute une piste vidéo vide au bas de la colonne",
+      "audio": "Ajoute une piste audio vide au bas de la colonne"
+    },
     "trackActions": "Actions de la piste {{name}}",
     "trackActionsHint": "Déplacer la piste dans la pile, ou la retirer avec ce qu’elle porte",
     "moveTrackUp": "Monter la piste",

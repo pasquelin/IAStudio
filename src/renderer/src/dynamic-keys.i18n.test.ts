@@ -34,9 +34,10 @@ function resolve(code: Language, key: string): unknown {
  * `inspector.layerKind_text` where a word belongs.
  */
 const COMPOSED_KEYS: readonly string[] = [
-  // One button per kind at the foot of the column, and the label composed from the kind. The
-  // union lives in the renderer, so its check does too — beside the list it derives from.
+  // One button per kind in the timeline's bar, and the label composed from the kind. The union
+  // lives in the renderer, so its check does too — beside the list it derives from.
   ...TRACK_KINDS.map(kind => `timeline.addTrack.${kind}`),
+  ...TRACK_KINDS.map(kind => `timeline.addTrackHint.${kind}`),
   ...ADJUSTMENT_KINDS.map(kind => `adjustment.${kind}`),
   // The sentence beside each of them. A menu row explains what it does, and the explanation is
   // composed the same way the label is — so it goes missing the same way, and is caught here.

@@ -410,6 +410,26 @@ describe('the contrast of the inks', () => {
   })
 
   /**
+   * The green a sound clip is filled with, held against BOTH inks the strip paints on it: the
+   * clip's name in `text`, at the 4.5 of WCAG 1.4.3, and its waveform in `muted`, at the 3 of
+   * 1.4.11 — a shape rather than a word, and the one that decided how green the green could be.
+   *
+   * Measured rather than eyeballed because a canvas escapes every other rule in this file: the
+   * painter reads these tokens through `engines/core/palette.ts`, so no class names them and no
+   * sweep above composes them.
+   */
+  it('carries a sound clip the strip can be read on, in both themes', () => {
+    for (const theme of THEMES) {
+      const tokens = palette(theme.from)
+      const green = tokens['clip-audio'] ?? ''
+
+      expect(green).toMatch(/^#[0-9a-f]{6}$/)
+      expect(contrastRatio(tokens.text ?? '', green)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT)
+      expect(contrastRatio(tokens.muted ?? '', green)).toBeGreaterThanOrEqual(AA_NON_TEXT)
+    }
+  })
+
+  /**
    * The one ink in the studio that is darker than its fill on one theme and lighter on the other.
    * Held at AA rather than at the 3:1 of WCAG 1.4.11 that a glyph would need: the rail's plus is
    * a glyph today, and a token that only ever cleared the glyph bar would be the wrong thing to

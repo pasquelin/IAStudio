@@ -1,8 +1,6 @@
 import { MENU_ICON_SIZE } from '@shared/domain/context-menu'
 import { THEME_ATTRIBUTE } from '@shared/domain/settings'
-
-/** The box every `@mdi/js` path is drawn in. */
-const VIEWBOX = 24
+import { MDI_VIEWBOX, mdiPath } from './mdi-canvas'
 
 /** Drawn once per glyph and colour: a menu is raised again and again over the same rows. */
 const drawn = new Map<string, string>()
@@ -23,12 +21,11 @@ function ink(): string {
  * An `@mdi/js` path as a PNG the system's menu can draw.
  *
  * `nativeImage` reads no SVG, so the glyph has to arrive as a bitmap, and only this side can
- * make one — the main process has no canvas. `Path2D` takes the very same `d` string the icons
- * are declared with, which is what keeps a menu row's glyph the one `UiIcon` draws beside it
- * rather than a second copy that can drift.
+ * make one — the main process has no canvas. The path itself comes from `mdiPath`, the same one
+ * the timeline paints with.
  *
  * Answers `undefined` where there is no canvas to draw on, and the menu is then popped without
- * glyphs — which is how the tests see it, and what a browser too old for `Path2D` would get.
+ * glyphs — which is how the tests see it.
  */
 export function menuIcon(path: string): string | undefined {
   // No DOM at all where the helpers run without a browser, which is most of this folder's tests.
@@ -47,10 +44,10 @@ export function menuIcon(path: string): string | undefined {
   const context = canvas.getContext('2d')
   if (!context) return undefined
 
-  const scale = MENU_ICON_SIZE / VIEWBOX
+  const scale = MENU_ICON_SIZE / MDI_VIEWBOX
   context.scale(scale, scale)
   context.fillStyle = colour
-  context.fill(new Path2D(path))
+  context.fill(mdiPath(path))
 
   const url = canvas.toDataURL('image/png')
   drawn.set(key, url)
