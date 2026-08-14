@@ -8,6 +8,7 @@ import {
   type NativeImage,
   type WebContents,
 } from 'electron'
+import { MENU_ICON_SCALE } from '@shared/domain/context-menu'
 import { TRANSLATIONS } from '@shared/i18n'
 import { CHANNELS } from '@shared/ipc'
 import { handle } from '@main/ipc/handle'
@@ -93,7 +94,7 @@ export function registerFieldMenu(): void {
  */
 function glyph(dataURL: string): NativeImage {
   const image = nativeImage.createEmpty()
-  image.addRepresentation({ scaleFactor: 2, dataURL })
+  image.addRepresentation({ scaleFactor: MENU_ICON_SCALE, dataURL })
   image.setTemplateImage(true)
   return image
 }

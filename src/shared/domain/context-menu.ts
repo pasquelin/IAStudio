@@ -30,5 +30,10 @@ export type ContextMenuItem = {
   tooltip?: string
 }
 
-/** How wide the window draws a menu icon, in device pixels: a 16 pt row at `@2x`. */
+/**
+ * How wide the window draws a menu icon, in device pixels, and at what density the main process
+ * files it. The two go together and are read from here on both sides: 32 physical pixels filed
+ * as `@2x` is a 16 pt glyph, and either number changed alone draws the icon at the wrong size.
+ */
 export const MENU_ICON_SIZE = 32
+export const MENU_ICON_SCALE = 2
