@@ -15,5 +15,5 @@ export function TimelineActions() {
   if (sceneId) return <AnimationActions documentId={sceneId} />
   if (!documentId) return null
 
-  return <SequenceActions />
+  return <SequenceActions documentId={documentId} />
 }

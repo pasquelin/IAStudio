@@ -7,7 +7,7 @@ import {
   type AudioWorkerState,
 } from '@/engines/audio/audio-render'
 import { initI18n } from '@/i18n'
-import { useAssets } from '@/stores/assets'
+import { forgetRememberedAssets, useAssets } from '@/stores/assets'
 
 /**
  * jsdom renders `<dialog>` but implements none of its modal API. Chromium does, and it is
@@ -38,6 +38,27 @@ function polyfillCanvas(): void {
   // `as`: the real method is overloaded per context id, and none of them accepts "always null".
   HTMLCanvasElement.prototype.getContext = (() =>
     null) as unknown as HTMLCanvasElement['getContext']
+}
+
+/**
+ * jsdom ships no `Path2D` either, and the strip paints one per clip — the mark saying whether it
+ * travels with its pair. Filled here rather than guarded in the painter: a `typeof` check in a
+ * draw loop is a production branch no real renderer takes, and it would leave the one thing the
+ * suite could not assert being that the mark is painted at all.
+ *
+ * A holder, not an implementation: nothing under test draws pixels — `getContext` above answers
+ * null — so what a case reads back is which path object reached `fill`.
+ */
+function polyfillPath2D(): void {
+  if ('Path2D' in globalThis) return
+
+  class Path2DHolder {
+    constructor(readonly d?: string) {}
+  }
+
+  // `as`: the real constructor also takes a `Path2D` and carries the drawing methods, none of
+  // which a jsdom case can reach.
+  globalThis.Path2D = Path2DHolder as unknown as typeof globalThis.Path2D
 }
 
 /**
@@ -126,6 +147,7 @@ configure({ asyncUtilTimeout: AWAITED_QUERY_MS })
 // At module scope, not in `beforeAll`: a component rendered while a test file is imported
 // would already have asked for a context by then.
 polyfillCanvas()
+polyfillPath2D()
 polyfillPointerAndDrag()
 polyfillWorker()
 
@@ -276,3 +298,10 @@ afterEach(cleanup)
  * flight has to await it; no teardown can await it for them.
  */
 afterEach(() => useAssets.getState().cancelInvalidate())
+
+/**
+ * Nor may it leave an asset behind. `assetsById` remembers every asset it has been shown, so that
+ * a browsing facet cannot take the names off an open document — which also means an asset one
+ * case puts in the catalogue would answer a lookup in the next.
+ */
+afterEach(forgetRememberedAssets)

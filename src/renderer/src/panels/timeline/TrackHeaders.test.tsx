@@ -90,22 +90,6 @@ describe('TrackHeaders', () => {
       transform: 'translateY(-30px)',
     })
   })
-  it('adds a track of each kind from the foot of the column', async () => {
-    render(<TrackHeaders documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste vidéo/ }))
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste audio/ }))
-
-    const ids = sequenceOf(useSequences.getState(), 'doc-1').tracks.map(track => track.id)
-    expect(ids).toEqual(['V1', 'A1', 'V2', 'A2'])
-  })
-
-  it('makes an added track undoable, unlike a mute', async () => {
-    render(<TrackHeaders documentId="doc-1" />)
-    await userEvent.click(screen.getByRole('button', { name: /Ajouter une piste vidéo/ }))
-
-    expect(canUndo(sequenceHistoryOf(useSequences.getState(), 'doc-1'))).toBe(true)
-  })
-
   it('removes a track from its own menu', async () => {
     render(<TrackHeaders documentId="doc-1" />)
     await userEvent.click(screen.getByRole('button', { name: /Actions de la piste V1/ }))

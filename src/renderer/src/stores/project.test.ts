@@ -3,6 +3,7 @@ import type { Project, RecentProject } from '@shared/domain/project'
 import { installFakeBridge } from '@/services/fake-bridge'
 import type { ActivityEntry } from '@shared/domain/activity'
 import { useActivity } from './activity'
+import { assetsById, useAssets } from './assets'
 import { useProject } from './project'
 import { useSettings } from './settings'
 
@@ -115,6 +116,49 @@ describe('settling the tabs of a project being followed', () => {
 
     expect(useActivity.getState().unread).toEqual([TOAST])
     expect(useProject.getState().project?.manifest.name).toBe('Winter')
+  })
+
+  /**
+   * The by-id index remembers every asset it has been shown, so that narrowing the browser's
+   * facet cannot take the names off an open montage. Following another project is the one thing
+   * that says a catalogue is over — without this, its rows answer lookups for the next one.
+   *
+   * Awaited, and that is the case rather than a detail: the forgetting has to happen AFTER the
+   * new catalogue has been read. Until then `items` still holds the rows being left, so a
+   * forget placed first is undone by any render that reads the index in that window.
+   */
+  it('leaves the assets of the project it is leaving behind', async () => {
+    const listeners: ((project: Project | null) => void)[] = []
+    installFakeBridge({
+      project: {
+        onChange: listener => {
+          listeners.push(listener)
+          return () => {}
+        },
+      },
+    })
+    await useProject.getState().connect()
+
+    useAssets.setState({
+      items: [
+        {
+          id: 'a',
+          name: 'One',
+          type: 'image',
+          location: 'local',
+          tags: [],
+          createdAt: '2026-08-14',
+        },
+      ],
+    })
+    expect(assetsById(useAssets.getState()).get('a')).toBeDefined()
+
+    listeners.forEach(listener => listener({ path: '/projects/winter', manifest: MANIFEST }))
+    // The index read while the new catalogue is still being fetched, which is what a panel
+    // rendering in that window does — and what used to put the old rows back for good.
+    assetsById(useAssets.getState())
+
+    await vi.waitFor(() => expect(assetsById(useAssets.getState()).get('a')).toBeUndefined())
   })
 })
 

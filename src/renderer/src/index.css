@@ -135,6 +135,16 @@
    */
   --color-monitor: #000000;
   /*
+   * A sound clip on the strip, where a picture clip stays `elevated`. Colour is what tells the
+   * two apart at a glance on a montage scrolled past its labels — the reading every editing
+   * suite gives its rows.
+   *
+   * Its LUMINANCE is `elevated`'s, near enough: the label is painted in `text` and the waveform
+   * in `muted`, and both are held on this fill by `design/tokens.test.ts`. A greener green would
+   * have taken the waveform under the 3:1 of WCAG 1.4.11.
+   */
+  --color-clip-audio: #264a31;
+  /*
    * Untextured geometry. Its own token and not `--color-muted`, which is a TEXT colour: raising
    * the contrast of a dimmed label would otherwise repaint every mesh in the scene. That is not
    * a hypothesis — `muted` was raised for exactly that reason and this value stayed where it was,
@@ -376,6 +386,9 @@
    * on, whatever the studio's own chrome is doing — the same trade the opaque window makes.
    */
   --color-monitor: #000000;
+  /* The same trade as the dark theme's green: `elevated`'s luminance here, so the label and the
+     waveform read on it exactly as they do on a picture clip. */
+  --color-clip-audio: #d5ecdb;
   /*
    * Restated identically, and for the same reason as the monitor: the marching ants are drawn
    * over the document, not over the studio's chrome, and the document does not change with the

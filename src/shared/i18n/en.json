@@ -817,6 +817,10 @@
       "video": "Add a video track",
       "audio": "Add an audio track"
     },
+    "addTrackHint": {
+      "video": "Adds an empty video track at the foot of the column",
+      "audio": "Adds an empty audio track at the foot of the column"
+    },
     "trackActions": "Actions for track {{name}}",
     "trackActionsHint": "Move the track through the stack, or remove it with what it carries",
     "moveTrackUp": "Move track up",
