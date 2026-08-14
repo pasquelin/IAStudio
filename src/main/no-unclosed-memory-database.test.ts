@@ -82,6 +82,27 @@ function closedNamesOf(argument: ts.Expression | undefined): string[] {
 const tally = (names: readonly string[]): Map<string, number> =>
   names.reduce((counts, name) => counts.set(name, (counts.get(name) ?? 0) + 1), new Map())
 
+/** One suite as the sweep sees it: the path a reader would open, and what the rule refuses in it. */
+type Swept = { path: string; findings: readonly string[] }
+
+/**
+ * The exemptions a sweep no longer justifies — a key naming nothing, or a file the rule now clears.
+ *
+ * A pure function of the sweep rather than an assertion inside the suite, so it can be put in
+ * default WITHOUT touching the tree: handed a made-up sweep it answers the same way. An exemption
+ * kept past its need is worse than none, because it goes on covering whatever the file gains next.
+ */
+export function staleExemptions(swept: readonly Swept[]): string[] {
+  const walked = new Set(swept.map(one => one.path))
+
+  return [
+    ...Object.keys(OWNED_ELSEWHERE).filter(path => !walked.has(path)),
+    ...swept
+      .filter(one => one.path in OWNED_ELSEWHERE && one.findings.length === 0)
+      .map(o => o.path),
+  ]
+}
+
 /** The openings this file never gives back, named where a reader would open the suite. */
 export function unclosedIn(path: string, source: string): string[] {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true)
@@ -163,16 +184,21 @@ describe('every database a suite opens by name is given back', () => {
    * reads true — the day `store.test.ts` names its catalogues, this fails and the entry goes.
    */
   it('carries no exemption the rule would no longer refuse', () => {
-    const swept = sweep()
+    expect(staleExemptions(sweep())).toEqual([])
+  })
 
-    expect(
-      Object.keys(OWNED_ELSEWHERE).filter(path => !swept.some(one => one.path === path)),
-    ).toEqual([])
-    expect(
-      swept
-        .filter(one => one.path in OWNED_ELSEWHERE && one.findings.length === 0)
-        .map(one => one.path),
-    ).toEqual([])
+  /**
+   * The staleness check put in default, on made-up sweeps rather than on the tree.
+   *
+   * Without this, the assertion above is a green nobody has ever seen go red — the failure this
+   * whole file was rewritten three times to avoid.
+   */
+  it('names an exemption whose file the rule has stopped refusing', () => {
+    const exempt = Object.keys(OWNED_ELSEWHERE)
+
+    expect(staleExemptions(exempt.map(path => ({ path, findings: [`${path}:1`] })))).toEqual([])
+    expect(staleExemptions(exempt.map(path => ({ path, findings: [] })))).toEqual(exempt)
+    expect(staleExemptions([{ path: 'main/elsewhere.test.ts', findings: [] }])).toEqual(exempt)
   })
 
   it('reads the fixture that wraps the driver, not only the driver', () => {
