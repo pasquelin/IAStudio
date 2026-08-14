@@ -154,10 +154,8 @@ fois ce que cet asset peut faire, et ce qui manque pour qu’il le fasse.
 **Un asset ouvert par double-clic a son onglet à lui**, dans l’espace qui édite son type : une
 image dans Image, un maillage dans 3D, un son dans Audio. Vous n’avez rien à ouvrir avant.
 
-**Il ne regarde jamais l’onglet que vous avez devant vous**, et c’est délibéré. Le même
-double-clic sur la même image a longtemps voulu dire deux choses — un calque au-dessus d’un
-onglet Image, un ciel au-dessus d’un onglet Skyboxes — et aucune des deux n’était « ouvre cet
-asset ». Une règle sans exception est la seule qu’une main apprenne.
+**Il ne regarde jamais l’onglet que vous avez devant vous** : le double-clic ouvre l’asset dans
+l’espace de son type, quoi qu’il y ait à l’écran.
 
 **Rouvrir le même asset revient à son onglet**, il n’en naît pas un second : deux onglets sur un
 même document sont deux historiques, et la seconde sauvegarde écraserait la première.

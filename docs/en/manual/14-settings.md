@@ -46,7 +46,7 @@ visible, but greyed out, with the reason written underneath — *"Has no effect 
 is off."*
 
 Nothing is ever hidden: a setting you cannot change right now stays where it is, with its
-explanation. Hunting for a vanished setting is more painful than reading why it is switched off.
+explanation.
 
 ---
 
@@ -67,11 +67,9 @@ The language of every text in the application: menus, buttons, messages.
 | **English** | English |
 
 > **A machine set to German, Spanish or Japanese opens the studio in English**, not in French.
-> That is deliberate: someone whose computer speaks a third language is likelier to read English,
-> and refusing it would mean making them hunt for this setting in a window written in French.
 
 Each language names itself in its own language — "Français" stays "Français" even on an English
-screen. That is deliberate: you recognise your own language before you can read the screen's.
+screen.
 
 Once applied, the change is **immediate**: nothing needs relaunching. It touches neither your projects nor what
 you write in them: a prompt written in English stays in English.
@@ -83,14 +81,9 @@ you write in them: a prompt written in English stays in English.
 > tomorrow arrives in its original wording.
 >
 > **Seven words stay in English on purpose**: `sampler`, `scheduler`, `LoRA`, `checkpoint`,
-> `prompt`, `clip skip`, `denoising strength`. The rule is not "it is the trade's term" — it is
-> easier to check than that: **a word is left in English only where the studio never gives it a
-> French name** — not in one of its own surfaces, and not in the [glossary](17-glossary.md).
->
-> The list has emptied twice under that rule. `seed` left it because the inspector and the Skybox
-> panel had said "Graine" for a long time; `guidance scale` and `negative prompt` left it because
-> the glossary named them — "Guidage" and "Prompt négatif". Each time, the form was the only
-> surface refusing the word the rest of the studio uses.
+> `prompt`, `clip skip`, `denoising strength`. **A word is left in English only where the studio
+> never gives it a French name** — not in one of its own surfaces, and not in the
+> [glossary](17-glossary.md).
 
 ### On opening
 
@@ -153,8 +146,7 @@ The form, below the list. Three fields:
 Take the key and the secret from [app.scenario.com](https://app.scenario.com), in your account
 settings. Then **Add an account** — the button reads "Adding…" while it writes.
 
-**The button stays off** until all three fields are valid. No need to guess why: it lights up when
-everything is there.
+**The button stays off** until all three fields are valid.
 
 The name obeys three rules, and the studio says which one was broken:
 
@@ -164,9 +156,7 @@ The name obeys three rules, and the studio says which one was broken:
 | 60 characters at most | "This name is too long." |
 | Two accounts cannot share a name | "Another account already uses this name." |
 
-Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name. That is deliberate
-— the switcher shows nothing but the name, and two entries that read the same would leave you
-choosing blind.
+Uniqueness is checked **ignoring case**: "Studio" and "studio" are the same name.
 
 **Two other messages can appear here**, more rarely, and they are not fixed the same way:
 
@@ -178,12 +168,9 @@ choosing blind.
 The first is never your fault and loses nothing. The second is the only message in this section
 that deserves a second attempt.
 
-> **The fields are cleared even on success.** That is not a bug. The screen you are looking at is
-> never allowed to know your key: it only knows whether it works. Once sent, it is encrypted by the
-> operating system's keychain — the same vault that holds your passwords — and filed out of the
-> display's reach.
->
-> That is why there is **no "show my key" button**: that button cannot exist.
+> **The fields are cleared even on success.** That is not a bug: once sent, the key is encrypted
+> by the operating system's keychain and filed out of the display's reach. That is why there is
+> **no "show my key" button**.
 
 ### The account list
 
@@ -213,10 +200,8 @@ as **an ordinary account** in the list, with a grey `secrets/.env` badge.
 It is used like the others — the **Use this account** button works — but it has **no Rename and no
 Remove**: those two buttons are absent, not greyed out.
 
-**That is more honest than a button that refuses.** This account is changed by editing the file, and
-a button that could only say no is worth less than no button at all. If you reach it by some other
-route, the studio says so: "This account comes from `secrets/.env`: edit that file to rename or
-remove it."
+This account is changed by editing the file. If you reach it by some other route, the studio says
+so: "This account comes from `secrets/.env`: edit that file to rename or remove it."
 
 ### When the list is empty
 
@@ -229,9 +214,8 @@ Nothing is stored, and nothing works: no catalogue, no generation.
 > "The keychain did not give your accounts back. Try again once it is unlocked — nothing was
 > changed."
 
-**The second half of that sentence is the important one.** The studio refused to write rather than
-write halfway: unable to read the existing list back, saving an account would have replaced it with
-that one alone. Unlock your keychain, try again, everything is still there.
+**Nothing has been changed**: the studio refused to write rather than overwrite a list it could
+not read back. Unlock your keychain, try again, everything is still there.
 
 ---
 
@@ -249,9 +233,8 @@ that one alone. Unlock your keychain, try again, everything is still there.
 | **Light** | light background — reads better in broad daylight |
 | **System** | follows your computer's setting, and switches on its own when evening comes |
 
-> **The background stays opaque, whatever the theme.** No transparency, no blur behind the window.
-> In a studio you judge colours, and a translucent background falsifies the perception of everything
-> shown on top of it. That is a professional decision, not an oversight.
+> **The background stays opaque, whatever the theme.** No transparency, no blur behind the window:
+> a translucent background would falsify the perception of the colours judged on top of it.
 
 ### Density
 
@@ -313,8 +296,7 @@ service can turn away the ones arriving on top (see
 [Too many requests](16-troubleshooting.md)). **Three is a good balance.**
 
 > **This setting is the only valve.** Every generation goes through the same queue, whatever
-> workspace it starts from. There is no way around it, and that is intended: it is what stops a
-> burst of requests from being refused wholesale.
+> workspace it starts from, and nothing bypasses it.
 
 ### Describe fetched assets
 
@@ -323,9 +305,9 @@ service can turn away the ones arriving on top (see
 Automatically names a picture that arrives **without a useful name**, by asking the API what it
 sees in it.
 
-> **This is the only place where the studio spends without being asked**, and that is exactly why
-> the setting exists: clear it, and nothing leaves on its own any more. The naming works in
-> batches, under a bounded queue, and every result takes its line in the activity journal.
+> **This is the only place where the studio spends without being asked**: clear it, and nothing
+> leaves on its own any more. The naming works in batches, under a bounded queue, and every result
+> takes its line in the activity journal.
 
 **What counts as "without a useful name"**, and nothing else:
 
@@ -336,8 +318,7 @@ sees in it.
 | a screenshot **followed by its timestamp or copy number** | `Screenshot 2026-08-09 at 10.30.45`, `Screenshot (3)`, `Capture d'écran (2)` |
 
 **A name you chose is never described**, even when it starts with the same words: `Screenshot of
-the main menu` stays as it is. The studio does not pay to replace a name somebody took the
-trouble to write.
+the main menu` stays as it is.
 
 Accents make no difference to this recognition: `Capture d'écran` and `Capture d’écran` are
 treated alike, including in the particular form macOS writes inside its file names.
@@ -517,9 +498,8 @@ feels slow to appear.
 In milliseconds, 700 by default. It is the interval between two previews of the sentence being
 spoken — the greyed text below the field.
 
-It is not free, and it is worth knowing why: **the model does not write as the words come**.
-Every preview reads back everything said since the sentence began. On a machine that struggles,
-previews space themselves out — the settled text never suffers for it.
+**It is not free**: every preview reads back everything said since the sentence began. On a
+machine that struggles, previews space themselves out — the settled text never suffers for it.
 
 **Set it to 0** to remove previews entirely: the text will then appear only at the end of each
 sentence, and the machine will work far less.
@@ -657,14 +637,13 @@ a problem.
 Opens the technical console of the embedded browser: the log messages, the errors, the internal
 state of the display.
 
-**In the build you installed, this button opens nothing.** The console is refused at the window
-level itself, and that is a security decision: a compromised dependency calling it would otherwise
-reach the studio's internal functions. The button stays on screen, with no effect — and you are
-missing nothing, because **the activity journal already carries what a report needs**, technical
-detail included. See [When something goes wrong](16-troubleshooting.md#the-log).
+**In the build you installed, this button opens nothing** — the console is refused there, for
+security. It stays on screen, with no effect. You are missing nothing: **the activity journal
+already carries what a report needs**, technical detail included. See
+[When something goes wrong](16-troubleshooting.md#the-log).
 
 For troubleshooting only, in a development build. **Nothing in there is needed to use the
-software** — and nothing you type in it is meant to be.
+software.**
 
 ### Reset everything
 
@@ -730,9 +709,8 @@ Two values live in the settings file with no control editing them:
 
 - **the last project opened** — written on its own every time a project opens. That is session
   memory, not a preference: nothing to set;
-- **where assets are kept** — a choice between "on your disk" and "in the cloud". The second does
-  not exist yet, and offering a choice that leads nowhere would be a promise the software cannot
-  keep. See [What does not exist yet](18-limits.md).
+- **where assets are kept** — a choice between "on your disk" and "in the cloud", the second of
+  which does not exist yet. See [What does not exist yet](18-limits.md).
 
 ---
 

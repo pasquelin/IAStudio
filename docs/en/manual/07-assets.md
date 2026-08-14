@@ -148,9 +148,8 @@ shows in one go what this asset can do, and what is missing for it to do it.
 **An asset opened by double-click gets a tab of its own**, in the workspace that edits its kind:
 a picture in Image, a mesh in 3D, a sound in Audio. There is nothing to open first.
 
-**It never looks at the tab in front of you**, and that is deliberate. The same double-click on
-the same picture long meant two things — a layer over an Image tab, a sky over a Skyboxes one —
-and neither was "open this asset". A rule with no exception is the only one a hand can learn.
+**It never looks at the tab in front of you**: the double-click opens the asset in the workspace
+for its kind, whatever is on screen.
 
 **Reopening the same asset returns to its tab**, no second one is born: two tabs onto one
 document are two histories of it, and the second save would write over the first.

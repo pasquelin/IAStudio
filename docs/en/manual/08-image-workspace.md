@@ -210,10 +210,9 @@ The frame never leaves the picture — a crop trims, it does not grow.
 A text layer stays text: you can fix a typo in it, and it stays sharp at any zoom. The inspector
 sets its **content**, its **size** and its **font**.
 
-**The font list is the 3D workspace's list**, deliberately: the three fonts the studio ships
-first, then your machine's. A caption written here and a text in volume over there are set in the
-same family, under the same name. What [the 3D workspace](09-3d-workspace.md#the-fonts-on-offer)
-says about missing fonts holds word for word here.
+**The font list is the 3D workspace's list**: the three fonts the studio ships first, then your
+machine's. What [the 3D workspace](09-3d-workspace.md#the-fonts-on-offer) says about missing fonts
+holds word for word here.
 
 ### Eraser group
 
@@ -258,12 +257,8 @@ everywhere else.
 **Size and opacity apply to four tools at once**: the brush, the pencil, the eraser and the shape
 stroke. A 40 px brush with a 4 px eraser is not possible — it is the same setting.
 
-**Hardness reaches only one of them: the brush — and it only shows there.** The pencil is hard by
-definition, that is what it is for, and it reads the size and the opacity like the others. The
-eraser and the shape stroke have a hard edge too: softening them needs a check nothing automatic
-can do here, and a feathered edge that stopped erasing would be worse than no feather at all. The
-slider used to be offered under all three, live and doing nothing; it has joined the tool that
-reads it.
+**Hardness reaches only one of them: the brush — and it only shows there.** The pencil, the eraser
+and the shape stroke have a hard edge; they read the size and the opacity like the others.
 
 **Below a certain point, softening stops showing.** A feather that would not reach half a pixel
 moves nothing an eye can tell: on a 4 px brush, hardness has to come down to 0.5 before the

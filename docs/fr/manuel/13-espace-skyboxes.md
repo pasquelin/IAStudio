@@ -105,9 +105,8 @@ objets de test. `⌘Z` et `⇧⌘Z` annulent et rétablissent ici comme ailleurs
 [Tous les raccourcis](15-raccourcis.md).
 
 **Les objets de test** sont des sphères posées au milieu du ciel : une mate, une brillante, une
-métallique. Elles ne font pas partie du ciel — elles servent à **voir ce que le ciel éclaire**.
-Un ciel se juge par ce qu’il fait aux objets, pas seulement par sa propre image. Elles sont
-visibles par défaut, pour cette raison.
+métallique. Elles ne font pas partie du ciel — elles servent à **voir ce que le ciel éclaire**, et
+sont visibles par défaut.
 
 **Le champ de vision** est l’équivalent de l’objectif d’un appareil photo : petit angle =
 téléobjectif, on voit peu mais de près ; grand angle = on voit beaucoup, mais les bords se

@@ -27,8 +27,7 @@ Three categories, not to be confused:
 
 ## Saving: every type is there
 
-**This chapter long opened with "three documents out of six do not save". That is no longer
-true.** All seven write into the project folder and open back exactly as they were.
+All seven types write into the project folder and open back exactly as they were.
 
 | Document | Extension | Saves? |
 |---|---|---|
@@ -39,12 +38,11 @@ true.** All seven write into the project folder and open back exactly as they we
 | Edited sound | `.aud` | **yes** |
 | Sky | `.sky` | **yes** |
 
-**What does not save, and that is deliberate:**
+**What does not save:**
 
 - **the undo history** — reopening a document means starting again without `⌘Z`;
 - **how you were looking at it** — zoom, framing, a sky's view, a selection: that is session
-  state, not what the document *is*. A reopened document does not argue with the window that
-  opens it;
+  state, not what the document *is*;
 - **in Audio, the A/B monitoring**: a reopened document listens to the chain, never the source.
 
 **Closing a tab now asks.** If the document holds unsaved work, the studio puts the question —

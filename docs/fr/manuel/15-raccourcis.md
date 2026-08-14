@@ -82,9 +82,8 @@ touche pour rien. Elle est dans le menu **Affichage**, et vous pouvez lui en att
 plus bas).
 
 **Dicter est le seul raccourci qui fonctionne alors que vous êtes en train d’écrire dans un
-champ.** Tous les autres se taisent dans ce cas, et c’est voulu : une lettre doit atteindre le
-champ, pas la surface derrière. Mais dicter dans le champ où l’on est, c’est tout l’intérêt —
-voir [Générer](06-generer.md#dicter-au-lieu-de-taper).
+champ** — tous les autres se taisent dans ce cas. Voir
+[Générer](06-generer.md#dicter-au-lieu-de-taper).
 
 Il se **maintient** au lieu de se déclencher : on appuie, on parle, on relâche. C’est réglable
 en bascule dans les [réglages](14-reglages.md#façon-de-déclencher).

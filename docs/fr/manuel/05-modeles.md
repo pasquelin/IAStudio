@@ -150,10 +150,7 @@ Les grands noms du domaine, différents selon l’espace :
 Utile pour voir ce qui vient de sortir.
 
 > **L’espace Skyboxes n’a ni capacités, ni tags, ni éditeurs à filtrer, et l’espace Textures n’a
-> ni tags ni éditeurs.** Ce n’est pas un oubli : ces familles ne comptent que quelques modèles, et
-> un menu qui réduit trois lignes ne sert à rien. La famille Texture a été détachée de la famille
-> Image sur ses seules capacités — lui prêter les tags de l’image proposerait des étiquettes
-> qu’aucun modèle de texture ne porte.
+> ni tags ni éditeurs** : ces familles ne comptent que quelques modèles.
 
 ---
 

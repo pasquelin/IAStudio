@@ -219,9 +219,8 @@ Le cadre ne sort jamais de l’image — un recadrage rogne, il n’agrandit pas
 Un calque texte reste du texte : il se corrige, et il reste net à tous les zooms. L’inspecteur en
 règle le **contenu**, le **corps** et la **police**.
 
-**La liste des polices est celle de l’espace 3D**, et c’est voulu : les trois polices que le
-studio embarque d’abord, puis celles de votre machine. Une légende écrite ici et un texte en
-volume là-bas se règlent dans la même famille, sous le même nom. Ce que dit
+**La liste des polices est celle de l’espace 3D** : les trois polices que le studio embarque
+d’abord, puis celles de votre machine. Ce que dit
 [l’espace 3D](09-espace-3d.md#les-polices-offertes) des polices absentes vaut mot pour mot ici.
 
 ### Groupe Gomme
@@ -270,12 +269,8 @@ deux partout ailleurs.
 et le trait des formes. Un pinceau de 40 px et une gomme de 4 px, ce n’est pas possible — c’est le
 même réglage.
 
-**La dureté, elle, n’en touche qu’un : le pinceau — et elle ne s’affiche que là.** Le crayon est
-net par définition, c’est sa raison d’être, et il lit la taille et l’opacité comme les autres. La
-gomme et le trait des formes ont un bord net eux aussi : leur adoucissement demande une
-vérification que rien d’automatique ne peut faire ici, et un bord fondu qui n’effacerait plus rien
-serait pire que pas de fondu du tout. Le curseur restait autrefois offert sous les trois, vivant
-et sans effet ; il a rejoint l’outil qui le lit.
+**La dureté, elle, n’en touche qu’un : le pinceau — et elle ne s’affiche que là.** Le crayon, la
+gomme et le trait des formes ont un bord net ; ils lisent la taille et l’opacité comme les autres.
 
 **En dessous d’un certain point, adoucir ne se voit plus.** Un fondu qui n’atteindrait pas un
 demi-pixel ne déplace rien qu’un œil distingue : sur un pinceau de 4 px, il faut descendre la

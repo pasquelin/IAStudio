@@ -49,7 +49,7 @@ pas affichée : il reste visible, mais grisé, avec la raison écrite en dessous
 que "Afficher la grille" est désactivé. »*
 
 Rien n’est jamais caché : un réglage qu’on ne peut pas changer maintenant reste à sa place, avec
-son explication. Chercher un réglage disparu est plus pénible que lire pourquoi il est éteint.
+son explication.
 
 ---
 
@@ -70,12 +70,10 @@ La langue de tous les textes de l’application : menus, boutons, messages.
 | **English** | anglais |
 
 > **Une machine en allemand, en espagnol ou en japonais ouvre le studio en anglais**, pas en
-> français. C’est délibéré : quelqu’un dont l’ordinateur parle une troisième langue lit plus
-> probablement l’anglais, et le lui refuser reviendrait à lui faire chercher ce réglage dans une
-> fenêtre écrite en français.
+> français.
 
 Chaque langue s’écrit dans sa propre langue — « Français » reste « Français » même sur un écran en
-anglais. C’est volontaire : on reconnaît sa langue avant de savoir lire celle de l’écran.
+anglais.
 
 Une fois appliqué, le changement est **immédiat** : il n’y a rien à relancer. Il ne touche ni vos projets, ni ce que
 vous écrivez dedans : un prompt écrit en anglais reste en anglais.
@@ -87,15 +85,8 @@ vous écrivez dedans : un prompt écrit en anglais reste en anglais.
 > publié demain arrive dans sa langue d’origine.
 >
 > **Sept mots restent en anglais exprès** : `sampler`, `scheduler`, `LoRA`, `checkpoint`,
-> `prompt`, `clip skip`, `denoising strength`. La règle n’est pas « c’est le terme du métier » —
-> elle est plus simple à vérifier : **ne reste en anglais que ce que le studio ne nomme en
-> français nulle part**, ni dans une de ses surfaces, ni dans le [glossaire](17-glossaire.md).
->
-> La liste s’est vidée deux fois en appliquant cette règle. `seed` en est parti parce que
-> l’inspecteur et le panneau Skybox disaient « Graine » depuis longtemps ; `guidance scale` et
-> `negative prompt` parce que le glossaire, lui, les nommait — « Guidage » et « Prompt négatif ».
-> Le formulaire était à chaque fois la seule surface à refuser le mot que le reste du studio
-> emploie.
+> `prompt`, `clip skip`, `denoising strength`. **Ne reste en anglais que ce que le studio ne nomme
+> en français nulle part**, ni dans une de ses surfaces, ni dans le [glossaire](17-glossaire.md).
 
 ### À l’ouverture
 
@@ -161,8 +152,7 @@ Le formulaire, sous la liste. Trois champs :
 Prenez la clé et le secret sur [app.scenario.com](https://app.scenario.com), dans les réglages de
 votre compte. Puis **Ajouter un compte** — le bouton affiche « Ajout… » le temps de l’écriture.
 
-**Le bouton reste éteint** tant que les trois champs ne sont pas valides. Inutile de deviner
-pourquoi : il s’allume quand tout y est.
+**Le bouton reste éteint** tant que les trois champs ne sont pas valides.
 
 Le nom obéit à trois règles, et le studio dit laquelle a été enfreinte :
 
@@ -173,8 +163,7 @@ Le nom obéit à trois règles, et le studio dit laquelle a été enfreinte :
 | Deux comptes ne peuvent pas porter le même nom | « Un autre compte porte déjà ce nom. » |
 
 L’unicité est vérifiée **sans tenir compte de la casse** : « Studio » et « studio » sont le même
-nom. C’est voulu — le sélecteur n’affiche que le nom, et deux entrées qui se lisent pareil vous
-feraient choisir à l’aveugle.
+nom.
 
 **Deux autres messages peuvent apparaître ici**, plus rares, et ils ne se règlent pas de la même
 façon :
@@ -187,12 +176,9 @@ façon :
 Le premier n’est jamais votre faute et ne perd rien. Le second est le seul message de cette
 section qui mérite un deuxième essai.
 
-> **Les champs sont vidés même en cas de succès.** Ce n’est pas un bug. L’écran que vous regardez
-> n’a jamais le droit de connaître votre clé : il sait seulement si elle marche. Une fois envoyée,
-> elle est chiffrée par le trousseau du système d’exploitation — le même coffre-fort que celui qui
-> garde vos mots de passe — et rangée hors de portée de l’affichage.
->
-> C’est pourquoi il n’y a **pas de bouton « voir ma clé »** : ce bouton ne peut pas exister.
+> **Les champs sont vidés même en cas de succès.** Ce n’est pas un bug : une fois envoyée, la clé
+> est chiffrée par le trousseau du système et rangée hors de portée de l’affichage. C’est pourquoi
+> il n’y a **pas de bouton « voir ma clé »**.
 
 ### La liste des comptes
 
@@ -223,10 +209,9 @@ identifiants apparaissent **comme un compte ordinaire** dans la liste, avec une 
 Il s’utilise comme les autres — le bouton **Utiliser ce compte** fonctionne — mais il n’a **ni
 Renommer ni Supprimer** : ces deux boutons sont absents, pas grisés.
 
-**C’est plus honnête qu’un bouton qui refuse.** Ce compte se modifie en éditant le fichier, et un
-bouton qui ne pourrait que dire non vaut moins que pas de bouton du tout. Si vous en croisez un par
-un autre chemin, le studio le dit : « Ce compte vient de `secrets/.env` : modifiez ce fichier pour
-le renommer ou le retirer. »
+Ce compte se modifie en éditant le fichier. Si vous en croisez un par un autre chemin, le studio
+le dit : « Ce compte vient de `secrets/.env` : modifiez ce fichier pour le renommer ou le
+retirer. »
 
 ### Quand la liste est vide
 
@@ -239,9 +224,8 @@ Rien n’est enregistré, et rien ne fonctionne : ni catalogue, ni génération.
 > « Le trousseau n’a pas rendu vos comptes. Réessayez après l’avoir déverrouillé — rien n’a été
 > modifié. »
 
-**La dernière moitié de la phrase est la plus importante.** Le studio a refusé d’écrire plutôt que
-d’écrire à moitié : sans pouvoir relire la liste existante, enregistrer un compte l’aurait
-remplacée par lui seul. Déverrouillez votre trousseau, réessayez, tout est encore là.
+**Rien n’a été modifié** : le studio a refusé d’écrire plutôt que d’écraser la liste qu’il ne
+pouvait pas relire. Déverrouillez votre trousseau, réessayez, tout est encore là.
 
 ---
 
@@ -260,8 +244,7 @@ remplacée par lui seul. Déverrouillez votre trousseau, réessayez, tout est en
 | **Système** | suit le réglage de votre ordinateur, et bascule tout seul le soir venu |
 
 > **Le fond reste opaque, quel que soit le thème.** Pas de transparence, pas de flou derrière la
-> fenêtre. Dans un studio on juge des couleurs, et un fond translucide fausse la perception de
-> tout ce qui est affiché au-dessus. C’est une décision de métier, pas un oubli.
+> fenêtre : un fond translucide fausserait la perception des couleurs qu’on juge au-dessus.
 
 ### Densité
 
@@ -324,8 +307,7 @@ Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut 
 [Trop de requêtes](16-depannage.md)). **Trois est un bon équilibre.**
 
 > **Ce réglage est la seule vanne.** Toutes les générations passent par la même file, quel que
-> soit l’espace de travail d’où elles partent. Il n’y a pas de moyen de la contourner, et c’est
-> voulu : c’est ce qui empêche une rafale de demandes de se faire refuser en bloc.
+> soit l’espace de travail d’où elles partent, et rien ne la contourne.
 
 ### Décrire les assets rapatriés
 
@@ -334,10 +316,9 @@ Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut 
 Nomme automatiquement une image qui arrive **sans nom utile**, en demandant à l’API ce qu’elle y
 voit.
 
-> **C’est le seul endroit où le studio dépense sans qu’on le lui ait demandé**, et c’est
-> exactement pourquoi ce réglage existe : décochez-le, et plus rien ne part de lui-même. Le
-> nommage travaille en lots, sous une file bornée, et chaque résultat prend sa ligne dans le
-> journal d’activité.
+> **C’est le seul endroit où le studio dépense sans qu’on le lui ait demandé** : décochez-le, et
+> plus rien ne part de lui-même. Le nommage travaille en lots, sous une file bornée, et chaque
+> résultat prend sa ligne dans le journal d’activité.
 
 **Ce qui compte comme « sans nom utile »**, et rien d’autre :
 
@@ -348,8 +329,7 @@ voit.
 | une capture d’écran **suivie de son horodatage ou de son numéro** | `Capture d’écran 2026-08-09 à 10.30.45`, `Screenshot (3)` |
 
 **Un nom que vous avez choisi n’est jamais décrit**, même s’il commence par les mêmes mots :
-`Capture d’écran du menu principal` reste tel quel. Le studio ne paie pas pour remplacer un nom
-que quelqu’un a pris la peine d’écrire.
+`Capture d’écran du menu principal` reste tel quel.
 
 Les accents ne changent rien à cette reconnaissance : `Capture d'écran` et `Capture d’écran`
 sont traités pareil, y compris sous la forme particulière que macOS écrit dans ses noms de
@@ -534,10 +514,9 @@ réfléchir. Réduisez-la si vous trouvez que le texte met trop longtemps à app
 En millisecondes, 700 par défaut. C'est l'intervalle entre deux aperçus de la phrase en cours —
 le texte grisé sous le champ.
 
-Ce n'est pas gratuit, et il vaut la peine de savoir pourquoi : **le modèle n'écrit pas au fil de
-la parole**. Chaque aperçu relit tout ce qui a été dit depuis le début de la phrase. Sur une
-machine qui peine, les aperçus s'espacent d'eux-mêmes — le texte définitif, lui, n'en souffre
-jamais.
+**Ce n'est pas gratuit** : chaque aperçu relit tout ce qui a été dit depuis le début de la phrase.
+Sur une machine qui peine, les aperçus s'espacent d'eux-mêmes — le texte définitif, lui, n'en
+souffre jamais.
 
 **Mettez 0** pour supprimer les aperçus : le texte n'apparaîtra alors qu'à la fin de chaque
 phrase, et la machine travaillera beaucoup moins.
@@ -678,14 +657,12 @@ aide à comprendre un problème.
 Ouvre la console technique du navigateur intégré : les messages du journal, les erreurs, l’état
 interne de l’affichage.
 
-**Dans la version installée, ce bouton n’ouvre rien.** La console y est refusée au niveau de la
-fenêtre elle-même, et c’est une décision de sécurité : une dépendance compromise qui l’appellerait
-atteindrait sinon les fonctions internes du studio. Le bouton reste affiché, sans effet — et il ne
-vous manque rien, car **le journal d’activité porte déjà ce qui sert à un signalement**, détail
-technique compris. Voir [Quand ça coince](16-depannage.md#le-journal).
+**Dans la version installée, ce bouton n’ouvre rien** — la console y est refusée, par sécurité. Il
+reste affiché, sans effet. Il ne vous manque rien : **le journal d’activité porte déjà ce qui sert
+à un signalement**, détail technique compris. Voir [Quand ça coince](16-depannage.md#le-journal).
 
 Réservé au dépannage, dans une version de développement. **Rien de ce qui s’y trouve n’est
-nécessaire pour se servir du logiciel** — et rien de ce qu’on y tape n’est prévu pour l’être.
+nécessaire pour se servir du logiciel.**
 
 ### Tout réinitialiser
 
@@ -753,9 +730,8 @@ Deux valeurs vivent dans le fichier de réglages sans qu’aucun contrôle ne le
 
 - **le dernier projet ouvert** — écrit tout seul à chaque ouverture. C’est de la mémoire de
   session, pas une préférence : rien à régler ;
-- **l’emplacement des assets** — un choix entre « sur votre disque » et « dans le nuage ». Le
-  second n’existe pas encore, et offrir un choix qui ne mène nulle part serait une promesse que le
-  logiciel ne peut pas tenir. Voir [Ce qui n’existe pas encore](18-limites.md).
+- **l’emplacement des assets** — un choix entre « sur votre disque » et « dans le nuage », dont le
+  second n’existe pas encore. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ---
 

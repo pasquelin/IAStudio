@@ -197,8 +197,7 @@ pu se dessiner.
 **Quoi faire.** **Réessayer** d’abord. Si l’écran revient au même état, fermez la fenêtre et
 rouvrez-la.
 
-> **Ces deux écrans ne disent pas ce qui a échoué**, et c’est délibéré : le détail technique ne
-> sert qu’à qui peut le corriger.
+> **Ces deux écrans ne disent pas ce qui a échoué.**
 >
 > **Mais la panne laisse une trace, elle** — et le journal est le seul endroit où la lire. Il en
 > garde une ligne sous le sujet **Interface** — « Une partie de l’interface n’a pas pu
@@ -357,9 +356,6 @@ plus.
 **Attention à ce que « retenu » veut dire** : le studio prend le **premier candidat présent** —
 livré, puis celui des réglages, puis le `PATH` — et ne redescend pas la liste. Le `which ffmpeg`
 que vous venez de taper n’est donc consulté que si les deux autres manquent.
-
-Un programme qu’on trouve sans pouvoir l’exécuter serait pire qu’un programme absent : le studio
-promettrait des proxies qu’il ne saurait pas fabriquer.
 
 **Pour le vérifier vous-même**, dans un terminal :
 
@@ -587,8 +583,8 @@ côté de son nom. Deux cas connus :
   l’enregistrer, pour ne pas écrire un document vide par-dessus celui qu’il n’a pas su lire — le
   fichier est la seule copie. La raison est dans le journal d’activité.
 
-**Ce qui ne revient jamais**, et c’est voulu : l’**historique d’annulation**. Rouvrir un
-document, c’est repartir sans `⌘Z`. La liste complète est dans
+**Ce qui ne revient jamais** : l’**historique d’annulation**. Rouvrir un document, c’est repartir
+sans `⌘Z`. La liste complète est dans
 [Ce qui n’existe pas encore](18-limites.md).
 
 ### « J’ai supprimé un document par erreur »

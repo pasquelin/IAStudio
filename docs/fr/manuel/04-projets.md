@@ -50,8 +50,8 @@ tronque.
 | **Révéler dans le dossier** | ouvre le gestionnaire de fichiers sur ce projet |
 | **Retirer de la liste** | retire le projet de cette liste, **sans toucher au dossier ni à ce qu’il contient** |
 
-**Retirer ne demande pas confirmation, et c’est voulu** : rien n’est perdu, et rouvrir le projet
-remet sa ligne. C’est le geste qui nettoie une liste où traîne un dossier déplacé.
+**Retirer ne demande pas confirmation** : rien n’est perdu, et rouvrir le projet remet sa ligne.
+C’est le geste qui nettoie une liste où traîne un dossier déplacé.
 
 > **Un projet ne se « sauvegarde » pas.** Il n’y a pas de commande « Enregistrer le projet ».
 > Chaque chose est écrite au moment où elle arrive : un asset généré à sa réception, un

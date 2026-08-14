@@ -103,8 +103,8 @@ In the right column, under the Skybox panel. Two sections.
 objects. `⌘Z` and `⇧⌘Z` undo and redo here as anywhere else — see [Every shortcut](15-shortcuts.md).
 
 **The test objects** are spheres set in the middle of the sky: one matte, one glossy, one metallic.
-They are not part of the sky — they are there to **see what the sky lights**. A sky is judged by
-what it does to objects, not only by its own image. That is why they are visible by default.
+They are not part of the sky — they are there to **see what the sky lights**, and are visible by
+default.
 
 **The field of view** is the equivalent of a camera lens: a small angle is a telephoto, you see
 little but closely; a wide angle shows a lot, but the edges distort.

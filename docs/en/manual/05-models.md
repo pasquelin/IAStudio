@@ -146,10 +146,7 @@ The big names in the field, different per workspace:
 Useful for seeing what has just come out.
 
 > **The Skyboxes workspace has no capabilities, tags or publishers to filter on, and the Textures
-> workspace has no tags or publishers.** That is not an oversight: those families hold only a handful
-> of models, and a menu that narrows three lines is useless. The Texture family was split out of the
-> Image family on its capabilities alone — lending it the image tags would offer labels no texture
-> model carries.
+> workspace has no tags or publishers**: those families hold only a handful of models.
 
 ---
 

@@ -28,8 +28,7 @@ Trois catégories, à ne pas confondre :
 
 ## L’enregistrement : les sept types y sont
 
-**Ce chapitre a longtemps commencé par « trois documents sur six ne s’enregistrent pas ». Ce
-n’est plus vrai.** Les sept s’écrivent dans le dossier du projet et se rouvrent tels quels.
+Les sept types s’écrivent dans le dossier du projet et se rouvrent tels quels.
 
 | Document | Extension | S’enregistre ? |
 |---|---|---|
@@ -40,12 +39,11 @@ n’est plus vrai.** Les sept s’écrivent dans le dossier du projet et se rouv
 | Son édité | `.aud` | **oui** |
 | Ciel | `.sky` | **oui** |
 
-**Ce qui ne s’enregistre pas, et c’est délibéré :**
+**Ce qui ne s’enregistre pas :**
 
 - **l’historique d’annulation** — rouvrir un document, c’est repartir sans `⌘Z` ;
 - **la façon dont on regarde** — zoom, cadrage, vue d’un ciel, sélection : c’est de l’état de
-  session, pas ce que le document *est*. Un document rouvert ne discute pas avec la fenêtre qui
-  l’ouvre ;
+  session, pas ce que le document *est* ;
 - **en Audio, l’écoute A/B** : un document rouvert écoute la chaîne, jamais la source.
 
 **Fermer un onglet demande maintenant.** Si le document a du travail non enregistré, le studio

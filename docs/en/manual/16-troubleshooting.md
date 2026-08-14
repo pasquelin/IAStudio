@@ -191,8 +191,7 @@ panels, your running generations — **carries on working normally**.
 **What to do.** **Try again** first. If the screen returns to the same state, close the window and
 open it again.
 
-> **Neither screen says what failed**, and that is deliberate: the technical detail only serves
-> someone who can act on it.
+> **Neither screen says what failed.**
 >
 > **The failure does leave a trace, though** — and the journal is the only place to read it. It
 > keeps a line for it under the **Interface** topic — "Part of the interface could not be drawn" —
@@ -340,9 +339,6 @@ over-eager `brew cleanup` — still exists as a file, but no longer starts.
 **Mind what "kept" means**: the studio takes the **first candidate present** — shipped, then the
 settings one, then the `PATH` — and does not walk back down the list. The `which ffmpeg` you just
 typed is therefore only consulted when the other two are missing.
-
-A program you can find but cannot run would be worse than a missing one: the studio would promise
-proxies it could not make.
 
 **To check for yourself**, in a terminal:
 
@@ -565,7 +561,7 @@ cases:
   so as not to write an empty document over the one it could not read — the file is the only
   copy. The reason is in the activity journal.
 
-**What never comes back**, by design: the **undo history**. Reopening a document means starting
+**What never comes back**: the **undo history**. Reopening a document means starting
 again without `⌘Z`. The complete list is in [What does not exist yet](18-limits.md).
 
 ### "I deleted a document by mistake"

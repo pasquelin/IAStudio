@@ -79,10 +79,8 @@ menu, which catches them before anybody else. They are therefore the only ones t
 months, and giving it a shortcut would mean occupying a key for nothing. It is in the **View** menu,
 and you can assign one to it (see below).
 
-**Dictate is the only shortcut that works while you are typing into a field.** Every other one
-stays quiet in that case, and rightly so: a letter must reach the field, not the surface behind
-it. But dictating into the field you are already in is the whole point — see
-[Generating](06-generating.md#speaking-instead-of-typing).
+**Dictate is the only shortcut that works while you are typing into a field** — every other one
+stays quiet in that case. See [Generating](06-generating.md#speaking-instead-of-typing).
 
 It is **held** rather than tapped: press, speak, let go. It can be set to toggle instead, in the
 [settings](14-settings.md#how-it-is-triggered).

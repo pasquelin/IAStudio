@@ -47,8 +47,8 @@ tooltip, along with the whole path, which a narrow panel truncates.
 | **Reveal in folder** | opens the file manager on this project |
 | **Remove from the list** | removes the project from this list, **leaving its folder and everything in it untouched** |
 
-**Removing asks for no confirmation, and that is deliberate**: nothing is lost, and reopening the
-project puts its row back. It is the gesture that cleans up a list where a moved folder lingers.
+**Removing asks for no confirmation**: nothing is lost, and reopening the project puts its row
+back. It is the gesture that cleans up a list where a moved folder lingers.
 
 > **A project is not "saved".** There is no "Save project" command. Each thing is written the
 > moment it happens: a generated asset when it arrives, a document when you press `⌘S`, the panel
