@@ -101,7 +101,7 @@ The message says which of the three cases you are in, because they call for diff
 
 ### Picking several assets
 
-Two of the shelf's actions work on **several** assets at once: **Send** and **Describe**. Multiple
+Two of the shelf's actions work on **several** assets at once: **Send** and **Name**. Multiple
 selection exists for them.
 
 **Shift-click extends, ⌘-click picks.** The first takes everything between the last asset chosen
@@ -285,14 +285,14 @@ An unselected asset, or a closed project, leaves the button greyed out.
 
 ### Naming from what the API sees
 
-The **Describe** button, next to it, asks the API to look at the selected pictures and give them a
+The **Name** button, next to it, asks the API to look at the selected pictures and give them a
 name drawn from their content. The names land in the project's catalogue.
 
 **It only sees pictures the library already knows.** The API describes what it hosts: a picture
-that has never been sent is dropped from the request, silently. Send it first, describe it after.
+that has never been sent is dropped from the request, silently. Send it first, name it after.
 
 > **This button is not the only door, and that is the one thing to take away here.** The
-> **Describe fetched assets** setting, under **Generation**, is **on by default**: a picture that
+> **Name fetched assets** setting, under **Generation**, is **on by default**: a picture that
 > arrives without a useful name is sent to the API with nobody clicking, and that **spends creative
 > units**. The chapter [All the settings](14-settings.md) covers it — it is the one place where the
 > studio spends of its own accord, and unticking it is enough to stop it.

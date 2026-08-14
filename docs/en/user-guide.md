@@ -142,7 +142,7 @@ knows whether it is connected.
 is what you ask it to generate: the text of your prompt and, where relevant, the image you supply
 as input.
 
-**One exception, and it is ticked by default** — but it does not touch your files. The **Describe
+**One exception, and it is ticked by default** — but it does not touch your files. The **Name
 fetched assets** setting, under **Settings ▸ Generation**, asks the API to name a picture that
 arrives without a useful one. **No byte leaves your disk**: that picture is already at Scenario,
 since that is where it came from, and the studio sends only its id. What does get spent is

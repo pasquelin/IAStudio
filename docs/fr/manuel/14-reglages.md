@@ -309,7 +309,7 @@ Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut 
 > **Ce réglage est la seule vanne.** Toutes les générations passent par la même file, quel que
 > soit l’espace de travail d’où elles partent, et rien ne la contourne.
 
-### Décrire les assets rapatriés
+### Nommer les assets rapatriés
 
 **Case à cocher.**
 
@@ -322,13 +322,13 @@ voit.
 
 **Ce qui compte comme « sans nom utile »**, et rien d’autre :
 
-| Ce que le studio décrit | Exemples |
+| Ce que le studio renomme | Exemples |
 |---|---|
 | un nom vide, ou un préfixe d’appareil suivi d’un numéro | `IMG_4821`, `DSC0001`, `PXL_20260809`, `photo 12` |
 | les noms que donnent les systèmes, dans les deux langues | `Sans titre`, `Téléchargement`, `Image collée`, `Nouvelle image`, `Untitled`, `Download` |
 | une capture d’écran **suivie de son horodatage ou de son numéro** | `Capture d’écran 2026-08-09 à 10.30.45`, `Screenshot (3)` |
 
-**Un nom que vous avez choisi n’est jamais décrit**, même s’il commence par les mêmes mots :
+**Un nom que vous avez choisi n’est jamais remplacé**, même s’il commence par les mêmes mots :
 `Capture d’écran du menu principal` reste tel quel.
 
 Les accents ne changent rien à cette reconnaissance : `Capture d'écran` et `Capture d’écran`
@@ -699,7 +699,7 @@ Ce que vous avez sur une installation neuve, d’un coup d’œil.
 | Apparence | Taille du texte | 1 | 0,85 à 1,40 |
 | Apparence | Limiter les animations | décochée | — |
 | Génération | Générations simultanées | 3 | 1 à 16 |
-| Génération | Décrire les assets rapatriés | cochée | — |
+| Génération | Nommer les assets rapatriés | cochée | — |
 | Génération | Tentatives maximum | 4 | 0 à 10 |
 | Génération | Modèle par défaut ×7 | Demander à chaque fois | — |
 | 3D | Afficher la grille | cochée | — |

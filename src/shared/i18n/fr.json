@@ -218,9 +218,9 @@
       "fetching": "Rapatriement en cours…",
       "missing": "Fichier introuvable sur le disque"
     },
-    "describe_one": "Décrire {{count, number}} asset",
-    "describe_many": "Décrire {{count, number}} assets",
-    "describe_other": "Décrire {{count, number}} assets",
+    "describe_one": "Nommer {{count, number}} asset",
+    "describe_many": "Nommer {{count, number}} assets",
+    "describe_other": "Nommer {{count, number}} assets",
     "describeHint": "Nommer les images choisies d’après ce que l’API y voit",
     "location": "Emplacement",
     "push_one": "Envoyer {{count, number}} asset",
@@ -1077,7 +1077,7 @@
       "help": "Nombre de créations qui travaillent en même temps. Plus ce nombre est grand, plus vous en lancez d’un coup — mais chacune peut mettre plus longtemps à revenir, et le service peut refuser celles qui arrivent en trop. Trois est un bon équilibre."
     },
     "captionArrivals": {
-      "title": "Décrire les assets rapatriés",
+      "title": "Nommer les assets rapatriés",
       "help": "Nommer automatiquement une image qui arrive sans nom utile. Consomme des unités créatives."
     },
     "maxRetries": {

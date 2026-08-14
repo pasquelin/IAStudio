@@ -106,7 +106,7 @@ Le message dit lequel des trois cas vous êtes, parce qu’ils appellent des ré
 ### Choisir plusieurs assets
 
 Deux actions de l’étagère travaillent sur **plusieurs** assets à la fois : **Envoyer** et
-**Décrire**. C’est pour elles que la sélection multiple existe.
+**Nommer**. C’est pour elles que la sélection multiple existe.
 
 **Maj-clic étend, ⌘-clic pioche.** Le premier prend tout ce qui se trouve entre le dernier asset
 choisi et celui que vous cliquez ; le second n’ajoute — ou ne retire — que celui-là. Un clic nu
@@ -297,15 +297,15 @@ Un asset non sélectionné, ou un projet fermé, laisse le bouton grisé.
 
 ### Nommer par ce que l’API voit
 
-Le bouton **Décrire**, à côté, demande à l’API de regarder les images sélectionnées et de leur
+Le bouton **Nommer**, à côté, demande à l’API de regarder les images sélectionnées et de leur
 donner un nom tiré de leur contenu. Les noms obtenus atterrissent dans le catalogue du projet.
 
 **Il ne voit que les images que la bibliothèque connaît déjà.** L’API décrit ce qu’elle héberge :
 une image qui n’a jamais été envoyée est écartée de la demande, sans le dire. Envoyez-la d’abord,
-décrivez ensuite.
+nommez ensuite.
 
 > **Ce bouton n’est pas la seule porte, et c’est la seule chose à retenir ici.** Le réglage
-> **Décrire les assets rapatriés**, dans **Génération**, est **coché par défaut** : une image qui
+> **Nommer les assets rapatriés**, dans **Génération**, est **coché par défaut** : une image qui
 > arrive sans nom utile est envoyée à l’API sans qu’on ait cliqué, et cela **consomme des unités
 > créatives**. Le chapitre [Tous les réglages](14-reglages.md) le détaille — c’est le seul endroit
 > où le studio dépense de lui-même, et le décocher suffit à l’arrêter.

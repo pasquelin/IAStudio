@@ -145,7 +145,7 @@ vers Scenario, c’est ce que vous demandez de générer : le texte de votre pro
 l’image que vous fournissez en entrée.
 
 **Une exception, et elle est cochée par défaut** — mais elle ne touche pas vos fichiers. Le
-réglage **Décrire les assets rapatriés**, dans **Réglages ▸ Génération**, demande à l’API de nommer
+réglage **Nommer les assets rapatriés**, dans **Réglages ▸ Génération**, demande à l’API de nommer
 une image qui arrive sans nom utile. **Aucun octet ne quitte votre disque** : cette image-là est
 déjà chez Scenario, puisqu’elle en vient, et le studio n’envoie que son identifiant. Ce qui se
 dépense, en revanche, ce sont des **unités créatives**, sans clic de votre part — c’est le seul
