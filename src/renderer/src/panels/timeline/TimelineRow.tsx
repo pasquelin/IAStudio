@@ -172,12 +172,26 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
   useEffect(() => {
     if (!dragging) return
 
+    const finish = (): void => {
+      if (!grabbed.current) return
+      grabbed.current = null
+      setDragging(false)
+      latest.current.onHeld(false)
+      latest.current.reorder.end?.()
+    }
+
     const onMove = (event: globalThis.PointerEvent): void => {
       // Only the pointer that STARTED the drag counts — the guard `ResizeHandle` spells out: a
       // mouse has no implicit capture, so a second pointer moving over the row would measure
       // against a stale origin and throw it several places at once.
       const grab = grabbed.current
       if (!grab || grab.pointerId !== event.pointerId) return
+
+      // No button held any more: it came up somewhere this window never heard about — past its
+      // own edge, or while another application had it. Giving up the capture is what costs that
+      // `pointerup`, and the first move back inside is when we find out. Without this, the row
+      // stays dimmed and armed for the rest of the session.
+      if (event.buttons === 0) return finish()
 
       const held = latest.current
       const steps = reorderSteps(event.clientY - grab.y, held.height)
@@ -188,26 +202,29 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
       grabbed.current = { ...grab, applied: grab.applied + moved }
     }
 
-    const stop = (event: globalThis.PointerEvent): void => {
-      if (grabbed.current?.pointerId !== event.pointerId) return
-      grabbed.current = null
-      setDragging(false)
-      latest.current.onHeld(false)
-      latest.current.reorder.end?.()
+    const onUp = (event: globalThis.PointerEvent): void => {
+      if (grabbed.current?.pointerId === event.pointerId) finish()
     }
 
     window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', stop)
-    window.addEventListener('pointercancel', stop)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    // The window losing focus never delivers the release either — the same hole `useShortcuts`
+    // closes for a held key, and for the same reason.
+    window.addEventListener('blur', finish)
 
     return () => {
       window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', stop)
-      window.removeEventListener('pointercancel', stop)
-      // Unmounted with the pointer still down — a panel closed, a workspace left. The gesture is
-      // open in the store, and nothing else would ever close it.
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      window.removeEventListener('blur', finish)
+      // Torn down with the pointer still down — a panel closed, a workspace left, a module
+      // swapped under a running gesture. BOTH halves have to be given back: the gesture the store
+      // is holding open, and the row's own "I am held", which nothing else would ever clear —
+      // it would stay dimmed with no drag behind it.
       if (grabbed.current) {
         grabbed.current = null
+        latest.current.onHeld(false)
         latest.current.reorder.end?.()
       }
     }

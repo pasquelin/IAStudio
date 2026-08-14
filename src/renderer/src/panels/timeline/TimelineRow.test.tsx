@@ -27,7 +27,8 @@ describe('TimelineRow', () => {
    * first rank it crossed.
    */
   const dragTo = (clientY: number): void => {
-    fireEvent.pointerMove(window, { clientY, pointerId: 1 })
+    // `buttons: 1` — a move with none held is what says the release happened out of sight.
+    fireEvent.pointerMove(window, { clientY, pointerId: 1, buttons: 1 })
   }
 
   const drop = (): void => {
@@ -124,6 +125,51 @@ describe('TimelineRow', () => {
 
     expect(end).toHaveBeenCalledTimes(1)
     expect(move).not.toHaveBeenCalled()
+  })
+
+  /**
+   * The release this window never hears: the button came up past its own edge, or while another
+   * application had it. Nothing arrives at the time — the first move back inside is the whole
+   * signal, and it is the one that has to end the gesture. Left open, the row stays dimmed and
+   * armed for the rest of the session, and the next hover reorders a stack nobody is holding.
+   */
+  it('ends the gesture on the first move that carries no button', () => {
+    const move = vi.fn((by: number) => by)
+    const end = vi.fn()
+    render(rowWith({ move, end }))
+    const row = screen.getByText('A1').closest('div[style]')
+
+    grab()
+    fireEvent.pointerMove(window, { clientY: 200, pointerId: 1, buttons: 0 })
+
+    expect(end).toHaveBeenCalledTimes(1)
+    expect(move).not.toHaveBeenCalled()
+    expect(row?.className).not.toContain('opacity-40')
+  })
+
+  // Torn down mid-gesture — a panel closed, a workspace left, a module swapped while the pointer
+  // was down. The store would keep the gesture open, and every later edit would coalesce into it.
+  it('closes the gesture when it is torn down mid-drag', () => {
+    const end = vi.fn()
+    const view = render(rowWith({ move: (by: number) => by, end }))
+
+    grab()
+    view.unmount()
+
+    expect(end).toHaveBeenCalledTimes(1)
+  })
+
+  // A window that loses focus mid-drag never delivers the release at all.
+  it('ends the gesture when the window loses focus', () => {
+    const end = vi.fn()
+    render(rowWith({ move: (by: number) => by, end }))
+    const row = screen.getByText('A1').closest('div[style]')
+
+    grab()
+    fireEvent.blur(window)
+
+    expect(end).toHaveBeenCalledTimes(1)
+    expect(row?.className).not.toContain('opacity-40')
   })
 
   // Between two ranks the stack does not move, and nothing else would say a drag is under way.

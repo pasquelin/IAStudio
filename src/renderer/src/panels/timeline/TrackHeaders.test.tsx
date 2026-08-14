@@ -135,9 +135,12 @@ describe('TrackHeaders', () => {
     const grip = (name: string): HTMLElement =>
       screen.getByRole('button', { name: `Déplacer la piste ${name}` })
 
-    /** The gesture listens on the window — see `TimelineRow`, which says why it has to. */
+    /**
+     * The gesture listens on the window — see `TimelineRow`, which says why it has to. `buttons`
+     * is part of the move: one carrying none is how a release out of sight is found out about.
+     */
     const dragTo = (clientY: number): void => {
-      fireEvent.pointerMove(window, { clientY })
+      fireEvent.pointerMove(window, { clientY, buttons: 1 })
     }
     const drop = (): void => {
       fireEvent.pointerUp(window)
