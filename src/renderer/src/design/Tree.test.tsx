@@ -288,6 +288,45 @@ describe('Tree', () => {
     expect(walked).toBe(deepest)
   })
 
+  /**
+   * A STACK closes the fold column on a row that holds nothing, so a layer starts where a group's
+   * chevron does — what every editor draws, and the reading a pinned column is for: the left edge
+   * is already anchored by it, so nothing is gained by reserving a second gutter for a glyph that
+   * will never come.
+   */
+  it('closes the fold column on a leaf once a column is pinned', () => {
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        renderLeading={() => <span data-pinned />}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const chevronOf = (name: string): Element | null | undefined =>
+      screen.getByText(name).closest('[role="treeitem"]')?.querySelector('[data-chevron]')
+
+    expect(chevronOf('a')).toBeInTheDocument()
+    expect(chevronOf('b')).not.toBeInTheDocument()
+  })
+
+  /**
+   * A file browser keeps it, and the difference is the whole point: files and folders of one level
+   * line up under each other, and a name that shifted by a glyph depending on whether it opens is
+   * a list nobody can scan. `b` is the leaf in both this case and the one above.
+   */
+  it('keeps the fold column on a leaf where nothing is pinned', () => {
+    renderTree()
+
+    const leaf = screen.getByText('b').closest('[role="treeitem"]')
+    expect(leaf?.querySelector('[data-chevron]')).toBeInTheDocument()
+  })
+
   it('leaves the rows undraggable when nothing listens for a drop', () => {
     renderTree()
     expect(screen.getAllByRole('treeitem')[0]).not.toHaveAttribute('draggable', 'true')

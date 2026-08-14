@@ -104,23 +104,19 @@ export const TITLE_BAR_GHOST = cn(
 export type RowTone = 'soft' | 'strong'
 
 /**
- * The shape of ONE LINE: a glyph, a word and whatever button follows, laid out at the studio's
- * row gutter.
+ * The shape of ONE LINE: how it is laid out, and its inset from whatever paints the fill.
  *
- * `gap-1.5` and not the `gap-2` a row of CONTROLS takes — this is one line reading as one thing,
- * and at two its pieces read as three laid side by side. It is the half-step
- * `design/spacing.test.ts` leaves open, and the reason it does.
+ * **No gutter.** It carried one, and the gutter is what a line of CONTROLS wants — between a
+ * glyph and a word that belong together it is dead space, and between two columns that already
+ * have a width of their own it is dead space twice over. `Tree` stacks three such columns, and
+ * the gutters between them added 12px to every line of every panel in the studio, on top of an
+ * inset the columns did not need either. What separates the tree's columns is their own width;
+ * `Row` adds the half-step where it really does hold a glyph beside a word.
  *
  * Written here because `Tree` and `Row` must AGREE on it: the tree draws the indent and the
- * chevron, the row draws the icon and the name, and the two meet in the middle of every line in
- * the studio. Kept apart, four gutters accumulated between the panel edge and a nested scene
- * node's name — 96px of them, at comfort density.
- *
- * The half-step buys 10 of those, which is the honest figure: the gutters were never where most
- * of that number came from. What paid for the rest is the eye leaving the indentation for a
- * column of its own, and shrinking to a control that sits INSIDE a line rather than on a bar.
+ * chevron, the row draws the icon and the name, and the two meet in the middle of every line.
  */
-export const ROW_LINE = 'flex h-full items-center gap-1.5 px-1'
+export const ROW_LINE = 'flex h-full items-center px-1'
 
 /**
  * Hover, selection and keyboard focus of one line in a list. The same line must not light up

@@ -401,29 +401,38 @@ export function Tree<T extends TreeNode>({
       )}
       <div
         style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
-        className="flex h-full min-w-0 flex-1 items-center gap-1.5"
+        className="flex h-full min-w-0 flex-1 items-center"
       >
-        {/* The chevron keeps its column even on a leaf: rows whose content shifts by a glyph are
-            unreadable as a list. It is not a control — the row already carries `aria-expanded`,
-            and the arrows already toggle it. Named because it has no other handle, being
-            `aria-hidden`: three suites used to reach it as the row's `firstChild`, which is a
-            claim about the markup around it rather than about it. */}
-        <span
-          aria-hidden="true"
-          data-chevron
-          className="flex w-3.5 shrink-0 justify-center"
-          onPointerDown={event => {
-            if (ghost || !row.hasChildren) return
-            // The row selects on pointer down, which fires before click: stopping the click alone
-            // would still have let the chevron steal the selection.
-            event.stopPropagation()
-            onToggle(row.node.id)
-          }}
-        >
-          {!ghost && row.hasChildren && (
-            <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
-          )}
-        </span>
+        {/* Kept open on a leaf where the tree is a TREE, closed where it is a STACK, and the
+            pinned column is what tells the two apart.
+
+            A file browser reserves it: files and folders of one level line up under each other,
+            and a name that shifted by a glyph depending on whether it can be opened is a list
+            nobody can scan. A stack has no such need — the pinned column already anchors the
+            left edge, so a layer that holds nothing starts where a group's chevron does, which
+            is how every editor draws one and what it was asked to do.
+
+            Not a control: the row carries `aria-expanded` and the arrows already toggle it. Named
+            because it has no other handle, being `aria-hidden` — three suites used to reach it as
+            the row's `firstChild`, a claim about the markup around it rather than about it. */}
+        {(row.hasChildren || !renderLeading) && (
+          <span
+            aria-hidden="true"
+            data-chevron
+            className="flex w-3 shrink-0 justify-center"
+            onPointerDown={event => {
+              if (ghost || !row.hasChildren) return
+              // The row selects on pointer down, which fires before click: stopping the click
+              // alone would still have let the chevron steal the selection.
+              event.stopPropagation()
+              onToggle(row.node.id)
+            }}
+          >
+            {!ghost && row.hasChildren && (
+              <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
+            )}
+          </span>
+        )}
         {renderRow(row)}
       </div>
     </>
