@@ -1,9 +1,8 @@
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isLocalPicture, PICTURES, posterUrl } from '@shared/domain/asset'
-import { TextureField, type TextureOption } from '@/design/TextureField'
+import { PICTURES } from '@shared/domain/asset'
+import { TextureField } from '@/design/TextureField'
 import { openAssetById } from '@/helpers/open-asset'
-import { useAssets } from '@/stores/assets'
+import { useProjectPictures } from './useProjectPictures'
 
 export type PictureFieldProps = {
   label: string
@@ -27,15 +26,7 @@ export type PictureFieldProps = {
  */
 export function PictureField({ label, value, onChange, emptyLabel, emptyHint }: PictureFieldProps) {
   const { t } = useTranslation()
-  const assets = useAssets(state => state.items)
-
-  const options = useMemo<TextureOption[]>(
-    () =>
-      assets
-        .filter(isLocalPicture)
-        .map(asset => ({ id: asset.id, name: asset.name, url: posterUrl(asset) ?? undefined })),
-    [assets],
-  )
+  const options = useProjectPictures(PICTURES)
 
   return (
     <TextureField
@@ -53,6 +44,11 @@ export function PictureField({ label, value, onChange, emptyLabel, emptyHint }: 
       clearLabel={t('inspector.clearTexture')}
       emptyHint={emptyHint ?? t('inspector.noTextureHint')}
       optionHint={t('inspector.pickTextureHint')}
+      // Said in the menu rather than by a line that refuses in silence. The keys are the Textures
+      // space's own: it is the same sentence about the same project, and a second wording of it
+      // would be two answers to one question.
+      noOptionLabel={t('texture.noPicture')}
+      noOptionHint={t('texture.noPictureHint')}
       // The three kinds that decode as an image, which is exactly what `options` was filtered to:
       // a slot that lit up for a mesh would promise a drop it then refuses.
       accepts={PICTURES}

@@ -14,6 +14,7 @@ import {
 } from '@/engines/scene/scene-state'
 import type { Transform } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
 import { installDocuments } from '@/stores/document-fixtures'
@@ -53,6 +54,18 @@ function turned(x: number, y: number, z: number): Transform {
 
 const nodeInStore = (id: string): SceneNode | null => sceneNodeNow('doc-1', id)
 
+/**
+ * What the CATALOGUE holds — which is what a texture slot now asks, rather than the shelf.
+ *
+ * `useAssets.items` is the browser's scope: in the 3D space it is narrowed to meshes, so every
+ * slot of the inspector offered nothing there. The shelf is filled too, because `openAssetById`
+ * still resolves an id through it.
+ */
+function cataloguing(assets: readonly Asset[]): void {
+  useAssets.setState({ items: assets })
+  installFakeBridge({ assets: { search: () => Promise.resolve([...assets]) } })
+}
+
 const entries = () => sceneHistoryOf(useScenes.getState(), 'doc-1').past.length
 
 /** The drag handle of one axis. Throws rather than narrowing, so a miss reads as a miss. */
@@ -86,19 +99,17 @@ describe('inspector panel', () => {
   })
 
   it('offers the skies of the project, and the studio to come back to', async () => {
-    useAssets.setState({
-      items: [
-        {
-          id: 'sky-1',
-          name: 'Coucher',
-          type: 'skybox',
-          location: 'local',
-          path: 'assets/sky-1.png',
-          tags: [],
-          createdAt: '2026-08-08T00:00:00.000Z',
-        },
-      ],
-    })
+    cataloguing([
+      {
+        id: 'sky-1',
+        name: 'Coucher',
+        type: 'skybox',
+        location: 'local',
+        path: 'assets/sky-1.png',
+        tags: [],
+        createdAt: '2026-08-08T00:00:00.000Z',
+      },
+    ])
     render(<Content />)
 
     await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
@@ -107,19 +118,17 @@ describe('inspector panel', () => {
   })
 
   it('writes the chosen sky into the document, through the history', async () => {
-    useAssets.setState({
-      items: [
-        {
-          id: 'sky-1',
-          name: 'Coucher',
-          type: 'skybox',
-          location: 'local',
-          path: 'assets/sky-1.png',
-          tags: [],
-          createdAt: '2026-08-08T00:00:00.000Z',
-        },
-      ],
-    })
+    cataloguing([
+      {
+        id: 'sky-1',
+        name: 'Coucher',
+        type: 'skybox',
+        location: 'local',
+        path: 'assets/sky-1.png',
+        tags: [],
+        createdAt: '2026-08-08T00:00:00.000Z',
+      },
+    ])
     render(<Content />)
 
     await userEvent.click(screen.getByRole('button', { name: /Choisir un ciel/ }))
@@ -403,13 +412,11 @@ describe('inspector panel', () => {
     })
 
     beforeEach(() => {
-      useAssets.setState({
-        items: [
-          asset('tex-1', 'Brique', 'texture'),
-          asset('img-1', 'Rendu', 'image'),
-          asset('vid-1', 'Rush', 'video'),
-        ],
-      })
+      cataloguing([
+        asset('tex-1', 'Brique', 'texture'),
+        asset('img-1', 'Rendu', 'image'),
+        asset('vid-1', 'Rush', 'video'),
+      ])
     })
 
     // What the studio generates lands in `image` far more often than in `texture`.
@@ -420,6 +427,20 @@ describe('inspector panel', () => {
 
       expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
       expect(screen.getByRole('menuitemradio', { name: /Rendu/ })).toBeInTheDocument()
+    })
+
+    /**
+     * The defect this closes, reported from the 3D space: the slots built their list out of
+     * `useAssets.items`, which is the BROWSER's scope — narrowed to meshes there — so « swap a
+     * map » offered nothing at all and refused every click, in the one space it belongs to.
+     */
+    it('offers them while the shelf is narrowed to another kind entirely', async () => {
+      useAssets.setState({ items: [] })
+      render(<Content />)
+
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
+
+      expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
     })
 
     it('leaves out what could never be loaded as a texture', async () => {

@@ -39,6 +39,8 @@ function Slot(props: Partial<TextureFieldProps> & Pick<TextureFieldProps, 'value
       clearLabel="Retirer la texture"
       emptyHint="Laisse ce champ sans image"
       optionHint="Pose cette image dans le champ"
+      noOptionLabel="Aucune image dans ce projet"
+      noOptionHint="Générez ou importez une image pour en poser une ici"
       {...props}
     />
   )
@@ -154,10 +156,27 @@ describe('TextureField', () => {
     expect(none).not.toHaveAttribute('aria-label')
   })
 
-  it('cannot be opened on a project with no usable asset', () => {
+  /**
+   * Reported from the 3D space, where the slots of « swap a map » were inert with nothing said:
+   * the trigger was `disabled`, and a disabled cover the size of the line looks exactly like a
+   * line that works. A refusal one cannot see is a click that does nothing.
+   */
+  it('opens on a project with nothing to offer, and says why rather than refusing', async () => {
     renderField(null, [])
 
-    expect(screen.getByRole('button', { name: /Choisir une texture/ })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: /Choisir une texture/ }))
+
+    expect(await screen.findByRole('menuitem', { name: /Aucune image/ })).toBeDisabled()
+  })
+
+  // Emptying it stays reachable there: refusing the whole menu took that away too.
+  it('still offers the empty row when there is nothing else to choose', async () => {
+    const { onChange } = renderField('tex-1', [])
+
+    await userEvent.click(screen.getByRole('button', { name: /Choisir une texture/ }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: /Aucune/ }))
+
+    expect(onChange).toHaveBeenCalledWith(null)
   })
 
   /**
