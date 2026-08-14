@@ -43,7 +43,7 @@ describe('AnimationSection', () => {
   it('takes itself off while the file has brought no clip, rather than offering an empty picker', () => {
     show([])
 
-    expect(screen.queryByLabelText('Séquence')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Clip')).not.toBeInTheDocument()
   })
 
   it('offers every clip the file brought, plus a way back to none', () => {
@@ -58,26 +58,26 @@ describe('AnimationSection', () => {
 
   it('starts a chosen clip playing, since a clip that sat still would read as a dead control', async () => {
     show()
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
 
     expect(nodeOf()?.model.animation).toMatchObject({ clip: 'walk', playing: true, time: 0 })
   })
 
   it('pauses and resumes without losing the clip', async () => {
     show()
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     await userEvent.click(screen.getByRole('button', { name: /Mettre en pause/ }))
 
     expect(nodeOf()?.model.animation).toMatchObject({ clip: 'walk', playing: false })
 
-    await userEvent.click(screen.getByRole('button', { name: /Jouer la séquence/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Jouer le clip/ }))
     expect(nodeOf()?.model.animation?.playing).toBe(true)
   })
 
   it('clears the reference when the choice goes back to none', async () => {
     show()
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'walk')
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), '')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), '')
 
     expect(nodeOf()?.model.animation).toBeUndefined()
   })
@@ -91,7 +91,7 @@ describe('AnimationSection', () => {
 
   it('writes the loop switch into the document', async () => {
     show()
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     await userEvent.click(screen.getByLabelText('En boucle'))
 
     expect(nodeOf()?.model.animation?.loop).toBe(false)
@@ -100,20 +100,20 @@ describe('AnimationSection', () => {
   it('leaves the play button dead while nothing is chosen', () => {
     show()
 
-    expect(screen.getByRole('button', { name: /Jouer la séquence/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Jouer le clip/ })).toBeDisabled()
   })
   it('keeps speed and loop when the clip is swapped for another', async () => {
     show()
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     await userEvent.click(screen.getByLabelText('En boucle'))
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'run')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'run')
 
     expect(nodeOf()?.model.animation).toMatchObject({ clip: 'run', loop: false, playing: true })
   })
 
   it('writes the speed the slider is dragged to', async () => {
     show()
-    await userEvent.selectOptions(screen.getByLabelText('Séquence'), 'walk')
+    await userEvent.selectOptions(screen.getByLabelText('Clip'), 'walk')
     fireEvent.change(screen.getByLabelText('Vitesse'), { target: { value: '2' } })
 
     expect(nodeOf()?.model.animation?.speed).toBe(2)
