@@ -591,7 +591,7 @@ offre la section **Animation** :
 
 | Contrôle | Ce qu’il fait |
 |---|---|
-| **Séquence** | choisit laquelle jouer, parmi celles que le fichier porte |
+| **Clip** | choisit lequel jouer, parmi ceux que le fichier porte |
 | **▶ / ⏸** | lance ou arrête la lecture |
 | **Vitesse** | un multiplicateur, de 0,1 à 4 |
 | **En boucle** | recommence à la fin, ou s’arrête sur la dernière pose |

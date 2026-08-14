@@ -755,7 +755,7 @@ describe('the inspector on an imported model', () => {
     install(modelNodeFixture('model-1'))
     render(<Content />)
 
-    expect(screen.queryByLabelText('Séquence')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Clip')).not.toBeInTheDocument()
   })
 
   it('offers the clips the file brought', () => {
@@ -763,7 +763,7 @@ describe('the inspector on an imported model', () => {
     useModelClips.setState({ clips: { 'doc-1': { 'model-1': ['walk'] } } })
     render(<Content />)
 
-    expect(screen.getByLabelText('Séquence')).toBeInTheDocument()
+    expect(screen.getByLabelText('Clip')).toBeInTheDocument()
   })
 
   // The other half of extracting a model's textures: without a slot to point back at, an edited
