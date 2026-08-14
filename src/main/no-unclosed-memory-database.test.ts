@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { relative } from 'node:path'
+import { join, relative } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { siteOf, walkIn } from './ast-sites'
@@ -193,6 +193,21 @@ describe('every database a suite opens by name is given back', () => {
    * Without this, the assertion above is a green nobody has ever seen go red — the failure this
    * whole file was rewritten three times to avoid.
    */
+  /**
+   * What the exemption COSTS, measured rather than promised.
+   *
+   * An exempt file is exempt whole: a leak added to it tomorrow is one the sweep will not report,
+   * even though the rule sees it perfectly well. Written as a test so the price is a number a
+   * reader can check, not a sentence they have to trust.
+   */
+  it('hides a leak added to an exempt suite, which is the price of the entry', () => {
+    const exempt = Object.keys(OWNED_ELSEWHERE)[0] ?? ''
+    const leaked = `${readFileSync(join(SOURCE_ROOT, exempt), 'utf8')}\nconst extra = memoryCatalog()\n`
+
+    expect(unclosedIn(exempt, leaked).length).toBeGreaterThan(0)
+    expect(findingsOf()).toEqual([])
+  })
+
   it('names an exemption whose file the rule has stopped refusing', () => {
     const exempt = Object.keys(OWNED_ELSEWHERE)
 
