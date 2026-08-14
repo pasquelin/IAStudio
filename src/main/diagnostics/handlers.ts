@@ -27,6 +27,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'skybox.source': 'document',
   'skybox.export': 'document',
   'canvas.layer': 'document',
+  'canvas.size': 'document',
   'image.export': 'document',
   'document.load': 'document',
   'document.save': 'document',

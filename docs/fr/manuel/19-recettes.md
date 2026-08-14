@@ -30,7 +30,7 @@ Avant les recettes, une règle qui les traverse toutes.
 
 **Le double-clic sur un asset n’ouvre pas d’onglet.** Il envoie l’asset dans l’onglet **déjà
 ouvert devant vous** — et à défaut dans un document ouvert **ailleurs**, en changeant d’espace.
-S’il n’y en a nulle part, un message le dit : « Cet asset n’a nulle part où aller ».
+S’il n’y en a nulle part, un message le dit : « Cet asset n’a pas pu être ouvert ».
 
 Donc, dans toutes les recettes qui suivent, l’ordre est **toujours** le même :
 

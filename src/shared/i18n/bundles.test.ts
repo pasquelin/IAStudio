@@ -660,9 +660,10 @@ describe('the keys the interface composes', () => {
  * reviewer reads.
  *
  * What this does NOT catch, and it is the important half: whether the sentence is TRUE.
- * `assets.open` says `Cet asset n'a nulle part où aller` and passes here, while covering one of
- * the six causes that raise it — the five others read under a sentence that is wrong. Announcing
- * a failure and describing the right one are two different jobs; only the first is machine work.
+ * `assets.open` used to say `Cet asset n'a nulle part où aller` and passed here, while covering
+ * one of the six causes that raised it — two of which were not failures to open at all. It took
+ * splitting the scope to fix, and this guard was green throughout. Announcing a failure and
+ * describing the right one are two different jobs; only the first is machine work.
  *
  * Nor does the second test catch a wording made too WIDE — `/./` would pass both tests and empty
  * the guard in one line. It rules out dead entries, not dilution: "can only shrink" is about the
@@ -674,10 +675,10 @@ describe('the keys the interface composes', () => {
  * reviewer's eyes, deliberately, rather than a sentence that quietly announces nothing.
  */
 const FAILURE_WORDINGS: Record<Language, readonly RegExp[]> = {
-  fr: [/a échoué/, /n’a pas pu/, /n’ont pas pu/, /a perdu/, /n’a nulle part/, /était illisible/],
+  fr: [/a échoué/, /n’a pas pu/, /n’ont pas pu/, /a perdu/, /était illisible/],
   // Not `/ failed\b/`: the leading space and the case made `Failed to open…` a false red, which
   // is how English states a failure most often. Same eight lines matched either way.
-  en: [/\bfailed\b/i, /could not/, /lost one of/, /has nowhere/],
+  en: [/\bfailed\b/i, /could not/, /lost one of/],
 }
 
 describe('the failures the journal reports', () => {

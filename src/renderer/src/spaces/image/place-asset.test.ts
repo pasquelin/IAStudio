@@ -9,6 +9,15 @@ vi.mock('@/services/diagnostics', () => ({ reportFailure: vi.fn() }))
 
 const said = () => vi.mocked(reportFailure).mock.calls.map(([, , error]) => String(error))
 
+/**
+ * Both warnings below are `canvas.size`, NOT `assets.open`, and each case asserts it: the
+ * document opens here — the layer is built and the state written right after — so filing them
+ * under `assets.open` told the reader « this asset has nowhere to go » at the moment the picture
+ * appeared on screen. One scope cannot carry a failure to open and a warning about the size of
+ * what did open.
+ */
+const scopes = () => vi.mocked(reportFailure).mock.calls.map(([scope]) => scope)
+
 const DOCUMENT = 'image-1'
 
 const picture: Asset = {
@@ -130,12 +139,14 @@ describe('making a document be the asset', () => {
     await becomeAsset(DOCUMENT, picture, () => Promise.reject(new Error('gone')))
 
     expect(said()).toEqual([expect.stringContaining('would not measure')])
+    expect(scopes()).toEqual(['canvas.size'])
   })
 
   it('says so when the ceiling brought the picture under its own size', async () => {
     await becomeAsset(DOCUMENT, picture, measuring(20000, 10000))
 
     expect(said()).toEqual([expect.stringContaining('below its own size')])
+    expect(scopes()).toEqual(['canvas.size'])
   })
 
   // The ordinary case, and the one that must stay quiet: a document that IS its picture.

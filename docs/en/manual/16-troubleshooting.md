@@ -380,29 +380,22 @@ format (`.mp4`, `.wav`, `.png`).
 **Failed**: preparation stopped on a problem. **Stopped**: you halted it yourself. In both cases,
 the file can be imported again.
 
-### "This asset has nowhere to go"
+### "This asset could not be opened"
 
-**What it means.** You double-clicked an asset, and **no open document knows how to receive it**.
-It is neither a bug nor a damaged file.
+**What it means.** You double-clicked an asset and it did not arrive. It is neither a bug nor a
+damaged file. **The journal line says which of the four causes it was**, in grey beside the
+message.
 
-**The cause.** Double-click **never opens a tab**: it sends the asset into a document that is
-already open. It looks across every workspace, not only the one you are in — but it needs at
-least one destination.
+| What the detail says | What happened | What to do |
+|---|---|---|
+| `no destination` | **the ordinary case**: no workspace knows how to open this kind of asset | right-click lists what this asset can become |
+| `not on disk` | the asset is in your Scenario library, not on this disk yet | fetch it into the project — see [Assets](07-assets.md) |
+| `no project` | no project is open, and a document is a file: it needs a folder | open or create a project |
+| `no document` | the document could not be created | check that the project folder can be written to |
 
-| You double-click… | You need, open somewhere… |
-|---|---|
-| a picture, to make it a sky | a **sky** document (Skyboxes workspace) |
-| a mesh, to set it in a scene | a **3D scene** |
-| a sound, to edit it | a **take** (Audio workspace) |
-| a picture, to paint on it | an **image** document |
-| anything, to cut it into an edit | a **sequence** (Video workspace) |
-| a picture, to make it a material | a **material** (Textures workspace) |
-
-**What to do.** Open a document able to receive it — the `+` button on the left rail, in the
-workspace you want — then double-click. You do not have to go there first: the studio takes you.
-
-> **Right-click answers the question without trying.** It lists every destination this asset has,
-> greying out those whose document is not open. Quicker than guessing.
+> **Double-click opens a tab when it needs to.** It reuses the asset's own tab when that is
+> already open, and creates one otherwise: there is no destination to prepare. Right-click, on
+> the other hand, lists everything this asset can become without trying any of it.
 
 ---
 
@@ -642,7 +635,7 @@ Settings → **Advanced** → **Reset everything**. Puts every setting back to a
 | No waves on the audio track | the same |
 | "Video preparation unavailable" although `which ffmpeg` finds one | run `ffmpeg -version`: the binary exists but no longer starts |
 | "The keychain did not give your accounts back" | unlock the keychain, then start again — nothing was lost |
-| "This asset has nowhere to go" | open a document able to receive it, with `+` on the left rail |
+| "This asset could not be opened" | read the grey detail: it says which of the four causes it was |
 | "This panel ran into an error" | click **Try again** — the rest of the window is fine |
 | `⌘Z` has no effect | activate the right tab |
 | Black 3D canvas | close and reopen the tab |

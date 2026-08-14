@@ -415,6 +415,12 @@ export type LogScope =
   | 'skybox.source'
   | 'skybox.export'
   | 'canvas.layer'
+  // Not `assets.open`, and the split is the point: the document DOES open here, and the code
+  // carries on building it. What is reported is that it could not take the size of the picture
+  // behind it — which matters because ⌘S writes the document's size back over that picture.
+  // Said under `assets.open`, it read « this asset has nowhere to go » while the asset was
+  // appearing on screen.
+  | 'canvas.size'
   | 'image.export'
   | 'document.load'
   | 'document.save'
@@ -454,6 +460,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'skybox.source',
   'skybox.export',
   'canvas.layer',
+  'canvas.size',
   'image.export',
   'document.load',
   'document.save',

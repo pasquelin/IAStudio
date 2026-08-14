@@ -168,7 +168,7 @@ The asset's kind picks its editor, and nothing else weighs in:
 | a **sound** | the Audio workspace |
 | a **video** | the Video workspace |
 
-**A double-click that leads nowhere says so**: "This asset has nowhere to go". That is a kind no
+**A double-click that leads nowhere says so**: "This asset could not be opened". That is a kind no
 editor takes, or an asset not yet down on your disk — not a broken one.
 
 > **The `+` button on the left rail makes an EMPTY document**, in the workspace you want.

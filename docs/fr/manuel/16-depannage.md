@@ -397,29 +397,22 @@ convertissez-le dans un format courant (`.mp4`, `.wav`, `.png`).
 **Échec** : la préparation s’est arrêtée sur un problème. **Interrompu** : vous l’avez arrêtée
 vous-même. Dans les deux cas, le fichier peut être réimporté.
 
-### « Cet asset n’a nulle part où aller »
+### « Cet asset n’a pas pu être ouvert »
 
-**Ce que ça veut dire.** Vous avez double-cliqué un asset, et **aucun document ouvert ne sait le
-recevoir**. Ce n’est ni un bug, ni un fichier abîmé.
+**Ce que ça veut dire.** Vous avez double-cliqué un asset, et il n’est pas arrivé. Ce n’est ni un
+bug, ni un fichier abîmé. **La ligne du journal dit laquelle des quatre causes**, en gris à côté
+du message.
 
-**La cause.** Le double-clic **n’ouvre jamais d’onglet** : il envoie l’asset dans un document
-déjà ouvert. Il cherche dans tous les espaces, pas seulement celui que vous regardez — mais il
-lui faut au moins une destination.
+| Ce que dit le détail | Ce qui s’est passé | Quoi faire |
+|---|---|---|
+| `no destination` | **la cause ordinaire** : aucun espace ne sait ouvrir ce type d’asset | le clic droit liste ce que cet asset sait devenir |
+| `not on disk` | l’asset est dans votre bibliothèque Scenario, pas encore sur ce disque | le récupérer dans le projet — voir [Assets](07-assets.md) |
+| `no project` | aucun projet n’est ouvert, et un document est un fichier : il lui faut un dossier | ouvrir ou créer un projet |
+| `no document` | le document n’a pas pu être créé | vérifier que le dossier du projet est accessible en écriture |
 
-| Vous double-cliquez… | Il faut, ouvert quelque part… |
-|---|---|
-| une image, pour en faire un ciel | un document **ciel** (espace Skyboxes) |
-| un maillage, pour le poser dans une scène | une **scène 3D** |
-| un son, pour l’éditer | une **prise** (espace Audio) |
-| une image, pour la peindre | un document **image** |
-| n’importe quoi, pour le monter | une **séquence** (espace Vidéo) |
-| une image, pour en faire une matière | une **matière** (espace Textures) |
-
-**Quoi faire.** Ouvrez un document capable de le recevoir — le bouton `+` du rail gauche, dans
-l’espace voulu — puis double-cliquez. Vous n’avez pas à y aller d’abord : le studio vous y amène.
-
-> **Le clic droit répond à la question sans essayer.** Il liste toutes les destinations de cet
-> asset, en grisant celles dont aucun document n’est ouvert. C’est plus rapide que de deviner.
+> **Le double-clic ouvre un onglet s’il le faut.** Il réutilise celui de l’asset quand il est déjà
+> ouvert, sinon il en crée un : vous n’avez aucune destination à préparer. Le clic droit, lui,
+> liste tout ce que cet asset sait devenir sans rien tenter.
 
 ---
 
@@ -668,7 +661,7 @@ installation neuve.
 | Pas de vagues sur la piste audio | idem |
 | « Préparation vidéo indisponible » alors que `which ffmpeg` en trouve un | `ffmpeg -version` : le binaire existe mais ne démarre plus |
 | « Le trousseau n’a pas rendu vos comptes » | déverrouiller le trousseau, puis recommencer — rien n’a été perdu |
-| « Cet asset n’a nulle part où aller » | ouvrir un document qui sache le recevoir, avec le `+` du rail gauche |
+| « Cet asset n’a pas pu être ouvert » | lire le détail en gris : il dit laquelle des quatre causes |
 | « Ce panneau a rencontré une erreur » | cliquer **Réessayer** — le reste de la fenêtre va bien |
 | `⌘Z` sans effet | activer le bon onglet |
 | Canvas 3D noir | fermer et rouvrir l’onglet |

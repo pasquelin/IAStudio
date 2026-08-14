@@ -174,7 +174,7 @@ Le type de l’asset désigne son éditeur, et rien d’autre n’entre en compt
 | un **son** | l’espace Audio |
 | une **vidéo** | l’espace Vidéo |
 
-**Un double-clic qui ne mène nulle part le dit** : « Cet asset n’a nulle part où aller ». C’est le
+**Un double-clic qui ne mène nulle part le dit** : « Cet asset n’a pas pu être ouvert ». C’est le
 cas d’un type qu’aucun éditeur ne prend, ou d’un asset qui n’est pas encore descendu sur votre
 disque — pas d’un asset abîmé.
 
