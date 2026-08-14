@@ -44,7 +44,12 @@ export function PictureField({ label, value, onChange, emptyLabel, emptyHint }: 
       options={options}
       onChange={onChange}
       emptyLabel={emptyLabel ?? t('inspector.noTexture')}
-      chooseLabel={t('inspector.chooseTexture')}
+      // Named after the slot, because the whole LINE is what opens the menu now: five slots of a
+      // material offered five controls called « Choose a texture », so nothing said which channel
+      // one was about to change — to a screen reader stepping through them, or to a voice command
+      // naming the one on screen. It is also the only place the slot's name stays readable when
+      // the column truncates it, which `Row` used to answer with a native title the cover swallows.
+      chooseLabel={t('inspector.chooseTextureFor', { name: label })}
       clearLabel={t('inspector.clearTexture')}
       emptyHint={emptyHint ?? t('inspector.noTextureHint')}
       optionHint={t('inspector.pickTextureHint')}

@@ -4,12 +4,13 @@ import type { AssetType } from '@shared/domain/asset'
 import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
+import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { AssetDropTarget } from './AssetDropTarget'
+import { Flyout } from './Flyout'
 import { Thumbnail } from './Thumbnail'
-import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
 import { Row } from './Row'
-import { FIELD_THUMBNAIL, FOCUS_RING } from './styles'
+import { FIELD_THUMBNAIL, FOCUS_RING, OVERLAY_BUTTON } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -38,8 +39,8 @@ export type TextureFieldProps = {
   optionHint: string
   /**
    * The kinds a drag may drop into this slot. Absent leaves the field undroppable, which is what
-   * a slot filled from something other than the catalogue wants — `FontField` offers the fonts
-   * of the system, and no asset of the project is one.
+   * a slot filled from something other than the catalogue wants — `FontField` offers the fonts of
+   * the system, and no asset of the project is one.
    */
   accepts?: readonly AssetType[]
   /**
@@ -50,14 +51,20 @@ export type TextureFieldProps = {
    * `EmptyStateAction` are: two props that must travel together are two props that can be split,
    * and a caller passing the callback alone would lose the button with nothing to say so. The
    * hint is required for the same reason `MenuRow` demands one — the label reads « Open the
-   * texture » while a single click does nothing at all, and only the hint says which gesture.
+   * texture » while a single click opens the menu instead, and only the hint says which gesture.
    */
   open?: { label: string; hint: string; run: () => void }
 }
 
 /**
- * One texture slot: what it holds, and a menu of what the project can put in it. What travels
- * is the asset's identifier and never an image — the engine loads, caches and frees the picture.
+ * One texture slot: what it holds, and a menu of what the project can put in it. What travels is
+ * the asset's identifier and never an image — the engine loads, caches and frees the picture.
+ *
+ * **The line itself is the menu's trigger.** It carried a button on its end instead, and that
+ * button was the one way in: a 28px thumbnail beside a name reads as a picture rather than as a
+ * control, so a whole row of the inspector looked like something to read. Pressing what one is
+ * trying to change is the shorter rule, and it leaves the end of the row to the one action that
+ * is not "change this" — emptying it.
  */
 export function TextureField({
   label,
@@ -73,11 +80,38 @@ export function TextureField({
   open,
 }: TextureFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
+  // "None" is one of the choices, not a separate button: choosing no texture is choosing.
+  const flyout = useHoverFlyout(options.length + 1)
+  // The same sentence for every option row: one object, not one per picture the project holds.
+  const optionTip = HINT_RIGHT(optionHint)
 
   const picture = <Thumbnail url={chosen?.url} className={FIELD_THUMBNAIL} />
 
   return (
     <DroppableSlot accepts={accepts} onDrop={onChange}>
+      {/* Laid over the row rather than around it, as `ChannelTile` does and for the same reason
+          `OVERLAY_BUTTON` gives. Positioned, so it paints over the row's own text; FIRST among
+          this box's positioned children, so the two controls below — which are `relative` for
+          exactly this — stay on top of it.
+
+          NO fill under the pointer, and none is coming: no line of the inspector answers one,
+          which `design/styles.test.ts` holds by naming the two surfaces still allowed to. What
+          says this one opens something is its tooltip.
+
+          Nothing on hover either, unlike `MenuButton`: `wrapProps` is deliberately not spread. A
+          menu opening under the pointer is what a toolbar wants; a stack of slots that opened one
+          each time the pointer crossed a row would be unusable. The ANCHOR, the ARIA pair and the
+          `Alt+ArrowDown` chord do come from the hook — writing them out here is how this trigger
+          silently lost the chord in the first place. */}
+      <button
+        type="button"
+        {...flyout.triggerProps}
+        disabled={options.length === 0}
+        onClick={flyout.open}
+        {...TIP_LEFT(chooseLabel)}
+        className={MENU_TRIGGER}
+      />
+
       <Row
         // The picture first, then what the slot holds over the slot's own name — the shape every
         // list of the studio draws, and the reason this stopped drawing its own: a label in the
@@ -87,16 +121,18 @@ export function TextureField({
           /* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives
              the picture it points at, and an id whose asset has left the project drew the empty
              label beside a button offering to open something no longer there. A focus stop that
-             leads nowhere is also one more Tab to cross. */
+             leads nowhere is also one more Tab to cross.
+
+             `relative` is what keeps it reachable: the trigger above covers the whole line, and a
+             static child of a row paints under a positioned sibling whatever the DOM order. Two
+             surfaces, two gestures — the picture opens what the slot holds, the rest of the line
+             offers to change it. */
           open && chosen ? (
             <button
               type="button"
               {...activation(open.run)}
               {...TIP_LEFT(open.label, false, open.hint)}
-              className={cn(
-                'shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
-                FOCUS_RING,
-              )}
+              className={OPEN_PICTURE}
             >
               {picture}
             </button>
@@ -108,64 +144,78 @@ export function TextureField({
         subtitle={label}
         tip={TIP_LEFT}
         actions={
-          <>
-            <MenuButton
-              icon={mdiTextureBox}
-              label={chooseLabel}
+          /* Only when there is something to clear: a dead cross on each of the five empty slots
+             of a fresh material is five buttons that do nothing. */
+          value !== null && (
+            <ToolButton
+              icon={mdiClose}
+              label={clearLabel}
               tooltip={TIP_LEFT}
               variant="header"
-              opensOnClick
-              disabled={options.length === 0}
-              // "None" is one of the choices, not a separate button: choosing no texture is
-              // choosing.
-              rowCount={options.length + 1}
-              rows={close => [
-                <MenuRow
-                  key="none"
-                  label={emptyLabel}
-                  icon={mdiCheckboxBlankOutline}
-                  checked={value === null}
-                  tick="one-of"
-                  tip={HINT_RIGHT(emptyHint)}
-                  onSelect={() => {
-                    onChange(null)
-                    close()
-                  }}
-                />,
-                ...options.map(option => (
-                  <MenuRow
-                    key={option.id}
-                    label={option.name}
-                    icon={mdiTextureBox}
-                    checked={option.id === value}
-                    tick="one-of"
-                    tip={HINT_RIGHT(optionHint)}
-                    onSelect={() => {
-                      onChange(option.id)
-                      close()
-                    }}
-                  />
-                )),
-              ]}
+              className="relative"
+              onClick={() => onChange(null)}
             />
-
-            {/* Only when there is something to clear: a dead cross on each of the five empty
-                slots of a fresh material is five buttons that do nothing. */}
-            {value !== null && (
-              <ToolButton
-                icon={mdiClose}
-                label={clearLabel}
-                tooltip={TIP_LEFT}
-                variant="header"
-                onClick={() => onChange(null)}
-              />
-            )}
-          </>
+          )
         }
       />
+
+      {flyout.showing && (
+        <Flyout
+          anchor={flyout.anchor}
+          // Below, not beside. The anchor is the whole line now, so the default placement measures
+          // from the panel's LEFT edge and hangs the menu out over the viewport, a panel's width
+          // away from the row it belongs to. `TitleBarSelect` hangs its own below for the same
+          // reason: a wide trigger is answered underneath.
+          placement="below"
+          role="menu"
+          {...flyout.flyoutProps}
+        >
+          <MenuRow
+            label={emptyLabel}
+            icon={mdiCheckboxBlankOutline}
+            checked={value === null}
+            tick="one-of"
+            tip={HINT_RIGHT(emptyHint)}
+            onSelect={() => {
+              onChange(null)
+              flyout.close()
+            }}
+          />
+          {options.map(option => (
+            <MenuRow
+              key={option.id}
+              label={option.name}
+              icon={mdiTextureBox}
+              checked={option.id === value}
+              tick="one-of"
+              tip={optionTip}
+              onSelect={() => {
+                onChange(option.id)
+                flyout.close()
+              }}
+            />
+          ))}
+        </Flyout>
+      )}
     </DroppableSlot>
   )
 }
+
+/**
+ * Refused rather than merely inert: a project with no picture has nothing to offer this slot.
+ *
+ * And TRANSPARENT to the pointer while it is refused, which is not decoration. A disabled control
+ * swallows pointer events without letting them bubble, and `DragEvent` is one of them — a cover
+ * the size of the row would take the slot's own drop with it, on exactly the row a drag is meant
+ * to fill. It gives the row's native titles back at the same time.
+ */
+const MENU_TRIGGER = cn(OVERLAY_BUTTON, 'rounded-(--radius-sc-md) disabled:pointer-events-none')
+
+/** The picture's own press, which is a second surface rather than a second meaning of one gesture. */
+const OPEN_PICTURE = cn(
+  'relative shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
+  FOCUS_RING,
+)
 
 /**
  * The row itself, made a drop target only where a drop means something.
@@ -199,8 +249,12 @@ function DroppableSlot({
    * The negative inset cancels the one `Row` carries: every list of the studio wants those four
    * pixels, and the inspector is the one place that does not — `FIELD_ROW` has none, deliberately,
    * so that the two families of property line start at the same x.
+   *
+   * `relative` because this box is what the menu trigger covers. Here rather than on a wrapper of
+   * its own: this element is already exactly the row, and a second one inside it would be a node
+   * whose only class is `relative`.
    */
-  const shape = 'h-(--sc-row-stacked) min-w-0 -mx-1'
+  const shape = 'relative h-(--sc-row-stacked) min-w-0 -mx-1'
 
   if (!accepts) return <div className={shape}>{children}</div>
 

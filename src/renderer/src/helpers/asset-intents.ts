@@ -104,6 +104,32 @@ function targetOf(kind: DocumentKind): DocumentDescriptor | null {
 }
 
 /**
+ * A tab brought forward and filled from disk, in that order — everything that must happen before
+ * anything is written INTO a document, and every step of it is load-bearing.
+ *
+ * Exported because a second caller assembles a document of its own (`openModelMaterial`) and had
+ * copied the two lines: the order is an invariant with a silent failure mode, so the day it gains
+ * a third step, a copy that did not gain it writes over a file nobody read.
+ *
+ * Answers whether the document is there at all — a descriptor that has gone leaves nothing to
+ * write into.
+ */
+export async function readyForWriting(documentId: string): Promise<boolean> {
+  const target = useDocuments.getState().documents[documentId]
+  if (!target) return false
+
+  // Brought forward before it is written into: an asset landing in a tab nobody is looking at is
+  // indistinguishable from a double-click that did nothing.
+  openDocument(target)
+
+  // And its file read before anything is written into it. A tab that has never been on screen
+  // holds no state, and writing into it makes `restoreDocument` take it for one already loaded:
+  // the file is then never read, and the next save writes this over it.
+  await restoreDocument(documentId)
+  return true
+}
+
+/**
  * A destination that needs an open tab of its kind, and an asset it can take.
  *
  * `eligible` mirrors the guard inside `put`: every one of them refuses in silence, and the
@@ -120,26 +146,13 @@ function inDocument(
   eligible: (asset: Asset, documentId: string | null) => boolean = () => true,
   fill?: (documentId: string, asset: Asset) => Promise<void>,
 ): Pick<AssetIntent, 'kind' | 'ready' | 'takes' | 'run' | 'into' | 'become'> {
-  /**
-   * The order both landings share, and every step of it is load-bearing — see the comments
-   * inside. Only what is placed at the end differs.
-   */
+  /** Only what is placed at the end differs between the two landings. */
   const land = async (
     documentId: string,
     asset: Asset,
     place: (documentId: string, asset: Asset) => void | Promise<void>,
   ): Promise<void> => {
-    const target = useDocuments.getState().documents[documentId]
-    if (!target) return
-
-    // Brought forward before it is written into: an asset landing in a tab nobody is looking
-    // at is indistinguishable from a double-click that did nothing.
-    openDocument(target)
-
-    // And its file read before anything is written into it. A tab that has never been on
-    // screen holds no state, and writing into it makes `restoreDocument` take it for one
-    // already loaded: the file is then never read, and the next save writes this over it.
-    await restoreDocument(documentId)
+    if (!(await readyForWriting(documentId))) return
     await place(documentId, asset)
   }
 

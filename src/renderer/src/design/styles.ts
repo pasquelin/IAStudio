@@ -55,6 +55,24 @@ export const BUTTON_BASE = cn(
 export const BUTTON_NEUTRAL = 'bg-surface text-text hover:bg-elevated'
 
 /**
+ * A button laid OVER what it acts on, rather than around it.
+ *
+ * The shape four surfaces reached for independently — a shelf tile, a texture channel, a texture
+ * slot, a model's material — and always for the same reason: those hosts render a `figure`, a
+ * `div` or a `p`, and a `button` takes phrasing content only. Wrapping them is invalid HTML, so
+ * the press target is drawn on top instead, invisible and the size of its host.
+ *
+ * The RADIUS stays with the caller, as `BUTTON_BASE` leaves the gauge: it has to match the host's
+ * corner, and the four hosts do not share one. No fill either — a surface that is invisible at
+ * rest and lights up under the pointer is a decision for the host to take (`rowSkin`), not one
+ * this shape should smuggle in.
+ */
+export const OVERLAY_BUTTON = cn(
+  'absolute inset-0 cursor-pointer border-none bg-transparent',
+  FOCUS_RING,
+)
+
+/**
  * The control language shared by the bars: same height token, so the density setting reaches
  * every one of them at once, and the same focus ring, so no bar ends up being the one control
  * a keyboard user cannot see.

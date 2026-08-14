@@ -1,5 +1,5 @@
 import { mdiChevronDown } from '@mdi/js'
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
@@ -49,19 +49,17 @@ export function TitleBarSelect({
   onAct,
   width,
 }: TitleBarSelectProps) {
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const flyout = useHoverFlyout(rowCount)
 
   return (
     <div {...flyout.wrapProps} className="contents">
       <button
-        ref={setAnchor}
         type="button"
         {...TIP_BOTTOM(name, false, hint)}
-        // Only when there is one: with a single row the button acts outright, and announcing a
-        // menu it will never show sends a screen reader looking for it.
-        aria-haspopup={flyout.hasFlyout ? 'menu' : undefined}
-        aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
+        // The anchor, the ARIA pair and the `Alt+ArrowDown` chord, all from the hook. This site
+        // declared the first two by hand and had never had the third: on the title bar's own
+        // selectors, the gesture that opens every other menu of the studio did nothing.
+        {...flyout.triggerProps}
         onClick={flyout.hasFlyout ? flyout.open : onAct}
         // The ring is the caller's job on `TITLE_BAR_GHOST`, and its own doc says so: without it
         // the platform draws an outline in a blue that belongs to no theme.
@@ -78,7 +76,7 @@ export function TitleBarSelect({
       </button>
 
       {flyout.showing && (
-        <Flyout anchor={anchor} placement="below" role="menu" {...flyout.flyoutProps}>
+        <Flyout anchor={flyout.anchor} placement="below" role="menu" {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}

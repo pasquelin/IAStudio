@@ -11,7 +11,7 @@ import type { PbrChannel } from '@shared/domain/texture'
 import { cn } from '@/helpers/cn'
 import { usePosterUrl } from '@/hooks/usePosterUrl'
 import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
-import { FOCUS_RING, rowSkin } from '@/design/styles'
+import { OVERLAY_BUTTON, rowSkin } from '@/design/styles'
 import { MediaTile } from '@/design/MediaTile'
 import { MenuButton } from '@/design/MenuButton'
 import { MenuRow } from '@/design/MenuRow'
@@ -109,11 +109,7 @@ export function ChannelTile({
         // which channel this is and nothing about what pressing it does.
         {...TIP_LEFT(label)}
         onClick={onInspect}
-        className={cn(
-          'absolute inset-0 cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
-          'disabled:cursor-default',
-          FOCUS_RING,
-        )}
+        className={cn(OVERLAY_BUTTON, 'rounded-(--radius-sc-sm) disabled:cursor-default')}
       />
 
       {/* After the button rather than in `MediaTile`'s badge slot, and for the same reason the
