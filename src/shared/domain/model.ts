@@ -101,13 +101,27 @@ export const FEATURED_TAG = 'sc:featured'
 export const SKYBOX_TAG = 'sc:skybox'
 
 /**
+ * The namespace Scenario keeps for its own tags — and the one `GET /models?tags=` does not index.
+ *
+ * MEASURED 2026-08-14, one request per tag against the real catalogue: `sc:skybox`, `sc:scenario`,
+ * `sc:featured`, `sc:texture` and `sc:tool` each answer 0 models, while `image-upscale` answers
+ * 13, `remove-background` 9 and `vectorize` 4. The three skybox models carry `sc:skybox` in the
+ * records that same endpoint serves when asked for no tag at all, so the tag is real and only the
+ * filter is blind to it. Asking for one does not narrow the walk, it ends it — which is what left
+ * the skybox workspace with no model to choose from. `POST /search/models` is no way around it
+ * either: filtering its hits by the same tag answers nothing too.
+ */
+export const SYSTEM_TAG_PREFIX = 'sc:'
+
+/**
  * The families no capability can name, and the tag that names each one. Skyboxes were the first;
  * upscaling, cutout and vectorization are the same case — the capability enum holds no value for
- * any of them, and all 24 of those models answer `img2img` like every other image model.
+ * any of them, and all 29 of those models answer `img2img` like every other image model.
  *
  * Read in both directions, which is why it is a list of pairs: `familyOf` classifies a model by
- * it, and the registry narrows a listing server-side by it. Ten models out of 642 are not worth
- * walking six pages of catalogue to find.
+ * it, and the registry narrows a listing server-side by the ones the API indexes — every family
+ * but the skyboxes, whose tag lives in the namespace above. Twenty-six models out of 642 are not
+ * worth walking six pages of catalogue to find.
  *
  * A tag alone never decides — see `familyOf`: two of the nine models carrying `remove-background`
  * remove it from video, and they belong to the montage, not to the canvas.

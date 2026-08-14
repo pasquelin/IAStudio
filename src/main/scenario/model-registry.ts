@@ -2,6 +2,7 @@ import {
   FEATURED_TAG,
   OFFICIAL_TAG,
   PERIOD_DAYS,
+  SYSTEM_TAG_PREFIX,
   tagOfFamily,
   type ModelDescriptor,
   type ModelPage,
@@ -61,13 +62,14 @@ export type ListRequest = {
   pageSize: number
   token?: string
   sort: ModelSort
-  /** Narrows the request to Scenario's own models, which the API can filter server-side. */
-  official: boolean
   /**
    * ONE tag, as a coarse pre-filter. Measured: the API unions the tags it is given — `Video`
    * alone answers 127 models, `Kling` alone 23, and `Video,Kling` answers 139. Passing every
    * chosen tag would therefore WIDEN the result with each filter added. The exact match is
    * made here instead, and this only narrows what has to be walked.
+   *
+   * Never one from `SYSTEM_TAG_PREFIX`, which the endpoint answers nothing for. `preFilter`
+   * is where that is decided.
    */
   tag?: string
   /** ISO date the models must be newer than, already resolved from the requested span. */
@@ -268,14 +270,20 @@ function matches(summary: ModelSummary, query: ModelQuery, since: string | null)
 /**
  * The one tag the listing is narrowed by server-side, ahead of `matches`.
  *
- * A chosen tag comes first — it is what the user asked for. Failing that, the four families a
- * tag defines are worth asking the API for by it: each is nine or ten models out of six
+ * A chosen tag comes first — it is what the user asked for. Failing that, the three families
+ * whose tag the API indexes are worth asking for by it: four to thirteen models out of six
  * hundred, and walking the public catalogue page by page to keep them costs eight round trips
  * to fill one screen. Every other family is dense enough that the local filter settles it.
+ *
+ * Nothing from `SYSTEM_TAG_PREFIX` leaves, whichever of the two it came from: the endpoint
+ * answers zero models for those, so the pre-filter would not shorten the walk but empty it.
+ * That is the fourth family, the skyboxes: `matches` classifies them from the records instead.
+ * Measured 2026-08-14, that walk does reach them — the three sit at offsets 100 to 299 of the
+ * score-ordered public listing, so one request's five pages of a hundred bring them all back.
  */
 function preFilter(query: ModelQuery): string | undefined {
-  if (query.tags?.[0]) return query.tags[0]
-  return query.family ? tagOfFamily(query.family) : undefined
+  const wanted = query.tags?.[0] ?? (query.family ? tagOfFamily(query.family) : undefined)
+  return wanted?.startsWith(SYSTEM_TAG_PREFIX) ? undefined : wanted
 }
 
 type Cached<T> = { at: number; value: T }
@@ -345,15 +353,19 @@ export function createModelRegistry({
    */
   const fetchPage = async (cursor: Cursor, query: ModelQuery): Promise<CatalogPage> => {
     // Keyed by the tag that actually leaves, never by what it was derived from. The family is
-    // one of its sources — a skybox listing narrows server-side, so its page holds three models
-    // and must not be served back to Image — but the six families that resolve to no tag ask
-    // the identical question and go on sharing one page. Keying the family itself would have
-    // made each of them repay a walk the previous one had already downloaded.
-    const key = `${preFilter(query) ?? ''}|${query.sort ?? ''}|${query.origin ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
+    // one of its sources — a cutout listing narrows server-side, so its page holds nine models
+    // and must not be served back to Image — but every family resolving to no tag, skyboxes
+    // among them, asks the identical question and shares one page. Keying the family itself
+    // would make each of them repay a walk the previous one had already downloaded.
+    //
+    // The chosen origin is absent for the same reason: nothing of it leaves. It picks where the
+    // walk starts, which `serialize(cursor)` already says, and `matches` reads authorship off
+    // the records — so "Official" and "All" are the same pages under two names.
+    const tag = preFilter(query)
+    const key = `${tag ?? ''}|${query.sort ?? ''}|${query.since ?? ''}|${query.search?.trim() ?? ''}|${serialize({ ...cursor, ...(cursor.mode === 'list' ? { skip: 0 } : {}) })}`
     const cached = fresh(fetched.get(key))
     if (cached) return cached
 
-    const tag = preFilter(query)
     const page =
       cursor.mode === 'search'
         ? await catalog().search({
@@ -365,7 +377,6 @@ export function createModelRegistry({
             privacy: cursor.privacy,
             pageSize: PAGE_SIZE,
             sort: query.sort ?? 'relevance',
-            official: query.origin === 'official',
             ...(tag ? { tag } : {}),
             ...(query.since ? { createdAfter: cutoff(query.since, now()) } : {}),
             ...(cursor.token ? { token: cursor.token } : {}),

@@ -182,7 +182,7 @@ describe('familyOf', () => {
   })
 
   // The capability enum holds no upscale, no cutout and no vectorize value — measured against
-  // `models.list`'s own — and all 24 of these models answer `img2img`. The tag is the only
+  // `models.list`'s own — and all 26 of these models answer `img2img`. The tag is the only
   // signal, exactly as for skyboxes.
   it('tells the three edit families apart from plain image models', () => {
     expect(familyOf(['img2img'], ['image-upscale'])).toBe('upscale')
