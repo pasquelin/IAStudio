@@ -18,6 +18,13 @@ export type Selection =
   | { kind: 'clip'; ownerId: string; ids: readonly string[] }
   | { kind: 'track'; ownerId: string; ids: readonly string[] }
   | { kind: 'layer'; ownerId: string; ids: readonly string[] }
+  /**
+   * A scene node, and never which one: `SceneState.selectedIds` is where that lives, and it is
+   * also written by the commands — a duplicate selects its copies, a delete drops what it
+   * removed, ⌘Z puts both back. None of those pass through `selectIn`, so a copy kept here could
+   * only go stale. This says the face is the scene's; the face reads the scene for the rest.
+   */
+  | { kind: 'node'; ownerId: string; ids: readonly string[] }
 
 type SelectionState = {
   selection: Selection
@@ -25,6 +32,7 @@ type SelectionState = {
   selectClip: (documentId: string, clipId: string) => void
   selectTrack: (documentId: string, trackId: string) => void
   selectLayer: (documentId: string, layerId: string) => void
+  pointAtNodes: (documentId: string, picked: boolean) => void
   clear: () => void
 }
 
@@ -64,7 +72,7 @@ function unchanged(current: Selection, next: Selection): boolean {
  * global rather than per document because one inspector serves every panel — the asset shelf,
  * the montage and the track headers all point it at what was touched last.
  */
-export const useSelection = create<SelectionState>()(set => {
+export const useSelection = create<SelectionState>()((set, get) => {
   const point = (next: Selection): void =>
     set(state => (unchanged(state.selection, next) ? state : { selection: next }))
 
@@ -77,6 +85,15 @@ export const useSelection = create<SelectionState>()(set => {
       point({ kind: 'track', ownerId: documentId, ids: [trackId] }),
     selectLayer: (documentId, layerId) =>
       point({ kind: 'layer', ownerId: documentId, ids: [layerId] }),
+    pointAtNodes: (documentId, picked) => {
+      if (picked) return point({ kind: 'node', ownerId: documentId, ids: NO_IDS })
+
+      // Emptied only where this scene is what filled it. A click in the void of a viewport used
+      // to wipe whatever ANOTHER panel had selected — five assets picked in the shelf, and the
+      // two buttons that act on them going grey because a cube was deselected beside them.
+      const { selection } = get()
+      if (selection.kind === 'node' && selection.ownerId === documentId) point(NONE)
+    },
     clear: () => point(NONE),
   }
 })

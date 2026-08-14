@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { fakeMenu } from '@/helpers/menu-fixtures'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { installScene } from '@/stores/scene-fixtures'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { SceneTree } from './SceneTree'
@@ -161,5 +163,58 @@ describe('SceneTree', () => {
     await userEvent.click(screen.getAllByRole('treeitem')[0]?.firstChild as HTMLElement)
 
     expect(screen.queryByText('AmbientLight')).not.toBeInTheDocument()
+  })
+
+  it('raises the node menu on a right-click, and nothing on the root', () => {
+    const menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
+    render(<SceneTree documentId="doc-1" />)
+
+    fireEvent.contextMenu(screen.getByText('AmbientLight'))
+    expect(menu.labels()).toContain('Supprimer')
+
+    // The root is a row but not a node: it stands for the scene, which has no name and no delete.
+    fireEvent.contextMenu(screen.getByText('Scène'))
+    expect(menu.raised).toHaveLength(1)
+  })
+
+  /**
+   * The rows of that menu act on the SELECTION, so what a right-click does to it is half the
+   * gesture: it aims, it never composes. The pointer event matters as much as the menu one, and
+   * macOS is where it bit hardest — Chromium delivers the Mac's secondary click as button 2 WITH
+   * `ctrlKey`, which the row read as a toggle and used to take the node back out, leaving a
+   * delete row that acted on the five others or on nothing at all. Not written as a case of its
+   * own: the polyfilled pointer event of this environment drops the modifier, so it would pass
+   * on the very defect it describes. One filter answers both.
+   */
+  it('keeps a selection of several when one of them is right-clicked', async () => {
+    const user = userEvent.setup()
+    installFakeBridge({ menu: fakeMenu().bridge })
+    render(<SceneTree documentId="doc-1" />)
+    const rowOf = (name: string): HTMLElement =>
+      screen.getByText(name).closest('[role="treeitem"]') as HTMLElement
+
+    await user.click(screen.getByText('AmbientLight'))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('HemisphereLight'))
+    await user.keyboard('{/Meta}')
+    expect(scene().selectedIds).toHaveLength(2)
+
+    fireEvent.pointerDown(rowOf('AmbientLight'), { button: 2 })
+    fireEvent.contextMenu(rowOf('AmbientLight'), { button: 2 })
+
+    expect(scene().selectedIds).toHaveLength(2)
+  })
+
+  it('renames a node from its own row, through the history', async () => {
+    render(<SceneTree documentId="doc-1" />)
+
+    await userEvent.dblClick(screen.getByText('AmbientLight'))
+    await userEvent.clear(screen.getByLabelText('Renommer l’objet'))
+    await userEvent.type(screen.getByLabelText('Renommer l’objet'), 'Soleil{Enter}')
+
+    expect(scene().nodes[0]?.name).toBe('Soleil')
+    useScenes.getState().undo('doc-1')
+    expect(scene().nodes[0]?.name).toBe('AmbientLight')
   })
 })

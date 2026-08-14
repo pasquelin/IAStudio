@@ -563,7 +563,13 @@
   "scene": {
     "root": "Scene",
     "visible": "Show or hide",
-    "noDocument": "Open a scene to see its contents."
+    "noDocument": "Open a scene to see its contents.",
+    "rename": "Rename object",
+    "renameHint": "Opens the object’s name to be typed over, as a double-click on it does",
+    "show": "Show object",
+    "showHint": "Brings the object back into view. Hiding it never took it out of the scene, this is not a delete",
+    "hide": "Hide object",
+    "hideHint": "Takes the object out of the view without taking it out of the scene, to clear what it covers"
   },
   "explorer": {
     "reveal": "Reveal in folder",

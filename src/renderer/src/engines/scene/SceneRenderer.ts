@@ -135,6 +135,14 @@ export type SceneRendererOptions = {
    */
   onSelectBone?: (picked: { nodeId: string; bone: string } | null) => void
   /**
+   * A node right-clicked in the viewport, for whoever raises the menu — this side draws none.
+   *
+   * Only for a right button that went down and came up in the same place with no motion key
+   * held: that button flies the camera, and every flight would otherwise end in a menu. A
+   * click in the void answers nothing, the fly camera being the gesture that owns the void.
+   */
+  onContextMenu?: (nodeId: string) => void
+  /**
    * What the scene costs, whenever that changes. Counted here because only the engine knows what
    * a model actually brought: the document holds an asset id, not the triangles behind it.
    */
@@ -176,6 +184,15 @@ const STUDIO_INTENSITY = 0.4
 
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
+
+/**
+ * Whether a release ends a click rather than a drag. Both buttons ask it: the left one to tell a
+ * pick from an orbit, the right one to tell a menu from a flight — and a slop written twice is a
+ * slop that stops agreeing the day it learns about pointer type or DPI.
+ */
+function wasClick(from: { x: number; y: number } | null, event: PointerEvent): boolean {
+  return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
+}
 
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
@@ -299,11 +316,22 @@ export class SceneRenderer {
   private dragged = false
   /** Where the left button went down, so the release can tell a click from an orbit. */
   private pressed: { x: number; y: number } | null = null
+  /**
+   * Where the right button went down, or nothing while it is up. It doubles as "the camera is
+   * flying", the two being the same fact: the button starts the flight and ends it. A flight
+   * that never left the pixel it started on is a click, and raises the node menu instead.
+   */
+  private flownFrom: { x: number; y: number } | null = null
+  /**
+   * Whether the camera actually moved while the button was down. The pointer alone cannot say:
+   * a flight is driven by the keyboard, so letting go of `W` before the button — the ordinary
+   * way to end one — leaves a release that never moved a pixel, and every flight ended in a menu.
+   */
+  private flew = false
 
   private gizmo: TransformControls | null = null
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
-  private flying = false
   private mode: TransformMode = 'select'
   private snapping = false
   private space: TransformSpace = 'world'
@@ -947,6 +975,11 @@ export class SceneRenderer {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
     if (this.flying && this.held.size > 0) this.viewport.requestRender()
+  }
+
+  /** Whether the right button is down, which is the whole of what flying means here. */
+  private get flying(): boolean {
+    return this.flownFrom !== null
   }
 
   dispose(): void {
@@ -1669,7 +1702,8 @@ export class SceneRenderer {
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.flying = true
+      this.flownFrom = { x: event.clientX, y: event.clientY }
+      this.flew = false
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = false
       // Before the first frame of the flight, or its opening step spans the whole idle time.
@@ -1689,48 +1723,66 @@ export class SceneRenderer {
 
   private readonly onPointerUp = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.flying = false
+      // A right button that never flew and never moved was a click, not a flight: that is the
+      // one gesture left for a menu in this viewport, the button itself being taken by the fly
+      // camera.
+      const still = !this.flew && this.held.size === 0 && wasClick(this.flownFrom, event)
+
+      this.flownFrom = null
       this.held.clear()
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = true
+
+      // Never in pose mode: there a click names a bone, and a bone is not a node the menu could
+      // act on.
+      if (still && !this.poseMode) {
+        const id = this.nodeAt(event)
+        if (id) this.options.onContextMenu?.(id)
+      }
       return
     }
     if (event.button !== 0) return
 
     const pressed = this.pressed
     this.pressed = null
-    if (!pressed || Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > CLICK_SLOP)
-      return
+    if (!wasClick(pressed, event)) return
 
     this.aimGizmo()
 
+    // In pose mode a click names a BONE and never a node: the two are exclusive, which is what
+    // keeps a rig's bones from stealing every click meant for the mesh they drive.
+    if (this.poseMode) {
+      const ndc = this.viewport.pointerNdcOf(event)
+      if (!ndc) return
+
+      // The camera of the view under the pointer, never the main one — `nodeAt` says why.
+      const picked = nearestBone(this.projectedBones(this.cameraInHand()), { x: ndc.x, y: ndc.y })
+      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
+      return
+    }
+
+    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
+    const extending = event.shiftKey || event.metaKey || event.ctrlKey
+    const id = this.nodeAt(event)
+    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+  }
+
+  /** The node the pointer is over, or nothing for a ray that met only the void. */
+  private nodeAt(event: PointerEvent): string | null {
     const ndc = this.viewport.pointerNdcOf(event)
-    if (!ndc) return
+    if (!ndc) return null
 
     this.pointer.set(ndc.x, ndc.y)
     // The camera of the view under the pointer, never the main one: a ray cast from elsewhere
     // meets whatever stands in ITS way, so a click in a side view picked something the pointer
     // was nowhere near — which made every view but the first one inert.
-    const camera = this.cameraInHand()
-
-    // In pose mode a click names a BONE and never a node: the two are exclusive, which is what
-    // keeps a rig's bones from stealing every click meant for the mesh they drive.
-    if (this.poseMode) {
-      const picked = nearestBone(this.projectedBones(camera), { x: ndc.x, y: ndc.y })
-      this.options.onSelectBone?.(picked ? { nodeId: picked.nodeId, bone: picked.bone } : null)
-      return
-    }
-
-    this.raycaster.setFromCamera(this.pointer, camera)
+    this.raycaster.setFromCamera(this.pointer, this.cameraInHand())
 
     // Helpers are what makes a light clickable, and recursively: it is one of their children
     // that the ray actually meets. Both they and the light carry the node's id.
     const targets = [...this.objects.values(), ...this.helpers.values()]
     const hit = this.raycaster.intersectObjects(targets, true)[0]
-    const id = hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
-    // Either modifier adds and removes: a viewport draws no rows, so it has no range to extend.
-    const extending = event.shiftKey || event.metaKey || event.ctrlKey
-    this.options.onSelect(id ? [id] : [], extending ? 'toggle' : 'replace')
+    return hit ? nodeIdOf(hit.object, name => this.objects.has(name)) : null
   }
 
   /**
@@ -1783,7 +1835,12 @@ export class SceneRenderer {
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */
   private advance(delta: number): boolean {
     const moving = this.flying && this.held.size > 0
-    if (moving) this.fly(delta)
+    if (moving) {
+      // Remembered rather than read back at the release: the keys are let go of first, and the
+      // release would then look exactly like a click — see `flew`.
+      this.flew = true
+      this.fly(delta)
+    }
     // Both, never short-circuited: a clip has to keep running while the camera flies over it.
     return this.animations.update(delta) || moving
   }

@@ -16,6 +16,7 @@ import type { Transform } from '@shared/domain/scene'
 import { EMPTY_TIMELINE } from '@shared/domain/animation'
 import { useAssets } from '@/stores/assets'
 import { installCanvas } from '@/stores/canvas-fixtures'
+import { installDocuments } from '@/stores/document-fixtures'
 import { useDocuments } from '@/stores/documents'
 import { useSelection } from '@/stores/selection'
 import { modelNodeFixture } from '@/engines/scene/scene-fixtures'
@@ -25,7 +26,7 @@ import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { sceneHistoryOf, sceneOf, useScenes } from '@/stores/scenes'
+import { sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 
@@ -777,5 +778,86 @@ describe('the inspector on an imported model', () => {
     await userEvent.click(screen.getByRole('button', { name: /Remplacer un canal/ }))
 
     expect(screen.getAllByText('Celle du fichier')).toHaveLength(TEXTURE_SLOTS.length)
+  })
+})
+
+/**
+ * The 3D space held its selection in the scene alone, where this panel never looked — so the
+ * asset clicked to import a model went on being described for as long as the tab stayed open,
+ * whatever was picked in the outliner or in the viewport afterwards.
+ */
+describe('the inspector and what is picked in a scene', () => {
+  beforeEach(() => {
+    useSelection.getState().clear()
+  })
+
+  it('describes the node picked in the scene, over the asset picked in the browser before it', () => {
+    install(meshNode('box-1'), false)
+    useSelection.getState().selectAssets(['asset-1'])
+    selectIn('doc-1', ['box-1'])
+    render(<Content />)
+
+    expect(screen.getByText('Géométrie')).toBeInTheDocument()
+  })
+
+  // The scene's own face is what a click in the void leaves: its environment is read there, and
+  // there is nowhere else to read it.
+  it('falls back to the scene itself when the pick lands in the void', () => {
+    install(meshNode('box-1'), false)
+    selectIn('doc-1', ['box-1'])
+    selectIn('doc-1', [])
+    render(<Content />)
+
+    expect(screen.getByText('Environnement')).toBeInTheDocument()
+    expect(screen.queryByText('Géométrie')).not.toBeInTheDocument()
+  })
+
+  /**
+   * Deselecting in one panel says nothing about another. It used to empty the whole descriptor:
+   * five assets picked in the shelf went grey — and the two buttons that act on them with them —
+   * because a cube was clicked away in a viewport beside it.
+   */
+  it('leaves what another panel has picked where it is', () => {
+    install(meshNode('box-1'), false)
+    useSelection.getState().selectAssets(['asset-1'])
+    selectIn('doc-1', [])
+
+    expect(useSelection.getState().selection.kind).toBe('asset')
+  })
+
+  /**
+   * A node outlives the tab it was picked in — nothing clears the selection when one closes — so
+   * it must not speak for a document it has nothing to do with. Guarded on the owner, the panel
+   * went empty on every switch between two scenes; counted as a voice, it left every texture
+   * opened afterwards with no face at all.
+   */
+  it('describes the scene in front, whichever one the node was picked in', () => {
+    useScenes.setState({
+      states: {
+        'doc-1': { ...EMPTY_SCENE, nodes: [meshNode('box-1')] },
+        'doc-2': { ...EMPTY_SCENE, nodes: [meshNode('box-2')] },
+      },
+      histories: {},
+      saved: {},
+    })
+    installDocuments({ 'doc-1': '3d', 'doc-2': '3d' }, 'doc-1')
+    selectIn('doc-1', ['box-1'])
+
+    installDocuments({ 'doc-1': '3d', 'doc-2': '3d' }, 'doc-2')
+    render(<Content />)
+
+    // Its environment, since nothing is picked in it — and never the empty state, which is what
+    // three panels contradicting each other looks like: the outliner of doc-2 highlights nothing
+    // while the inspector claims there is nothing to describe.
+    expect(screen.getByText('Environnement')).toBeInTheDocument()
+  })
+
+  it('describes a texture brought in front after a node was picked', () => {
+    install(meshNode('box-1'), false)
+    selectIn('doc-1', ['box-1'])
+    installTexture('doc-2')
+    render(<Content />)
+
+    expect(screen.getByLabelText('Rugosité')).toBeInTheDocument()
   })
 })

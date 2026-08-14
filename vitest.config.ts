@@ -141,6 +141,7 @@ const DOM_BOUND = [
   // initialised by the renderer setup — `initI18n` reads `localStorage`, which node has not.
   'src/renderer/src/panels/assets/AssetMenu.test.ts',
   'src/renderer/src/panels/layers/LayerMenu.test.ts',
+  'src/renderer/src/spaces/three/SceneNodeMenu.test.ts',
   'src/renderer/src/helpers/model-for-family.test.ts',
   'src/renderer/src/helpers/scroll-parent.test.ts',
   'src/renderer/src/helpers/tool-registry.test.ts',

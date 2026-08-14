@@ -18,7 +18,10 @@ export function inspectedTextureId(
   sceneId: string | null,
   textureId: string | null,
 ): string | null {
-  if (selection.kind !== 'none') return null
+  // A picked NODE is the exception: it is only ever a voice inside a scene, and it outlives the
+  // tab it was picked in — nothing clears it when one closes. Counted as loud as the others, a
+  // cube clicked once left every texture opened afterwards with no face and no save button.
+  if (selection.kind !== 'none' && selection.kind !== 'node') return null
   if (sceneId) return null
   return textureId
 }

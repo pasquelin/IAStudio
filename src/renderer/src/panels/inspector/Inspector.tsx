@@ -94,18 +94,20 @@ function Face() {
         <Empty />
       )
     }
-
-    // Nothing was clicked in a panel, so the document in front speaks for itself: a scene says
-    // which node is selected from its own state, and a texture has nothing to select — the
-    // material IS the document. At most one id is set, so the order below is reading order.
-    default: {
-      if (sceneId) return <SceneInspector documentId={sceneId} />
-      // Through the same answer the title row reads, so the button it carries and the face
-      // below it can never describe two different things.
-      const material = inspectedTextureId(selection, sceneId, textureId)
-      return material ? <TextureInspector documentId={material} /> : <Empty />
-    }
   }
+
+  // `none` and `node` both land here, and deliberately: neither names a thing the document in
+  // front might not hold. Nothing was clicked at all, or a scene node was — and a scene says
+  // which of its nodes from its OWN state, which `SceneInspector` reads there. That is why this
+  // one is not guarded on its owner as the three faces above are: guarding it emptied the panel
+  // on every switch between two scenes, and kept it empty over a texture afterwards. At most one
+  // id is set below, so the order is reading order.
+  if (sceneId) return <SceneInspector documentId={sceneId} />
+
+  // Through the same answer the title row reads, so the button it carries and the face below it
+  // can never describe two different things.
+  const material = inspectedTextureId(selection, sceneId, textureId)
+  return material ? <TextureInspector documentId={material} /> : <Empty />
 }
 
 function Empty() {

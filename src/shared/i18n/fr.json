@@ -563,7 +563,13 @@
   "scene": {
     "root": "Scène",
     "visible": "Afficher ou masquer",
-    "noDocument": "Ouvrez une scène pour voir son contenu."
+    "noDocument": "Ouvrez une scène pour voir son contenu.",
+    "rename": "Renommer l’objet",
+    "renameHint": "Ouvre le nom de l’objet pour le réécrire, comme un double-clic dessus",
+    "show": "Afficher l’objet",
+    "showHint": "Remet l’objet dans la vue. Le masquer ne l’avait pas sorti de la scène, ce n’est pas une suppression",
+    "hide": "Masquer l’objet",
+    "hideHint": "Retire l’objet de la vue sans le sortir de la scène, pour dégager ce qu’il cache"
   },
   "explorer": {
     "reveal": "Révéler dans le dossier",
