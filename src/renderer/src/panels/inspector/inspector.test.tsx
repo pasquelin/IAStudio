@@ -26,7 +26,8 @@ import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
-import { sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
+import { connectSceneSelection } from '@/stores/scene-selection'
+import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
 
@@ -798,6 +799,34 @@ describe('the inspector and what is picked in a scene', () => {
     render(<Content />)
 
     expect(screen.getByText('Géométrie')).toBeInTheDocument()
+  })
+
+  /**
+   * A COMMAND selects too — an import selects the model it just put down, a duplicate its copies,
+   * ⌘Z what a delete dropped — and none of them go through `selectIn`. Dropping an asset in the
+   * viewport therefore left the panel describing the asset that was dropped, while the outliner
+   * highlighted the node it had become: the same thing named twice, two panels disagreeing, and
+   * a second click on the row as the only way out.
+   */
+  it('describes the node an import just put down, not the asset it came from', () => {
+    install(meshNode('box-1'), false)
+    // The connector the application wires up: what the panel shows after an import is only half
+    // the answer, and the other half is who told it — see `scene-selection.test.ts`.
+    const stop = connectSceneSelection()
+    useSelection.getState().selectAssets(['asset-1'])
+
+    addModelTo('doc-1', {
+      id: 'asset-1',
+      name: 'Robot',
+      type: 'mesh',
+      location: 'local',
+      tags: [],
+      createdAt: '2026-08-14T10:00:00.000Z',
+    })
+    render(<Content />)
+
+    expect(screen.getByText('Transformation')).toBeInTheDocument()
+    stop()
   })
 
   // The scene's own face is what a click in the void leaves: its environment is read there, and

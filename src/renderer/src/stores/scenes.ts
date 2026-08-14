@@ -41,12 +41,16 @@ export function writeAnimationTrack(
  * be read at call time, not from the render that drew the row: a copy taken before whatever
  * command ran in between would undo it.
  *
- * It points the studio's selection at the scene too, and that is the point of going through one
- * function: the scene holds what the viewport highlights, `useSelection` holds which FACE the
- * inspector shows, and for as long as the 3D space wrote only the first one, picking a node left
- * the inspector on whatever asset had been clicked in the browser — which is how a model got
- * imported in the first place. `canvases` does the same pairing at its call site rather than
- * here; four callers against one is the whole of the difference.
+ * It points the studio's selection at the scene too, and keeps doing so even though
+ * `connectSceneSelection` watches every write of the document in front: a click on the row that
+ * is ALREADY selected changes no ids, so it writes no state and wakes no subscriber — and it is
+ * exactly the gesture someone makes to bring the panel back onto a node after clicking an asset
+ * in the browser. It points at whichever document it is given, where the connector answers only
+ * for the one in front; the three callers all render the front tab, so the two never disagree.
+ *
+ * The scene holds what the viewport highlights, `useSelection` holds which FACE the inspector
+ * shows. `canvases` does the same pairing at its call site rather than here; four callers against
+ * one is the whole of the difference.
  *
  * Which nodes is deliberately NOT copied over — `pointAtNodes` says why.
  */

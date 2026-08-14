@@ -18,6 +18,7 @@ import { useUpdates } from '@/stores/updates'
 import { connectImageGeneration } from '@/stores/image-generation'
 import { connectModelGeneration } from '@/stores/model-generation'
 import { connectPreparation } from '@/stores/preparation'
+import { connectSceneSelection } from '@/stores/scene-selection'
 import { connectSkyboxGeneration } from '@/stores/skybox-generation'
 import { Shell } from './Shell'
 
@@ -72,6 +73,10 @@ export function Application() {
   // Same reason, the other way round: what an edit asked the generator to open on belongs to the
   // space that asked, and has to close when the user leaves it.
   useEffect(() => connectPreparation(), [])
+
+  // Same reason again: a scene selects from four doors — the outliner, the viewport, the node
+  // panels and its own COMMANDS — and only the inspector needs to hear about all four.
+  useEffect(() => connectSceneSelection(), [])
 
   useAppliedSettings()
   useDictationShortcut()
