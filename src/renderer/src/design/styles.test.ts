@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { BUTTON_NEUTRAL, FOCUS_RING, ROW_INK, ROW_QUIET, rowSkin, TITLE_BAR_GHOST } from './styles'
+import {
+  BUTTON_NEUTRAL,
+  FOCUS_RING,
+  ROW_INK,
+  ROW_QUIET,
+  rowSkin,
+  TILE_QUIET,
+  TITLE_BAR_GHOST,
+} from './styles'
 import { WRITTEN_SOURCES } from './test-harness'
 
 /**
@@ -68,12 +76,25 @@ describe('the quiet ink of a row', () => {
    * studio is left in that case — a TILE, whose fill is the whole of what says it can be pressed.
    * A list arriving here is a list that has quietly taken its hover back.
    */
-  it('lifts under a pointer only where something still fills under one', () => {
+  it('lifts under a pointer only through the constant that carries the case', () => {
     const lifting = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('group-hover/row:text-text'),
     ).map(([path]) => path)
 
-    expect(lifting).toEqual(['../home/sections/Tools.tsx'])
+    expect(lifting).toEqual([])
+  })
+
+  /**
+   * The one case left where a word DOES have to brighten under the pointer: a tile, whose fill is
+   * the whole of what says it can be pressed. `muted` reads 3.51:1 on `elevated`, so the lift is
+   * not a flourish — it is what clears WCAG 1.4.3 exactly where that fill arrives.
+   *
+   * A constant rather than the variant at each site, because the rule above can then go on
+   * REFUSING rather than becoming a list of filenames allowed to break it.
+   */
+  it('gives a tile its own constant, since a tile is what still fills', () => {
+    expect(TILE_QUIET).toContain('group-hover/row:text-text')
+    expect(TILE_QUIET).toContain(ROW_QUIET)
   })
 
   // The partner of the rule above: it stays green on a studio where nobody wears the constant at
@@ -94,7 +115,7 @@ describe('the row skin and the state it publishes', () => {
   })
 
   it('takes the group away from a refused row, whose background does not answer either', () => {
-    expect(rowSkin(false, true)).not.toContain('group/row')
+    expect(rowSkin(false, { disabled: true })).not.toContain('group/row')
   })
 
   /**
@@ -142,14 +163,14 @@ describe('the row skin and the state it publishes', () => {
  */
 describe('the loud fill of a row that says where one is', () => {
   it('fills with the accent itself, where the soft tone fills with its muted twin', () => {
-    expect(rowSkin(true, false, 'strong')).toContain('bg-accent')
-    expect(rowSkin(true, false, 'strong')).not.toContain('bg-accent-soft')
-    expect(rowSkin(true, false, 'soft')).toContain('bg-accent-soft')
+    expect(rowSkin(true, { tone: 'strong' })).toContain('bg-accent')
+    expect(rowSkin(true, { tone: 'strong' })).not.toContain('bg-accent-soft')
+    expect(rowSkin(true, { tone: 'soft' })).toContain('bg-accent-soft')
   })
 
   // Soft is the default, so no existing caller can be repainted by this landing.
   it('is not what a caller gets without asking', () => {
-    expect(rowSkin(true)).toBe(rowSkin(true, false, 'soft'))
+    expect(rowSkin(true)).toBe(rowSkin(true, { tone: 'soft' }))
   })
 
   /**
@@ -157,14 +178,14 @@ describe('the loud fill of a row that says where one is', () => {
    * all on the single row where a keyboard most needs one. Overridden last so `cn` keeps it.
    */
   it('takes the ring off the accent it would otherwise be invisible against', () => {
-    expect(rowSkin(true, false, 'strong')).toContain('focus-visible:ring-accent-content')
-    expect(rowSkin(true, false, 'strong')).not.toContain('focus-visible:ring-accent ')
-    expect(rowSkin(true, false, 'soft')).toContain('focus-visible:ring-accent')
+    expect(rowSkin(true, { tone: 'strong' })).toContain('focus-visible:ring-accent-content')
+    expect(rowSkin(true, { tone: 'strong' })).not.toContain('focus-visible:ring-accent ')
+    expect(rowSkin(true, { tone: 'soft' })).toContain('focus-visible:ring-accent')
   })
 
   // Only a SELECTED row is filled, so an unselected one must keep the ordinary ring and hover.
   it('changes nothing about a row that is not the one open', () => {
-    expect(rowSkin(false, false, 'strong')).toBe(rowSkin(false, false, 'soft'))
+    expect(rowSkin(false, { tone: 'strong' })).toBe(rowSkin(false, { tone: 'soft' }))
   })
 
   /**

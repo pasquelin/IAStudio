@@ -254,6 +254,10 @@ describe('Tree', () => {
    * The whole reason `renderLeading` exists: a stack is read the way Photoshop draws one, its
    * eyes in a column that does not move. A row three levels deep would otherwise put its controls
    * further right than the group holding it, which is a file browser's reading, not a stack's.
+   *
+   * Asked of the OFFSET rather than of the markup: nothing between the row's edge and the pinned
+   * column may carry the indent, whatever elements the tree happens to stack in between. `a1` is
+   * two levels down, and its `aria-level` is what says so without reading the DOM.
    */
   it('leaves a pinned column out of the indentation, however deep the row', () => {
     render(
@@ -264,18 +268,24 @@ describe('Tree', () => {
         expandedIds={new Set(['scene', 'a'])}
         onSelect={() => {}}
         onToggle={() => {}}
-        renderLeading={row => <span data-pinned>{row.node.id}</span>}
+        // Marked rather than named: the row's own name is what `getByText` below asks for, and a
+        // second element carrying it would make that query ambiguous.
+        renderLeading={() => <span data-pinned />}
         renderRow={row => <span>{row.node.id}</span>}
       />,
     )
 
-    const pinned = screen
-      .getAllByRole('treeitem')
-      .map(row => row.querySelector<HTMLElement>('[data-pinned]')?.parentElement)
+    const deepest = screen.getByText('a1').closest('[role="treeitem"]')
+    expect(deepest).toHaveAttribute('aria-level', '3')
 
-    expect(pinned.length).toBeGreaterThan(1)
-    // Every one of them is the ROW, never the indented block: nothing between them can shift.
-    for (const parent of pinned) expect(parent).toHaveAttribute('role', 'treeitem')
+    // Walk out of the pinned column up to the row: not one step of it may be indented.
+    let walked: HTMLElement | null = deepest?.querySelector<HTMLElement>('[data-pinned]') ?? null
+    expect(walked).toBeInTheDocument()
+    while (walked && walked !== deepest) {
+      expect(walked.style.paddingLeft).toBe('')
+      walked = walked.parentElement
+    }
+    expect(walked).toBe(deepest)
   })
 
   it('leaves the rows undraggable when nothing listens for a drop', () => {

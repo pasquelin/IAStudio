@@ -4,6 +4,23 @@ import type { TooltipFactory } from '@/helpers/tooltip'
 import { BUTTON_BASE } from './styles'
 import { UiIcon } from './UiIcon'
 
+/**
+ * What each host costs the button, on one line per host.
+ *
+ * A table rather than two conditions, because the two do not cut the same way: the BOX separates
+ * `row` from the rest, the GLYPH separates `bar` from the rest. Written as a pair of ternaries,
+ * a fourth host meant guessing which side of two different partitions it fell on.
+ *
+ * `row` is the only one that shrinks the box, and the reason is measured: at a bar's gauge, an
+ * eye and two padlocks took 68px off the end of a 28px layer line — more than a fifth of a side
+ * panel, on the very rows whose name is what one reads.
+ */
+const HOSTS = {
+  bar: { box: 'size-(--sc-control)', glyph: 16 },
+  header: { box: 'size-(--sc-control)', glyph: 14 },
+  row: { box: 'size-(--sc-control-inline)', glyph: 14 },
+}
+
 export type ToolButtonProps = Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   'aria-label' | 'children' | 'title'
@@ -27,13 +44,8 @@ export type ToolButtonProps = Omit<
   active?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
-  /**
-   * Which host the button sits on. `bar` is a toolbar, `header` a panel's title bar — the same
-   * box, a smaller glyph. `row` is a control INSIDE a list row, the eye and the padlock, and it
-   * is the only one that shrinks the box: at a bar's gauge, two of them took 68px off the end of
-   * a 28px layer line, on the very rows whose name is what one reads.
-   */
-  variant?: 'bar' | 'header' | 'row'
+  /** Which host the button sits on — see `HOSTS` for what each one costs. */
+  variant?: keyof typeof HOSTS
   iconSize?: number
   children?: ReactNode
   /** The `<button>` itself, so a bar can publish its active button as an anchor. */
@@ -70,7 +82,7 @@ export function ToolButton({
       className={cn(
         BUTTON_BASE,
         'text-muted shrink-0 bg-transparent',
-        variant === 'row' ? 'size-(--sc-control-inline)' : 'size-(--sc-control)',
+        HOSTS[variant].box,
         'hover:bg-elevated hover:text-text',
         // Inside a row filled with the accent — the open project's menu button is the case — the
         // rest ink reads 1.50:1 on that blue, and `elevated` under the pointer is grey on it. Both
@@ -85,9 +97,7 @@ export function ToolButton({
       {...naming}
       {...rest}
     >
-      {icon !== undefined && (
-        <UiIcon path={icon} size={iconSize ?? (variant === 'bar' ? 16 : 14)} />
-      )}
+      {icon !== undefined && <UiIcon path={icon} size={iconSize ?? HOSTS[variant].glyph} />}
       {children}
     </button>
   )

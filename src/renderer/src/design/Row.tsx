@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/helpers/cn'
-import { ROW_INK, ROW_QUIET } from './styles'
+import { ROW_INK, ROW_LINE, ROW_QUIET } from './styles'
 import { TIP_RIGHT, type TooltipFactory } from '@/helpers/tooltip'
 import { UiIcon } from './UiIcon'
 
@@ -54,11 +54,9 @@ export function Row({
     // row both do. Raising it to two here instead stacked on the tree's own step and pushed every
     // name a further 4px off its chevron.
     //
-    // `gap-1.5` and not `gap-2`, which is what the studio spaces a row of CONTROLS by: this is a
-    // glyph, a word and a button reading as one line, and at two they read as three things laid
-    // out side by side. It is the half-step `design/spacing.test.ts` leaves open, and the reason
-    // it does. Measured on the scene outliner: 96px before a nested node's name, down to 74.
-    <div className="flex h-full items-center gap-1.5 px-1">
+    // The shape itself is `ROW_LINE`, shared with `Tree`: the two draw halves of the same line,
+    // and gutters that drifted apart are what put a nested node's name 96px from the panel edge.
+    <div className={ROW_LINE}>
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">
@@ -70,23 +68,24 @@ export function Row({
             'truncate text-xs leading-tight',
             // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a
             // scene node still selected and dragged, so the exemption WCAG 1.4.3 grants a disabled
-            // control does not cover either. Lifted on the same two states as the subtitle below —
-            // 3.51:1 on `elevated`, 3.25 on `accent-soft` — and the strike-through, with the
-            // crossed-out eye beside it, is what goes on saying the row is hidden.
+            // control does not cover either. Lifted on the same state as the subtitle below —
+            // `muted` reads 3.25:1 on `accent-soft` — and the strike-through, with the crossed-out
+            // eye beside it, is what goes on saying the row is hidden.
             muted ? cn(ROW_QUIET, 'line-through') : ROW_INK,
           )}
         >
           {title}
         </p>
-        {/* Muted at rest, full ink once the row is picked or pointed at: `muted` on
-            `accent-soft` reads 3.25:1 and on `elevated` 3.51, both under the 4.5 of WCAG 1.4.3.
-            Driven from the row through `rowSkin`'s group, so no list has to pass its state down.
+        {/* Muted at rest, full ink once the row is PICKED: `muted` reads 3.25:1 on `accent-soft`,
+            under the 4.5 of WCAG 1.4.3. Driven from the row through `rowSkin`'s group, so no list
+            has to pass its state down.
 
-            Titled for the same reason the name above it is tipped, and it took an inspector slot
-            to notice: this line truncates too, and « Occlusion ambian… » is exactly the case
-            where hovering is the only way to read the rest. The native attribute rather than the
-            studio tooltip — one row raising two of them answers two things depending on which
-            half of it the pointer is over. */}
+            Titled, and it took an inspector slot to notice: this line truncates, and
+            « Occlusion ambian… » is exactly the case where hovering is the only way to read the
+            rest. The NATIVE attribute rather than the studio tooltip, and the reason has outlived
+            the batch that found it: the name above raises the studio one where a `hint` gives it
+            something to say, and one row raising two of them would answer two different things
+            depending on which half of it the pointer was over. */}
         {subtitle && (
           <p title={subtitle} className={cn(ROW_QUIET, 'text-mini truncate')}>
             {subtitle}

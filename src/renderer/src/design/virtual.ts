@@ -87,11 +87,12 @@ export type RowHeight = 'control' | 'stacked' | 'filled' | number
 /**
  * The pixels a row shape measures, read back from the gauge that sizes it.
  *
- * A shape rather than a number, because a constant is only right at one density. Shared by the
- * two virtualized surfaces rather than written in each, which is what the explorer was missing:
- * `Tree` sized every row on `--sc-control` while its rows stack a name over a subtitle for a
- * document that is open. What that costs is written where the gauge is declared, in `index.css`
- * beside `--sc-row-stacked`.
+ * A shape rather than a number, because a constant is only right at one density.
+ *
+ * The shapes past `control` belong to `Collection` alone since 2026-08-14: `Tree` asks for a
+ * control and cannot be told otherwise — the explorer used to ask for `stacked`, which measured a
+ * whole panel for a second line one row in thirty carried, and a tree is a list of NAMES. What
+ * each shape costs is written where the gauges are declared, in `index.css`.
  */
 export function useRowHeight(shape: RowHeight): number {
   // A table rather than a chain, and every gauge read unconditionally: a hook cannot sit behind a

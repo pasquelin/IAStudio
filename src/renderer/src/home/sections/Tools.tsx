@@ -1,7 +1,7 @@
 import { mdiCogOutline, mdiFolderOpenOutline, mdiFolderPlusOutline } from '@mdi/js'
 import { useTranslation } from 'react-i18next'
 import { UiIcon } from '@/design/UiIcon'
-import { ROW_QUIET, rowSkin } from '@/design/styles'
+import { rowSkin, TILE_QUIET } from '@/design/styles'
 import { cn } from '@/helpers/cn'
 import { HINT_TOP } from '@/helpers/tooltip'
 import { workspaceLabelKey } from '@/helpers/workspaces'
@@ -98,7 +98,7 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
             // answer to "the pointer is here" as every list row. Its radius is overridden below:
             // a tile of the home is wider than a line and takes the larger one.
             className={cn(
-              rowSkin(false),
+              rowSkin(false, { surface: 'tile' }),
               'flex cursor-pointer items-start gap-2.5 text-left',
               'rounded-(--radius-sc-md) border-none bg-transparent p-2 transition-colors',
             )}
@@ -106,18 +106,10 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
             <UiIcon path={entry.icon} size={18} className="text-muted mt-0.5 shrink-0" />
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="text-text truncate text-xs leading-normal">{entry.label}</span>
-              {/* Lifted under the pointer, and written HERE rather than carried by `ROW_QUIET`:
-                  `muted` reads 3.51:1 on `elevated`, the fill this tile takes on hover, and this
-                  tile is the last surface in the studio that still takes one. A list row does not
-                  any more, so the rule sits beside the fill that makes it necessary.
-                  `transition-colors` comes with `ROW_QUIET` — the property does not inherit, so
-                  without it the fill would fade while the words snapped. */}
-              <span
-                className={cn(
-                  ROW_QUIET,
-                  'group-hover/row:text-text text-tiny line-clamp-2 leading-snug',
-                )}
-              >
+              {/* `TILE_QUIET` and not `ROW_QUIET`: `muted` reads 3.51:1 on `elevated`, the fill
+                  this tile takes on hover, and a tile is the last surface in the studio that still
+                  takes one — a list row stopped on 2026-08-14. */}
+              <span className={cn(TILE_QUIET, 'text-tiny line-clamp-2 leading-snug')}>
                 {entry.help}
               </span>
             </span>

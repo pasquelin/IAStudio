@@ -101,17 +101,15 @@ export function SceneTree({ documentId }: { documentId: string }) {
       }}
       // Pinned to the left edge, outside the indentation, as the layer stack pins its own: a node
       // three groups deep keeps its eye under the eye of the scene's first child, and only the
-      // name walks right. The synthetic root has none — it stands for the scene, which cannot be
-      // hidden — and the column is held open so the rows below it still line up.
+      // name walks right. The synthetic root answers nothing — it stands for the scene, which
+      // cannot be hidden — and `Tree` holds the column open at one width for every row.
       renderLeading={({ node: item }) =>
-        item.node ? (
+        item.node && (
           <VisibilityToggle
             visible={item.node.visible}
             label={t('scene.visible')}
             onToggle={() => toggleNodeVisible(documentId, item.id)}
           />
-        ) : (
-          <span aria-hidden="true" className="size-(--sc-control-inline) shrink-0" />
         )
       }
       renderRow={({ node: item }) =>

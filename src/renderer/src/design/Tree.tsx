@@ -5,7 +5,7 @@ import { cn } from '@/helpers/cn'
 import { dragChannel } from '@/helpers/drag'
 import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selection'
 import { isTyping } from '@/helpers/typing'
-import { rowSkin } from './styles'
+import { ROW_LINE, rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
 import { useRemeasure, useRowHeight } from './virtual'
 
@@ -144,13 +144,24 @@ export type TreeProps<T extends TreeNode> = {
    * years, and a stack is what the layers panel is — a file browser has no such column and does
    * not pass this.
    *
-   * Absent, the row is exactly its indent, its chevron and `renderRow`.
+   * The tree holds the column open at one width for every row, so a row with nothing to put in
+   * it answers `null` rather than spacing itself: the scene's synthetic root does exactly that,
+   * standing for a scene, which cannot be hidden.
+   *
+   * Absent altogether, the row is exactly its indent, its chevron and `renderRow`.
    */
   renderLeading?: (row: TreeRow<T>) => ReactNode
 }
 
 /** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
 const INDENT = 'var(--sc-indent)'
+
+/**
+ * The pinned column, at the gauge of the control it holds — the visibility eye, and nothing wider
+ * so far. Held by the tree rather than measured from what the caller returns, because a row that
+ * puts nothing in it still has to line the rows under it up.
+ */
+const PINNED = 'flex w-(--sc-control-inline) shrink-0 justify-center'
 
 /**
  * A tree that does not know what it shows. It owns the geometry — indent, chevron, selection,
@@ -371,6 +382,53 @@ export function Tree<T extends TreeNode>({
     onSelect(ids, mode)
   }
 
+  /**
+   * What sits inside a row: the pinned column, then everything the depth moves.
+   *
+   * Written once for the real row and for the GHOST — the outline that follows the pointer during
+   * a drag. The two carry the same four pieces of geometry, and the ghost's whole job is to line
+   * up with the rows under it: a copy of them would be a copy that says where a drop lands.
+   *
+   * `ghost` turns off what a row that does not exist yet cannot have — a control for a state
+   * nothing is in, a chevron folding a branch nobody made. `invisible` rather than an empty span,
+   * so the column keeps the width the caller's control gives it, and rather than `opacity-0`,
+   * which would leave a button in the tab order.
+   */
+  const body = (row: TreeRow<T>, ghost: boolean): ReactNode => (
+    <>
+      {renderLeading && (
+        <span className={cn(PINNED, ghost && 'invisible')}>{renderLeading(row)}</span>
+      )}
+      <div
+        style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
+        className="flex h-full min-w-0 flex-1 items-center gap-1.5"
+      >
+        {/* The chevron keeps its column even on a leaf: rows whose content shifts by a glyph are
+            unreadable as a list. It is not a control — the row already carries `aria-expanded`,
+            and the arrows already toggle it. Named because it has no other handle, being
+            `aria-hidden`: three suites used to reach it as the row's `firstChild`, which is a
+            claim about the markup around it rather than about it. */}
+        <span
+          aria-hidden="true"
+          data-chevron
+          className="flex w-3.5 shrink-0 justify-center"
+          onPointerDown={event => {
+            if (ghost || !row.hasChildren) return
+            // The row selects on pointer down, which fires before click: stopping the click alone
+            // would still have let the chevron steal the selection.
+            event.stopPropagation()
+            onToggle(row.node.id)
+          }}
+        >
+          {!ghost && row.hasChildren && (
+            <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
+          )}
+        </span>
+        {renderRow(row)}
+      </div>
+    </>
+  )
+
   // The React event, not `event.nativeEvent`: React dispatches from a single root listener, so
   // the native event's `currentTarget` is already null by the time a handler reads it — and the
   // guard below then refused every `Enter` and every `Space`, in every tree of the studio.
@@ -428,21 +486,13 @@ export function Tree<T extends TreeNode>({
                 style={{ transform: `translateY(${virtual.start}px)`, height: virtual.size }}
                 className="pointer-events-none absolute inset-x-0 top-0 py-px"
               >
-                <div className="border-accent bg-elevated flex h-full items-center gap-1.5 rounded-(--radius-sc-sm) border border-dashed px-1">
-                  {/* The column is held open rather than drawn: the ghost has to line up with the
-                      rows under it, and an eye on a row that does not exist yet is a control for a
-                      state nothing is in. `invisible` and not `opacity-0` — it takes the button
-                      out of the tab order too. */}
-                  {renderLeading && (
-                    <span className="invisible shrink-0">{renderLeading(row)}</span>
+                <div
+                  className={cn(
+                    ROW_LINE,
+                    'border-accent bg-elevated rounded-(--radius-sc-sm) border border-dashed',
                   )}
-                  <div
-                    style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
-                    className="flex h-full min-w-0 flex-1 items-center gap-1.5"
-                  >
-                    <span className="flex w-3.5 shrink-0 justify-center" />
-                    {renderRow(row)}
-                  </div>
+                >
+                  {body(row, true)}
                 </div>
               </li>
             )
@@ -480,10 +530,11 @@ export function Tree<T extends TreeNode>({
                 aria-posinset={row.position}
                 aria-setsize={row.siblings}
                 className={cn(
-                  'group flex h-full cursor-pointer items-center gap-1.5 px-1',
+                  ROW_LINE,
+                  'group cursor-pointer',
                   // A list row does not answer the pointer — see `rowSkin`. What says where the
                   // pointer is in a tree is the pointer.
-                  rowSkin(selected.has(row.node.id), false, 'soft', false),
+                  rowSkin(selected.has(row.node.id), { surface: 'row' }),
                   // The row a drop would land in, told apart from the row that is selected.
                   over?.id === row.node.id &&
                     over.zone === 'into' &&
@@ -560,39 +611,7 @@ export function Tree<T extends TreeNode>({
                 }}
                 onKeyDown={event => onRowKeyDown(row, index, event)}
               >
-                {renderLeading?.(row)}
-                {/* Everything the depth moves. The pinned column above stays out of it — that is
-                    what pins it — and the indent sits here rather than on the row so the fill
-                    still runs the whole width at every level. */}
-                <div
-                  style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
-                  className="flex h-full min-w-0 flex-1 items-center gap-1.5"
-                >
-                  {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
-                  glyph are unreadable as a list. It is not a control — the row already carries
-                  `aria-expanded`, and the arrows already toggle it. */}
-                  <span
-                    aria-hidden="true"
-                    // Named because it has no other handle: it is `aria-hidden`, so nothing can
-                    // ask for it by role or by text. Three suites used to reach it as the row's
-                    // `firstChild`, which is a claim about the markup around it rather than
-                    // about it — and the claim broke the day the indent moved one element in.
-                    data-chevron
-                    className="flex w-3.5 shrink-0 justify-center"
-                    onPointerDown={event => {
-                      if (!row.hasChildren) return
-                      // The row selects on pointer down, which fires before click: stopping the
-                      // click alone would still have let the chevron steal the selection.
-                      event.stopPropagation()
-                      onToggle(row.node.id)
-                    }}
-                  >
-                    {row.hasChildren && (
-                      <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
-                    )}
-                  </span>
-                  {renderRow(row)}
-                </div>
+                {body(row, false)}
               </div>
             </li>
           )

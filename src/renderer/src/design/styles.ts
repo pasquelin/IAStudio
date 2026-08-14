@@ -104,6 +104,21 @@ export const TITLE_BAR_GHOST = cn(
 export type RowTone = 'soft' | 'strong'
 
 /**
+ * The shape of ONE LINE: a glyph, a word and whatever button follows, laid out at the studio's
+ * row gutter.
+ *
+ * `gap-1.5` and not the `gap-2` a row of CONTROLS takes — this is one line reading as one thing,
+ * and at two its pieces read as three laid side by side. It is the half-step
+ * `design/spacing.test.ts` leaves open, and the reason it does.
+ *
+ * Written here because `Tree` and `Row` must AGREE on it: the tree draws the indent and the
+ * chevron, the row draws the icon and the name, and the two meet in the middle of every line in
+ * the studio. Kept apart, the gutters drifted and a nested scene node started its name 96px from
+ * the panel edge — measured, and down to 66 once they were the same number.
+ */
+export const ROW_LINE = 'flex h-full items-center gap-1.5 px-1'
+
+/**
  * Hover, selection and keyboard focus of one line in a list. The same line must not light up
  * differently depending on whether a `Tree` or a `Collection` is holding it.
  *
@@ -115,13 +130,34 @@ export type RowTone = 'soft' | 'strong'
  * `accent`, which on an accent fill is 1:1 and therefore no ring at all: it is overridden here,
  * last-wins through `cn`, so a keyboard can still see where it is on the one row it matters on.
  *
- * `hoverable` is the one thing a LIST turns off and a TILE keeps — see where it is read below.
+ * Everything past `selected` is named rather than positional, and `surface` is why: it arrived as
+ * a fourth boolean, and the one call that needed it had to spell out the two defaults in front of
+ * it — `rowSkin(picked, false, 'soft', false)`, four values of which three say nothing.
  */
+export type RowSkin = {
+  /**
+   * What is wearing the skin, and the one thing that decides whether the pointer fills anything.
+   *
+   * A `row` answers no, and both surfaces that draw one agree: rows sit shoulder to shoulder, so
+   * a fill following the pointer reads as a block sliding over the list rather than as one line
+   * answering — and running past a picked row it briefly wears the same weight as the selection
+   * it is meant to sit beside. What says where the pointer is in a list is the pointer.
+   *
+   * A `tile` answers yes — the home's tools, a texture channel — because there the fill is the
+   * whole of what says the tile can be pressed: nothing else about it looks like a control. Its
+   * quiet ink goes with it, and has its own constant: `TILE_QUIET`.
+   */
+  surface?: 'row' | 'tile'
+  disabled?: boolean
+  tone?: RowTone
+}
+
 export function rowSkin(
   selected: boolean,
-  disabled = false,
-  tone: RowTone = 'soft',
-  hoverable = true,
+  // `row` by default, which is what the function is called: a surface arriving here without a
+  // word on the subject is a list until it says otherwise, and a list that quietly took a hover
+  // back is the defect this batch went to remove.
+  { surface = 'row', disabled, tone }: RowSkin = {},
 ): string {
   const accented = selected && tone === 'strong'
 
@@ -129,8 +165,7 @@ export function rowSkin(
   return cn(
     'rounded-(--radius-sc-sm)',
     // Named, and paired with `data-selected` on the SAME element: `Row` reads both to lift its
-    // title and its subtitle out of `muted`, which carries 3.25:1 on `accent-soft` and 3.51 on
-    // `elevated` in the dark theme.
+    // title and its subtitle out of `muted`, which carries 3.25:1 on `accent-soft`.
     //
     // A refused row takes no group, because its background does not answer a pointer either —
     // and a row that is refused WHILE selected therefore keeps the muted subtitle on
@@ -139,20 +174,13 @@ export function rowSkin(
     // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
     selected && (accented ? 'bg-accent' : 'bg-accent-soft'),
-    // Whether the pointer resting here fills anything.
-    //
-    // A LIST answers no, and both surfaces that draw one do: rows sit shoulder to shoulder, so a
-    // fill following the pointer reads as a block sliding over the list rather than as one line
-    // answering — and running past a picked row it briefly wears the same weight as the selection
-    // it is meant to sit beside. What says where the pointer is in a list is the pointer.
-    //
-    // A TILE answers yes — the home's tools, a texture channel — because there the fill is the
-    // whole of what says the tile can be pressed: nothing else about it looks like a control.
-    !selected && hoverable && 'hover:bg-elevated',
-    // After the hover, which it undoes: a refused line that still lights up under the pointer
-    // reads as pickable right until the click that does nothing. `MenuRow` reached the same
-    // triplet on its own — this is where a list row gets it, so `Tree` inherits it too.
-    disabled && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+    // Three refusals in one condition rather than a fill written and then undone: a `hover:` that
+    // exists only to cancel another `hover:` is one class the day either of them moves.
+    surface === 'tile' && !selected && !disabled && 'hover:bg-elevated',
+    // A refused line that still lit up under the pointer read as pickable right until the click
+    // that does nothing. `MenuRow` reached the same pair on its own — this is where a list row
+    // gets it, so `Tree` inherits it too.
+    disabled && 'cursor-not-allowed opacity-40',
     FOCUS_RING,
     accented && 'focus-visible:ring-accent-content',
   )
@@ -168,9 +196,8 @@ export function rowSkin(
  *
  * It once carried a hover lift beside it, for `elevated` at 3.51:1. That fill left the lists on
  * 2026-08-14 and the lift went with it: a variant firing on a background that no longer moves is
- * a word brightening under the pointer for no reason a reader could name. **`Tools.tsx` still
- * hovers**, being a tile rather than a line, and writes the lift where its own fill is declared —
- * one site, beside the thing that makes it necessary, instead of a rule every list pays for.
+ * a word brightening under the pointer for no reason a reader could name. What still hovers is a
+ * TILE, and it wears `TILE_QUIET` below rather than writing the variant out again.
  *
  * Written once because five sites had reached the same classes, one of them twice. A site whose
  * row has no selection carries the variant harmlessly: the attribute never appears.
@@ -195,6 +222,18 @@ export const ROW_QUIET = cn(
   'group-data-accented/row:text-accent-content',
   'group-data-accented/row:group-data-selected/row:text-accent-content',
 )
+
+/**
+ * The same quiet ink on a surface that still FILLS under the pointer — `rowSkin`'s `tile`, and
+ * nothing else. `muted` reads 3.51:1 on `elevated`, under the 4.5 of WCAG 1.4.3, so the word has
+ * to leave it exactly where that fill arrives.
+ *
+ * A constant rather than the variant written at each tile, and the reason is the guard next door:
+ * `styles.test.ts` refuses `group-hover/row:text-text` anywhere outside this file. Without this
+ * export that rule could only be kept as a list of filenames allowed to break it, which is a rule
+ * that stops refusing anything the moment a second name is added to it.
+ */
+export const TILE_QUIET = cn(ROW_QUIET, 'group-hover/row:text-text')
 
 /**
  * The ink of the NAME in a row — the counterpart of `ROW_QUIET`, and it exists for one reason: on

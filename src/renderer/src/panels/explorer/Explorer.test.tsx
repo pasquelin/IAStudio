@@ -442,29 +442,26 @@ describe('the project explorer', () => {
 
     /**
      * A dot of accent, and no word: the word cost every row in the panel the height of a stacked
-     * one — see the gauge test above. Read off the class because the mark is `aria-hidden` and
-     * has nothing else to be asked for by: it says « open » to the eye, and what says it to a
-     * reader is the tab itself.
+     * one — see the gauge test above. Read off the class because the mark is `aria-hidden` and has
+     * nothing else to be asked for by: it says « open » to the eye, and what says it to a reader
+     * is the tab itself.
+     *
+     * Two files in one folder rather than two cases, because « and them alone » is the whole of
+     * what a mark is for: a dot on every row says nothing.
      */
-    it('marks the documents a tab is already showing', async () => {
+    it('marks the documents a tab is showing, and them alone', async () => {
       withProject()
       useDocuments.setState({ documents: { a3f1: scene } })
-      install({ '': [file('a3f1.scene')] }, [scene])
+      install({ '': [file('a3f1.scene'), file('other.scene')] }, [scene])
 
       render(<Explorer />)
+      await screen.findByText('a3f1.scene')
 
-      const row = (await screen.findByText('a3f1.scene')).closest('[role="treeitem"]')
-      expect(row?.querySelector('.bg-accent')).toBeInTheDocument()
-    })
+      const marked = (name: string): Element | null | undefined =>
+        screen.getByText(name).closest('[role="treeitem"]')?.querySelector('.bg-accent')
 
-    it('leaves the mark off a file no tab is showing', async () => {
-      withProject()
-      install({ '': [file('a3f1.scene')] }, [scene])
-
-      render(<Explorer />)
-
-      const row = (await screen.findByText('a3f1.scene')).closest('[role="treeitem"]')
-      expect(row?.querySelector('.bg-accent')).not.toBeInTheDocument()
+      expect(marked('a3f1.scene')).toBeInTheDocument()
+      expect(marked('other.scene')).not.toBeInTheDocument()
     })
   })
 
