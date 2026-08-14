@@ -72,8 +72,11 @@ describe('saying that a document drifted from its asset', () => {
 
     await reportAssetDrift(DOCUMENT, ASSET, 'concept art')
 
+    // `canvas.size`, not `assets.save`: at ⌘S the asset IS rewritten — « the save happens either
+    // way » — and on a revisit nothing is saved at all. What both moments have to say is that the
+    // document does not measure its picture, which is the one thing `canvas.size` names.
     expect(reportFailure).toHaveBeenCalledWith(
-      'assets.save',
+      'canvas.size',
       'concept art',
       expect.objectContaining({ message: expect.stringContaining('no longer measures') }),
     )

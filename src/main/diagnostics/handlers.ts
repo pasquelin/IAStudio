@@ -27,6 +27,9 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'skybox.source': 'document',
   'skybox.export': 'document',
   'canvas.layer': 'document',
+  // With the document, not the shelf: what these three sites are about is a document that does
+  // not measure its picture. The asset is the victim, the document is the subject — and reading
+  // them by subject is how a user finds the tab to fix.
   'canvas.size': 'document',
   'image.export': 'document',
   'document.load': 'document',
@@ -38,6 +41,8 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   // document that refused it — there is none, and that is exactly what the line says.
   'assets.open': 'library',
   // Read with the shelf whose tile is now behind, not with the document — that one was saved.
+  // The drift warning that used to justify this line moved to `canvas.size`; what is left is
+  // ⌘S failing to write the asset, and ⇧⌘S failing to make a copy — see the note at its sites.
   'assets.save': 'library',
   // `import`, with the lines the extraction itself writes: what it produces is bytes landing in
   // the project, and a failure filed away from its own outcome reads as a different event.
