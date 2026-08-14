@@ -13,31 +13,41 @@ describe('Row', () => {
   })
 
   /**
-   * Muted at rest and full ink on the two states a row takes, because `muted` carries 3.25:1 on
-   * `accent-soft` and 3.51 on `elevated`. Read off `rowSkin`'s group rather than a prop: six
-   * sites render a subtitle and none of them knows whether the cell holding it is picked.
+   * Muted at rest and full ink once the row is PICKED, because `muted` carries 3.25:1 on
+   * `accent-soft`. Read off `rowSkin`'s group rather than a prop: six sites render a subtitle and
+   * none of them knows whether the cell holding it is picked.
    */
-  it('lifts its subtitle out of muted once the row is picked or pointed at', () => {
+  it('lifts its subtitle out of muted once the row is picked', () => {
     render(<Row icon={mdiCube} title="Cube" subtitle="Mesh" />)
 
-    expect(screen.getByText('Mesh')).toHaveClass(
-      'text-muted',
-      'group-hover/row:text-text',
-      'group-data-selected/row:text-text',
-    )
+    expect(screen.getByText('Mesh')).toHaveClass('text-muted', 'group-data-selected/row:text-text')
+  })
+
+  /**
+   * The name used to raise one on its own, on the grounds that a row truncates. What that
+   * produced was a band repeating a word already under the pointer, over the panel beside it, on
+   * every list in the studio.
+   */
+  it('says nothing under the pointer when the row has nothing the screen does not show', () => {
+    render(<Row icon={mdiCube} title="A rather long name" />)
+
+    expect(screen.getByText('A rather long name')).not.toHaveAttribute('data-tooltip-content')
   })
 
   // The studio tooltip, not the native `title`: the rest of the app is instant and themed.
-  it('tips the row with its own name, since it truncates', () => {
-    render(<Row icon={mdiCube} title="A rather long name" />)
+  it('tips the row where a hint gives it something to say', () => {
+    render(<Row icon={mdiCube} title="Cube" hint="Not on your plan" />)
 
-    const name = screen.getByText('A rather long name')
-    expect(name).toHaveAttribute('data-tooltip-content', 'A rather long name')
+    const name = screen.getByText('Cube')
+    expect(name).toHaveAttribute(
+      'data-tooltip-content',
+      expect.stringContaining('Not on your plan'),
+    )
     expect(name).toHaveAttribute('data-tooltip-place', 'right')
   })
 
   it('follows the placement its list asks for', () => {
-    render(<Row icon={mdiCube} title="Cube" tip={TIP_BOTTOM} />)
+    render(<Row icon={mdiCube} title="Cube" hint="Somewhere else" tip={TIP_BOTTOM} />)
 
     expect(screen.getByText('Cube')).toHaveAttribute('data-tooltip-place', 'bottom')
   })
@@ -51,17 +61,16 @@ describe('Row', () => {
 
   /**
    * A hidden layer is DIMMED, not disabled — still selectable, renamable, draggable — so its name
-   * has to clear AA on the fills the row takes: `muted` reads 3.51:1 on `elevated` and 3.25 on
-   * `accent-soft`. The strike-through goes on saying what the pale colour used to say alone.
+   * has to clear AA on the fill the row takes: `muted` reads 3.25:1 on `accent-soft`. The
+   * strike-through goes on saying what the pale colour used to say alone.
    *
    * The subtitle got this at iteration 8 and the title did not, four lines apart, under a comment
    * quoting these very numbers.
    */
-  it('lifts a muted title on the same two states as the subtitle, keeping the strike', () => {
+  it('lifts a muted title on the same state as the subtitle, keeping the strike', () => {
     render(<Row icon={mdiCube} title="Cube" muted />)
 
     expect(screen.getByText('Cube')).toHaveClass(
-      'group-hover/row:text-text',
       'group-data-selected/row:text-text',
       'line-through',
       // The fill fades under it; without this the word would snap while its background fades.

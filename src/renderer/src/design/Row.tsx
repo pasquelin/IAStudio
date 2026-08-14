@@ -18,12 +18,16 @@ export type RowProps = {
   /** Struck through, and dimmed AT REST only: a hidden layer, an invisible mesh. */
   muted?: boolean
   /**
-   * A sentence added under the name in its tooltip — why the row is refused, typically. The
-   * name is already on screen, so this EXPLAINS rather than repeats: that is what the factory's
-   * `description` is for, and a tooltip that echoes a visible word is noise to a screen reader.
+   * What the row has to say that the screen does not already show — why it is refused, the full
+   * path behind a truncated one, the real name of an asset listed under its id.
+   *
+   * **It is the whole of what puts a tooltip on this row.** The name alone used to raise one,
+   * everywhere, on the grounds that a row truncates; what that produced was a band of text
+   * repeating a word already under the pointer, over the panel beside it, on every list in the
+   * studio. A tooltip that echoes a visible word is noise on screen and noise to a reader alike.
    */
   hint?: string
-  /** Placement of the name's tooltip. Rows live in side panels, so it goes right by default. */
+  /** Placement of the hint. Rows live in side panels, so it goes right by default. */
   tip?: TooltipFactory
 }
 
@@ -49,15 +53,19 @@ export function Row({
     // One step; the host that PAINTS the fill adds the second — `Collection`'s cell and `Tree`'s
     // row both do. Raising it to two here instead stacked on the tree's own step and pushed every
     // name a further 4px off its chevron.
-    <div className="flex h-full items-center gap-2 px-1">
+    //
+    // `gap-1.5` and not `gap-2`, which is what the studio spaces a row of CONTROLS by: this is a
+    // glyph, a word and a button reading as one line, and at two they read as three things laid
+    // out side by side. It is the half-step `design/spacing.test.ts` leaves open, and the reason
+    // it does. Measured on the scene outliner: 96px before a nested node's name, down to 74.
+    <div className="flex h-full items-center gap-1.5 px-1">
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">
-        {/* Tipped with its own name: the row truncates, and a truncated name is exactly the
-            case where hovering is the only way to read it. The studio tooltip and not `title`,
-            which comes with the OS delay and none of the theme. */}
+        {/* The studio tooltip and not `title`, which comes with the OS delay and none of the
+            theme — and only where `hint` gives it something to say. */}
         <p
-          {...tip(title, false, hint)}
+          {...(hint ? tip(title, false, hint) : {})}
           className={cn(
             'truncate text-xs leading-tight',
             // A hidden layer is DIMMED, not disabled: a layer is still selected and renamed, a

@@ -6,7 +6,6 @@ import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
 import type { SelectionMode } from '@/helpers/selection'
 import { flattenTree, Tree } from './Tree'
-import type { RowHeight } from './virtual'
 
 const NODES = [
   { id: 'scene', parentId: null },
@@ -55,7 +54,6 @@ function renderTree(
   onSelect: Selector = () => {},
   onToggle = (): void => {},
   selectedIds: readonly string[] = [],
-  rowHeight: RowHeight = 'control',
 ) {
   return render(
     <Tree
@@ -65,7 +63,6 @@ function renderTree(
       expandedIds={new Set(['scene'])}
       onSelect={onSelect}
       onToggle={onToggle}
-      rowHeight={rowHeight}
       renderRow={row => <span>{row.node.id}</span>}
     />,
   )
@@ -96,24 +93,18 @@ describe('Tree, the height it estimates', () => {
   })
 
   /**
-   * A tree whose rows stack a name over a subtitle — the explorer's. Two steps of `leading-tight`
-   * text do not fit a control, and `index.css` writes the arithmetic beside the gauge.
+   * A control's gauge, and no way to ask for another. The explorer used to ask for the stacked one
+   * — a whole panel measured for a second line one row in thirty carried — and a tree is a list of
+   * NAMES. `Collection` still takes the taller shapes, and its own suite holds them.
    */
-  it('estimates the taller gauge for a tree whose rows stack', () => {
+  it('takes a control gauge whatever the tree, the stacked one being nobody’s to ask for', () => {
     document.documentElement.style.setProperty('--sc-control', '24px')
     document.documentElement.style.setProperty('--sc-row-stacked', '32px')
     refreshPalette()
 
-    renderTree(undefined, undefined, undefined, 'stacked')
+    renderTree()
 
-    expect(screen.getByRole('tree')).toHaveStyle({ height: '96px' })
-  })
-
-  // What no gauge describes, for the two panels that size their own rows.
-  it('takes a number for a shape no gauge names', () => {
-    renderTree(undefined, undefined, undefined, 40)
-
-    expect(screen.getByRole('tree')).toHaveStyle({ height: '120px' })
+    expect(screen.getByRole('tree')).toHaveStyle({ height: '72px' })
   })
 
   it('falls back to the shipped height when no gauge is declared', () => {
@@ -243,14 +234,48 @@ describe('Tree', () => {
 
   // A pixel count would hold the same indent in both densities, next to a layer stack whose own
   // step is a gauge. The two steps differ — one gutter there, two here — the reading does not.
+  //
+  // Carried by the block INSIDE the row rather than by the row itself, and that is the point: a
+  // pinned column sits before it and must not walk right with the depth.
   it('indents each level by the density gauge rather than a pixel count', () => {
     renderTree()
 
-    const [root, child] = screen.getAllByRole('treeitem')
+    const indented = screen
+      .getAllByRole('treeitem')
+      .map(row => row.querySelector<HTMLElement>('[data-chevron]')?.parentElement)
+    const [root, child] = indented
     // The factor is held too: it is what keeps a comfortable level at the 12 px it always was.
     expect(root?.style.paddingLeft).toContain('var(--sc-indent)')
     expect(child?.style.paddingLeft).toContain('var(--sc-indent)')
     expect(child?.style.paddingLeft).not.toEqual(root?.style.paddingLeft)
+  })
+
+  /**
+   * The whole reason `renderLeading` exists: a stack is read the way Photoshop draws one, its
+   * eyes in a column that does not move. A row three levels deep would otherwise put its controls
+   * further right than the group holding it, which is a file browser's reading, not a stack's.
+   */
+  it('leaves a pinned column out of the indentation, however deep the row', () => {
+    render(
+      <Tree
+        nodes={NODES}
+        label="Outline"
+        selectedIds={[]}
+        expandedIds={new Set(['scene', 'a'])}
+        onSelect={() => {}}
+        onToggle={() => {}}
+        renderLeading={row => <span data-pinned>{row.node.id}</span>}
+        renderRow={row => <span>{row.node.id}</span>}
+      />,
+    )
+
+    const pinned = screen
+      .getAllByRole('treeitem')
+      .map(row => row.querySelector<HTMLElement>('[data-pinned]')?.parentElement)
+
+    expect(pinned.length).toBeGreaterThan(1)
+    // Every one of them is the ROW, never the indented block: nothing between them can shift.
+    for (const parent of pinned) expect(parent).toHaveAttribute('role', 'treeitem')
   })
 
   it('leaves the rows undraggable when nothing listens for a drop', () => {
@@ -674,7 +699,9 @@ describe('Tree', () => {
     const onToggle = vi.fn()
     renderTree(onSelect, onToggle)
 
-    await userEvent.click(screen.getAllByRole('treeitem')[0]?.firstChild as HTMLElement)
+    await userEvent.click(
+      screen.getAllByRole('treeitem')[0]?.querySelector('[data-chevron]') as HTMLElement,
+    )
 
     expect(onToggle).toHaveBeenCalledWith('scene')
     expect(onSelect).not.toHaveBeenCalled()

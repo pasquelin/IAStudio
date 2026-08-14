@@ -160,7 +160,9 @@ describe('SceneTree', () => {
   it('folds the root away, which is session state and not an edit', async () => {
     render(<SceneTree documentId="doc-1" />)
 
-    await userEvent.click(screen.getAllByRole('treeitem')[0]?.firstChild as HTMLElement)
+    await userEvent.click(
+      screen.getAllByRole('treeitem')[0]?.querySelector('[data-chevron]') as HTMLElement,
+    )
 
     expect(screen.queryByText('AmbientLight')).not.toBeInTheDocument()
   })

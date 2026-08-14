@@ -114,8 +114,15 @@ export type RowTone = 'soft' | 'strong'
  * keeps the two apart on that fill, since the colour no longer can. And `FOCUS_RING` draws in
  * `accent`, which on an accent fill is 1:1 and therefore no ring at all: it is overridden here,
  * last-wins through `cn`, so a keyboard can still see where it is on the one row it matters on.
+ *
+ * `hoverable` is the one thing a LIST turns off and a TILE keeps — see where it is read below.
  */
-export function rowSkin(selected: boolean, disabled = false, tone: RowTone = 'soft'): string {
+export function rowSkin(
+  selected: boolean,
+  disabled = false,
+  tone: RowTone = 'soft',
+  hoverable = true,
+): string {
   const accented = selected && tone === 'strong'
 
   // `elevated` is the studio's hover token — what a toolbar button lights up with.
@@ -131,7 +138,17 @@ export function rowSkin(selected: boolean, disabled = false, tone: RowTone = 'so
     // and it is left alone knowingly: `opacity-40` is already on it, and WCAG 1.4.3 exempts a
     // disabled control. Lifting the ink there would say the row is available.
     !disabled && 'group/row',
-    selected ? (accented ? 'bg-accent' : 'bg-accent-soft') : 'hover:bg-elevated',
+    selected && (accented ? 'bg-accent' : 'bg-accent-soft'),
+    // Whether the pointer resting here fills anything.
+    //
+    // A LIST answers no, and both surfaces that draw one do: rows sit shoulder to shoulder, so a
+    // fill following the pointer reads as a block sliding over the list rather than as one line
+    // answering — and running past a picked row it briefly wears the same weight as the selection
+    // it is meant to sit beside. What says where the pointer is in a list is the pointer.
+    //
+    // A TILE answers yes — the home's tools, a texture channel — because there the fill is the
+    // whole of what says the tile can be pressed: nothing else about it looks like a control.
+    !selected && hoverable && 'hover:bg-elevated',
     // After the hover, which it undoes: a refused line that still lights up under the pointer
     // reads as pickable right until the click that does nothing. `MenuRow` reached the same
     // triplet on its own — this is where a list row gets it, so `Tree` inherits it too.
@@ -144,17 +161,23 @@ export function rowSkin(selected: boolean, disabled = false, tone: RowTone = 'so
 /**
  * The quiet ink of a word that lives INSIDE a row — a subtitle, a kind, the help under a tile.
  *
- * `muted` is quiet enough at rest and not enough once the row answers: it carries 3.51:1 on
- * `elevated` and 3.25 on `accent-soft`, both under the 4.5 of WCAG 1.4.3. Raising the token would
- * repaint every dimmed word in the studio, so the word is lifted on those two states instead —
- * read from `rowSkin`'s group, which is why no list has to pass its state down.
+ * `muted` is quiet enough at rest and not enough once the row is PICKED: it carries 3.25:1 on
+ * `accent-soft`, under the 4.5 of WCAG 1.4.3. Raising the token would repaint every dimmed word in
+ * the studio, so the word is lifted on that state instead — read from `rowSkin`'s group, which is
+ * why no list has to pass its state down.
  *
- * Written once because five sites had reached the same three classes, one of them twice. A site
- * whose row has no selection carries the selected variant harmlessly: the attribute never appears.
+ * It once carried a hover lift beside it, for `elevated` at 3.51:1. That fill left the lists on
+ * 2026-08-14 and the lift went with it: a variant firing on a background that no longer moves is
+ * a word brightening under the pointer for no reason a reader could name. **`Tools.tsx` still
+ * hovers**, being a tile rather than a line, and writes the lift where its own fill is declared —
+ * one site, beside the thing that makes it necessary, instead of a rule every list pays for.
+ *
+ * Written once because five sites had reached the same classes, one of them twice. A site whose
+ * row has no selection carries the variant harmlessly: the attribute never appears.
  */
 export const ROW_QUIET = cn(
   'text-muted transition-colors',
-  'group-hover/row:text-text group-data-selected/row:text-text',
+  'group-data-selected/row:text-text',
   /**
    * On an accent FILL the lift above is not enough: `text` reads 3.44:1 there, and the token is
    * pinned so that only pure white clears 4.5.

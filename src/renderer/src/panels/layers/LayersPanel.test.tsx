@@ -15,10 +15,13 @@ import { LayersPanel } from './LayersPanel'
 /**
  * The chevron belongs to `Tree`, which owns the geometry of every stack in the studio: it is
  * `aria-hidden` on purpose — the row already carries `aria-expanded`, and the arrow keys already
- * fold it — so it is reached the way the tree's own suite reaches it, by its place in the row.
+ * fold it — so it is reached the way the tree's own suite reaches it, by the handle it publishes.
  */
 const chevronOf = (name: string): HTMLElement =>
-  screen.getByText(name).closest('[role="treeitem"]')?.firstChild as HTMLElement
+  screen
+    .getByText(name)
+    .closest('[role="treeitem"]')
+    ?.querySelector('[data-chevron]') as HTMLElement
 
 describe('LayersPanel', () => {
   // The panel sits on the edge, outside Dockview: it reads the image in front rather than being

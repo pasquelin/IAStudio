@@ -7,7 +7,7 @@ import { pickFrom, type Modifiers, type SelectionMode } from '@/helpers/selectio
 import { isTyping } from '@/helpers/typing'
 import { rowSkin } from './styles'
 import { UiIcon } from './UiIcon'
-import { useRemeasure, useRowHeight, type RowHeight } from './virtual'
+import { useRemeasure, useRowHeight } from './virtual'
 
 export type TreeNode = { id: string; parentId: string | null }
 
@@ -135,14 +135,18 @@ export type TreeProps<T extends TreeNode> = {
   /** Draws the row's content. The tree owns the chevron, the indent and the selection. */
   renderRow: (row: TreeRow<T>) => ReactNode
   /**
-   * How tall a row is, for a tree whose rows stack a name over a subtitle.
+   * Draws a column pinned to the LEFT EDGE, outside the indentation — the visibility eye of a
+   * layer stack and of the scene outliner.
    *
-   * `control` by default, which is every tree but the explorer's — and the explorer is what this
-   * exists for: its rows carry a second line for a document that is open, and two steps of
-   * `leading-tight` text do not fit in a control's height. Same shape as `Collection`'s, resolved
-   * by the same hook.
+   * Outside, and that is the whole of what this prop is for: an eye that walked right with the
+   * depth put a top-level layer's controls further in than the group's own chevron, which is what
+   * a stack panel is read the other way round from. Photoshop has pinned that column for thirty
+   * years, and a stack is what the layers panel is — a file browser has no such column and does
+   * not pass this.
+   *
+   * Absent, the row is exactly its indent, its chevron and `renderRow`.
    */
-  rowHeight?: RowHeight
+  renderLeading?: (row: TreeRow<T>) => ReactNode
 }
 
 /** One step of indentation. A gauge rather than a pixel count — see `index.css`. */
@@ -168,7 +172,7 @@ export function Tree<T extends TreeNode>({
   onActivate,
   onContextMenu,
   renderRow,
-  rowHeight = 'control',
+  renderLeading,
 }: TreeProps<T>) {
   // Which row the pointer is over during a drag, where in it, and what is being dragged. Session
   // state of the gesture itself, so none of it reaches the caller: what the caller hears about
@@ -226,7 +230,12 @@ export function Tree<T extends TreeNode>({
   }, [rows, ghost])
 
   // Read back from the gauge the row below is sized by: a constant is only right at one density.
-  const rowPixels = useRowHeight(rowHeight)
+  //
+  // A control's, for every tree in the studio and with no way to ask for another: the explorer was
+  // the one that stacked a second line, and it stopped on 2026-08-14 — a whole panel measured for
+  // a word one row in thirty carried. A tree is a list of NAMES. `Collection` still takes the
+  // taller shapes, for the surfaces that really do stack.
+  const rowPixels = useRowHeight('control')
 
   // Virtualized like `Collection`: a scene of a few hundred nodes is a few thousand elements,
   // and every one of them would be reconciled on each selection click.
@@ -417,14 +426,23 @@ export function Tree<T extends TreeNode>({
                 role="presentation"
                 aria-hidden="true"
                 style={{ transform: `translateY(${virtual.start}px)`, height: virtual.size }}
-                className="pointer-events-none absolute inset-x-0 top-0"
+                className="pointer-events-none absolute inset-x-0 top-0 py-px"
               >
-                <div
-                  style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
-                  className="border-accent bg-elevated flex h-full items-center gap-2 rounded-(--radius-sc-sm) border border-dashed px-1"
-                >
-                  <span aria-hidden="true" className="flex w-3.5 shrink-0 justify-center" />
-                  {renderRow(row)}
+                <div className="border-accent bg-elevated flex h-full items-center gap-1.5 rounded-(--radius-sc-sm) border border-dashed px-1">
+                  {/* The column is held open rather than drawn: the ghost has to line up with the
+                      rows under it, and an eye on a row that does not exist yet is a control for a
+                      state nothing is in. `invisible` and not `opacity-0` — it takes the button
+                      out of the tab order too. */}
+                  {renderLeading && (
+                    <span className="invisible shrink-0">{renderLeading(row)}</span>
+                  )}
+                  <div
+                    style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
+                    className="flex h-full min-w-0 flex-1 items-center gap-1.5"
+                  >
+                    <span className="flex w-3.5 shrink-0 justify-center" />
+                    {renderRow(row)}
+                  </div>
                 </div>
               </li>
             )
@@ -440,7 +458,11 @@ export function Tree<T extends TreeNode>({
                 transform: `translateY(${virtual.start}px)`,
                 height: virtual.size,
               }}
-              className="absolute inset-x-0 top-0"
+              // A hairline above and below the fill, taken off the slot rather than added to it, so
+              // the row count on screen does not change: without it two picked rows meet fill to
+              // fill and read as one taller block with rounded ends, which is what a run of them
+              // looked like in the layer stack.
+              className="absolute inset-x-0 top-0 py-px"
             >
               <div
                 role="treeitem"
@@ -457,10 +479,11 @@ export function Tree<T extends TreeNode>({
                 aria-level={row.depth + 1}
                 aria-posinset={row.position}
                 aria-setsize={row.siblings}
-                style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
                 className={cn(
-                  'group flex h-full cursor-pointer items-center gap-2 px-1',
-                  rowSkin(selected.has(row.node.id)),
+                  'group flex h-full cursor-pointer items-center gap-1.5 px-1',
+                  // A list row does not answer the pointer — see `rowSkin`. What says where the
+                  // pointer is in a tree is the pointer.
+                  rowSkin(selected.has(row.node.id), false, 'soft', false),
                   // The row a drop would land in, told apart from the row that is selected.
                   over?.id === row.node.id &&
                     over.zone === 'into' &&
@@ -537,25 +560,39 @@ export function Tree<T extends TreeNode>({
                 }}
                 onKeyDown={event => onRowKeyDown(row, index, event)}
               >
-                {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
-                glyph are unreadable as a list. It is not a control — the row already carries
-                `aria-expanded`, and the arrows already toggle it. */}
-                <span
-                  aria-hidden="true"
-                  className="flex w-3.5 shrink-0 justify-center"
-                  onPointerDown={event => {
-                    if (!row.hasChildren) return
-                    // The row selects on pointer down, which fires before click: stopping the
-                    // click alone would still have let the chevron steal the selection.
-                    event.stopPropagation()
-                    onToggle(row.node.id)
-                  }}
+                {renderLeading?.(row)}
+                {/* Everything the depth moves. The pinned column above stays out of it — that is
+                    what pins it — and the indent sits here rather than on the row so the fill
+                    still runs the whole width at every level. */}
+                <div
+                  style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
+                  className="flex h-full min-w-0 flex-1 items-center gap-1.5"
                 >
-                  {row.hasChildren && (
-                    <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
-                  )}
-                </span>
-                {renderRow(row)}
+                  {/* The chevron keeps its column even on a leaf: rows whose content shifts by a
+                  glyph are unreadable as a list. It is not a control — the row already carries
+                  `aria-expanded`, and the arrows already toggle it. */}
+                  <span
+                    aria-hidden="true"
+                    // Named because it has no other handle: it is `aria-hidden`, so nothing can
+                    // ask for it by role or by text. Three suites used to reach it as the row's
+                    // `firstChild`, which is a claim about the markup around it rather than
+                    // about it — and the claim broke the day the indent moved one element in.
+                    data-chevron
+                    className="flex w-3.5 shrink-0 justify-center"
+                    onPointerDown={event => {
+                      if (!row.hasChildren) return
+                      // The row selects on pointer down, which fires before click: stopping the
+                      // click alone would still have let the chevron steal the selection.
+                      event.stopPropagation()
+                      onToggle(row.node.id)
+                    }}
+                  >
+                    {row.hasChildren && (
+                      <UiIcon path={row.expanded ? mdiChevronDown : mdiChevronRight} size={12} />
+                    )}
+                  </span>
+                  {renderRow(row)}
+                </div>
               </div>
             </li>
           )

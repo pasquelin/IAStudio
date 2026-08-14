@@ -31,12 +31,20 @@ describe('the shared class strings', () => {
 })
 
 describe('the quiet ink of a row', () => {
-  it('lifts on both states the skin knows, and stays quiet at rest', () => {
+  it('lifts on the state the skin knows, and stays quiet at rest', () => {
     expect(ROW_QUIET).toContain('text-muted')
-    expect(ROW_QUIET).toContain('group-hover/row:text-text')
     expect(ROW_QUIET).toContain('group-data-selected/row:text-text')
     // The fill fades under it; the property does not inherit, so the word carries its own.
     expect(ROW_QUIET).toContain('transition-colors')
+  })
+
+  /**
+   * The lift for `elevated` at 3.51:1 left with the fill that made it necessary: no list in the
+   * studio takes one under the pointer any more. A word that brightens over a background standing
+   * perfectly still is the hover this batch went to remove, arriving by the back door.
+   */
+  it('no longer brightens under a pointer, since no list fills under one', () => {
+    expect(ROW_QUIET).not.toContain('group-hover/row')
   })
 
   /**
@@ -54,13 +62,18 @@ describe('the quiet ink of a row', () => {
    *
    * `WRITTEN_SOURCES` reads `renderer/src` only: a class string written in `shared/` would not be
    * seen. No JSX lives there today, which is why the gap is tolerated rather than closed.
+   *
+   * **What it now watches is the hover lift, which the constant no longer carries.** A word only
+   * has to brighten under the pointer where the background under it moves, and one surface in the
+   * studio is left in that case — a TILE, whose fill is the whole of what says it can be pressed.
+   * A list arriving here is a list that has quietly taken its hover back.
    */
-  it('is worn rather than written out again', () => {
-    const offenders = WRITTEN_SOURCES.filter(
+  it('lifts under a pointer only where something still fills under one', () => {
+    const lifting = WRITTEN_SOURCES.filter(
       ([path, source]) => path !== GUARDED && source.includes('group-hover/row:text-text'),
     ).map(([path]) => path)
 
-    expect(offenders).toEqual([])
+    expect(lifting).toEqual(['../home/sections/Tools.tsx'])
   })
 
   // The partner of the rule above: it stays green on a studio where nobody wears the constant at

@@ -221,13 +221,13 @@ describe('the project explorer', () => {
     })
 
     /**
-     * A row of this tree stacks a name over a second line for a document that is open, and two
-     * steps of `leading-tight` text are 27.5px — they fill a 28px control row edge to edge and
-     * overflow a compact one. The tree reserved a control's height for every row, so the name
-     * and the « open » line spilled over the row below and the tint that marks the row stopped
-     * where the text did not.
+     * A folder is read as a list of names, and it used to be measured for a second line that one
+     * row in thirty carried — the word « open » under a document the studio has a tab on. `Tree`
+     * is handed a NUMBER for its estimate, so every row in the panel stood at the taller gauge:
+     * 36px against a control's 28, five or six fewer folders on screen. The word went on
+     * 2026-08-14 and the mark it repeated — a dot of accent in the pinned column — stayed.
      */
-    it('reserves the height a stacked row needs, not a control’s', async () => {
+    it('measures its rows as a control, not as a stack of two lines', async () => {
       withProject()
       install({ '': [file('a3f1.scene')] }, [scene])
       // Declared, so the assertion answers to the STYLESHEET rather than to the fallback the
@@ -239,7 +239,7 @@ describe('the project explorer', () => {
       await screen.findByText('a3f1.scene')
 
       const row = screen.getByRole('treeitem').closest('li')
-      expect(row).toHaveStyle({ height: '32px' })
+      expect(row).toHaveStyle({ height: '24px' })
     })
 
     it('closes a folder again, and its contents go with it', async () => {
@@ -440,6 +440,12 @@ describe('the project explorer', () => {
       expect(openFile).not.toHaveBeenCalled()
     })
 
+    /**
+     * A dot of accent, and no word: the word cost every row in the panel the height of a stacked
+     * one — see the gauge test above. Read off the class because the mark is `aria-hidden` and
+     * has nothing else to be asked for by: it says « open » to the eye, and what says it to a
+     * reader is the tab itself.
+     */
     it('marks the documents a tab is already showing', async () => {
       withProject()
       useDocuments.setState({ documents: { a3f1: scene } })
@@ -447,8 +453,18 @@ describe('the project explorer', () => {
 
       render(<Explorer />)
 
-      await screen.findByText('a3f1.scene')
-      expect(screen.getByText('Ouvert')).toBeInTheDocument()
+      const row = (await screen.findByText('a3f1.scene')).closest('[role="treeitem"]')
+      expect(row?.querySelector('.bg-accent')).toBeInTheDocument()
+    })
+
+    it('leaves the mark off a file no tab is showing', async () => {
+      withProject()
+      install({ '': [file('a3f1.scene')] }, [scene])
+
+      render(<Explorer />)
+
+      const row = (await screen.findByText('a3f1.scene')).closest('[role="treeitem"]')
+      expect(row?.querySelector('.bg-accent')).not.toBeInTheDocument()
     })
   })
 

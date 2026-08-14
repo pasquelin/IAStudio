@@ -5,6 +5,7 @@ import { Row } from '@/design/Row'
 import { Tree, type TreeNode } from '@/design/Tree'
 import { canReparent, type SceneNode } from '@/engines/scene/scene-state'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
+import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { reparentNode } from '@/engines/scene/commands'
 import { openSceneNodeMenu } from '@/spaces/three/SceneNodeMenu'
 import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/scene-commands'
@@ -98,12 +99,26 @@ export function SceneTree({ documentId }: { documentId: string }) {
           onRename: () => openRename(node.id),
         })
       }}
+      // Pinned to the left edge, outside the indentation, as the layer stack pins its own: a node
+      // three groups deep keeps its eye under the eye of the scene's first child, and only the
+      // name walks right. The synthetic root has none — it stands for the scene, which cannot be
+      // hidden — and the column is held open so the rows below it still line up.
+      renderLeading={({ node: item }) =>
+        item.node ? (
+          <VisibilityToggle
+            visible={item.node.visible}
+            label={t('scene.visible')}
+            onToggle={() => toggleNodeVisible(documentId, item.id)}
+          />
+        ) : (
+          <span aria-hidden="true" className="size-(--sc-control-inline) shrink-0" />
+        )
+      }
       renderRow={({ node: item }) =>
         item.node ? (
           <SceneNodeRow
             documentId={documentId}
             node={item.node}
-            visibleLabel={t('scene.visible')}
             renameLabel={t('scene.rename')}
             renaming={renaming === item.id}
             onRename={openRename}

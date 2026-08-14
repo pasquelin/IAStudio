@@ -6,19 +6,18 @@ import { MenuRow } from '@/design/MenuRow'
 import { Row } from '@/design/Row'
 import { ToolButton } from '@/design/ToolButton'
 import type { CanvasState, Layer } from '@/engines/canvas/canvas-state'
-import { removeLayer, renameLayer, setLayerLocks, setLayerVisible } from '@/engines/canvas/commands'
+import { removeLayer, renameLayer, setLayerLocks } from '@/engines/canvas/commands'
 import type { Command } from '@/engines/core/history'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { InlineRename } from '@/panels/shared/InlineRename'
-import { VisibilityToggle } from '@/panels/shared/VisibilityToggle'
 import { LAYER_LOCKS } from './layer-locks'
 import { useCanvases } from '@/stores/canvases'
 
-/** Resolved by the list rather than per row — see `LayerList`. */
+/**
+ * Resolved by the list rather than per row — see `LayerList`. The eye's three are not here: it
+ * lives in the tree's pinned column now, and the list hands them straight to it.
+ */
 export type LayerRowLabels = {
-  visible: string
-  show: string
-  hide: string
   locks: string
   locksHint: string
   rename: string
@@ -81,14 +80,6 @@ export const LayerRow = memo(function LayerRow({
           <Row
             title={layer.name}
             muted={!layer.visible}
-            leading={
-              <VisibilityToggle
-                visible={layer.visible}
-                label={labels.visible}
-                description={layer.visible ? labels.hide : labels.show}
-                onToggle={() => run(setLayerVisible(layer.id, !layer.visible))}
-              />
-            }
             actions={
               <>
                 <ToolButton
@@ -96,7 +87,7 @@ export const LayerRow = memo(function LayerRow({
                   label={labels.remove}
                   description={labels.removeHint}
                   tooltip={TIP_RIGHT}
-                  variant="header"
+                  variant="row"
                   // The command does not refuse the last paintable layer — `deserializeCanvas`
                   // rejects the empty stack that would follow — so the refusal is here, as it is
                   // on the panel's own delete button.
@@ -116,7 +107,7 @@ export const LayerRow = memo(function LayerRow({
                   label={labels.locks}
                   description={labels.locksHint}
                   tooltip={TIP_RIGHT}
-                  variant="header"
+                  variant="row"
                   active={locked}
                   // One button rather than three on the line: the row is 24 px tall in compact.
                   rowCount={LAYER_LOCKS.length}

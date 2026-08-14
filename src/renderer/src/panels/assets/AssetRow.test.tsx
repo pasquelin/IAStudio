@@ -22,14 +22,14 @@ function asset(overrides: Partial<Asset> = {}): Asset {
 
 describe('a row of the asset shelf', () => {
   /**
-   * The kind sits in the row's `actions`, so the fill under it is the cell's — `elevated` on
-   * hover, `accent-soft` once picked — where `muted` reads 3.51:1 and 3.25. It therefore wears
-   * `ROW_QUIET` like every other quiet word of a row, rather than `text-muted` alone.
+   * The kind sits in the row's `actions`, so the fill under it is the cell's — `accent-soft` once
+   * picked, where `muted` reads 3.25:1. It therefore wears `ROW_QUIET` like every other quiet word
+   * of a row, rather than `text-muted` alone.
    *
    * Written because this site was the one the whole batch existed for and the only one no test
    * held: reverting it to `text-muted text-tiny` left all 7864 tests green.
    */
-  it('lifts the kind out of muted once the row answers', () => {
+  it('lifts the kind out of muted once the row is picked', () => {
     render(
       <AssetRow
         row={{ id: 'asset_1', from: 'local', asset: asset() }}
@@ -42,7 +42,6 @@ describe('a row of the asset shelf', () => {
 
     expect(screen.getByText('Image')).toHaveClass(
       'text-muted',
-      'group-hover/row:text-text',
       'group-data-selected/row:text-text',
       'transition-colors',
     )

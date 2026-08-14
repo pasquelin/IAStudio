@@ -106,10 +106,18 @@ function Group({ title, entries }: { title: string; entries: readonly Entry[] })
             <UiIcon path={entry.icon} size={18} className="text-muted mt-0.5 shrink-0" />
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className="text-text truncate text-xs leading-normal">{entry.label}</span>
-              {/* Lifted under the pointer, as a list row's subtitle is: `muted` reads 3.51:1 on
-                  `elevated`, the fill this tile takes on hover. `transition-colors` here too —
-                  the property does not inherit, so the fill would fade while the words snapped. */}
-              <span className={cn(ROW_QUIET, 'text-tiny line-clamp-2 leading-snug')}>
+              {/* Lifted under the pointer, and written HERE rather than carried by `ROW_QUIET`:
+                  `muted` reads 3.51:1 on `elevated`, the fill this tile takes on hover, and this
+                  tile is the last surface in the studio that still takes one. A list row does not
+                  any more, so the rule sits beside the fill that makes it necessary.
+                  `transition-colors` comes with `ROW_QUIET` — the property does not inherit, so
+                  without it the fill would fade while the words snapped. */}
+              <span
+                className={cn(
+                  ROW_QUIET,
+                  'group-hover/row:text-text text-tiny line-clamp-2 leading-snug',
+                )}
+              >
                 {entry.help}
               </span>
             </span>

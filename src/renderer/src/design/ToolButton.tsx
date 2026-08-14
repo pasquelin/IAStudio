@@ -27,8 +27,13 @@ export type ToolButtonProps = Omit<
   active?: boolean
   /** Tool in use AND whose zone has focus: accented background. */
   accented?: boolean
-  /** `header` is the smaller gauge used in panel title bars. */
-  variant?: 'bar' | 'header'
+  /**
+   * Which host the button sits on. `bar` is a toolbar, `header` a panel's title bar — the same
+   * box, a smaller glyph. `row` is a control INSIDE a list row, the eye and the padlock, and it
+   * is the only one that shrinks the box: at a bar's gauge, two of them took 68px off the end of
+   * a 28px layer line, on the very rows whose name is what one reads.
+   */
+  variant?: 'bar' | 'header' | 'row'
   iconSize?: number
   children?: ReactNode
   /** The `<button>` itself, so a bar can publish its active button as an anchor. */
@@ -64,7 +69,8 @@ export function ToolButton({
       aria-pressed={active}
       className={cn(
         BUTTON_BASE,
-        'text-muted size-(--sc-control) shrink-0 bg-transparent',
+        'text-muted shrink-0 bg-transparent',
+        variant === 'row' ? 'size-(--sc-control-inline)' : 'size-(--sc-control)',
         'hover:bg-elevated hover:text-text',
         // Inside a row filled with the accent — the open project's menu button is the case — the
         // rest ink reads 1.50:1 on that blue, and `elevated` under the pointer is grey on it. Both
@@ -80,7 +86,7 @@ export function ToolButton({
       {...rest}
     >
       {icon !== undefined && (
-        <UiIcon path={icon} size={iconSize ?? (variant === 'header' ? 14 : 16)} />
+        <UiIcon path={icon} size={iconSize ?? (variant === 'bar' ? 16 : 14)} />
       )}
       {children}
     </button>

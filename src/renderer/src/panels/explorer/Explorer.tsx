@@ -142,13 +142,6 @@ export function Explorer() {
           onRename: () => setRenaming(node.id),
         })
       }
-      // Its rows carry a second line for a document that is open — see `EntryRow`. Uniformly,
-      // as `Documents` does with the same conditionally stacked row: every row is then 8px taller
-      // than a control, which is five or six fewer on screen. The alternative is a per-row
-      // measurement, and a ResizeObserver on each of a few hundred rows is what invariant 6 sends
-      // away — it would also make the estimate move as documents open and close, which the
-      // keyboard's `scrollToIndex` assumes it does not.
-      rowHeight="stacked"
       renderRow={row => {
         const document = documentOf(row.node)
         const icon =
