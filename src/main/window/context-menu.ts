@@ -63,8 +63,10 @@ function fieldMenu(params: ContextMenuParams, contents: WebContents): MenuItemCo
  * popped up from here — and the spellchecker is on, which had the studio underlining misspellings
  * it offered no way to correct.
  *
- * **Nothing outside an editable node.** Every other surface draws its own in the renderer
- * (`design/ContextMenu`), and a native menu beside it would be a second one for a single press.
+ * **Nothing outside an editable node**, and the reason has changed since: the other surfaces no
+ * longer draw their own, they ASK for one through `registerContextMenu` below. Two menus for a
+ * single press is still what this guard prevents — a right-click in a rename field would
+ * otherwise raise the clipboard menu and the row's menu at once.
  *
  * Beside `lockNavigation` and called from the same place, before any window exists: registered
  * from the menu layer instead, it would reach only the windows opened after the IPC handlers —

@@ -69,6 +69,29 @@ describe('a menu the system draws for a window', () => {
     expect(renamed).toHaveBeenCalledOnce()
   })
 
+  /**
+   * The main process refuses what it cannot draw, and a refused menu shows nothing at all — no
+   * surface, no half-open flyout. Without this the only trace would be an unhandled rejection.
+   */
+  it('files a menu the system refused, rather than failing in silence', async () => {
+    const reported: unknown[] = []
+    installFakeBridge({
+      menu: { popup: () => Promise.reject(new Error('label too long')) },
+      diagnostics: {
+        report: entry => {
+          reported.push(entry)
+          return Promise.resolve()
+        },
+      },
+    })
+    const renamed = vi.fn()
+
+    await showContextMenu([{ label: 'Renommer', tooltip: 'Change le nom', onSelect: renamed }])
+
+    expect(renamed).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(reported).toHaveLength(1))
+  })
+
   it('runs nothing when the menu is dismissed', async () => {
     bridgeAnswering(null)
     const renamed = vi.fn()

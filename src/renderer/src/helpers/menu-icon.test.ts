@@ -5,6 +5,7 @@ import { menuIcon } from './menu-icon'
 const CHECK = 'M9 20.42 2.79 14.2l2.83-2.83L9 14.77l9.88-9.89 2.83 2.83z'
 
 const noCanvas = HTMLCanvasElement.prototype.getContext
+const noDataURL = HTMLCanvasElement.prototype.toDataURL
 
 /** A 2D context that remembers the colour it was told to paint in, and nothing else. */
 function installCanvas(): string[] {
@@ -24,7 +25,9 @@ function installCanvas(): string[] {
 }
 
 afterEach(() => {
+  // Both, or the next case to reach a real canvas reads the stub back instead of drawing.
   HTMLCanvasElement.prototype.getContext = noCanvas
+  HTMLCanvasElement.prototype.toDataURL = noDataURL
   vi.unstubAllGlobals()
 })
 

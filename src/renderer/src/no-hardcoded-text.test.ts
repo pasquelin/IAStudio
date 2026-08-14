@@ -15,6 +15,24 @@ const COMPONENTS: Record<string, string> = import.meta.glob(
 )
 
 /**
+ * The modules that hand words to something else to draw — the context menus, since the system
+ * draws those and no `.tsx` is left to inspect.
+ *
+ * A blind spot the native menus opened: three of them became plain `.ts` the day their rows
+ * stopped being JSX, and `label: 'Rename'` would have shipped straight past a check that only
+ * ever read `.tsx`. What it looks at here is narrower than what it looks at above — a spoken
+ * PROPERTY, not any property — because a module is full of literals nobody reads.
+ */
+const MODULES: Record<string, string> = import.meta.glob(
+  ['./**/*.ts', '!./**/*.test.ts', '!./**/*-fixtures.ts'],
+  {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  },
+)
+
+/**
  * Attributes whose value is read out — on screen or by a screen reader. `className`, `role` and
  * `aria-live` are deliberately absent: their literals are class names and ARIA keywords, not
  * words anyone reads.
@@ -59,6 +77,19 @@ const TECHNICAL_ATTRIBUTES = new Set([
   'key',
   'id',
 ])
+
+/**
+ * The same names, minus the two that only speak inside a tag.
+ *
+ * `value` is a `<Figure>`'s reading on screen and a facet's identifier in a module — `value:
+ * 'official'` sits beside the `label` that translates it. `message` is a word to a user in a
+ * component and a failure code between a worker and its port. Both were measured on this
+ * codebase: four findings, four of them wrong, and a check that cries wolf is one somebody
+ * turns off.
+ */
+const SPOKEN_PROPERTIES = new Set(
+  [...SPOKEN_ATTRIBUTES].filter(name => name !== 'value' && name !== 'message'),
+)
 
 /** A word, rather than a symbol, a number or a separator that reads the same in any language. */
 function isWords(text: string): boolean {
@@ -156,6 +187,36 @@ function findingsIn(path: string, code: string): string[] {
 }
 
 /**
+ * The same rule where there is no tag to hang it on: a property whose NAME says it is read out,
+ * given a word rather than a key. `label: 'Rename'` in a menu module, and nothing else — the
+ * wide net above works because a component holds almost nothing but words, and a module is the
+ * other way round.
+ */
+function propertyFindingsIn(path: string, code: string): string[] {
+  const source = ts.createSourceFile(path, code, ts.ScriptTarget.Latest, true)
+  const findings: string[] = []
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ts.isIdentifier(node.name) &&
+      SPOKEN_PROPERTIES.has(node.name.text)
+    ) {
+      for (const value of literalsIn(node.initializer)) {
+        if (!isWords(value)) continue
+        const { line } = source.getLineAndCharacterOfPosition(node.getStart(source))
+        findings.push(`${path}:${line + 1} ${node.name.text}: "${value}"`)
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(source)
+  return findings
+}
+
+/**
  * The rule the whole interface rests on: every word on screen comes from a bundle, so the studio
  * reads in French or in English without a component knowing which.
  *
@@ -171,6 +232,40 @@ describe('the renderer', () => {
 
   it('holds every component, so the check covers the whole window', () => {
     expect(Object.keys(COMPONENTS).length).toBeGreaterThan(100)
+  })
+
+  // The menus the system draws are composed here and rendered nowhere, so the net above cannot
+  // see them at all: `openEntryMenu` and its two siblings are `.ts`, and always will be.
+  it('leaves every word its modules hand over to the bundles too', () => {
+    const findings = Object.entries(MODULES).flatMap(([path, code]) =>
+      propertyFindingsIn(path, code),
+    )
+
+    expect(findings).toEqual([])
+  })
+
+  it('would see a word written straight into a menu row', () => {
+    const found = propertyFindingsIn(
+      'probe.ts',
+      "const rows = [{ label: 'Rename', tooltip: t('explorer.renameHint') }]",
+    )
+
+    expect(found).toHaveLength(1)
+  })
+
+  // A module names things for itself far more often than it names them for a reader: only the
+  // properties the list above calls spoken are read at all.
+  it('leaves a module’s own identifiers alone', () => {
+    const quiet = [
+      "const a = { id: 'asset_1', kind: 'image', path: 'assets/img' }",
+      "const b = { labelKey: 'intents.skyboxSource', workspace: 'skyboxes' }",
+      "const c = { label: t('explorer.rename'), tooltip: t('explorer.renameHint') }",
+      // The two `SPOKEN_PROPERTIES` drops, in the shapes they actually take here.
+      "const d = { value: 'official', label: t('models.official') }",
+      "const e = { kind: 'failed', message: 'no take loaded' }",
+    ]
+
+    expect(quiet.flatMap((code, index) => propertyFindingsIn(`probe${index}.ts`, code))).toEqual([])
   })
 
   it('would see a word put back, between tags or in a spoken attribute', () => {

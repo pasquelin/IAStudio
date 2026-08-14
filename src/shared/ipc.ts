@@ -436,6 +436,9 @@ export type LogScope =
   // holding the documents, and both used to leave nothing behind in a packaged build.
   | 'shell.render'
   | 'shell.layout'
+  // A menu the system refused to draw. It leaves nothing on screen to look at — no surface, no
+  // half-open flyout — so a right-click that does nothing at all is the only symptom there is.
+  | 'shell.menu'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -466,6 +469,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'font.face',
   'shell.render',
   'shell.layout',
+  'shell.menu',
 ]
 
 /**

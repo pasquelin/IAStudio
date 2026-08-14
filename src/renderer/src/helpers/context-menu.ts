@@ -1,5 +1,6 @@
 import type { ContextMenuItem } from '@shared/domain/context-menu'
 import { getBridge } from '@/services/bridge'
+import { reportFailure } from '@/services/diagnostics'
 import { menuIcon } from './menu-icon'
 
 export type ContextMenuRow = {
@@ -45,7 +46,16 @@ export async function showContextMenu(rows: readonly ContextMenuRow[]): Promise<
     }
   })
 
-  const chosen = await getBridge()?.menu.popup(items)
+  // Caught rather than left to `void`: the main process validates what arrives and REFUSES what
+  // it cannot draw, and a menu that never appears leaves no half-open surface behind to hint at
+  // it — an unhandled rejection would be the only trace, and it is not one anybody reads.
+  const chosen = await getBridge()
+    ?.menu.popup(items)
+    .catch(error => {
+      reportFailure('shell.menu', rows[0]?.label ?? '', error)
+      return null
+    })
+
   // Spelt out rather than `!chosen`: the first row's id is `'0'`, which reads as falsy to anyone
   // skimming even though the string is not.
   if (chosen === null || chosen === undefined) return

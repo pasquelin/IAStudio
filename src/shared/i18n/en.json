@@ -180,6 +180,7 @@
       "document.load": "The document could not be opened",
       "shell.render": "Part of the interface could not be drawn",
       "shell.layout": "A workspace’s stored layout could not be read",
+      "shell.menu": "A context menu could not be opened",
       "scene": {
         "render": "Video render"
       }
