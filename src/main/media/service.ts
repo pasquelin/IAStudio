@@ -1,5 +1,11 @@
 import { basename } from 'node:path'
-import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
+import {
+  PEAKS_PER_SECOND,
+  wantsPoster,
+  type Asset,
+  type AssetType,
+  type MediaProbe,
+} from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
 import { PEAKS_FOLDER, POSTERS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
 import { peaksArgs, posterArgs, posterOffset, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
@@ -197,7 +203,9 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
           //
           // Swallowed on failure, like the still a download brings beside a mesh: a rush whose
           // first keyframe ffmpeg refuses is still a perfectly good import.
-          if (kind === 'video') {
+          // The same policy as the still a download brings beside a generated asset, read from
+          // the one place that states it: only a mesh and a rush, never a sound.
+          if (wantsPoster(kind)) {
             const relative = `${POSTERS_FOLDER}/${assetId}.jpg`
             const args = posterArgs(
               sourcePath,

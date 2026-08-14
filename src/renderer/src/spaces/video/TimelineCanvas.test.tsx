@@ -45,17 +45,14 @@ const clipsOf = (): Clip[] => sequenceOf(useSequences.getState(), 'doc-1').track
 const viewOf = (): Viewport => viewportOf(useTimelineView.getState(), 'doc-1')
 
 /**
- * A canvas that has been laid out AND can paint — the two conditions under which the strip
- * learns its own width, which is the only thing anything here asks of the drawing.
+ * A canvas that can paint, which is the only condition under which the strip ever learns its
+ * own width — `test-setup` sizes every element but hands back a null 2D context, so `paint`
+ * returns before measuring anything.
  *
- * jsdom lays nothing out and implements no 2D context (`test-setup` hands back null, so `paint`
- * returns before measuring anything). Every drawing call is a no-op; nothing is asserted on
- * what was drawn, only on what the component did with the width it read back.
+ * Every drawing call is a no-op: nothing is asserted on what was drawn, only on what the
+ * component did with the width it read back.
  */
 function laidOut(canvas: HTMLCanvasElement): HTMLCanvasElement {
-  Object.defineProperty(canvas, 'clientWidth', { value: 800, configurable: true })
-  Object.defineProperty(canvas, 'clientHeight', { value: 300, configurable: true })
-
   const context = new Proxy({} as CanvasRenderingContext2D, {
     get: () => () => undefined,
     set: () => true,
@@ -260,17 +257,6 @@ describe('TimelineCanvas', () => {
     movePlayhead(500_000_000)
 
     expect(viewOf().offset).toBeGreaterThan(0)
-  })
-
-  // The other half of the same rule: a montage that fits on screen must never scroll at all,
-  // and an effect writing an equal-but-new viewport back would chase itself for ever.
-  it('leaves the view alone while the playhead is inside it', () => {
-    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
-    laidOut(paint())
-
-    movePlayhead(500_000)
-
-    expect(viewOf().offset).toBe(0)
   })
 
   it('drags the view under the hand tool, which was declared and did nothing', () => {

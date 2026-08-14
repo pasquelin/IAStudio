@@ -316,25 +316,32 @@ export class TimelineEngine {
     const painting = videoTracksByDepth(this.state)
     for (const sprite of spritesOffFrame(this.sprites, painting)) sprite.visible = false
 
-    for (const track of painting) {
-      const sprite = this.spriteFor(track.id)
+    // Every track asked BEFORE any is awaited: each holds a sink of its own, so their decodes
+    // are independent, and awaiting them one after another made a frame of a two-track montage
+    // cost the sum of two decodes rather than the longer of them.
+    const asked = painting.map(track => {
       // Asked here rather than by filtering the list: a track dropped from it would keep the
       // sprite it last painted on screen, which is the opposite of muting it.
       const clip = playsThrough(this.state, track) ? clipAt(track, time) : null
-      if (!clip) {
-        sprite.visible = false
-        continue
+      return {
+        sprite: this.spriteFor(track.id),
+        clip,
+        frame: clip ? this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time)) : null,
       }
+    })
 
-      const frame = await this.pool.frameAt(clip.assetId, sourceTimeAt(clip, time))
-      if (generation !== this.generation) {
-        frame?.close()
-        return
-      }
+    const decoded = await Promise.all(asked.map(({ frame }) => frame))
+    if (generation !== this.generation) {
+      for (const frame of decoded) frame?.close()
+      return
+    }
+
+    asked.forEach(({ sprite, clip }, index) => {
+      const frame = decoded[index]
       if (!frame) {
         sprite.visible = false
-        if (this.pool.undecodable(clip.assetId)) unreadable = true
-        continue
+        if (clip && this.pool.undecodable(clip.assetId)) unreadable = true
+        return
       }
 
       sprite.visible = true
@@ -344,7 +351,7 @@ export class TimelineEngine {
           swapTexture(sprite, uploadNow(Texture.from(uploaded), application.renderer.texture)),
       }).push(frame)
       this.fit(sprite)
-    }
+    })
 
     // Only when the monitor is showing nothing at all: the message covers the whole picture, and
     // laying it over a track that did decode would trade one silence for a worse lie. A layer

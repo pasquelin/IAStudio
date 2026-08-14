@@ -139,8 +139,15 @@ describe('laying an asset down', () => {
     expect(picture?.trackId).toBe('V1')
   })
 
-  it('lays nothing when the sequence holds no track of the kind', () => {
-    const soundOnly = sequenceWith([trackFixture('A1', 'audio')])
-    expect(placementsForAsset(soundOnly, take(2), 'asset-1', 0, 'A1')).toEqual([])
+  // A muted track accepted under the pointer and skipped when chosen for the drop would be two
+  // rules for one question — and the drop would land where nothing plays it.
+  it('refuses a silenced track even when the pointer landed on it', () => {
+    const muted = sequenceWith([
+      trackFixture('V1', 'video', [], { muted: true }),
+      trackFixture('V2', 'video', [], { index: 2 }),
+    ])
+    const [picture] = placementsForAsset(muted, take(), 'asset-1', 0, 'V1')
+
+    expect(picture?.trackId).toBe('V2')
   })
 })

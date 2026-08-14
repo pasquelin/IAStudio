@@ -41,13 +41,17 @@ function kindForAsset(asset: Asset | null): TrackKind {
   return asset?.type === 'audio' ? 'audio' : 'video'
 }
 
-/** The first track of a kind a drop would be seen or heard on. */
+/**
+ * Whether a drop would be seen or heard on this track. Locked and silenced alike are skipped —
+ * landing on either looks exactly like an add that did nothing.
+ */
+function takes(state: SequenceState, track: Track, kind: TrackKind): boolean {
+  return track.kind === kind && !track.locked && playsThrough(state, track)
+}
+
+/** The first track of a kind that would take the drop. */
 function landingTrack(state: SequenceState, kind: TrackKind): Track | null {
-  return (
-    state.tracks.find(
-      track => track.kind === kind && !track.locked && playsThrough(state, track),
-    ) ?? null
-  )
+  return state.tracks.find(track => takes(state, track, kind)) ?? null
 }
 
 /**
@@ -80,15 +84,15 @@ export function placementsForAsset(
   start: Us,
   trackId?: string,
 ): ClipPlacement[] {
+  const kind = kindForAsset(asset)
   const aimed = trackId ? trackById(state, trackId) : null
-  const target =
-    aimed && aimed.kind === kindForAsset(asset) && !aimed.locked
-      ? aimed
-      : trackForAsset(state, asset)
+  // The same rule for the track that was aimed at as for the one picked for it: a muted track
+  // accepted under the pointer and skipped otherwise is two rules for one question.
+  const target = aimed && takes(state, aimed, kind) ? aimed : landingTrack(state, kind)
   if (!target) return []
 
   const clip = clipForAsset(assetId, asset, start, state.settings)
-  const sound = target.kind === 'video' && hasSound(asset) ? landingTrack(state, 'audio') : null
+  const sound = kind === 'video' && hasSound(asset) ? landingTrack(state, 'audio') : null
   if (!sound) return [{ trackId: target.id, clip }]
 
   const linkId = newId()

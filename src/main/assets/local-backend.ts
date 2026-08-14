@@ -2,6 +2,7 @@ import { rm, writeFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import {
   ASSET_FOLDERS,
+  wantsPoster,
   type Asset,
   type AssetGeneration,
   type AssetType,
@@ -19,16 +20,6 @@ const FALLBACK_EXTENSION: Record<AssetType, string> = {
   texture: '.png',
   skybox: '.png',
 }
-
-/**
- * The kinds whose own file no surface can paint, and which therefore keep the library's still.
- *
- * A picture answers for itself. A sound must NOT be given one: a timeline clip reads `posterUrl`
- * like every other surface, and the still would be painted under its waveform. What is left is
- * a mesh — nothing decodes a `.glb` — and a rush, whose first frame is the only thing that tells
- * one take from another in a shelf of grey rectangles.
- */
-const POSTER_KINDS: readonly AssetType[] = ['mesh', 'video']
 
 export type Download = (url: string) => Promise<Uint8Array>
 
@@ -190,13 +181,13 @@ export function createLocalBackend({
   }
 
   /**
-   * The library's still, brought down beside the bytes — see `POSTER_KINDS`.
+   * The library's still, brought down beside the bytes — for the kinds `wantsPoster` names.
    *
    * Best effort, and that is the whole design: the thumbnail is a convenience, the model is the
    * asset. A CDN that answers 404 must leave the import that carries it untouched.
    */
   const savePoster = async (request: WriteRequest): Promise<string | undefined> => {
-    if (!request.thumbnailUrl || !POSTER_KINDS.includes(request.type)) return undefined
+    if (!request.thumbnailUrl || !wantsPoster(request.type)) return undefined
 
     try {
       const poster = await download(request.thumbnailUrl)
@@ -211,21 +202,24 @@ export function createLocalBackend({
   const write = async (request: WriteRequest, bytes: Uint8Array): Promise<Asset> => {
     const relativePath = relativePathFor(request.id, request.extension, request.type)
 
-    // Together: the still is a second download over the network, and waiting for it after the
-    // bytes are already on disk would add its latency to every import that carries one.
-    const [, posterPath] = await Promise.all([
-      writeFile(join(projectPath(), relativePath), bytes),
-      savePoster(request),
-    ])
-    // After the write, and only then: it reads the file that was just laid down.
-    const probe = await probeWritten(request, relativePath)
-
-    const at = now()
+    // All at once. Three of these are the only thing the fourth waits on: the still is a second
+    // download over the network, the probe spawns ffprobe, and the row is a catalogue read —
+    // run in a file, each one's latency lands on every import that carries the others.
+    //
     // What the row already held survives being written again. Pulling a twin a second time
     // lands on the same id on purpose, and rebuilding the asset from the request alone dropped
     // the tags the user had put on it and moved its creation date to now — which also sent it
     // back to the top of a shelf sorted newest first, for a file that had not changed.
-    const existing = await catalog().find(request.id)
+    const written = writeFile(join(projectPath(), relativePath), bytes)
+    const [, posterPath, probe, existing] = await Promise.all([
+      written,
+      savePoster(request),
+      // After the write, and only after it: this one reads the file that was just laid down.
+      written.then(() => probeWritten(request, relativePath)),
+      catalog().find(request.id),
+    ])
+
+    const at = now()
 
     // The still's name follows the extension the CDN's URL carried, and a second pull of the
     // same twin can carry another one. The file the row stops pointing at is ours and nothing

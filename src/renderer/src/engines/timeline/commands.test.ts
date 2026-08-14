@@ -7,6 +7,7 @@ import {
   moveTrack,
   removeClip,
   removeTrack,
+  setClipSpeed,
   splitClip,
   trimClip,
   unlinkClip,
@@ -364,6 +365,18 @@ describe('a take whose picture and sound are linked', () => {
   it('deletes both, since a picture whose sound stays behind is never what was meant', () => {
     const cleared = removeClip('v').apply(take())
     expect(cleared.tracks.flatMap(track => track.clips)).toEqual([])
+  })
+
+  /**
+   * `speed` is read on both sides — `sourceTimeAt` seeks the picture with it, `SoundCue.rate`
+   * resamples the sound with it — so a change on one half alone drifts the two apart for good.
+   * A gain and a fade are each half's own business and stay unlinked.
+   */
+  it('runs the sound at the speed the picture was given', () => {
+    const faster = setClipSpeed('v', 2).apply(take())
+
+    expect(clipOf(faster, 'v')?.speed).toBe(2)
+    expect(clipOf(faster, 'a')?.speed).toBe(2)
   })
 
   it('unties the pair, so each half can then be edited alone', () => {

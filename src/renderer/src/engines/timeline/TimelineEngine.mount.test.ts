@@ -59,7 +59,7 @@ vi.mock('pixi.js', () => ({
 }))
 
 const { TimelineEngine } = await import('./TimelineEngine')
-const { clipFixture, sequenceWith, trackFixture } = await import('./timeline-fixtures')
+const { clipFixture, sequenceWith, settled, trackFixture } = await import('./timeline-fixtures')
 
 /** No output in jsdom: the suite plays nothing, and every load is refused. */
 const silence = () => ({
@@ -311,15 +311,13 @@ describe('mounting a monitor', () => {
       ...(onTime ? { onTime } : {}),
     })
 
-    // A macrotask between the two: a decode is several awaits deep, and counting microtasks
-    // here would tie the test to how many the pool happens to take.
-    const settle = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0))
-
+    // `settled` between the two, which is a macrotask: a decode is several awaits deep, and
+    // counting microtasks here would tie the test to how many the pool happens to take.
     const tick = async (): Promise<void> => {
       frames.shift()?.()
-      await settle()
+      await settled()
       pending.shift()?.({ toVideoFrame: fakeFrame, close: vi.fn() })
-      await settle()
+      await settled()
     }
 
     await mounted(engine)

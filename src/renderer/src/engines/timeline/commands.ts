@@ -1,4 +1,4 @@
-import type { Command } from '../core/history'
+import { composed, type Command } from '../core/history'
 import type { ClipPlacement } from './insert'
 import {
   clampFades,
@@ -38,38 +38,30 @@ const withoutClip = (track: Track, clipId: string): Track => ({
   clips: track.clips.filter(clip => clip.id !== clipId),
 })
 
-/** Several commands as one history entry: applied in order, reverted in reverse. */
-function composed(id: string, parts: readonly Command<SequenceState>[]): Command<SequenceState> {
-  return {
-    id,
-    apply: state => parts.reduce((current, part) => part.apply(current), state),
-    revert: state => parts.reduceRight((current, part) => part.revert(current), state),
-  }
-}
-
 /**
  * The same edit, on a clip and on whatever a link ties to it — a take's picture and its sound.
  *
- * The twins are only known once there is a state to read, so the parts are composed on the
- * first apply and KEPT: a redo must replay the very same commands, each holding the id it
- * minted for a tail it cut loose, and rebuilding them would rename what undo put back.
+ * The twins are only known once there is a state to read, so the whole is composed on the first
+ * apply and KEPT: a redo must replay the very same commands, each holding the id it minted for
+ * a tail it cut loose, and rebuilding them would rename what undo had put back.
  */
 function acrossLink(
   id: string,
   clipId: string,
   make: (state: SequenceState, linkedId: string) => Command<SequenceState> | null,
 ): Command<SequenceState> {
-  let parts: Command<SequenceState>[] | null = null
+  let all: Command<SequenceState> | null = null
 
   return {
     id,
     apply: state => {
-      parts ??= linkedClipIds(state, clipId)
-        .map(linkedId => make(state, linkedId))
-        .filter((part): part is Command<SequenceState> => part !== null)
-      return composed(id, parts).apply(state)
+      all ??= composed(
+        id,
+        linkedClipIds(state, clipId).flatMap(linkedId => make(state, linkedId) ?? []),
+      )
+      return all.apply(state)
     },
-    revert: state => (parts ? composed(id, parts).revert(state) : state),
+    revert: state => all?.revert(state) ?? state,
   }
 }
 
@@ -119,14 +111,13 @@ const restore = (state: SequenceState, trackId: string, clips: Clip[]): Sequence
  * user aimed at, and the inspector reads the selection.
  */
 export function addClips(placements: readonly ClipPlacement[]): Command<SequenceState> {
-  const first = placements[0]
-  const parts = placements.map(({ trackId, clip }) => addClip(trackId, clip))
-  const all = composed(`add:${first?.clip.id ?? 'none'}`, parts)
+  const aimed = placements[0]?.clip.id ?? null
+  const all = composed(
+    `add:${aimed}`,
+    placements.map(({ trackId, clip }) => addClip(trackId, clip)),
+  )
 
-  return {
-    ...all,
-    apply: state => (first ? { ...all.apply(state), selectedId: first.clip.id } : state),
-  }
+  return { ...all, apply: state => ({ ...all.apply(state), selectedId: aimed }) }
 }
 
 export function addClip(trackId: string, clip: Clip): Command<SequenceState> {
@@ -376,8 +367,18 @@ export function setClipGain(clipId: string, gain: number): Command<SequenceState
   return editClip(`gain:${clipId}`, clipId, clip => ({ ...clip, gain: clampGain(gain) }))
 }
 
+/**
+ * Runs a clip faster or slower — and its twin with it, which is the whole point of the link.
+ *
+ * `speed` is read on both sides of the montage: `sourceTimeAt` seeks the picture with it and
+ * `SoundCue.rate` resamples the sound with it. Changed on one half alone, the two drift apart
+ * for good — the one failure a link exists to prevent. A fade and a gain, by contrast, are each
+ * half's own business: a sound fades where a picture does not, and a picture has no level.
+ */
 export function setClipSpeed(clipId: string, speed: number): Command<SequenceState> {
-  return editClip(`speed:${clipId}`, clipId, clip => ({ ...clip, speed: clampSpeed(speed) }))
+  return acrossLink(`speed:${clipId}`, clipId, (_, linkedId) =>
+    editClip(`speed:${linkedId}`, linkedId, clip => ({ ...clip, speed: clampSpeed(speed) })),
+  )
 }
 
 /**
