@@ -724,6 +724,7 @@
     "chooseSky": "Choose a sky",
     "clearSky": "Back to the studio",
     "openSky": "Open the sky",
+    "openSkyHint": "Double-click opens this sky in its own space",
     "openTexture": "Open the texture",
     "font": "Font",
     "noFont": "None",

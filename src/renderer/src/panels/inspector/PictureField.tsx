@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isLocalPicture, PICTURES, posterUrl } from '@shared/domain/asset'
 import { TextureField, type TextureOption } from '@/design/TextureField'
-import { openAsset } from '@/helpers/open-asset'
+import { openAssetById } from '@/helpers/open-asset'
 import { useAssets } from '@/stores/assets'
 
 export type PictureFieldProps = {
@@ -51,10 +51,10 @@ export function PictureField({ label, value, onChange, emptyLabel, emptyHint }: 
       // The three kinds that decode as an image, which is exactly what `options` was filtered to:
       // a slot that lit up for a mesh would promise a drop it then refuses.
       accepts={PICTURES}
-      openLabel={t('inspector.openTexture')}
-      onOpen={() => {
-        const picture = assets.find(asset => asset.id === value)
-        if (picture) void openAsset(picture)
+      open={{
+        label: t('inspector.openTexture'),
+        hint: t('inspector.openTextureHint'),
+        run: () => openAssetById(value),
       }}
     />
   )

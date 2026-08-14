@@ -1,6 +1,7 @@
 import type { Asset } from '@shared/domain/asset'
 import { openDocument } from '@/app/dockview-api'
 import { reportFailure } from '@/services/diagnostics'
+import { assetsById, useAssets } from '@/stores/assets'
 import { documentForAsset, useDocuments } from '@/stores/documents'
 import { useProject } from '@/stores/project'
 import { editorIntent, type AssetIntent } from './asset-intents'
@@ -65,4 +66,19 @@ export async function openAsset(asset: Asset, into?: AssetIntent): Promise<void>
   // one the asset was dropped on. It is what leaves the tab unmodified on open, and what makes
   // ⌘S able to write a faithful flatten back.
   await (intent.become ?? intent.into)(created.id, asset)
+}
+
+/**
+ * The same, from the id a document holds rather than from the asset itself.
+ *
+ * What every texture slot needs, and what none of them should write: `design/` reads no store, so
+ * the caller resolves the id — and each one that did wrote its own `items.find`, which is exactly
+ * what `assetsById` was indexed to stop. An id the catalogue no longer holds opens nothing, in
+ * silence: the slot beside it already reads as empty, and a document outlives its picture.
+ */
+export function openAssetById(assetId: string | null): void {
+  if (!assetId) return
+
+  const asset = assetsById(useAssets.getState()).get(assetId)
+  if (asset) void openAsset(asset)
 }

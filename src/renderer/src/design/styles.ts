@@ -247,6 +247,14 @@ export const PANEL_SCROLL = 'flex min-h-0 flex-1 flex-col overflow-y-auto pr-2'
 export const PROPERTY_BODY = 'flex flex-col gap-2 px-2 pt-1 pb-2'
 
 /**
+ * A picture standing in a property line — the texture a slot holds, the map a model carries.
+ *
+ * One gauge, because a slot is exactly one row tall and three files were each writing it down:
+ * two of them with the same sentence explaining why.
+ */
+export const FIELD_THUMBNAIL = 'size-(--sc-control)'
+
+/**
  * One property row of an inspector: a label of fixed width, then the control it names.
  *
  * The gap is two, never one: at one the label, the track and the number read as a single
@@ -261,6 +269,17 @@ export const FIELD_ROW = 'flex min-h-(--sc-control) min-w-0 items-center gap-2 t
  * draw both families inside one group, so two widths meant two columns of labels in the same box.
  */
 export const FIELD_LABEL = 'text-muted w-(--sc-label) shrink-0 truncate'
+
+/**
+ * The same label where the field has NO control to line up on that column — a checkbox, which
+ * sits at the far end of the row whatever the label does.
+ *
+ * Held to the fixed gauge, « Projette une ombre » read « Projette une … » at eighty pixels with
+ * two thirds of the row empty beside it. Still truncating, and still `title`d for it: a panel
+ * narrow enough will run out of room here too, and a label cut mid-word reads as a shorter one
+ * that means something else.
+ */
+export const FIELD_LABEL_WIDE = 'text-muted min-w-0 flex-1 truncate'
 
 /**
  * The number beside a track — "somewhere past the middle" is not a value anyone can write down.

@@ -724,6 +724,7 @@
     "chooseSky": "Choisir un ciel",
     "clearSky": "Revenir au studio",
     "openSky": "Ouvrir le ciel",
+    "openSkyHint": "Double-cliquez pour ouvrir ce ciel dans son espace",
     "openTexture": "Ouvrir la texture",
     "font": "Police",
     "noFont": "Aucune",

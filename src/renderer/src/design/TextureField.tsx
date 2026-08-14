@@ -8,7 +8,7 @@ import { AssetDropTarget } from './AssetDropTarget'
 import { Thumbnail } from './Thumbnail'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
-import { FIELD_LABEL, FIELD_ROW, FOCUS_RING } from './styles'
+import { FIELD_LABEL, FIELD_ROW, FIELD_THUMBNAIL, FOCUS_RING } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -44,14 +44,15 @@ export type TextureFieldProps = {
   /**
    * OPENING what the slot holds — the double-click on its picture, and Enter with it. The caller
    * owns it because it alone knows what `value` names; absent, the picture stays inert.
+   *
+   * One object rather than a label and a callback side by side, as `ChannelDerivation` and
+   * `EmptyStateAction` are: two props that must travel together are two props that can be split,
+   * and a caller passing the callback alone would lose the button with nothing to say so. The
+   * hint is required for the same reason `MenuRow` demands one — the label reads « Open the
+   * texture » while a single click does nothing at all, and only the hint says which gesture.
    */
-  onOpen?: () => void
-  /** What the double-click does, for the reader that cannot see it. Required with `onOpen`. */
-  openLabel?: string
+  open?: { label: string; hint: string; run: () => void }
 }
-
-/** The thumbnail matches the control gauge, so a slot is exactly one row tall. */
-const THUMBNAIL = 'size-(--sc-control)'
 
 /**
  * One texture slot: what it holds, and a menu of what the project can put in it. What travels
@@ -68,12 +69,11 @@ export function TextureField({
   emptyHint,
   optionHint,
   accepts,
-  onOpen,
-  openLabel,
+  open,
 }: TextureFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
 
-  const picture = <Thumbnail url={chosen?.url} className={THUMBNAIL} />
+  const picture = <Thumbnail url={chosen?.url} className={FIELD_THUMBNAIL} />
 
   return (
     <DroppableSlot accepts={accepts} onDrop={onChange}>
@@ -81,13 +81,15 @@ export function TextureField({
         {label}
       </span>
 
-      {/* A button only where there is something to open: an empty slot double-clicked would take
-          the user to nothing, and a focus stop that leads nowhere is one more Tab to cross. */}
-      {onOpen && openLabel && value !== null ? (
+      {/* Guarded on what the slot RESOLVED to, never on the id it holds: a document outlives the
+          picture it points at, and an id whose asset has left the project draws the empty label
+          beside a button offering to open something that is no longer there. A focus stop that
+          leads nowhere is also one more Tab to cross. */}
+      {open && chosen ? (
         <button
           type="button"
-          {...activation(onOpen)}
-          {...TIP_LEFT(openLabel, false, undefined)}
+          {...activation(open.run)}
+          {...TIP_LEFT(open.label, false, open.hint)}
           className={cn(
             'shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
             FOCUS_RING,
@@ -162,6 +164,9 @@ export function TextureField({
  * says WHICH slot a drop would land in, and a field that mounted one unconditionally would light
  * up on a drag it has no use for. `exclusive`, because these slots sit inside the panel's own
  * target — without it both would frame at once and the answer would name two places.
+ *
+ * NOT `AssetDropField`, whose name is one letter away: that one is a form control — it registers
+ * with react-hook-form, draws an input, and holds the chosen id itself. This holds nothing.
  */
 function DroppableSlot({
   accepts,

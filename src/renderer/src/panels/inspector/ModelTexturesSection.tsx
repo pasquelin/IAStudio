@@ -8,7 +8,7 @@ import { TIP_LEFT } from '@/helpers/tooltip'
 import { PropertySection } from '@/design/PropertySection'
 import { QuietNote } from '@/design/QuietNote'
 import { Row } from '@/design/Row'
-import { rowSkin } from '@/design/styles'
+import { FIELD_THUMBNAIL, FOCUS_RING, rowSkin } from '@/design/styles'
 import { Thumbnail } from '@/design/Thumbnail'
 
 import { useDerivedTextures } from './useDerivedTextures'
@@ -46,6 +46,9 @@ function ModelTextureList({ assetId }: { assetId: string }) {
   if (textures.length === 0) return <QuietNote>{t('inspector.noModelTexture')}</QuietNote>
 
   return (
+    // No gap, as `Tree` draws the outliner right beside this panel: the studio spaces a row's
+    // CONTENTS by two and stacks the rows themselves flush, which is what `spacing.test.ts`
+    // holds. `Collection` reserves four pixels, but through its virtualizer rather than a class.
     <div className="flex flex-col">
       {textures.map(texture => (
         <ModelTextureRow key={texture.id} texture={texture} />
@@ -72,27 +75,32 @@ const ModelTextureRow = memo(function ModelTextureRow({ texture }: { texture: As
   const channel = texture.map ? t(`texture.channel.${texture.map}`) : texture.name
 
   return (
-    <button
-      type="button"
-      {...activation(() => void openAsset(texture))}
-      {...TIP_LEFT(t('home.open', { name: channel }), false, t('inspector.openTextureHint'))}
-      className={cn('cursor-pointer border-none bg-transparent p-0 text-left', rowSkin(false))}
-    >
+    <div className={cn('relative', rowSkin(false))}>
       <Row
         // Straight off the row this list was answered with, rather than through `usePosterUrl`:
         // the asset is in hand, and it is fresher than the shelf, which is scoped by space.
         media={
-          <Thumbnail
-            url={posterUrl(texture) ?? assetUrl(texture.id)}
-            className="size-(--sc-control)"
-          />
+          <Thumbnail url={posterUrl(texture) ?? assetUrl(texture.id)} className={FIELD_THUMBNAIL} />
         }
         // The channel alone, with no file name under it: the seven pictures of one model are all
         // called « Robot — … » and the word already on the line is the only one that tells them
         // apart. A subtitle here would be the same string seven times.
         title={channel}
-        tip={TIP_LEFT}
       />
-    </button>
+
+      {/* Laid OVER the row rather than around it, exactly as `ChannelTile` does and for the same
+          reason: `Row` draws a `div` and a `p`, and a `button` takes phrasing content only. It
+          covers the whole line, which is also what keeps the two tooltips of this row from
+          answering different things — the pointer never reaches the name's own anchor. */}
+      <button
+        type="button"
+        {...activation(() => void openAsset(texture))}
+        {...TIP_LEFT(t('home.open', { name: channel }), false, t('inspector.openTextureHint'))}
+        className={cn(
+          'absolute inset-0 cursor-pointer rounded-(--radius-sc-sm) border-none bg-transparent',
+          FOCUS_RING,
+        )}
+      />
+    </div>
   )
 })

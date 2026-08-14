@@ -53,6 +53,8 @@ function renderField(value: string | null = null, options = OPTIONS) {
 /** The row itself, which the drop lands on — read through the one word an empty slot draws. */
 const emptyRow = (): Element => screen.getByText('Aucune').parentElement as Element
 
+const OPEN = { label: 'Ouvrir', hint: 'Double-cliquez pour ouvrir', run: () => {} }
+
 describe('TextureField', () => {
   it('says the slot is empty rather than showing nothing', () => {
     renderField(null)
@@ -158,18 +160,30 @@ describe('TextureField', () => {
     })
 
     it('opens what it holds on a double-click', async () => {
-      const onOpen = vi.fn()
-      render(<Slot value="tex-1" onChange={vi.fn()} onOpen={onOpen} openLabel="Ouvrir" />)
+      const run = vi.fn()
+      render(<Slot value="tex-1" onChange={vi.fn()} open={{ ...OPEN, run }} />)
 
       await userEvent.dblClick(screen.getByRole('button', { name: 'Ouvrir' }))
 
-      expect(onOpen).toHaveBeenCalled()
+      expect(run).toHaveBeenCalled()
     })
 
     // A focus stop that leads nowhere is one more Tab to cross for nothing.
     it('offers nothing to open while the slot is empty', () => {
-      render(<Slot value={null} onChange={vi.fn()} onOpen={vi.fn()} openLabel="Ouvrir" />)
+      render(<Slot value={null} onChange={vi.fn()} open={OPEN} />)
 
+      expect(screen.queryByRole('button', { name: 'Ouvrir' })).not.toBeInTheDocument()
+    })
+
+    /**
+     * A document outlives the picture it points at: nothing rewrites a material when an asset
+     * leaves the project. The row already reads « Aucune » in that case — offering to open what
+     * it just said it does not hold is a button that answers nothing when pressed.
+     */
+    it('offers nothing to open for an id the project no longer holds', () => {
+      render(<Slot value="tex-gone" onChange={vi.fn()} open={OPEN} />)
+
+      expect(screen.getByText('Aucune')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Ouvrir' })).not.toBeInTheDocument()
     })
   })
