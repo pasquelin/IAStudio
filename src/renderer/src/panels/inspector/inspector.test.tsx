@@ -26,6 +26,7 @@ import { installTexture } from '@/stores/texture-fixtures'
 import { useTextureViews } from '@/stores/texture-views'
 import { textureOf, useTextures } from '@/stores/textures'
 import { setChannel } from '@/engines/texture/commands'
+import { connectSceneSelection } from '@/stores/scene-selection'
 import { addModelTo, sceneHistoryOf, sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { definition } from '.'
 import { EMPTY_SCENE } from '@/engines/scene/scene-state'
@@ -809,6 +810,9 @@ describe('the inspector and what is picked in a scene', () => {
    */
   it('describes the node an import just put down, not the asset it came from', () => {
     install(meshNode('box-1'), false)
+    // The connector the application wires up: what the panel shows after an import is only half
+    // the answer, and the other half is who told it — see `scene-selection.test.ts`.
+    const stop = connectSceneSelection()
     useSelection.getState().selectAssets(['asset-1'])
 
     addModelTo('doc-1', {
@@ -822,26 +826,7 @@ describe('the inspector and what is picked in a scene', () => {
     render(<Content />)
 
     expect(screen.getByText('Transformation')).toBeInTheDocument()
-  })
-
-  /**
-   * The other half of that rule, and the reason it is filtered on the tab in front: a 3D
-   * generation lands in the tab it was launched from, which is often not the one being looked at.
-   * Unfiltered, a model arriving in the background would take the panel off whatever its owner
-   * was editing — an asset here, a layer in an image tab.
-   */
-  it('leaves the front panel alone when a scene in another tab selects something', () => {
-    useScenes.setState({
-      states: { 'doc-1': EMPTY_SCENE, 'doc-2': EMPTY_SCENE },
-      histories: {},
-      saved: {},
-    })
-    installDocuments({ 'doc-1': '3d', 'doc-2': '3d' }, 'doc-2')
-    useSelection.getState().selectAssets(['asset-1'])
-
-    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-1')))
-
-    expect(useSelection.getState().selection.kind).toBe('asset')
+    stop()
   })
 
   // The scene's own face is what a click in the void leaves: its environment is read there, and

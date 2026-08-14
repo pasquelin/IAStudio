@@ -6,7 +6,6 @@ import { modelNode } from '@/engines/scene/node-factory'
 import { EMPTY_SCENE, type SceneState } from '@/engines/scene/scene-state'
 import type { SelectionMode } from '@/helpers/selection'
 import { createDocumentStore } from './document-store'
-import { activeSceneId, useDocuments } from './documents'
 import { useSelection } from './selection'
 
 /** One scene per document, in memory like the documents themselves. */
@@ -17,33 +16,6 @@ export const useScenes = store.use
 export const sceneOf = store.stateOf
 export const sceneHistoryOf = store.historyOf
 export const isSceneDirty = store.isDirty
-
-/**
- * Points the inspector at the scene whenever a scene changes what it has selected — and NOT only
- * when a pointer did it.
- *
- * `selectIn` is one of the doors; the commands are the others, and they are the ones nobody
- * thinks of. An import selects the model it just put down (`addNodes`), a duplicate its copies,
- * a delete drops what it removed, ⌘Z puts both back. Dropping an asset in the viewport therefore
- * left the panel describing the ASSET while the outliner highlighted the NODE it had become —
- * the same thing named twice, and a second click on the row as the only way out.
- *
- * Subscribed rather than called from each site: nine of them run a scene command, and the one
- * that forgot would bring the defect back with nothing to say so.
- *
- * Only the document in FRONT, which is the whole subtlety: a 3D generation lands in the tab it
- * was launched from, and that tab is often not the one being looked at. Unfiltered, a model
- * arriving in the background would take the inspector off the layer someone was editing.
- */
-store.use.subscribe((state, previous) => {
-  const documentId = activeSceneId(useDocuments.getState())
-  if (!documentId) return
-
-  const picked = state.states[documentId]?.selectedIds
-  if (!picked || picked === previous.states[documentId]?.selectedIds) return
-
-  useSelection.getState().pointAtNodes(documentId, picked.length > 0)
-})
 
 /**
  * A flag of an animation track, written without an entry in the history — how one works, not what
@@ -69,10 +41,12 @@ export function writeAnimationTrack(
  * be read at call time, not from the render that drew the row: a copy taken before whatever
  * command ran in between would undo it.
  *
- * It points the studio's selection at the scene too, and keeps doing so even though the
- * subscription above catches every change: a click on the row that is ALREADY selected changes
- * no ids, so it writes no state and wakes no subscriber — and it is exactly the gesture someone
- * makes to bring the panel back onto a node after clicking an asset in the browser.
+ * It points the studio's selection at the scene too, and keeps doing so even though
+ * `connectSceneSelection` watches every write of the document in front: a click on the row that
+ * is ALREADY selected changes no ids, so it writes no state and wakes no subscriber — and it is
+ * exactly the gesture someone makes to bring the panel back onto a node after clicking an asset
+ * in the browser. It points at whichever document it is given, where the connector answers only
+ * for the one in front; the three callers all render the front tab, so the two never disagree.
  *
  * The scene holds what the viewport highlights, `useSelection` holds which FACE the inspector
  * shows. `canvases` does the same pairing at its call site rather than here; four callers against
