@@ -8,6 +8,8 @@ import type { Clip } from '@/engines/timeline/timeline-state'
 import { EMPTY_SEQUENCE, snapToFrame } from '@/engines/timeline/timeline-state'
 import { startAssetDrag } from '@/helpers/asset-drag'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { fakeMenu } from '@/helpers/menu-fixtures'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from '@/stores/assets'
 import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
@@ -75,11 +77,15 @@ function movePlayhead(playhead: number): void {
   })
 }
 
+let menu = fakeMenu()
+
 describe('TimelineCanvas', () => {
   beforeEach(() => {
     useSequences.setState({ states: {}, histories: {} })
     useTimelineView.setState({ viewports: {} })
     useAssets.setState({ items: [asset()] })
+    menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
   })
 
   it('turns a dropped asset into a clip on the track it landed on', async () => {
@@ -257,6 +263,44 @@ describe('TimelineCanvas', () => {
     movePlayhead(500_000_000)
 
     expect(viewOf().offset).toBeGreaterThan(0)
+  })
+
+  /**
+   * A montage offered nothing at all to a right-click: every edit was a key, so whoever had not
+   * learnt them had no way to cut, unlink or delete a clip.
+   */
+  it('offers what can be done to the clip under the pointer', async () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+
+    fireEvent.contextMenu(paint(), { clientX: 50, clientY: RULER_HEIGHT + 10 })
+
+    await vi.waitFor(() =>
+      expect(menu.labels()).toEqual([
+        'Couper le clip',
+        'Délier l’image et le son',
+        'Supprimer le clip',
+      ]),
+    )
+    // Greyed rather than dropped, so the menu keeps the same shape whatever it is opened over:
+    // this clip is tied to nothing, and the playhead sits on its very start.
+    expect(menu.offers('Délier l’image et le son')).toBe(false)
+    expect(menu.offers('Couper le clip')).toBe(false)
+  })
+
+  it('runs the row that was chosen on the clip it was opened over', async () => {
+    useSequences.getState().runCommand('doc-1', addClip('V1', clip))
+    menu.picks('Supprimer le clip')
+
+    fireEvent.contextMenu(paint(), { clientX: 50, clientY: RULER_HEIGHT + 10 })
+
+    await vi.waitFor(() => expect(clipsOf()).toHaveLength(0))
+  })
+
+  it('raises nothing over a gap, where there is no clip to act on', async () => {
+    fireEvent.contextMenu(paint(), { clientX: 50, clientY: RULER_HEIGHT + 10 })
+
+    await Promise.resolve()
+    expect(menu.raised).toHaveLength(0)
   })
 
   it('drags the view under the hand tool, which was declared and did nothing', () => {

@@ -27,6 +27,10 @@ const clip = clipFixture
 const stateWith = (clips: Clip[]): SequenceState =>
   sequenceWith([trackFixture('V1', 'video', clips)])
 
+/** The same, on a sound track: what a clip SHOWS follows the kind of track it sits on. */
+const soundWith = (clips: Clip[]): SequenceState =>
+  sequenceWith([trackFixture('A1', 'audio', clips)])
+
 type Rect = { x: number; y: number; width: number; height: number }
 
 /** Records what was painted, so the test asserts on rectangles and labels, not on pixels. */
@@ -232,7 +236,7 @@ describe('timeline painter', () => {
   it('draws a waveform when the clip has peaks to draw', () => {
     const { context, lines } = spyContext()
     const peaks = new Float32Array([-1, 1, -0.5, 0.5])
-    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size, {
+    paintTimeline(context, soundWith([clip('a', 0, 1_000_000)]), viewport, size, {
       peaksOf: () => peaks,
     })
 
@@ -241,11 +245,34 @@ describe('timeline painter', () => {
 
   it('draws no waveform for a clip nothing was decoded for', () => {
     const { context, lines } = spyContext()
-    paintTimeline(context, stateWith([clip('a', 0, 1_000_000)]), viewport, size, {
+    paintTimeline(context, soundWith([clip('a', 0, 1_000_000)]), viewport, size, {
       peaksOf: () => null,
     })
 
     expect(lines).toHaveLength(0)
+  })
+
+  /**
+   * What a track shows follows what it plays. Drawn on both, a waveform ran over the stills of
+   * every rush — and the sound half of a linked take, which points at the SAME file, wore that
+   * rush's frames underneath its own waveform. Two rows saying the same thing twice, badly.
+   */
+  it('keeps the waveform off a picture track, and the stills off a sound one', () => {
+    const peaks = new Float32Array([-1, 1, -0.5, 0.5])
+    // A stand-in: the painter only ever hands it to `drawImage`, which the spy records.
+    const poster = {} as CanvasImageSource
+    const both = { peaksOf: () => peaks, posterOf: () => poster }
+
+    const picture = spyContext()
+    paintTimeline(picture.context, stateWith([clip('a', 0, 1_000_000)]), viewport, size, both)
+
+    const sound = spyContext()
+    paintTimeline(sound.context, soundWith([clip('a', 0, 1_000_000)]), viewport, size, both)
+
+    expect(picture.images).toHaveLength(1)
+    expect(picture.lines).toHaveLength(0)
+    expect(sound.lines.length).toBeGreaterThan(0)
+    expect(sound.images).toHaveLength(0)
   })
 
   it('lays a poster across the head of a clip, never across the whole of it', () => {

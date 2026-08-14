@@ -342,6 +342,16 @@ describe('a take whose picture and sound are linked', () => {
     expect(moved.tracks.find(track => track.id === 'A1')?.clips).toHaveLength(1)
   })
 
+  /**
+   * Every one of these commands selects what it edited, and the twin is applied last: clicking
+   * the picture put the inspector on the sound, and the sound on the picture. It read as a
+   * montage that selects the wrong half of everything.
+   */
+  it('leaves the selection on the half that was touched', () => {
+    expect(moveClip('v', 'V1', 3_000_000).apply(take()).selectedId).toBe('v')
+    expect(moveClip('a', 'A1', 3_000_000).apply(take()).selectedId).toBe('a')
+  })
+
   it('trims both edges together', () => {
     const trimmed = trimClip('v', 'out', 2_000_000, 'unknown').apply(take())
 
