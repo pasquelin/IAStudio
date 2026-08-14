@@ -12,6 +12,7 @@ import {
   POSTER_HOST,
   type Asset,
   type AssetType,
+  type MediaProbe,
 } from '@shared/domain/asset'
 import type { MediaCapabilities } from '@shared/domain/media'
 import { FAVORITE_HOST } from '@shared/domain/favorite'
@@ -59,6 +60,7 @@ import {
 } from './media/runner'
 import { openPeaksProcess } from './media/peaks-process'
 import type { PeaksClient } from './media/peaks-client'
+import { catchUpMedia } from './media/catch-up'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
@@ -585,6 +587,11 @@ export function createServices(settings: SettingsStore): Services {
       // them only exists once one is open.
       if (current) void resumeJobsOf(current.path)
 
+      // Takes that arrived before the pipeline ran on downloads: they hold no length, no
+      // waveform and no proxy, and nothing else would ever go back for them. A project opened
+      // after the fix would otherwise show exactly what it showed before it.
+      if (current) void catchUpProject()
+
       // One watch at a time, and it belongs to the project that is open: left running, the
       // previous project's folder would go on announcing changes the explorer would answer by
       // re-reading a folder that is no longer on screen.
@@ -620,6 +627,34 @@ export function createServices(settings: SettingsStore): Services {
     })
   })
 
+  /**
+   * What a file on this disk says about itself, or null when ffprobe is missing or refuses it.
+   *
+   * One wiring for the three callers that need it — the bytes an import just wrote, the takes a
+   * project is catching up on, and the pipeline's own probe step reaches it through its dep.
+   */
+  const probeLocalFile = async (path: string): Promise<MediaProbe | null> => {
+    const outcome = await probeSource(companionPath(ffmpeg.path()), path)
+    return outcome.kind === 'probed' ? outcome.probe : null
+  }
+
+  /**
+   * Writes onto a row the catalogue may have dropped while ffmpeg was running.
+   *
+   * Nobody awaits this — a proxy that lands after the import it belonged to is answered has no
+   * caller left — so the failure it can raise has to be caught here: closing a project while a
+   * twenty-minute encode finishes leaves `catalog()` with nothing to answer with.
+   */
+  const saveAssetFields = (assetId: string, fields: Partial<Asset>): void => {
+    void (async () => {
+      const catalog = project.catalog()
+      const current = await catalog.find(assetId)
+      if (current) await catalog.add({ ...current, ...fields })
+    })().catch((error: unknown) =>
+      log.warn('media', `could not record what was derived for ${assetId}: ${String(error)}`),
+    )
+  }
+
   const assets = createLocalBackend({
     download,
     projectPath: () => project.path(),
@@ -628,10 +663,7 @@ export function createServices(settings: SettingsStore): Services {
     // The API states no duration and no track list beside the bytes it hands over, so a
     // generated take reached the timeline as an untimed clip: five arbitrary seconds, and no
     // way to tell whether it carries a sound. ffprobe reads the file that just landed.
-    probeFile: async path => {
-      const outcome = await probeSource(companionPath(ffmpeg.path()), path)
-      return outcome.kind === 'probed' ? outcome.probe : null
-    },
+    probeFile: probeLocalFile,
     // Every mesh that lands in the project sheds its pictures on the spot, so the inspector has
     // something to show beside a model without anyone having gone looking for a menu row. Not
     // awaited by the import: a model of half a dozen 2048² pictures would otherwise hold up the
@@ -719,12 +751,8 @@ export function createServices(settings: SettingsStore): Services {
     discard: async assetId => {
       await project.catalog().remove(assetId)
     },
-    save: async (assetId, fields) => {
-      const catalog = project.catalog()
-      const current = await catalog.find(assetId)
-      // The row may have been deleted while a twenty-minute proxy was encoding.
-      if (current) await catalog.add({ ...current, ...fields })
-    },
+    // The row may have been deleted while a twenty-minute proxy was encoding — see the helper.
+    save: saveAssetFields,
     writeFile: async (path, data) => {
       await mkdir(dirname(path), { recursive: true })
       await writeFile(path, data)
@@ -735,6 +763,33 @@ export function createServices(settings: SettingsStore): Services {
     // Two cores left to the interface and to whatever else the machine is doing.
     concurrency: () => Math.max(1, availableParallelism() - 2),
   })
+
+  /**
+   * The takes this project holds that arrived before the pipeline ran on downloads.
+   *
+   * Behind the project rather than in front of it: nothing here is awaited by the open, and a
+   * project that holds none costs one catalogue read. Its own failures are logged and dropped —
+   * an ffprobe that is not there must not stop a project from opening.
+   */
+  const catchUpProject = async (): Promise<void> => {
+    try {
+      // Inside the try: `path` throws when no project is open, and this runs on a change that
+      // may already have been followed by a close.
+      const projectPath = project.path()
+      const done = await catchUpMedia({
+        list: () => project.catalog().search({ types: ['video', 'audio'], location: 'local' }),
+        fileOf: asset => ownFileOf(projectPath, asset),
+        probeFile: probeLocalFile,
+        save: saveAssetFields,
+        derive: request => media.derive(request),
+      })
+
+      // The shelf and the strip both read what was just written, and neither asked for it.
+      if (done > 0) broadcast(EVENTS.assetsChanged)
+    } catch (error: unknown) {
+      log.warn('media', `could not catch up the project's takes: ${String(error)}`)
+    }
+  }
 
   // The model is read from where the user pointed, or from beside the settings file. Read on
   // every call rather than kept: the folder is a setting, and it can change while the studio
