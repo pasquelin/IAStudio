@@ -1,8 +1,8 @@
 import { basename } from 'node:path'
 import { PEAKS_PER_SECOND, type Asset, type AssetType, type MediaProbe } from '@shared/domain/asset'
 import type { IngestProgress, IngestStage } from '@shared/domain/media'
-import { PEAKS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
-import { peaksArgs, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
+import { PEAKS_FOLDER, POSTERS_FOLDER, PROXIES_FOLDER } from '@shared/domain/project'
+import { peaksArgs, posterArgs, posterOffset, proxyArgs, PEAKS_SAMPLE_RATE } from './ffmpeg'
 import type { PeaksRun } from './peaks-client'
 import type { ProbeOutcome } from './probe'
 import type { ActivityReport } from '@main/project/activity-log'
@@ -191,6 +191,28 @@ export function createMediaService(deps: MediaServiceDeps): MediaService {
         const timed = kind === 'video' || kind === 'audio'
 
         if (timed && binary && project && probe) {
+          // Under the proxy's own stage rather than one of its own: a keyframe grab is a tenth
+          // of a second, and a stage of its own would cost an ingest state, its label in two
+          // bundles and the guards that hold them, for a bar nobody would see move.
+          //
+          // Swallowed on failure, like the still a download brings beside a mesh: a rush whose
+          // first keyframe ffmpeg refuses is still a perfectly good import.
+          if (kind === 'video') {
+            const relative = `${POSTERS_FOLDER}/${assetId}.jpg`
+            const args = posterArgs(
+              sourcePath,
+              `${project}/${relative}`,
+              posterOffset(probe.duration),
+            )
+            try {
+              await deps.run(binary, args, controller.signal)
+              fields.posterPath = relative
+            } catch {
+              // A grid falls back to the kind's own glyph, which is what it showed before.
+            }
+            if (cancelled()) return
+          }
+
           if (needsProxy(probe)) {
             advance('proxy')
             const relative = `${PROXIES_FOLDER}/${hash}.mp4`

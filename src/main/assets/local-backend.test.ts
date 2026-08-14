@@ -468,12 +468,29 @@ describe('the still brought down beside the bytes', () => {
   })
 
   /**
-   * A picture answers for itself, and a rush and a take get their still at ingest — one recorded
-   * here would be painted UNDER the waveform of every audio clip, since a timeline clip reads
-   * `posterUrl` like every other surface. Only a `.glb` has nothing that decodes.
+   * A grid of video tiles is a grid of identical grey rectangles otherwise, and so is a clip on
+   * the strip — both read `posterUrl`. The still the library already holds is the cheapest true
+   * picture of the take there is; nothing needs decoding to show it.
+   */
+  it('writes one for a rush, whose own file no grid can paint', async () => {
+    const asset = await backend.importFromUrl({
+      id: 'asset_2',
+      url: 'https://cdn.example/take.mp4',
+      name: 'Terrier',
+      type: 'video',
+      thumbnailUrl: 'https://cdn.example/thumb/asset_remote.jpg',
+    })
+
+    expect(asset.posterPath).toBe('.index/posters/asset_2.jpg')
+    expect(await readFile(join(root, '.index/posters/asset_2.jpg'))).toEqual(Buffer.from(POSTER))
+  })
+
+  /**
+   * A picture answers for itself. A sound must NOT be given one: a timeline clip reads
+   * `posterUrl` like every other surface, and the still would be painted under its waveform.
    */
   it('writes none for a kind that has a picture of its own', async () => {
-    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'video', 'audio']
+    const alreadyShowable: AssetType[] = ['image', 'texture', 'skybox', 'audio']
     for (const type of alreadyShowable) {
       const asset = await backend.importFromUrl({
         id: `asset_${type}`,
@@ -487,7 +504,7 @@ describe('the still brought down beside the bytes', () => {
     }
 
     // One download per asset, and not one thumbnail among them.
-    expect(download).toHaveBeenCalledTimes(5)
+    expect(download).toHaveBeenCalledTimes(4)
   })
 
   // The model is the asset; the still is a convenience. A CDN answering 404 must not cost the

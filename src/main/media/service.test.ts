@@ -85,9 +85,49 @@ describe('media service', () => {
       sourcePath: '/Volumes/Rushes/rush.mov',
       probe,
       hash: 'abc123',
+      posterPath: '.index/posters/asset-1.jpg',
       proxyPath: '.index/proxies/abc123.mp4',
       peaksPath: '.index/peaks/abc123.bin',
     })
+  })
+
+  /**
+   * A rush picked off the disk has no library still to bring down, and both the shelf and the
+   * clip on the strip read `posterUrl`: without this, every imported take is the same grey
+   * rectangle wearing a film glyph.
+   */
+  it('grabs a still of a rush, taken past the black a take often opens on', async () => {
+    const injected = deps()
+    await createMediaService(injected).ingest('asset-1', '/Volumes/Rushes/rush.mov', 'video')
+
+    const args = vi.mocked(injected.run).mock.calls.map(([, given]) => given)
+    // A tenth of the way into twenty seconds, and one frame out.
+    expect(args[0]).toContain('2.000')
+    expect(args[0]).toEqual(expect.arrayContaining(['/tmp/project/.index/posters/asset-1.jpg']))
+  })
+
+  // The still is a convenience; the rush is the asset. Same rule as the one a download brings
+  // beside a mesh — a refusal here must not cost the import.
+  it('imports the rush all the same when the still cannot be grabbed', async () => {
+    const injected = deps({
+      run: vi.fn(async (_binary: string, args: string[]) => {
+        if (args.includes('-frames:v')) throw new Error('no keyframe there')
+        return Buffer.alloc(0)
+      }),
+    })
+
+    await createMediaService(injected).ingest('asset-1', '/Volumes/Rushes/rush.mov', 'video')
+
+    expect(stages(injected.onProgress)).toContain('done')
+    expect(vi.mocked(injected.save).mock.calls[0]?.[1]).not.toHaveProperty('posterPath')
+  })
+
+  // A sound has a waveform, and a still recorded here would be painted under it.
+  it('grabs none for a sound', async () => {
+    const injected = deps()
+    await createMediaService(injected).ingest('asset-1', '/take.wav', 'audio')
+
+    expect(vi.mocked(injected.save).mock.calls[0]?.[1]).not.toHaveProperty('posterPath')
   })
 
   it('skips the proxy for a file the browser can already decode', async () => {

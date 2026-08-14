@@ -20,6 +20,16 @@ const FALLBACK_EXTENSION: Record<AssetType, string> = {
   skybox: '.png',
 }
 
+/**
+ * The kinds whose own file no surface can paint, and which therefore keep the library's still.
+ *
+ * A picture answers for itself. A sound must NOT be given one: a timeline clip reads `posterUrl`
+ * like every other surface, and the still would be painted under its waveform. What is left is
+ * a mesh — nothing decodes a `.glb` — and a rush, whose first frame is the only thing that tells
+ * one take from another in a shelf of grey rectangles.
+ */
+const POSTER_KINDS: readonly AssetType[] = ['mesh', 'video']
+
 export type Download = (url: string) => Promise<Uint8Array>
 
 export type LocalBackendDeps = {
@@ -149,18 +159,13 @@ export function createLocalBackend({
   onImported,
 }: LocalBackendDeps): LocalBackend {
   /**
-   * The library's still, brought down beside the bytes — for a mesh, and for a mesh alone.
-   *
-   * A picture IS its own poster. A rush and a take have one waiting for them at ingest, and a
-   * still recorded here would be painted UNDER the waveform of every audio clip on the timeline
-   * (`posterUrl` is what a clip reads) — a picture of the take before any edit, at that. Only
-   * `.glb` has nothing any surface can decode, which is the whole reason this exists.
+   * The library's still, brought down beside the bytes — see `POSTER_KINDS`.
    *
    * Best effort, and that is the whole design: the thumbnail is a convenience, the model is the
    * asset. A CDN that answers 404 must leave the import that carries it untouched.
    */
   const savePoster = async (request: WriteRequest): Promise<string | undefined> => {
-    if (!request.thumbnailUrl || request.type !== 'mesh') return undefined
+    if (!request.thumbnailUrl || !POSTER_KINDS.includes(request.type)) return undefined
 
     try {
       const poster = await download(request.thumbnailUrl)
