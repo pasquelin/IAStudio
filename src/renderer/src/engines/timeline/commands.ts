@@ -532,8 +532,17 @@ export function moveTrack(trackId: string, by: number): Command<SequenceState> {
       from = position
       return { ...state, tracks: reorder(state.tracks, position, to) }
     },
-    revert: state =>
-      from === null ? state : { ...state, tracks: reorder(state.tracks, from + by, from) },
+    /**
+     * The track is found again rather than computed from `from + by`, and that is what makes a
+     * DRAG undoable in one press: successive steps of one gesture coalesce into a single entry
+     * keeping the FIRST revert (`coalesce`), by which time the track stands three places away
+     * from where that arithmetic expects it — and ⌘Z put it back in the wrong row.
+     */
+    revert: state => {
+      if (from === null) return state
+      const position = state.tracks.findIndex(track => track.id === trackId)
+      return position < 0 ? state : { ...state, tracks: reorder(state.tracks, position, from) }
+    },
   }
 }
 

@@ -53,9 +53,20 @@ import { sequenceOf, useSequences } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
 import type { VideoToolId } from './video-tools'
 
-export type TimelineCanvasProps = { documentId: string; tool: VideoToolId }
+export type TimelineCanvasProps = {
+  documentId: string
+  tool: VideoToolId
+  /**
+   * Whether the strip answers the `sequence` scope — undo, redo, zoom, the transport keys.
+   *
+   * The host decides, never the strip: a sound montage sits under a take that already listens
+   * on its own scope, and two listeners on one window is one ⌘Z undoing both halves of the
+   * document — the studio's oldest trap, "two diverging undo stacks".
+   */
+  shortcuts?: boolean
+}
 
-export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
+export function TimelineCanvas({ documentId, tool, shortcuts = true }: TimelineCanvasProps) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The gesture and the state it started from: one history entry per gesture, not per pixel.
@@ -242,8 +253,9 @@ export function TimelineCanvas({ documentId, tool }: TimelineCanvasProps) {
     [documentId, seek, setViewport],
   )
 
-  // The strip is only mounted for the document in front, so it always listens while it is there.
-  useShortcuts({ scope: 'sequence', enabled: true, onCommand: run })
+  // The strip is only mounted for the document in front, so it listens while it is there — unless
+  // its host says another scope already answers for this document.
+  useShortcuts({ scope: 'sequence', enabled: shortcuts, onCommand: run })
 
   const pointAt = (
     event: PointerEvent<HTMLCanvasElement> | DragEvent<HTMLCanvasElement>,

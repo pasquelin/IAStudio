@@ -7,7 +7,9 @@
  * rather than stored. Folding a subject away must never lose a key.
  */
 import type { AnimationTimeline, AnimationTrack } from '@shared/domain/animation'
+import { reconcileOrder } from '@shared/domain/order'
 import type { Us } from '@shared/domain/time'
+import { ROW_PADDING } from '../timeline/timeline-geometry'
 
 /** One object, or one bone of one object. Its channels are the tracks that drive it. */
 export type Subject = {
@@ -70,8 +72,6 @@ export const CLIP_HEIGHT = 24
  */
 const CONTROL_ROW = 28
 const NAME_ROW = 16
-/** Both halves of `TimelineRow`'s own padding, which is what every band's rows now sit in. */
-const ROW_PADDING = 8
 
 export const SUBJECT_HEIGHT = NAME_ROW + CONTROL_ROW + ROW_PADDING
 
@@ -122,20 +122,30 @@ export function orderedSubjects(
   preferred: readonly string[],
 ): string[] {
   const known = new Set(natural)
-  const kept = preferred.filter(id => known.has(id))
-  const placed = new Set(kept)
-  return [...kept, ...natural.filter(id => !placed.has(id))]
+  // `reconcileOrder` rather than appending the newcomers at the end, and the difference is what
+  // one SEES: an object added to the scene lands under the neighbours the hierarchy already gives
+  // it, instead of at the bottom of a sheet somebody has arranged. Its header says as much — this
+  // reconciliation had already been written twice before it was named.
+  return reconcileOrder(
+    preferred.filter(id => known.has(id)),
+    natural,
+    id => id,
+  )
 }
 
 /**
  * The same list with one entry moved by that many places. Clamped at both ends rather than
  * wrapping: a row dragged past the top has arrived, it has not gone to the bottom.
  */
-export function movedWithin(ids: readonly string[], id: string, by: number): string[] {
+export function movedWithin(ids: readonly string[], id: string, by: number): readonly string[] {
   const from = ids.indexOf(id)
-  if (from === -1 || by === 0) return [...ids]
+  if (from === -1 || by === 0) return ids
 
   const to = Math.min(Math.max(from + by, 0), ids.length - 1)
+  // The SAME array back when nothing moved — a line dragged against the top is asked to move on
+  // every step of the gesture, and a fresh array each time rebuilds the whole sheet for nothing.
+  if (to === from) return ids
+
   const moved = [...ids]
   moved.splice(from, 1)
   moved.splice(to, 0, id)

@@ -23,5 +23,8 @@ export function SoundPanel({ documentId }: SoundPanelProps) {
   // Nothing rather than the wrong thing, for the one frame the effect above has not run in.
   if (!ready) return null
 
-  return <MontagePanel documentId={documentId} />
+  // Shortcuts off, and it is the whole reason the host passes them down: the take under this
+  // montage already listens on the `audio` scope, and one ⌘Z reaching both scopes would undo a
+  // step of the chain AND a step of the montage. `AudioDocument` routes ⌘Z to the right half.
+  return <MontagePanel documentId={documentId} shortcuts={false} />
 }

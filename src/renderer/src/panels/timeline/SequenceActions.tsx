@@ -9,7 +9,6 @@ import { tipFor } from '@/helpers/tooltip'
 import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/video-tools'
 import { useSequences } from '@/stores/sequences'
 import { useVideoTool } from '@/stores/video-tool'
-import { TIMELINE_BAR } from './bar'
 import { TRACK_KIND_ICONS } from './track-flags'
 
 export type SequenceActionsProps = {
@@ -29,8 +28,10 @@ export function SequenceActions({ documentId, kinds = TRACK_KINDS, lead }: Seque
   const tool = useVideoTool(state => state.tool)
   const setTool = useVideoTool(state => state.setTool)
 
+  // A fragment, not a box: `PanelHeader` already lays its actions out, and a second flex row
+  // inside it is how the three timelines came to space their buttons differently.
   return (
-    <div className={TIMELINE_BAR}>
+    <>
       {lead}
       <Toolbar
         orientation="horizontal"
@@ -66,6 +67,6 @@ export function SequenceActions({ documentId, kinds = TRACK_KINDS, lead }: Seque
           </>
         }
       />
-    </div>
+    </>
   )
 }

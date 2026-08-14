@@ -71,7 +71,7 @@ describe('TimelineRow', () => {
 
   it('offers no grip to a row that holds no order of its own', () => {
     render(
-      <TimelineRow height={ROW_HEIGHT} nested align="center">
+      <TimelineRow height={ROW_HEIGHT} nested>
         <span>position</span>
       </TimelineRow>,
     )

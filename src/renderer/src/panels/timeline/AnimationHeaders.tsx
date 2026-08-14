@@ -1,4 +1,5 @@
 import { mdiChevronDown, mdiChevronRight, mdiDeleteOutline, mdiRhombus } from '@mdi/js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TrackProperty } from '@shared/domain/animation'
 import { ToolButton } from '@/design/ToolButton'
@@ -13,12 +14,11 @@ import {
   type ClipRow,
   type SubjectRow,
 } from '@/engines/scene/animation-rows'
-import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { HINT_RIGHT, TIP_RIGHT } from '@/helpers/tooltip'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { sceneOf, useScenes, writeAnimationTrack } from '@/stores/scenes'
 import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
-import { TimelineRow } from './TimelineRow'
+import { TimelineHeaderColumn, TimelineRow } from './TimelineRow'
 import { TRACK_FLAGS } from './track-flags'
 
 /** A row id back into the pair its channels are addressed by — the inverse of `subjectKey`. */
@@ -59,20 +59,16 @@ export function AnimationHeaders({ documentId, rows }: AnimationHeadersProps) {
   const scrollTop = useAnimationViews(
     state => animationViewOf(state, documentId).viewport.scrollTop,
   )
-  const shown = shownSubjects(rows)
+  // Memoised on `rows`, whose identity the panel keeps stable: this column re-renders on every
+  // frame of playback, and two arrays allocated per frame is two arrays nobody reads.
+  const shown = useMemo(() => shownSubjects(rows), [rows])
 
   return (
-    <div className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r">
-      {/* Empty band facing the ruler, so line one lines up with row one. */}
-      <div style={{ height: RULER_HEIGHT }} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div style={{ transform: `translateY(${-scrollTop}px)` }}>
-          {rows.map(row => (
-            <HeaderRow key={row.id} documentId={documentId} row={row} shown={shown} />
-          ))}
-        </div>
-      </div>
-    </div>
+    <TimelineHeaderColumn scrollTop={scrollTop}>
+      {rows.map(row => (
+        <HeaderRow key={row.id} documentId={documentId} row={row} shown={shown} />
+      ))}
+    </TimelineHeaderColumn>
   )
 }
 
@@ -88,7 +84,7 @@ function HeaderRow({ documentId, row, shown }: HeaderRowProps) {
 /** A block names the clip it plays, and offers nothing else: it is driven from the inspector. */
 function ClipHeader({ row }: { row: ClipRow }) {
   return (
-    <TimelineRow height={row.height} nested align="center" data-testid={`anim-clip-${row.nodeId}`}>
+    <TimelineRow height={row.height} nested data-testid={`anim-clip-${row.nodeId}`}>
       <span className="text-muted text-tiny min-w-0 truncate" {...HINT_RIGHT(row.name)}>
         {row.name}
       </span>
@@ -185,7 +181,7 @@ function ChannelHeader({ documentId, row }: ChannelRowProps) {
   const { t } = useTranslation()
 
   return (
-    <TimelineRow height={row.height} nested align="center" data-testid={`anim-channel-${row.id}`}>
+    <TimelineRow height={row.height} nested data-testid={`anim-channel-${row.id}`}>
       <div className="flex items-center gap-0.5">
         <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(row.name)}>
           {row.name}

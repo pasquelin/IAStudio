@@ -148,8 +148,14 @@ describe('arranging the lines', () => {
     expect(arranged(['c', 'a'])).toEqual(['c', 'a', 'b'])
   })
 
-  it('ignores an entry for an object the scene no longer holds', () => {
-    expect(arranged(['gone', 'b'])).toEqual(['b', 'a', 'c'])
+  it('ignores an entry for an object the scene no longer holds, and draws no hole for it', () => {
+    expect(arranged(['gone', 'c', 'a', 'b'])).toEqual(['c', 'a', 'b'])
+  })
+
+  // Not at the bottom: a line the arrangement never saw comes back where the hierarchy puts it,
+  // under the neighbours it already has.
+  it('puts an object the arrangement never saw back beside its neighbours', () => {
+    expect(arranged(['c', 'b'])).toEqual(['a', 'c', 'b'])
   })
 
   it('moves one line and leaves the others in place', () => {

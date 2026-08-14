@@ -26,7 +26,6 @@ import { bonesOfNode, useModelClips } from '@/stores/model-clips'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
-import { TIMELINE_BAR } from './bar'
 
 export type AnimationActionsProps = { documentId: string }
 
@@ -73,8 +72,12 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
     onGestureEnd: () => useScenes.getState().endGesture(documentId),
   }
 
+  // No box of its own: `PanelHeader` already lays its actions out — same gutter, same alignment,
+  // and it is the one that knows whether this panel's row may take the free width (`fillActions`).
+  // A second flex row inside it was what let this bar space its buttons three times wider than
+  // the montage's, on controls of the very same gauge.
   return (
-    <div className={TIMELINE_BAR}>
+    <>
       <ToolButton
         icon={mdiSkipPrevious}
         label={t('animation.toStart')}
@@ -156,7 +159,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       </div>
 
       <RenderButton documentId={documentId} />
-    </div>
+    </>
   )
 }
 

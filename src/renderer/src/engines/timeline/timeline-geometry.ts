@@ -35,6 +35,15 @@ export type HitTarget =
   | { kind: 'fade'; clipId: string; trackId: string; edge: ClipEdge }
 
 export const RULER_HEIGHT = 24
+/**
+ * Both halves of the padding a header row sits in.
+ *
+ * Here rather than in the component that draws it, because the CANVAS has to agree with it: row
+ * heights are derived from what a header must hold, and the band is painted from those same
+ * heights. Two independent numbers would drift the DOM column and the painted rows apart by a
+ * line — cumulatively, with nothing red anywhere. `TimelineRow` reads it; so does `animation-rows`.
+ */
+export const ROW_PADDING = 8
 /** Pixels around a clip edge that grab the edge rather than the body. */
 export const EDGE_GRAB = 8
 /** Share of a clip's width its body keeps, however narrow it gets: a clip must stay draggable. */

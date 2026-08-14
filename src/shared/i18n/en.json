@@ -2139,6 +2139,6 @@
     "keyAllHint": "Keys every animated object at the playhead",
     "unkeySubject": "Remove {{name}}’s key",
     "unkeySubjectHint": "Removes the key standing here, on every property of this object",
-    "reorderRow": "Drag to move the {{name}} line — the order stays the timeline's own"
+    "reorderRow": "Drag to move the {{name}} line — the order stays the timeline’s own"
   }
 }

@@ -78,7 +78,12 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
 
   moveRow: (documentId, shown, rowId, by) =>
     set(state =>
-      write(state, documentId, view => ({ ...view, order: movedWithin(shown, rowId, by) })),
+      write(state, documentId, view => {
+        const order = movedWithin(shown, rowId, by)
+        // Identity is the answer to "nothing moved": rewriting the view would rebuild every row
+        // of the sheet, on every step of a drag against the end of the stack.
+        return order === shown ? view : { ...view, order }
+      }),
     ),
 
   forget: documentId =>

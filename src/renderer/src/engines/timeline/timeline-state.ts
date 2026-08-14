@@ -161,8 +161,11 @@ export const EMPTY_SEQUENCE: SequenceState = {
  */
 export const EMPTY_SOUND_SEQUENCE: SequenceState = {
   settings: DEFAULT_SETTINGS,
-  tracks: [1, 2, 3, 4].map(number =>
-    makeTrack({ id: `A${number}`, kind: 'audio', index: 4 - number }),
+  // `reindexTracks` rather than an index written by hand: it is the one place that decides what
+  // depth a row carries, and a second copy of that arithmetic is what makes the painter and the
+  // header column disagree about which track is on top.
+  tracks: reindexTracks(
+    [1, 2, 3, 4].map(number => makeTrack({ id: `A${number}`, kind: 'audio', index: 0 })),
   ),
   selectedId: null,
   playhead: 0,

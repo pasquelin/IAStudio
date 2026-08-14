@@ -177,10 +177,25 @@ type AudioPayload = { edits: unknown; montage: unknown }
 
 /** An older file holds the chain alone, and reopens with an empty montage rather than refusing. */
 function audioPayloadOf(content: unknown): AudioPayload {
-  const payload: unknown = isRecord(content) && 'montage' in content ? content : null
-  return payload && isRecord(payload)
-    ? { edits: payload.edits, montage: payload.montage }
+  return isRecord(content) && 'montage' in content
+    ? { edits: content.edits, montage: content.montage }
     : { edits: content, montage: null }
+}
+
+/**
+ * Whether either half of a take holds work nobody has written yet. Read from a snapshot rather
+ * than from the live stores, because `capture` must ask it BEFORE its first `await` — an edit
+ * made while the file is on its way to disk must not be counted as saved.
+ */
+function audioHasUnsavedWork(
+  documentId: string,
+  edits = audioEditStore.use.getState(),
+  montage = sequenceStore.use.getState(),
+): boolean {
+  return (
+    audioEditStore.hasUnsavedWork(edits, documentId) ||
+    sequenceStore.hasUnsavedWork(montage, documentId)
+  )
 }
 
 const AUDIO_IO: DocumentIo = {
@@ -202,9 +217,7 @@ const AUDIO_IO: DocumentIo = {
         sequenceStore.use.getState().markSaved(documentId, montageMark)
       },
       // Either half is the document: a montage built over an untouched take is work to save.
-      wasEdited:
-        audioEditStore.hasUnsavedWork(edits, documentId) ||
-        sequenceStore.hasUnsavedWork(montage, documentId),
+      wasEdited: audioHasUnsavedWork(documentId, edits, montage),
     })
   },
 
@@ -232,9 +245,7 @@ const AUDIO_IO: DocumentIo = {
   // the panel before the file is read would make an unopened document look already filled.
   holds: documentId => audioEditStore.hasState(audioEditStore.use.getState(), documentId),
 
-  dirty: documentId =>
-    audioEditStore.hasUnsavedWork(audioEditStore.use.getState(), documentId) ||
-    sequenceStore.hasUnsavedWork(sequenceStore.use.getState(), documentId),
+  dirty: audioHasUnsavedWork,
 
   forget: documentId => {
     audioEditStore.use.getState().drop(documentId)

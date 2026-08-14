@@ -5,7 +5,6 @@ import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'
 import { moveTrack, renameTrack } from '@/engines/timeline/commands'
-import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import {
   clampTrackHeight,
   playsThrough,
@@ -18,7 +17,7 @@ import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
-import { TimelineRow } from './TimelineRow'
+import { TimelineHeaderColumn, TimelineRow } from './TimelineRow'
 import { TRACK_FLAGS } from './track-flags'
 import { TrackMenu, TrackMenuRows, TRACK_MENU_ROWS } from './TrackMenu'
 
@@ -36,24 +35,18 @@ export function TrackHeaders({ documentId }: TrackHeadersProps) {
   const scrollTop = useTimelineView(state => viewportOf(state, documentId).scrollTop)
 
   return (
-    <div className="border-border flex w-(--sc-track-header) shrink-0 flex-col overflow-hidden border-r">
-      {/* Empty band facing the ruler, so row one lines up with track one. */}
-      <div style={{ height: RULER_HEIGHT }} />
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div style={{ transform: `translateY(${-scrollTop}px)` }}>
-          {sequence.tracks.map((track, row) => (
-            <TrackHeader
-              key={track.id}
-              documentId={documentId}
-              sequence={sequence}
-              track={track}
-              canRise={row > 0}
-              canFall={row < sequence.tracks.length - 1}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+    <TimelineHeaderColumn scrollTop={scrollTop}>
+      {sequence.tracks.map((track, row) => (
+        <TrackHeader
+          key={track.id}
+          documentId={documentId}
+          sequence={sequence}
+          track={track}
+          canRise={row > 0}
+          canFall={row < sequence.tracks.length - 1}
+        />
+      ))}
+    </TimelineHeaderColumn>
   )
 }
 
@@ -82,6 +75,10 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
       reorder={{
         label: t('timeline.reorderTrack', { name: track.name }),
         move: by => useSequences.getState().runCommand(documentId, moveTrack(track.id, by)),
+        // A drag across three places is one thing the user did: without the gesture, `runCommand`
+        // pushes an entry per step, and ⌘Z gives the stack back a row at a time.
+        begin: () => useSequences.getState().beginGesture(documentId),
+        end: () => useSequences.getState().endGesture(documentId),
       }}
       data-testid={`track-header-${track.id}`}
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
