@@ -401,21 +401,31 @@ export function Tree<T extends TreeNode>({
       )}
       <div
         style={{ paddingLeft: `calc(${INDENT} * ${row.depth})` }}
-        className="flex h-full min-w-0 flex-1 items-center gap-1.5"
+        className="flex h-full min-w-0 flex-1 items-center"
       >
-        {/* The chevron keeps its column even on a leaf: rows whose content shifts by a glyph are
-            unreadable as a list. It is not a control — the row already carries `aria-expanded`,
-            and the arrows already toggle it. Named because it has no other handle, being
-            `aria-hidden`: three suites used to reach it as the row's `firstChild`, which is a
-            claim about the markup around it rather than about it. */}
+        {/* The fold column is kept open on a leaf, and it is NOT a cosmetic choice: it is what
+            makes the indent arithmetic uniform. A parent's content starts one column past its own
+            edge, so a child starts one INDENT past its parent's edge — the two only read as
+            nested while every row pays the same column.
+
+            Closing it on leaves was tried on 2026-08-14 and reverted the same day: `--sc-indent`
+            is 12px and this column is 12px, so a layer inside a group landed at exactly its
+            parent's x — and 4px to its LEFT in compact density, where the indent drops to 8. The
+            nesting a stack panel exists to show simply disappeared. Giving it back would mean an
+            indent of a column plus a gutter, which is 24px a level, and the file browser next
+            door would then walk in strides.
+
+            Not a control: the row carries `aria-expanded` and the arrows already toggle it. Named
+            because it has no other handle, being `aria-hidden` — three suites used to reach it as
+            the row's `firstChild`, a claim about the markup around it rather than about it. */}
         <span
           aria-hidden="true"
           data-chevron
-          className="flex w-3.5 shrink-0 justify-center"
+          className="flex w-3 shrink-0 justify-center"
           onPointerDown={event => {
             if (ghost || !row.hasChildren) return
-            // The row selects on pointer down, which fires before click: stopping the click alone
-            // would still have let the chevron steal the selection.
+            // The row selects on pointer down, which fires before click: stopping the click
+            // alone would still have let the chevron steal the selection.
             event.stopPropagation()
             onToggle(row.node.id)
           }}

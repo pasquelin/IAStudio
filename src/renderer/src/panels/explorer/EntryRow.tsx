@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Row } from '@/design/Row'
+import { UiIcon } from '@/design/UiIcon'
 import { cn } from '@/helpers/cn'
 import { InlineRename } from '@/panels/shared/InlineRename'
 
@@ -34,22 +35,21 @@ export function EntryRow({ name, icon, open, onRename }: EntryRowProps) {
     return <InlineRename value={name} label={t('explorer.rename')} onCommit={onRename} />
 
   return (
+    // The mark of "open" is the GLYPH, in accent ink: a row can be selected in this tree without
+    // being open, so it cannot be the selection tint — and it has to cost nothing, because it is
+    // true of one row in a folder of thirty.
+    //
+    // It has been a word under the name, then a dot before the icon, and both were paid for by
+    // every OTHER row: the word made the panel measure a stacked height throughout, the dot took
+    // a column and a gutter — 10px in front of thirty names to be seen in front of one. Colouring
+    // what is already there takes none.
+    //
+    // Through `media` rather than `icon`, which is `Row`'s way of saying "I am drawing this one
+    // myself". `accent-ink` and not `accent`: the fill misses 1.4.11 on a panel, the ink clears
+    // it — see `index.css`, and `design/tokens.test.ts` refuses the fill outright.
     <Row
-      icon={icon}
+      media={<UiIcon path={icon} size={14} className={cn('shrink-0', open && 'text-accent-ink')} />}
       title={name}
-      // The mark of "open", its own rather than the selection tint: a row can be selected in
-      // this tree without being open, and the two must not look alike.
-      //
-      // It used to be a dot AND the word under the name, and the word is what cost: one row in a
-      // folder of thirty carries it, and `Tree` is handed a NUMBER for its estimate, so every row
-      // in the panel stood at the height of the tallest — 36px against a control's 28, five or six
-      // fewer folders on screen for a word that repeats what the dot already says.
-      leading={
-        <span
-          aria-hidden="true"
-          className={cn('size-1 shrink-0 rounded-full', open ? 'bg-accent' : 'bg-transparent')}
-        />
-      }
     />
   )
 }

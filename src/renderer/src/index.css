@@ -449,10 +449,14 @@
      not follow density either, so there is no second declaration below. */
   --sc-rail-inset: 14px;
   --sc-gutter: 6px;
-  /* One step of indentation, wherever a tree draws depth. Derived, so it follows density without
-     a second declaration below — and named, because `Tree` and the settings column had started to
-     spell the same two gutters out on their own. The layer stack walks a narrower step, one
-     gutter, and deliberately does not read this. */
+  /* One step of indentation, wherever a tree draws depth — the layer stack included, which a
+     comment here claimed walked a narrower step of its own until 2026-08-14. It never did: it
+     goes through `Tree`, which knows one indent. Believing otherwise is what let a batch close
+     the fold column on leaves without noticing that the column and this step are the SAME 12px,
+     so a layer inside a group landed at its parent's x, and 4px to its left in compact.
+
+     Derived, so it follows density without a second declaration below — and named, because `Tree`
+     and the settings column had started to spell the same two gutters out on their own. */
   --sc-indent: calc(var(--sc-gutter) * 2);
   --sc-header: 40px;
   /* The strip, not the tab: the tab sits inside it with 6px of air above and below, so this

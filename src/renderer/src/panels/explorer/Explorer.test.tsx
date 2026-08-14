@@ -441,13 +441,16 @@ describe('the project explorer', () => {
     })
 
     /**
-     * A dot of accent, and no word: the word cost every row in the panel the height of a stacked
-     * one — see the gauge test above. Read off the class because the mark is `aria-hidden` and has
-     * nothing else to be asked for by: it says « open » to the eye, and what says it to a reader
-     * is the tab itself.
+     * The GLYPH in accent ink, and nothing added to the line: the mark has been a word under the
+     * name and then a dot before the icon, and both were paid for by every other row — a stacked
+     * height throughout for the first, a column and a gutter for the second. Colouring what is
+     * already on screen costs the thirty rows that are not open exactly nothing.
+     *
+     * Read off the class because the glyph is `aria-hidden` and has nothing else to be asked for
+     * by: it says « open » to the eye, and what says it to a reader is the tab itself.
      *
      * Two files in one folder rather than two cases, because « and them alone » is the whole of
-     * what a mark is for: a dot on every row says nothing.
+     * what a mark is for: a mark on every row says nothing.
      */
     it('marks the documents a tab is showing, and them alone', async () => {
       withProject()
@@ -458,7 +461,7 @@ describe('the project explorer', () => {
       await screen.findByText('a3f1.scene')
 
       const marked = (name: string): Element | null | undefined =>
-        screen.getByText(name).closest('[role="treeitem"]')?.querySelector('.bg-accent')
+        screen.getByText(name).closest('[role="treeitem"]')?.querySelector('.text-accent-ink')
 
       expect(marked('a3f1.scene')).toBeInTheDocument()
       expect(marked('other.scene')).not.toBeInTheDocument()

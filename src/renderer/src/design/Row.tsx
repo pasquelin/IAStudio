@@ -54,9 +54,13 @@ export function Row({
     // row both do. Raising it to two here instead stacked on the tree's own step and pushed every
     // name a further 4px off its chevron.
     //
-    // The shape itself is `ROW_LINE`, shared with `Tree`: the two draw halves of the same line,
-    // and a gutter that drifted here would land in the middle of every list in the studio.
-    <div className={ROW_LINE}>
+    // The shape itself is `ROW_LINE`, shared with `Tree`: the two draw halves of the same line.
+    //
+    // The gutter is added HERE and not carried by the shape, because this is where it describes
+    // something: a glyph, a word and a button, three things that have to breathe. The tree's
+    // columns have a width of their own and needed no such thing — between them the same gutter
+    // was 12px of nothing, on every line of every panel.
+    <div className={cn(ROW_LINE, 'gap-1.5')}>
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
       <div className="min-w-0 flex-1 leading-tight">
