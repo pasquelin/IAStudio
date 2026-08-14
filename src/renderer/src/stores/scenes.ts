@@ -41,12 +41,14 @@ export function writeAnimationTrack(
  * be read at call time, not from the render that drew the row: a copy taken before whatever
  * command ran in between would undo it.
  *
- * It writes the studio's selection too, and that is the point of going through one function: the
- * scene holds what the viewport highlights, `useSelection` holds what the INSPECTOR reads, and
- * for as long as the 3D space wrote only the first one, picking a node left the inspector on
- * whatever asset had been clicked in the browser — which is how a model got imported in the
- * first place. What lands there is the resolved selection rather than the ids asked for: a
- * toggle removes as often as it adds.
+ * It points the studio's selection at the scene too, and that is the point of going through one
+ * function: the scene holds what the viewport highlights, `useSelection` holds which FACE the
+ * inspector shows, and for as long as the 3D space wrote only the first one, picking a node left
+ * the inspector on whatever asset had been clicked in the browser — which is how a model got
+ * imported in the first place. `canvases` does the same pairing at its call site rather than
+ * here; four callers against one is the whole of the difference.
+ *
+ * Which nodes is deliberately NOT copied over — `pointAtNodes` says why.
  */
 export function selectIn(
   documentId: string,
@@ -54,9 +56,14 @@ export function selectIn(
   mode: SelectionMode = 'replace',
 ): void {
   const state = useScenes.getState()
-  const next = setSelection(sceneOf(state, documentId), ids, mode)
-  state.replace(documentId, next)
-  useSelection.getState().selectNodes(documentId, next.selectedIds)
+  const current = sceneOf(state, documentId)
+  const next = setSelection(current, ids, mode)
+
+  // Guarded on the ids rather than on the state, which `setSelection` copies either way: clicking
+  // a row that is already selected — the gesture that OPENS a drag — otherwise wrote the document
+  // back, and the viewport rebuilt its whole scene graph on the strength of it.
+  if (next.selectedIds !== current.selectedIds) state.replace(documentId, next)
+  useSelection.getState().pointAtNodes(documentId, next.selectedIds.length > 0)
 }
 
 /**

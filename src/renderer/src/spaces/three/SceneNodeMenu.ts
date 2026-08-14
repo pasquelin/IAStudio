@@ -8,29 +8,26 @@ import {
   mdiTrashCanOutline,
 } from '@mdi/js'
 import type { TFunction } from 'i18next'
-import {
-  addNodes,
-  copiesOf,
-  groupNodes,
-  removeNodes,
-  setNodeVisible,
-} from '@/engines/scene/commands'
-import type { Command } from '@/engines/core/history'
-import { selectedNodes, type SceneState } from '@/engines/scene/scene-state'
+import { commandDescriptor, type CommandId } from '@shared/domain/command'
+import type { SceneNode } from '@/engines/scene/scene-state'
 import { showContextMenu, type ContextMenuRow } from '@/helpers/context-menu'
-import { sceneEngineOf } from '@/stores/scene-engines'
-import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 
 export type SceneNodeMenuProps = {
-  documentId: string
-  /** The node under the pointer, by id: the viewport picks one out of a ray and holds nothing
-   * else, and reading it here is what keeps both callers from passing a stale copy. */
-  nodeId: string
+  /** The node the pointer is over. Already selected by the caller — see below. */
+  node: SceneNode
+  /** False on a scene whose viewport is not mounted: there is then nothing to move. */
+  canFrame: boolean
   /** The window's translator, as every menu of this studio takes it — see `openLayerMenu`. */
   t: TFunction
+  /** Where the rows land: `runSceneCommand`, the same door the toolbar and the keyboard use. */
+  run: (command: CommandId) => void
+  /** The eye of a row, which is not a command of the space — see the row itself. */
+  onToggleVisible: () => void
   /**
    * Opens the name for typing. Absent in the viewport, which draws no name to type over: there
-   * the node is renamed from the outliner or from the inspector's own field.
+   * the node is renamed from the outliner or from the inspector's own field. The one row that
+   * varies, and it varies with the SURFACE rather than with the selection — the rule against a
+   * menu of changing length is about the second, which no row here breaks.
    */
   onRename?: () => void
 }
@@ -38,71 +35,42 @@ export type SceneNodeMenuProps = {
 /**
  * What can be done with one node of a scene, right-clicked — in the outliner or in the viewport.
  *
- * The rows act on the SELECTION, and the node under the pointer joins it first when it is not
- * already in it. Both halves matter: framing reads the engine's own selection rather than
- * anything passed here, so a menu that acted on the node alone would delete one thing and frame
- * another — and a right-click on a row of a selection of six must not shrink it to one.
+ * Five of the six rows are `CommandId`s rather than commands: they are the very ones the toolbar,
+ * the keyboard and the native Édition menu already run, and a second copy of "duplicate" would
+ * drift from the first the day one of them learns to offset its copies.
  *
- * Greyed rather than dropped, the rule this studio's menus already follow: a menu that changes
- * length depending on what is selected is a menu one cannot learn. Copy, cut and paste are
- * deliberately absent — they are the four keys every editor shares and they already sit in the
- * native Édition menu, where a hand that lost them looks.
+ * The rows act on the SELECTION, never on the node alone — framing reads the engine's own, so a
+ * menu that deleted one thing and framed another would be unreadable. Selecting the node first is
+ * therefore the caller's job, as it is for the asset shelf (`DraggableAsset`): the outliner arms
+ * on pointer down, and the viewport has to do it by hand because its right button flies the
+ * camera.
+ *
+ * Copy, cut and paste are deliberately absent — the four keys every editor shares already sit in
+ * the native Édition menu, where a hand that lost them looks.
  */
-export function openSceneNodeMenu({ documentId, nodeId, t, onRename }: SceneNodeMenuProps): void {
-  // Armed before the rows are built. The outliner arms on pointer down, but the viewport's right
-  // button flies the camera — so nothing has armed anything there by the time this runs.
-  if (!sceneOf(useScenes.getState(), documentId).selectedIds.includes(nodeId)) {
-    selectIn(documentId, [nodeId])
+export function openSceneNodeMenu({
+  node,
+  canFrame,
+  t,
+  run,
+  onToggleVisible,
+  onRename,
+}: SceneNodeMenuProps): void {
+  // Named by the registry rather than by keys written again here: the row then says exactly what
+  // the toolbar's tooltip and the native menu's entry say, and a renamed command cannot leave one
+  // of the three behind.
+  const command = (id: CommandId, icon: string): ContextMenuRow => {
+    const descriptor = commandDescriptor(id)
+    return {
+      label: descriptor ? t(descriptor.titleKey) : id,
+      icon,
+      tooltip: descriptor ? t(descriptor.helpKey) : id,
+      onSelect: () => run(id),
+    }
   }
 
-  const { nodes, selectedIds } = sceneOf(useScenes.getState(), documentId)
-  const node = nodes.find(candidate => candidate.id === nodeId)
-  if (!node) return
-
-  const picked = selectedNodes(nodes, selectedIds)
-  const engine = sceneEngineOf(documentId)
-  const run = (command: Command<SceneState>): void =>
-    useScenes.getState().runCommand(documentId, command)
-
-  const rows: ContextMenuRow[] = [
-    {
-      label: t('commands.sceneDuplicate.title'),
-      icon: mdiContentCopy,
-      tooltip: t('commands.sceneDuplicate.help'),
-      onSelect: () => run(addNodes(copiesOf(nodes, picked))),
-    },
-    {
-      label: t('commands.sceneGroup.title'),
-      icon: mdiFolderPlusOutline,
-      tooltip: t('commands.sceneGroup.help'),
-      onSelect: () => run(groupNodes(picked)),
-    },
-    {
-      label: t('commands.sceneFrame.title'),
-      icon: mdiCropFree,
-      tooltip: t('commands.sceneFrame.help'),
-      // A scene left in a background tab has no viewport mounted, and therefore nothing to move.
-      disabled: !engine,
-      onSelect: () => engine?.frameSelection(),
-    },
-    {
-      label: node.visible ? t('scene.hide') : t('scene.show'),
-      icon: node.visible ? mdiEyeOffOutline : mdiEyeOutline,
-      tooltip: node.visible ? t('scene.hideHint') : t('scene.showHint'),
-      // The one row that stays on the node under the pointer: the eye of a row does the same,
-      // and a selection of six half hidden has no single state to flip.
-      onSelect: () => run(setNodeVisible(node.id, !node.visible)),
-    },
-    {
-      label: t('commands.sceneDelete.title'),
-      icon: mdiTrashCanOutline,
-      tooltip: t('commands.sceneDelete.help'),
-      onSelect: () => run(removeNodes(nodes, selectedIds)),
-    },
-  ]
-
-  void showContextMenu(
-    onRename
+  void showContextMenu([
+    ...(onRename
       ? [
           {
             label: t('scene.rename'),
@@ -110,8 +78,19 @@ export function openSceneNodeMenu({ documentId, nodeId, t, onRename }: SceneNode
             tooltip: t('scene.renameHint'),
             onSelect: onRename,
           },
-          ...rows,
         ]
-      : rows,
-  )
+      : []),
+    command('scene.duplicate', mdiContentCopy),
+    command('scene.group', mdiFolderPlusOutline),
+    { ...command('scene.frame', mdiCropFree), disabled: !canFrame },
+    {
+      label: node.visible ? t('scene.hide') : t('scene.show'),
+      icon: node.visible ? mdiEyeOffOutline : mdiEyeOutline,
+      tooltip: node.visible ? t('scene.hideHint') : t('scene.showHint'),
+      // The one row that stays on the node under the pointer: the eye of a row does the same, and
+      // a selection of six half hidden has no single state to flip.
+      onSelect: onToggleVisible,
+    },
+    command('scene.delete', mdiTrashCanOutline),
+  ])
 }

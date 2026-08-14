@@ -185,6 +185,15 @@ const STUDIO_INTENSITY = 0.4
 /** How far the pointer may wander between press and release and still count as a click, in px. */
 const CLICK_SLOP = 4
 
+/**
+ * Whether a release ends a click rather than a drag. Both buttons ask it: the left one to tell a
+ * pick from an orbit, the right one to tell a menu from a flight — and a slop written twice is a
+ * slop that stops agreeing the day it learns about pointer type or DPI.
+ */
+function wasClick(from: { x: number; y: number } | null, event: PointerEvent): boolean {
+  return from !== null && Math.hypot(event.clientX - from.x, event.clientY - from.y) <= CLICK_SLOP
+}
+
 /** Scratch vectors for the fly loop, which runs every frame while a direction is held. */
 const forward = new ThreeVector3()
 const right = new ThreeVector3()
@@ -307,13 +316,16 @@ export class SceneRenderer {
   private dragged = false
   /** Where the left button went down, so the release can tell a click from an orbit. */
   private pressed: { x: number; y: number } | null = null
-  /** The same, for the right button: it flies the camera, and a flight that never left is a click. */
+  /**
+   * Where the right button went down, or nothing while it is up. It doubles as "the camera is
+   * flying", the two being the same fact: the button starts the flight and ends it. A flight
+   * that never left the pixel it started on is a click, and raises the node menu instead.
+   */
   private flownFrom: { x: number; y: number } | null = null
 
   private gizmo: TransformControls | null = null
   private viewHelper: ViewHelper | null = null
   private grid: GridHelper | null = null
-  private flying = false
   private mode: TransformMode = 'select'
   private snapping = false
   private space: TransformSpace = 'world'
@@ -957,6 +969,11 @@ export class SceneRenderer {
     this.held.clear()
     for (const motion of held) this.held.add(motion)
     if (this.flying && this.held.size > 0) this.viewport.requestRender()
+  }
+
+  /** Whether the right button is down, which is the whole of what flying means here. */
+  private get flying(): boolean {
+    return this.flownFrom !== null
   }
 
   dispose(): void {
@@ -1679,7 +1696,6 @@ export class SceneRenderer {
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
-      this.flying = true
       this.flownFrom = { x: event.clientX, y: event.clientY }
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = false
@@ -1703,14 +1719,9 @@ export class SceneRenderer {
       // A right button that never flew and never moved was a click, not a flight: that is the
       // one gesture left for a menu in this viewport, the button itself being taken by the fly
       // camera. Read before `held` is emptied, or every flight would end in a menu.
-      const aimed = this.flownFrom
-      const still =
-        aimed !== null &&
-        this.held.size === 0 &&
-        Math.hypot(event.clientX - aimed.x, event.clientY - aimed.y) <= CLICK_SLOP
+      const still = this.held.size === 0 && wasClick(this.flownFrom, event)
 
       this.flownFrom = null
-      this.flying = false
       this.held.clear()
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = true
@@ -1727,8 +1738,7 @@ export class SceneRenderer {
 
     const pressed = this.pressed
     this.pressed = null
-    if (!pressed || Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > CLICK_SLOP)
-      return
+    if (!wasClick(pressed, event)) return
 
     this.aimGizmo()
 

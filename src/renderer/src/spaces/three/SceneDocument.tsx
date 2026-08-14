@@ -2,11 +2,11 @@ import type { AssetType } from '@shared/domain/asset'
 import { bindingOf, type CommandId } from '@shared/domain/command'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
 import type { ExportFormat } from '@shared/domain/scene'
+import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
-import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
+import { setNodeVisible } from '@/engines/scene/commands'
 import { movesToCommand } from '@/engines/scene/animation-commands'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { snapToFrame } from '@shared/domain/time'
@@ -22,7 +22,7 @@ import { useBindingOverrides } from '@/stores/bindings'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { assetVersionOf } from '@/stores/assets'
 import { useShelfRefresh } from '@/hooks/useShelfRefresh'
-import { selectedNodes, type NodeMove } from '@/engines/scene/scene-state'
+import type { NodeMove } from '@/engines/scene/scene-state'
 import { useModelClips } from '@/stores/model-clips'
 import { forgetSceneEngine, registerSceneEngine } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
@@ -33,6 +33,7 @@ import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
 import { openSceneNodeMenu } from './SceneNodeMenu'
+import { runSceneCommand } from './scene-commands'
 import { ScenePaneGrid } from './ScenePaneGrid'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -79,13 +80,40 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
   if (command) store.runCommand(documentId, command)
 }
 
+/**
+ * A node right-clicked in the viewport, selected and then offered what can be done to it.
+ *
+ * Selecting first is this side's job rather than the menu's, as it is for the asset shelf: an
+ * outliner arms its row on pointer down, but the right button of a viewport flies the camera, so
+ * nothing has armed anything by the time the menu is asked for. Left as it was when the node is
+ * already in the selection — a right-click on one of six must not shrink it to one.
+ *
+ * No rename row: a viewport draws no name to type over. `i18next.t` rather than the hook's, for
+ * the reason `document-io` reads it that way — this runs from an engine callback, outside any
+ * render, and the singleton is always the language in force.
+ */
+function openNodeMenu(documentId: string, nodeId: string): void {
+  const { nodes, selectedIds } = sceneOf(useScenes.getState(), documentId)
+  if (!selectedIds.includes(nodeId)) selectIn(documentId, [nodeId])
+
+  const node = nodes.find(candidate => candidate.id === nodeId)
+  if (!node) return
+
+  openSceneNodeMenu({
+    node,
+    canFrame: true,
+    t: i18next.t,
+    run: command => runSceneCommand(documentId, command),
+    onToggleVisible: () =>
+      useScenes.getState().runCommand(documentId, setNodeVisible(node.id, !node.visible)),
+  })
+}
+
 const MESHES: readonly AssetType[] = ['mesh']
 
 export function SceneDocument({ documentId }: { documentId: string }) {
-  const { t } = useTranslation()
   const host = useRef<HTMLDivElement>(null)
   const engine = useRef<SceneRenderer | null>(null)
-  const translate = useRef(t)
   const [mode, setMode] = useState<TransformMode>('select')
   // Session state, like the mode: a document that remembered its snapping would impose it on
   // whoever opens it next.
@@ -114,12 +142,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
     if (title) setDocumentTitle(documentId, title, modified)
   }, [documentId, title, modified])
 
-  // Read at click time rather than captured by the engine: the renderer is built once per
-  // document, and a language changed afterwards would leave its menu in the old one.
-  useEffect(() => {
-    translate.current = t
-  }, [t])
-
   useEffect(() => {
     const element = host.current
     if (!element) return
@@ -133,8 +155,7 @@ export function SceneDocument({ documentId }: { documentId: string }) {
         useModelClips.getState().report(documentId, nodeId, clips, lengths),
       onBones: (nodeId, bones) => useModelClips.getState().reportBones(documentId, nodeId, bones),
       onSelectBone: picked => useSceneViews.getState().setPickedBone(documentId, picked),
-      // No rename row: a viewport draws no name to type over — see `openSceneNodeMenu`.
-      onContextMenu: nodeId => openSceneNodeMenu({ documentId, nodeId, t: translate.current }),
+      onContextMenu: nodeId => openNodeMenu(documentId, nodeId),
       onStats: (scene, selected) => setStats({ scene, selected }),
       assetVersion: assetVersionOf,
     })
@@ -250,9 +271,11 @@ export function SceneDocument({ documentId }: { documentId: string }) {
   // tool is declared once in `SCENE_TOOLS` and handled once here.
   const run = useCallback(
     (command: CommandId) => {
+      // What acts on the selection is shared with the node menu, which arrives by the same ids —
+      // see `runSceneCommand`. What is left below is what only this viewport can answer for.
+      if (runSceneCommand(documentId, command)) return
+
       const store = useScenes.getState()
-      const { nodes, selectedIds } = sceneOf(store, documentId)
-      const picked = selectedNodes(nodes, selectedIds)
 
       switch (command) {
         case 'scene.select':
@@ -263,8 +286,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
           return setMode('rotate')
         case 'scene.scale':
           return setMode('scale')
-        case 'scene.frame':
-          return engine.current?.frameSelection()
         case 'scene.snap':
           return setSnapping(current => !current)
         case 'scene.space':
@@ -286,30 +307,6 @@ export function SceneDocument({ documentId }: { documentId: string }) {
               documentId,
               view.projection === 'perspective' ? 'orthographic' : 'perspective',
             )
-        case 'scene.delete':
-          if (selectedIds.length > 0) store.runCommand(documentId, removeNodes(nodes, selectedIds))
-          return
-        case 'scene.duplicate':
-          if (picked.length > 0) store.runCommand(documentId, addNodes(copiesOf(nodes, picked)))
-          return
-        case 'scene.copy':
-          if (picked.length > 0) useSceneClipboard.getState().copy(copiesOf(nodes, picked))
-          return
-        case 'scene.cut':
-          if (picked.length === 0) return
-          useSceneClipboard.getState().copy(copiesOf(nodes, picked))
-          store.runCommand(documentId, removeNodes(nodes, selectedIds))
-          return
-        case 'scene.paste': {
-          // Copied again on the way out: pasting twice must not put the same ids in twice.
-          const held = useSceneClipboard.getState().nodes
-          if (held.length === 0) return
-          store.runCommand(documentId, addNodes(rootedIn(copiesOf(held, held), nodes)))
-          return
-        }
-        case 'scene.group':
-          if (picked.length > 0) store.runCommand(documentId, groupNodes(picked))
-          return
         case 'scene.undo':
           return store.undo(documentId)
         case 'scene.redo':

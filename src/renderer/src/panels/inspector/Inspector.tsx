@@ -95,11 +95,20 @@ function Face() {
       )
     }
 
-    // A node of the scene, or nothing clicked at all: the document in front answers both. A
-    // scene says which nodes are selected from its OWN state — `SceneInspector` reads them
-    // there, so the descriptor only has to say that the face is the scene's — and a texture has
-    // nothing to select, the material being the document. At most one id is set below, so the
-    // order is reading order.
+    // The only face whose descriptor carries no ids: a scene says which of its nodes are
+    // selected from its own state, and `SceneInspector` reads them there — see `Selection`.
+    // Guarded on the owner all the same, as the three faces above are: the scene in front is
+    // not necessarily the one the node was picked in.
+    case 'node':
+      return sceneId && selection.ownerId === sceneId ? (
+        <SceneInspector documentId={sceneId} />
+      ) : (
+        <Empty />
+      )
+
+    // Nothing was clicked in a panel, so the document in front speaks for itself: a scene shows
+    // its environment, and a texture has nothing to select — the material IS the document. At
+    // most one id is set, so the order below is reading order.
     default: {
       if (sceneId) return <SceneInspector documentId={sceneId} />
       // Through the same answer the title row reads, so the button it carries and the face

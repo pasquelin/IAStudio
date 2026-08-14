@@ -17,8 +17,13 @@ export type SceneNodeRowProps = {
   renameLabel?: string
   /** The name is being typed over. Held by the list: the menu that opens a rename sits there. */
   renaming?: boolean
-  onRename?: () => void
-  onRenamed?: () => void
+  /**
+   * Both take the node's id, which the row already holds. It costs an argument and buys a
+   * callback the list can keep stable across renders — bound per row, they would defeat the memo
+   * below on every render of the list, which is the whole of what it is for.
+   */
+  onRename?: (id: string) => void
+  onRenamed?: (id: string) => void
 }
 
 /**
@@ -46,7 +51,7 @@ export const SceneNodeRow = memo(function SceneNodeRow({
         value={node.name}
         label={renameLabel}
         onCommit={name => {
-          onRenamed?.()
+          onRenamed?.(node.id)
           if (name !== node.name) run(renameNode(node.id, name))
         }}
       />
@@ -56,7 +61,7 @@ export const SceneNodeRow = memo(function SceneNodeRow({
   return (
     // On the name alone, as the layer stack does: a double click meant for the chevron or the
     // eye is not a rename.
-    <div className="h-full min-w-0 flex-1" onDoubleClick={onRename}>
+    <div className="h-full min-w-0 flex-1" onDoubleClick={() => onRename?.(node.id)}>
       <Row
         icon={iconOf(node)}
         title={node.name}

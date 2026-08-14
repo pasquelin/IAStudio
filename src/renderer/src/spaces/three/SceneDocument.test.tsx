@@ -14,7 +14,7 @@ import { useAssets } from '@/stores/assets'
 import { useDocuments } from '@/stores/documents'
 import { useSceneViews, sceneViewOf } from '@/stores/scene-views'
 import { clearScenes } from '@/stores/scene-fixtures'
-import { sceneOf, useScenes } from '@/stores/scenes'
+import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 import { useSettings } from '@/stores/settings'
 import type { SceneRendererOptions } from '@/engines/scene/SceneRenderer'
 import { bonesOfNode, clipsOfNode, useModelClips } from '@/stores/model-clips'
@@ -561,6 +561,32 @@ describe('SceneDocument and a node right-clicked in the viewport', () => {
 
     await vi.waitFor(() => expect(menu.labels()).toContain('Supprimer'))
     expect(menu.labels()).not.toContain('Renommer l’objet')
+  })
+
+  /**
+   * The outliner arms its row on pointer down; the right button of a viewport flies the camera,
+   * so nothing has armed anything here. Without this the rows would act on whatever was selected
+   * before — the menu deletes a selection, never the node it was raised on.
+   */
+  it('selects the node it was raised on', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    render(<SceneDocument documentId="doc-1" />)
+
+    built.at(-1)?.onContextMenu?.('box-1')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual(['box-1'])
+  })
+
+  // The other half of the same rule: a right-click on one of six must not shrink it to one.
+  it('leaves a selection the node already belongs to', () => {
+    useScenes.getState().runCommand('doc-1', addNode(box))
+    useScenes.getState().runCommand('doc-1', addNode(meshNode('box-2')))
+    render(<SceneDocument documentId="doc-1" />)
+    selectIn('doc-1', ['box-1', 'box-2'])
+
+    built.at(-1)?.onContextMenu?.('box-1')
+
+    expect(sceneOf(useScenes.getState(), 'doc-1').selectedIds).toEqual(['box-1', 'box-2'])
   })
 })
 
