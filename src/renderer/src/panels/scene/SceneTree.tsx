@@ -5,9 +5,9 @@ import { Row } from '@/design/Row'
 import { Tree, type TreeNode } from '@/design/Tree'
 import { canReparent, type SceneNode } from '@/engines/scene/scene-state'
 import { SceneNodeRow } from '@/panels/shared/SceneNodeRow'
-import { reparentNode, setNodeVisible } from '@/engines/scene/commands'
+import { reparentNode } from '@/engines/scene/commands'
 import { openSceneNodeMenu } from '@/spaces/three/SceneNodeMenu'
-import { runSceneCommand } from '@/spaces/three/scene-commands'
+import { runSceneCommand, toggleNodeVisible } from '@/spaces/three/scene-commands'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, selectIn, useScenes } from '@/stores/scenes'
 
@@ -94,8 +94,7 @@ export function SceneTree({ documentId }: { documentId: string }) {
           canFrame: sceneEngineOf(documentId) !== undefined,
           t,
           run: command => runSceneCommand(documentId, command),
-          onToggleVisible: () =>
-            useScenes.getState().runCommand(documentId, setNodeVisible(node.id, !node.visible)),
+          onToggleVisible: () => toggleNodeVisible(documentId, node.id),
           onRename: () => openRename(node.id),
         })
       }}

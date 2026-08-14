@@ -178,6 +178,34 @@ describe('SceneTree', () => {
     expect(menu.raised).toHaveLength(1)
   })
 
+  /**
+   * The rows of that menu act on the SELECTION, so what a right-click does to it is half the
+   * gesture: it aims, it never composes. The pointer event matters as much as the menu one, and
+   * macOS is where it bit hardest — Chromium delivers the Mac's secondary click as button 2 WITH
+   * `ctrlKey`, which the row read as a toggle and used to take the node back out, leaving a
+   * delete row that acted on the five others or on nothing at all. Not written as a case of its
+   * own: the polyfilled pointer event of this environment drops the modifier, so it would pass
+   * on the very defect it describes. One filter answers both.
+   */
+  it('keeps a selection of several when one of them is right-clicked', async () => {
+    const user = userEvent.setup()
+    installFakeBridge({ menu: fakeMenu().bridge })
+    render(<SceneTree documentId="doc-1" />)
+    const rowOf = (name: string): HTMLElement =>
+      screen.getByText(name).closest('[role="treeitem"]') as HTMLElement
+
+    await user.click(screen.getByText('AmbientLight'))
+    await user.keyboard('{Meta>}')
+    await user.click(screen.getByText('HemisphereLight'))
+    await user.keyboard('{/Meta}')
+    expect(scene().selectedIds).toHaveLength(2)
+
+    fireEvent.pointerDown(rowOf('AmbientLight'), { button: 2 })
+    fireEvent.contextMenu(rowOf('AmbientLight'), { button: 2 })
+
+    expect(scene().selectedIds).toHaveLength(2)
+  })
+
   it('renames a node from its own row, through the history', async () => {
     render(<SceneTree documentId="doc-1" />)
 

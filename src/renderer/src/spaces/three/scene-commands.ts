@@ -1,6 +1,13 @@
 import type { CommandId } from '@shared/domain/command'
-import { addNodes, copiesOf, groupNodes, removeNodes, rootedIn } from '@/engines/scene/commands'
-import { selectedNodes } from '@/engines/scene/scene-state'
+import {
+  addNodes,
+  copiesOf,
+  groupNodes,
+  removeNodes,
+  rootedIn,
+  setNodeVisible,
+} from '@/engines/scene/commands'
+import { nodeById, selectedNodes } from '@/engines/scene/scene-state'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { useSceneClipboard } from '@/stores/scene-clipboard'
 import { sceneOf, useScenes } from '@/stores/scenes'
@@ -18,6 +25,20 @@ import { sceneOf, useScenes } from '@/stores/scenes'
  * serve. The viewport is reached through the registry rather than through a ref: a panel that is
  * not the viewport raises this menu too.
  */
+/**
+ * Flips the eye of one node, read at the moment it is asked for.
+ *
+ * Its own function because it is the only gesture of the node menu that is not a `CommandId`, and
+ * because the state has to be FRESH: a native menu stands open for as long as the hand takes to
+ * choose, and a `visible` captured when it was built would write back the value already in place
+ * — an entry in the history that changes nothing, and a redo stack emptied for it.
+ */
+export function toggleNodeVisible(documentId: string, nodeId: string): void {
+  const store = useScenes.getState()
+  const node = nodeById(sceneOf(store, documentId), nodeId)
+  if (node) store.runCommand(documentId, setNodeVisible(node.id, !node.visible))
+}
+
 export function runSceneCommand(documentId: string, command: CommandId): boolean {
   const store = useScenes.getState()
   const { nodes, selectedIds } = sceneOf(store, documentId)

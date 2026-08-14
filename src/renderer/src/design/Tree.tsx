@@ -13,6 +13,9 @@ export type TreeNode = { id: string; parentId: string | null }
 
 const ROWS = dragChannel('application/x-scenario-tree-row')
 
+/** A pick that composes with nothing — what aiming a menu at a row asks for. */
+const NO_MODIFIERS: Modifiers = { shiftKey: false, metaKey: false, ctrlKey: false }
+
 /** Where in a row the pointer is: its edges insert beside it, its middle drops into it. */
 type DropZone = 'before' | 'into' | 'after'
 
@@ -513,7 +516,11 @@ export function Tree<T extends TreeNode>({
                   // drag that scrolled it out of view has no element left to end on.
                   setDragged(null)
                 }}
-                onPointerDown={event => pick(row.node, event)}
+                // The secondary button is left to `onContextMenu` below, which aims rather than
+                // composes: on macOS it arrives as Ctrl+click, and `pickFrom` reads that modifier
+                // as a toggle — the row a menu was raised on left the very selection the menu was
+                // about to act on.
+                onPointerDown={event => event.button !== 2 && pick(row.node, event)}
                 onDoubleClick={() => onActivate?.(row.node)}
                 onContextMenu={event => {
                   // A right-click in a row's rename field belongs to the native clipboard and
@@ -521,6 +528,11 @@ export function Tree<T extends TreeNode>({
                   // keep from ever being asked.
                   if (!onContextMenu || isTyping(event.target)) return
                   event.preventDefault()
+                  // Aimed, never composed: a row already in the selection keeps it whole — what
+                  // every file browser does, and what a menu acting on a selection needs. It is
+                  // also the only arming a menu raised from the KEYBOARD ever gets: `Shift+F10`
+                  // fires this with no pointer event before it.
+                  if (!selectedIds.includes(row.node.id)) pick(row.node, NO_MODIFIERS)
                   onContextMenu(row.node)
                 }}
                 onKeyDown={event => onRowKeyDown(row, index, event)}

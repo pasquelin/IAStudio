@@ -72,7 +72,7 @@ function unchanged(current: Selection, next: Selection): boolean {
  * global rather than per document because one inspector serves every panel — the asset shelf,
  * the montage and the track headers all point it at what was touched last.
  */
-export const useSelection = create<SelectionState>()(set => {
+export const useSelection = create<SelectionState>()((set, get) => {
   const point = (next: Selection): void =>
     set(state => (unchanged(state.selection, next) ? state : { selection: next }))
 
@@ -85,8 +85,15 @@ export const useSelection = create<SelectionState>()(set => {
       point({ kind: 'track', ownerId: documentId, ids: [trackId] }),
     selectLayer: (documentId, layerId) =>
       point({ kind: 'layer', ownerId: documentId, ids: [layerId] }),
-    pointAtNodes: (documentId, picked) =>
-      point(picked ? { kind: 'node', ownerId: documentId, ids: NO_IDS } : NONE),
+    pointAtNodes: (documentId, picked) => {
+      if (picked) return point({ kind: 'node', ownerId: documentId, ids: NO_IDS })
+
+      // Emptied only where this scene is what filled it. A click in the void of a viewport used
+      // to wipe whatever ANOTHER panel had selected — five assets picked in the shelf, and the
+      // two buttons that act on them going grey because a cube was deselected beside them.
+      const { selection } = get()
+      if (selection.kind === 'node' && selection.ownerId === documentId) point(NONE)
+    },
     clear: () => point(NONE),
   }
 })

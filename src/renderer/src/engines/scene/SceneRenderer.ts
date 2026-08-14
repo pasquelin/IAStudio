@@ -322,6 +322,12 @@ export class SceneRenderer {
    * that never left the pixel it started on is a click, and raises the node menu instead.
    */
   private flownFrom: { x: number; y: number } | null = null
+  /**
+   * Whether the camera actually moved while the button was down. The pointer alone cannot say:
+   * a flight is driven by the keyboard, so letting go of `W` before the button — the ordinary
+   * way to end one — leaves a release that never moved a pixel, and every flight ended in a menu.
+   */
+  private flew = false
 
   private gizmo: TransformControls | null = null
   private viewHelper: ViewHelper | null = null
@@ -1697,6 +1703,7 @@ export class SceneRenderer {
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button === 2) {
       this.flownFrom = { x: event.clientX, y: event.clientY }
+      this.flew = false
       const orbit = this.viewport.orbit
       if (orbit) orbit.enabled = false
       // Before the first frame of the flight, or its opening step spans the whole idle time.
@@ -1718,8 +1725,8 @@ export class SceneRenderer {
     if (event.button === 2) {
       // A right button that never flew and never moved was a click, not a flight: that is the
       // one gesture left for a menu in this viewport, the button itself being taken by the fly
-      // camera. Read before `held` is emptied, or every flight would end in a menu.
-      const still = this.held.size === 0 && wasClick(this.flownFrom, event)
+      // camera.
+      const still = !this.flew && this.held.size === 0 && wasClick(this.flownFrom, event)
 
       this.flownFrom = null
       this.held.clear()
@@ -1828,7 +1835,12 @@ export class SceneRenderer {
   /** Reports whether the camera is still flying, which is what keeps the loop alive. */
   private advance(delta: number): boolean {
     const moving = this.flying && this.held.size > 0
-    if (moving) this.fly(delta)
+    if (moving) {
+      // Remembered rather than read back at the release: the keys are let go of first, and the
+      // release would then look exactly like a click — see `flew`.
+      this.flew = true
+      this.fly(delta)
+    }
     // Both, never short-circuited: a clip has to keep running while the camera flies over it.
     return this.animations.update(delta) || moving
   }

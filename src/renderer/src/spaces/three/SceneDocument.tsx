@@ -6,7 +6,7 @@ import i18next from 'i18next'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PANE_TOOLBAR } from '@/design/styles'
 import { Toolbar } from '@/design/Toolbar'
-import { setNodeVisible } from '@/engines/scene/commands'
+import { nodeById } from '@/engines/scene/scene-state'
 import { movesToCommand } from '@/engines/scene/animation-commands'
 import { animationViewOf, useAnimationViews } from '@/stores/animation-view'
 import { snapToFrame } from '@shared/domain/time'
@@ -33,7 +33,7 @@ import { isDisplayMode } from '@shared/domain/scene'
 import { EMPTY_STATS, type SceneStats } from '@/engines/scene/scene-stats'
 import { SceneCounters } from './SceneCounters'
 import { openSceneNodeMenu } from './SceneNodeMenu'
-import { runSceneCommand } from './scene-commands'
+import { runSceneCommand, toggleNodeVisible } from './scene-commands'
 import { ScenePaneGrid } from './ScenePaneGrid'
 import { SCENE_TOOLS } from './scene-tools'
 
@@ -93,19 +93,20 @@ function recordTransform(documentId: string, moves: readonly NodeMove[]): void {
  * render, and the singleton is always the language in force.
  */
 function openNodeMenu(documentId: string, nodeId: string): void {
-  const { nodes, selectedIds } = sceneOf(useScenes.getState(), documentId)
-  if (!selectedIds.includes(nodeId)) selectIn(documentId, [nodeId])
-
-  const node = nodes.find(candidate => candidate.id === nodeId)
+  const scene = sceneOf(useScenes.getState(), documentId)
+  // Read before anything is selected: an id the engine still holds for a node the document has
+  // already dropped would otherwise move the selection and then open no menu at all.
+  const node = nodeById(scene, nodeId)
   if (!node) return
+
+  if (!scene.selectedIds.includes(nodeId)) selectIn(documentId, [nodeId])
 
   openSceneNodeMenu({
     node,
     canFrame: true,
     t: i18next.t,
     run: command => runSceneCommand(documentId, command),
-    onToggleVisible: () =>
-      useScenes.getState().runCommand(documentId, setNodeVisible(node.id, !node.visible)),
+    onToggleVisible: () => toggleNodeVisible(documentId, node.id),
   })
 }
 
