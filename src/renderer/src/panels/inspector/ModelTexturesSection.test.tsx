@@ -4,10 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Asset, AssetQuery } from '@shared/domain/asset'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useAssets } from '@/stores/assets'
+import type * as OpenModelMaterial from '@/spaces/textures/open-model-material'
 import { ModelTexturesSection } from './ModelTexturesSection'
 
 const openAsset = vi.fn()
 vi.mock('@/helpers/open-asset', () => ({ openAsset: (...args: unknown[]) => openAsset(...args) }))
+
+const openModelMaterial = vi.fn()
+// Partial: `hasChannel` is what decides which rows this section draws at all, so a copy of it
+// written here would let the section and its test disagree about what a channel is.
+vi.mock('@/spaces/textures/open-model-material', async importOriginal => ({
+  ...(await importOriginal<typeof OpenModelMaterial>()),
+  openModelMaterial: (...args: unknown[]) => openModelMaterial(...args),
+}))
 
 const MODEL = 'asset-model'
 
@@ -30,7 +39,7 @@ const search = vi.fn((query: AssetQuery) =>
 )
 
 function show(): void {
-  render(<ModelTexturesSection assetId={MODEL} />)
+  render(<ModelTexturesSection assetId={MODEL} name="Robot" />)
 }
 
 describe('ModelTexturesSection', () => {
@@ -38,50 +47,63 @@ describe('ModelTexturesSection', () => {
     derived = [texture()]
     search.mockClear()
     openAsset.mockClear()
+    openModelMaterial.mockClear()
     installFakeBridge({ assets: { search } })
     useAssets.setState({ items: [] })
   })
 
   /**
-   * The name over the channel, which is the shape every row of the studio draws: what the thing
-   * IS on the first line, what KIND of thing on the second. This list read the other way round
-   * for a while, and was the one list of the panel to be learnt twice.
+   * One line for what is one thing. A texture document of this studio IS a material, so three
+   * pictures of a model are three channels of it — listed flat, they described three files where
+   * the user sees one surface, and left the assembling to be done by hand in the other space.
    */
-  it('shows a model’s own pictures, each named over the channel it plays', async () => {
+  it('shows a model’s maps as the one material they make up', async () => {
+    derived = [texture(), texture({ id: 'asset-normal', map: 'normal' })]
+
     show()
 
-    expect(await screen.findByText('Robot — Couleur de base')).toBeInTheDocument()
+    expect(await screen.findByText('Matière du modèle')).toBeInTheDocument()
+    expect(screen.queryByText('Robot — Couleur de base')).not.toBeInTheDocument()
     // Which of the two is the SUBTITLE, and not merely that both are on screen: read the other
-    // way round — the channel over the file name, as this list drew it for a while — both
-    // strings are still there and an assertion on their presence alone stays green.
-    expect(screen.getByText('Couleur de base')).toHaveClass('text-mini')
+    // way round, both strings are still there and an assertion on their presence alone stays
+    // green.
+    expect(screen.getByText('Couleur de base, Normale')).toHaveClass('text-mini')
   })
 
-  // Nothing invented under a picture the file gave no channel to: repeating its name as its own
-  // kind would say something the extraction never said.
-  it('says no kind for a picture the studio has no channel for', async () => {
-    derived = [texture({ id: 'asset-ao', map: undefined, name: 'Robot — occlusion' })]
+  it('opens that material, channels in place, on the double-click every asset answers to', async () => {
+    show()
+
+    await userEvent.dblClick(await screen.findByRole('button', { name: /Ouvrir la matière/ }))
+
+    expect(openModelMaterial).toHaveBeenCalledWith({ id: MODEL, name: 'Robot' }, derived)
+  })
+
+  // Blank underneath, the row read as an oversight — which is exactly what it is not.
+  it('says why a picture the material could not take is on a line of its own', async () => {
+    derived = [texture(), texture({ id: 'asset-packed', map: undefined, name: 'Robot — metal' })]
 
     show()
 
-    expect(await screen.findByText('Robot — occlusion')).toBeInTheDocument()
-    expect(screen.getAllByText(/Robot/)).toHaveLength(1)
+    expect(await screen.findByText('Robot — metal')).toBeInTheDocument()
+    expect(screen.getByText('Cette image ne tient pas dans un seul canal')).toBeInTheDocument()
   })
 
-  it('opens a picture where it is edited, on the double-click every asset answers to', async () => {
+  it('opens that picture where it is edited, since the material has no place for it', async () => {
+    derived = [texture({ id: 'asset-packed', map: undefined, name: 'Robot — metal' })]
+
     show()
 
-    await userEvent.dblClick(await screen.findByRole('button', { name: /Couleur de base/ }))
+    await userEvent.dblClick(await screen.findByRole('button', { name: /Robot — metal/ }))
 
     expect(openAsset).toHaveBeenCalledWith(derived[0])
   })
 
   /**
-   * The id of a picture does not move when ⌘S rewrites the file behind it, so the tile draws its
-   * URL off the stamp. A grid that only compared ids kept showing the picture from before the
-   * edit — the very half of « edit it, and the model follows » this panel exists for.
+   * The id of a picture does not move when ⌘S rewrites the file behind it, so the row draws its
+   * URL off the stamp. A panel that only compared ids kept showing the picture from before the
+   * edit — the very half of « edit it, and the model follows » this section exists for.
    */
-  it('repaints a tile whose picture was rewritten under the same id', async () => {
+  it('repaints a row whose picture was rewritten under the same id', async () => {
     derived = [texture({ localChangedAt: '2026-08-13T10:00:00.000Z' })]
 
     show()
@@ -101,8 +123,8 @@ describe('ModelTexturesSection', () => {
   })
 
   /**
-   * The whole reason the grid is subscribed: extraction runs at import with nobody waiting on it,
-   * so a model dropped in the scene has no picture at all for a second or two.
+   * The whole reason the section is subscribed: extraction runs at import with nobody waiting on
+   * it, so a model dropped in the scene has no picture at all for a second or two.
    */
   it('fills itself when the pictures land, without the model being picked again', async () => {
     derived = []
@@ -114,6 +136,6 @@ describe('ModelTexturesSection', () => {
     derived = [texture()]
     useAssets.setState({ items: [texture()] })
 
-    expect(await screen.findByText('Couleur de base')).toBeInTheDocument()
+    expect(await screen.findByText('Matière du modèle')).toBeInTheDocument()
   })
 })

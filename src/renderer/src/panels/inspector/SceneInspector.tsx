@@ -126,7 +126,7 @@ export function SceneInspector({ documentId }: SceneInspectorProps) {
           {/* On the anchor alone, unlike a material: which maps a model wears depends on what its
               own file carries, so spreading one over a selection would dress meshes that never
               had that slot. */}
-          <ModelTexturesSection assetId={model.model.assetId} />
+          <ModelTexturesSection assetId={model.model.assetId} name={model.name} />
           <ModelOverridesSection
             textures={model.model.textures}
             onChange={textures => edit.run(setModelTextures(model.id, textures))}

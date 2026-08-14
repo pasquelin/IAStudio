@@ -416,7 +416,7 @@ describe('inspector panel', () => {
     it('offers the pictures of the project, whatever folder they were filed under', async () => {
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
 
       expect(await screen.findByRole('menuitemradio', { name: /Brique/ })).toBeInTheDocument()
       expect(screen.getByRole('menuitemradio', { name: /Rendu/ })).toBeInTheDocument()
@@ -425,7 +425,7 @@ describe('inspector panel', () => {
     it('leaves out what could never be loaded as a texture', async () => {
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
       await screen.findByRole('menuitemradio', { name: /Brique/ })
 
       expect(screen.queryByRole('menuitemradio', { name: /Rush/ })).not.toBeInTheDocument()
@@ -436,7 +436,7 @@ describe('inspector panel', () => {
     it('stores the asset identifier in the material', async () => {
       render(<Content />)
 
-      await userEvent.click(screen.getAllByRole('button', { name: /Choisir une texture/ })[0]!)
+      await userEvent.click(screen.getAllByRole('button', { name: /Choisir la texture de/ })[0]!)
       await userEvent.click(await screen.findByRole('menuitemradio', { name: /Brique/ }))
 
       const node = nodeInStore('box-1')
@@ -463,9 +463,24 @@ describe('inspector panel', () => {
     it('offers a slot per map a standard material reads', () => {
       render(<Content />)
 
-      expect(screen.getAllByRole('button', { name: /Choisir une texture/ })).toHaveLength(
+      expect(screen.getAllByRole('button', { name: /Choisir la texture de/ })).toHaveLength(
         TEXTURE_SLOTS.length,
       )
+    })
+
+    /**
+     * The whole LINE is what opens the menu since 2026-08-14, so its name is the only thing left
+     * to tell five stacked slots apart by — a reader stepping through them, or a voice command
+     * naming the one on screen. One shared « Choose a texture » made them five identical controls.
+     */
+    it('names each slot after the map it fills, so the stacked ones can be told apart', () => {
+      render(<Content />)
+
+      const named = screen
+        .getAllByRole('button', { name: /Choisir la texture de/ })
+        .map(button => button.getAttribute('aria-label'))
+
+      expect(new Set(named).size).toBe(TEXTURE_SLOTS.length)
     })
   })
 

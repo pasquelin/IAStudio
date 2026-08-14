@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { TooltipFactory } from '@/helpers/tooltip'
 import { useHoverFlyout } from '@/hooks/useHoverFlyout'
 import { Flyout } from './Flyout'
@@ -44,10 +44,6 @@ export type MenuButtonProps = Pick<
   menu?: boolean
 }
 
-/** The chord exactly, no more: a fourth modifier held down means the user meant something else. */
-const opensWith = (event: KeyboardEvent<HTMLButtonElement>): boolean =>
-  event.key === 'ArrowDown' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey
-
 /**
  * A button whose menu opens on hover — on click when `opensOnClick`, and on `Alt+ArrowDown`
  * always, since hovering is not a keyboard gesture and a group whose click arms a mode has no
@@ -64,43 +60,29 @@ export function MenuButton({
   menu = true,
   ...button
 }: MenuButtonProps) {
-  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null)
   const flyout = useHoverFlyout(rowCount)
 
   return (
     <div {...flyout.wrapProps} className="contents">
       <ToolButton
         {...button}
-        ref={setAnchor}
+        // The anchor, the ARIA pair and the APG chord — `Alt+ArrowDown`, the only way into a mode
+        // group, where the click arms the tool rather than opening. All three from the hook, so
+        // the whole-line trigger of `TextureField` cannot get a different set of manners.
+        {...flyout.triggerProps}
+        // …except the promise itself, which is the one thing that is not the hook's to make: this
+        // button also serves a flyout of sliders, and `role="menu"` over anything but menu items
+        // sends a screen reader looking for rows to step through.
+        aria-haspopup={menu ? flyout.triggerProps['aria-haspopup'] : undefined}
         tooltip={tooltip}
-        // Announced before it opens, as `AccountSelect` does on the same mounting: a menu that
-        // takes the focus without a reader having said it was coming is a jump out of nowhere.
-        aria-haspopup={menu && flyout.hasFlyout ? 'menu' : undefined}
-        aria-expanded={flyout.hasFlyout ? flyout.showing : undefined}
         onClick={() => {
           onClick?.()
           if (opensOnClick) flyout.open()
         }}
-        /*
-         * The APG gesture for a menu button, and the only way into a mode group: there the click
-         * arms the tool rather than opening, so `opensOnClick` is false and hovering — which no
-         * keyboard does — was the sole opener. Enter goes on arming, untouched.
-         *
-         * Stopped as well as prevented: these buttons sit inside `Collection` cells, which walk
-         * the list on a bare `ArrowDown` without looking at the modifiers. Left to bubble, one
-         * press opened the menu and moved the focus a row on, anchoring the menu to a row nobody
-         * was on any more.
-         */
-        onKeyDown={event => {
-          if (!flyout.hasFlyout || !opensWith(event)) return
-          event.preventDefault()
-          event.stopPropagation()
-          flyout.open()
-        }}
       />
 
       {flyout.showing && (
-        <Flyout anchor={anchor} role={menu ? 'menu' : undefined} {...flyout.flyoutProps}>
+        <Flyout anchor={flyout.anchor} role={menu ? 'menu' : undefined} {...flyout.flyoutProps}>
           {rows(flyout.close)}
         </Flyout>
       )}

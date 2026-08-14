@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { MediaTile } from './MediaTile'
-import { FOCUS_RING } from './styles'
+import { OVERLAY_BUTTON } from './styles'
 import { activation } from '@/helpers/activation'
 import { cn } from '@/helpers/cn'
 import { TIP_BOTTOM, type TooltipFactory } from '@/helpers/tooltip'
@@ -60,11 +60,7 @@ export function ShelfTile({
           onClick={onClick}
           {...(onActivate ? activation(onActivate) : {})}
           {...tip(label, false, hint)}
-          className={cn(
-            'absolute inset-0 cursor-pointer rounded-(--radius-sc-md) border-none',
-            'bg-transparent p-0 hover:opacity-90',
-            FOCUS_RING,
-          )}
+          className={cn(OVERLAY_BUTTON, 'rounded-(--radius-sc-md) p-0 hover:opacity-90')}
         >
           {tile}
         </button>

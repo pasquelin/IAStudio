@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BUTTON_NEUTRAL,
   FOCUS_RING,
+  OVERLAY_BUTTON,
   ROW_INK,
   ROW_QUIET,
   rowSkin,
@@ -149,6 +150,48 @@ describe('the row skin and the state it publishes', () => {
     )
 
     expect(wearing.length).toBeGreaterThanOrEqual(4)
+  })
+
+  /**
+   * The two surfaces of the studio that fill under the pointer, named rather than counted.
+   *
+   * A `tile` is the one thing `rowSkin` fills for, and it is asked for by name — so who may ask
+   * is the rule. Both of these are tiles in the strict sense: nothing else about them looks like
+   * a control, so the fill is the whole of what says they can be pressed.
+   *
+   * The inspector is deliberately absent, and that is a decision of 2026-08-14: no line of it
+   * answers the pointer. The cost was stated when it was taken — nothing distinguishes a line one
+   * can open from a line one only reads, and what says a row opens is its tooltip.
+   */
+  const MAY_FILL_UNDER_THE_POINTER = [
+    '../home/sections/Tools.tsx',
+    '../panels/channels/ChannelTile.tsx',
+  ]
+
+  /**
+   * Repo-wide rather than by folder, and that is the point: a row of the inspector drawn from
+   * `design/` — a texture slot is one — sits outside every folder rule anyone would write.
+   *
+   * **What this does NOT hold**: a `hover:bg-` written by hand, on a line that never goes through
+   * `rowSkin`. The studio's fill is guarded here because the studio's fill has one door; a panel
+   * painting its own is caught by nothing.
+   */
+  it('fills under the pointer for two surfaces only, and neither is a line of the inspector', () => {
+    const asking = WRITTEN_SOURCES.filter(
+      ([path, source]) => path !== GUARDED && source.includes("surface: 'tile'"),
+    ).map(([path]) => path)
+
+    expect(asking.sort()).toEqual([...MAY_FILL_UNDER_THE_POINTER].sort())
+  })
+
+  /**
+   * The exemption above lets `styles.ts` say anything, and one of its constants is worn by every
+   * line the rule protects: `OVERLAY_BUTTON` covers a texture slot, a model's material, a channel
+   * tile and a shelf tile. A fill added there would repaint the whole inspector at once and leave
+   * the rule green, since the rule never reads this file.
+   */
+  it('keeps the fill out of the button laid over a line, which no rule above can see', () => {
+    expect(OVERLAY_BUTTON).not.toMatch(/hover:bg-/)
   })
 })
 

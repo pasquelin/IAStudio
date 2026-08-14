@@ -100,6 +100,18 @@ describe('TextureField', () => {
     expect(onChange).toHaveBeenCalledWith('tex-1')
   })
 
+  /**
+   * Unlike a toolbar's menu, which opens on hover: a panel stacks these slots five deep, and one
+   * menu per row the pointer crosses on its way down is a panel nobody can cross.
+   */
+  it('does not open under a pointer merely passing over it', async () => {
+    renderField()
+
+    await userEvent.hover(screen.getByRole('button', { name: /Choisir une texture/ }))
+
+    expect(screen.queryByRole('menuitemradio')).not.toBeInTheDocument()
+  })
+
   // Choosing no texture is a choice, and belongs in the menu beside the others.
   it('offers "none" among the choices', async () => {
     const { onChange } = renderField('tex-1')
