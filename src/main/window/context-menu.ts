@@ -1,12 +1,19 @@
 import {
   app,
+  BrowserWindow,
   Menu,
+  nativeImage,
   type ContextMenuParams,
   type MenuItemConstructorOptions,
+  type NativeImage,
   type WebContents,
 } from 'electron'
+import { MENU_ICON_SCALE } from '@shared/domain/context-menu'
 import { TRANSLATIONS } from '@shared/i18n'
+import { CHANNELS } from '@shared/ipc'
+import { handle } from '@main/ipc/handle'
 import { windowLanguage } from './language'
+import { parseContextMenuItems } from './validation'
 
 /**
  * The rows a right-click offers inside a text field.
@@ -56,8 +63,10 @@ function fieldMenu(params: ContextMenuParams, contents: WebContents): MenuItemCo
  * popped up from here — and the spellchecker is on, which had the studio underlining misspellings
  * it offered no way to correct.
  *
- * **Nothing outside an editable node.** Every other surface draws its own in the renderer
- * (`design/ContextMenu`), and a native menu beside it would be a second one for a single press.
+ * **Nothing outside an editable node**, and the reason has changed since: the other surfaces no
+ * longer draw their own, they ASK for one through `registerContextMenu` below. Two menus for a
+ * single press is still what this guard prevents — a right-click in a rename field would
+ * otherwise raise the clipboard menu and the row's menu at once.
  *
  * Beside `lockNavigation` and called from the same place, before any window exists: registered
  * from the menu layer instead, it would reach only the windows opened after the IPC handlers —
@@ -73,6 +82,62 @@ export function registerFieldMenu(): void {
     contents.on('context-menu', (_contextEvent, params) => {
       if (!params.isEditable) return
       Menu.buildFromTemplate(fieldMenu(params, contents)).popup({ window })
+    })
+  })
+}
+
+/**
+ * A glyph the window drew, filed at the density it drew it for.
+ *
+ * `createFromDataURL` files a bitmap as the 1× representation, which would draw a 32 px icon at
+ * twice the size of a menu row; `addRepresentation` is what says "this is the @2x one". Marked
+ * as a template image, which macOS reads as "recolour this to match the menu" — ignored on the
+ * other platforms, where the window has already drawn it in the colour of the resolved theme.
+ */
+function glyph(dataURL: string): NativeImage {
+  const image = nativeImage.createEmpty()
+  image.addRepresentation({ scaleFactor: MENU_ICON_SCALE, dataURL })
+  image.setTemplateImage(true)
+  return image
+}
+
+/**
+ * The menus the windows raise on their own surfaces — a row of the explorer, an asset, a tab.
+ *
+ * The window composes the rows and this pops them: the labels arrive translated and `enabled`
+ * arrives decided, because the state they describe (what document is open, whether a transfer
+ * is running) lives in exactly one place and it is not this one. What this side owns is the
+ * part a drawn surface cannot have — the system's own menu, at the pointer, free of the window.
+ *
+ * **Answers the id of the row chosen, or `null`.** The choice comes back through `click` rather
+ * than through `popup`'s own callback, and the two are ordered the wrong way round on macOS:
+ * the menu closes BEFORE it sends the item's action, so a callback that resolved on the spot
+ * would report a dismissal for every row anyone actually picked. One turn of the event loop is
+ * what separates the two, and what makes a real dismissal answer `null`.
+ */
+export function registerContextMenu(): void {
+  handle(CHANNELS.menuPopup, (event, items) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (!window) return null
+
+    let chosen: string | null = null
+    const template: MenuItemConstructorOptions[] = parseContextMenuItems(items).map(item => ({
+      label: item.label,
+      enabled: item.enabled ?? true,
+      ...(item.icon ? { icon: glyph(item.icon) } : {}),
+      // macOS shows it on hover; Windows and Linux drop it without a word. Sent regardless —
+      // what a row does is written once, wherever the platform can say it.
+      ...(item.tooltip ? { toolTip: item.tooltip } : {}),
+      click: () => {
+        chosen = item.id
+      },
+    }))
+
+    return new Promise<string | null>(resolve => {
+      Menu.buildFromTemplate(template).popup({
+        window,
+        callback: () => setImmediate(() => resolve(chosen)),
+      })
     })
   })
 }

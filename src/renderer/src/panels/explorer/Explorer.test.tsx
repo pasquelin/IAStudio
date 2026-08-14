@@ -6,6 +6,7 @@ import type { DocumentDescriptor } from '@shared/domain/document'
 import type { FolderEntry } from '@shared/domain/folder'
 import { refreshPalette } from '@/engines/core/palette'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useDocuments } from '@/stores/documents'
 import { useLayouts } from '@/stores/layouts'
@@ -49,6 +50,9 @@ const withProject = (): void => {
  * `catalogued` is what the folder cannot say: whether a file it shows is an asset. Empty by
  * default, which is a folder of files the studio has never heard of.
  */
+/** Reset per case in `beforeEach`, and read by `install` — every case here raises a menu. */
+let menu = fakeMenu()
+
 function install(
   byFolder: Record<string, FolderEntry[]>,
   documents: DocumentDescriptor[] = [],
@@ -63,6 +67,7 @@ function install(
   installFakeBridge({
     project: { listFolder, openFile, revealFile, renameFile, moveFile, trashFile },
     documents: { list: () => Promise.resolve(documents) },
+    menu: menu.bridge,
     assets: {
       search: (query: AssetQuery) =>
         Promise.resolve(catalogued.filter(asset => asset.path === query.path)),
@@ -88,6 +93,7 @@ beforeEach(() => {
   // every case below is about what it says once it has.
   useProject.setState({ project: null, known: true })
   useLayouts.setState({ layout: null })
+  menu = fakeMenu()
   installFakeBridge({})
 })
 
@@ -595,29 +601,29 @@ describe('the explorer menu', () => {
   it('shows a file in the system file manager', async () => {
     withProject()
     const { revealFile } = install({ '': [file('brief.pdf')] })
+    menu.picks('Révéler dans le dossier')
 
     render(<Explorer />)
     await open('brief.pdf')
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' }))
 
-    expect(revealFile).toHaveBeenCalledWith('brief.pdf')
+    await waitFor(() => expect(revealFile).toHaveBeenCalledWith('brief.pdf'))
   })
 
   it('moves a file to the trash rather than deleting it', async () => {
     withProject()
     const { trashFile } = install({ '': [file('brief.pdf')] })
+    menu.picks('Mettre à la corbeille')
 
     render(<Explorer />)
     await open('brief.pdf')
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Mettre à la corbeille' }))
 
-    expect(trashFile).toHaveBeenCalledWith('brief.pdf')
+    await waitFor(() => expect(trashFile).toHaveBeenCalledWith('brief.pdf'))
   })
 
   /**
    * The catalogue stores every asset by a path under `assets/`, so moving one orphans rows
-   * nobody can find again. Shown disabled rather than hidden: a menu that changes length is a
-   * menu one cannot learn.
+   * nobody can find again. Greyed rather than dropped: a menu that changes length is a menu one
+   * cannot learn.
    */
   it('refuses to move the studio own folders, and says so before the click', async () => {
     withProject()
@@ -626,9 +632,9 @@ describe('the explorer menu', () => {
     render(<Explorer />)
     await open('assets')
 
-    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
-    expect(screen.getByRole('menuitem', { name: 'Mettre à la corbeille' })).toBeDisabled()
-    expect(screen.getByRole('menuitem', { name: 'Révéler dans le dossier' })).toBeEnabled()
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
+    expect(menu.offers('Mettre à la corbeille')).toBe(false)
+    expect(menu.offers('Révéler dans le dossier')).toBe(true)
   })
 
   // A document's file name IS its identifier: renaming one a tab is holding orphans that tab,
@@ -641,7 +647,7 @@ describe('the explorer menu', () => {
     render(<Explorer />)
     await open('a3f1.scene')
 
-    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeDisabled()
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(false))
   })
 
   it('renames a document no tab is holding', async () => {
@@ -651,18 +657,19 @@ describe('the explorer menu', () => {
     render(<Explorer />)
     await open('a3f1.scene')
 
-    expect(screen.getByRole('menuitem', { name: 'Renommer' })).toBeEnabled()
+    await waitFor(() => expect(menu.offers('Renommer')).toBe(true))
   })
 
   it('renames where the name is read', async () => {
     withProject()
     const { renameFile } = install({ '': [file('brief.pdf')] })
+    menu.picks('Renommer')
 
     render(<Explorer />)
     await open('brief.pdf')
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
-    await userEvent.clear(screen.getByRole('textbox', { name: 'Renommer' }))
-    await userEvent.type(screen.getByRole('textbox', { name: 'Renommer' }), 'note.pdf{Enter}')
+    const field = await screen.findByRole('textbox', { name: 'Renommer' })
+    await userEvent.clear(field)
+    await userEvent.type(field, 'note.pdf{Enter}')
 
     expect(renameFile).toHaveBeenCalledWith('brief.pdf', 'note.pdf')
   })
@@ -672,10 +679,11 @@ describe('the explorer menu', () => {
   it('asks for nothing when the name was left as it was', async () => {
     withProject()
     const { renameFile } = install({ '': [file('brief.pdf')] })
+    menu.picks('Renommer')
 
     render(<Explorer />)
     await open('brief.pdf')
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }))
+    await screen.findByRole('textbox', { name: 'Renommer' })
     await userEvent.keyboard('{Escape}')
 
     expect(renameFile).not.toHaveBeenCalled()

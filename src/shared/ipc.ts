@@ -6,6 +6,7 @@ import type { FolderEntry } from './domain/folder'
 import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
 import type { CommandId, MenuCheck } from './domain/command'
+import type { ContextMenuItem } from './domain/context-menu'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
   CloseChoice,
@@ -164,6 +165,8 @@ export type Channels = {
   windowLanguage: 'window:language'
   windowWorkspace: 'window:workspace'
 
+  menuPopup: 'menu:popup'
+
   updateState: 'update:state'
   updateInstall: 'update:install'
 }
@@ -285,6 +288,8 @@ export const CHANNELS: Channels = {
   windowState: 'window:state',
   windowLanguage: 'window:language',
   windowWorkspace: 'window:workspace',
+
+  menuPopup: 'menu:popup',
 
   updateState: 'update:state',
   updateInstall: 'update:install',
@@ -431,6 +436,9 @@ export type LogScope =
   // holding the documents, and both used to leave nothing behind in a packaged build.
   | 'shell.render'
   | 'shell.layout'
+  // A menu the system refused to draw. It leaves nothing on screen to look at — no surface, no
+  // half-open flyout — so a right-click that does nothing at all is the only symptom there is.
+  | 'shell.menu'
 
 export const LOG_SCOPES: readonly LogScope[] = [
   'scene.model',
@@ -461,6 +469,7 @@ export const LOG_SCOPES: readonly LogScope[] = [
   'font.face',
   'shell.render',
   'shell.layout',
+  'shell.menu',
 ]
 
 /**
@@ -1021,6 +1030,16 @@ export type StudioBridge = {
     ) => Promise<void>
   }
   menu: {
+    /**
+     * Draws these rows as a native context menu over the calling window, and answers the `id` of
+     * the row that was chosen — `null` when the menu was dismissed.
+     *
+     * The window builds the rows because it is the only side that knows them: the labels come
+     * from its own bundle, and `enabled` from state no other process replicates. What it does
+     * NOT decide is where the menu appears — the system pops it at the pointer, which is the
+     * whole reason for going through here rather than drawing a surface.
+     */
+    popup: (items: readonly ContextMenuItem[]) => Promise<string | null>
     onOpenTool: (callback: (request: ToolRequest) => void) => Unsubscribe
     onCommand: (callback: (command: CommandId) => void) => Unsubscribe
     onSceneAdd: (callback: (request: SceneAddRequest) => void) => Unsubscribe

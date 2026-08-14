@@ -1,10 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { fakeMenu } from '@/helpers/menu-fixtures'
+import { installFakeBridge } from '@/services/fake-bridge'
 import { useSettings } from '@/stores/settings'
 import { TitleBar } from './TitleBar'
+
+let menu = fakeMenu()
 
 /** `classList`, never `className`: `FOCUS_RING` already carries a `focus-visible:ring-accent`. */
 function pill(name: string): HTMLElement {
@@ -26,6 +29,8 @@ function drag(from: string, onto: string): void {
 describe('TitleBar', () => {
   beforeEach(() => {
     useSettings.setState({ settings: structuredClone(DEFAULT_SETTINGS) })
+    menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
   })
 
   it('draws the spaces in the order the settings carry', () => {
@@ -212,39 +217,24 @@ describe('TitleBar', () => {
   it('offers the same move in a menu, for a pointer that cannot drag', async () => {
     const write = vi.fn(async () => undefined)
     useSettings.setState({ write })
+    menu.picks('Déplacer à droite')
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
     fireEvent.contextMenu(pill('Image'))
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Déplacer à droite' }))
 
-    expect(write).toHaveBeenCalledWith({
-      workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
-    })
+    await vi.waitFor(() =>
+      expect(write).toHaveBeenCalledWith({
+        workspaces: { order: ['video', 'image', '3d', 'audio', 'textures', 'skyboxes'] },
+      }),
+    )
   })
 
-  it('disables the move the end of the bar refuses', () => {
+  it('disables the move the end of the bar refuses', async () => {
     render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
 
     fireEvent.contextMenu(pill('Image'))
 
-    expect(screen.getByRole('menuitem', { name: 'Déplacer à gauche' })).toBeDisabled()
-  })
-
-  it('says what each move does rather than reading the row back', () => {
-    render(<TitleBar activeWorkspace="image" onWorkspace={vi.fn()} />)
-
-    fireEvent.contextMenu(pill('Image'))
-
-    const left = screen.getByRole('menuitem', { name: 'Déplacer à gauche' })
-    expect(left).toHaveAttribute(
-      'data-tooltip-content',
-      'Place cet espace avant son voisin de gauche dans la barre',
-    )
-    expect(left).not.toHaveAttribute('aria-label')
-    expect(screen.getByRole('menuitem', { name: 'Déplacer à droite' })).toHaveAttribute(
-      'data-tooltip-content',
-      'Place cet espace après son voisin de droite dans la barre',
-    )
+    await vi.waitFor(() => expect(menu.offers('Déplacer à gauche')).toBe(false))
   })
 
   // The order changes, the focus does not move, and the label does not change: without this the

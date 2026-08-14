@@ -177,6 +177,7 @@ describe('the lists that stand for a union', () => {
       'font.face': true,
       'shell.render': true,
       'shell.layout': true,
+      'shell.menu': true,
     }
 
     expect(sorted(LOG_SCOPES)).toEqual(sorted(Object.keys(all)))

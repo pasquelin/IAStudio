@@ -184,6 +184,7 @@ const bridge: StudioBridge = {
       ipcRenderer.invoke(CHANNELS.windowWorkspace, workspace, tools, checked),
   },
   menu: {
+    popup: items => ipcRenderer.invoke(CHANNELS.menuPopup, items),
     onOpenTool: callback => subscribe<ToolRequest>(EVENTS.openTool, callback),
     onCommand: callback => subscribe<CommandId>(EVENTS.menuCommand, callback),
     onSceneAdd: callback => subscribe<SceneAddRequest>(EVENTS.sceneAdd, callback),

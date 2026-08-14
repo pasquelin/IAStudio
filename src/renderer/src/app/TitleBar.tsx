@@ -3,8 +3,7 @@ import { useState, type DragEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CLICKABLE, DRAGGABLE } from '@/helpers/app-region'
 import { cn } from '@/helpers/cn'
-import { ContextMenu } from '@/design/ContextMenu'
-import { MenuRow } from '@/design/MenuRow'
+import { showContextMenu } from '@/helpers/context-menu'
 import { TITLE_BAR_GHOST, FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { bindingOf, commandFor } from '@shared/domain/command'
@@ -23,7 +22,7 @@ import {
 import { workspaceLabelKey } from '@/helpers/workspaces'
 import { dragChannel } from '@/helpers/drag'
 import { useSettings } from '@/stores/settings'
-import { HINT_BOTTOM, HINT_RIGHT } from '@/helpers/tooltip'
+import { HINT_BOTTOM } from '@/helpers/tooltip'
 
 /** Its own MIME type, so a file from the desktop never reads as one of the bar's pills. */
 const SPACES = dragChannel('application/x-scenario-workspace')
@@ -60,7 +59,6 @@ export function TitleBar({
   // and without it the pill being dragged would light itself up as somewhere it could land.
   const [drag, setDrag] = useState<{ from: WorkspaceId; over: WorkspaceId | null } | null>(null)
 
-  const [menuAt, setMenuAt] = useState<{ id: WorkspaceId; x: number; y: number } | null>(null)
   const [announcement, setAnnouncement] = useState('')
 
   const order = workspaces.map(workspace => workspace.id)
@@ -80,6 +78,26 @@ export function TitleBar({
   const step = (id: WorkspaceId, move: WorkspaceMove): void => {
     if (!canMoveWorkspace(order, id, move)) return
     apply(movedWorkspaceBy(order, id, move), id)
+  }
+
+  // The two moves as a menu, which is the third way to reorder: the drag, the keyboard, this.
+  const openMenu = (id: WorkspaceId): void => {
+    void showContextMenu([
+      {
+        label: t('workspaces.moveLeft'),
+        icon: mdiArrowLeft,
+        tooltip: t('workspaces.moveLeftHint'),
+        disabled: !canMoveWorkspace(order, id, 'left'),
+        onSelect: () => step(id, 'left'),
+      },
+      {
+        label: t('workspaces.moveRight'),
+        icon: mdiArrowRight,
+        tooltip: t('workspaces.moveRightHint'),
+        disabled: !canMoveWorkspace(order, id, 'right'),
+        onSelect: () => step(id, 'right'),
+      },
+    ])
   }
 
   const drop = (event: DragEvent, onto: WorkspaceId): void => {
@@ -140,36 +158,11 @@ export function TitleBar({
               onDrop: event => drop(event, workspace.id),
               onEnd: () => setDrag(null),
               onStep: move => step(workspace.id, move),
-              onMenu: at => setMenuAt({ id: workspace.id, ...at }),
+              onMenu: () => openMenu(workspace.id),
             }}
           />
         ))}
       </nav>
-
-      {menuAt && (
-        <ContextMenu at={menuAt} onClose={() => setMenuAt(null)}>
-          <MenuRow
-            label={t('workspaces.moveLeft')}
-            icon={mdiArrowLeft}
-            disabled={!canMoveWorkspace(order, menuAt.id, 'left')}
-            tip={HINT_RIGHT(t('workspaces.moveLeftHint'))}
-            onSelect={() => {
-              step(menuAt.id, 'left')
-              setMenuAt(null)
-            }}
-          />
-          <MenuRow
-            label={t('workspaces.moveRight')}
-            icon={mdiArrowRight}
-            disabled={!canMoveWorkspace(order, menuAt.id, 'right')}
-            tip={HINT_RIGHT(t('workspaces.moveRightHint'))}
-            onSelect={() => {
-              step(menuAt.id, 'right')
-              setMenuAt(null)
-            }}
-          />
-        </ContextMenu>
-      )}
 
       {/* The order changes under a focus that does not move and a label that does not change:
           without this the gesture succeeds in silence for anyone reading rather than looking. */}
@@ -196,7 +189,8 @@ type Reorder = {
   onDrop: (event: DragEvent) => void
   onEnd: () => void
   onStep: (move: WorkspaceMove) => void
-  onMenu: (at: { x: number; y: number }) => void
+  /** Takes no coordinates: the system pops the menu where the pointer is. */
+  onMenu: () => void
 }
 
 type BarButtonProps = {
@@ -264,7 +258,7 @@ function BarButton({ icon, label, current, onClick, reorder }: BarButtonProps) {
       onContextMenu={event => {
         if (!reorder) return
         event.preventDefault()
-        reorder.onMenu({ x: event.clientX, y: event.clientY })
+        reorder.onMenu()
       }}
       className={cn(
         TITLE_BAR_GHOST,

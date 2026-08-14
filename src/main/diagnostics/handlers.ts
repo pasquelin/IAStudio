@@ -52,6 +52,7 @@ const TOPIC_OF_SCOPE: Record<LogScope, ActivityTopic> = {
   'font.face': 'document',
   'shell.render': 'shell',
   'shell.layout': 'shell',
+  'shell.menu': 'shell',
 }
 
 /**

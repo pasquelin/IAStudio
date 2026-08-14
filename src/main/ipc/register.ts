@@ -14,6 +14,7 @@ import { registerScenarioHandlers } from '@main/scenario/handlers'
 import { runSettingAction } from '@main/settings/actions'
 import { registerSettingsHandlers } from '@main/settings/handlers'
 import { registerWindowControls } from '@main/window/controls'
+import { registerContextMenu } from '@main/window/context-menu'
 import { registerDialogHandlers } from '@main/window/dialogs'
 import { registerSceneHandlers } from '@main/scene/export'
 import { registerExportHandlers } from '@main/export/folder'
@@ -25,6 +26,7 @@ import type { Services } from '@main/services'
 /** Single place where the IPC surface is wired. Registered once, before any window loads. */
 export function registerIpc(services: Services): void {
   registerWindowControls()
+  registerContextMenu()
   registerMenuHandlers()
   registerDiagnosticsHandlers(() => services.journal)
   // Wired here rather than held by `Services`: opening a window is not a service, and this is

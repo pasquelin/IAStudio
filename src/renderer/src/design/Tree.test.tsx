@@ -510,7 +510,7 @@ describe('Tree, the menu a right-click opens', () => {
 
     fireEvent.contextMenu(screen.getByText('a'))
 
-    expect(onContextMenu).toHaveBeenCalledWith(NODES[1], expect.anything())
+    expect(onContextMenu).toHaveBeenCalledWith(NODES[1])
   })
 
   /**

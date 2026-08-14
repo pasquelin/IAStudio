@@ -1,11 +1,9 @@
 import { mdiFolderOpenOutline, mdiImageMultipleOutline } from '@mdi/js'
-import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import type { Asset } from '@shared/domain/asset'
-import { ContextMenu } from '@/design/ContextMenu'
-import { MenuRow } from '@/design/MenuRow'
 import { intentsFor, pixelEditorIntent } from '@/helpers/asset-intents'
+import { showContextMenu, type ContextMenuRow } from '@/helpers/context-menu'
 import { openAsset } from '@/helpers/open-asset'
-import { HINT_RIGHT } from '@/helpers/tooltip'
 import { workspaceById } from '@/helpers/workspaces'
 import { getBridge } from '@/services/bridge'
 import { reportFailure } from '@/services/diagnostics'
@@ -13,8 +11,12 @@ import { useAssets } from '@/stores/assets'
 
 export type AssetMenuProps = {
   asset: Asset
-  at: { x: number; y: number }
-  onClose: () => void
+  /**
+   * Handed the translator rather than the words, and it is the one menu that needs to be: its
+   * rows come from `ASSET_INTENTS`, whose labels are keys the table carries. A host composing
+   * them itself would be a second copy of the table.
+   */
+  t: TFunction
 }
 
 /**
@@ -28,19 +30,11 @@ export type AssetMenuProps = {
  * (`editorIntent`). What this lists is the other half: sending an asset into a document already
  * open, which is a gesture of its own and not a fallback of that one.
  *
- * A destination whose space has no document open is shown disabled rather than hidden: a menu
- * that changes length depending on what is open is a menu one cannot learn.
+ * A destination whose space has no document open is greyed rather than dropped: a menu that
+ * changes length depending on what is open is a menu one cannot learn.
  */
-export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
-  const { t } = useTranslation()
+export function openAssetMenu({ asset, t }: AssetMenuProps): void {
   const pixels = pixelEditorIntent(asset)
-
-  const choose =
-    (run: () => void): (() => void) =>
-    () => {
-      run()
-      onClose()
-    }
 
   // The inspector turns a false into a "file missing" row; this menu is gone by the time the
   // answer comes, so the failure travels to the log rather than nowhere. Either way, never a
@@ -69,48 +63,46 @@ export function AssetMenu({ asset, at, onClose }: AssetMenuProps) {
       .finally(() => useAssets.getState().invalidate())
   }
 
-  return (
-    <ContextMenu at={at} onClose={onClose}>
-      {intentsFor(asset.type).map(intent => (
-        <MenuRow
-          key={intent.id}
-          label={t(intent.labelKey)}
-          // Read off the workspace table: changing a space's glyph in the rail must change it here.
-          icon={workspaceById(intent.workspace).icon}
-          disabled={!intent.ready(asset)}
-          tip={HINT_RIGHT(t(`${intent.labelKey}Hint`))}
-          onSelect={choose(() => void intent.run(asset))}
-        />
-      ))}
-      {/* The other half of extracting a model's textures: a channel is assembled in the Textures
-          space, which writes no image back, so this is where its pixels are opened for editing. */}
-      {pixels && (
-        <MenuRow
-          label={t('assets.editPixels')}
-          icon={workspaceById(pixels.workspace).icon}
-          tip={HINT_RIGHT(t('assets.editPixelsHint'))}
-          onSelect={choose(() => void openAsset(asset, pixels))}
-        />
-      )}
-      {/* Only for a mesh, because only a mesh keeps its pictures inside itself. Shown for one
-          wherever it sits and disabled when the file is not here — a row that appears and
-          disappears with the selection is a row nobody can learn. */}
-      {asset.type === 'mesh' && (
-        <MenuRow
-          label={t('assets.extractTextures')}
-          icon={mdiImageMultipleOutline}
-          disabled={asset.location !== 'local'}
-          tip={HINT_RIGHT(t('assets.extractTexturesHint'))}
-          onSelect={choose(extract)}
-        />
-      )}
-      <MenuRow
-        label={t('inspector.reveal')}
-        icon={mdiFolderOpenOutline}
-        disabled={asset.location !== 'local'}
-        tip={HINT_RIGHT(t('inspector.revealHint'))}
-        onSelect={choose(reveal)}
-      />
-    </ContextMenu>
-  )
+  const rows: ContextMenuRow[] = intentsFor(asset.type).map(intent => ({
+    label: t(intent.labelKey),
+    // Read off the workspace table: changing a space's glyph in the rail must change it here.
+    icon: workspaceById(intent.workspace).icon,
+    tooltip: t(`${intent.labelKey}Hint`),
+    disabled: !intent.ready(asset),
+    onSelect: () => void intent.run(asset),
+  }))
+
+  // The other half of extracting a model's textures: a channel is assembled in the Textures
+  // space, which writes no image back, so this is where its pixels are opened for editing.
+  if (pixels) {
+    rows.push({
+      label: t('assets.editPixels'),
+      icon: workspaceById(pixels.workspace).icon,
+      tooltip: t('assets.editPixelsHint'),
+      onSelect: () => void openAsset(asset, pixels),
+    })
+  }
+
+  // Only for a mesh, because only a mesh keeps its pictures inside itself. Shown for one
+  // wherever it sits and greyed when the file is not here — a row that appears and disappears
+  // with the selection is a row nobody can learn.
+  if (asset.type === 'mesh') {
+    rows.push({
+      label: t('assets.extractTextures'),
+      icon: mdiImageMultipleOutline,
+      tooltip: t('assets.extractTexturesHint'),
+      disabled: asset.location !== 'local',
+      onSelect: extract,
+    })
+  }
+
+  rows.push({
+    label: t('inspector.reveal'),
+    icon: mdiFolderOpenOutline,
+    tooltip: t('inspector.revealHint'),
+    disabled: asset.location !== 'local',
+    onSelect: reveal,
+  })
+
+  void showContextMenu(rows)
 }

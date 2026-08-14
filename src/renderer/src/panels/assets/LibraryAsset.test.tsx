@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import { dragTransfer } from '@/helpers/drag-fixtures'
+import { fakeMenu } from '@/helpers/menu-fixtures'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { useCloud } from '@/stores/cloud'
 import { useProject } from '@/stores/project'
@@ -20,6 +21,10 @@ const asset: CloudAsset = {
   collectionIds: [],
 }
 
+const FETCH = 'Récupérer dans le projet'
+
+let menu = fakeMenu()
+
 function open() {
   render(
     <LibraryAsset asset={asset}>
@@ -27,7 +32,7 @@ function open() {
     </LibraryAsset>,
   )
   const surface = screen.getByText('tile').parentElement as Element
-  fireEvent.contextMenu(surface, { clientX: 10, clientY: 10 })
+  fireEvent.contextMenu(surface)
   return surface
 }
 
@@ -43,34 +48,35 @@ const withProject = (path: string | null): void => {
 describe('a library line the catalogue does not hold', () => {
   beforeEach(() => {
     useCloud.getState().clear()
-    installFakeBridge({})
+    menu = fakeMenu()
+    installFakeBridge({ menu: menu.bridge })
     withProject('/Users/someone/Reel.scenario')
   })
 
-  it('offers the one thing the line is for', () => {
+  it('offers the one thing the line is for', async () => {
     open()
 
-    expect(screen.getByRole('menuitem', { name: 'Récupérer dans le projet' })).toBeInTheDocument()
+    await vi.waitFor(() => expect(menu.labels()).toEqual([FETCH]))
   })
 
   /**
-   * Disabled rather than hidden, as every other menu here: an entry that comes and goes with
-   * the context is one nobody can learn. Without a project there is no folder to write into.
+   * Greyed rather than hidden, as every other menu here: an entry that comes and goes with the
+   * context is one nobody can learn. Without a project there is no folder to write into.
    */
-  it('greys the entry out when there is nowhere to write the file', () => {
+  it('greys the entry out when there is nowhere to write the file', async () => {
     withProject(null)
     open()
 
-    expect(screen.getByRole('menuitem', { name: 'Récupérer dans le projet' })).toBeDisabled()
+    await vi.waitFor(() => expect(menu.offers(FETCH)).toBe(false))
   })
 
   // One transfer at a time is `useCloud`'s own rule; the menu says so rather than starting a
   // second one that the store would silently refuse.
-  it('greys the entry out while another transfer is running', () => {
+  it('greys the entry out while another transfer is running', async () => {
     useCloud.setState({ busy: true })
     open()
 
-    expect(screen.getByRole('menuitem', { name: 'Récupérer dans le projet' })).toBeDisabled()
+    await vi.waitFor(() => expect(menu.offers(FETCH)).toBe(false))
   })
 
   /**
@@ -97,6 +103,7 @@ describe('a library line the catalogue does not hold', () => {
   it('fetches the asset when the entry is chosen', async () => {
     let pulled: readonly string[] = []
     installFakeBridge({
+      menu: menu.bridge,
       cloud: {
         pull: ids => {
           pulled = ids
@@ -104,9 +111,9 @@ describe('a library line the catalogue does not hold', () => {
         },
       },
     })
-    open()
+    menu.picks(FETCH)
 
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Récupérer dans le projet' }))
+    open()
 
     await vi.waitFor(() => expect(pulled).toEqual(['asset_remote']))
   })

@@ -82,7 +82,8 @@ export type TreeProps<T extends TreeNode> = {
    */
   onActivate?: (node: T) => void
   /** A right-click on a row, with where the pointer was. Absent leaves the browser's own menu. */
-  onContextMenu?: (node: T, at: { x: number; y: number }) => void
+  /** Takes no coordinates: the system pops the menu where the pointer already is. */
+  onContextMenu?: (node: T) => void
   /**
    * A row was dropped onto another. Absent leaves the tree undraggable — a tree with nothing to
    * reorder that offered the gesture would promise something it cannot do.
@@ -317,7 +318,7 @@ export function Tree<T extends TreeNode>({
                   // keep from ever being asked.
                   if (!onContextMenu || isTyping(event.target)) return
                   event.preventDefault()
-                  onContextMenu(row.node, { x: event.clientX, y: event.clientY })
+                  onContextMenu(row.node)
                 }}
                 onKeyDown={event => onRowKeyDown(row, index, event)}
               >

@@ -180,6 +180,7 @@
       "document.load": "Le document n’a pas pu être ouvert",
       "shell.render": "Une partie de l’interface n’a pas pu s’afficher",
       "shell.layout": "L’agencement enregistré d’un espace était illisible",
+      "shell.menu": "Un menu contextuel n’a pas pu être ouvert",
       "scene": {
         "render": "Rendu vidéo"
       }
