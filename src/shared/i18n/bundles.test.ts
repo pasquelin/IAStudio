@@ -696,7 +696,9 @@ describe('the failures the journal reports', () => {
     const idle = FAILURE_WORDINGS[code]
       .filter(
         wording =>
-          !LOG_SCOPES.some(scope => wording.test(BUNDLES[code].get(`activity.scope.${scope}`) ?? '')),
+          !LOG_SCOPES.some(scope =>
+            wording.test(BUNDLES[code].get(`activity.scope.${scope}`) ?? ''),
+          ),
       )
       .map(wording => wording.source)
 
