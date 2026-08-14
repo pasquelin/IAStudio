@@ -723,6 +723,8 @@
     "studio": "Studio",
     "chooseSky": "Choose a sky",
     "clearSky": "Back to the studio",
+    "openSky": "Open the sky",
+    "openTexture": "Open the texture",
     "font": "Font",
     "noFont": "None",
     "chooseFont": "Choose a font",

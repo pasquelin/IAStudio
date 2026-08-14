@@ -1,10 +1,14 @@
 import { mdiCheckboxBlankOutline, mdiClose, mdiTextureBox } from '@mdi/js'
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
+import type { AssetType } from '@shared/domain/asset'
+import { activation } from '@/helpers/activation'
+import { cn } from '@/helpers/cn'
 import { HINT_RIGHT, TIP_LEFT } from '@/helpers/tooltip'
+import { AssetDropTarget } from './AssetDropTarget'
 import { Thumbnail } from './Thumbnail'
 import { MenuButton } from './MenuButton'
 import { MenuRow } from './MenuRow'
-import { FIELD_LABEL, FIELD_ROW } from './styles'
+import { FIELD_LABEL, FIELD_ROW, FOCUS_RING } from './styles'
 import { ToolButton } from './ToolButton'
 
 export type TextureOption = {
@@ -31,6 +35,19 @@ export type TextureFieldProps = {
    */
   emptyHint: string
   optionHint: string
+  /**
+   * The kinds a drag may drop into this slot. Absent leaves the field undroppable, which is what
+   * a slot filled from something other than the catalogue wants — `FontField` offers the fonts
+   * of the system, and no asset of the project is one.
+   */
+  accepts?: readonly AssetType[]
+  /**
+   * OPENING what the slot holds — the double-click on its picture, and Enter with it. The caller
+   * owns it because it alone knows what `value` names; absent, the picture stays inert.
+   */
+  onOpen?: () => void
+  /** What the double-click does, for the reader that cannot see it. Required with `onOpen`. */
+  openLabel?: string
 }
 
 /** The thumbnail matches the control gauge, so a slot is exactly one row tall. */
@@ -50,16 +67,37 @@ export function TextureField({
   chooseLabel,
   emptyHint,
   optionHint,
+  accepts,
+  onOpen,
+  openLabel,
 }: TextureFieldProps) {
   const chosen = useMemo(() => options.find(option => option.id === value), [options, value])
 
+  const picture = <Thumbnail url={chosen?.url} className={THUMBNAIL} />
+
   return (
-    <div className={FIELD_ROW}>
+    <DroppableSlot accepts={accepts} onDrop={onChange}>
       <span title={label} className={FIELD_LABEL}>
         {label}
       </span>
 
-      <Thumbnail url={chosen?.url} className={THUMBNAIL} />
+      {/* A button only where there is something to open: an empty slot double-clicked would take
+          the user to nothing, and a focus stop that leads nowhere is one more Tab to cross. */}
+      {onOpen && openLabel && value !== null ? (
+        <button
+          type="button"
+          {...activation(onOpen)}
+          {...TIP_LEFT(openLabel, false, undefined)}
+          className={cn(
+            'shrink-0 cursor-pointer rounded-(--radius-sc-md) border-none bg-transparent p-0',
+            FOCUS_RING,
+          )}
+        >
+          {picture}
+        </button>
+      ) : (
+        picture
+      )}
 
       <span className="text-muted min-w-0 flex-1 truncate">{chosen?.name ?? emptyLabel}</span>
 
@@ -113,6 +151,37 @@ export function TextureField({
           onClick={() => onChange(null)}
         />
       )}
-    </div>
+    </DroppableSlot>
+  )
+}
+
+/**
+ * The row itself, made a drop target only where a drop means something.
+ *
+ * Wrapped rather than made conditional inside the row: `AssetDropTarget` owns the outline that
+ * says WHICH slot a drop would land in, and a field that mounted one unconditionally would light
+ * up on a drag it has no use for. `exclusive`, because these slots sit inside the panel's own
+ * target — without it both would frame at once and the answer would name two places.
+ */
+function DroppableSlot({
+  accepts,
+  onDrop,
+  children,
+}: {
+  accepts?: readonly AssetType[]
+  onDrop: (assetId: string) => void
+  children: ReactNode
+}) {
+  if (!accepts) return <div className={FIELD_ROW}>{children}</div>
+
+  return (
+    <AssetDropTarget
+      accepts={accepts}
+      exclusive
+      onDrop={asset => onDrop(asset.id)}
+      className={FIELD_ROW}
+    >
+      {children}
+    </AssetDropTarget>
   )
 }

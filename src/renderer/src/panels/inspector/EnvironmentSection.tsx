@@ -1,10 +1,13 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { isLocalPicture, posterUrl } from '@shared/domain/asset'
+import { isLocalPicture, posterUrl, type AssetType } from '@shared/domain/asset'
 import { STUDIO_ENVIRONMENT, type EnvironmentRef } from '@shared/domain/scene'
 import { PropertySection } from '@/design/PropertySection'
 import { TextureField, type TextureOption } from '@/design/TextureField'
+import { openAsset } from '@/helpers/open-asset'
 import { useAssets } from '@/stores/assets'
+
+const SKIES: readonly AssetType[] = ['skybox']
 
 export type EnvironmentSectionProps = {
   environment: EnvironmentRef
@@ -48,6 +51,15 @@ export function EnvironmentSection({ environment, onChange }: EnvironmentSection
         clearLabel={t('inspector.clearSky')}
         emptyHint={t('inspector.studioHint')}
         optionHint={t('inspector.pickSkyHint')}
+        // A sky and nothing else: the slot lights up for what it can actually hold, so a drag
+        // across the panel says where it may land before the hand commits to it.
+        accepts={SKIES}
+        openLabel={t('inspector.openSky')}
+        onOpen={() => {
+          if (environment.kind !== 'skybox') return
+          const sky = assets.find(asset => asset.id === environment.assetId)
+          if (sky) void openAsset(sky)
+        }}
       />
     </PropertySection>
   )
