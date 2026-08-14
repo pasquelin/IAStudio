@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { CHANNELS } from '@shared/ipc'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
@@ -68,6 +68,7 @@ function setup(
 ): Harness {
   resetHandlers()
   const catalog = memoryCatalog()
+  onTestFinished(catalog.close)
   const listed: unknown[] = []
   const searched: unknown[] = []
   const tagged: unknown[] = []

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { CloudAsset } from '@shared/domain/cloud-asset'
 import type { AsyncCatalog } from '@main/project/catalog-client'
@@ -36,6 +36,7 @@ type Harness = {
 
 function harness(overrides: Partial<CloudBackendDeps> = {}): Harness {
   const catalog = memoryCatalog()
+  onTestFinished(catalog.close)
   const imported: ImportRequest[] = []
   const downloads: { assetId: string; format?: string }[] = []
   const multiparts: unknown[] = []

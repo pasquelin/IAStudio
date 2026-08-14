@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import { CHANNELS, EVENTS } from '@shared/ipc'
 import { glbFile, glbWearing } from '@main/assets/glb-fixtures'
@@ -111,6 +111,7 @@ describe('project handlers', () => {
     resetHandlers()
     vi.clearAllMocks()
     catalog = memoryCatalog()
+    onTestFinished(catalog.close)
   })
 
   // Same silence as opening, reached by the explorer's own "create a project" button: nothing

@@ -6,8 +6,37 @@ import { siteOf, walkIn } from './ast-sites'
 import { SOURCE_ROOT, WHOLE_PROJECT } from './source-files'
 import { testFilesUnder } from './wide-guards'
 
-const calls = (node: ts.Node, name: string): node is ts.CallExpression =>
-  ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name
+const calls = (node: ts.Node, ...names: readonly string[]): node is ts.CallExpression =>
+  ts.isCallExpression(node) &&
+  ts.isIdentifier(node.expression) &&
+  names.includes(node.expression.text)
+
+/**
+ * The two ways a suite gets a database, and there are no others.
+ *
+ * `memoryCatalog` (`project/catalog-fixtures.ts`) wraps `openMemoryDatabase`, so a fixture opens
+ * one without a suite ever naming the driver. It is the MORE used of the two — thirteen sites
+ * against fourteen — and it was invisible to this guard until 2026-08-14.
+ */
+const OPENERS = ['openMemoryDatabase', 'memoryCatalog']
+
+/** The two ways a suite gives one back. Both are teardowns; neither is a plain statement. */
+const TEARDOWNS = ['onTestFinished', 'afterEach']
+
+/**
+ * Suites that hand their database to the object which will close it, which no static rule follows.
+ *
+ * By FILE and with a reason in prose, the way `design/tokens.test.ts` carries its own. The entry
+ * below is the shape `openCatalog: async () => memoryCatalog()` — the handle is given away at the
+ * moment it is made, and comes back through its new owner. Reading that would mean following a
+ * value across a constructor, which is a rule no reader could apply by eye.
+ *
+ * The test at the bottom asks whether an entry is still NEEDED, never whether its prose is true.
+ */
+const OWNED_ELSEWHERE: Record<string, string> = {
+  'main/project/store.test.ts':
+    'three catalogues handed to `openCatalog`, given back by `store.ts` when the store closes',
+}
 
 /**
  * The name the opening was bound to, whether declared or assigned.
@@ -60,9 +89,9 @@ export function unclosedIn(path: string, source: string): string[] {
   const givenBack: string[] = []
 
   walkIn(file, node => {
-    if (calls(node, 'openMemoryDatabase'))
+    if (calls(node, ...OPENERS))
       openings.push({ name: nameBoundTo(node), site: siteOf(file, path, node) })
-    else if (calls(node, 'onTestFinished')) givenBack.push(...closedNamesOf(node.arguments[0]))
+    else if (calls(node, ...TEARDOWNS)) givenBack.push(...closedNamesOf(node.arguments[0]))
   })
 
   const opened = tally(openings.flatMap(opening => (opening.name ? [opening.name] : [])))
@@ -88,34 +117,31 @@ export function unclosedIn(path: string, source: string): string[] {
  * database; the next read the argument as text, so a comment explaining why the handle was left
  * open absolved it. The handle's own name has to come back, spelt as code.
  *
- * FIVE blind spots, written down rather than left to be found:
+ * FOUR blind spots, written down rather than left to be found:
  *
- * - **one entry point, and it is the SUITES that are read.** `memoryCatalog`
- *   (`project/catalog-fixtures.ts`) opens through this helper, but a fixture is not a `.test.ts`
- *   and is never swept; its thirteen callers name only `memoryCatalog`. On 2026-08-14
- *   `local-backend.test.ts` closed its two and the three of `store.test.ts` came back through
- *   `store.ts:234`, leaving **eight** that leak — in `assets/cloud-backend`, `assets/handlers`,
- *   `favorites/handlers`, `project/activity-log` (four of them) and `project/handlers`. A lot of
- *   its own, and the reason the title claims the openings this guard can read.
+ * - **the SUITES are read, and nothing else.** A fixture is not a `.test.ts`, so a third wrapper
+ *   around `openMemoryDatabase` would open databases this guard never sees. `OPENERS` is the whole
+ *   of what it knows, and it is a list somebody has to extend by hand — `memoryCatalog` was
+ *   missing from it until 2026-08-14, which hid eight leaks.
  * - **named, not invoked.** `onTestFinished(() => { if (keep) d.close() })` gives the handle back
  *   on one branch and reads as sound on both: the rule sees the name spelt as code, never the call
  *   actually made. Following the branch would need the value resolved, which no reader does by eye.
  * - **a name, not a binding.** Two handles sharing a name share their tally. The case that gets
  *   through is a teardown posted in one `describe` for a handle opened elsewhere under the same
- *   name — `catalog` closed for a `memoryCatalog()` answers for a `createCatalog(open…())` next
- *   door. Resolving scopes buys a rule no reader could apply by eye.
+ *   name. Resolving scopes buys a rule no reader could apply by eye.
  * - **three correct spellings it refuses**, all erring towards the safe side and none in the tree:
  *   `const { close } = openMemoryDatabase()`, a handle renamed before its teardown, and a handle
  *   handed to a helper that closes it. Each reads as a leak.
- * - **`onTestFinished` only.** A teardown written as `afterEach` over a list of handles reads as a
- *   leak. Deliberate: one spelling in the tree is one spelling to learn. Measured the same day:
- *   the five catalogue suites hold no `afterEach` at all.
  */
 describe('every database a suite opens by name is given back', () => {
+  const sweep = (): { path: string; findings: string[] }[] =>
+    testFilesUnder(SOURCE_ROOT).map(path => {
+      const named = relative(SOURCE_ROOT, path)
+      return { path: named, findings: unclosedIn(named, readFileSync(path, 'utf8')) }
+    })
+
   const findingsOf = (): string[] =>
-    testFilesUnder(SOURCE_ROOT).flatMap(path =>
-      unclosedIn(relative(SOURCE_ROOT, path), readFileSync(path, 'utf8')),
-    )
+    sweep().flatMap(({ path, findings }) => (path in OWNED_ELSEWHERE ? [] : findings))
 
   it(
     'gives back every database it opened, in every suite of the project',
@@ -129,6 +155,42 @@ describe('every database a suite opens by name is given back', () => {
   // not exist, the assertion above stays green.
   it('reads the suites the project ships', () => {
     expect(testFilesUnder(SOURCE_ROOT).length).toBeGreaterThan(100)
+  })
+
+  /**
+   * An exemption that has stopped being needed is worse than none: it goes on covering whatever is
+   * added to the file next. Held by REPLAYING the rule, not by asking whether the prose still
+   * reads true — the day `store.test.ts` names its catalogues, this fails and the entry goes.
+   */
+  it('carries no exemption the rule would no longer refuse', () => {
+    const swept = sweep()
+
+    expect(
+      Object.keys(OWNED_ELSEWHERE).filter(path => !swept.some(one => one.path === path)),
+    ).toEqual([])
+    expect(
+      swept
+        .filter(one => one.path in OWNED_ELSEWHERE && one.findings.length === 0)
+        .map(one => one.path),
+    ).toEqual([])
+  })
+
+  it('reads the fixture that wraps the driver, not only the driver', () => {
+    expect(unclosedIn('probe.ts', 'const catalog = memoryCatalog()')).toEqual(['probe.ts:1'])
+    expect(
+      unclosedIn('probe.ts', 'const catalog = memoryCatalog()\nonTestFinished(catalog.close)'),
+    ).toEqual([])
+  })
+
+  // `afterEach` is the other teardown the tree uses, and it obeys the same rule about whose
+  // handle comes back: an `afterEach` closing something else answers for nothing.
+  it('takes a teardown written as afterEach, and only for the handle it names', () => {
+    expect(unclosedIn('probe.ts', 'const c = memoryCatalog()\nafterEach(() => c.close())')).toEqual(
+      [],
+    )
+    expect(unclosedIn('probe.ts', 'const c = memoryCatalog()\nafterEach(() => rm(root))')).toEqual([
+      'probe.ts:1',
+    ])
   })
 
   it('sees the opening the catalogue suites had left without a teardown', () => {
