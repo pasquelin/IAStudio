@@ -96,7 +96,13 @@ export function readsTheTree(code: string): boolean {
   )
 }
 
-function testFilesUnder(folder: string): string[] {
+/**
+ * Every suite under `folder`, whatever it reads.
+ *
+ * Exported because a guard that sweeps the SUITES rather than the sources has nowhere else to get
+ * them: `source-files.ts` excludes `.test.ts` by design. Two walks of the same tree would drift.
+ */
+export function testFilesUnder(folder: string): string[] {
   return readdirSync(folder, { withFileTypes: true }).flatMap(entry => {
     const path = join(folder, entry.name)
     if (entry.isDirectory()) return testFilesUnder(path)

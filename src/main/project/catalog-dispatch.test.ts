@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import { createCatalog, type Catalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
 import { dispatchCatalogRequest } from './catalog-dispatch'
@@ -11,7 +11,9 @@ import type {
 } from '@shared/domain/activity'
 
 function catalogOf(): Catalog {
-  return createCatalog(openMemoryDatabase())
+  const catalog = createCatalog(openMemoryDatabase())
+  onTestFinished(catalog.close)
+  return catalog
 }
 
 const NO_ASSETS = emptyAssetCounts()

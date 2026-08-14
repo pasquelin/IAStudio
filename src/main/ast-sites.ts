@@ -13,6 +13,23 @@
 import ts from 'typescript'
 
 /**
+ * Every node of `subtree`, in source order.
+ *
+ * For a rule that GATHERS rather than recognises — one that has to carry a name or a count out of
+ * the tree, which a boolean cannot. `sitesIn` is this walk with the answer narrowed to locations;
+ * a guard needing more takes this and stays on the one recursion.
+ */
+export function walkIn(subtree: ts.Node, visit: (node: ts.Node) => void): void {
+  visit(subtree)
+  ts.forEachChild(subtree, child => walkIn(child, visit))
+}
+
+/** Where `node` sits, as `path:line` with a 1-based line — the coordinate a reader opens. */
+export function siteOf(file: ts.SourceFile, path: string, node: ts.Node): string {
+  return `${path}:${file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1}`
+}
+
+/**
  * Every site of `file` the rule recognises, as `path:line` with a 1-based line.
  *
  * `path` is passed rather than taken from `file.fileName`: guards report a path relative to
@@ -26,15 +43,9 @@ export function sitesIn(
 ): string[] {
   const found: string[] = []
 
-  const walk = (node: ts.Node): void => {
-    if (recognises(node)) {
-      const { line } = file.getLineAndCharacterOfPosition(node.getStart(file))
-      found.push(`${path}:${line + 1}`)
-    }
+  walkIn(file, node => {
+    if (recognises(node)) found.push(siteOf(file, path, node))
+  })
 
-    ts.forEachChild(node, walk)
-  }
-
-  walk(file)
   return found
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished } from 'vitest'
 import { createCatalogQueue, serveCatalog, type CatalogServerPort } from './catalog-queue'
 import { createCatalog } from './catalog'
 import { openMemoryDatabase } from './sqlite-memory'
@@ -155,7 +155,9 @@ describe('a catalogue served on a port', () => {
 
   it('answers what it is asked, off the catalogue it was given', async () => {
     const port = fakePort()
-    serveCatalog(createCatalog(openMemoryDatabase()), port)
+    const catalog = createCatalog(openMemoryDatabase())
+    onTestFinished(catalog.close)
+    serveCatalog(catalog, port)
 
     port.send({ id: 1, op: 'search', query: {} })
     await settle()
@@ -168,6 +170,7 @@ describe('a catalogue served on a port', () => {
   it('skips a request abandoned before its turn', async () => {
     const port = fakePort()
     const catalog = createCatalog(openMemoryDatabase())
+    onTestFinished(catalog.close)
     serveCatalog(catalog, port)
 
     port.send({ id: 1, op: 'search', query: { text: 'mo' } })
