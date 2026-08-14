@@ -40,7 +40,7 @@ too — with no update to the studio.
 | A **number** | a quantity | often with a minimum and a maximum |
 | A **checkbox** | yes or no | — |
 | A **dropdown** | a list of imposed choices | a format, a style, a size |
-| An **empty frame** reading "Drop a picture…" | an input picture — a reference, a mask, the image to edit | drag a project asset onto it, or paste its id |
+| An **empty frame** reading "Drop an image…" | an input image — a reference, a mask, the image to edit | drag a project asset onto it, or paste its id |
 | A **colour square** | a colour | a click opens the system picker |
 | A **number with a die** 🎲 | the *seed* — see below | a number, or a click on the die |
 
@@ -205,7 +205,7 @@ own.
 | Message | What it means |
 |---|---|
 | "This text is already in English." | translation has nothing to do — the studio checks the language before calling |
-| "Drop a reference picture to describe its style." | the form carries no picture to read |
+| "Drop a reference image to describe its style." | the form carries no image to read |
 
 Neither is a failure, and nothing is spent when they appear.
 

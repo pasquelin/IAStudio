@@ -25,7 +25,7 @@ volume, under a real light**, and turns it.
 2. Click the **+** button on the left rail. A fresh document opens.
 3. **Drag an image from the project onto the preview.** It becomes the **base colour**.
 
-While no image is placed, the preview shows: "Drop a picture from the project to use it as the
+While no image is placed, the preview shows: "Drop an image from the project to use it as the
 base colour".
 
 A blue frame appears around the preview when you hover with an image: that is the sign the drop
