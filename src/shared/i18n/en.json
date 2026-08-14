@@ -613,7 +613,7 @@
     "clearTexture": "Remove the texture",
     "modelOverrides": "Swap a map",
     "noModelTexture": "No image was taken out of this model.",
-    "openTextureHint": "Double-click opens this image in the Textures space",
+    "openTextureHint": "Double-click to open this image in the Textures space",
     "fields": {
       "width": "Width",
       "height": "Height",
@@ -724,7 +724,7 @@
     "chooseSky": "Choose a sky",
     "clearSky": "Back to the studio",
     "openSky": "Open the sky",
-    "openSkyHint": "Double-click opens this sky in its own space",
+    "openSkyHint": "Double-click to open this sky in its own space",
     "openTexture": "Open the texture",
     "font": "Font",
     "noFont": "None",
