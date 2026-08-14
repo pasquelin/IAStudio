@@ -113,8 +113,12 @@ export type RowTone = 'soft' | 'strong'
  *
  * Written here because `Tree` and `Row` must AGREE on it: the tree draws the indent and the
  * chevron, the row draws the icon and the name, and the two meet in the middle of every line in
- * the studio. Kept apart, the gutters drifted and a nested scene node started its name 96px from
- * the panel edge — measured, and down to 66 once they were the same number.
+ * the studio. Kept apart, four gutters accumulated between the panel edge and a nested scene
+ * node's name — 96px of them, at comfort density.
+ *
+ * The half-step buys 10 of those, which is the honest figure: the gutters were never where most
+ * of that number came from. What paid for the rest is the eye leaving the indentation for a
+ * column of its own, and shrinking to a control that sits INSIDE a line rather than on a bar.
  */
 export const ROW_LINE = 'flex h-full items-center gap-1.5 px-1'
 

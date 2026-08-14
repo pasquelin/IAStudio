@@ -55,7 +55,7 @@ export function Row({
     // name a further 4px off its chevron.
     //
     // The shape itself is `ROW_LINE`, shared with `Tree`: the two draw halves of the same line,
-    // and gutters that drifted apart are what put a nested node's name 96px from the panel edge.
+    // and a gutter that drifted here would land in the middle of every list in the studio.
     <div className={ROW_LINE}>
       {leading}
       {media ?? (icon && <UiIcon path={icon} size={14} className="shrink-0" />)}
