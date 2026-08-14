@@ -165,7 +165,7 @@
       "skybox.source": "The sky image could not be loaded",
       "skybox.export": "Exporting the sky failed",
       "canvas.layer": "A layer could not be loaded",
-      "canvas.size": "This image could not be opened at its own size",
+      "canvas.size": "This image could not keep its own size",
       "image.export": "Exporting the image failed",
       "document.save": "Saving the document failed",
       "assets.reveal": "The file could not be shown",

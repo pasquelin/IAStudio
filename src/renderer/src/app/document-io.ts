@@ -442,6 +442,12 @@ export async function saveDocumentAs(documentId: string): Promise<boolean> {
   const { bridge, document, io } = savable
 
   const source = document.sourceAssetId
+  // KNOWN WRONG, and left for its own batch: the three `assets.save` lines below read « the
+  // asset could not be rewritten », while ⇧⌘S never rewrites anything — it makes a COPY. The
+  // third is the worst of them: the comment above it says the asset is already on disk, so the
+  // journal denies a write that happened. Same shape as the drift warning this batch moved out,
+  // one function away, and fixing it needs a scope or a sentence of its own.
+  //
   // No asset to derive from, or a kind that bakes to nothing one could hold: both are "there is
   // no copy to make", and both are said out loud rather than doing nothing quietly.
   if (!source || !io.writeAsset) {
