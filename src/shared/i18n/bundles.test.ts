@@ -643,6 +643,68 @@ describe('the keys the interface composes', () => {
 })
 
 /**
+ * Every `activity.scope.*` line is written at `level: 'error'` — `reportFailure` hard-codes it and
+ * is the only caller — and it reaches the reader as a toast before it is a journal row. So the
+ * sentence has one job: say that something failed.
+ *
+ * `scene.render` said `Rendu vidéo` / `Video render` for a year. A neutral noun phrase, the only
+ * one of the twenty-nine, announcing nothing at the exact moment a render had just died. The
+ * guard above it saw nothing: `DYNAMIC_KEYS` asks that the key EXISTS and is not blank, never
+ * what it says.
+ *
+ * The wordings are listed rather than pattern-matched, because no cheap test tells a failure
+ * sentence from a title. Two alternatives were measured and dropped: a value colliding with an
+ * action label catches nothing (`animation.render` reads `Rendre en vidéo`, no collision at all),
+ * and a minimum word count is arbitrary. Listing them costs one line the day a new phrasing is
+ * written — the same upkeep `DYNAMIC_KEYS` already asks for, and an added line is a line a
+ * reviewer reads.
+ *
+ * What this does NOT catch, and it is the important half: whether the sentence is TRUE.
+ * `assets.open` says `Cet asset n'a nulle part où aller` and passes here, while covering one of
+ * the six causes that raise it — the five others read under a sentence that is wrong. Announcing
+ * a failure and describing the right one are two different jobs; only the first is machine work.
+ *
+ * Nor does the second test catch a wording made too WIDE — `/./` would pass both tests and empty
+ * the guard in one line. It rules out dead entries, not dilution: "can only shrink" is about the
+ * list growing into a catalogue, and says nothing about a regex that stopped being specific.
+ *
+ * And the list is a GRAMMAR, which is the price paid here: `Impossible de…`, `Échec de…` and
+ * `Failed to…` are all correct French and English, and none of them can be pre-authorised —
+ * the second test drops any wording no line uses yet. A new phrasing is a line added under a
+ * reviewer's eyes, deliberately, rather than a sentence that quietly announces nothing.
+ */
+const FAILURE_WORDINGS: Record<Language, readonly RegExp[]> = {
+  fr: [/a échoué/, /n’a pas pu/, /n’ont pas pu/, /a perdu/, /n’a nulle part/, /était illisible/],
+  // Not `/ failed\b/`: the leading space and the case made `Failed to open…` a false red, which
+  // is how English states a failure most often. Same eight lines matched either way.
+  en: [/\bfailed\b/i, /could not/, /lost one of/, /has nowhere/],
+}
+
+describe('the failures the journal reports', () => {
+  it.each(CODES)('says that something failed, in every scope line, in %s', code => {
+    const silent = LOG_SCOPES.filter(scope => {
+      const text = BUNDLES[code].get(`activity.scope.${scope}`) ?? ''
+      return !FAILURE_WORDINGS[code].some(wording => wording.test(text))
+    })
+
+    expect(silent).toEqual([])
+  })
+
+  // A wording that stopped matching any line is one nobody would think to delete, and the list
+  // would drift into a catalogue of everything ever written. It can only shrink on its own.
+  it.each(CODES)('drops a wording once no scope line uses it in %s', code => {
+    const idle = FAILURE_WORDINGS[code]
+      .filter(
+        wording =>
+          !LOG_SCOPES.some(scope => wording.test(BUNDLES[code].get(`activity.scope.${scope}`) ?? '')),
+      )
+      .map(wording => wording.source)
+
+    expect(idle).toEqual([])
+  })
+})
+
+/**
  * Tag and Capability are two menus of the same bar, filtering on two different things — one the
  * API matches as a tag, the other the registry applies. A `<select>` shows the chosen OPTION once
  * it closes, never the facet it belongs to (`CollectionBar.tsx` says so where it draws one), so
