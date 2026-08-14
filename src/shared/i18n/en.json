@@ -56,7 +56,7 @@
     "randomSeed": "Random",
     "noProject": "Open a project to generate.",
     "noCredentials": "Enter your API credentials to see your models.",
-    "dropPicture": "Drop a picture, or paste its id",
+    "dropPicture": "Drop an image, or paste its id",
     "estimatedCost": "~{{units}} CU"
   },
   "jobs": {
@@ -140,8 +140,8 @@
     "extractedTextures_one": "{{count, number}} texture taken out of “{{name}}”",
     "extractedTextures_many": "{{count, number}} textures taken out of “{{name}}”",
     "extractedTextures_other": "{{count, number}} textures taken out of “{{name}}”",
-    "extractedNothing": "“{{name}}” carries no picture of its own",
-    "extractFailed": "Could not read the pictures inside “{{name}}”",
+    "extractedNothing": "“{{name}}” carries no image of its own",
+    "extractFailed": "Could not read the images inside “{{name}}”",
     "pushFailed": "Could not send “{{name}}”",
     "pushed_one": "{{count, number}} asset sent",
     "pushed_many": "{{count, number}} assets sent",
@@ -158,19 +158,19 @@
       "scene.texture": "A texture could not be loaded",
       "scene.export": "Exporting the scene failed",
       "texture.map": "A texture channel could not be loaded",
-      "texture.channel": "A picture could not go into a channel",
+      "texture.channel": "An image could not go into a channel",
       "texture.seam": "The seams could not be measured",
       "texture.shader": "The material preview lost one of its settings",
       "texture.export": "Exporting the texture failed",
-      "skybox.source": "The sky picture could not be loaded",
+      "skybox.source": "The sky image could not be loaded",
       "skybox.export": "Exporting the sky failed",
       "canvas.layer": "A layer could not be loaded",
-      "image.export": "Exporting the picture failed",
+      "image.export": "Exporting the image failed",
       "document.save": "Saving the document failed",
       "assets.reveal": "The file could not be shown",
       "assets.open": "This asset has nowhere to go",
       "assets.save": "The asset could not be rewritten",
-      "assets.extract": "The pictures inside this model could not be taken out",
+      "assets.extract": "The images inside this model could not be taken out",
       "project.reveal": "The project folder could not be shown",
       "project.forget": "The project could not be removed from the list",
       "project.rename": "The project could not be renamed",
@@ -221,7 +221,7 @@
     "describe_one": "Describe {{count, number}} asset",
     "describe_many": "Describe {{count, number}} assets",
     "describe_other": "Describe {{count, number}} assets",
-    "describeHint": "Name the chosen pictures from what the API sees in them",
+    "describeHint": "Name the chosen images from what the API sees in them",
     "location": "Location",
     "push_one": "Send {{count, number}} asset",
     "push_many": "Send {{count, number}} assets",
@@ -232,9 +232,9 @@
     "fetchAction": "Fetch into the project",
     "fetchActionHint": "Downloads this asset from your Scenario library into the open project",
     "extractTextures": "Extract its textures",
-    "extractTexturesHint": "Takes the pictures inside this model out into the project, where they can be opened and painted on",
-    "editPixels": "Edit the picture",
-    "editPixelsHint": "Opens this picture in the Image space, where ⌘S writes it back over itself"
+    "extractTexturesHint": "Takes the images inside this model out into the project, where they can be opened and painted on",
+    "editPixels": "Edit the image",
+    "editPixelsHint": "Opens this image in the Image space, where ⌘S writes it back over itself"
   },
   "dialog": {
     "allMedia": "All media",
@@ -580,7 +580,7 @@
     "sprite": "Sprite",
     "text": "Text",
     "camera": "Camera",
-    "spriteHint": "A flat picture that always faces the camera",
+    "spriteHint": "A flat image that always faces the camera",
     "textHint": "Text set into the scene, with depth",
     "cameraHint": "A stored point of view, beside the one being flown"
   },
@@ -606,8 +606,8 @@
     "chooseTexture": "Choose a texture",
     "clearTexture": "Remove the texture",
     "modelOverrides": "Swap a map",
-    "noModelTexture": "No picture was taken out of this model.",
-    "openTextureHint": "Double-click opens this picture in the Textures space",
+    "noModelTexture": "No image was taken out of this model.",
+    "openTextureHint": "Double-click opens this image in the Textures space",
     "fields": {
       "width": "Width",
       "height": "Height",
@@ -751,8 +751,8 @@
     "combine": "How this combines with the condition above",
     "rangeFrom": "Lower bound",
     "rangeTo": "Upper bound",
-    "noTextureHint": "Leaves this field without a picture",
-    "pickTextureHint": "Puts this picture in the field",
+    "noTextureHint": "Leaves this field without an image",
+    "pickTextureHint": "Puts this image in the field",
     "studioHint": "Lights the scene with the default environment, no imported sky",
     "pickSkyHint": "Lights the scene with this sky and draws it behind",
     "noFontHint": "No font picked; the text keeps the document’s own",
@@ -1065,7 +1065,7 @@
     },
     "captionArrivals": {
       "title": "Describe fetched assets",
-      "help": "Automatically name a picture that arrives without a useful name. Spends creative units."
+      "help": "Automatically name an image that arrives without a useful name. Spends creative units."
     },
     "maxRetries": {
       "title": "Max retries",
@@ -1161,7 +1161,7 @@
       "spaces": "In the bar of spaces",
       "scene": "In the 3D view",
       "sequence": "In the edit",
-      "canvas": "In the picture",
+      "canvas": "In the image",
       "skybox": "In the sky",
       "audio": "In the audio editor",
       "texture": "In the material"
@@ -1541,7 +1541,7 @@
     },
     "skyboxProbes": {
       "title": "Light probes",
-      "help": "Shows or hides the witness spheres. A sky is judged by what it lights, not by its own picture."
+      "help": "Shows or hides the witness spheres. A sky is judged by what it lights, not by its own image."
     },
     "canvasToolMove": {
       "title": "Move tool",
@@ -1661,7 +1661,7 @@
     "showBackground": "Show background",
     "autoSpin": "Auto spin",
     "envIntensity": "Lighting",
-    "dropSource": "Drop a picture from the project to use it as the base colour",
+    "dropSource": "Drop an image from the project to use it as the base colour",
     "baseTint": "Base tint",
     "roughness": "Roughness",
     "roughnessRange": "Roughness range",
@@ -1719,14 +1719,14 @@
     },
     "inspectChannel": "Look at {{channel}} on its own",
     "showMaterial": "Back to the lit material",
-    "noPicture": "No picture in this project",
+    "noPicture": "No image in this project",
     "tilingPreviewHint": "Changes the preview only — the exported texture is not repeated for it",
     "previewShapeHint": "Changes the shape the preview is laid on, not the texture",
     "measureSeamHint": "Compares the opposite edges of the texture to say whether the seam shows",
-    "deriveHint": "Computes this channel from another one rather than from an imported picture",
-    "clearChannelHint": "Takes the picture off the channel; the material falls back to its default",
-    "noPictureHint": "Generate or import a picture before one can be put here",
-    "pickChannelHint": "Puts this picture on the channel"
+    "deriveHint": "Computes this channel from another one rather than from an imported image",
+    "clearChannelHint": "Takes the image off the channel; the material falls back to its default",
+    "noPictureHint": "Generate or import an image before one can be put here",
+    "pickChannelHint": "Puts this image on the channel"
   },
   "licences": {
     "title": "Licences",
@@ -1941,7 +1941,7 @@
     "imageLayer": "Place as a layer",
     "videoClip": "Add to the edit",
     "textureChannel": "Use as base colour",
-    "skyboxSourceHint": "Opens the skybox document and sets this picture as the panorama source",
+    "skyboxSourceHint": "Opens the skybox document and sets this image as the panorama source",
     "sceneMeshHint": "Opens the 3D scene and adds the model to it",
     "audioTakeHint": "Opens the audio editor and loads this take into it",
     "imageLayerHint": "Opens the image document and lays the asset in as a new layer",
@@ -1957,7 +1957,7 @@
     "translate": "Translate to English",
     "alreadyEnglish": "This text is already in English.",
     "describeStyle": "Describe the style of the references",
-    "noReference": "Drop a reference picture to describe its style.",
+    "noReference": "Drop a reference image to describe its style.",
     "useTextHint": "Takes the sentence only, and leaves your settings as they are",
     "useTextAndSettingsHint": "Takes the sentence AND the settings listed above"
   },
@@ -2014,7 +2014,7 @@
     "tools": {
       "createGroup": "Create",
       "projectGroup": "Projects",
-      "image": "Generate and retouch pictures on a layered canvas.",
+      "image": "Generate and retouch images on a layered canvas.",
       "video": "Cut, sequence and export moving images.",
       "3d": "Build a scene, light it, export the model.",
       "audio": "Compose and edit sound across tracks.",

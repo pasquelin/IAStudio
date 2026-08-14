@@ -46,7 +46,7 @@ Eight contexts:
 | **In the bar of spaces** | the top bar, while the focus is on one of its tabs |
 | **In the 3D view** | the viewport of the 3D workspace |
 | **In the edit** | the timeline of the Video and Audio workspaces |
-| **In the picture** | the canvas of the Image workspace |
+| **In the image** | the canvas of the Image workspace |
 | **In the sky** | the view of the Skyboxes workspace |
 | **In the take editor** | the waveform of the Audio workspace |
 | **In the material** | the preview and channels of the Textures workspace |

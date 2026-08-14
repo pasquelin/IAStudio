@@ -277,14 +277,35 @@ describe('the translation bundles', () => {
    * wrote "eight chapters" and "`Préférences` exactly once", both off: fourteen, and the second
    * true only of the capitalised form. A guard is a poor place to freeze a number nobody rechecks.
    *
+   * The third pair is `picture` against `image`, and it is the one this list was widened for.
+   * The English called the same thing both ways in the same window — thirty values said
+   * `picture` where forty said `image`, for a French bundle that says `image` and nothing else.
+   * What settles it is not the count: `Image` is the name of the space, of the asset type, of
+   * the menu and of the model families, seventeen values carrying it capitalised as a proper
+   * noun. Prose that reaches for a synonym to avoid repeating a word is good English and poor
+   * interface — a reader recognises one word, not two.
+   *
+   * `except` exists for that pair alone. The picture track of a sequence is `picture` against
+   * `sound`, which is what the trade calls those two tracks; `TWO_THINGS.image` already names
+   * that reading. An entry with no `except` covers its whole bundle.
+   *
    * What this does NOT catch: a form split across two lines, a THIRD synonym nobody has written
    * yet (`explorateur de fichiers`, `file explorer`), and text in NFD. And what it catches TOO
    * much, the day a bundle says it: `préférence` in the sense of a taste — "ce n'est pas une
    * préférence", "by preference" — where demanding `réglages` would be nonsense. The prose of the
    * repo already writes it that way; no bundle does yet, and this line is what to read when one
    * does.
+   *
+   * Nor does it reach OUTSIDE the bundles, and that is the hole the `picture` batch fell into:
+   * `docs/en/manual/` quotes labels, sometimes cut short by an ellipsis — `"Drop a picture…"` —
+   * so a search for the whole value walks straight past them. Four such quotes followed that
+   * batch, the fourth found by review rather than by any guard. A label renamed here is not
+   * done until `grep` has read the manual for its opening words, not its whole sentence.
    */
-  const SETTLED_WORDS: Record<Language, readonly { dropped: RegExp; kept: string }[]> = {
+  const SETTLED_WORDS: Record<
+    Language,
+    readonly { dropped: RegExp; kept: string; except?: readonly string[] }[]
+  > = {
     fr: [
       { dropped: /système de fichiers/i, kept: 'gestionnaire de fichiers' },
       { dropped: /préférences?/i, kept: 'réglages' },
@@ -292,17 +313,40 @@ describe('the translation bundles', () => {
     en: [
       { dropped: /file browser/i, kept: 'file manager' },
       { dropped: /\bpreferences?\b/i, kept: 'settings' },
+      {
+        dropped: /\bpictures?\b/i,
+        kept: 'image',
+        except: ['inspector.kind_video', 'commands.sequenceUnlink.title'],
+      },
     ],
   }
 
   it.each(CODES)('says one thing one way in %s', code => {
     const drifted = [...BUNDLES[code]].flatMap(([key, text]) =>
       SETTLED_WORDS[code]
-        .filter(({ dropped }) => dropped.test(text))
+        .filter(({ dropped, except }) => dropped.test(text) && !except?.includes(key))
         .map(({ kept }) => `${key} — say "${kept}"`),
     )
 
     expect(drifted).toEqual([])
+  })
+
+  /**
+   * An exempted key that stopped writing the word it was exempted for is an exemption nobody
+   * would think to delete — and the next reader takes it for a rule. The same reasoning as the
+   * stale `TWO_THINGS` entry below, applied to a list of keys rather than a term.
+   */
+  it.each(CODES)('drops a key exemption once that key stops saying the word in %s', code => {
+    const covering = SETTLED_WORDS[code].flatMap(({ dropped, except }) =>
+      (except ?? [])
+        .filter(key => {
+          const text = BUNDLES[code].get(key)
+          return text === undefined || !dropped.test(text)
+        })
+        .map(key => `${key} — no longer says what ${dropped.source} exempts it for`),
+    )
+
+    expect(covering).toEqual([])
   })
 
   /**
