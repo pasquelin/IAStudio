@@ -216,6 +216,30 @@ describe('every database a suite opens by name is given back', () => {
     expect(staleExemptions([{ path: 'main/elsewhere.test.ts', findings: [] }])).toEqual(exempt)
   })
 
+  /**
+   * The widening `afterEach` brought, put in default.
+   *
+   * A teardown in one `describe` sits in the same tally as an opening in another, so the question
+   * is whether a suite where only half the blocks give their handle back still reads as sound. It
+   * does not: the tally is short by one, and a short name names every one of its openings.
+   */
+  it('refuses a suite where one block gives the handle back and another does not', () => {
+    expect(
+      unclosedIn(
+        'probe.ts',
+        [
+          "describe('a', () => {",
+          '  beforeEach(() => { c = memoryCatalog() })',
+          '  afterEach(() => c.close())',
+          '})',
+          "describe('b', () => {",
+          '  beforeEach(() => { c = memoryCatalog() })',
+          '})',
+        ].join('\n'),
+      ),
+    ).toEqual(['probe.ts:2', 'probe.ts:6'])
+  })
+
   it('reads the fixture that wraps the driver, not only the driver', () => {
     expect(unclosedIn('probe.ts', 'const catalog = memoryCatalog()')).toEqual(['probe.ts:1'])
     expect(
