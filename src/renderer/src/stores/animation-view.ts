@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { movedWithin } from '@/engines/scene/animation-rows'
 import type { Viewport } from '@/engines/timeline/timeline-geometry'
 import { DEFAULT_VIEWPORT } from '@/engines/timeline/viewport'
 
@@ -19,6 +20,13 @@ export type AnimationView = {
   selected: readonly string[]
   /** Whether moving an object writes a key rather than its rest pose. */
   autoKey: boolean
+  /**
+   * How the lines have been arranged, by `subjectKey`. Empty leaves the scene's own order.
+   *
+   * A way of working, never the scene: the objects one is animating are brought together at the
+   * top of the sheet, and the outliner keeps the hierarchy exactly as it was.
+   */
+  order: readonly string[]
 }
 
 const DEFAULT_ANIMATION_VIEW: AnimationView = {
@@ -26,6 +34,7 @@ const DEFAULT_ANIMATION_VIEW: AnimationView = {
   expanded: [],
   selected: [],
   autoKey: false,
+  order: [],
 }
 
 export type AnimationViewState = {
@@ -34,6 +43,14 @@ export type AnimationViewState = {
   toggleExpanded: (documentId: string, subjectId: string) => void
   setSelected: (documentId: string, selected: readonly string[]) => void
   setAutoKey: (documentId: string, autoKey: boolean) => void
+  /**
+   * Moves one line in the sheet's own arrangement.
+   *
+   * `shown` is the order the sheet is displaying right now — the whole of it, not the moved id
+   * alone: the first drag is what turns "the scene's order" into an arrangement, and an order
+   * holding one entry would send every other line behind it.
+   */
+  moveRow: (documentId: string, shown: readonly string[], rowId: string, by: number) => void
   forget: (documentId: string) => void
 }
 
@@ -58,6 +75,11 @@ export const useAnimationViews = create<AnimationViewState>()(set => ({
 
   setAutoKey: (documentId, autoKey) =>
     set(state => write(state, documentId, view => ({ ...view, autoKey }))),
+
+  moveRow: (documentId, shown, rowId, by) =>
+    set(state =>
+      write(state, documentId, view => ({ ...view, order: movedWithin(shown, rowId, by) })),
+    ),
 
   forget: documentId =>
     set(state => {

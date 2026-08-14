@@ -31,6 +31,7 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
   const nodes = useScenes(state => sceneOf(state, documentId).nodes)
   const view = useSceneViews(state => sceneViewOf(state, documentId))
   const expandedList = useAnimationViews(state => animationViewOf(state, documentId).expanded)
+  const order = useAnimationViews(state => animationViewOf(state, documentId).order)
 
   usePlayback(documentId, view.playing, timeline.duration)
   useHeadInsideBand(documentId, view.playhead, timeline.duration)
@@ -59,8 +60,8 @@ export function AnimationPanel({ documentId }: AnimationPanelProps) {
       })
     }
 
-    return animationRows(timeline, { nodes, expanded, clips })
-  }, [timeline, nodes, expanded, lengths])
+    return animationRows(timeline, { nodes, expanded, clips, order })
+  }, [timeline, nodes, expanded, lengths, order])
 
   return (
     <div className="flex h-full min-h-0 flex-col">

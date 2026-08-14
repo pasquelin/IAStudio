@@ -43,6 +43,11 @@ export type AnimationHeadersProps = {
   rows: readonly AnimationRow[]
 }
 
+/** The subjects, in the order the sheet is showing them — what a drag rearranges. */
+function shownSubjects(rows: readonly AnimationRow[]): string[] {
+  return rows.filter(row => row.kind === 'subject').map(row => row.id)
+}
+
 /**
  * The column beside the band: one line per row, aligned with the row it names.
  *

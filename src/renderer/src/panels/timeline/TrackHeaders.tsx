@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { MenuButton } from '@/design/MenuButton'
 import { ResizeHandle } from '@/design/ResizeHandle'
 import { ToolButton } from '@/design/ToolButton'
-import { renameTrack } from '@/engines/timeline/commands'
+import { moveTrack, renameTrack } from '@/engines/timeline/commands'
 import { RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import {
   clampTrackHeight,
@@ -18,6 +18,7 @@ import { isTyping } from '@/helpers/typing'
 import { useSelection } from '@/stores/selection'
 import { sequenceOf, useSequences, writeTrack } from '@/stores/sequences'
 import { useTimelineView, viewportOf } from '@/stores/timeline-view'
+import { TimelineRow } from './TimelineRow'
 import { TRACK_FLAGS } from './track-flags'
 import { TrackMenu, TrackMenuRows, TRACK_MENU_ROWS } from './TrackMenu'
 
@@ -76,9 +77,12 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
   const rows = { documentId, trackId: track.id, canRise, canFall }
 
   return (
-    <div
-      className="flex flex-col justify-between px-1.5 py-1"
-      style={{ height: track.height }}
+    <TimelineRow
+      height={track.height}
+      reorder={{
+        label: t('timeline.reorderTrack', { name: track.name }),
+        move: by => useSequences.getState().runCommand(documentId, moveTrack(track.id, by)),
+      }}
       data-testid={`track-header-${track.id}`}
       onPointerDown={() => useSelection.getState().selectTrack(documentId, track.id)}
       onContextMenu={event => {
@@ -124,7 +128,7 @@ function TrackHeader({ documentId, sequence, track, canRise, canFall }: TrackHea
       />
 
       {menuAt && <TrackMenu {...rows} at={menuAt} onClose={() => setMenuAt(null)} />}
-    </div>
+    </TimelineRow>
   )
 }
 

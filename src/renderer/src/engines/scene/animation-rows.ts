@@ -108,6 +108,36 @@ export type SheetNode = {
   name: string
 }
 
+/**
+ * The subjects in the order the sheet shows them: the arrangement the user made first, then
+ * whatever the scene has added since, in the order the scene holds it.
+ *
+ * The arrangement is a WAY OF WORKING and nothing else — objects one returns to are brought to
+ * the top. It never touches the scene: the outliner keeps its own order, and an object moved here
+ * stays exactly where the hierarchy put it.
+ */
+export function orderedSubjects(natural: readonly string[], preferred: readonly string[]): string[] {
+  const known = new Set(natural)
+  const kept = preferred.filter(id => known.has(id))
+  const placed = new Set(kept)
+  return [...kept, ...natural.filter(id => !placed.has(id))]
+}
+
+/**
+ * The same list with one entry moved by that many places. Clamped at both ends rather than
+ * wrapping: a row dragged past the top has arrived, it has not gone to the bottom.
+ */
+export function movedWithin(ids: readonly string[], id: string, by: number): string[] {
+  const from = ids.indexOf(id)
+  if (from === -1 || by === 0) return [...ids]
+
+  const to = Math.min(Math.max(from + by, 0), ids.length - 1)
+  const moved = [...ids]
+  moved.splice(from, 1)
+  moved.splice(to, 0, id)
+  return moved
+}
+
 export type RowsOptions = {
   /**
    * The objects on stage, in outliner order. EVERY one gets a line, keyed or not: a scene's
@@ -123,6 +153,8 @@ export type RowsOptions = {
    * GLB, so nothing that reads only the document can know how long a block runs.
    */
   clips?: readonly ClipBlock[]
+  /** How the user has arranged the lines. Empty leaves the scene's own order — see `orderedSubjects`. */
+  order?: readonly string[]
 }
 
 /**
@@ -146,10 +178,11 @@ export function animationRows(timeline: AnimationTimeline, options: RowsOptions)
   const rows: AnimationRow[] = []
 
   /** The objects first, in the order the scene holds them, then the bones keyed inside them. */
-  const order = [
+  const natural = [
     ...options.nodes.map(node => node.id),
     ...[...grouped.keys()].filter(key => !named.has(key)),
   ]
+  const order = orderedSubjects(natural, options.order ?? [])
 
   for (const key of order) {
     const tracks = grouped.get(key) ?? []
