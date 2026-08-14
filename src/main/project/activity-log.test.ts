@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { ActivityEntry } from '@shared/domain/activity'
 import { ACTIVITY_FLUSH_MS, createActivityLog, type ActivityLog } from './activity-log'
 import { memoryCatalog } from './catalog-fixtures'
@@ -18,6 +18,7 @@ describe('the studio recording what it did', () => {
 
   beforeEach(() => {
     catalog = memoryCatalog()
+    onTestFinished(catalog.close)
     broadcast = spy()
     journal = createActivityLog({
       catalog: () => catalog,
@@ -152,9 +153,13 @@ describe('recording with no project open', () => {
 describe('when the journal itself cannot be written', () => {
   // Saying so in the journal would loop: it is the journal that is broken.
   it('does not throw at the caller that was reporting a failure', async () => {
+    // Opened once and named: the factory ran on every call, so the handles it left behind were as
+    // many as the journal asked for. What is asserted never reads a row.
+    const broken = memoryCatalog()
+    onTestFinished(broken.close)
     const journal = createActivityLog({
       catalog: () => ({
-        ...memoryCatalog(),
+        ...broken,
         appendActivity: () => Promise.reject(new Error('disk is full')),
       }),
       broadcast: spy(),
@@ -170,8 +175,10 @@ describe('when the journal itself cannot be written', () => {
 describe('a journal that has been disposed', () => {
   it('takes nothing more, so a closing project cannot be written to', async () => {
     const broadcast = spy()
+    const disposed = memoryCatalog()
+    onTestFinished(disposed.close)
     const journal = createActivityLog({
-      catalog: () => memoryCatalog(),
+      catalog: () => disposed,
       broadcast,
       now: () => '2026-08-08T10:00:00.000Z',
     })
@@ -194,6 +201,7 @@ describe('flushing while a write is already on its way', () => {
     let release: (() => void) | undefined
     const written: string[] = []
     const held = memoryCatalog()
+    onTestFinished(held.close)
 
     const journal = createActivityLog({
       catalog: () => ({

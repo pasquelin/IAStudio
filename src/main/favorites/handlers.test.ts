@@ -1,7 +1,7 @@
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Asset } from '@shared/domain/asset'
 import type { FavoriteRecipe } from '@shared/domain/favorite'
 import { CHANNELS } from '@shared/ipc'
@@ -62,6 +62,7 @@ beforeEach(() => {
   resetHandlers()
   vi.clearAllMocks()
   catalog = memoryCatalog()
+  onTestFinished(catalog.close)
 })
 
 describe('the favourites channels', () => {
