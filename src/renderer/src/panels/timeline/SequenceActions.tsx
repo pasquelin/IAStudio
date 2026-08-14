@@ -4,10 +4,12 @@ import { Toolbar } from '@/design/Toolbar'
 import { ToolButton } from '@/design/ToolButton'
 import { addTrack } from '@/engines/timeline/commands'
 import { TRACK_KINDS } from '@/engines/timeline/timeline-state'
+import { cn } from '@/helpers/cn'
 import { tipFor } from '@/helpers/tooltip'
 import { VIDEO_TOOLS, isVideoTool } from '@/spaces/video/video-tools'
 import { useSequences } from '@/stores/sequences'
 import { useVideoTool } from '@/stores/video-tool'
+import { TIMELINE_BAR } from './bar'
 import { TRACK_KIND_ICONS } from './track-flags'
 
 export type SequenceActionsProps = { documentId: string }
@@ -21,7 +23,7 @@ export function SequenceActions({ documentId }: SequenceActionsProps) {
   return (
     <Toolbar
       orientation="horizontal"
-      className="border-none bg-transparent p-0 shadow-none"
+      className={cn(TIMELINE_BAR, 'border-none bg-transparent p-0 shadow-none')}
       tools={[...VIDEO_TOOLS]}
       activeTool={tool}
       onTool={id => isVideoTool(id) && setTool(id)}

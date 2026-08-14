@@ -841,7 +841,8 @@
     "removeTrack": "Supprimer la piste",
     "moveTrackUpHint": "Échange cette piste avec celle du dessus",
     "moveTrackDownHint": "Échange cette piste avec celle du dessous",
-    "removeTrackHint": "Retire la piste et tous les clips qu’elle porte"
+    "removeTrackHint": "Retire la piste et tous les clips qu’elle porte",
+    "reorderTrack": "Glisser pour déplacer la piste {{name}} dans la pile"
   },
   "videoTools": {
     "select": "Sélection",
@@ -2137,6 +2138,7 @@
     "keyAll": "Poser une clé sur tout ce qui est animé",
     "keyAllHint": "Pose une clé sur chaque objet animé, à la position de la tête",
     "unkeySubject": "Retirer la clé de {{name}}",
-    "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet"
+    "unkeySubjectHint": "Retire la clé posée ici, sur toutes les propriétés de cet objet",
+    "reorderRow": "Glisser pour déplacer la ligne {{name}} — l’ordre reste propre à la timeline"
   }
 }

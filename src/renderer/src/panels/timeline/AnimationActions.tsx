@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { secondsToUs, snapToFrame, usToSeconds, type Us } from '@shared/domain/time'
 import { NumberField } from '@/design/NumberField'
+import { Separator } from '@/design/Separator'
 import { Timecode } from '@/design/Timecode'
 import { ToolButton } from '@/design/ToolButton'
 import { CONTROL } from '@/design/styles'
@@ -25,6 +26,7 @@ import { bonesOfNode, useModelClips } from '@/stores/model-clips'
 import { sceneEngineOf } from '@/stores/scene-engines'
 import { sceneOf, useScenes } from '@/stores/scenes'
 import { sceneViewOf, useSceneViews } from '@/stores/scene-views'
+import { TIMELINE_BAR } from './bar'
 
 export type AnimationActionsProps = { documentId: string }
 
@@ -72,7 +74,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+    <div className={TIMELINE_BAR}>
       <ToolButton
         icon={mdiSkipPrevious}
         label={t('animation.toStart')}
@@ -98,6 +100,7 @@ export function AnimationActions({ documentId }: AnimationActionsProps) {
       />
       <Timecode time={view.playhead} fps={timeline.fps} />
 
+      <Separator />
       <ToolButton
         icon={mdiRecordCircleOutline}
         label={t('animation.autoKey')}

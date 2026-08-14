@@ -14,9 +14,11 @@ import {
   type Viewport,
 } from './timeline-geometry'
 import { MDI_VIEWBOX, mdiPath } from '@/helpers/mdi-canvas'
+import { paintBandEnd } from './band-end'
 import { paintRuler as paintBandRuler } from './ruler'
 import {
   clipEnd,
+  sequenceDuration,
   type Clip,
   type SequenceState,
   type Track,
@@ -369,6 +371,16 @@ export function paintTimeline(
   }
 
   paintRuler(context, state, viewport, size, palette)
+
+  // Where the montage stops, marked exactly as a scene's duration is: the two bands had said the
+  // same thing in two different languages — a wash of scrim there, nothing at all here.
+  paintBandEnd(context, {
+    end: sequenceDuration(state),
+    viewport,
+    width: size.width,
+    height: size.height,
+    colour: palette.muted,
+  })
 
   context.fillStyle = palette.playhead
   context.fillRect(Math.round(timeToX(state.playhead, viewport)), 0, 1, size.height)

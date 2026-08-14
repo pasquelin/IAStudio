@@ -8,6 +8,7 @@
  */
 import type { Us } from '@shared/domain/time'
 import { placeRows } from '../timeline/band'
+import { paintBandEnd } from '../timeline/band-end'
 import { paintRuler, type RulerStyle } from '../timeline/ruler'
 import { RULER_HEIGHT, timeToX, type Viewport } from '../timeline/timeline-geometry'
 import { memoPalette, rootColour, rootFont } from '../core/palette'
@@ -36,7 +37,7 @@ type Palette = {
   key: string
   keySelected: string
   block: string
-  beyond: string
+  end: string
   playhead: string
   muted: string
   rulerFont: string
@@ -50,7 +51,7 @@ const readPalette = memoPalette((): Palette => ({
   key: rootColour('--color-muted'),
   keySelected: rootColour('--color-accent'),
   block: rootColour('--color-elevated'),
-  beyond: rootColour('--color-scrim'),
+  end: rootColour('--color-muted'),
   playhead: rootColour('--color-accent'),
   muted: rootColour('--color-muted'),
   rulerFont: rootFont('--text-mini', RULER_SIZE, RULER_FAMILY),
@@ -143,7 +144,15 @@ export function paintAnimation(
   }
   paintRuler(context, { viewport: paint.viewport, width: size.width, fps: paint.fps, style })
 
-  paintBeyond(context, paint, size, palette)
+  // A ruler graduated to seventeen seconds over a five-second scene says the scene is longer than
+  // it is, and there is nowhere for a key to go out there — the head is clamped to the duration.
+  paintBandEnd(context, {
+    end: paint.duration,
+    viewport: paint.viewport,
+    width: size.width,
+    height: size.height,
+    colour: palette.end,
+  })
   paintHead(context, paint, size, palette)
 }
 
@@ -196,25 +205,6 @@ function paintBlock(
 
   context.fillStyle = palette.block
   context.fillRect(left, top + BLOCK_INSET, Math.max(1, right - left), height - BLOCK_INSET * 2 - 1)
-}
-
-/**
- * Dims whatever lies past the end of the band.
- *
- * A ruler graduated to seventeen seconds over a five-second scene says the scene is longer than
- * it is, and there is nowhere for a key to go out there — the head is clamped to the duration.
- */
-function paintBeyond(
-  context: CanvasRenderingContext2D,
-  paint: AnimationPaint,
-  size: Size,
-  palette: Palette,
-): void {
-  const end = timeToX(paint.duration, paint.viewport)
-  if (end >= size.width) return
-
-  context.fillStyle = palette.beyond
-  context.fillRect(Math.max(0, end), RULER_HEIGHT, size.width - Math.max(0, end), size.height)
 }
 
 function paintHead(

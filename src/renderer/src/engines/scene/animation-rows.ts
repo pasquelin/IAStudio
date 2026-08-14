@@ -70,7 +70,8 @@ export const CLIP_HEIGHT = 24
  */
 const CONTROL_ROW = 28
 const NAME_ROW = 16
-const ROW_PADDING = 4
+/** Both halves of `TimelineRow`'s own padding, which is what every band's rows now sit in. */
+const ROW_PADDING = 8
 
 export const SUBJECT_HEIGHT = NAME_ROW + CONTROL_ROW + ROW_PADDING
 
