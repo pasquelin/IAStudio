@@ -88,12 +88,7 @@ function HeaderRow({ documentId, row, shown }: HeaderRowProps) {
 /** A block names the clip it plays, and offers nothing else: it is driven from the inspector. */
 function ClipHeader({ row }: { row: ClipRow }) {
   return (
-    <TimelineRow
-      height={row.height}
-      nested
-      align="center"
-      data-testid={`anim-clip-${row.nodeId}`}
-    >
+    <TimelineRow height={row.height} nested align="center" data-testid={`anim-clip-${row.nodeId}`}>
       <span className="text-muted text-tiny min-w-0 truncate" {...HINT_RIGHT(row.name)}>
         {row.name}
       </span>
@@ -190,12 +185,7 @@ function ChannelHeader({ documentId, row }: ChannelRowProps) {
   const { t } = useTranslation()
 
   return (
-    <TimelineRow
-      height={row.height}
-      nested
-      align="center"
-      data-testid={`anim-channel-${row.id}`}
-    >
+    <TimelineRow height={row.height} nested align="center" data-testid={`anim-channel-${row.id}`}>
       <div className="flex items-center gap-0.5">
         <span className="text-muted text-tiny min-w-0 flex-1 truncate" {...HINT_RIGHT(row.name)}>
           {row.name}

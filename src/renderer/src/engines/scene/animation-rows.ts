@@ -117,7 +117,10 @@ export type SheetNode = {
  * the top. It never touches the scene: the outliner keeps its own order, and an object moved here
  * stays exactly where the hierarchy put it.
  */
-export function orderedSubjects(natural: readonly string[], preferred: readonly string[]): string[] {
+export function orderedSubjects(
+  natural: readonly string[],
+  preferred: readonly string[],
+): string[] {
   const known = new Set(natural)
   const kept = preferred.filter(id => known.has(id))
   const placed = new Set(kept)

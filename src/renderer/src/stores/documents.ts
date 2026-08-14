@@ -147,6 +147,13 @@ export const activeImageId = (state: DocumentsSlice): string | null =>
 export const activeSequenceId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'sequence')
 
+/**
+ * The take in front, as a selector. Same reason again — and it names the SOUND MONTAGE the
+ * timeline shows for it, not the waveform in the centre: an audio document carries both.
+ */
+export const activeAudioId = (state: DocumentsSlice): string | null =>
+  activeIdOfKind(state, 'audio')
+
 /** The sky in front, as a selector. Same reason again, for the skybox panel. */
 export const activeSkyboxId = (state: DocumentsSlice): string | null =>
   activeIdOfKind(state, 'skybox')

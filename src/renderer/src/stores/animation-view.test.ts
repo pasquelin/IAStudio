@@ -16,6 +16,7 @@ describe('how a scene band is being looked at', () => {
       expanded: [],
       selected: [],
       autoKey: false,
+      order: [],
     })
   })
 

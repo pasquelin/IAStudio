@@ -6,6 +6,7 @@ import {
   SUBJECT_HEIGHT,
   animationRows,
   mergedKeys,
+  movedWithin,
   subjectKey,
   trackIdsOf,
 } from './animation-rows'
@@ -126,6 +127,39 @@ describe('laying out the sheet', () => {
 
   it('answers nothing at all for a scene with no object', () => {
     expect(rowsOf([], [], [])).toEqual([])
+  })
+})
+
+describe('arranging the lines', () => {
+  const THREE = [
+    { id: 'a', name: 'a' },
+    { id: 'b', name: 'b' },
+    { id: 'c', name: 'c' },
+  ]
+
+  const arranged = (order: string[]) =>
+    animationRows(timelineWith([]), { nodes: THREE, expanded: new Set(), order }).map(row => row.id)
+
+  it('shows the lines in the order the user arranged, not the scene order', () => {
+    expect(arranged(['c', 'a', 'b'])).toEqual(['c', 'a', 'b'])
+  })
+
+  it('lands an object added since the arrangement was made, rather than losing it', () => {
+    expect(arranged(['c', 'a'])).toEqual(['c', 'a', 'b'])
+  })
+
+  it('ignores an entry for an object the scene no longer holds', () => {
+    expect(arranged(['gone', 'b'])).toEqual(['b', 'a', 'c'])
+  })
+
+  it('moves one line and leaves the others in place', () => {
+    expect(movedWithin(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b'])
+    expect(movedWithin(['a', 'b', 'c'], 'a', 2)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('stops at the ends rather than wrapping, so a line dragged up has arrived', () => {
+    expect(movedWithin(['a', 'b', 'c'], 'a', -3)).toEqual(['a', 'b', 'c'])
+    expect(movedWithin(['a', 'b', 'c'], 'c', 5)).toEqual(['a', 'b', 'c'])
   })
 })
 

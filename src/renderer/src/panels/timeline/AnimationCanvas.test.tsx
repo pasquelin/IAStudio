@@ -62,7 +62,9 @@ describe('dragging a clip block', () => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [modelWithClip()] })
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
-      views: { [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] } },
+      views: {
+        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+      },
     })
   })
 
@@ -122,7 +124,9 @@ describe('scrubbing and picking on the band', () => {
     installScene(DOCUMENT, EMPTY_SCENE)
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
-      views: { [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] } },
+      views: {
+        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+      },
     })
   })
 
@@ -177,7 +181,9 @@ describe('following a duration that changes', () => {
     installScene(DOCUMENT, EMPTY_SCENE)
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
-      views: { [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] } },
+      views: {
+        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+      },
     })
   })
 
@@ -222,7 +228,9 @@ describe('removing a picked key with the keyboard', () => {
     installScene(DOCUMENT, { ...EMPTY_SCENE, nodes: [meshNode('cube')] })
     useSceneViews.setState({ views: {} })
     useAnimationViews.setState({
-      views: { [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] } },
+      views: {
+        [DOCUMENT]: { viewport: VIEWPORT, expanded: [], selected: [], autoKey: false, order: [] },
+      },
     })
   })
 

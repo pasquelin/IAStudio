@@ -11,7 +11,12 @@ import { parseAudioEdits, EMPTY_AUDIO_EDIT } from '@/engines/audio/edits'
 import { createDefaultScene } from '@/engines/scene/default-scene'
 import { scenePayload, sceneFromPayload } from '@/engines/scene/scene-document'
 import { parseSkybox } from '@/engines/skybox/skybox-state'
-import { EMPTY_SEQUENCE, parseSequence } from '@/engines/timeline/timeline-state'
+import {
+  EMPTY_SEQUENCE,
+  EMPTY_SOUND_SEQUENCE,
+  parseSequence,
+} from '@/engines/timeline/timeline-state'
+import { isRecord } from '@shared/guards'
 import { getBridge } from '@/services/bridge'
 import type { StudioBridge } from '@shared/ipc'
 import { reportFailure } from '@/services/diagnostics'
@@ -161,6 +166,83 @@ function textDocumentIo<S>(
 const asIs = <S>(state: S): unknown => state
 
 /**
+ * The take, which is the one kind holding TWO states: the chain of edits over a sample, and the
+ * sound montage the timeline shows under it. Both are the same document — one tab, one ⌘S, one
+ * file — so neither of the two generic paths fits, and the composition is written out here.
+ *
+ * The montage half is why the Audio workspace is a workspace at all rather than a sample editor:
+ * music is built by laying takes side by side, and a montage lost on close is a session lost.
+ */
+type AudioPayload = { edits: unknown; montage: unknown }
+
+/** An older file holds the chain alone, and reopens with an empty montage rather than refusing. */
+function audioPayloadOf(content: unknown): AudioPayload {
+  const payload: unknown = isRecord(content) && 'montage' in content ? content : null
+  return payload && isRecord(payload)
+    ? { edits: payload.edits, montage: payload.montage }
+    : { edits: content, montage: null }
+}
+
+const AUDIO_IO: DocumentIo = {
+  capture: documentId => {
+    const edits = audioEditStore.use.getState()
+    const montage = sequenceStore.use.getState()
+    const editMark = audioEditStore.markOf(edits, documentId)
+    const montageMark = sequenceStore.markOf(montage, documentId)
+
+    return Promise.resolve({
+      draft: {
+        content: JSON.stringify({
+          edits: audioEditStore.stateOf(edits, documentId),
+          montage: sequenceStore.stateOf(montage, documentId),
+        }),
+      },
+      commit: () => {
+        audioEditStore.use.getState().markSaved(documentId, editMark)
+        sequenceStore.use.getState().markSaved(documentId, montageMark)
+      },
+      // Either half is the document: a montage built over an untouched take is work to save.
+      wasEdited:
+        audioEditStore.hasUnsavedWork(edits, documentId) ||
+        sequenceStore.hasUnsavedWork(montage, documentId),
+    })
+  },
+
+  install: (documentId, content) => {
+    const payload = audioPayloadOf(JSON.parse(content))
+
+    // `replace`, not a command: loading a document is not something ⌘Z gives back.
+    audioEditStore.use.getState().replace(documentId, parseAudioEdits(payload.edits))
+    sequenceStore.use
+      .getState()
+      .replace(documentId, payload.montage ? parseSequence(payload.montage) : EMPTY_SOUND_SEQUENCE)
+
+    const edits = audioEditStore.use.getState()
+    edits.markSaved(documentId, audioEditStore.markOf(edits, documentId))
+    const montage = sequenceStore.use.getState()
+    montage.markSaved(documentId, sequenceStore.markOf(montage, documentId))
+  },
+
+  createDefault: documentId => {
+    audioEditStore.use.getState().ensure(documentId, () => EMPTY_AUDIO_EDIT)
+    sequenceStore.use.getState().ensure(documentId, () => EMPTY_SOUND_SEQUENCE)
+  },
+
+  // The chain alone answers: it is the half a fresh tab always has, and a montage installed by
+  // the panel before the file is read would make an unopened document look already filled.
+  holds: documentId => audioEditStore.hasState(audioEditStore.use.getState(), documentId),
+
+  dirty: documentId =>
+    audioEditStore.hasUnsavedWork(audioEditStore.use.getState(), documentId) ||
+    sequenceStore.hasUnsavedWork(sequenceStore.use.getState(), documentId),
+
+  forget: documentId => {
+    audioEditStore.use.getState().drop(documentId)
+    sequenceStore.use.getState().drop(documentId)
+  },
+}
+
+/**
  * What a surface's pixels are called inside `<id>.img/`. The role goes in FRONT of the id, never
  * behind it: a suffix would not be injective — a layer literally called `x-mask` and the mask of
  * a layer called `x` would claim the same file, and one would silently overwrite the other.
@@ -292,7 +374,7 @@ const IO_BY_KIND: Record<DocumentKind, DocumentIo> = {
   // a decoded source, and « nothing is written to disk until apply or save as ». Baking it into
   // its own source would leave the chain in the document and apply it a second time on reopen —
   // and its own toolbar already offers both writes, where a hand asks for them.
-  audio: textDocumentIo(audioEditStore, asIs, parseAudioEdits, () => EMPTY_AUDIO_EDIT),
+  audio: AUDIO_IO,
   // Nor here: `adjustments` are applied over a source left intact, and baking them into it would
   // destroy the only copy of what they are meant to stay undoable against.
   skybox: textDocumentIo(skyboxStore, asIs, parseSkybox, createSkyboxContent),

@@ -148,6 +148,26 @@ export const EMPTY_SEQUENCE: SequenceState = {
   playhead: 0,
 }
 
+/**
+ * What the Audio workspace opens on: the same montage, with nothing but sound in it.
+ *
+ * Four tracks rather than the one a sequence opens with, and it is a decision about the work
+ * being done: music is layered — a rhythm, a bass, a harmony, a voice — and a person building it
+ * lays the second sound down within seconds of the first. One track means the very first gesture
+ * is "add a track", every time.
+ *
+ * No picture track at all, so a video dropped here lands nowhere rather than being montaged into
+ * a space that has no monitor to show it.
+ */
+export const EMPTY_SOUND_SEQUENCE: SequenceState = {
+  settings: DEFAULT_SETTINGS,
+  tracks: [1, 2, 3, 4].map(number =>
+    makeTrack({ id: `A${number}`, kind: 'audio', index: 4 - number }),
+  ),
+  selectedId: null,
+  playhead: 0,
+}
+
 /** The letter a kind's tracks are named after, on the pattern `EMPTY_SEQUENCE` opens with. */
 const TRACK_PREFIX: Record<TrackKind, string> = { video: 'V', audio: 'A' }
 
