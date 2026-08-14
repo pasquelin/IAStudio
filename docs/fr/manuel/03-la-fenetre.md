@@ -2,119 +2,90 @@
 
 [← Premiers pas](02-premiers-pas.md) · [Sommaire](../guide-utilisateur.md) · [Chapitre suivant : Les projets →](04-projets.md)
 
-La fenêtre du studio ressemble à celle d’un logiciel de développement ou de montage, pas à une
-page web. Ce chapitre en démonte chaque morceau.
+La fenêtre du studio ressemble à celle d’un logiciel de montage, pas à une page web. Ce chapitre
+en démonte chaque morceau.
 
 ---
 
 ## L’accueil, avant tout le reste
 
-**Le studio ne s’ouvre pas sur une fenêtre vide.** Il s’ouvre sur un écran pleine largeur —
-l’accueil — qui dit où vous en étiez, ce que vous avez produit, et ce que vous pouvez faire.
-
-Il se ferme dès que vous entrez dans un espace de travail, et il n’a ni rail, ni panneau, ni
-onglet : c’est une page, pas une disposition. La ligne d’état reste en bas, parce qu’une
-génération lancée hier peut très bien finir pendant que vous le lisez.
+Le studio s’ouvre sur un écran pleine largeur — l’accueil — qui dit où vous en étiez, ce que vous
+avez produit, et ce que vous pouvez faire. Il se ferme dès que vous entrez dans un espace de
+travail. Il n’a ni rail, ni panneau, ni onglet ; la ligne d’état reste en bas.
 
 ### La bannière, en haut
 
-Elle ne dit qu’une chose à la fois, celle qui compte à cet instant.
+Elle n’affiche qu’une chose à la fois :
 
 | Ce qu’elle affiche | Quand |
 |---|---|
 | **Reprendre où vous en étiez** | un document était ouvert la dernière fois |
 | **_n_ générations en cours** | quelque chose tourne encore |
 | **Connecter une clé API** | aucune clé n’est enregistrée |
-| **Tout est prêt** | aucune des lignes ci-dessus ne s’applique, et le studio sait déjà à quoi s’en tenir |
+| **Tout est prêt** | aucun des cas ci-dessus |
 
-**Il n’y a pas de carte « Démarrer un projet », et c’est délibéré** : créer un projet se demande
-déjà depuis le `+` du rail, la section Outils, la liste des projets, l’écran qui s’affiche sans
-projet et le menu. Une bannière en haut de page l’aurait dit une fois de plus.
-
-**Elle attend de savoir avant de conclure.** Lire les projets et les documents prend un instant, et
-tant que la réponse n’est pas là, « rien n’est vrai » et « rien n’est encore su » se ressemblent :
-la bannière reste muette au lieu d’annoncer « Tout est prêt » puis de se corriger.
+Tant que le studio lit vos projets, elle reste muette plutôt que d’annoncer « Tout est prêt »
+puis de se corriger.
 
 ### Les deux bandes
 
-Sous la bannière, le centre n’empile plus que deux sujets, et ce sont les deux qui ont besoin de
-la largeur :
+Le centre empile deux bandes :
 
 | Bande | Ce qu’elle montre | Il faut |
 |---|---|---|
-| **Où vous en étiez** | la bannière elle-même : reprendre, connecter, ou créer | rien |
+| **Où vous en étiez** | la bannière : reprendre, connecter, ou créer | rien |
 | **Explorer** | ce que tout le monde a publié, par type | une clé API |
 
 **Une bande qui n’a pas ce qu’il lui faut n’est pas grisée : elle n’est pas là.** Sans clé API,
 **Explorer** n’existe pas sur cet écran.
 
-**Tout le reste de l’accueil est un panneau**, logé dans les deux colonnes : vos projets, les
-outils, les recettes, une idée pour commencer, dans la même veine, ce que vous avez produit, les
-compteurs par type, ce que vous avez consommé, votre bibliothèque, vos documents, l’activité
-récente et les tâches en cours. Une bande est ce que le centre empile ; ce que portent les rails
-n’en est pas une. Le bouton **Masquer cette section** ne les concerne donc pas.
+Tout le reste de l’accueil est un panneau, logé dans les deux colonnes — sauf la section
+**Outils**, au centre et en largeur : elle liste ce que le studio sait commencer, dans le même
+ordre que la barre des espaces, et permet d’y créer un projet.
 
 ### Explorer, le fil sans fin
 
-**Explorer** est la seule surface de l’accueil qui ne parle pas de votre compte : c’est le fil de
-ce que **tout le monde** a publié, une catégorie à la fois — les six types du studio, en onglets.
-Pas d’onglet « tout » : une grille qui mêle des sons et des images est une grille de rectangles
-gris, et l’API ne sait de toute façon pas les ordonner les uns contre les autres.
+Le fil de ce que **tout le monde** a publié, une catégorie à la fois — les six types du studio,
+en onglets. Pas d’onglet « tout ».
 
-- **elle se charge en descendant** : le fil pagine tant que vous scrollez, il n’a pas de fin ;
-- **elle reste en bas de page.** Elle y est ancrée : enterrer une section sous un fil sans fin
-  n’est pas une préférence, et rien dans l’interface ne permet de l’exprimer ;
-- **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre, et le studio n’a aucun
-  moyen d’en rapatrier une — un bouton qui peut refuser vaut moins que pas de bouton.
+- **il se charge en descendant** : le fil pagine tant que vous scrollez ;
+- **il reste en bas de page**, et ne se déplace pas ;
+- **les tuiles ne font rien.** Elles appartiennent à quelqu’un d’autre.
 
-C’est aussi la seule bande qui puisse être masquée : la bannière est épinglée, et une ligne en
-bas de page rétablit ce qu’on a retiré.
+C’est la seule bande qui puisse être masquée.
 
 ### Cliquer une vignette l’ouvre
 
-**C’est la règle de toute la page, et il n’y a qu’elle à retenir.** Un clic sur une image
-l’ouvre dans son espace. Ce qui n’est pas « ouvrir » est une action **secondaire**, révélée au
-survol dans le coin de la vignette, et chaque bouton dit son verbe.
+**C’est la règle de toute la page.** Un clic sur une image l’ouvre dans son espace. Ce qui n’est
+pas « ouvrir » est une action secondaire, révélée au survol dans le coin de la vignette.
 
-**Refaire une image ne coûte aucun appel réseau.** Dans le coin de chaque création, « En refaire
-une avec… » rouvre le formulaire déjà rempli : le modèle, le prompt et les réglages sont gardés
-à côté de l’asset, dans le projet.
+**Refaire une image ne coûte aucun appel réseau.** « En refaire une avec… », dans le coin de
+chaque création, rouvre le formulaire déjà rempli — modèle, prompt et réglages sont gardés à côté
+de l’asset.
 
-**Une exception, et une seule : un asset de la bibliothèque que vous n’avez pas encore
-rapatrié.** Il n’est pas sur votre disque, donc il n’y a rien à ouvrir — le clic le **récupère**,
-et le bouton le dit. Une fois descendu, la vignette rejoint la règle commune et s’ouvre. Rien
-n’est jamais téléchargé sans que vous l’ayez demandé.
+**Une exception : un asset de la bibliothèque que vous n’avez pas encore rapatrié.** Le clic le
+**récupère**, et le bouton le dit ; une fois descendu, il s’ouvre comme les autres. Rien n’est
+téléchargé sans que vous l’ayez demandé. Sans projet ouvert, ou pendant un transfert, la vignette
+ne répond pas.
 
-**C’est là, et nulle part ailleurs, qu’on rapatrie.** L’étagère, elle, sait envoyer et pas
-reprendre : chaque sens a sa porte, et ce n’est pas la même — voir [Les assets](07-assets.md).
-Sans projet ouvert, ou pendant qu’un transfert tourne, la vignette reste une image et ne répond
-pas : il n’y aurait nulle part où écrire.
+C’est là, et nulle part ailleurs, qu’on rapatrie ; l’étagère, elle, sait envoyer — voir
+[Les assets](07-assets.md).
 
-**Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image et pose le
-filtre : vous arrivez sur les images, pas sur l’étagère entière. Un type à zéro reste sur la
-rangée mais ne répond pas — il n’y a nulle part où aller. **Et le panneau ne disparaît jamais** :
-projet vide, ou pas de projet du tout, il montre ses six types à zéro. Une bande peut se retirer
-de la page ; un panneau posé sous une icône de rail, non — sinon l’icône ouvrirait sur rien.
+**Un compteur mène à ses assets.** Cliquer celui des images ouvre l’espace Image avec le filtre
+posé. Un type à zéro ne répond pas. Le panneau reste affiché même sans projet, avec ses six types
+à zéro.
 
 ### Ranger la page
 
-Un seul geste reste offert sur un titre de bande : **Masquer cette section**, un bouton qui
-apparaît au survol du titre. Les sections masquées sont comptées en bas de page — « 1 section
-masquée » — avec un bouton **Les réafficher**. Rien ne disparaît sans laisser de trace.
+**Masquer cette section**, au survol d’un titre de bande. Les sections masquées sont comptées en
+bas de page — « 1 section masquée » — avec un bouton **Les réafficher**.
 
-**Aujourd’hui, seul Explorer porte ce bouton.** La bannière est épinglée : c’est ce qui garantit
-que l’accueil n’est jamais une page blanche, quoi qu’on décoche, et elle ne réclame aucune clé
-API. Un contrôle qui ne pourrait que refuser ne s’affiche pas.
-
-**Le menu d’avant n’existe plus.** Le réglage du nombre d’éléments est parti avec les bandes qui
-le portaient — une étagère de panneau lit sa propre page, et une colonne n’a pas de barre où poser
-une telle ligne. **Monter** et **Descendre** sont partis avec l’avant-dernière : il ne reste au
-centre qu’une bannière épinglée en tête et un fil ancré en pied, et rien entre les deux à ranger.
+Seul **Explorer** porte ce bouton ; la bannière est épinglée.
 
 ### La colonne de gauche
 
-Coupée en deux dans tous les espaces, pour la même raison : en haut ce avec quoi on produit, en
-bas ce qu’on parcourt. **À l’accueil, seule la moitié basse existe.**
+Coupée en deux : en haut ce avec quoi on produit, en bas ce qu’on parcourt. **À l’accueil, seule
+la moitié basse existe.**
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
@@ -123,79 +94,51 @@ bas ce qu’on parcourt. **À l’accueil, seule la moitié basse existe.**
 | **Une idée pour commencer** | 2de | des départs de prompt écrits pour votre modèle d’image | une clé API |
 | **Dans la même veine** | 2de | des créations publiques qui ressemblent à votre dernier asset | une clé API |
 
-**La moitié haute est celle que les espaces réservent à la génération**, et l’accueil ne génère
-rien : il y met ce dans quoi on produit. **Vos projets** y est seul, donc aucun clic sur les trois
-étagères du dessous ne peut le faire disparaître. La liste de ce que le studio sait commencer,
-elle, se lit au centre, en largeur — c’est la section **Outils**.
+**Vos recettes** vous suit d’un projet à l’autre : une recette est gardée en dehors des projets.
 
-**Vos recettes ne demandent rien**, et c’est voulu : une recette est gardée en dehors des projets,
-elle vous suit de l’un à l’autre.
+**Une idée pour commencer** n’appelle rien tant que vous ne cliquez pas **Proposez-moi une idée**.
+**C’est gratuit** — aucune unité créative n’est consommée. Prendre une idée ouvre le générateur
+sur le prompt **et** sur les réglages qui vont avec. Sans modèle d’image choisi, le panneau dit ce
+qu’il attend.
 
-**Une idée pour commencer** n’appelle rien tant que vous ne le demandez pas : elle a un bouton
-**Proposez-moi une idée**. C’est délibéré — un accueil qui déclencherait un aller-retour à chaque
-lancement dépenserait la limite de débit du compte pour un panneau que personne n’a regardé.
-**C’est gratuit** : aucune unité créative n’est consommée. Prendre une idée ouvre le générateur sur
-le prompt **et** sur les réglages qui vont avec. Sans modèle d’image choisi, le panneau dit ce
-qu’il attend : la proposition est écrite pour un modèle, et sans lui elle proposerait dans le vide.
-
-**Dans la même veine** part de votre **dernier asset** — pas d’un choix, il n’y a rien à
-sélectionner — et cherche des créations publiques qui lui ressemblent. La référence, nommée en tête
-du panneau, est retirée des résultats où elle arriverait première. Si la bibliothèque ne répond
-pas, le panneau le dit **dans ses propres mots** et propose **Réessayer**. Les autres panneaux
-distinguent aussi un refus d’un compte vide ; il est le seul à le dire avec ses mots à lui.
-
-Les documents du projet ouvert, eux, sont listés dans la colonne de droite, qui a ses panneaux à
-elle.
+**Dans la même veine** part de votre **dernier asset**, nommé en tête du panneau, et cherche des
+créations publiques qui lui ressemblent. Si la bibliothèque ne répond pas, le panneau propose
+**Réessayer**.
 
 ### La colonne de droite
-
-Cinq panneaux en moitié haute, deux en moitié basse, et ils se lisent dans cet ordre : de ce que
-ce projet vient de produire à ce qu’il y a dedans à ouvrir, en passant par ce qu’il a coûté et par
-ce que votre compte détient en dehors de lui.
 
 | Panneau | Moitié | Ce qu’il montre | Il faut |
 |---|---|---|---|
 | **Ce que vous avez produit** | 1re | les générations de ce projet, la plus récente d’abord | un projet ouvert |
-| **Par type** | 1re | un nombre par type d’asset ; un type qui n’est pas à zéro mène à sa part de l’étagère | rien |
+| **Par type** | 1re | un nombre par type d’asset ; un type non nul mène à sa part de l’étagère | rien |
 | **Ce que vous avez consommé** | 1re | vos unités dépensées, en tout et par modèle | une clé API |
 | **Votre bibliothèque** | 1re | ce que votre compte détient en ligne | une clé API |
 | **Vos documents** | 1re | les documents du projet, ouverts ou non | un projet ouvert |
 | **Activité récente** | 2de | le journal du studio, filtrable | rien |
 | **En cours** | 2de | les générations du studio, en route et terminées | rien |
 
-**Ce que vous avez consommé** reprend la période de la fenêtre de consommation, pour que les deux
-ne se contredisent jamais. C’est un résumé, pas la fenêtre : le détail est dans
-**Aide ▸ Consommation…**.
+**Ce que vous avez consommé** reprend la période de la fenêtre de consommation. C’est un résumé :
+le détail est dans **Aide ▸ Consommation…**.
 
-**En cours** est la liste que le voyant de la barre d’état ouvre déjà — la même, à un autre
-endroit. Elle garde les générations terminées le temps de la session, pour qu’on puisse y lire ce
-qu’une exécution a coûté.
+**En cours** est la liste qu’ouvre déjà le voyant de la barre d’état. Elle garde les générations
+terminées le temps de la session, pour qu’on puisse y lire ce qu’une exécution a coûté.
 
-**« Il faut » ne veut pas dire la même chose ici que pour les bandes.** Une bande à qui il manque
-quelque chose disparaît ; **un panneau reste**, et dit ce qui lui manque — son icône est dans le
-rail, et une icône qui ouvre sur rien serait pire qu’un panneau vide. Sans projet, *Vos documents*
-propose d’en ouvrir un ; sans clé, *Votre bibliothèque* dit qu’elle **n’a pas obtenu de réponse**
-et offre de réessayer — c’est le même message qu’un refus du serveur, et c’est voulu : de son point
-de vue, une demande sans clé et une demande refusée reviennent au même, et **Réessayer** est le
-bon geste dans les deux cas. Le message « la bibliothèque est vide » ne s’affiche, lui, que
-lorsque la question a bien été posée et que la réponse ne contenait rien.
+**« Il faut » ne veut pas dire la même chose que pour les bandes.** Une bande à qui il manque
+quelque chose disparaît ; **un panneau reste et dit ce qui lui manque**. Sans projet, *Vos
+documents* propose d’en ouvrir un ; sans clé, *Votre bibliothèque* dit qu’elle n’a pas obtenu de
+réponse et offre de réessayer — même message qu’un refus du serveur. « La bibliothèque est vide »
+ne s’affiche que si la question a bien été posée.
 
-**Vos documents n’est pas l’Explorateur, et c’est tout l’intérêt.** L’Explorateur parcourt le
-dossier du projet en arborescence, où un document est un fichier parmi d’autres, un pli plus bas.
-Ce panneau-ci liste les documents eux-mêmes — la question que pose l’accueil est « qu’y a-t-il à
-ouvrir ». **C’est ce qui rend retrouvable un document fermé** : la disposition dit lesquels sont
-à l’écran, le dossier dit lesquels existent, et un document fermé alors qu’aucune disposition ne
-le tenait ne se retrouve que là.
+**Vos documents n’est pas l’Explorateur.** L’Explorateur parcourt le dossier du projet en
+arborescence ; ce panneau liste les documents eux-mêmes. **C’est ce qui rend retrouvable un
+document fermé.**
 
-**Activité récente est le journal complet**, celui-là même que déroule la barre d’état — avec ses
-filtres par niveau et par sujet, et son état vide. Ce n’est pas un extrait des dernières lignes :
-un résumé ne peut rien dire de ce qu’il a laissé de côté, alors que « qu’est-ce qui a raté »
-demande précisément de filtrer.
+**Activité récente est le journal complet**, avec ses filtres par niveau et par sujet — pas un
+extrait des dernières lignes.
 
 > **L’accueil peut être coupé.** **Réglages ▸ Général ▸ Afficher l’accueil** : décoché, le
 > studio va droit à l’espace que vous aviez quitté. Ce que vous masquez se règle sur l’accueil
-> lui-même, pas dans les réglages — et il n’y a plus d’ordre à régler : les deux bandes ne se
-> déplacent pas.
+> lui-même.
 
 ---
 
@@ -220,64 +163,52 @@ demande précisément de filtrer.
 
 Cinq éléments, dans l’ordre où on les rencontre :
 
-1. la **barre de titre**, tout en haut, qui porte les espaces de travail ;
+1. la **barre de titre**, qui porte les espaces de travail ;
 2. les **rails**, collés aux bords gauche et droit : des bandes d’icônes ;
 3. les **zones**, où vivent les panneaux ;
-4. la **zone des documents**, au centre : c’est là que se trouve ce que vous fabriquez ;
+4. la **zone des documents**, au centre ;
 5. la **ligne d’état**, tout en bas.
 
-**Les couleurs ont un sens.** Le fond général — le *châssis* — est gris moyen. Les panneaux
-posés dessus sont **plus sombres**, avec des coins arrondis. C’est l’inverse de l’habitude du
-web, et c’est voulu : cela donne la lecture « des panneaux posés sur une table », comme dans un
-logiciel de montage.
+**Les couleurs ont un sens.** Le fond général — le *châssis* — est gris moyen ; les panneaux posés
+dessus sont **plus sombres**, avec des coins arrondis.
 
 ---
 
 ## La barre de titre
 
-Elle ne porte pas le nom du fichier. Elle porte les **six espaces de travail** :
+Elle ne porte pas le nom du fichier, mais les **six espaces de travail** :
 
 **Image** · **Vidéo** · **3D** · **Audio** · **Textures** · **Skyboxes**
 
-Un clic change d’espace. L’espace actif est celui dont le bouton est plus clair que les autres.
+Un clic change d’espace ; l’espace actif est plus clair que les autres. Changer d’espace fait
+trois choses :
 
-Changer d’espace fait trois choses d’un coup :
-
-- **les panneaux se réarrangent** — chaque espace montre les outils dont il a besoin et cache
-  les autres ;
+- **les panneaux se réarrangent** — chaque espace montre les outils dont il a besoin ;
 - **les onglets changent** — chaque espace a ses propres documents ouverts ;
-- **le catalogue se filtre** — le panneau Modèles ne montre plus que les modèles capables de
-  fabriquer ce type de contenu.
+- **le catalogue se filtre** — Modèles ne montre que les modèles capables de ce type de contenu.
 
-Sur macOS, les trois pastilles rouge / orange / verte restent à leur place habituelle, à gauche.
+Sur macOS, les trois pastilles restent à leur place habituelle, à gauche.
 
 ### Ranger les espaces dans l’ordre qui vous arrange
-
-L’ordre de la barre n’est pas imposé. Trois façons de le changer, au choix :
 
 | Geste | Comment |
 |---|---|
 | **Glisser** | attrapez un espace et lâchez-le sur un autre |
-| **Clavier** | `⌥←` / `⌥→` sur l’espace focalisé — les flèches nues, elles, servent à parcourir la barre |
+| **Clavier** | `⌥←` / `⌥→` sur l’espace focalisé — les flèches nues parcourent la barre |
 | **Clic droit** | **Déplacer à gauche** / **Déplacer à droite** |
 
-Les deux touches **se remappent comme les autres**, sous le contexte *Dans la barre des espaces*
-de l’[écran des raccourcis](15-raccourcis.md).
+Les deux touches se remappent sous le contexte *Dans la barre des espaces* de
+l’[écran des raccourcis](15-raccourcis.md).
 
-**L’Accueil ne bouge pas** : il n’est pas un espace parmi les autres, il les couvre tous, et il
-reste en tête.
-
-**L’ordre suit partout.** La section **Outils** de l’accueil montre les mêmes espaces : réordonner
-l’un sans l’autre laisserait deux vérités sur le même écran. Il est retenu d’une session à
-l’autre, avec vos réglages.
+**L’Accueil ne bouge pas** et reste en tête. L’ordre est le même dans la section **Outils** de
+l’accueil, et il est retenu d’une session à l’autre.
 
 > **Un espace ajouté par une mise à jour n’atterrit pas au bout de votre barre.** Il se pose là où
-> le studio le range d’origine — après le dernier de ses voisins que vous avez gardés. Un ordre
-> enregistré est la photo des espaces d’un jour donné, et cette photo vieillit.
+> le studio le range d’origine, après le dernier de ses voisins que vous avez gardés.
 
 ### Le sélecteur de compte
 
-À droite de la barre de titre : un petit point de couleur, un nom, et un chevron.
+À droite de la barre de titre : un point de couleur, un nom, un chevron.
 
 | Ce que vous voyez | Ce que ça dit |
 |---|---|
@@ -286,115 +217,79 @@ l’autre, avec vos réglages.
 | **Le nom** | le compte en cours d’utilisation |
 | **« Non connecté »** | aucun compte n’est enregistré |
 
-**Un clic ouvre la liste** de vos comptes, celui en cours étant coché, plus une entrée
-**Gérer les comptes…** qui mène aux réglages.
-
-S’il n’y a **aucun compte enregistré**, le bouton n’ouvre pas de menu : il va directement aux
-réglages. Un menu d’une seule ligne n’est pas un menu.
+Un clic ouvre la liste de vos comptes, celui en cours étant coché, plus **Gérer les comptes…** qui
+mène aux réglages. Sans aucun compte enregistré, le bouton va directement aux réglages.
 
 > **Changer de compte change la bibliothèque, pas votre travail.** Chaque clé API porte son propre
-> projet Scenario — ses modèles, ses assets, son crédit. Votre projet local, lui, est sur votre
-> disque et n’appartient à aucun compte : il ne bouge pas d’un pixel.
+> projet Scenario — ses modèles, ses assets, son crédit. Votre projet local est sur votre disque et
+> n’appartient à aucun compte.
 
-C’est un **sélecteur**, jamais un formulaire : les clés se tapent dans les réglages, et nulle part
-ailleurs.
+Les clés se tapent dans les réglages, et nulle part ailleurs.
 
 ---
 
 ## Les rails
 
-Les deux bandes verticales d’icônes, collées aux bords gauche et droit.
+Les deux bandes verticales d’icônes, collées aux bords. **Un rail ne disparaît jamais** : même
+quand vous avez tout fermé, chaque panneau reste à un clic.
 
-**Un rail ne disparaît jamais.** C’est leur intérêt : même quand vous avez tout fermé, chaque
-panneau reste à un clic.
-
-### Comment ils se lisent
-
-Un clic sur une icône **ouvre** le panneau. Un second clic sur la même icône le **referme**.
-
-Un **trait de séparation** en travers du rail indique la coupure d’une zone : les icônes
-au-dessus du trait ouvrent dans la première moitié de la zone, celles en dessous dans la
-seconde. Le rail est donc la légende de la colonne qu’il commande.
+Un clic sur une icône **ouvre** le panneau ; un second le **referme**. Un **trait de séparation**
+indique la coupure d’une zone : les icônes au-dessus ouvrent dans la première moitié, celles en
+dessous dans la seconde.
 
 ### Le rail de gauche
-
-De haut en bas :
 
 | Élément | Ce qu’il fait |
 |---|---|
 | **+** (bouton bleu) | crée un **nouveau document** dans l’espace actif |
 | *séparateur* | |
-| Les icônes de la **moitié haute** de la colonne de gauche | Modèles, puis Génération — les mêmes dans tous les espaces ; l’accueil y met **Vos projets** |
+| Icônes de la **moitié haute** | Modèles, puis Génération ; l’accueil y met **Vos projets** |
 | *séparateur* | |
-| Les icônes de la **moitié basse** | l’Explorateur — le même dans tous les espaces ; l’accueil y met ses trois étagères : recettes, assistance de prompt, puis « dans la même veine » |
-| Tout en bas : les icônes de la **bande basse** | Assets ou Timeline, selon l’espace |
-
-**Un séparateur par coupure de la colonne, jamais un de plus.** Le rail est la légende de la
-colonne : il la découpe comme elle est découpée, et une moitié vide ne l’atteint pas.
-
-Le bouton **+** est plein et bleu, quand tous les autres sont des glyphes gris. C’est parce
-qu’il **agit** — il crée quelque chose — alors que les autres ne font que montrer ou cacher.
+| Icônes de la **moitié basse** | l’Explorateur ; l’accueil y met ses trois étagères |
+| Tout en bas | Assets ou Timeline, selon l’espace |
 
 > Le bouton **+** est grisé quand aucun projet n’est ouvert : un document est un fichier dans un
-> dossier de projet, et sans projet il n’y a nulle part où l’écrire.
+> dossier de projet.
 
 ### Le rail de droite
 
-Les icônes de la **colonne de droite** : Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
-Mailles, Assets — celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
-
-**Assets vient en dernier, et ce n’est pas un détail** : une moitié sans choix montre le premier
-panneau déclaré, et une étagère listée avant l’arbre de la scène s’ouvrirait devant lui à chaque
-entrée dans l’espace 3D.
+Les icônes de la colonne de droite — Skybox, Vue, Calques, Canaux, Styles, Scène, Lumières,
+Mailles, Assets, celles que l’espace déclare, dans cet ordre — puis, sous le trait, Inspecteur.
 
 ### Le rail ne montre que ce que l’espace sait faire
 
-Une icône n’apparaît que si l’espace où vous êtes a réellement ce panneau. Les Calques n’ont aucun
-sens dans l’espace Audio : leur icône n’y est pas.
+Une icône n’apparaît que si l’espace a réellement ce panneau : les Calques n’existent pas dans
+l’espace Audio.
 
-**Un cas particulier : la Génération.** Son icône disparaît tant qu’aucun modèle n’est choisi.
-Ce n’est pas un bouton grisé, c’est une absence — générer sans modèle est impossible, et le rail
-préfère montrer ce que l’espace **peut** faire plutôt que ce qu’il ne peut pas.
-
-Dès que vous choisissez un modèle dans le panneau **Modèles**, l’icône apparaît. Elle reste si vous
-avez fixé un modèle par défaut pour cette famille dans les réglages.
+**La Génération est un cas particulier** : son icône est absente tant qu’aucun modèle n’est
+choisi. Elle apparaît dès que vous en choisissez un dans **Modèles**, et reste si vous avez fixé
+un modèle par défaut pour cette famille.
 
 ---
 
 ## Les zones et les panneaux
 
-Il y a quatre zones : **gauche**, **droite**, **haute**, **basse**.
-
-Chaque zone est **coupée en deux moitiés**, et chaque moitié montre **un panneau à la fois**.
-
-Cela veut dire deux choses :
+Quatre zones — **gauche**, **droite**, **haute**, **basse** — chacune coupée en deux moitiés, et
+chaque moitié montre **un panneau à la fois** :
 
 - deux panneaux de la **même moitié** se relaient : ouvrir le second referme le premier ;
-- deux panneaux de moitiés **différentes** de la même zone s’affichent **ensemble** — l’un
-  au-dessus de l’autre dans une colonne, l’un à côté de l’autre dans une bande.
+- deux panneaux de moitiés **différentes** de la même zone s’affichent **ensemble**.
 
 > **La zone haute n’accueille aucun panneau pour l’instant.** Elle existe dans la structure et
-> reste réservée. Rien n’y apparaîtra tant qu’un panneau n’y sera pas déclaré.
+> reste réservée.
 
 ### Redimensionner
 
-**Tirez sur l’espace entre deux panneaux.** Cet espace — la *gouttière* — est lui-même la
-poignée : il n’y a pas de petite prise à viser au pixel près.
+**Tirez sur l’espace entre deux panneaux** — la *gouttière* est elle-même la poignée.
 
-Le studio garde toujours **au moins 240 pixels** pour la zone des documents au centre, et au
-moins 140 pixels pour chaque zone latérale. Vous ne pouvez donc pas écraser le centre par
-accident en tirant trop loin.
+Le studio garde toujours **au moins 240 pixels** pour la zone des documents et **au moins 140**
+pour chaque zone latérale : vous ne pouvez pas écraser le centre par accident.
 
-Tailles de départ : colonne de gauche 320 px, colonne de droite 260 px, bande basse 240 px. La
-gauche est la plus large des deux : elle porte le formulaire du modèle, et un formulaire à
-260 px replie ses champs les uns sous les autres.
+Tailles de départ : colonne de gauche 320 px, colonne de droite 260 px, bande basse 240 px.
 
 ### Fermer, rouvrir, tout remettre en place
 
-Un panneau **se ferme**, il ne se replie pas. Un panneau replié serait un troisième état qui ne
-ressemble ni à ouvert ni à fermé — et le rail le rouvre déjà en un clic.
-
-Trois façons de retrouver ce que vous avez fermé :
+Un panneau se ferme, il ne se replie pas. Trois façons de retrouver ce que vous avez fermé :
 
 | Moyen | Effet |
 |---|---|
@@ -402,20 +297,13 @@ Trois façons de retrouver ce que vous avez fermé :
 | **Affichage ▸ Modules** | même chose, depuis le menu |
 | **Affichage ▸ Réinitialiser la disposition** | remet **tous** les panneaux à leur place d’origine |
 
-> **Réinitialiser la disposition ne touche pas votre travail.** Cela ne déplace que des
-> panneaux.
+> **Réinitialiser la disposition ne touche pas votre travail.** Cela ne déplace que des panneaux.
 
 ### Quand un panneau devient étroit
 
-Rétrécissez un panneau et sa ligne de titre cède du terrain progressivement : ses propres
-contrôles — un filtre, un bouton de vue — partent les premiers. **Le bouton de fermeture, lui,
-ne part jamais.** Un panneau dont on ne pourrait plus sortir serait pire qu’un panneau privé de
-son filtre.
-
-**Une exception : le nom du panneau ne se sacrifie pas en premier.** Dans une bande, l’étagère
-loge toute sa barre sur la ligne de titre ; si la place manquait, c’est le nom qui serait rogné
-jusqu’à disparaître. Le nom d’un panneau n’est pas ce qu’une ligne encombrée doit dépenser en
-premier, donc il garde sa taille et c’est la barre qui se resserre.
+Sa ligne de titre cède du terrain progressivement : ses propres contrôles — un filtre, un bouton
+de vue — partent les premiers. **Le bouton de fermeture ne part jamais**, et le nom du panneau
+garde sa taille.
 
 ---
 
@@ -428,7 +316,7 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Skybox** | droite | 1re | Skyboxes | les réglages du ciel ouvert |
 | **Vue** | droite | 1re | Skyboxes | la projection, le champ de vision et les objets de test |
 | **Calques** | droite | 1re | Image | la pile de calques de l’image ouverte |
-| **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte, et ce que chacun porte |
+| **Canaux** | droite | 1re | Textures | les huit canaux de la matière ouverte |
 | **Styles** | droite | 1re | Textures | les réglages de matière enregistrés, à rejouer sur n’importe quelle matière |
 | **Scène** | droite | 1re | 3D | l’arbre de la scène ouverte |
 | **Lumières** | droite | 1re | 3D | les sources lumineuses de la scène |
@@ -437,70 +325,38 @@ premier, donc il garde sa taille et c’est la barre qui se resserre.
 | **Explorateur** | gauche | 2de | partout | le dossier du projet, dossiers et fichiers |
 | **Inspecteur** | droite | 2de | partout | ce qui est sélectionné, réglable en direct |
 | **Assets** | bas | 1re | Image, Textures, Skyboxes | la même étagère, en bande |
-| **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation de la scène |
+| **Timeline** | bas | 1re | Vidéo, Audio, 3D | la séquence en cours de montage, ou l’animation |
 
-> **« Partout » veut dire les espaces de travail, pas l’accueil**, sauf mention contraire. Un
-> espace est un endroit qui ouvre des documents d’une sorte à lui ; l’accueil n’en ouvre aucun —
-> il ouvre ceux des autres. **L’accueil a ses propres panneaux, et ce tableau ne les liste pas** :
-> il a ses deux colonnes à lui, avec onze panneaux qui n’existent nulle part ailleurs. N’ayant pas
-> de génération à mettre en moitié haute, il y met **Vos projets** — un espace range à gauche ce
-> **avec** quoi on produit, l’accueil ce **dans** quoi on produit, et c’est la première chose
-> qu’on vient y chercher. Ses trois étagères se partagent la moitié basse, là où les espaces
-> mettent l’Explorateur ; ce que le studio sait commencer se lit au centre, en largeur.
+> **« Partout » veut dire les espaces de travail, pas l’accueil.** L’accueil a ses propres
+> panneaux — onze, dans ses deux colonnes — que ce tableau ne liste pas.
 
-**La colonne de gauche est celle de ce qui produit**, et elle est coupée en deux.
-
-**En haut, la génération, et rien d’autre.** Deux panneaux seulement y ont le droit —
-**Modèles** et **Génération** — et aucun des deux ne s’affiche ailleurs. Générer est la seule
-chose que tous les espaces font : elle a donc la même place dans chacun, juste sous le bouton
-**+** qui crée un document. Ce sont deux moments du même travail, choisir puis remplir, donc ils
-se relaient dans la même moitié.
-
-**En bas, l’Explorateur** : les documents dans lesquels on produit. Sa propre moitié plutôt qu’un
-tour de plus en haut, parce qu’empiler les icônes dans un rail est le moment où une colonne cesse
-d’être un endroit qu’on connaît pour devenir une pile qu’on fouille — et parce que la moitié
-haute garde ainsi la génération visible **pendant** qu’on lit l’Explorateur.
+**La colonne de gauche est celle de ce qui produit.** En haut, **Modèles** et **Génération**,
+qui se relaient. En bas, l’**Explorateur**.
 
 **La colonne de droite est celle du document ouvert** : ce qu’il contient, ce qui l’éclaire, ce
-qui est sélectionné. Les panneaux y prennent leur tour dans la moitié haute — un espace ne
-déclare jamais tous à la fois — et l’**Inspecteur** occupe l’autre moitié, toujours en bas.
-On lit ce qui est sélectionné **pendant** qu’on choisit un modèle et qu’on écrit un prompt :
-dans un éditeur, l’inspecteur n’est jamais le panneau qu’il faut quitter pour voir autre chose.
+qui est sélectionné. Les panneaux prennent leur tour dans la moitié haute, l’**Inspecteur**
+occupe toujours la moitié basse.
 
-**Pourquoi l’étagère à assets change de place.** Dans la plupart des espaces, elle est en bas :
-c’est une étagère, elle se lit en largeur, et la colonne latérale est réservée à ce qui agit sur le
-document. Mais en **Vidéo**, en **Audio** et en **3D**, la bande basse appartient à la timeline,
-qui a besoin de toute la largeur. L’étagère passe alors dans la **colonne de droite**, pour que la
-timeline et elle tiennent l’écran **ensemble** : glisser une prise sur une piste est le geste
-autour duquel ces espaces sont bâtis.
-
-**La règle appartient à la bande, pas au montage.** La 3D suit les deux autres parce qu’elle a une
-timeline elle aussi — le temps s’y lit sur la même ligne, qu’on y monte des plans ou qu’on y joue
-une animation.
+**L’étagère à assets change de place selon l’espace.** En bas dans la plupart ; en **Vidéo**,
+**Audio** et **3D**, la bande basse appartient à la timeline, et l’étagère passe dans la colonne
+de droite — timeline et étagère tiennent alors l’écran ensemble, pour glisser une prise sur une
+piste.
 
 ### Une moitié montre ce que l’espace y met
 
-Vous ouvrez la bande basse dans l’espace Image : c’est l’étagère. Vous passez en Vidéo : la même
-bande devient le montage, sans que vous ayez rien à rouvrir.
+Ouvrez la bande basse en Image : c’est l’étagère. Passez en Vidéo : la même bande devient le
+montage, sans rien rouvrir.
 
-**Ce que vous avez ouvert, c’est une zone** — et elle le reste. Une moitié qui contient un panneau
-que cet espace range ailleurs, ou n’a pas du tout, affiche ce que l’espace y met à la place.
-Fermer la moitié la vide partout : c’est la seule chose que le clic disait vraiment.
-
-Deux conséquences pratiques :
+**Ce que vous avez ouvert, c’est une zone**, et elle le reste. Fermer la moitié la vide partout.
 
 - **rien n’est réécrit** : revenez dans l’espace d’origine, vous retrouvez ce que vous y aviez ;
-- **une Génération sans modèle laisse la place aux Modèles** — le panneau qui permet justement d’en
-  choisir un.
+- **une Génération sans modèle laisse la place aux Modèles.**
 
 ### Une moitié que vous n’avez pas choisie s’ouvre sur le premier panneau de l’espace
 
-Tant que vous n’avez cliqué aucune icône d’une moitié, elle n’est attachée à **aucun** panneau :
-elle affiche le premier que l’espace y déclare — celui du haut dans le tableau ci-dessus, et donc
-le premier du rail.
-
-C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸ Réinitialiser la
-disposition** rétablit :
+Tant que vous n’avez cliqué aucune icône d’une moitié, elle affiche le premier panneau que
+l’espace y déclare. C’est ce que vous voyez à la première ouverture, et ce que **Affichage ▸
+Réinitialiser la disposition** rétablit.
 
 La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espaces.
 
@@ -513,66 +369,50 @@ La moitié basse de gauche s’ouvre sur l’**Explorateur** dans tous les espac
 | **Textures** | Canaux | Assets |
 | **Skyboxes** | Skybox | Assets |
 
-**Pourquoi ce n’est pas un panneau fixé une fois pour toutes.** Votre disposition est retenue une
-seule fois pour tous les espaces, alors que le panneau qui vient en premier diffère dans chacun.
-En inscrire un dans la disposition par défaut reviendrait à imposer la réponse d’un espace aux
-six autres.
+Dès que vous cliquez une icône, cette moitié retient **votre** choix et ne bouge plus, jusqu’à ce
+que vous en cliquiez une autre ou que vous réinitialisiez la disposition.
 
-Dès que vous cliquez une icône, cette moitié retient **votre** choix, et ne bouge plus jusqu’à ce
-que vous en cliquiez une autre — ou que vous réinitialisiez la disposition.
-
-**Pourquoi l’Explorateur est visible partout.** Il montre le dossier du projet en arborescence, et
-c’est la même question dans tous les espaces : un double-clic sur un document l’ouvre, en changeant
-d’espace s’il appartient à un autre ; sur un fichier d’`assets/`, il l’ouvre dans l’espace qui édite
-son type ; sur tout le reste, il le confie au système. Il a longtemps montré
-l’arbre de la scène 3D — celui-ci a désormais son propre panneau, **Scène**.
+**L’Explorateur est visible partout.** Un double-clic sur un document l’ouvre, en changeant
+d’espace s’il appartient à un autre ; sur un fichier d’`assets/`, il l’ouvre dans l’espace qui
+édite son type ; sur tout le reste, il le confie au système.
 
 ---
 
 ## La zone des documents
 
-Le centre. C’est là que se trouve ce que vous fabriquez.
-
-**Elle ne prend que des documents.** Un fichier ouvert et sa barre d’outils, rien d’autre. Aucun
-panneau ne peut y entrer.
+Le centre, où se trouve ce que vous fabriquez. **Elle ne prend que des documents** : un fichier
+ouvert et sa barre d’outils. Aucun panneau ne peut y entrer.
 
 ### Les onglets
 
-Chaque document ouvert a son onglet, en haut du centre. Un clic passe de l’un à l’autre.
-
-Ils peuvent être **déplacés**, **réorganisés**, et **posés côte à côte** : faites glisser un
-onglet vers un bord du centre, une zone de dépôt s’affiche, lâchez — vous obtenez deux documents
-visibles en même temps.
+Chaque document ouvert a son onglet, en haut du centre ; un clic passe de l’un à l’autre. Ils
+peuvent être **déplacés**,
+**réorganisés** et **posés côte à côte** : faites glisser un onglet vers un bord du centre, une
+zone de dépôt s’affiche, lâchez.
 
 ### Le point à côté du nom
 
-Un onglet dont le travail n’est pas encore écrit sur le disque porte **un point** (`•`) à côté
-de son nom.
-
-Le point disparaît à l’enregistrement (`⌘S` / `Ctrl+S`), et revient à la modification suivante.
-Si vous annulez jusqu’au point exact où vous aviez enregistré, il disparaît aussi : ce que vous
-voyez est alors bien ce que contient le fichier.
+Un onglet dont le travail n’est pas écrit sur le disque porte **un point** (`•`). Il disparaît à
+l’enregistrement (`⌘S` / `Ctrl+S`) et revient à la modification suivante. Si vous annulez jusqu’au
+point exact où vous aviez enregistré, il disparaît aussi.
 
 > **Les sept types de documents savent s’enregistrer** — images, scènes 3D, textures, séquences,
-> sons édités, ciels et graphes. Ce qui ne revient pas d’un enregistrement à l’autre, c’est l’historique
-> d’annulation. Voir [Ce qui n’existe pas encore](18-limites.md).
+> sons édités, ciels et graphes. Ce qui ne revient pas d’un enregistrement à l’autre, c’est
+> l’historique d’annulation. Voir [Ce qui n’existe pas encore](18-limites.md).
 
 ### Fermer un onglet
 
-La croix de l’onglet ferme le document. **S’il porte le point**, le studio demande d’abord quoi
-faire de ce qui n’est pas écrit :
+La croix ferme le document. **S’il porte le point**, le studio demande d’abord :
 
-- **Enregistrer** écrit le document puis ferme — c’est ce que `⏎` choisit ;
+- **Enregistrer** écrit puis ferme — c’est ce que `⏎` choisit ;
 - **Ne pas enregistrer** ferme et perd le travail fait depuis le dernier `⌘S` ;
-- **Annuler** ne ferme rien — et c’est aussi ce que répond `⎋`, pour qu’une touche frappée sans
-  lire ne puisse jamais jeter du travail.
+- **Annuler** ne ferme rien — c’est aussi ce que répond `⎋`.
 
-Si l’écriture échoue, l’onglet reste ouvert et la raison part dans le journal d’activité : fermer
-quand même perdrait exactement ce que la question venait de promettre de garder.
+Si l’écriture échoue, l’onglet reste ouvert et la raison part dans le journal d’activité.
 
 ### Le menu d’un onglet
 
-Un **clic droit** sur un onglet ouvre trois gestes :
+Un **clic droit** ouvre trois gestes :
 
 | Ligne | Ce qu’elle fait |
 |---|---|
@@ -581,36 +421,28 @@ Un **clic droit** sur un onglet ouvre trois gestes :
 | **Supprimer le document…** | **retire le fichier du dossier du projet** |
 
 **Supprimer est irréversible**, et c’est le seul geste du studio qui efface un fichier que vous
-avez fait. Le studio demande confirmation, et cette fois-ci c’est *Annuler* qui est le bouton par
-défaut. Un document supprimé ne propose pas d’être enregistré au passage : l’écrire et l’effacer
-dans le même geste n’aurait aucun sens.
+avez fait. Le studio demande confirmation, et cette fois *Annuler* est le bouton par défaut.
 
 ### Chaque espace a ses propres onglets
 
 Passer de « Image » à « 3D » ne ferme rien : cela range les onglets d’Image et sort ceux de 3D.
-Revenez à Image, vous retrouvez exactement ce que vous y aviez laissé.
 
 ---
 
 ## La ligne d’état
 
-La bande fine, tout en bas.
-
-À gauche, elle indique **où vous êtes** :
+La bande fine, tout en bas. À gauche, elle indique **où vous êtes** :
 
 | Ce qui s’affiche | Situation |
 |---|---|
 | *Aucun projet ouvert* | rien n’est ouvert |
 | `Mon projet` | un projet est ouvert, aucun document en avant |
-| `Mon projet — Falaise` | un projet est ouvert, et le document « Falaise » est en avant |
+| `Mon projet — Falaise` | le document « Falaise » est en avant |
 
 ### Les générations, à droite de la ligne d’état
 
-C’est ici que vivent vos demandes en cours. **Il n’y a pas de panneau Tâches** : une génération est
-plusieurs minutes d’attente que vous passez ailleurs, elle doit donc se lire depuis n’importe quel
-espace — et un panneau ne peut être qu’à un endroit.
-
-Ce que vous voyez, quand quelque chose travaille :
+Vos demandes en cours. **Il n’y a pas de panneau Tâches** : une génération se lit depuis
+n’importe quel espace. Ce que vous voyez, quand quelque chose travaille :
 
 ```
 3 générations  ▓▓▓▓▓░░░░░  45 %  ⌃
@@ -623,58 +455,43 @@ Ce que vous voyez, quand quelque chose travaille :
 | **Le pourcentage** | le même chiffre, en clair |
 | **Le chevron** | un clic ouvre la liste complète |
 
-**Quand plus rien ne travaille, la zone disparaît.** Elle ne coûte aucune place au repos.
-
-**Sauf s’il y a eu un échec** : « 2 échecs » reste affiché après la fin des tâches. Un échec qui
-s’effacerait avec la dernière génération en cours est un échec que personne n’aurait lu.
+**Quand plus rien ne travaille, la zone disparaît** — **sauf s’il y a eu un échec** : « 2 échecs »
+reste affiché après la fin des tâches.
 
 **Le clic ouvre la liste**, dans une petite fenêtre au-dessus de la ligne d’état : une ligne par
 tâche, son modèle, son état, sa barre, et le bouton qui l’annule. Sous la barre, ce que la
-génération a coûté — ou, si elle a échoué, pourquoi. C’est le contenu de l’ancien panneau, à un
-clic au lieu d’une place permanente.
+génération a coûté — ou, si elle a échoué, pourquoi.
 
 ### Le journal, à côté
 
-Une seconde icône, sur la même ligne : c’est le **journal d’activité**. Il retient ce que le
-studio a fait et ce qu’il a raté — une génération, un import, un envoi vers la bibliothèque, un
-enregistrement de document.
-
-**Il est toujours là**, contrairement aux générations qui s’effacent au repos. Un studio qui ne
-montre rien tant que rien n’a cassé laisse l’utilisateur sans endroit où regarder **avant** que
-ça casse.
+Une seconde icône, sur la même ligne : le **journal d’activité**. Il retient ce que le studio a
+fait et ce qu’il a raté — une génération, un import, un envoi vers la bibliothèque, un
+enregistrement. **Il est toujours là**, contrairement aux générations qui s’effacent au repos.
 
 | Ce que vous voyez | Situation |
 |---|---|
 | une petite horloge grise | tout va bien, le journal est consultable |
-| une alerte et « 2 échecs » en rouge | deux choses ont échoué et n’ont pas encore été lues |
+| une alerte et « 2 échecs » en rouge | deux choses ont échoué et n’ont pas été lues |
 
-**Un clic ouvre la liste et marque tout comme lu** — l’ouvrir, c’est le lire. Deux filtres y
-attendent : le **niveau** (information, avertissement, échec) et le **sujet** (génération,
-import, bibliothèque, document, projet, interface). **Chacun est un menu** : le bouton dit ce
-qu'il retient — « Niveau : Échec », ou « Niveau : Tout » quand il ne retient rien — et l'ouvrir
-donne les cases à cocher. Plusieurs valeurs peuvent l'être à la fois ; la ligne **Tout**, en tête
-du menu, relâche le filtre entier.
+**Un clic ouvre la liste et marque tout comme lu.** Deux filtres y attendent : le **niveau**
+(information, avertissement, échec) et le **sujet** (génération, import, bibliothèque, document,
+projet, interface). **Chacun est un menu** : le bouton dit ce qu’il retient — « Niveau : Échec »,
+ou « Niveau : Tout » — et l’ouvrir donne les cases à cocher. La ligne **Tout**, en tête du menu,
+relâche le filtre entier.
 
 **Interface, c’est le studio lui-même** plutôt que ce qu’il contient : un panneau qui n’a pas pu
-se dessiner, ou l’agencement enregistré d’un espace devenu illisible. Ces pannes-là n’ont pas de
-document à qui les rattacher — [voir le chapitre 16](16-depannage.md).
+se dessiner, un agencement enregistré devenu illisible — [voir le chapitre 16](16-depannage.md).
 
-**Pour refermer** : un clic à côté, `Échap`, ou le passage à une autre application — recliquer
-l’icône marche aussi. C’est vrai des deux volets de la ligne d’état, et de tout ce qui flotte
-au-dessus de la fenêtre.
+**Pour refermer** : un clic à côté, `Échap`, le passage à une autre application, ou recliquer
+l’icône. C’est vrai de tout ce qui flotte au-dessus de la fenêtre.
 
 ### Les bulles qui ne s’effacent pas
 
 Un échec fait apparaître une **bulle** dans le coin bas-droit, au-dessus de la ligne d’état.
 
-Deux décisions y sont visibles, et toutes deux à contre-courant de l’habitude :
-
-- **Seuls les échecs en font une.** Un asset importé avec succès a sa ligne dans le journal, pas
-  de bulle : une bulle par événement heureux apprendrait à détourner le regard du coin où
-  s’affichent les problèmes.
-- **Elles ne disparaissent pas toutes seules.** Pas de fondu au bout de quatre secondes — une
-  bulle évanouie est une bulle que quelqu’un qui regardait sa toile n’a jamais vue. Elle part
-  quand vous la fermez, et c’est cette fermeture qui la marque lue.
+- **Seuls les échecs en font une.** Un asset importé avec succès a sa ligne dans le journal.
+- **Elles ne disparaissent pas toutes seules.** Elle part quand vous la fermez, et cette
+  fermeture la marque lue.
 
 ---
 
@@ -686,79 +503,61 @@ Le menu du système — en haut de l’écran sur macOS, en haut de la fenêtre 
 |---|---|
 | **Fichier** | Nouveau projet…, Ouvrir un projet…, Enregistrer, Réglages… |
 | **Édition** | Annuler, Rétablir, et les commandes de texte du système |
-| **Affichage** | Modules (rouvrir un panneau), Réinitialiser la disposition, Plein écran, et le zoom de l’image |
+| **Affichage** | Modules, Réinitialiser la disposition, Plein écran, zoom de l’image |
 | **Objets** | Ajouter ▸ Maille, Ajouter ▸ Lumière — dans l’espace 3D |
 | **Fenêtre** | les commandes de fenêtre du système |
 | **Aide** | À propos de Scenario Studio, Consommation…, Licences |
 
+Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**.
+
+**Affichage ▸ Modules ne liste que ce que l’espace peut ouvrir**, comme le rail.
+
 ### La fenêtre de consommation
 
-**Aide ▸ Consommation…** ouvre une fenêtre à part, qui dit **ce que vos clés ont dépensé**.
-
-En haut à droite, la période : **7, 31 ou 120 jours**, sur 31 par défaut. Quatre sections dans la
-colonne de gauche :
+**Aide ▸ Consommation…** dit **ce que vos clés ont dépensé**. En haut à droite, la période :
+**7, 31 ou 120 jours**, sur 31 par défaut.
 
 | Section | Ce qu’elle montre |
 |---|---|
-| **Vue d’ensemble** | le total consommé sur la période, les remises, le nombre de générations, la dépense par jour et par compte |
+| **Vue d’ensemble** | le total sur la période, les remises, le nombre de générations, la dépense par jour et par compte |
 | **Modèles** | quels modèles ont coûté, combien de générations chacun a servi, et la part passée par une clé API |
 | **Activités** | ce qui a été fait, et les assets qui en sont sortis |
 | **Journal** | chaque événement facturé, du plus récent au plus ancien, par pages |
 
-**Activités et Journal nomment leurs lignes dans la langue de la fenêtre**, pas dans celle de
-l’API : vous lisez « Génération d’images », pas `images-generation`. Si Scenario ajoute un type
-d’événement que le studio ne connaît pas encore, sa ligne affiche le nom brut de l’API — c’est le
-seul cas où l’anglais technique reparaît, et il vaut mieux qu’une ligne vide.
+Activités et Journal nomment leurs lignes dans la langue de la fenêtre : vous lisez « Génération
+d’images », pas `images-generation`. Un type d’événement que le studio ne connaît pas encore
+affiche le nom brut de l’API.
 
-Trois avertissements y sont affichés, et aucun n’est décoratif :
+Trois avertissements y sont affichés :
 
 - **il n’y a pas de solde.** L’API Scenario n’expose que ce qui a été dépensé, jamais ce qui
-  reste. Aucun chiffre de cette fenêtre ne vous dira combien vous pouvez encore générer ;
-- **le montant en euros est indicatif.** Il est calculé sur la grille publique des packs
-  prépayés, qui est par paliers et ne dit rien du tarif d’un abonnement. C’est un ordre de
-  grandeur, pas une facture ;
-- **le total mélange des comptes facturés séparément.** Si vous avez plusieurs clés, la somme
-  affichée ne correspond à aucune facture réelle — la section Vue d’ensemble détaille par compte.
+  reste. Aucun chiffre ne dira combien vous pouvez encore générer ;
+- **le montant en euros est indicatif.** Calculé sur la grille publique des packs prépayés : un
+  ordre de grandeur, pas une facture ;
+- **le total mélange des comptes facturés séparément.** Avec plusieurs clés, la somme affichée ne
+  correspond à aucune facture réelle — la Vue d’ensemble détaille par compte.
 
 **Une clé qui ne répond pas ne fausse pas les chiffres en silence** : la fenêtre nomme les clés
-restées muettes et précise que les totaux sont ceux des autres.
-
-Sans aucune clé enregistrée, la fenêtre le dit et renvoie aux réglages.
+restées muettes et précise que les totaux sont ceux des autres. Sans aucune clé enregistrée, elle
+le dit et renvoie aux réglages.
 
 ### La fenêtre des licences
 
-**Aide ▸ Licences** ouvre la liste des logiciels que Scenario Studio embarque : leur nom, leur
-version, et le nom court de leur licence (`MIT`, `Apache-2.0`…).
+**Aide ▸ Licences** liste les logiciels que Scenario Studio embarque : nom, version, et nom court
+de la licence (`MIT`, `Apache-2.0`…). Cliquez une ligne : le **texte entier** se déplie, et le
+lien vers les sources s’affiche quand la licence l’exige.
 
-Cliquez sur une ligne : le **texte entier** de la licence se déplie, et le lien vers ses sources
-s’affiche quand la licence l’exige.
-
-> **Le texte est dans l’application, pas derrière un lien.** Une notice qu’il faut être connecté
-> pour lire n’est pas une notice — et plusieurs de ces licences exigent d’être reproduites en
-> entier, pas résumées.
-
-Rien à y faire, rien à y régler. C’est une obligation légale, tenue proprement.
-
-**Cette fenêtre parle des autres, pas du studio.** Trois textes, trois portées, et il vaut mieux
-ne pas les confondre :
+Trois textes, trois portées :
 
 | Ce dont on parle | Sous quelles conditions | Où le lire |
 |---|---|---|
-| **Le code source** du studio | PolyForm Noncommercial 1.0.0 — lisible, modifiable, réutilisable pour tout usage **non commercial** | `LICENSE`, dans le dépôt |
-| **L’application** que vous avez installée | ses propres conditions d’utilisation | `EULA.md`, dans le dépôt |
-| **Les composants tiers** que l’un et l’autre embarquent | chacun garde la sienne | cette fenêtre, et `THIRD-PARTY-NOTICES.md` |
+| **Le code source** du studio | PolyForm Noncommercial 1.0.0 — réutilisable pour tout usage **non commercial** | `LICENSE`, dans le dépôt |
+| **L’application** installée | ses propres conditions d’utilisation | `EULA.md`, dans le dépôt |
+| **Les composants tiers** | chacun garde la sienne | cette fenêtre, et `THIRD-PARTY-NOTICES.md` |
 
-**Le cas de ffmpeg est à part**, et sa ligne le dit : il n’est pas lié dans l’application, il est
-lancé **à côté**, comme un programme séparé. Sa licence n’est donc pas la même selon la
-plateforme — GPL sur macOS, LGPL ailleurs — et **ses sources correspondantes sont attachées à
-chaque version publiée**, à côté des installeurs.
-
-Les raccourcis affichés dans les menus sont **ceux que vous avez réglés**. Si vous changez un
-raccourci dans les réglages, le menu suit.
-
-**Affichage ▸ Modules ne liste que ce que l’espace peut ouvrir.** Comme le rail : pas de Calques
-dans l’espace Audio, et pas de Génération tant qu’aucun modèle n’est choisi. Un menu qui proposerait
-d’ouvrir un panneau qui n’apparaîtrait pas serait pire qu’un menu court.
+**Le cas de ffmpeg est à part** : il n’est pas lié dans l’application, il est lancé **à côté**,
+comme un programme séparé. Sa licence diffère selon la plateforme — GPL sur macOS, LGPL ailleurs —
+et **ses sources correspondantes sont attachées à chaque version publiée**.
 
 ---
 
@@ -777,15 +576,11 @@ Vous n’avez rien à enregistrer pour cela :
 
 ## Fermer la dernière fenêtre quitte le studio
 
-Sur macOS, l’habitude veut qu’une application survive à ses fenêtres et qu’on en rouvre une
-depuis le Dock. **Ce n’est pas ce que fait le studio** : fermer la dernière fenêtre le quitte,
-sur les trois systèmes.
-
-C’est assumé. Un éditeur de documents n’a plus rien à offrir une fois ses fenêtres fermées, et
-la convention laissait tourner une application qu’aucun geste ne permettait de revoir.
+Sur macOS, l’habitude veut qu’une application survive à ses fenêtres. **Ce n’est pas ce que fait
+le studio** : fermer la dernière fenêtre le quitte, sur les trois systèmes.
 
 > Vos documents ne partent pas avec elle : ce qui n’est pas enregistré est **demandé avant** que
-> la fenêtre se ferme, comme partout ailleurs.
+> la fenêtre se ferme.
 
 ---
 
