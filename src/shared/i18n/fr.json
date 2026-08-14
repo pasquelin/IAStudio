@@ -111,7 +111,7 @@
     },
     "projectNotAProject": "Ce dossier n’est pas un projet Scenario",
     "projectUnreadable": "Le manifeste de ce projet est illisible : il a été tronqué ou modifié à la main",
-    "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez-le à jour pour l’ouvrir",
+    "projectTooNew": "Ce projet a été créé par une version plus récente du studio ; mettez le studio à jour pour l’ouvrir",
     "projectNotCreated": "Le projet n’a pas pu être créé dans ce dossier",
     "projectNotRenamed": "Le projet n’a pas pu être renommé : son dossier est introuvable ou illisible",
     "projectNotRevealed": "Le dossier du projet est introuvable",
@@ -149,7 +149,7 @@
     "captioned_one": "{{count, number}} asset nommé",
     "captioned_many": "{{count, number}} assets nommés",
     "captioned_other": "{{count, number}} assets nommés",
-    "captionFailed": "La description automatique a échoué",
+    "captionFailed": "Le nommage a échoué",
     "tagsNotSynced": "Les tags de « {{name}} » n’ont pas rejoint la bibliothèque",
     "apiRefused": "L’API Scenario a refusé une requête",
     "scope": {
@@ -182,7 +182,7 @@
       "shell.layout": "L’agencement enregistré d’un espace était illisible",
       "shell.menu": "Un menu contextuel n’a pas pu être ouvert",
       "scene": {
-        "render": "Rendu vidéo"
+        "render": "Le rendu vidéo a échoué"
       }
     },
     "allHint": "Enlève ce filtre : le journal remontre tout",

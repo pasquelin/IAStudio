@@ -149,7 +149,7 @@
     "captioned_one": "{{count, number}} asset named",
     "captioned_many": "{{count, number}} assets named",
     "captioned_other": "{{count, number}} assets named",
-    "captionFailed": "Automatic description failed",
+    "captionFailed": "Naming failed",
     "tagsNotSynced": "The tags of “{{name}}” did not reach the library",
     "apiRefused": "The Scenario API refused a request",
     "scope": {
@@ -182,7 +182,7 @@
       "shell.layout": "A workspace’s stored layout could not be read",
       "shell.menu": "A context menu could not be opened",
       "scene": {
-        "render": "Video render"
+        "render": "Rendering the video failed"
       }
     },
     "allHint": "Clears this filter: the log shows everything again",
