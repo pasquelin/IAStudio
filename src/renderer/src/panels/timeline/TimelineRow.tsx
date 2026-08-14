@@ -1,5 +1,6 @@
 import { mdiDragVertical } from '@mdi/js'
 import {
+  useEffect,
   useRef,
   useState,
   type HTMLAttributes,
@@ -149,36 +150,76 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
   // The pointer keeps travelling while the stack renumbers under it, so only the DIFFERENCE is
   // ever applied.
   const grabbed = useRef<Grab | null>(null)
+  const [dragging, setDragging] = useState(false)
 
-  const release = (): void => {
-    if (!grabbed.current) return
-    grabbed.current = null
-    onHeld(false)
-    reorder.end?.()
-  }
+  // Read by the window listeners below, which are bound once for the whole gesture: `reorder` is
+  // a fresh object on every draw of its row, and rebinding on each would drop events mid-drag.
+  const latest = useRef({ height, reorder, onHeld })
+  useEffect(() => {
+    latest.current = { height, reorder, onHeld }
+  })
+
+  /**
+   * The gesture lives on the WINDOW, not on the grip, and pointer capture is deliberately not
+   * used.
+   *
+   * A row that moves is a row React re-inserts in the DOM, and re-inserting a node releases the
+   * capture it held — so the first rank the row travelled ended the drag, every time. `Tree.tsx`
+   * carries the same note from the other side: it keeps its dragged row in place precisely
+   * because a source moved mid-gesture stops firing. This band moves its rows for real, so the
+   * listener has to sit somewhere the reordering cannot touch.
+   */
+  useEffect(() => {
+    if (!dragging) return
+
+    const onMove = (event: globalThis.PointerEvent): void => {
+      // Only the pointer that STARTED the drag counts — the guard `ResizeHandle` spells out: a
+      // mouse has no implicit capture, so a second pointer moving over the row would measure
+      // against a stale origin and throw it several places at once.
+      const grab = grabbed.current
+      if (!grab || grab.pointerId !== event.pointerId) return
+
+      const held = latest.current
+      const steps = reorderSteps(event.clientY - grab.y, held.height)
+      if (steps === grab.applied) return
+
+      // What the stack GAVE, not what the pointer asked for — see `move`.
+      const moved = held.reorder.move(steps - grab.applied)
+      grabbed.current = { ...grab, applied: grab.applied + moved }
+    }
+
+    const stop = (event: globalThis.PointerEvent): void => {
+      if (grabbed.current?.pointerId !== event.pointerId) return
+      grabbed.current = null
+      setDragging(false)
+      latest.current.onHeld(false)
+      latest.current.reorder.end?.()
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+      // Unmounted with the pointer still down — a panel closed, a workspace left. The gesture is
+      // open in the store, and nothing else would ever close it.
+      if (grabbed.current) {
+        grabbed.current = null
+        latest.current.reorder.end?.()
+      }
+    }
+  }, [dragging])
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>): void => {
-    event.currentTarget.setPointerCapture(event.pointerId)
     // The row under the grip must not also take the press as a selection.
     event.stopPropagation()
     grabbed.current = { pointerId: event.pointerId, y: event.clientY, applied: 0 }
+    setDragging(true)
     onHeld(true)
     reorder.begin?.()
-  }
-
-  const onPointerMove = (event: PointerEvent<HTMLButtonElement>): void => {
-    // Only the pointer that STARTED the drag counts — the guard `ResizeHandle` spells out: a
-    // mouse has no implicit capture, so a second pointer moving over the grip would measure
-    // against a stale origin and throw the row several places at once.
-    const grab = grabbed.current
-    if (!grab || grab.pointerId !== event.pointerId) return
-
-    const steps = reorderSteps(event.clientY - grab.y, height)
-    if (steps === grab.applied) return
-
-    // What the stack GAVE, not what the pointer asked for — see `move`.
-    const moved = reorder.move(steps - grab.applied)
-    grabbed.current = { ...grab, applied: grab.applied + moved }
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -202,13 +243,8 @@ function RowGrip({ height, reorder, onHeld }: RowGripProps) {
         'text-muted hover:text-text flex w-3 shrink-0 cursor-grab items-center justify-center',
         'outline-none active:cursor-grabbing',
       )}
+      // The press alone: every other half of the gesture is bound on the window — see above.
       onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={release}
-      // A capture lost — a window blur, a touch cancelled — leaves the drag open otherwise, and
-      // the next bare hover over the grip would reorder a stack nobody was holding.
-      onPointerCancel={release}
-      onLostPointerCapture={release}
       onKeyDown={onKeyDown}
     >
       <UiIcon path={mdiDragVertical} size={12} />

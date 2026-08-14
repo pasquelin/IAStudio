@@ -132,13 +132,15 @@ describe('TrackHeaders', () => {
   })
 
   describe('dragged by its grip', () => {
-    const grip = (name: string): HTMLElement => {
-      const found = screen.getByRole('button', { name: `Déplacer la piste ${name}` })
-      Object.assign(found, {
-        setPointerCapture: (): void => undefined,
-        releasePointerCapture: (): void => undefined,
-      })
-      return found
+    const grip = (name: string): HTMLElement =>
+      screen.getByRole('button', { name: `Déplacer la piste ${name}` })
+
+    /** The gesture listens on the window — see `TimelineRow`, which says why it has to. */
+    const dragTo = (clientY: number): void => {
+      fireEvent.pointerMove(window, { clientY })
+    }
+    const drop = (): void => {
+      fireEvent.pointerUp(window)
     }
 
     const ids = (): (string | undefined)[] =>
@@ -146,11 +148,10 @@ describe('TrackHeaders', () => {
 
     it('moves the track through the stack', () => {
       render(<TrackHeaders documentId="doc-1" />)
-      const held = grip('V1')
 
-      fireEvent.pointerDown(held, { clientY: 0 })
-      fireEvent.pointerMove(held, { clientY: 60 })
-      fireEvent.pointerUp(held)
+      fireEvent.pointerDown(grip('V1'), { clientY: 0 })
+      dragTo(60)
+      drop()
 
       expect(ids()).toEqual(['A1', 'V1'])
     })
@@ -160,12 +161,11 @@ describe('TrackHeaders', () => {
     it('costs one entry in the history, however many rows it crossed', () => {
       render(<TrackHeaders documentId="doc-1" />)
       const before = sequenceHistoryOf(useSequences.getState(), 'doc-1').past.length
-      const held = grip('V1')
 
-      fireEvent.pointerDown(held, { clientY: 0 })
-      fireEvent.pointerMove(held, { clientY: 60 })
-      fireEvent.pointerMove(held, { clientY: 120 })
-      fireEvent.pointerUp(held)
+      fireEvent.pointerDown(grip('V1'), { clientY: 0 })
+      dragTo(60)
+      dragTo(120)
+      drop()
 
       expect(sequenceHistoryOf(useSequences.getState(), 'doc-1').past).toHaveLength(before + 1)
     })
@@ -174,12 +174,11 @@ describe('TrackHeaders', () => {
     // back where it started would spend those steps the other way, and the track would climb.
     it('writes nothing at all when there is nowhere to go', () => {
       render(<TrackHeaders documentId="doc-1" />)
-      const held = grip('A1')
 
-      fireEvent.pointerDown(held, { clientY: 0 })
-      fireEvent.pointerMove(held, { clientY: 60 })
-      fireEvent.pointerMove(held, { clientY: 0 })
-      fireEvent.pointerUp(held)
+      fireEvent.pointerDown(grip('A1'), { clientY: 0 })
+      dragTo(60)
+      dragTo(0)
+      drop()
 
       expect(ids()).toEqual(['V1', 'A1'])
       expect(sequenceHistoryOf(useSequences.getState(), 'doc-1').past).toHaveLength(0)
