@@ -6,11 +6,9 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react'
-import { FOCUS_RING } from '@/design/styles'
 import { UiIcon } from '@/design/UiIcon'
 import { ROW_PADDING, RULER_HEIGHT } from '@/engines/timeline/timeline-geometry'
 import { cn } from '@/helpers/cn'
-import { TIP_RIGHT } from '@/helpers/tooltip'
 
 /**
  * How many places a row has travelled, dragged by this much over rows of this height.
@@ -176,11 +174,13 @@ function RowGrip({ height, reorder }: { height: number; reorder: RowReorder }) {
   return (
     <button
       type="button"
-      {...TIP_RIGHT(reorder.label)}
+      // The name alone, with no tooltip and no focus ring: a grip stands on EVERY row of every
+      // band, and a bubble explaining the obvious — the glyph is a grip, the cursor is a hand —
+      // covered the rows underneath on the way past. Screen readers still get the name.
+      aria-label={reorder.label}
       className={cn(
-        FOCUS_RING,
         'text-muted hover:text-text flex w-3 shrink-0 cursor-grab items-center justify-center',
-        'active:cursor-grabbing',
+        'outline-none active:cursor-grabbing',
       )}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

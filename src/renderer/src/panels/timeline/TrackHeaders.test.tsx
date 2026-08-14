@@ -133,7 +133,7 @@ describe('TrackHeaders', () => {
 
   describe('dragged by its grip', () => {
     const grip = (name: string): HTMLElement => {
-      const found = screen.getByRole('button', { name: new RegExp(`déplacer la piste ${name}`) })
+      const found = screen.getByRole('button', { name: `Déplacer la piste ${name}` })
       Object.assign(found, {
         setPointerCapture: (): void => undefined,
         releasePointerCapture: (): void => undefined,

@@ -193,14 +193,14 @@ describe('arranging the lines', () => {
   const orderOf = () => animationViewOf(useAnimationViews.getState(), DOCUMENT).order
 
   it('records the whole arrangement, not the line that moved, so nothing falls behind it', async () => {
-    grip('déplacer la ligne Sphere').focus()
+    grip('Déplacer la ligne Sphere').focus()
     await userEvent.keyboard('{ArrowUp}')
 
     expect(orderOf()).toEqual(['cube-2', 'cube-1'])
   })
 
   it('leaves the scene exactly as it was: the arrangement belongs to the sheet alone', async () => {
-    grip('déplacer la ligne Sphere').focus()
+    grip('Déplacer la ligne Sphere').focus()
     await userEvent.keyboard('{ArrowUp}')
 
     expect(sceneOf(useScenes.getState(), DOCUMENT).nodes.map(node => node.id)).toEqual([
