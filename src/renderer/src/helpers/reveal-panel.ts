@@ -1,11 +1,12 @@
 import type { AssetType } from '@shared/domain/asset'
 import { placementIn, type ToolId } from '@shared/domain/tool'
+import { showWorkspace } from '@/app/dockview-api'
 import { setFacetValue } from '@/helpers/collection-state'
 import { hasModelFor, shownTool } from '@/helpers/tool-registry'
 import { workspaceOfType } from '@/helpers/workspaces'
 import { TYPE_FACET } from '@/panels/assets/type-facet'
 import { useAssets } from '@/stores/assets'
-import { toolSurface, useLayouts } from '@/stores/layouts'
+import { toolSurface } from '@/stores/layouts'
 import { arrangementOf, useTools } from '@/stores/tools'
 
 /**
@@ -52,7 +53,9 @@ export function revealAssets(): void {
  * click on "Skyboxes" show every sky rather than the ones this space happens to accept.
  */
 export function revealAssetsOfKind(type: AssetType): void {
-  useLayouts.getState().setActiveWorkspace(workspaceOfType(type))
+  // `showWorkspace` rather than the store's setter, so the tab strip and the rail agree: the
+  // centre holds every section at once, and a section chosen by hand brings its own tab forward.
+  showWorkspace(workspaceOfType(type))
 
   const { collection, setCollection } = useAssets.getState()
   setCollection(setFacetValue(collection, TYPE_FACET, type))

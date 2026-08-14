@@ -17,13 +17,13 @@ export function closeOrphanTabs(): void {
   const { documents, stored } = useDocuments.getState()
   const known = new Set(stored.map(document => document.id))
   const orphans = new Set(
-    [...panelIds(useLayouts.getState().layouts)].filter(id => !documents[id] && !known.has(id)),
+    [...panelIds(useLayouts.getState().layout)].filter(id => !documents[id] && !known.has(id)),
   )
   if (orphans.size === 0) return
 
-  // The stored layout first, for the workspaces Dockview has not mounted — their panels are
-  // nowhere else. Closing then takes the tabs off the mounted one, and the layout it writes
-  // back on that change is already free of them.
+  // The stored layout first, for a centre the home is covering — its panels are nowhere else.
+  // Closing then takes the tabs off the mounted one, and the layout it writes back on that
+  // change is already free of them.
   useLayouts.getState().prune(orphans)
   for (const id of orphans) closePanel(id)
 }

@@ -70,7 +70,7 @@ describe('opening an asset', () => {
     useScenes.setState({ states: {}, histories: {} })
     useCanvases.setState({ states: {}, histories: {} })
     // Not the target of any case below: a test watching the workspace change must not start on it.
-    useLayouts.setState({ layouts: {}, activeWorkspace: 'video' })
+    useLayouts.setState({ layout: null, activeWorkspace: 'video', home: false })
     useProject.setState({ project: PROJECT, known: true })
     installFakeBridge()
     // jsdom decodes nothing, so an unlent `Image` never settles and every picture would open at
@@ -221,13 +221,13 @@ describe('opening an asset', () => {
   })
 
   /**
-   * The home covers a centre whose Dockview is unmounted, while the module still holds the api
-   * of the workspace last mounted. `openDocument` only switches workspace when the document
-   * belongs to another one — so on the same one it would add a panel to a discarded api, and
-   * the double-click would paint nothing at all.
+   * The home covers a centre whose Dockview is unmounted, while the module may still hold the
+   * api of the instance it replaced. Adding a panel there paints nothing at all, so leaving the
+   * home is what the gesture has to do first — for every asset, and not only for one whose
+   * section differs from the one already settled on.
    */
   it('leaves the home, even for an asset of the workspace already settled on', async () => {
-    useLayouts.setState({ layouts: {}, activeWorkspace: 'image', home: true })
+    useLayouts.setState({ layout: null, activeWorkspace: 'image', home: true })
 
     await openAsset(picture())
 

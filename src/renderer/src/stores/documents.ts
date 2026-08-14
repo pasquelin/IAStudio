@@ -19,6 +19,15 @@ type DocumentsState = {
    */
   activeId: string | null
   /**
+   * The last document each section had in front. The tab strip holds every section at once, so
+   * choosing a section in the rail has to say WHICH of its tabs comes forward — and the one
+   * being worked in is the only answer a hand can predict.
+   *
+   * Session state: it is a trail through the tabs, and a trail through tabs that are no longer
+   * open is worth nothing at the next launch.
+   */
+  recent: Partial<Record<WorkspaceId, string>>
+  /**
    * Everything the project folder holds, open or not — what the Explorer lists.
    *
    * Beside `documents` rather than derived from it: `documents` is what the window is showing,
@@ -154,18 +163,31 @@ export function documentsIn(
 }
 
 /**
- * The documents some layout still shows, across every workspace.
+ * Which tab choosing a section brings forward, or `null` when that section has none open.
  *
- * A tab cannot say this for itself: switching workspace unmounts Dockview, which removes every
- * panel of the workspace being left — reading that would drop the documents the user is coming
- * back to. The persisted layouts are the reliable record of what is open.
+ * The remembered one when it is still open, and any of the section's tabs otherwise: `recent`
+ * is never cleaned when a tab closes, deliberately — a trail that has to be swept on every
+ * close is a second bookkeeping to get wrong, and a stale id is answered here in one read.
  */
-export function panelIds(layouts: Record<string, { panels?: object } | undefined>): Set<string> {
-  const shown = new Set<string>()
-  for (const layout of Object.values(layouts)) {
-    for (const id of Object.keys(layout?.panels ?? {})) shown.add(id)
-  }
-  return shown
+export function frontDocumentIn(
+  state: Pick<DocumentsState, 'documents' | 'recent'>,
+  workspace: WorkspaceId,
+): string | null {
+  const remembered = state.recent[workspace]
+  if (remembered !== undefined && state.documents[remembered]) return remembered
+
+  return documentsIn(state, workspace)[0]?.id ?? null
+}
+
+/**
+ * The documents the layout still shows.
+ *
+ * Read off the persisted arrangement rather than off Dockview: the centre is unmounted whenever
+ * the home covers it, and asking a torn-down api which panels it holds answers none — which
+ * would drop every document the user is about to come back to.
+ */
+export function panelIds(layout: { panels?: object } | null): Set<string> {
+  return new Set(Object.keys(layout?.panels ?? {}))
 }
 
 /**
@@ -182,11 +204,19 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
   documents: {},
   stored: [],
   activeId: null,
+  recent: {},
 
-  // Guarded: Dockview announces the active panel again on each workspace switch — usually the
-  // same value, and every `set` wakes every subscriber.
+  // Guarded: Dockview announces the active panel again whenever the centre remounts — usually
+  // the same value, and every `set` wakes every subscriber.
   activate: id => {
-    if (get().activeId !== id) set({ activeId: id })
+    const state = get()
+    if (state.activeId === id) return
+
+    const workspace = id === null ? undefined : state.documents[id]?.workspace
+    set({
+      activeId: id,
+      ...(workspace && id ? { recent: { ...state.recent, [workspace]: id } } : {}),
+    })
   },
 
   relist: async after => {
@@ -217,7 +247,7 @@ export const useDocuments = createStore<DocumentsState>()((set, get) => ({
     if (mine !== generations.refresh) return false
 
     const inFolder = found ?? []
-    const shown = panelIds(useLayouts.getState().layouts)
+    const shown = panelIds(useLayouts.getState().layout)
     // One `set` for both halves: the folder says which documents exist, the layout says which
     // are open, and between two writes every tab would paint and unpaint.
     const documents = Object.fromEntries(

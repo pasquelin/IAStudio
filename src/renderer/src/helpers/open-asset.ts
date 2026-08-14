@@ -2,7 +2,6 @@ import type { Asset } from '@shared/domain/asset'
 import { openDocument } from '@/app/dockview-api'
 import { reportFailure } from '@/services/diagnostics'
 import { documentForAsset, useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
 import { useProject } from '@/stores/project'
 import { editorIntent, type AssetIntent } from './asset-intents'
 
@@ -28,7 +27,8 @@ export async function openAsset(asset: Asset, into?: AssetIntent): Promise<void>
   // Back to its own tab rather than a second one onto the same asset: two tabs of one document
   // are two histories of it, and the second save writes over the first.
   if (already) {
-    useLayouts.getState().setActiveWorkspace(already.workspace)
+    // The section is not set here: bringing the tab forward is what sets it, so the two cannot
+    // disagree — see `DocumentArea`.
     openDocument(already)
     // The tab is NOT resized to the asset: it keeps its size and the work done in it. But one
     // that no longer measures its asset writes a smaller file over it on the next ⌘S, so the
@@ -61,10 +61,6 @@ export async function openAsset(asset: Asset, into?: AssetIntent): Promise<void>
 
   if (!created) return reportFailure('assets.open', asset.name, new Error('no document'))
 
-  // Before the panel is added, and not left to `openDocument`: it only switches workspace when
-  // the document belongs to another one, so an asset opened from the home onto the workspace
-  // last mounted would land on a Dockview api whose DocumentArea the home has unmounted.
-  useLayouts.getState().setActiveWorkspace(intent.workspace)
   // `become` where the destination offers one — the document IS the asset, rather than a blank
   // one the asset was dropped on. It is what leaves the tab unmodified on open, and what makes
   // ⌘S able to write a faithful flatten back.

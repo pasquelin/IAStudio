@@ -1,7 +1,7 @@
 import type { SerializedDockview } from 'dockview-react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { DEFAULT_WORKSPACE, WORKSPACE_IDS, type WorkspaceId } from '@shared/domain/workspace'
+import { DEFAULT_WORKSPACE, type WorkspaceId } from '@shared/domain/workspace'
 import { HOME_SURFACE, type ToolSurface } from '@shared/domain/tool'
 import { withoutPanels } from './layout-prune'
 import { useSettings } from './settings'
@@ -24,16 +24,17 @@ type LayoutsState = {
    * to guard against.
    */
   home: boolean
-  layouts: Partial<Record<WorkspaceId, SerializedLayout>>
-  /** The project these layouts arrange. A layout is a set of open documents, so it follows one. */
+  /** `null` before the centre has ever reported an arrangement, and after one is dropped. */
+  layout: SerializedLayout | null
+  /** The project this layout arranges. A layout is a set of open documents, so it follows one. */
   projectPath: string | null
   setActiveWorkspace: (workspace: WorkspaceId) => void
   setHome: (home: boolean) => void
-  remember: (workspace: WorkspaceId, layout: SerializedLayout) => void
-  forget: (workspace: WorkspaceId) => void
+  remember: (layout: SerializedLayout) => void
+  forget: () => void
   /**
-   * Takes those panels out of every workspace's layout — the tabs of documents the window can
-   * no longer open. A layout left with none is forgotten rather than kept as an empty one.
+   * Takes those panels out of the layout — the tabs of documents the window can no longer open.
+   * A layout left with none is forgotten rather than kept as an empty one.
    */
   prune: (panels: ReadonlySet<string>) => void
   /** Keeps the arrangement when the same project comes back, drops it for another one. */
@@ -41,63 +42,56 @@ type LayoutsState = {
 }
 
 /**
- * Every workspace keeps ITS OWN layout: coming back to "3D" must restore the viewport and the
- * outliner as they were, not the "Image" layout.
+ * ONE layout for the whole studio, and it belongs to ONE project: a panel is a document open,
+ * and the documents live in the project folder. Kept across a change of project, the tabs of
+ * the previous one came back over a folder that has none of them.
  *
- * And every layout belongs to ONE project: a panel is a document open, and the documents live
- * in the project folder. Kept across a change of project, the tabs of the previous one came
- * back over a folder that has none of them.
+ * One rather than one per workspace, and that is the whole point of the centre: a scene and an
+ * image share a tab strip, so they share the arrangement that holds them. The section a document
+ * belongs to still drives the DOCKS around it — that is `activeWorkspace`, which the tab in
+ * front now sets.
  */
 export const useLayouts = create<LayoutsState>()(
   persist(
     set => ({
       activeWorkspace: DEFAULT_WORKSPACE,
       home: true,
-      layouts: {},
+      layout: null,
       projectPath: null,
       // The native menu follows this through `useNativeMenu`, which subscribes: what it may
       // offer depends on more than the space, so the space alone is not what gets published.
       // Choosing a space leaves the home: that is what a click on one of them asks for.
-      setActiveWorkspace: workspace => set({ activeWorkspace: workspace, home: false }),
+      // Guarded, as `activate` is: the centre now announces the tab in front on every click,
+      // and most of those clicks are within one section.
+      setActiveWorkspace: workspace =>
+        set(state =>
+          state.activeWorkspace === workspace && !state.home
+            ? {}
+            : { activeWorkspace: workspace, home: false },
+        ),
       setHome: home => set({ home }),
-      remember: (workspace, layout) =>
-        set(state => ({ layouts: { ...state.layouts, [workspace]: layout } })),
-      forget: workspace =>
-        set(state => {
-          const remaining = { ...state.layouts }
-          delete remaining[workspace]
-          return { layouts: remaining }
-        }),
+      remember: layout => set({ layout }),
+      forget: () => set({ layout: null }),
 
       prune: panels =>
         set(state => {
-          const layouts = { ...state.layouts }
-          let pruned = false
+          const layout = state.layout
+          // Asked before rewriting: `withoutPanels` always answers with a new object, and a
+          // layout replaced by an equal one is a write to `localStorage` per launch.
+          if (!layout || !Object.keys(layout.panels).some(id => panels.has(id))) return {}
 
-          for (const workspace of WORKSPACE_IDS) {
-            const layout = layouts[workspace]
-            // Asked before rewriting: `withoutPanels` always answers with a new object, and a
-            // layout replaced by an equal one is a write to `localStorage` per launch.
-            if (!layout || !Object.keys(layout.panels).some(id => panels.has(id))) continue
-
-            pruned = true
-            const kept = withoutPanels(layout, panels)
-            if (kept) layouts[workspace] = kept
-            else delete layouts[workspace]
-          }
-
-          return pruned ? { layouts } : {}
+          return { layout: withoutPanels(layout, panels) }
         }),
 
       adopt: projectPath =>
-        set(state => (state.projectPath === projectPath ? {} : { projectPath, layouts: {} })),
+        set(state => (state.projectPath === projectPath ? {} : { projectPath, layout: null })),
     }),
     {
       name: 'scenario-studio:layouts',
       // `home` stays out: see the field. Everything else is arrangement, which is the point.
-      partialize: ({ activeWorkspace, layouts, projectPath }) => ({
+      partialize: ({ activeWorkspace, layout, projectPath }) => ({
         activeWorkspace,
-        layouts,
+        layout,
         projectPath,
       }),
       // Bumped whenever a stored layout stops being one this build can restore: a major
@@ -107,7 +101,10 @@ export const useLayouts = create<LayoutsState>()(
       // 2: the graph space went, and `activeWorkspace` is persisted. Restored verbatim, a
       // session last left in it hands `'graph'` to `workspaceById`, which throws on an id no
       // build declares — during render, in the shell, the generator and the models panel alike.
-      version: 2,
+      //
+      // 3: the six layouts became one. A stored `layouts` map is not a layout, and handing it to
+      // `fromJSON` throws — so the session that upgrades reopens its documents from the folder.
+      version: 3,
       migrate: () => undefined,
     },
   ),
