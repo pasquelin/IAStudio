@@ -1,6 +1,7 @@
 import { mdiDragVertical } from '@mdi/js'
 import {
   useRef,
+  useState,
   type HTMLAttributes,
   type KeyboardEvent,
   type PointerEvent,
@@ -98,14 +99,24 @@ export function TimelineRow({
   children,
   ...rest
 }: TimelineRowProps) {
+  const [held, setHeld] = useState(false)
+
   return (
     <div
-      className={cn('flex items-stretch gap-0.5 px-1.5', className)}
+      className={cn(
+        'flex items-stretch gap-0.5 px-1.5',
+        // The row the hand is holding, for the length of the gesture — the same dimming the
+        // outliner uses for the same thing, so one gesture does not read two ways in one studio.
+        // Nothing else says a drag is under way: the stack reorders a rank at a time, and between
+        // two ranks the hand held something invisible.
+        held && 'bg-elevated opacity-40',
+        className,
+      )}
       style={{ height, paddingBlock: ROW_PADDING / 2 }}
       {...rest}
     >
       {reorder ? (
-        <RowGrip height={height} reorder={reorder} />
+        <RowGrip height={height} reorder={reorder} onHeld={setHeld} />
       ) : (
         <div className={cn('shrink-0', nested ? 'w-5' : 'w-3')} />
       )}
@@ -127,7 +138,14 @@ type Grab = { pointerId: number; y: number; applied: number }
  * The grip a row is dragged by. A button rather than a bare div: reordering has to be reachable
  * from the keyboard too, and the arrow keys on a focused grip are the shortest way there.
  */
-function RowGrip({ height, reorder }: { height: number; reorder: RowReorder }) {
+type RowGripProps = {
+  height: number
+  reorder: RowReorder
+  /** Told for the length of the gesture, so the row it belongs to can read as held. */
+  onHeld: (held: boolean) => void
+}
+
+function RowGrip({ height, reorder, onHeld }: RowGripProps) {
   // The pointer keeps travelling while the stack renumbers under it, so only the DIFFERENCE is
   // ever applied.
   const grabbed = useRef<Grab | null>(null)
@@ -135,6 +153,7 @@ function RowGrip({ height, reorder }: { height: number; reorder: RowReorder }) {
   const release = (): void => {
     if (!grabbed.current) return
     grabbed.current = null
+    onHeld(false)
     reorder.end?.()
   }
 
@@ -143,6 +162,7 @@ function RowGrip({ height, reorder }: { height: number; reorder: RowReorder }) {
     // The row under the grip must not also take the press as a selection.
     event.stopPropagation()
     grabbed.current = { pointerId: event.pointerId, y: event.clientY, applied: 0 }
+    onHeld(true)
     reorder.begin?.()
   }
 

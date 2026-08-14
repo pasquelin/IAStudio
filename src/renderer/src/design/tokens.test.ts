@@ -252,6 +252,8 @@ const DIMMING_ALLOWED: Record<string, string> = {
   '/ShelfTile.tsx': 'a caption at ~17:1 on its own gradient, a tenth off it changes nothing',
   '/Tree.tsx':
     'the row a drag is holding, for the length of the gesture, while the ghost reads at full ink',
+  '/TimelineRow.tsx':
+    'the timeline row a drag is holding, for the length of the gesture — the same dimming as the outliner above, and the rows it reads against are at full ink',
 }
 
 /**

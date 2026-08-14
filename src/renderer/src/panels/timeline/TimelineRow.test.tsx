@@ -106,6 +106,18 @@ describe('TimelineRow', () => {
     expect(move).not.toHaveBeenCalled()
   })
 
+  // Between two ranks the stack does not move, and nothing else would say a drag is under way.
+  it('reads as held for the length of the gesture, and only for that', () => {
+    render(rowWith({ move: (by: number) => by }))
+    const row = screen.getByText('A1').closest('div[style]')
+
+    const grip = grab()
+    expect(row?.className).toContain('opacity-40')
+
+    fireEvent.pointerUp(grip)
+    expect(row?.className).not.toContain('opacity-40')
+  })
+
   it('offers no grip to a row that holds no order of its own', () => {
     render(
       <TimelineRow height={ROW_HEIGHT} nested>
