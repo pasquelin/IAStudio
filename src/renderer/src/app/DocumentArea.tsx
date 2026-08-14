@@ -4,7 +4,7 @@ import { ASSET_TYPES, type Asset } from '@shared/domain/asset'
 import { AssetDropTarget } from '@/design/AssetDropTarget'
 import { reportFailure } from '@/services/diagnostics'
 import { useDocuments } from '@/stores/documents'
-import { useLayouts } from '@/stores/layouts'
+import { homeIsVisible, useLayouts } from '@/stores/layouts'
 import { DocumentTab } from './DocumentTab'
 import { DOCUMENT_COMPONENTS } from './documents'
 import { setDockviewApi } from './dockview-api'
@@ -31,6 +31,12 @@ const openDropped = (asset: Asset): void => {
 function followFront(id: string | null): void {
   const documents = useDocuments.getState()
   documents.activate(id)
+
+  // Nothing said while the home is up, and it is not belt and braces: `setActiveWorkspace` also
+  // LEAVES the home, so a tab announced while Dockview is being torn down — which is exactly
+  // what raising the home does to it — would reopen the studio over the home the user just asked
+  // for. The centre is only ever on screen when the home is not.
+  if (homeIsVisible()) return
 
   const workspace = id === null ? undefined : documents.documents[id]?.workspace
   if (workspace) useLayouts.getState().setActiveWorkspace(workspace)

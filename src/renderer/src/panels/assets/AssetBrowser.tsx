@@ -79,10 +79,10 @@ export function AssetBrowser() {
    * On the space and never on the collection: this must not fight the user's own choice, only
    * replace it when they move to another space.
    */
+  const ownType = typeOfWorkspace(workspace)
   useEffect(() => {
-    const own = typeOfWorkspace(workspace)
-    if (own) setCollection(setFacetValue(useAssets.getState().collection, TYPE_FACET, own))
-  }, [workspace, setCollection])
+    if (ownType) setCollection(setFacetValue(useAssets.getState().collection, TYPE_FACET, ownType))
+  }, [ownType, setCollection])
 
   /**
    * What the catalogue and the library are ASKED for — the facet's own answer, falling back to
@@ -267,7 +267,7 @@ export function AssetBrowser() {
    * sends someone hunting for a filter to clear, and clearing this one only widens to the four
    * kinds the space can take.
    */
-  const atSpaceDefault = chosenTypes?.length === 1 && chosenTypes[0] === typeOfWorkspace(workspace)
+  const atSpaceDefault = chosenTypes?.length === 1 && chosenTypes[0] === ownType
   const narrowedByHand = isFiltered(
     atSpaceDefault ? setFacetValue(collection, TYPE_FACET, null) : collection,
   )

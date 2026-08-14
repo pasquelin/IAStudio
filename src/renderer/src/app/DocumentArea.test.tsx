@@ -135,6 +135,24 @@ describe('DocumentArea', () => {
     expect(useLayouts.getState().activeWorkspace).toBe('3d')
   })
 
+  /**
+   * Raising the home is what tears this centre down, and putting a section up LEAVES the home. A
+   * tab announced on the way out would therefore have reopened the studio over the home the user
+   * had just asked for — the button would have looked broken.
+   */
+  it('says nothing about the section once the home has taken the centre', () => {
+    useDocuments.setState({
+      documents: { 'doc-7': { id: 'doc-7', kind: 'image', title: 'Affiche', workspace: 'image' } },
+    })
+    render(<DocumentArea />)
+    useLayouts.setState({ home: true })
+
+    announceActivePanel?.({ panel: { id: 'doc-7' } })
+
+    expect(useLayouts.getState().home).toBe(true)
+    expect(useLayouts.getState().activeWorkspace).toBe('3d')
+  })
+
   it('opens a panel for a document created after mount', async () => {
     render(<DocumentArea />)
 

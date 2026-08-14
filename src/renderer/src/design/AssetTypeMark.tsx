@@ -1,6 +1,7 @@
 import type { AssetType } from '@shared/domain/asset'
 import { cn } from '@/helpers/cn'
 import { assetIcon } from '@/helpers/workspaces'
+import { TILE_MARK } from './styles'
 import { UiIcon } from './UiIcon'
 
 export type AssetTypeMarkProps = {
@@ -24,8 +25,8 @@ export function AssetTypeMark({ type, label }: AssetTypeMarkProps) {
   return (
     <span
       className={cn(
-        'pointer-events-none absolute top-1 left-1 inline-flex items-center',
-        'bg-chassis/75 text-muted rounded-(--radius-sc-sm) p-px',
+        'text-muted pointer-events-none absolute top-1 left-1 inline-flex items-center',
+        TILE_MARK,
       )}
       // The glyph carries the meaning, so it needs the words a picture cannot give.
       title={label}

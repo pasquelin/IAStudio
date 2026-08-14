@@ -53,7 +53,7 @@ type LayoutsState = {
  */
 export const useLayouts = create<LayoutsState>()(
   persist(
-    set => ({
+    (set, get) => ({
       activeWorkspace: DEFAULT_WORKSPACE,
       home: true,
       layout: null,
@@ -61,14 +61,14 @@ export const useLayouts = create<LayoutsState>()(
       // The native menu follows this through `useNativeMenu`, which subscribes: what it may
       // offer depends on more than the space, so the space alone is not what gets published.
       // Choosing a space leaves the home: that is what a click on one of them asks for.
-      // Guarded, as `activate` is: the centre now announces the tab in front on every click,
-      // and most of those clicks are within one section.
-      setActiveWorkspace: workspace =>
-        set(state =>
-          state.activeWorkspace === workspace && !state.home
-            ? {}
-            : { activeWorkspace: workspace, home: false },
-        ),
+      // Guarded, and by an early return rather than by an empty `set`: zustand notifies on every
+      // call whatever the updater answers, and the centre now announces the tab in front on every
+      // click — most of which stay inside one section.
+      setActiveWorkspace: workspace => {
+        const state = get()
+        if (state.activeWorkspace === workspace && !state.home) return
+        set({ activeWorkspace: workspace, home: false })
+      },
       setHome: home => set({ home }),
       remember: layout => set({ layout }),
       forget: () => set({ layout: null }),
