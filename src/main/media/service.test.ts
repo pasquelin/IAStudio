@@ -191,6 +191,69 @@ describe('the files a generation gets beside it', () => {
     expect(injected.save).toHaveBeenCalledWith('asset-1', { hash: 'abc123' })
   })
 
+  /**
+   * Two "apply" in a row on one take, which is a gesture away in the audio editor. The id names
+   * a row that already exists, so both runs write the same proxy and the same peaks — from two
+   * ffmpeg processes, over one another.
+   */
+  it('supersedes a derivation of the same asset still on its way', async () => {
+    const injected = deps()
+    let releaseHash = (): void => {}
+    injected.hash = vi
+      .fn()
+      .mockImplementationOnce(
+        () => new Promise<string>(resolve => (releaseHash = () => resolve('abc123'))),
+      )
+      .mockImplementation(async () => 'abc123')
+
+    const service = createMediaService(injected)
+    const first = service.derive(request)
+    const second = service.derive(request)
+
+    // Waited for rather than released outright: `derive` reaches its hash a tick after the call,
+    // and a release fired before that resolves a promise nobody is holding yet.
+    await vi.waitFor(() => expect(injected.hash).toHaveBeenCalled())
+    releaseHash()
+    await Promise.all([first, second])
+
+    expect(stages(injected.onProgress).filter(stage => stage === 'cancelled')).toEqual([
+      'cancelled',
+    ])
+  })
+
+  // The other half of that replacement, and the one nothing on screen would explain: the run
+  // that was superseded ends LAST, and its own bookkeeping must not take the live one with it.
+  it('leaves cancel pointing at the run still standing', async () => {
+    const injected = deps()
+    let releaseHash = (): void => {}
+    let releasePeaks = (): void => {}
+    injected.hash = vi
+      .fn()
+      .mockImplementationOnce(
+        () => new Promise<string>(resolve => (releaseHash = () => resolve('abc123'))),
+      )
+      .mockImplementation(async () => 'abc123')
+    injected.computePeaks = vi.fn(
+      () =>
+        new Promise<Float32Array>(resolve => (releasePeaks = () => resolve(new Float32Array(2)))),
+    )
+
+    const service = createMediaService(injected)
+    const first = service.derive(request)
+    const second = service.derive(request)
+
+    await vi.waitFor(() => expect(injected.hash).toHaveBeenCalled())
+    releaseHash()
+    await first
+    await vi.waitFor(() => expect(injected.computePeaks).toHaveBeenCalled())
+
+    service.cancel('asset-1')
+    releasePeaks()
+    await second
+
+    expect(stages(injected.onProgress).at(-1)).toBe('cancelled')
+  })
+
   it('reports its stages, so a take being prepared is not a window doing nothing', async () => {
     const injected = deps()
     await createMediaService(injected).derive(request)
