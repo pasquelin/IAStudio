@@ -14,6 +14,7 @@ import type { SettingsSectionId } from '@shared/domain/settings'
 import {
   CHANNELS,
   EVENTS,
+  type AssistantActionRequest,
   type LogEntry,
   type SceneAddRequest,
   type SceneDisplayRequest,
@@ -162,6 +163,11 @@ const bridge: StudioBridge = {
     cancel: assetId => ipcRenderer.invoke(CHANNELS.mediaCancel, assetId),
     capabilities: () => ipcRenderer.invoke(CHANNELS.mediaAvailable),
     onProgress: callback => subscribe<IngestProgress>(EVENTS.mediaProgress, callback),
+  },
+  assistant: {
+    think: request => ipcRenderer.invoke(CHANNELS.assistantThink, request),
+    onAction: callback => subscribe<AssistantActionRequest>(EVENTS.assistantAction, callback),
+    actionResult: result => ipcRenderer.invoke(CHANNELS.assistantActionResult, result),
   },
   dictation: {
     state: () => ipcRenderer.invoke(CHANNELS.dictationState),

@@ -7,6 +7,12 @@ import type { MaterialStyle } from './domain/style'
 import type { CloudAsset, CloudPage, CloudQuery, ExploreQuery } from './domain/cloud-asset'
 import type { CommandId, MenuCheck } from './domain/command'
 import type { ContextMenuItem } from './domain/context-menu'
+import type {
+  ActionOutcome,
+  AssistantAnswer,
+  AssistantCall,
+  AssistantThought,
+} from './domain/assistant'
 import type { SttEvent, SttSnapshot } from './domain/dictation'
 import type {
   CloseChoice,
@@ -137,6 +143,9 @@ export type Channels = {
   mediaCancel: 'media:cancel'
   mediaAvailable: 'media:available'
 
+  assistantThink: 'assistant:think'
+  assistantActionResult: 'assistant:action-result'
+
   dictationState: 'dictation:state'
   dictationStart: 'dictation:start'
   dictationStop: 'dictation:stop'
@@ -262,6 +271,9 @@ export const CHANNELS: Channels = {
   mediaIngest: 'media:ingest',
   mediaCancel: 'media:cancel',
   mediaAvailable: 'media:available',
+
+  assistantThink: 'assistant:think',
+  assistantActionResult: 'assistant:action-result',
 
   dictationState: 'dictation:state',
   dictationStart: 'dictation:start',
@@ -521,6 +533,7 @@ export const EVENTS = {
   jobProgress: 'evt:job-progress',
   jobsChanged: 'evt:jobs-changed',
   mediaProgress: 'evt:media-progress',
+  assistantAction: 'evt:assistant-action',
   dictation: 'evt:dictation',
   log: 'evt:log',
   projectChanged: 'evt:project-changed',
@@ -562,6 +575,19 @@ export type SceneDisplayRequest = { mode: DisplayMode }
 
 /** What the native menu asks of the scene in front: a format, and how much of the scene. */
 export type SceneExportCommand = { format: ExportFormat; scope: 'scene' | 'selection' }
+
+/**
+ * An action asked for from OUTSIDE the window — today, by an MCP client on the other side of
+ * the machine.
+ *
+ * It travels as a PAIR, because the studio has no single round trip in that direction: `invoke`
+ * goes renderer to main, `broadcast` goes back with no reply. So the main process sends this to
+ * the window in front, and the window answers on `assistant:action-result` quoting the same
+ * `callId`. A call nobody answers in time fails, and says which way it failed.
+ */
+export type AssistantActionRequest = { callId: string; call: AssistantCall }
+
+export type AssistantActionResult = { callId: string; outcome: ActionOutcome }
 
 /** What the native menu asks of the texture in front: which engine it is being handed to. */
 export type TextureExportCommand = { target: TextureExportTarget }
@@ -990,6 +1016,25 @@ export type StudioBridge = {
     cancel: (assetId: string) => Promise<void>
     capabilities: () => Promise<MediaCapabilities>
     onProgress: (callback: (progress: IngestProgress) => void) => Unsubscribe
+  }
+  assistant: {
+    /**
+     * Works out what a sentence meant, and answers what to do about it.
+     *
+     * Thinking is the main process's business because the key, the rate limiter and the job loop
+     * are there; deciding and acting is the window's, because that is where the actions are and
+     * where the person is looking. So this asks a question and answers a plan — it never runs
+     * anything itself.
+     */
+    think: (request: AssistantThought) => Promise<AssistantAnswer>
+    /**
+     * An action the main process is asking THIS window to run, because it came from outside it.
+     * Sent to the window in front alone — running it in every window at once is the trap the
+     * native menu already avoids.
+     */
+    onAction: (callback: (request: AssistantActionRequest) => void) => Unsubscribe
+    /** What that window made of it, quoting the `callId` it was asked under. */
+    actionResult: (result: AssistantActionResult) => Promise<void>
   }
   dictation: {
     /** The state as it stands, for a window that arrives after the events it missed. */

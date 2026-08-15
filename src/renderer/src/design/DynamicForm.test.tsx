@@ -156,51 +156,23 @@ describe('DynamicForm', () => {
       expect([...seen]).toEqual(['prompt', 'steps'])
     })
 
-    it('fills its own field without disturbing the others', async () => {
-      const onSubmit = vi.fn()
-      render(
-        <DynamicForm
-          fields={fields}
-          onSubmit={onSubmit}
-          submitLabel="Générer"
-          accessory={(shown, handle) =>
-            shown.key === 'prompt' && (
-              <button type="button" onClick={() => handle.write('a rewritten prompt')}>
-                Adopter
-              </button>
-            )
-          }
-        />,
-      )
-
-      await userEvent.type(screen.getByLabelText(/Steps/), '30')
-      await userEvent.click(screen.getByRole('button', { name: 'Adopter' }))
-      await userEvent.click(screen.getByRole('button', { name: 'Générer' }))
-
-      expect(onSubmit).toHaveBeenCalledWith({ prompt: 'a rewritten prompt', steps: 30 })
-    })
-
-    it('reads the field as it stands when asked, not as it was drawn', async () => {
-      const seen: unknown[] = []
+    /**
+     * Two cases stood here and went with the handle they exercised — writing one field without
+     * disturbing the others, and reading a field as it stands rather than as it was drawn. They
+     * described `FieldHandle`, which nothing reads any more: prompt assistance rewrote the field
+     * it hung under, and that moved to the assistant, which reaches the form another way.
+     */
+    it('hangs nothing on a field the caller passes over', () => {
       render(
         <DynamicForm
           fields={fields}
           onSubmit={vi.fn()}
           submitLabel="Générer"
-          accessory={(shown, handle) =>
-            shown.key === 'prompt' && (
-              <button type="button" onClick={() => seen.push(handle.read())}>
-                Lire
-              </button>
-            )
-          }
+          accessory={shown => shown.key === 'prompt' && <span>Sous le prompt</span>}
         />,
       )
 
-      await userEvent.type(screen.getByLabelText(/Prompt/), 'a boulder')
-      await userEvent.click(screen.getByRole('button', { name: 'Lire' }))
-
-      expect(seen).toEqual(['a boulder'])
+      expect(screen.getAllByText('Sous le prompt')).toHaveLength(1)
     })
 
     // A button nested in a label steals the click meant for the field it labels.

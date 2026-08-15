@@ -52,6 +52,14 @@ function startUp(splash: Splash, settings: SettingsStore): void {
   // a check that fails leaves the studio exactly as usable as it was.
   void services.updates.check()
 
+  /**
+   * The way in from outside follows the setting from here on — and is applied straight away with
+   * the settings as they stand. Subscribing alone would only ever hear a CHANGE, so a user who
+   * left it on would find nothing listening until they toggled it twice.
+   */
+  services.mcp.apply(settings.read())
+  settings.subscribe(services.mcp.apply)
+
   // The journal batches, so up to a flush's worth of it is still in memory at any moment — and
   // the most ordinary way to lose it is the one that matters: an export fails, the user quits.
   const settleBeforeQuit = (): Promise<unknown> => {
@@ -61,7 +69,17 @@ function startUp(splash: Splash, settings: SettingsStore): void {
     // The note of what is still running goes out with the journal: a job whose submission
     // landed in the last moments would otherwise be lost, and it has already been paid for.
     // The manifest stamp joins them — quitting right after a save is the ordinary way to do it.
-    return Promise.all([services.journal.flush(), services.flushJobs(), services.project.settled()])
+    //
+    // The MCP server is AWAITED among them, not fired off beside them: the file it removes names
+    // a port, and a removal racing `app.quit()` leaves that file pointing the next client at
+    // whatever takes the port after this process is gone. `void` here undid the very thing it
+    // claimed to do.
+    return Promise.all([
+      services.journal.flush(),
+      services.flushJobs(),
+      services.project.settled(),
+      services.mcp.stop(),
+    ])
   }
 
   app.on('will-quit', createShutdown({ settle: settleBeforeQuit, quit: () => app.quit() }))

@@ -8,6 +8,7 @@ import {
   startCapture,
   type Capture,
 } from '@/dictation/capture'
+import { mountedDictationTarget } from '@/dictation/destination'
 import { insertAtCaret } from '@/dictation/insert-at-caret'
 import { useSettings } from './settings'
 
@@ -103,9 +104,7 @@ export const useDictation = create<DictationState>()((set, get) => ({
       if (event.type === 'partial') set({ partial: event.text })
       else if (event.type === 'final') {
         set({ partial: '' })
-        // Into the field the caret is in — which is what makes dictation work in every input of
-        // the studio without any of them being rewritten.
-        insertAtCaret(event.text)
+        settle(event.text)
       } else if (event.type === 'download') set({ download: event.progress })
       else set({ failure: event.failure })
     })
@@ -197,6 +196,19 @@ export const useDictation = create<DictationState>()((set, get) => ({
     set({ devices: await listInputDevices() })
   },
 }))
+
+/**
+ * Where a settled sentence goes.
+ *
+ * Whoever claimed it, and the caret otherwise — which is what makes dictation work in every
+ * input of the studio without any of them being rewritten. This session knows nothing about who
+ * claims it or why; the assistant's modal does the claiming while it is up.
+ */
+function settle(text: string): void {
+  const target = mountedDictationTarget()
+  if (target) target(text)
+  else insertAtCaret(text)
+}
 
 async function closeCapture(): Promise<void> {
   // Bumped before the first await, so a start still opening a device sees it and closes what it

@@ -7,6 +7,7 @@ import { getBridge } from '@/services/bridge'
 import { publishCommand } from '@/services/command-bus'
 import { reportFailure } from '@/services/diagnostics'
 import { addNodeTo } from '@/hooks/useAddNode'
+import { useAssistant } from '@/stores/assistant'
 import { activeIdOfKind, useDocuments } from '@/stores/documents'
 import { displayOfPane, sceneViewOf, useSceneViews } from '@/stores/scene-views'
 import { sceneEngineOf } from '@/stores/scene-engines'
@@ -21,6 +22,10 @@ function runCommand(command: CommandId): void {
   switch (command) {
     case 'layout.reset':
       useTools.getState().reset()
+      return
+    case 'app.assistant':
+      // Toggled rather than opened: ⌘K is the key one presses to get out of it too.
+      useAssistant.getState().toggle()
       return
     case 'project.new':
       void useProject.getState().createPicked()

@@ -1178,3 +1178,109 @@ describe('what a finished job leaves behind to read', () => {
     for (const report of recorded) expect(report.messageKey).toMatch(/^activity\./)
   })
 })
+
+/**
+ * The assistant reasons by running a text model, which is machinery rather than a generation.
+ * It needs this loop — the queue, the concurrency bound, the retries, the one poll — and none of
+ * what surrounds a generation, because a sentence typed at the assistant is not something the
+ * person asked to watch, keep, or find in their library afterwards.
+ */
+describe('a job nobody asked to see', () => {
+  it('answers what became of it, rather than being watched', async () => {
+    const { manager } = harness({
+      runner: { submit: () => Promise.resolve(remote('success', { assetIds: ['asset_reply'] })) },
+    })
+
+    const job = await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    expect(job.status).toBe('succeeded')
+  })
+
+  /**
+   * The line that keeps the assistant out of the asset browser. Collecting would download a
+   * fragment of JSON into the project and index it beside the person's own work; the ids kept
+   * are the API's own, which is where the answer is read from.
+   */
+  it('collects nothing, and keeps the ids the API gave', async () => {
+    const collect = vi.fn(() => landing(['asset_local']))
+    const { manager } = harness({
+      collect,
+      runner: { submit: () => Promise.resolve(remote('success', { assetIds: ['asset_reply'] })) },
+    })
+
+    const job = await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    expect(collect).not.toHaveBeenCalled()
+    expect(job.assetIds).toEqual(['asset_reply'])
+  })
+
+  it('never reaches the jobs bar', async () => {
+    const { manager, progress, announced } = harness()
+
+    await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    expect(progress).toEqual([])
+    expect(announced).toEqual([])
+    expect(manager.list()).toEqual([])
+  })
+
+  it('writes nothing to the journal', async () => {
+    const { manager, recorded } = harness({
+      runner: { submit: () => Promise.resolve(remote('success', { assetIds: ['asset_reply'] })) },
+    })
+
+    await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    expect(recorded).toEqual([])
+  })
+
+  /**
+   * Picked up tomorrow, a reasoning step would answer a question nobody is still asking — and
+   * charge an account for it. So it goes through the loop that persists, and is not written.
+   *
+   * The runner SETTLES on the second look rather than answering `in-progress` for ever. A poll
+   * loop with no way out spins past the end of the test on the microtask queue, and the
+   * harness's runaway guard then throws into whatever file happens to be running — which is
+   * exactly what it did, as an unhandled error nobody could place.
+   */
+  it('is never written down to be resumed', async () => {
+    let looks = 0
+    const { manager, remembered } = harness({
+      runner: {
+        submit: () => Promise.resolve(remote('in-progress')),
+        poll: () => Promise.resolve(remote((looks += 1) > 1 ? 'success' : 'in-progress')),
+      },
+    })
+
+    await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    // In flight AND settled: a generation is written down at both, and this is written at neither.
+    expect(looks).toBeGreaterThan(1)
+    expect(remembered()).toEqual([])
+  })
+
+  it('answers a failure rather than hanging on it', async () => {
+    const { manager } = harness({
+      runner: { submit: () => Promise.resolve(remote('failure')) },
+    })
+
+    const job = await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+
+    expect(job.status).toBe('failed')
+    expect(job.error).toBe('rejected')
+  })
+
+  // The bar and the journal still belong to generations: a discreet job beside one must not
+  // take either away from it.
+  it('leaves an ordinary generation alone beside it', async () => {
+    const { manager, announced, progress } = harness({ collect: () => landing(['asset_1']) })
+
+    manager.submit({ id: 'model_flux' }, 'Flux', {})
+    await manager.run({ id: 'model_scenario-llm' }, 'Assistant', {})
+    await settled()
+
+    expect(manager.list().map(job => job.label)).toEqual(['Flux'])
+    for (const list of announced) expect(list.every(job => job.label === 'Flux')).toBe(true)
+    expect(progress.length).toBeGreaterThan(0)
+  })
+})

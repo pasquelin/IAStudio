@@ -16,6 +16,7 @@ export const SHIPPED: string[] = [
   // Runtime dependencies, loaded from `node_modules` by the main process.
   '@mdi/js',
   '@mdi/react',
+  '@modelcontextprotocol/sdk',
   '@scenario-labs/sdk',
   'better-sqlite3',
   'electron-store',

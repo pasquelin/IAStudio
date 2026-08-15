@@ -1,6 +1,7 @@
 import type { Translations } from '../fr'
 import type * as frActivity from '../fr/activity.json'
 import type * as frAssets from '../fr/assets.json'
+import type * as frAssistant from '../fr/assistant.json'
 import type * as frCommands from '../fr/commands.json'
 import type * as frCommon from '../fr/common.json'
 import type * as frImage from '../fr/image.json'
@@ -13,6 +14,7 @@ import type * as frTexture from '../fr/texture.json'
 import type * as frUsage from '../fr/usage.json'
 import activity from './activity.json'
 import assets from './assets.json'
+import assistant from './assistant.json'
 import commands from './commands.json'
 import common from './common.json'
 import image from './image.json'
@@ -40,6 +42,7 @@ type Section<Roots extends keyof Translations> = Pick<Translations, Roots>
 export const en = {
   ...(activity satisfies Section<keyof typeof frActivity>),
   ...(assets satisfies Section<keyof typeof frAssets>),
+  ...(assistant satisfies Section<keyof typeof frAssistant>),
   ...(commands satisfies Section<keyof typeof frCommands>),
   ...(common satisfies Section<keyof typeof frCommon>),
   ...(image satisfies Section<keyof typeof frImage>),

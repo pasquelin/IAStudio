@@ -3,6 +3,7 @@ import type { SttEvent } from '@shared/domain/dictation'
 import { DEFAULT_SETTINGS } from '@shared/domain/settings'
 import { installFakeBridge } from '@/services/fake-bridge'
 import { MicrophoneRefused, NoInputDevice } from '@/dictation/capture'
+import { registerDictationTarget } from '@/dictation/destination'
 import { useDictation } from './dictation'
 import { useSettings } from './settings'
 
@@ -133,6 +134,29 @@ describe('where a settled sentence goes', () => {
     emit({ type: 'final', text: 'Un phare rouge.', latencyMs: 300 })
 
     expect(input.value).toBe('Un phare rouge.')
+    input.remove()
+  })
+
+  /**
+   * The one thing talking to the studio changed about dictation — and it changed it here rather
+   * than in a branch on who is on screen. This session knows only that somebody may have claimed
+   * the words; which surface, and while it is up, is that surface's business.
+   */
+  it('goes to whoever claimed the words instead, when somebody has', async () => {
+    const claimed: string[] = []
+    const release = registerDictationTarget(text => claimed.push(text))
+
+    const input = document.createElement('input')
+    document.body.append(input)
+    input.focus()
+
+    const { emit } = connected()
+    await useDictation.getState().connect()
+    emit({ type: 'final', text: 'ouvre un fichier 3D', latencyMs: 300 })
+
+    expect(claimed).toEqual(['ouvre un fichier 3D'])
+    expect(input.value).toBe('')
+    release()
     input.remove()
   })
 })

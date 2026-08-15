@@ -24,6 +24,10 @@
       "title": "Réglages",
       "help": "Ouvre la fenêtre des réglages, celle-ci même : la langue, les couleurs, le compte, les raccourcis et tout ce qui se règle."
     },
+    "appAssistant": {
+      "title": "Assistant",
+      "help": "Ouvre la fenêtre où l’on dit ce que l’on veut faire, à la voix ou au clavier. L’assistant exécute lui-même ce qu’il comprend, et demande votre accord avant tout ce qui coûte."
+    },
     "appDictate": {
       "title": "Dicter",
       "help": "Écoute le micro et écrit ce que vous dites à l’endroit du curseur, dans le champ où vous êtes. Se maintient enfoncée par défaut : on parle, on relâche, le texte s’écrit."

@@ -140,19 +140,6 @@
     "videoClipHint": "Ouvre le montage et y ajoute l’asset comme clip",
     "textureChannelHint": "Ouvre le document de texture et remplit son canal de couleur de base"
   },
-  "prompt": {
-    "suggest": "Proposer des variantes",
-    "suggesting": "Rédaction des variantes…",
-    "noSuggestion": "Aucune variante proposée.",
-    "useText": "Utiliser le texte",
-    "useTextAndSettings": "Texte + réglages",
-    "translate": "Traduire en anglais",
-    "alreadyEnglish": "Ce texte est déjà en anglais.",
-    "describeStyle": "Décrire le style des références",
-    "noReference": "Déposez une image de référence pour en décrire le style.",
-    "useTextHint": "Ne reprend que la phrase, et laisse vos réglages tels quels",
-    "useTextAndSettingsHint": "Reprend la phrase ET les réglages listés au-dessus"
-  },
   "keys": {
     "Space": "Espace",
     "Enter": "Entrée",

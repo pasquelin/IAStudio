@@ -177,6 +177,18 @@ export function showMainWindow(): void {
   else createMainWindow()
 }
 
+/**
+ * The window that shows the studio itself, and the only one that mounts the assistant.
+ *
+ * Named rather than "whichever is in front": the settings, licences, usage and mirror windows
+ * load the same bundle on another route, so they are focusable and they answer `frontWindow` —
+ * and none of them subscribes to anything the assistant sends. An action from outside must reach
+ * this one or be refused; anything else is a two-minute wait for a message nobody heard.
+ */
+export function studioWindow(): BrowserWindow | null {
+  return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null
+}
+
 let settingsWindow: BrowserWindow | null = null
 
 /**

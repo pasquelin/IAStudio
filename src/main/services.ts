@@ -23,6 +23,7 @@ import {
   type ProjectAccountPlan,
 } from '@shared/domain/project'
 import type { PathKind } from '@shared/domain/settings-registry'
+import { ASSISTANT_MODEL_ID } from '@shared/domain/assistant'
 import type { AuthState } from '@shared/domain/settings'
 import { log } from './log'
 import { TRANSLATIONS, type Language } from '@shared/i18n'
@@ -43,6 +44,11 @@ import { createFavorites, type FavoritesStore } from './favorites/store'
 import { createStyles, type StylesStore } from './styles/store'
 import { createFfmpegResolver } from './media/ffmpeg'
 import { bundledFfmpeg, bundledVad, resourcesRoot } from './resources'
+import { createAssetText } from './assistant/asset-text'
+import { createRemoteActions, type RemoteActions } from './mcp/asking'
+import { createMcpControl, type McpControl } from './mcp/control'
+import type { AssistantBrain } from './assistant/brain-port'
+import { createScenarioBrain } from './assistant/brain-scenario'
 import { createSession, type DictationSession } from './dictation/session'
 import { fetchModel, modelIsComplete } from './dictation/model-download'
 import { createDownloadHost, defaultModelFolder, ensureFolder } from './dictation/model-store'
@@ -64,7 +70,8 @@ import { catchUpMedia } from './media/catch-up'
 import { createMediaService, type MediaService } from './media/service'
 import { createLocalBackend, type LocalBackend } from './assets/local-backend'
 import { createTextureExtraction, type TextureExtraction } from './assets/texture-extraction'
-import { broadcast } from './ipc/broadcast'
+import { broadcast, sendTo } from './ipc/broadcast'
+import { studioWindow } from './window/windows'
 import { setLogVerbosity } from './log'
 import type Scenario from '@scenario-labs/sdk'
 import {
@@ -175,6 +182,16 @@ export type Services = {
   /** Minted here so the collector and the audio editor cannot name assets differently. */
   newAssetId: () => string
   media: MediaService
+  /** Works out what a sentence said to the studio meant. Decides nothing and runs nothing. */
+  assistant: AssistantBrain
+  /**
+   * Asking the window in front to run an action that came from outside the application, and
+   * waiting for its answer. Held here because two places need the same one: the MCP server,
+   * which asks, and the IPC handler, which hears the reply.
+   */
+  remoteActions: RemoteActions
+  /** The MCP server, off unless the setting says otherwise. Followed from `index.ts`. */
+  mcp: McpControl
   /** Speaking instead of typing. Holds the engine, the model and the state of a session. */
   dictation: DictationSession
   /** Opens the system screen where microphone access is granted back after a refusal. */
@@ -1021,6 +1038,43 @@ export function createServices(settings: SettingsStore): Services {
     sleep: delay,
   })
 
+  /**
+   * The assistant's thinking, on Scenario's own catalogue model.
+   *
+   * Through `jobs.run` rather than `jobs.submit`: it is machinery, not a generation, and the
+   * difference is what keeps every sentence typed at the assistant out of the jobs bar and its
+   * answers out of the asset browser — see `JobManager.run`.
+   */
+  const brain = createScenarioBrain({
+    run: body => jobs.run({ id: ASSISTANT_MODEL_ID }, ASSISTANT_MODEL_ID, body),
+    readText: createAssetText({
+      retrieve: async assetId => (await client.require().assets.retrieve(assetId)).asset,
+      // The signed CDN url the asset carries, for the rare answer too long to have been
+      // previewed whole. No key goes on this request: the signature is the authorisation.
+      download: async url => await (await fetch(url)).text(),
+    }),
+    model: () => settings.read().assistant.model,
+  })
+
+  // To the studio window alone, and it says when there is none — which is the difference between
+  // an MCP client hearing "no window was there" and waiting out two minutes for nothing.
+  const remoteActions = createRemoteActions({
+    send: request => sendTo(studioWindow(), EVENTS.assistantAction, request),
+  })
+
+  /**
+   * The door onto the machine, built here and opened only if the setting says so.
+   *
+   * Built rather than reached for: the composition root says nothing here reaches for a
+   * singleton, and this used to be the exception — a module-level registry, because the settings
+   * store is constructed before this is. `SettingsStore.subscribe` closed that hole.
+   */
+  const mcp = createMcpControl({
+    run: remoteActions.run,
+    version: app.getVersion(),
+    configPath: join(app.getPath('userData'), 'mcp.json'),
+  })
+
   const captioner = createCaptioner({
     queue: assistQueue.run,
     caption: images => prompts.caption(images),
@@ -1092,6 +1146,9 @@ export function createServices(settings: SettingsStore): Services {
     extractTextures,
     newAssetId,
     media,
+    assistant: brain,
+    remoteActions,
+    mcp,
     dictation,
     openMicrophoneSettings: () => openMicrophoneSettings(url => void shell.openExternal(url)),
     link: async (source, type) =>

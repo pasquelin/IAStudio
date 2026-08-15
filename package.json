@@ -39,6 +39,7 @@
   "dependencies": {
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@scenario-labs/sdk": "^3.0.0",
     "better-sqlite3": "^13.0.3",
     "electron-store": "^11.0.2",
