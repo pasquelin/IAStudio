@@ -42,16 +42,23 @@ introuvable, lui, reste noir et muet sans rien annoncer.
 
 ## Poser un premier clip
 
-Deux gestes, et **ils ne posent pas le clip au même endroit** :
+Trois gestes, et **ils ne posent pas le clip au même endroit** :
 
 | Geste | Sur quelle piste | À quel instant |
 |---|---|---|
-| **Glisser-déposer** depuis l’étagère | celle que vous survolez, **exactement** | là où vous lâchez |
+| **Glisser-déposer** depuis l’étagère | celle que vous survolez, **si elle peut le prendre** | là où vous lâchez |
 | **Glisser-déposer** dans le vide, sous la dernière piste | une **nouvelle** piste, ouverte pour lui | là où vous lâchez |
 | **Double-clic** sur l’asset | le studio choisit | à la **tête de lecture** |
 
-**Le glisser-déposer vous obéit au pixel près.** C’est vous qui visez la piste, donc c’est vous
-qui décidez — y compris de viser une piste où le clip ne s’entendra pas.
+**Le glisser-déposer vous obéit au pixel près pour l’INSTANT ; pour la piste, il vous corrige.**
+Vous lâchez exactement où vous voulez dans le temps. Mais **viser une piste qui ne peut pas
+prendre le clip ne l’y pose pas** : une piste image pour un son, une piste verrouillée, muette, ou
+tue par le solo d’une autre. Le studio choisit alors à votre place, comme au double-clic, et le
+clip atterrit **ailleurs que sous le pointeur**.
+
+C’est une règle unique et non deux : une piste muette acceptée sous le pointeur et évitée partout
+ailleurs répondrait deux fois à la même question. Mais **rien ne le dit à l’écran**, et c’est le
+seul endroit du montage où le geste ne fait pas ce qu’il montre.
 
 **Lâcher sous la dernière piste ouvre les pistes qu’il faut** plutôt que de ne rien faire : une
 piste image, et la piste son à côté pour une prise qui porte du son. Les deux arrivent d’un seul
@@ -62,10 +69,12 @@ aucune piste image — celui de l’espace Audio — où lâcher un rush ne fait
 puisqu’il n’y a là aucun moniteur pour l’afficher.
 
 **Le double-clic choisit à votre place**, et il choisit bien : un son va sur une piste son, tout
-le reste sur une piste image, et les pistes **verrouillées** ou **rendues muettes** sont évitées —
-un clip qui y atterrirait aurait l’air de n’avoir rien fait.
+le reste sur une piste image, et **toute piste qui ne se fait pas entendre est évitée** — un clip
+qui y atterrirait aurait l’air de n’avoir rien fait. Cela vise les **verrouillées** et les
+**muettes**, mais aussi celles que le **solo d’une autre piste** a fait taire : une piste que rien
+ne distingue à l’œil, et sur laquelle le double-clic ne posera pourtant rien.
 
-Dans les deux cas, le studio décide de deux choses :
+Dans tous les cas, le studio décide de deux choses :
 
 - **la durée** — celle du média. Une image fixe, ou un média dont la durée est inconnue, dure
   **5 secondes** par défaut. Ce n’est qu’un point de départ : le temps qu’une image reste à
@@ -218,6 +227,56 @@ La colonne de gauche de la timeline, face à chaque ligne.
 
 **Solo l’emporte sur muet.** Dès qu’une piste passe en solo, toutes celles qui ne le sont pas se
 taisent, qu’elles soient muettes ou non. C’est la convention de tous les logiciels de montage.
+
+### En ajouter une
+
+**Deux boutons, dans la barre du panneau Timeline** — en haut, à côté des outils :
+**Ajouter une piste vidéo** et **Ajouter une piste audio**. La piste arrive vide, **au bas de la
+colonne**.
+
+Ils sont en haut et non sous la colonne pour une raison pratique : le bas de la colonne descend
+avec le montage, et un bouton qui s’y trouve finit derrière ce que l’on regarde.
+
+**Un troisième geste en crée aussi** : lâcher un asset dans le vide, sous la dernière piste, ouvre
+les pistes qu’il faut et y pose le clip — [décrit plus haut](#poser-un-premier-clip). Les boutons
+servent quand on veut la piste **avant** d’avoir quoi que ce soit à y mettre.
+
+> **L’espace Audio n’en a qu’un**, celui des pistes son : il n’y a pas d’image à y montrer.
+> Voir [Espace Audio](11-espace-audio.md).
+
+### Les déplacer dans la pile
+
+**L’ordre des pistes compte** : quand vous **double-cliquez** un asset, le studio le pose sur la
+**première piste du bon genre qui se fait entendre**, en partant du haut. Monter une piste, c’est
+donc en faire la destination par défaut. Chaque en-tête porte une **poignée** sur son bord gauche.
+
+- **Tirez-la** vers le haut ou vers le bas. La ligne tenue **s’estompe** le temps du geste : c’est
+  la seule chose qui dise qu’un déplacement est en cours, la pile se renumérotant d’un rang à la
+  fois. Un glissement de trois rangs reste **un seul geste** — `⌘Z` le défait d’un coup, et non
+  rang par rang.
+- **Au clavier** : la poignée est un bouton. Donnez-lui le focus, puis `↑` et `↓`.
+
+**Rien ne bouge aux extrémités.** La première piste ne monte pas, la dernière ne descend pas, et
+l’essai ne laisse pas d’étape à annuler.
+
+### En supprimer une
+
+**Clic droit sur l’en-tête**, ou le bouton **Actions de la piste** de la ligne — le clic droit
+n’étant pas un geste de clavier, ce bouton est ce qui rend ces trois lignes atteignables sans
+souris. Le menu en porte trois :
+
+| Ligne | Effet |
+|---|---|
+| **Monter la piste** | l’échange avec celle du dessus. Grisée sur la première |
+| **Descendre la piste** | l’échange avec celle du dessous. Grisée sur la dernière |
+| **Supprimer la piste** | la retire **avec tous les clips qu’elle porte** |
+
+> **Une piste verrouillée ne se supprime pas, et le menu ne le dit pas** : la ligne reste
+> cliquable, et le clic ne fait rien. Le verrou vaut pour la piste elle-même, pas seulement pour
+> ses clips — déverrouillez-la d’abord.
+
+Comme tout le reste, la suppression s’annule par `⌘Z`, et la piste revient **à son rang**, avec
+tout ce qu’elle portait.
 
 ---
 
